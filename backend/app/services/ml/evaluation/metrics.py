@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
@@ -75,7 +76,7 @@ class MetricsCalculator:
         包括的な評価指標を計算
 
         Args:
-            y_true: 真のラベル
+            y_true: 真のラベル (np.ndarray または pd.Series)
             y_pred: 予測ラベル
             y_proba: 予測確率（オプション）
             class_names: クラス名のリスト
@@ -86,6 +87,10 @@ class MetricsCalculator:
         Returns:
             評価指標の辞書
         """
+        # pd.Series の場合は numpy 配列に変換
+        if hasattr(y_true, "values"):
+            y_true = y_true.values
+        
         if level == "full":
             logger.info("📊 包括的な評価指標を計算中(Full)...")
 
@@ -344,6 +349,16 @@ class MetricsCalculator:
             sample_weights[mask] = weights[i]
 
         return sample_weights
+
+
+def get_default_metrics() -> Dict[str, float]:
+    """デフォルトの評価メトリクス辞書を返す（全て0.0初期化）"""
+    keys = [
+        "accuracy", "precision", "recall", "f1_score", "auc_score", "auc_roc", "auc_pr",
+        "balanced_accuracy", "matthews_corrcoef", "cohen_kappa", "specificity", "sensitivity",
+        "npv", "ppv", "log_loss", "brier_score", "loss", "val_accuracy", "val_loss", "training_time"
+    ]
+    return {k: 0.0 for k in keys}
 
 
 # グローバルインスタンス

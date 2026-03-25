@@ -16,7 +16,8 @@ from sklearn.model_selection import cross_val_predict
 from app.config.unified_config import unified_config
 
 from ....utils.error_handler import ModelError
-from ..common.utils import create_temporal_cv_splitter, validate_training_inputs
+from ..cross_validation import create_temporal_cv_splitter
+from ..common.utils import validate_training_inputs
 from .base_ensemble import BaseEnsemble
 
 logger = logging.getLogger(__name__)

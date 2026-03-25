@@ -8,6 +8,7 @@ from .metrics import (
     MetricsCalculator,
     MetricsConfig,
     metrics_collector,
+    get_default_metrics,
 )
 
 __all__ = [
@@ -16,4 +17,6 @@ __all__ = [
     "MetricsConfig",
     # Global instances
     "metrics_collector",
+    # Utility functions
+    "get_default_metrics",
 ]

@@ -22,9 +22,8 @@ from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.utils import (
     get_feature_importance_unified,
     prepare_data_for_prediction,
-    get_t1_series,
 )
-from ..cross_validation import PurgedKFold
+from ..cross_validation import PurgedKFold, get_t1_series
 from ..common.exceptions import MLModelError
 from ..feature_engineering.feature_engineering_service import FeatureEngineeringService
 from ..label_generation.label_generation_service import LabelGenerationService

@@ -101,50 +101,6 @@ class BaseFeatureCalculator(ABC):
         """
         return df.copy()
 
-    def handle_calculation_error(
-        self, error: Exception, context: str, fallback_df: pd.DataFrame
-    ) -> pd.DataFrame:
-        """
-        計算エラーの共通ハンドリング
-
-        Args:
-            error: 発生したエラー
-            context: エラーのコンテキスト
-            fallback_df: フォールバック用のDataFrame
-
-        Returns:
-            エラー時に返すDataFrame
-        """
-        logger.error(f"{context}でエラーが発生しました: {error}")
-        return fallback_df
-
-    def clip_extreme_values(
-        self, series: pd.Series, lower_bound: float = -5.0, upper_bound: float = 5.0
-    ) -> pd.Series:
-        """
-        極値のクリッピング
-
-        Args:
-            series: クリッピング対象のSeries
-            lower_bound: 下限値
-            upper_bound: 上限値
-
-        Returns:
-            クリッピングされたSeries
-        """
-        return series.clip(lower=lower_bound, upper=upper_bound)
-
-    def sanitize_numeric_dataframe(
-        self,
-        df: pd.DataFrame,
-        fill_value: Optional[float] = 0.0,
-        forward_fill: bool = False,
-    ) -> pd.DataFrame:
-        """数値カラムの inf / NaN を整形する"""
-        return sanitize_numeric_dataframe(
-            df, fill_value=fill_value, forward_fill=forward_fill
-        )
-
     @abstractmethod
     def calculate_features(
         self, df: pd.DataFrame, config: Dict[str, Any]
@@ -161,15 +117,6 @@ class BaseFeatureCalculator(ABC):
         Returns:
             特徴量が追加されたDataFrame
         """
-
-    def log_feature_calculation_complete(self, feature_type: str) -> None:
-        """
-        特徴量計算完了のログ出力
-
-        Args:
-            feature_type: 特徴量の種類
-        """
-        pass  # デバッグログを削除
 
     def create_result_dataframe_efficient(
         self, df: pd.DataFrame, new_features: Dict[str, pd.Series]
@@ -194,55 +141,3 @@ class BaseFeatureCalculator(ABC):
         # DataFrame断片化を避けるため、辞書で収集 → pd.concat()で一括追加
         result_df = pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
         return result_df
-
-    def batch_calculate_ratio(
-        self,
-        numerators: Dict[str, pd.Series],
-        denominators: Dict[str, pd.Series],
-        fill_value: float = 0.0,
-    ) -> Dict[str, pd.Series]:
-        """
-        比の一括計算（ゼロ除算対応）
-
-        複数の分子と分母のペアを受け取り、safe_ratio_calculationを使用して
-        一括で比を計算します。
-
-        Args:
-            numerators: 分子のSeries辞書
-            denominators: 分母のSeries辞書
-            fill_value: ゼロ除算時の埋め値
-
-        Returns:
-            計算結果のSeries辞書
-        """
-        results = {}
-
-        for name in numerators:
-            if name in denominators:
-                results[name] = self.safe_ratio_calculation(
-                    numerators[name], denominators[name], fill_value=fill_value
-                )
-            else:
-                logger.warning(f"分母'{name}'が見つかりません")
-
-        return results
-
-    def safe_ratio_calculation(
-        self,
-        numerator: Any,
-        denominator: Any,
-        fill_value: float = 0.0,
-    ) -> pd.Series:
-        """ゼロ除算を防ぐための安全な比率計算"""
-        if not isinstance(numerator, pd.Series) or not isinstance(
-            denominator, pd.Series
-        ):
-            return pd.Series(
-                [fill_value] * (len(numerator) if hasattr(numerator, "__len__") else 0)
-            )
-
-        return (
-            _replace_inf_with_nan(numerator / denominator.replace(0, np.nan)).fillna(
-                fill_value
-            )
-        )

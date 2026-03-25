@@ -13,7 +13,7 @@ import pandas as pd
 
 from app.config.unified_config import unified_config
 
-from ..common.evaluation import evaluate_model_predictions
+from ..evaluation.metrics import metrics_collector
 from ..common.utils import get_feature_importance_unified
 from ..common.exceptions import MLModelError
 
@@ -209,7 +209,7 @@ class BaseEnsemble(ABC):
         Returns:
             評価指標の辞書
         """
-        result = evaluate_model_predictions(y_true, y_pred, y_pred_proba)
+        result = metrics_collector.calculate_comprehensive_metrics(y_true, y_pred, y_pred_proba)
 
         logger.info("✅ アンサンブル評価指標計算完了（共通評価関数使用）")
 

@@ -8,7 +8,7 @@ from sklearn.utils.class_weight import compute_sample_weight
 
 from app.utils.error_handler import ModelError
 
-from ..common.evaluation import evaluate_model_predictions
+from ..evaluation.metrics import metrics_collector
 from ..common.utils import get_feature_importance_unified, predict_class_from_proba
 
 logger = logging.getLogger(__name__)
@@ -166,7 +166,7 @@ class BaseGradientBoostingModel(ABC):
                     else (y_pred_proba > 0.5).astype(int)
                 )
 
-                detailed_metrics = evaluate_model_predictions(
+                detailed_metrics = metrics_collector.calculate_comprehensive_metrics(
                     y_test, y_pred_class, y_pred_proba
                 )
                 logger.info(

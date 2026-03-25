@@ -1,7 +1,7 @@
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
 
-from app.services.ml.common.utils import (
+from app.services.ml.cross_validation import (
     create_temporal_cv_splitter,
     get_t1_series,
     infer_timeframe,

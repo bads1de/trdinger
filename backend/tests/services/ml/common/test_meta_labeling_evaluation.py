@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 from unittest.mock import patch
 
-from app.services.ml.common.evaluation import (
+from app.services.ml.evaluation.meta_labeling_utils import (
     evaluate_meta_labeling,
     find_optimal_threshold,
     print_meta_labeling_report,
@@ -229,7 +229,7 @@ class TestMetaLabelingReporting:
         y_pred = np.array([1, 0])
 
         with patch(
-            "app.services.ml.common.evaluation.evaluate_meta_labeling",
+            "app.services.ml.evaluation.meta_labeling_utils.evaluate_meta_labeling",
             return_value=full_mock_metrics,
         ) as mock_eval:
             print_meta_labeling_report(y_true, y_pred)
@@ -240,7 +240,7 @@ class TestMetaLabelingReporting:
             m = full_mock_metrics.copy()
             m["precision"] = 0.5
             with patch(
-                "app.services.ml.common.evaluation.evaluate_meta_labeling",
+                "app.services.ml.evaluation.meta_labeling_utils.evaluate_meta_labeling",
                 return_value=m,
             ):
                 print_meta_labeling_report(y_true, y_pred)
@@ -249,7 +249,7 @@ class TestMetaLabelingReporting:
             m["precision"] = 0.7
             m["signal_adoption_rate"] = 0.6
             with patch(
-                "app.services.ml.common.evaluation.evaluate_meta_labeling",
+                "app.services.ml.evaluation.meta_labeling_utils.evaluate_meta_labeling",
                 return_value=m,
             ):
                 print_meta_labeling_report(y_true, y_pred)
@@ -260,7 +260,7 @@ class TestMetaLabelingReporting:
         y_pred_proba = np.array([0.9, 0.8, 0.2, 0.1])
 
         with patch(
-            "app.services.ml.common.evaluation.evaluate_meta_labeling",
+            "app.services.ml.evaluation.meta_labeling_utils.evaluate_meta_labeling",
             return_value=full_mock_metrics,
         ) as mock_eval:
             res_p = find_optimal_threshold(y_true, y_pred_proba, metric="precision")

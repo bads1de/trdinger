@@ -12,7 +12,7 @@ import pandas as pd
 
 from ....utils.error_handler import ModelError
 from ..trainers.base_ml_trainer import BaseMLTrainer
-from ..common.evaluation import evaluate_model_predictions
+from ..evaluation.metrics import metrics_collector
 from ..common.registry import algorithm_registry
 from ..common.utils import predict_class_from_proba, validate_training_inputs
 from .meta_labeling import MetaLabelingService
@@ -342,10 +342,10 @@ class EnsembleTrainer(BaseMLTrainer):
             y_pred = predict_class_from_proba(y_pred_proba)
 
             # 統一された評価システムを使用
-            detailed_metrics = evaluate_model_predictions(
+            detailed_metrics = metrics_collector.calculate_comprehensive_metrics(
                 y_true=y_test,
                 y_pred=y_pred,
-                y_pred_proba=y_pred_proba,
+                y_proba=y_pred_proba,
             )
 
             # 分類レポート（詳細メトリクスに含まれているが、互換性のために明示的に取得）

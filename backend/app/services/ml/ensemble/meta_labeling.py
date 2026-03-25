@@ -229,7 +229,7 @@ class MetaLabelingService:
         X_meta_specific: Optional[pd.DataFrame] = None,
     ) -> pd.Series:
         """Cross-Validationを実行"""
-        from app.services.ml.common.utils import create_temporal_cv_splitter
+        from ..cross_validation import create_temporal_cv_splitter
 
         trend_mask = primary_proba >= threshold
         oof_preds = pd.Series(0, index=X.index, dtype=int)
@@ -267,9 +267,9 @@ class MetaLabelingService:
 
             # 各フォールド内での特徴量選択（リーク防止のため推奨されるが計算コスト高。ここではフラグに従う）
             if self.use_feature_selection:
-                from ..feature_selection.feature_selector import FeatureSelector
+                from ..feature_selection.dynamic_meta_selector import DynamicMetaSelector
 
-                fold_selector = FeatureSelector(**self.feature_selection_params)
+                fold_selector = DynamicMetaSelector(**self.feature_selection_params)
                 X_tr = fold_selector.fit_transform(X_tr, y_tr)
                 X_val = fold_selector.transform(X_val)
 
@@ -288,7 +288,7 @@ class MetaLabelingService:
         threshold: float = 0.5,
     ) -> Dict[str, Any]:
         """メタラベリング適用後のパフォーマンスを評価"""
-        from ..common.evaluation import evaluate_model_predictions
+        from ..evaluation.metrics import metrics_collector
 
         # メタ予測と一次予測（バイナリ）
         final_pred = self.predict(
@@ -297,8 +297,8 @@ class MetaLabelingService:
         primary_pred = (primary_proba_test >= threshold).astype(int)
 
         # メトリクス計算
-        m_met = evaluate_model_predictions(y_test, final_pred.values)
-        p_met = evaluate_model_predictions(y_test, primary_pred.values)
+        m_met = metrics_collector.calculate_comprehensive_metrics(y_test, final_pred.values)
+        p_met = metrics_collector.calculate_comprehensive_metrics(y_test, primary_pred.values)
 
         return {
             "meta_accuracy": m_met["accuracy"],

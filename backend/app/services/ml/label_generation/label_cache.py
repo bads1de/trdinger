@@ -11,7 +11,7 @@ from typing import Dict, Optional, Tuple
 import pandas as pd
 
 from enum import Enum
-from ..common.utils import get_t1_series
+from ..cross_validation import get_t1_series
 from .presets import (
     trend_scanning_preset,
     triple_barrier_method_preset,

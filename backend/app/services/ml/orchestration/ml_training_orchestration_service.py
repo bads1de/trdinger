@@ -75,7 +75,7 @@ def get_latest_model_with_info(model_name_pattern: str = "*") -> Optional[Dict[s
 
 def get_model_info_with_defaults(model_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """モデル情報にデフォルト値を適用"""
-    from ..common.evaluation import get_default_metrics
+    from ..evaluation.metrics import get_default_metrics
     if not model_info:
         return {
             **get_default_metrics(), "model_type": "No Model",

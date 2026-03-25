@@ -200,7 +200,7 @@ class TestBaseMLTrainer:
         X = pd.DataFrame(np.random.randn(150, 5), index=sample_data.index)
         y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
 
-        with patch("app.services.ml.trainers.base_ml_trainer.get_t1_series") as mock_t1:
+        with patch("app.services.ml.cross_validation.get_t1_series") as mock_t1:
             mock_t1.return_value = pd.Series(X.index, index=X.index)
             with patch(
                 "app.services.ml.trainers.base_ml_trainer.PurgedKFold"

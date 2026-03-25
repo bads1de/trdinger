@@ -16,7 +16,7 @@ from app.services.ml.models.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import api_response
 
-from ..common.evaluation import get_default_metrics
+from ..evaluation.metrics import get_default_metrics
 from .ml_training_orchestration_service import (
     ml_training_service,
     get_latest_model_with_info,

@@ -1,8 +1,8 @@
 """
-MLモデル評価ユーティリティ
+メタラベリング評価ユーティリティ
 
-モデルの予測結果を評価するための共通関数を提供します。
-一般指標とメタラベリング（Fakeout Detection）用の指標をカバーします。
+メタラベリング（Fakeout Detection）用の評価指標計算とレポート機能を提供します。
+主にテストで使用されます。
 """
 
 import logging
@@ -12,45 +12,9 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_recall_curve
 
-# 統一されたMetricsCalculatorのグローバルインスタンスをインポート
-from ..evaluation.metrics import metrics_collector
+from .metrics import metrics_collector
 
 logger = logging.getLogger(__name__)
-
-
-def evaluate_model_predictions(
-    y_true: pd.Series,
-    y_pred: np.ndarray,
-    y_pred_proba: Optional[np.ndarray] = None,
-) -> Dict[str, Any]:
-    """
-    予測結果を評価するための共通関数
-
-    Args:
-        y_true: 実際のターゲット値
-        y_pred: 予測値
-        y_pred_proba: 予測確率（オプション）
-
-    Returns:
-        評価指標の辞書
-    """
-    y_true_array = y_true.values if hasattr(y_true, "values") else y_true
-    return metrics_collector.calculate_comprehensive_metrics(
-        y_true_array, y_pred, y_pred_proba
-    )
-
-
-def get_default_metrics() -> Dict[str, float]:
-    """デフォルトの評価メトリクス辞書を返す（全て0.0初期化）"""
-    keys = [
-        "accuracy", "precision", "recall", "f1_score", "auc_score", "auc_roc", "auc_pr",
-        "balanced_accuracy", "matthews_corrcoef", "cohen_kappa", "specificity", "sensitivity",
-        "npv", "ppv", "log_loss", "brier_score", "loss", "val_accuracy", "val_loss", "training_time"
-    ]
-    return {k: 0.0 for k in keys}
-
-
-# --- メタラベリング評価 ---
 
 
 def evaluate_meta_labeling(
@@ -78,10 +42,6 @@ def evaluate_meta_labeling(
         "positive_samples": int(np.sum(y_t)),
         "negative_samples": int(len(y_t) - np.sum(y_t))
     })
-    
-    for k, v in [("meta_f1", "f1_score"), ("meta_precision", "precision"), ("meta_recall", "recall")]:
-        if v in res:
-            res[k] = res[v]
 
     return res
 

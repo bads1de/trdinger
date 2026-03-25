@@ -417,7 +417,7 @@ class ModelManager:
             model_path: モデルファイルパス
             metadata: メタデータ（オプション）。指定された場合、モデル読み込みをスキップします。
         """
-        from ..common.evaluation import get_default_metrics
+        from ..evaluation.metrics import get_default_metrics
 
         try:
             if metadata is None:
