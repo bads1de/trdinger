@@ -13,20 +13,20 @@ from deap import tools
 
 from app.services.backtest.backtest_service import BacktestService
 
-from ..config.ga import GAConfig
-from ..generators.random_gene_generator import RandomGeneGenerator
-from ..genes import StrategyGene
+from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.genes import StrategyGene
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner
-from .fitness_sharing import FitnessSharing
+from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import (
     _gene_kwargs,
     create_deap_mutate_wrapper,
     crossover_strategy_genes,
     mutate_strategy_gene,
 )
-from .individual_evaluator import IndividualEvaluator
-from .parallel_evaluator import ParallelEvaluator
+from ..evaluation.individual_evaluator import IndividualEvaluator
+from ..evaluation.parallel_evaluator import ParallelEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class GeneticAlgorithmEngine:
         # ハイブリッドモードに応じてEvaluatorを選択
         if hybrid_mode:
             logger.info("[Hybrid] ハイブリッドGA+MLモードで起動")
-            from .hybrid_individual_evaluator import HybridIndividualEvaluator
+            from ..hybrid.hybrid_individual_evaluator import HybridIndividualEvaluator
 
             self.individual_evaluator = HybridIndividualEvaluator(
                 backtest_service=backtest_service,
@@ -179,7 +179,7 @@ class GeneticAlgorithmEngine:
 
             # シード戦略の注入（ハイブリッド初期化）
             if config.use_seed_strategies:
-                from ..generators.seed_strategy_factory import (
+                from app.services.auto_strategy.generators.seed_strategy_factory import (
                     SeedStrategyFactory,
                 )
 
@@ -289,7 +289,7 @@ class GeneticAlgorithmEngine:
         if not getattr(config, "enable_parallel_evaluation", False):
             return None
 
-        from .evaluation_worker import (
+        from ..evaluation.evaluation_worker import (
             initialize_worker_process,
             worker_evaluate_individual,
         )
@@ -552,7 +552,7 @@ class GeneticAlgorithmEngine:
             チューニングされた戦略遺伝子
         """
         try:
-            from ..optimization import StrategyParameterTuner
+            from app.services.auto_strategy.optimization import StrategyParameterTuner
 
             logger.info("[Tuning] エリート個体のパラメータチューニングを開始")
 

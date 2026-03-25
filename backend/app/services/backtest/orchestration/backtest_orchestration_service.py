@@ -8,7 +8,6 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.services.backtest.backtest_service import BacktestService
 from app.utils.response import api_response
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
@@ -58,6 +57,7 @@ class BacktestOrchestrationService:
         Returns:
             バックテスト結果一覧
         """
+
         @_safe_backtest_api_operation("バックテスト結果取得")
         def _get_backtest_results():
             backtest_repo = BacktestResultRepository(db)
@@ -91,6 +91,7 @@ class BacktestOrchestrationService:
         Returns:
             バックテスト結果
         """
+
         @_safe_backtest_api_operation(f"バックテスト結果取得 (ID: {result_id})")
         def _get_backtest_result_by_id():
             backtest_repo = BacktestResultRepository(db)
@@ -118,6 +119,7 @@ class BacktestOrchestrationService:
         Returns:
             削除結果
         """
+
         @_safe_backtest_api_operation(f"バックテスト結果削除 (ID: {result_id})")
         def _delete_backtest_result():
             # 関連する戦略のリンクを解除
@@ -146,6 +148,7 @@ class BacktestOrchestrationService:
         Returns:
             削除結果
         """
+
         @_safe_backtest_api_operation("全バックテスト結果削除")
         def _delete_all_backtest_results():
             backtest_repo = BacktestResultRepository(db)
@@ -181,6 +184,7 @@ class BacktestOrchestrationService:
         Returns:
             戦略一覧
         """
+
         @_safe_backtest_api_operation("サポート戦略取得")
         def _get_supported_strategies():
             from app.services.backtest.constants import SUPPORTED_STRATEGIES
@@ -188,6 +192,3 @@ class BacktestOrchestrationService:
             return api_response(success=True, data={"strategies": SUPPORTED_STRATEGIES})
 
         return _get_supported_strategies()
-
-
-

@@ -5,7 +5,7 @@ Auto Strategy Utils パッケージ
 """
 
 # Core Utilities
-from ..core.operand_grouping import (
+from ..core.strategy.operand_grouping import (
     OperandGroup,
     OperandGroupingSystem,
     operand_grouping_system,

@@ -7,7 +7,7 @@ backtesting.pyの統計結果をデータベース保存用の形式に変換し
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 

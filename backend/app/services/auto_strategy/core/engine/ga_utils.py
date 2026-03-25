@@ -7,7 +7,7 @@ GAエンジンで使用される共通のヘルパー関数を提供します。
 import logging
 from typing import Any, Dict
 
-from ..genes.genetic_utils import GeneticUtils
+from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
 
 logger = logging.getLogger(__name__)
 

@@ -13,10 +13,10 @@ from scipy.spatial import cKDTree
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
-from ..config.constants import OPERATORS
-from ..genes import ConditionGroup, StrategyGene
-from ..serializers.serialization import GeneSerializer
-from ..utils.indicators import get_valid_indicator_types
+from app.services.auto_strategy.config.constants import OPERATORS
+from app.services.auto_strategy.genes import ConditionGroup, StrategyGene
+from app.services.auto_strategy.serializers.serialization import GeneSerializer
+from app.services.auto_strategy.utils.indicators import get_valid_indicator_types
 
 logger = logging.getLogger(__name__)
 

@@ -13,9 +13,9 @@ from typing import Any, List, Optional
 import numpy as np
 from deap import tools
 
-from .fitness_sharing import FitnessSharing
+from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import _invalidate_individual_cache, _set_fitness_values
-from .parallel_evaluator import ParallelEvaluator
+from ..evaluation.parallel_evaluator import ParallelEvaluator
 
 logger = logging.getLogger(__name__)
 

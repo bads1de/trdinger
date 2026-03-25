@@ -5,8 +5,8 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
-from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.hybrid.hybrid_predictor import HybridPredictor
+from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 from app.services.backtest.backtest_service import BacktestService
 from app.services.ml.common.exceptions import MLPredictionError, MLTrainingError
 from app.services.ml.models.model_manager import model_manager
@@ -14,7 +14,7 @@ from app.services.ml.models.model_manager import model_manager
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
-    from app.services.auto_strategy.core.hybrid_feature_adapter import (
+    from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
         HybridFeatureAdapter,
     )
 
@@ -228,7 +228,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _resolve_feature_adapter_cls(self) -> Type["HybridFeatureAdapter"]:
         module = importlib.import_module(
-            "app.services.auto_strategy.core.hybrid_feature_adapter"
+            "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter"
         )
         return getattr(module, "HybridFeatureAdapter")
 

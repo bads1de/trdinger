@@ -12,7 +12,7 @@ import pandas as pd
 
 from app.utils.error_handler import safe_operation
 
-from ..genes import Condition, ConditionGroup
+from app.services.auto_strategy.genes import Condition, ConditionGroup
 
 logger = logging.getLogger(__name__)
 

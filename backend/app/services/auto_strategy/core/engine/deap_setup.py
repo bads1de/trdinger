@@ -9,8 +9,8 @@ from typing import Optional
 
 from deap import base, creator, tools
 
-from ..config.ga import GAConfig
-from ..genes import StrategyGene
+from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.genes import StrategyGene
 
 logger = logging.getLogger(__name__)
 

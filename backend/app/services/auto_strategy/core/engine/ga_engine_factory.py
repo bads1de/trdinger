@@ -9,8 +9,8 @@ import logging
 
 from app.services.backtest.backtest_service import BacktestService
 from .ga_engine import GeneticAlgorithmEngine
-from ..config.ga import GAConfig
-from ..generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +85,8 @@ class GeneticAlgorithmEngineFactory:
         Returns:
             (predictor, adapter) のタプル
         """
-        from .hybrid_predictor import HybridPredictor
-        from .hybrid_feature_adapter import HybridFeatureAdapter
+        from ..hybrid.hybrid_predictor import HybridPredictor
+        from ..hybrid.hybrid_feature_adapter import HybridFeatureAdapter
 
         logger.info("🔬 ハイブリッドGA+MLモードのコンポーネントを準備中")
 

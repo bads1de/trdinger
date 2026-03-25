@@ -9,8 +9,8 @@ import logging
 import math
 from typing import Any, Dict, Tuple
 
-from ..config.ga import GAConfig
-from .evaluation_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
+from app.services.auto_strategy.config.ga import GAConfig
+from ..evaluation.evaluation_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
 
 logger = logging.getLogger(__name__)
 

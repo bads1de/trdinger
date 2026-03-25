@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Dict, Tuple
 
 import pandas as pd
 
-from ..config.ga import GAConfig
+from app.services.auto_strategy.config.ga import GAConfig
 
 if TYPE_CHECKING:
     from .individual_evaluator import IndividualEvaluator

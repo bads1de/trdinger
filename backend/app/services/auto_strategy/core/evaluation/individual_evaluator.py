@@ -19,15 +19,12 @@ from pydantic import ValidationError
 from app.services.backtest.backtest_config import BacktestConfig
 from app.services.backtest.backtest_service import BacktestService
 
-from ..config import GAConfig
-from ..genes import StrategyGene
-from ..serializers.serialization import GeneSerializer
+from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.genes import StrategyGene
+from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
-from .evaluation_metrics import (
-    calculate_trade_frequency_penalty,
-    calculate_ulcer_index,
-)
-from .fitness_calculator import FitnessCalculator
+
+from ..fitness.fitness_calculator import FitnessCalculator
 from .evaluation_strategies import EvaluationStrategy
 
 logger = logging.getLogger(__name__)
@@ -495,9 +492,7 @@ class IndividualEvaluator:
         self, gene: Any, base_backtest_config: Dict[str, Any], config: GAConfig
     ) -> Tuple[float, ...]:
         """具体的な評価プロセスを振り分け（EvaluationStrategyに委譲）"""
-        return self._evaluation_strategy.execute(
-            gene, base_backtest_config, config
-        )
+        return self._evaluation_strategy.execute(gene, base_backtest_config, config)
 
     def _evaluate_with_oos(
         self,
@@ -539,9 +534,7 @@ class IndividualEvaluator:
             backtest_result, config, **kwargs
         )
 
-    def _calculate_long_short_balance(
-        self, backtest_result: Dict[str, Any]
-    ) -> float:
+    def _calculate_long_short_balance(self, backtest_result: Dict[str, Any]) -> float:
         """ロング・ショートバランススコア計算（FitnessCalculatorに委譲）"""
         return self._fitness_calculator.calculate_long_short_balance(backtest_result)
 
