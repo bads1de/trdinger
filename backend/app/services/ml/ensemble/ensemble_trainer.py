@@ -51,24 +51,19 @@ class EnsembleTrainer(BaseMLTrainer):
             "strict_error_mode", True
         )  # エラー時に例外を発生させるか
 
-        # 単一モデルモードかアンサンブルモードかを判定
         models = ensemble_config.get("models", [])
         model_type = ensemble_config.get("model_type")
 
         if model_type or len(models) == 1:
-            self.is_single_model = True
             self.model_type = model_type or models[0]
             if not models:
                 self.ensemble_config["models"] = [self.model_type]
         else:
-            self.is_single_model = False
             self.model_type = "EnsembleModel"
 
-        mode = "単一モデル" if self.is_single_model else "アンサンブル"
         logger.info(
-            f"EnsembleTrainer初期化: mode={mode}, "
-            f"method={self.ensemble_method}, model_type={self.model_type}, "
-            f"strict_error_mode={self.strict_error_mode}"
+            f"EnsembleTrainer初期化: method={self.ensemble_method}, "
+            f"model_type={self.model_type}, strict_error_mode={self.strict_error_mode}"
         )
 
     def _extract_optimized_parameters(
@@ -163,29 +158,6 @@ class EnsembleTrainer(BaseMLTrainer):
             }
             for model_name, params in base_model_params.items()
         }
-
-    def predict_proba(self, features_df: pd.DataFrame) -> np.ndarray:
-        """
-        アンサンブルモデルで予測確率を取得（フィルタリングなし）
-
-        Args:
-            features_df: 特徴量DataFrame
-
-        Returns:
-            予測確率の配列 (2クラス分類)
-        """
-        if self.ensemble_model is None or not self.ensemble_model.is_fitted:
-            raise ModelError("学習済みアンサンブルモデルがありません")
-
-        try:
-            features_scaled = features_df
-            predictions = self.ensemble_model.predict_proba(features_scaled)
-
-            return predictions
-
-        except Exception as e:
-            logger.error(f"アンサンブル予測確率取得エラー: {e}")
-            raise ModelError(f"アンサンブル予測確率の取得に失敗しました: {e}")
 
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """

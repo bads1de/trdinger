@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import pandas as pd
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
@@ -90,7 +89,7 @@ class MetricsCalculator:
         # pd.Series の場合は numpy 配列に変換
         if hasattr(y_true, "values"):
             y_true = y_true.values
-        
+
         if level == "full":
             logger.info("📊 包括的な評価指標を計算中(Full)...")
 
@@ -146,18 +145,25 @@ class MetricsCalculator:
         try:
             # 標準メトリクス
             p, r, f, _ = precision_recall_fscore_support(
-                y_true, y_pred, average=self.config.average_method, zero_division=self.config.zero_division
+                y_true,
+                y_pred,
+                average=self.config.average_method,
+                zero_division=self.config.zero_division,
             )
             pm, rm, fm, _ = precision_recall_fscore_support(
                 y_true, y_pred, average="macro", zero_division=self.config.zero_division
             )
-            
+
             return {
                 "accuracy": accuracy_score(y_true, y_pred),
-                "precision": float(p), "recall": float(r), "f1_score": float(f),
-                "precision_macro": float(pm), "recall_macro": float(rm), "f1_score_macro": float(fm),
+                "precision": float(p),
+                "recall": float(r),
+                "f1_score": float(f),
+                "precision_macro": float(pm),
+                "recall_macro": float(rm),
+                "f1_score_macro": float(fm),
                 "matthews_corrcoef": matthews_corrcoef(y_true, y_pred),
-                "cohen_kappa": cohen_kappa_score(y_true, y_pred)
+                "cohen_kappa": cohen_kappa_score(y_true, y_pred),
             }
         except Exception as e:
             logger.warning(f"基本指標計算エラー: {e}")
@@ -191,64 +197,101 @@ class MetricsCalculator:
         metrics = {}
         try:
             n_classes = len(np.unique(y_true))
-            y_pos = y_proba[:, 1] if y_proba.ndim > 1 and y_proba.shape[1] > 1 else y_proba.ravel()
+            y_pos = (
+                y_proba[:, 1]
+                if y_proba.ndim > 1 and y_proba.shape[1] > 1
+                else y_proba.ravel()
+            )
 
             if self.config.include_roc_auc:
                 if n_classes == 2:
                     metrics["roc_auc"] = roc_auc_score(y_true, y_pos)
                 else:
-                    metrics["roc_auc"] = roc_auc_score(y_true, y_proba, multi_class="ovr", average="weighted")
+                    metrics["roc_auc"] = roc_auc_score(
+                        y_true, y_proba, multi_class="ovr", average="weighted"
+                    )
 
             if self.config.include_pr_auc:
                 if n_classes == 2:
                     metrics["pr_auc"] = average_precision_score(y_true, y_pos)
                 else:
-                    pr_aucs = [average_precision_score((y_true == i).astype(int), y_proba[:, i]) 
-                               for i in range(n_classes) if np.sum(y_true == i) > 0]
+                    pr_aucs = [
+                        average_precision_score(
+                            (y_true == i).astype(int), y_proba[:, i]
+                        )
+                        for i in range(n_classes)
+                        if np.sum(y_true == i) > 0
+                    ]
                     metrics["pr_auc"] = np.mean(pr_aucs) if pr_aucs else 0.0
 
             metrics["log_loss"] = log_loss(y_true, y_proba)
             if n_classes == 2:
                 metrics["brier_score"] = brier_score_loss(y_true, y_pos)
             else:
-                metrics["brier_score"] = np.mean([brier_score_loss((y_true == i).astype(int), y_proba[:, i]) 
-                                                 for i in range(n_classes)])
+                metrics["brier_score"] = np.mean(
+                    [
+                        brier_score_loss((y_true == i).astype(int), y_proba[:, i])
+                        for i in range(n_classes)
+                    ]
+                )
         except Exception as e:
             logger.warning(f"確率指標計算エラー: {e}")
             metrics.update({"log_loss": 0.0, "brier_score": 0.0})
         return metrics
 
     def _calculate_confusion_matrix_metrics(
-        self, y_true: np.ndarray, y_pred: np.ndarray, class_names: Optional[List[str]] = None
+        self,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+        class_names: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """混同行列関連指標を計算"""
         metrics = {}
         try:
             cm = confusion_matrix(y_true, y_pred)
             metrics["confusion_matrix"] = cm.tolist()
-            metrics["confusion_matrix_normalized"] = confusion_matrix(y_true, y_pred, normalize="true").tolist()
+            metrics["confusion_matrix_normalized"] = confusion_matrix(
+                y_true, y_pred, normalize="true"
+            ).tolist()
             if class_names:
                 metrics["class_names"] = class_names
 
             labels = np.unique(y_true)
             mcm = multilabel_confusion_matrix(y_true, y_pred, labels=labels)
             tn, fp, fn, tp = mcm[:, 0, 0], mcm[:, 0, 1], mcm[:, 1, 0], mcm[:, 1, 1]
-            
+
             eps = 1e-12
-            spec, sens, npv, ppv = tn / (tn + fp + eps), tp / (tp + fn + eps), tn / (tn + fn + eps), tp / (tp + fp + eps)
+            spec, sens, npv, ppv = (
+                tn / (tn + fp + eps),
+                tp / (tp + fn + eps),
+                tn / (tn + fn + eps),
+                tp / (tp + fp + eps),
+            )
 
             if len(labels) == 2:
-                metrics.update({"true_negatives": int(tn[1]), "false_positives": int(fp[1]), 
-                                "false_negatives": int(fn[1]), "true_positives": int(tp[1]),
-                                "specificity": float(spec[1]), "sensitivity": float(sens[1]),
-                                "npv": float(npv[1]), "ppv": float(ppv[1])})
+                metrics.update(
+                    {
+                        "true_negatives": int(tn[1]),
+                        "false_positives": int(fp[1]),
+                        "false_negatives": int(fn[1]),
+                        "true_positives": int(tp[1]),
+                        "specificity": float(spec[1]),
+                        "sensitivity": float(sens[1]),
+                        "npv": float(npv[1]),
+                        "ppv": float(ppv[1]),
+                    }
+                )
             else:
                 counts = np.bincount(y_true)
                 weights = counts / (counts.sum() + eps)
-                metrics.update({"specificity": float(np.average(spec, weights=weights)),
-                                "sensitivity": float(np.average(sens, weights=weights)),
-                                "npv": float(np.average(npv, weights=weights)),
-                                "ppv": float(np.average(ppv, weights=weights))})
+                metrics.update(
+                    {
+                        "specificity": float(np.average(spec, weights=weights)),
+                        "sensitivity": float(np.average(sens, weights=weights)),
+                        "npv": float(np.average(npv, weights=weights)),
+                        "ppv": float(np.average(ppv, weights=weights)),
+                    }
+                )
         except Exception as e:
             logger.warning(f"混同行列計算エラー: {e}")
         return metrics
@@ -290,13 +333,22 @@ class MetricsCalculator:
                 y_true, y_pred, average=None, zero_division=self.config.zero_division
             )
             labels = np.unique(y_true)
-            
-            return {"per_class_metrics": {
-                (class_names[i] if class_names and i < len(class_names) else f"class_{lab}"): {
-                    "precision": float(p[i]), "recall": float(r[i]), 
-                    "f1_score": float(f[i]), "support": int(s[i])
-                } for i, lab in enumerate(labels)
-            }}
+
+            return {
+                "per_class_metrics": {
+                    (
+                        class_names[i]
+                        if class_names and i < len(class_names)
+                        else f"class_{lab}"
+                    ): {
+                        "precision": float(p[i]),
+                        "recall": float(r[i]),
+                        "f1_score": float(f[i]),
+                        "support": int(s[i]),
+                    }
+                    for i, lab in enumerate(labels)
+                }
+            }
         except Exception as e:
             logger.warning(f"クラス別指標計算エラー: {e}")
             return {}
@@ -354,9 +406,26 @@ class MetricsCalculator:
 def get_default_metrics() -> Dict[str, float]:
     """デフォルトの評価メトリクス辞書を返す（全て0.0初期化）"""
     keys = [
-        "accuracy", "precision", "recall", "f1_score", "auc_score", "auc_roc", "auc_pr",
-        "balanced_accuracy", "matthews_corrcoef", "cohen_kappa", "specificity", "sensitivity",
-        "npv", "ppv", "log_loss", "brier_score", "loss", "val_accuracy", "val_loss", "training_time"
+        "accuracy",
+        "precision",
+        "recall",
+        "f1_score",
+        "auc_score",
+        "auc_roc",
+        "auc_pr",
+        "balanced_accuracy",
+        "matthews_corrcoef",
+        "cohen_kappa",
+        "specificity",
+        "sensitivity",
+        "npv",
+        "ppv",
+        "log_loss",
+        "brier_score",
+        "loss",
+        "val_accuracy",
+        "val_loss",
+        "training_time",
     ]
     return {k: 0.0 for k in keys}
 

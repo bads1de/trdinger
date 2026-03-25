@@ -72,8 +72,6 @@ class StackingEnsemble(BaseEnsemble):
         )
         self.y_train_original: Optional[pd.Series] = None  # メタラベル生成のため
 
-        self.y_train_original: Optional[pd.Series] = None  # メタラベル生成のため
-
         logger.info(
             f"StackingEnsemble初期化（自前実装）: base_models={self._base_model_types}, "
             f"meta_model={self._meta_model_type}, cv_folds={self.cv_folds}, "
