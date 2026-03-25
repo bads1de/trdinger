@@ -267,10 +267,6 @@ class IndividualEvaluator:
                     end_date=pd.to_datetime(end_date),
                 )
 
-                if not data.empty and "Open" not in data.columns:
-                    data = data.copy()
-                    data.columns = data.columns.str.capitalize()
-
                 self._data_cache[key] = data
                 logger.debug(f"バックテストデータをキャッシュしました: {key}")
 
@@ -317,10 +313,6 @@ class IndividualEvaluator:
                         end_date=pd.to_datetime(end_date),
                     )
                     if not data.empty:
-                        if "Open" not in data.columns:
-                            data = data.copy()
-                            data.columns = data.columns.str.capitalize()
-
                         self._data_cache[key] = data
                         logger.debug(f"1分足データをキャッシュしました: {key}")
                     else:
@@ -389,10 +381,6 @@ class IndividualEvaluator:
             )
 
             if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
-                if "Open" not in ohlcv_data.columns:
-                    ohlcv_data = ohlcv_data.copy()
-                    ohlcv_data.columns = ohlcv_data.columns.str.capitalize()
-
                 with self._lock:
                     self._data_cache[cache_key] = ohlcv_data
                 logger.debug(

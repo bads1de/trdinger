@@ -183,12 +183,9 @@ class BacktestOrchestrationService:
         """
         @_safe_backtest_api_operation("サポート戦略取得")
         def _get_supported_strategies():
-            backtest_service = BacktestService()
-            try:
-                strategies = backtest_service.get_supported_strategies()
-                return api_response(success=True, data={"strategies": strategies})
-            finally:
-                backtest_service.cleanup()
+            from app.services.backtest.constants import SUPPORTED_STRATEGIES
+
+            return api_response(success=True, data={"strategies": SUPPORTED_STRATEGIES})
 
         return _get_supported_strategies()
 

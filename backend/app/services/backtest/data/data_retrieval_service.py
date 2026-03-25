@@ -5,7 +5,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, cast
 
 from database.models import (
     FundingRateData,
@@ -106,10 +106,8 @@ class DataRetrievalService:
             return []
 
         def query() -> List[OHLCVData]:
-            # Type assertion to help type checker understand ohlcv_repo is not None
-            assert self.ohlcv_repo is not None, "OHLCVRepositoryが初期化されていません"
-
-            return self.ohlcv_repo.get_ohlcv_data(
+            ohlcv_repo = cast(OHLCVRepository, self.ohlcv_repo)
+            return ohlcv_repo.get_ohlcv_data(
                 symbol=symbol,
                 timeframe=timeframe,
                 start_time=start_date,
@@ -143,12 +141,8 @@ class DataRetrievalService:
             return []
 
         def query() -> List[OpenInterestData]:
-            # Type assertion to help type checker understand oi_repo is not None
-            assert (
-                self.oi_repo is not None
-            ), "Open InterestRepositoryが初期化されていません"
-
-            return self.oi_repo.get_open_interest_data(
+            oi_repo = cast(OpenInterestRepository, self.oi_repo)
+            return oi_repo.get_open_interest_data(
                 symbol=symbol,
                 start_time=start_date,
                 end_time=end_date,
@@ -181,12 +175,8 @@ class DataRetrievalService:
             return []
 
         def query() -> List[FundingRateData]:
-            # Type assertion to help type checker understand fr_repo is not None
-            assert (
-                self.fr_repo is not None
-            ), "Funding RateRepositoryが初期化されていません"
-
-            return self.fr_repo.get_funding_rate_data(
+            fr_repo = cast(FundingRateRepository, self.fr_repo)
+            return fr_repo.get_funding_rate_data(
                 symbol=symbol,
                 start_time=start_date,
                 end_time=end_date,

@@ -169,7 +169,8 @@ class GeneticAlgorithmEngine:
 
             # ツールボックスと統計情報の取得
             toolbox = self.deap_setup.get_toolbox()
-            assert toolbox is not None, "Toolbox must be initialized before use."
+            if toolbox is None:
+                raise RuntimeError("Toolbox must be initialized before use.")
 
             stats = self._create_statistics()
 

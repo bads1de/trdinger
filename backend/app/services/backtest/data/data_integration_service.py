@@ -246,11 +246,11 @@ class DataIntegrationService:
         end_date_val: pd.Timestamp = pd.to_datetime(df.index.max(), errors="coerce")  # type: ignore
         end_date = end_date_val.isoformat() if pd.notna(end_date_val) else None
 
-        # カラム名のケースをチェックして適切なものを選択
-        low_col = "low" if "low" in df.columns else "Low"
-        high_col = "high" if "high" in df.columns else "High"
-        close_col = "close" if "close" in df.columns else "Close"
-        volume_col = "volume" if "volume" in df.columns else "Volume"
+        # カラム名を小文字に統一して取得
+        low_col = "low"
+        high_col = "high"
+        close_col = "close"
+        volume_col = "volume"
 
         summary = {
             "total_records": len(df),

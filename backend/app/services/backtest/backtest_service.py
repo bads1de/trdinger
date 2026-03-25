@@ -80,8 +80,10 @@ class BacktestService:
         """データサービスの初期化を確保"""
         if self.data_service is None:
             try:
-                # 新しいDBセッションを作成し、保持する
-                self._db_session = next(get_db())
+                # 外部からセッションが注入されていない場合のみ新規作成
+                if self._db_session is None:
+                    self._db_session = next(get_db())
+
                 ohlcv_repo = OHLCVRepository(self._db_session)
                 oi_repo = OpenInterestRepository(self._db_session)
                 fr_repo = FundingRateRepository(self._db_session)
@@ -181,12 +183,15 @@ class BacktestService:
             {'success': bool, 'result': saved_model_data} 形式の辞書
         """
         try:
+            # 外部セッションを内部にも設定してトランザクションを統一
+            self._db_session = db_session
+
             config = self._build_execution_config(request)
 
             # バックテストを実行
             result = self.run_backtest(config)
 
-            # 結果をデータベースに保存
+            # 結果をデータベースに保存（同じセッションを使用）
             backtest_repo = BacktestResultRepository(db_session)
             saved_result = backtest_repo.save_backtest_result(result)
 
@@ -195,3 +200,8 @@ class BacktestService:
         except Exception as e:
             logger.error(f"バックテスト実行・保存エラー: {e}", exc_info=True)
             return {"success": False, "error": str(e), "status_code": 500}
+        finally:
+            # 外部セッションは呼び出し側が管理するため、ここではcloseしない
+            self._db_session = None
+            self.data_service = None
+            self._orchestrator = None

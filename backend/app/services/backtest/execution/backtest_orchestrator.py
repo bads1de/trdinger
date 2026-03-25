@@ -65,16 +65,10 @@ class BacktestOrchestrator:
 
             if skip_validation:
                 # バリデーションスキップ（GAなど信頼できる内部呼び出し用）
-                from types import SimpleNamespace
-                # configは辞書なので、SimpleNamespaceに変換して属性アクセス可能にする
-                backtest_config = SimpleNamespace(**config)
-                # strategy_config は辞書のまま扱われる
+                # model_constructでバリデーションをスキップしつつPydanticモデルインスタンスを取得
+                # 呼出し側でstart_date/end_dateはdatetime変換済みである前提
+                backtest_config = BacktestConfig.model_construct(**config)
                 strategy_config_dict = config["strategy_config"]
-                # 必要な属性が欠けている場合のデフォルト値を補完（最低限）
-                if not hasattr(backtest_config, "slippage"):
-                    backtest_config.slippage = 0.0
-                if not hasattr(backtest_config, "leverage"):
-                    backtest_config.leverage = 1.0
             else:
                 # 1. 設定の検証とモデル変換 (Pydantic)
                 try:

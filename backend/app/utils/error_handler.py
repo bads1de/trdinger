@@ -6,6 +6,7 @@ APIErrorHandler と MLErrorHandler の重複機能を統合し、
 """
 
 import functools
+import inspect
 import logging
 import time
 from contextlib import contextmanager
@@ -258,29 +259,41 @@ def safe_operation(
 
     API と ML 両方のコンテキストに対応した安全実行デコレータ
     default_returnが指定されていない場合や"RAISE_EXCEPTION"の場合、例外を投げる
+    同期・非同期の両方の関数に対応する。
     """
 
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs) -> T:
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                if error_handler:
-                    return error_handler(e, context)
-                else:
-                    if is_api_call:
-                        raise ErrorHandler.handle_api_error(e, context)
-                    else:
-                        logger.error(f"エラー in {context}: {e}")
-                        if (
-                            isinstance(default_return, str)
-                            and default_return == "RAISE_EXCEPTION"
-                        ):
-                            raise e
-                        return default_return
+    def _handle_error(e: Exception) -> Any:
+        """エラーハンドリングの共通ロジック"""
+        if error_handler:
+            return error_handler(e, context)
+        if is_api_call:
+            raise ErrorHandler.handle_api_error(e, context)
+        logger.error(f"エラー in {context}: {e}")
+        if isinstance(default_return, str) and default_return == "RAISE_EXCEPTION":
+            raise e
+        return default_return
 
-        return wrapper
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        if inspect.iscoroutinefunction(func):
+
+            @functools.wraps(func)
+            async def async_wrapper(*args, **kwargs) -> T:
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    return _handle_error(e)
+
+            return async_wrapper  # type: ignore[return-value]
+        else:
+
+            @functools.wraps(func)
+            def sync_wrapper(*args, **kwargs) -> T:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    return _handle_error(e)
+
+            return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
