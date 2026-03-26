@@ -5,8 +5,12 @@ ML共通ユーティリティモジュール
 評価指標計算、およびユーティリティ関数を提供します。
 """
 
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
+
 from .base_resource_manager import CleanupLevel, BaseResourceManager
-from .config import MLConfigManager, ml_config_manager, get_default_ensemble_config, get_default_single_model_config
 from .exceptions import (
     MLBaseError,
     MLDataError,
@@ -31,13 +35,27 @@ from .utils import (
     calculate_realized_volatility,
 )
 
-__all__ = [
-    "CleanupLevel",
-    "BaseResourceManager",
+_CONFIG_EXPORTS = {
     "MLConfigManager",
     "ml_config_manager",
     "get_default_ensemble_config",
     "get_default_single_model_config",
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _CONFIG_EXPORTS:
+        module = import_module(".config", __name__)
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted({*globals().keys(), *_CONFIG_EXPORTS})
+
+__all__ = [
+    "CleanupLevel",
+    "BaseResourceManager",
     "MLBaseError",
     "MLDataError",
     "MLValidationError",
@@ -59,4 +77,8 @@ __all__ = [
     "calculate_volatility_atr",
     "calculate_historical_volatility",
     "calculate_realized_volatility",
+    "MLConfigManager",
+    "ml_config_manager",
+    "get_default_ensemble_config",
+    "get_default_single_model_config",
 ]

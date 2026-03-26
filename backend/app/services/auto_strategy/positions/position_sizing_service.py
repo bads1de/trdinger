@@ -14,11 +14,11 @@ from typing import Any, Dict, List, Optional
 from ..config.constants import AUTO_STRATEGY_DEFAULTS
 from ..utils.normalization import normalize_enum_name
 from app.utils.error_handler import safe_operation
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 
 from .calculators.calculator_factory import CalculatorFactory
 from .market_data_handler import MarketDataHandler
 from .risk_metrics import calculate_expected_shortfall, calculate_historical_var
-from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 

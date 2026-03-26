@@ -11,12 +11,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_data_collection_orchestration_service
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
 from app.utils.error_handler import api_safe_execute, ensure_db_initialized
 from database.connection import get_db
-from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 router = APIRouter(
     prefix="/api/data-collection", 
@@ -142,6 +142,5 @@ async def collect_historical_oi_data(
     return await orchestration_service.start_historical_oi_collection(
         symbol, interval, background_tasks, db
     )
-
 
 

@@ -13,9 +13,8 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.model_selection import cross_val_predict
 
-from app.config.unified_config import unified_config
-
 from ....utils.error_handler import ModelError
+from ..common.config import ml_config_manager
 from ..cross_validation import create_temporal_cv_splitter
 from ..common.utils import validate_training_inputs
 from .base_ensemble import BaseEnsemble
@@ -238,8 +237,9 @@ class StackingEnsemble(BaseEnsemble):
             CVスプリッター
         """
         cv_strategy = self.config.get("cv_strategy", "purged_kfold")
-        t1_horizon_n = unified_config.ml.training.label_generation.horizon_n
-        pct_embargo = getattr(unified_config.ml.training, "pct_embargo", 0.01)
+        ml_training = ml_config_manager.config.training
+        t1_horizon_n = ml_training.label_generation.horizon_n
+        pct_embargo = getattr(ml_training, "pct_embargo", 0.01)
         return create_temporal_cv_splitter(
             cv_strategy=cv_strategy,
             n_splits=self.cv_folds,
@@ -442,10 +442,11 @@ class StackingEnsemble(BaseEnsemble):
             ]
             fallback_patterns = [
                 os.path.join(
-                    unified_config.ml.model.model_save_path, "stacking_*.pkl"
+                    ml_config_manager.config.model.model_save_path,
+                    "stacking_*.pkl",
                 ),
                 os.path.join(
-                    unified_config.ml.model.model_save_path,
+                    ml_config_manager.config.model.model_save_path,
                     "stacking_ensemble_*.pkl",
                 ),
             ]

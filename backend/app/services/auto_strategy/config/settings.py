@@ -1,4 +1,3 @@
-from app.config.unified_config import SUPPORTED_TIMEFRAMES
 """
 Settings クラス群
 
@@ -9,6 +8,7 @@ TradingSettings, IndicatorSettings, TPSLSettings, PositionSizingSettings を提�
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from app.config.constants import SUPPORTED_TIMEFRAMES
 from ..utils.indicators import get_valid_indicator_types
 from app.services.indicators.config.indicator_config import indicator_registry
 from .base import BaseConfig

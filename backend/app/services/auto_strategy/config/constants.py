@@ -4,6 +4,8 @@ Auto Strategy 共通定数とEnum定義
 
 from enum import Enum
 
+from app.config.constants import DEFAULT_MARKET_SYMBOL, SUPPORTED_TIMEFRAMES  # noqa: F401
+
 
 # === 列挙型定義 ===
 
@@ -68,8 +70,6 @@ DATA_SOURCES = [
 ]
 
 # === 取引ペア定数 ===
-from app.config.unified_config import DEFAULT_MARKET_SYMBOL, SUPPORTED_TIMEFRAMES  # noqa: F401
-
 SUPPORTED_SYMBOLS = [
     DEFAULT_MARKET_SYMBOL,
 ]

@@ -27,8 +27,8 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
+from app.services.ml.common.config import ml_config_manager
 from app.services.ml.models.model_manager import model_manager
-from ....config.unified_config import unified_config
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.config import get_default_ensemble_config, get_default_single_model_config
 from ..ensemble.ensemble_trainer import EnsembleTrainer
@@ -138,22 +138,22 @@ class MLTrainingService(BaseResourceManager):
         """初期化"""
         super().__init__()
         self.trainer_type = trainer_type
-        config = self._create_unified_config(
+        config = self._create_trainer_config(
             trainer_type, ensemble_config, single_model_config
         )
         self.trainer = EnsembleTrainer(ensemble_config=config)
         self.optimization_service = OptimizationService()
 
-    def _create_unified_config(
+    def _create_trainer_config(
         self,
         trainer_type: str,
         ensemble_config: Optional[Dict[str, Any]],
         single_model_config: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """設定に基づいて統一設定を作成"""
+        """設定に基づいてトレーナー設定を作成"""
         if trainer_type == "ensemble":
             if ensemble_config is None:
-                ensemble_config = unified_config.ml.ensemble.model_dump()
+                ensemble_config = ml_config_manager.config.ensemble.model_dump()
                 if "default_method" in ensemble_config:
                     ensemble_config["method"] = ensemble_config.pop("default_method")
                 if "algorithms" in ensemble_config:
@@ -454,7 +454,7 @@ class MLTrainingService(BaseResourceManager):
         """実際の学習処理"""
         # 現在のインスタンスを更新
         self.trainer_type = trainer_type
-        cfg = self._create_unified_config(trainer_type, ensemble_cfg, single_cfg)
+        cfg = self._create_trainer_config(trainer_type, ensemble_cfg, single_cfg)
         self.trainer = EnsembleTrainer(ensemble_config=cfg)
 
         opt_settings = (

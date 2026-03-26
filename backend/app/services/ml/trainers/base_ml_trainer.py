@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
-from ....config.unified_config import unified_config
 from ....utils.error_handler import (
     DataError,
     ml_operation_context,
@@ -23,6 +22,7 @@ from ..common.utils import (
     get_feature_importance_unified,
     prepare_data_for_prediction,
 )
+from ..common.config import ml_config_manager
 from .. import cross_validation as cross_validation_module
 from ..cross_validation import PurgedKFold
 from ..common.exceptions import MLModelError
@@ -88,8 +88,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     @property
     def config(self):
-        """現在の統一ML設定を取得"""
-        return unified_config.ml
+        """現在のML設定を取得"""
+        return ml_config_manager.config
 
     @property
     def model(self) -> Any:

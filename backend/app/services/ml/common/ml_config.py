@@ -2,7 +2,7 @@
 ML関連設定クラス
 
 機械学習パイプラインの設定を一元管理します。
-unified_config.py の MLConfig から参照され、環境変数ベースの設定を提供します。
+設定はサービス配下で完結し、環境変数ベースで上書きできます。
 """
 
 from dataclasses import asdict, dataclass

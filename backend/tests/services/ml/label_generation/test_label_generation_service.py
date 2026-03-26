@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 from unittest.mock import patch
 
+from app.services.ml.common.config import ml_config_manager
 from app.services.ml.label_generation.label_generation_service import (
     LabelGenerationService,
 )
@@ -282,12 +283,13 @@ class TestTrendScanningIntegration:
     def test_trend_scanning_integration(self, trend_sample_features, trend_sample_ohlcv):
         service = LabelGenerationService()
 
-        with patch("app.config.unified_config.unified_config") as mock_config:
-            mock_config.ml.training.label_generation.threshold_method = "TREND_SCANNING"
-            mock_config.ml.training.label_generation.horizon_n = 20
-            mock_config.ml.training.label_generation.threshold = 2.0
-            mock_config.ml.training.label_generation.timeframe = "1h"
-            mock_config.ml.training.label_generation.price_column = "close"
+        original_config = ml_config_manager.config.model_copy(deep=True)
+        try:
+            ml_config_manager.config.training.label_generation.threshold_method = "TREND_SCANNING"
+            ml_config_manager.config.training.label_generation.horizon_n = 20
+            ml_config_manager.config.training.label_generation.threshold = 2.0
+            ml_config_manager.config.training.label_generation.timeframe = "1h"
+            ml_config_manager.config.training.label_generation.price_column = "close"
 
             features, labels = service.prepare_labels(
                 features_df=trend_sample_features,
@@ -296,6 +298,8 @@ class TestTrendScanningIntegration:
                 window_step=1,
                 use_signal_generator=False,
             )
+        finally:
+            ml_config_manager.config = original_config
 
         assert len(features) > 0
         assert len(labels) == len(features)

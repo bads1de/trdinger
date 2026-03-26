@@ -10,13 +10,13 @@ from typing import Optional
 
 import ccxt
 
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.utils.error_handler import ErrorHandler
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..bybit.market_data_service import BybitMarketDataService
-from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 
@@ -446,6 +446,5 @@ class HistoricalDataService:
         )
 
         return results
-
 
 

@@ -66,7 +66,7 @@ class GeneValidator:
         # タイムフレームのバリデーション（設定されている場合のみ）
         timeframe = getattr(indicator_gene, "timeframe", None)
         if timeframe is not None:
-            from app.config.unified_config import SUPPORTED_TIMEFRAMES
+            from app.config.constants import SUPPORTED_TIMEFRAMES
 
             if timeframe not in SUPPORTED_TIMEFRAMES:
                 logger.warning(

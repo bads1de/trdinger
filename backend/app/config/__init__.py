@@ -1,12 +1,17 @@
 """
 設定管理パッケージ
 
-統一設定システムを提供し、アプリケーション全体の設定を階層的に管理します。
-各設定クラスは所属サービスのモジュールに定義され、ここで一括再エクスポートされます。
+アプリケーション共通の設定入口を提供します。
+ドメイン固有の設定は各サービス配下の config パッケージを直接参照します。
 """
 
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
+
 # 共通定数
-from .constants import (
+from .constants import (  # noqa: F401
     DEFAULT_DATA_LIMIT,
     DEFAULT_ENSEMBLE_ALGORITHMS,
     DEFAULT_MARKET_EXCHANGE,
@@ -17,29 +22,30 @@ from .constants import (
     SUPPORTED_TIMEFRAMES,
 )
 
-# コア設定
-from .unified_config import (
-    AppConfig,
-    DatabaseConfig,
-    LoggingConfig,
-    MarketConfig,
-    DataCollectionConfig,
-    UnifiedConfig,
-    unified_config,
-)
+_UNIFIED_CONFIG_EXPORTS = {
+    "AppConfig",
+    "DatabaseConfig",
+    "LoggingConfig",
+    "MarketConfig",
+    "DataCollectionConfig",
+    "UnifiedConfig",
+    "unified_config",
+}
 
-# 各サービスの設定を再エクスポート
-from .unified_config import (
-    BacktestConfig,
-    AutoStrategyConfig,
-    MLConfig,
-    MLDataProcessingConfig,
-    MLModelConfig,
-    MLPredictionConfig,
-    MLTrainingConfig,
-    LabelGenerationConfig,
-    EnsembleConfig,
-)
+def __getattr__(name: str) -> Any:
+    if name in _UNIFIED_CONFIG_EXPORTS:
+        module = import_module(".unified_config", __name__)
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list[str]:
+    return sorted(
+        {
+            *globals().keys(),
+            *_UNIFIED_CONFIG_EXPORTS,
+        }
+    )
 
 __all__ = [
     # 共通定数
@@ -61,15 +67,4 @@ __all__ = [
     # 市場・データ収集設定
     "MarketConfig",
     "DataCollectionConfig",
-    # バックテスト・戦略設定
-    "BacktestConfig",
-    "AutoStrategyConfig",
-    # ML設定
-    "MLConfig",
-    "MLDataProcessingConfig",
-    "MLModelConfig",
-    "MLPredictionConfig",
-    "MLTrainingConfig",
-    "LabelGenerationConfig",
-    "EnsembleConfig",
 ]

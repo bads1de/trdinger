@@ -13,8 +13,8 @@ from typing import Any, Dict, List, Optional
 
 import joblib
 
-from ....config.unified_config import unified_config
 from ....utils.error_handler import safe_ml_operation
+from ..common.config import ml_config_manager
 from ..common.exceptions import MLModelError
 from ..common.utils import collect_unique_files
 
@@ -34,8 +34,20 @@ class ModelManager:
         """
         初期化
         """
-        # 既存設定の初期化
-        self.config = unified_config.ml.model
+        # 設定は遅延取得する（import 時の設定初期化を避ける）
+        self._config_override: Optional[Any] = None
+
+    @property
+    def config(self):
+        """現在の ML 設定を取得"""
+        if self._config_override is not None:
+            return self._config_override
+        return ml_config_manager.config.model
+
+    @config.setter
+    def config(self, value: Any) -> None:
+        """テスト用に設定を差し替える"""
+        self._config_override = value
 
     def _ensure_directories(self):
         """必要なディレクトリを作成"""
@@ -46,7 +58,7 @@ class ModelManager:
         モデル検索パスを取得
         テスト容易性のためにメソッド化
         """
-        return unified_config.ml.get_model_search_paths()
+        return ml_config_manager.config.get_model_search_paths()
 
     def _collect_model_files(self, model_name_pattern: str = "*") -> List[str]:
         """検索パスからモデルファイルを重複なく収集する"""

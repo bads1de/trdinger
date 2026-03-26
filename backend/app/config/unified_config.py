@@ -1,8 +1,8 @@
 """
 統一設定システム
 
-アプリケーション全体の設定を階層的で管理しやすい構造で統一管理します。
-SOLID原則に従い、各設定カテゴリを明確に分離し、責任を明確化します。
+アプリケーション全体で共有する設定だけをまとめます。
+ドメイン固有の設定は各サービス配下の config パッケージで保持します。
 """
 
 from typing import Any, Dict, List, Optional
@@ -11,9 +11,8 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # 共通定数
-from app.config.constants import (  # noqa: F401
+from .constants import (
     DEFAULT_DATA_LIMIT,
-    DEFAULT_ENSEMBLE_ALGORITHMS,
     DEFAULT_MARKET_EXCHANGE,
     DEFAULT_MARKET_SYMBOL,
     DEFAULT_MARKET_TIMEFRAME,
@@ -21,22 +20,6 @@ from app.config.constants import (  # noqa: F401
     MIN_DATA_LIMIT,
     SUPPORTED_TIMEFRAMES,
 )
-
-# 各サービスの環境変数設定をインポート（サービス側の実体を正本として参照）
-from app.services.backtest.config.backtest_settings import BacktestConfig  # noqa: F401
-from app.services.auto_strategy.config.auto_strategy_settings import (  # noqa: F401
-    AutoStrategyConfig,
-)
-from app.services.ml.common.ml_config import (  # noqa: F401
-    EnsembleConfig,
-    LabelGenerationConfig,
-    MLConfig,
-    MLDataProcessingConfig,
-    MLModelConfig,
-    MLPredictionConfig,
-    MLTrainingConfig,
-)
-
 
 class AppConfig(BaseSettings):
     """アプリケーション基本設定。
@@ -189,7 +172,7 @@ class DataCollectionConfig(BaseSettings):
 class UnifiedConfig(BaseSettings):
     """アプリケーション全体の統一設定クラス。
 
-    全ての設定を階層的に管理し、環境変数からの設定読み込みをサポートします。
+    app / database / logging / market / data_collection のみを保持します。
     """
 
     app: AppConfig = Field(default_factory=AppConfig)
@@ -197,9 +180,6 @@ class UnifiedConfig(BaseSettings):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     market: MarketConfig = Field(default_factory=MarketConfig)
     data_collection: DataCollectionConfig = Field(default_factory=DataCollectionConfig)
-    backtest: BacktestConfig = Field(default_factory=BacktestConfig)
-    auto_strategy: AutoStrategyConfig = Field(default_factory=AutoStrategyConfig)
-    ml: MLConfig = Field(default_factory=MLConfig)
 
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",

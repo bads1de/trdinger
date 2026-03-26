@@ -2,7 +2,7 @@
 ML設定管理
 
 ML関連のデフォルト設定定数、および設定の永続化、更新、リセット機能を提供します。
-unified_config.ml と同期して動作します。
+設定の正本はこのモジュール内で保持します。
 """
 
 import json
@@ -10,6 +10,8 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
+
+from .ml_config import MLConfig
 
 
 logger = logging.getLogger(__name__)
@@ -46,24 +48,32 @@ class MLConfigManager:
     ML設定管理クラス
 
     設定の永続化、更新、リセット、バリデーション機能を提供します。
-    unified_config.ml と同期して動作します。
+    サービス内の `MLConfig` インスタンスを正本として扱います。
     """
 
     def __init__(self, config_file_path: str = "config/ml_config.json"):
         """初期化"""
         self.config_file_path = Path(config_file_path)
+        self._config = MLConfig()
         if self.config_file_path.exists():
             self.load_config()
 
+    @property
+    def config(self) -> MLConfig:
+        """現在の ML 設定を返します。"""
+        return self._config
+
+    @config.setter
+    def config(self, value: MLConfig) -> None:
+        """現在の ML 設定を差し替えます。"""
+        self._config = value
+
     def get_config_dict(self) -> Dict[str, Any]:
         """設定を辞書形式で取得（エイリアス対応）"""
-        from app.services.ml.common.ml_config import MLConfig
-        from app.config.unified_config import unified_config
-
-        return unified_config.ml.model_dump(by_alias=True)
+        return self.config.model_dump(by_alias=True)
 
     def save_config(self) -> bool:
-        """現在の設定(unified_config.ml)をファイルに保存"""
+        """現在の設定をファイルに保存"""
         try:
             config_dict = self.get_config_dict()
             config_dict["_metadata"] = {
@@ -88,7 +98,7 @@ class MLConfigManager:
             return False
 
     def load_config(self) -> bool:
-        """ファイルから設定を読み込み、unified_config.ml に適用"""
+        """ファイルから設定を読み込み、現在の設定に適用"""
         try:
             if not self.config_file_path.exists():
                 logger.warning(f"設定ファイルが存在しません: {self.config_file_path}")
@@ -123,11 +133,8 @@ class MLConfigManager:
 
     def reset_config(self) -> bool:
         """設定をデフォルト値にリセット"""
-        from app.services.ml.common.ml_config import MLConfig
-        from app.config.unified_config import unified_config
-
         try:
-            unified_config.ml = MLConfig()
+            self.config = MLConfig()
             if self.save_config():
                 logger.info("ML設定をデフォルト値にリセットしました")
                 return True
@@ -151,11 +158,8 @@ class MLConfigManager:
         return res
 
     def _apply_config_dict(self, config_dict: Dict[str, Any]) -> None:
-        """辞書から設定をunified_config.mlに適用"""
-        from app.services.ml.common.ml_config import MLConfig
-        from app.config.unified_config import unified_config
-
-        unified_config.ml = MLConfig(**config_dict)
+        """辞書から設定を現在の設定に適用"""
+        self.config = MLConfig(**config_dict)
 
 
 # グローバルインスタンス

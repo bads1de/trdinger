@@ -12,6 +12,7 @@ from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.config.unified_config import unified_config
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.utils.error_handler import safe_operation
 from app.utils.response import api_response
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -19,7 +20,6 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..historical.historical_data_service import HistoricalDataService
-from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 

@@ -11,10 +11,9 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from app.config.unified_config import unified_config
-
 from ..evaluation.metrics import metrics_collector
 from ..common.utils import get_feature_importance_unified
+from ..common.config import ml_config_manager
 from ..common.exceptions import MLModelError
 
 logger = logging.getLogger(__name__)
@@ -107,11 +106,12 @@ class BaseEnsemble(ABC):
         """ベースモデルを作成"""
         mt = model_type.lower()
         params = {k: v for k, v in (model_params or {}).items() if v is not None}
+        ml_training = ml_config_manager.config.training
         seed = params.pop(
             "random_state",
             params.pop(
                 "random_seed",
-                self.config.get("random_state", unified_config.ml.training.random_state),
+                self.config.get("random_state", ml_training.random_state),
             ),
         )
         n_jobs = params.pop("n_jobs", self.config.get("n_jobs", 1))
@@ -196,7 +196,7 @@ class BaseEnsemble(ABC):
 
             return LogisticRegression(
                 random_state=seed,
-                max_iter=params.pop("max_iter", unified_config.ml.training.lr_max_iter),
+                max_iter=params.pop("max_iter", ml_training.lr_max_iter),
                 solver=params.pop("solver", "lbfgs"),
                 C=params.pop("C", 1.0),
                 penalty=params.pop("penalty", "l2"),

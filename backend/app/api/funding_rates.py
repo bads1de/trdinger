@@ -10,12 +10,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_funding_rate_orchestration_service
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
 from app.utils.error_handler import api_safe_execute, ensure_db_initialized
 from database.connection import get_db
-from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 router = APIRouter(
     prefix="/api/funding-rates", 
@@ -140,6 +140,5 @@ async def bulk_collect_funding_rates(
     return await orchestration_service.collect_bulk_funding_rate_data(
         symbols=symbols, db_session=db
     )
-
 
 

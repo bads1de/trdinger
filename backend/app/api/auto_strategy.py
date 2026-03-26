@@ -13,10 +13,10 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.api.dependencies import (
     get_auto_strategy_service,
 )
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.services.auto_strategy import AutoStrategyService
 from app.utils.error_handler import ErrorHandler
 from app.utils.response import result_response
-from app.config.unified_config import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +189,5 @@ async def stop_experiment(
             )
 
     return await ErrorHandler.safe_execute_async(_stop_experiment)
-
 
 

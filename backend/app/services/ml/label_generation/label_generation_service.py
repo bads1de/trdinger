@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import pandas as pd
 
+from app.services.ml.common.config import ml_config_manager
 from .label_cache import LabelCache
 from app.services.ml.label_generation.signal_generator import SignalGenerator
 from app.utils.error_handler import DataError
@@ -51,9 +52,7 @@ class LabelGenerationService:
         Returns:
             インデックスが同期され、NaN が除去された (特徴量 DataFrame, ラベル Series) のタプル
         """
-        from app.config.unified_config import unified_config
-
-        label_config = unified_config.ml.training.label_generation
+        label_config = ml_config_manager.config.training.label_generation
         label_cache = LabelCache(ohlcv_df)
 
         try:

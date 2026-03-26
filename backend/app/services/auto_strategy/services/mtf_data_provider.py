@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from app.config.unified_config import SUPPORTED_TIMEFRAMES
+from app.config.constants import SUPPORTED_TIMEFRAMES
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_backtest_orchestration_service
-from app.config.unified_config import unified_config
+from app.services.backtest.config import BacktestConfig
 from app.services.backtest.orchestration.backtest_orchestration_service import (
     BacktestOrchestrationService,
 )
@@ -21,6 +21,7 @@ from app.utils.response import ensure_response_dict, extract_response_data, now_
 from database.connection import get_db
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
+_BACKTEST_CONFIG = BacktestConfig()
 
 
 class BacktestResponse(BaseModel):
@@ -44,9 +45,9 @@ class BacktestResultsResponse(BaseModel):
 @router.get("/results", response_model=BacktestResultsResponse)
 async def get_backtest_results(
     limit: int = Query(
-        unified_config.backtest.default_results_limit,
+        _BACKTEST_CONFIG.default_results_limit,
         ge=1,
-        le=unified_config.backtest.max_results_limit,
+        le=_BACKTEST_CONFIG.max_results_limit,
         description="取得件数",
     ),
     offset: int = Query(0, ge=0, description="オフセット"),
@@ -214,6 +215,5 @@ async def get_supported_strategies(
         return await orchestration_service.get_supported_strategies()
 
     return await ErrorHandler.safe_execute_async(_get_strategies)
-
 
 

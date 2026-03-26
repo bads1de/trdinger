@@ -11,18 +11,15 @@ import pytest
 
 from app.config.unified_config import (
     AppConfig,
-    AutoStrategyConfig,
-    BacktestConfig,
     DatabaseConfig,
     LoggingConfig,
     MarketConfig,
-    MLConfig,
-    MLPredictionConfig,
     UnifiedConfig,
 )
-from app.services.auto_strategy.config.ga import (
-    GAConfig as GAConfigRuntime,
-)
+from app.services.auto_strategy.config import AutoStrategyConfig
+from app.services.auto_strategy.config.ga import GAConfig as GAConfigRuntime
+from app.services.backtest.config import BacktestConfig
+from app.services.ml.common.ml_config import MLConfig, MLPredictionConfig
 from app.services.auto_strategy.config.validators import ConfigValidator
 
 
@@ -37,9 +34,6 @@ class TestUnifiedConfig:
         assert config.logging is not None
         assert config.market is not None
         assert config.data_collection is not None
-        assert config.backtest is not None
-        assert config.auto_strategy is not None
-        assert config.ml is not None
 
     def test_singleton_instance_access(self):
         """シングルトンインスタンスへのアクセステスト"""
@@ -63,25 +57,6 @@ class TestUnifiedConfig:
         # Market設定へのアクセス
         assert config.market.default_exchange == "bybit"
         assert "bybit" in config.market.supported_exchanges
-
-    def test_nested_ml_config_access(self):
-        """ネストされたML設定へのアクセステスト"""
-        config = UnifiedConfig()
-
-        # MLConfig内のネストされた設定へのアクセス
-        assert config.ml.data_processing is not None
-        assert config.ml.model is not None
-        assert config.ml.prediction is not None
-        assert config.ml.training is not None
-
-        # ML設定の具体的な値
-        print(
-            f"DEBUG: config.ml.data_processing.max_ohlcv_rows = {config.ml.data_processing.max_ohlcv_rows}"
-        )
-        assert config.ml.data_processing.max_ohlcv_rows == 1000000
-        assert config.ml.model.model_save_path == "models/"
-        assert config.ml.prediction.default_is_valid_prob == 0.5
-        assert config.ml.training.lgb_n_estimators == 100
 
     def test_env_nested_delimiter_support(self):
         """環境変数のネスト区切り文字サポートテスト"""
@@ -110,18 +85,16 @@ class TestUnifiedConfig:
     @patch.dict(
         os.environ,
         {
-            "MARKET_DATA_SANDBOX": "true",
-            "MARKET_DEFAULT_SYMBOL": "ETH/USDT:USDT",
             "AUTO_STRATEGY_POPULATION_SIZE": "100",
+            "AUTO_STRATEGY_GENERATIONS": "30",
         },
     )
     def test_nested_environment_variables(self):
         """ネストされた環境変数の読み込みテスト"""
-        config = UnifiedConfig()
+        config = AutoStrategyConfig()
 
-        assert config.market.sandbox is True
-        assert config.market.default_symbol == "ETH/USDT:USDT"
-        assert config.auto_strategy.population_size == 100
+        assert config.population_size == 100
+        assert config.generations == 30
 
 
 class TestAppConfig:
@@ -317,7 +290,7 @@ class TestConfigIntegration:
     """設定クラス間の統合テスト"""
 
     def test_unified_config_contains_all_subconfigs(self):
-        """UnifiedConfigが全てのサブ設定を含むテスト"""
+        """UnifiedConfigがアプリ共通のサブ設定のみを含むテスト"""
         config = UnifiedConfig()
         required_configs = [
             "app",
@@ -325,20 +298,22 @@ class TestConfigIntegration:
             "logging",
             "market",
             "data_collection",
-            "backtest",
-            "auto_strategy",
-            "ml",
         ]
         for config_name in required_configs:
             assert hasattr(config, config_name)
             assert getattr(config, config_name) is not None
 
-    def test_backtest_uses_market_defaults(self):
-        """BacktestConfigがMarketConfigのデフォルト値を使用できるテスト"""
+        assert not hasattr(config, "backtest")
+        assert not hasattr(config, "auto_strategy")
+        assert not hasattr(config, "ml")
+
+    def test_domain_configs_are_separated(self):
+        """ドメイン固有の設定は各パッケージで独立していることを確認"""
         config = UnifiedConfig()
-        # BacktestConfigがMarketConfigの設定を参照できることを確認
         assert config.market.default_exchange == "bybit"
-        assert config.backtest.default_initial_capital > 0
+        assert BacktestConfig().default_initial_capital > 0
+        assert AutoStrategyConfig().population_size > 0
+        assert MLConfig().training is not None
 
 
 class TestConfigValidation:
