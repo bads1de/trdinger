@@ -12,7 +12,7 @@ from pydantic import ValidationError
 
 # 実装予定のモジュール（まだ存在しない）
 from app.services.backtest.config.backtest_config import (
-    BacktestConfig,
+    BacktestRunConfig,
     StrategyConfig,
     GeneratedGAParameters,
 )
@@ -65,8 +65,8 @@ def test_strategy_config_validation(valid_strategy_config_dict):
 
 
 def test_backtest_config_validation(valid_backtest_config_dict):
-    """BacktestConfigのバリデーションテスト"""
-    config = BacktestConfig(**valid_backtest_config_dict)
+    """BacktestRunConfigのバリデーションテスト"""
+    config = BacktestRunConfig(**valid_backtest_config_dict)
     assert config.strategy_name == "Test Strategy"
     assert config.symbol == "BTC/USDT:USDT"
     # 日付は自動的にdatetimeに変換されるべき
@@ -82,7 +82,7 @@ def test_missing_required_fields():
         # strategy_nameが欠落
     }
     with pytest.raises(ValidationError) as excinfo:
-        BacktestConfig(**invalid_data)
+        BacktestRunConfig(**invalid_data)
 
     assert "strategy_name" in str(excinfo.value)
 
@@ -93,12 +93,12 @@ def test_invalid_data_types(valid_backtest_config_dict):
     invalid_data["initial_capital"] = "invalid_number"  # 数値であるべき場所へ文字列
 
     with pytest.raises(ValidationError):
-        BacktestConfig(**invalid_data)
+        BacktestRunConfig(**invalid_data)
 
 
 def test_serialization(valid_backtest_config_dict):
     """辞書へのシリアライズテスト"""
-    config = BacktestConfig(**valid_backtest_config_dict)
+    config = BacktestRunConfig(**valid_backtest_config_dict)
     data = config.model_dump()
 
     assert data["strategy_name"] == "Test Strategy"

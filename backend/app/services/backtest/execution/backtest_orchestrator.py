@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import pandas as pd
 from pydantic import ValidationError
 
-from ..config.backtest_config import BacktestConfig, BacktestConfigValidationError
+from ..config.backtest_config import BacktestRunConfig, BacktestRunConfigValidationError
 from ..services.backtest_data_service import BacktestDataService
 from ..conversion.backtest_result_converter import (
     BacktestResultConversionError,
@@ -67,14 +67,14 @@ class BacktestOrchestrator:
                 # バリデーションスキップ（GAなど信頼できる内部呼び出し用）
                 # model_constructでバリデーションをスキップしつつPydanticモデルインスタンスを取得
                 # 呼出し側でstart_date/end_dateはdatetime変換済みである前提
-                backtest_config = BacktestConfig.model_construct(**config)
+                backtest_config = BacktestRunConfig.model_construct(**config)
                 strategy_config_dict = config["strategy_config"]
             else:
                 # 1. 設定の検証とモデル変換 (Pydantic)
                 try:
-                    backtest_config = BacktestConfig(**config)
+                    backtest_config = BacktestRunConfig(**config)
                 except ValidationError as e:
-                    raise BacktestConfigValidationError(f"設定が無効です: {e}")
+                    raise BacktestRunConfigValidationError(f"設定が無効です: {e}")
 
                 # 2. 戦略クラス取得または生成
                 # StrategyClassFactoryはまだ辞書を期待しているため、一部辞書に戻す
@@ -131,7 +131,7 @@ class BacktestOrchestrator:
             return result
 
         except (
-            BacktestConfigValidationError,
+            BacktestRunConfigValidationError,
             StrategyClassCreationError,
             BacktestExecutionError,
             BacktestResultConversionError,

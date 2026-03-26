@@ -7,94 +7,41 @@
 import importlib as _importlib
 import sys as _sys
 
-from .engine.deap_setup import DEAPSetup
-from .engine.evolution_runner import EvolutionRunner
-from .engine.ga_engine import GeneticAlgorithmEngine
-from .engine.ga_engine_factory import GeneticAlgorithmEngineFactory
-from .engine.ga_utils import crossover_strategy_genes, mutate_strategy_gene
-from .evaluation.condition_evaluator import ConditionEvaluator
-from .evaluation.evaluation_strategies import EvaluationStrategy
-from .evaluation.evaluator_wrapper import EvaluatorWrapper
-from .evaluation.individual_evaluator import IndividualEvaluator
-from .evaluation.parallel_evaluator import ParallelEvaluator
-from .fitness.fitness_calculator import FitnessCalculator
-from .fitness.fitness_sharing import FitnessSharing
-from .hybrid.hybrid_feature_adapter import HybridFeatureAdapter, WaveletFeatureTransformer
-from .hybrid.hybrid_individual_evaluator import HybridIndividualEvaluator
-from .hybrid.hybrid_predictor import HybridPredictor
-from .strategy.operand_grouping import OperandGroup, OperandGroupingSystem, operand_grouping_system
+_ATTRIBUTE_EXPORTS = {
+    "DEAPSetup": ".engine.deap_setup",
+    "EvolutionRunner": ".engine.evolution_runner",
+    "GeneticAlgorithmEngine": ".engine.ga_engine",
+    "GeneticAlgorithmEngineFactory": ".engine.ga_engine_factory",
+    "crossover_strategy_genes": ".engine.ga_utils",
+    "mutate_strategy_gene": ".engine.ga_utils",
+    "ConditionEvaluator": ".evaluation.condition_evaluator",
+    "EvaluationStrategy": ".evaluation.evaluation_strategies",
+    "EvaluatorWrapper": ".evaluation.evaluator_wrapper",
+    "IndividualEvaluator": ".evaluation.individual_evaluator",
+    "ParallelEvaluator": ".evaluation.parallel_evaluator",
+    "FitnessCalculator": ".fitness.fitness_calculator",
+    "FitnessSharing": ".fitness.fitness_sharing",
+    "HybridFeatureAdapter": ".hybrid.hybrid_feature_adapter",
+    "WaveletFeatureTransformer": ".hybrid.hybrid_feature_adapter",
+    "HybridIndividualEvaluator": ".hybrid.hybrid_individual_evaluator",
+    "HybridPredictor": ".hybrid.hybrid_predictor",
+    "OperandGroup": ".strategy.operand_grouping",
+    "OperandGroupingSystem": ".strategy.operand_grouping",
+    "operand_grouping_system": ".strategy.operand_grouping",
+}
+
+
+def _load_export(name: str):
+    module = _importlib.import_module(_ATTRIBUTE_EXPORTS[name], __name__)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
 
 
 def __getattr__(name: str):
     """遅延インポートで循環インポートを回避"""
-    if name in ("DEAPSetup",):
-        from .engine.deap_setup import DEAPSetup
-
-        return DEAPSetup
-    if name in ("EvolutionRunner",):
-        from .engine.evolution_runner import EvolutionRunner
-
-        return EvolutionRunner
-    if name in ("GeneticAlgorithmEngine",):
-        from .engine.ga_engine import GeneticAlgorithmEngine
-
-        return GeneticAlgorithmEngine
-    if name in ("GeneticAlgorithmEngineFactory",):
-        from .engine.ga_engine_factory import GeneticAlgorithmEngineFactory
-
-        return GeneticAlgorithmEngineFactory
-    if name in ("crossover_strategy_genes", "mutate_strategy_gene"):
-        from .engine.ga_utils import crossover_strategy_genes, mutate_strategy_gene
-
-        return {"crossover_strategy_genes": crossover_strategy_genes, "mutate_strategy_gene": mutate_strategy_gene}[name]
-    if name in ("ConditionEvaluator",):
-        from .evaluation.condition_evaluator import ConditionEvaluator
-
-        return ConditionEvaluator
-    if name in ("EvaluationStrategy",):
-        from .evaluation.evaluation_strategies import EvaluationStrategy
-
-        return EvaluationStrategy
-    if name in ("EvaluatorWrapper",):
-        from .evaluation.evaluator_wrapper import EvaluatorWrapper
-
-        return EvaluatorWrapper
-    if name in ("IndividualEvaluator",):
-        from .evaluation.individual_evaluator import IndividualEvaluator
-
-        return IndividualEvaluator
-    if name in ("ParallelEvaluator",):
-        from .evaluation.parallel_evaluator import ParallelEvaluator
-
-        return ParallelEvaluator
-    if name in ("FitnessCalculator",):
-        from .fitness.fitness_calculator import FitnessCalculator
-
-        return FitnessCalculator
-    if name in ("FitnessSharing",):
-        from .fitness.fitness_sharing import FitnessSharing
-
-        return FitnessSharing
-    if name in ("HybridFeatureAdapter", "WaveletFeatureTransformer"):
-        from .hybrid.hybrid_feature_adapter import HybridFeatureAdapter, WaveletFeatureTransformer
-
-        return {"HybridFeatureAdapter": HybridFeatureAdapter, "WaveletFeatureTransformer": WaveletFeatureTransformer}[name]
-    if name in ("HybridIndividualEvaluator",):
-        from .hybrid.hybrid_individual_evaluator import HybridIndividualEvaluator
-
-        return HybridIndividualEvaluator
-    if name in ("HybridPredictor",):
-        from .hybrid.hybrid_predictor import HybridPredictor
-
-        return HybridPredictor
-    if name in ("OperandGroup", "OperandGroupingSystem", "operand_grouping_system"):
-        from .strategy.operand_grouping import OperandGroup, OperandGroupingSystem, operand_grouping_system
-
-        return {
-            "OperandGroup": OperandGroup,
-            "OperandGroupingSystem": OperandGroupingSystem,
-            "operand_grouping_system": operand_grouping_system,
-        }[name]
+    if name in _ATTRIBUTE_EXPORTS:
+        return _load_export(name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

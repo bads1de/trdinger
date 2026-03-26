@@ -9,18 +9,22 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from app.config.unified_config import SUPPORTED_TIMEFRAMES, unified_config
+from app.config.constants import SUPPORTED_TIMEFRAMES
 
 
 VALID_TIMEFRAMES = SUPPORTED_TIMEFRAMES
 
 
-class BacktestConfigValidationError(Exception):
+class BacktestRunConfigValidationError(Exception):
     """バックテスト設定検証エラー"""
 
     def __init__(self, message: str, errors: Optional[List[str]] = None):
         super().__init__(message)
         self.errors = errors or []
+
+
+# 後方互換性エイリアス
+BacktestConfigValidationError = BacktestRunConfigValidationError
 
 
 class GeneratedGAParameters(BaseModel):
@@ -51,9 +55,9 @@ class StrategyConfig(BaseModel):
         return v
 
 
-class BacktestConfig(BaseModel):
+class BacktestRunConfig(BaseModel):
     """
-    バックテスト実行設定
+    バックテスト実行設定（APIリクエストスキーマ）
 
     これまで辞書で受け渡されていた設定を型安全に定義します。
     """
@@ -65,7 +69,7 @@ class BacktestConfig(BaseModel):
     end_date: datetime
     initial_capital: float = Field(..., gt=0)
     commission_rate: float = Field(
-        default=unified_config.backtest.default_commission_rate, ge=0, le=1
+        default=0.001, ge=0, le=1
     )
     slippage: float = Field(0.0, ge=0)
     leverage: float = Field(1.0, ge=1.0)
@@ -97,7 +101,7 @@ class BacktestConfig(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def validate_dates(self) -> "BacktestConfig":
+    def validate_dates(self) -> "BacktestRunConfig":
         """日付の整合性を検証"""
         errors: List[str] = []
 
@@ -114,3 +118,7 @@ class BacktestConfig(BaseModel):
             )
 
         return self
+
+
+# 後方互換性エイリアス
+BacktestConfig = BacktestRunConfig

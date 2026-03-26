@@ -57,6 +57,7 @@ class MLConfigManager:
 
     def get_config_dict(self) -> Dict[str, Any]:
         """設定を辞書形式で取得（エイリアス対応）"""
+        from app.services.ml.common.ml_config import MLConfig
         from app.config.unified_config import unified_config
 
         return unified_config.ml.model_dump(by_alias=True)
@@ -122,7 +123,8 @@ class MLConfigManager:
 
     def reset_config(self) -> bool:
         """設定をデフォルト値にリセット"""
-        from app.config.unified_config import MLConfig, unified_config
+        from app.services.ml.common.ml_config import MLConfig
+        from app.config.unified_config import unified_config
 
         try:
             unified_config.ml = MLConfig()
@@ -150,7 +152,8 @@ class MLConfigManager:
 
     def _apply_config_dict(self, config_dict: Dict[str, Any]) -> None:
         """辞書から設定をunified_config.mlに適用"""
-        from app.config.unified_config import MLConfig, unified_config
+        from app.services.ml.common.ml_config import MLConfig
+        from app.config.unified_config import unified_config
 
         unified_config.ml = MLConfig(**config_dict)
 

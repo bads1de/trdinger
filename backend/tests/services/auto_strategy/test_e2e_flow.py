@@ -143,7 +143,7 @@ class TestE2EFlow:
         manager = ExperimentManager(mock_backtest_service, mock_persistence_service)
 
         # GAエンジン初期化
-        manager.initialize_ga_engine(ga_config)
+        manager.initialize_ga_engine(ga_config, experiment_id)
 
         # インジケーター生成をモック化（パラメータ生成エラー回避のため）
         from app.services.auto_strategy.genes import IndicatorGene

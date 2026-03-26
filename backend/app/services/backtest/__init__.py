@@ -11,6 +11,8 @@ import sys as _sys
 from .config import (
     BacktestConfig,
     BacktestConfigValidationError,
+    BacktestRunConfig,
+    BacktestRunConfigValidationError,
     StrategyConfig,
     SUPPORTED_STRATEGIES,
 )
@@ -30,6 +32,8 @@ for _alias, _target in _module_aliases.items():
 
 __all__ = [
     "BacktestConfig",
+    "BacktestRunConfig",
+    "BacktestRunConfigValidationError",
     "BacktestConfigValidationError",
     "StrategyConfig",
     "SUPPORTED_STRATEGIES",

@@ -32,12 +32,6 @@ class DictConverter:
     再帰的な変換を管理します。
     """
 
-    def __init__(self):
-        """
-        初期化
-        """
-        pass
-
     def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """
         戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換
@@ -570,152 +564,17 @@ class DictConverter:
             raise ValueError(f"StatefulConditionの復元に失敗: {e}")
 
 
-class GeneSerializer:
+class GeneSerializer(DictConverter):
     """
-    戦略遺伝子のシリアライゼーションを統括するサービス
+    戦略遺伝子のシリアライゼーション補助クラス
 
-    `DictConverter` を内部で使用し、`StrategyGene` オブジェクトと
-    辞書形式、または JSON 文字列との間の相互変換インターフェースを提供します。
+    辞書変換は `DictConverter` を継承して直接提供し、JSON 変換と
+    DEAP 個体のリスト復元だけを追加します。
     """
 
     def __init__(self):
-        """
-        初期化
-        """
-        self.dict_converter = DictConverter()
-
-    def strategy_gene_to_dict(self, strategy_gene) -> Dict[str, Any]:
-        """
-        戦略遺伝子を辞書形式に変換します。
-
-        Args:
-            strategy_gene: 変換対象のStrategyGene
-
-        Returns:
-            辞書形式のデータ
-        """
-        return self.dict_converter.strategy_gene_to_dict(strategy_gene)
-
-    def indicator_gene_to_dict(self, indicator_gene) -> Dict[str, Any]:
-        """
-        指標遺伝子を辞書形式に変換します。
-
-        Args:
-            indicator_gene: 変換対象のIndicatorGene
-
-        Returns:
-            辞書形式のデータ
-        """
-        return self.dict_converter.indicator_gene_to_dict(indicator_gene)
-
-    def dict_to_indicator_gene(self, data: Dict[str, Any]):
-        """
-        辞書形式から指標遺伝子を復元します。
-
-        Args:
-            data: 辞書形式の指標データ
-
-        Returns:
-            復元されたIndicatorGene
-        """
-        return self.dict_converter.dict_to_indicator_gene(data)
-
-    def condition_to_dict(self, condition) -> Dict[str, Any]:
-        """
-        条件を辞書形式に変換します。
-
-        Args:
-            condition: 変換対象のCondition
-
-        Returns:
-            辞書形式のデータ
-        """
-        return self.dict_converter.condition_to_dict(condition)
-
-    def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
-        """
-        Condition または ConditionGroup を辞書に変換します。
-
-        Args:
-            obj: 変換対象のCondition/ConditionGroup
-
-        Returns:
-            辞書形式のデータ
-        """
-        return self.dict_converter.condition_or_group_to_dict(obj)
-
-    def tpsl_gene_to_dict(self, tpsl_gene):
-        """
-        TP/SL遺伝子を辞書形式に変換します。
-
-        Args:
-            tpsl_gene: 変換対象のTPSLGene
-
-        Returns:
-            辞書形式のデータ
-        """
-        return self.dict_converter.tpsl_gene_to_dict(tpsl_gene)
-
-    def dict_to_tpsl_gene(self, data: Dict[str, Any]):
-        """
-        辞書形式からTP/SL遺伝子を復元します。
-
-        Args:
-            data: 辞書形式のTP/SLデータ
-
-        Returns:
-            復元されたTPSLGene
-        """
-        return self.dict_converter.dict_to_tpsl_gene(data)
-
-    def position_sizing_gene_to_dict(self, position_sizing_gene):
-        """
-        ポジションサイジング遺伝子を辞書形式に変換します。
-
-        Args:
-            position_sizing_gene: 変換対象のPositionSizingGene
-
-        Returns:
-            辞書形式のデータ
-        """
-        return self.dict_converter.position_sizing_gene_to_dict(position_sizing_gene)
-
-    def dict_to_position_sizing_gene(self, data: Dict[str, Any]):
-        """
-        辞書形式からポジションサイジング遺伝子を復元します。
-
-        Args:
-            data: 辞書形式のポジションサイジングデータ
-
-        Returns:
-            復元されたPositionSizingGene
-        """
-        return self.dict_converter.dict_to_position_sizing_gene(data)
-
-    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class):
-        """
-        辞書形式から戦略遺伝子を復元します。
-
-        Args:
-            data: 辞書形式の戦略遺伝子データ
-            strategy_gene_class: 復元に使用するクラス
-
-        Returns:
-            復元されたStrategyGene
-        """
-        return self.dict_converter.dict_to_strategy_gene(data, strategy_gene_class)
-
-    def dict_to_condition(self, data: Dict[str, Any]):
-        """
-        辞書形式から条件を復元します。
-
-        Args:
-            data: 辞書形式の条件データ
-
-        Returns:
-            復元されたCondition
-        """
-        return self.dict_converter.dict_to_condition(data)
+        """後方互換のために self を dict_converter として公開します。"""
+        self.dict_converter = self
 
     def from_list(self, individual_list: list, strategy_gene_class: Any):
         """
@@ -747,8 +606,6 @@ class GeneSerializer:
 
         return None
 
-    # JSON変換機能（JsonConverterを廃止してここに統合）
-
     def strategy_gene_to_json(self, strategy_gene) -> str:
         """
         戦略遺伝子をJSON文字列に変換
@@ -760,7 +617,7 @@ class GeneSerializer:
             JSON文字列
         """
         try:
-            data = self.dict_converter.strategy_gene_to_dict(strategy_gene)
+            data = self.strategy_gene_to_dict(strategy_gene)
             return json.dumps(data, ensure_ascii=False, indent=2)
         except Exception as e:
             logger.error(f"戦略遺伝子JSON変換エラー: {e}")
@@ -779,7 +636,7 @@ class GeneSerializer:
         """
         try:
             data = json.loads(json_str)
-            return self.dict_converter.dict_to_strategy_gene(data, strategy_gene_class)
+            return self.dict_to_strategy_gene(data, strategy_gene_class)
         except Exception as e:
             logger.error(f"戦略遺伝子JSON復元エラー: {e}")
             raise ValueError(f"戦略遺伝子のJSON復元に失敗: {e}")

@@ -38,8 +38,6 @@ class ExperimentManager:
         """初期化"""
         self.backtest_service = backtest_service
         self.persistence_service = persistence_service
-        self.ga_engine: Optional["GeneticAlgorithmEngine"] = None
-        self._current_experiment_id: Optional[str] = None
 
     def run_experiment(
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
@@ -59,11 +57,12 @@ class ExperimentManager:
 
         @safe_operation(context=f"GA実験実行 ({experiment_id})", is_api_call=False)
         def _execute():
-            if not self.ga_engine:
-                raise RuntimeError("GAエンジンが初期化されていません。")
+            engine = self._get_active_engine(experiment_id)
+            if not engine:
+                raise RuntimeError(
+                    f"GAエンジンが初期化されていません: {experiment_id}"
+                )
 
-            self._register_active_engine(experiment_id, self.ga_engine)
-            self._current_experiment_id = experiment_id
             run_backtest_config = backtest_config.copy()
             run_backtest_config["experiment_id"] = experiment_id
 
@@ -71,9 +70,9 @@ class ExperimentManager:
                 logger.info(f"GA実行開始: {experiment_id}")
 
                 # GA実行
-                result = self.ga_engine.run_evolution(ga_config, run_backtest_config)
+                result = engine.run_evolution(ga_config, run_backtest_config)
 
-                if self.ga_engine.is_stop_requested() is True:
+                if engine.is_stop_requested() is True:
                     logger.info(
                         f"GA実行は停止要求により中断されました: {experiment_id}"
                     )
@@ -85,7 +84,7 @@ class ExperimentManager:
                     experiment_id, result, ga_config, run_backtest_config
                 )
 
-                if self.ga_engine.is_stop_requested() is True:
+                if engine.is_stop_requested() is True:
                     logger.info(
                         f"GA実行は結果保存後に停止要求を検知しました: {experiment_id}"
                     )
@@ -100,27 +99,28 @@ class ExperimentManager:
                 logger.info(f"GA実行停止を検知しました: {experiment_id}")
                 self.persistence_service.stop_experiment(experiment_id)
             finally:
-                self.release_experiment(experiment_id, self.ga_engine)
+                self.release_experiment(experiment_id, engine)
 
         try:
             _execute()
         except Exception as e:
             logger.error(f"実験実行エラー ({experiment_id}): {e}")
             self.persistence_service.fail_experiment(experiment_id)
-            self.release_experiment(experiment_id, self.ga_engine)
+            self.release_experiment(experiment_id)
 
     def initialize_ga_engine(
         self, ga_config: GAConfig, experiment_id: Optional[str] = None
-    ):
+    ) -> "GeneticAlgorithmEngine":
         """GAエンジンを初期化（Factoryを使用）"""
         from ..core.ga_engine_factory import GeneticAlgorithmEngineFactory
 
-        self.ga_engine = GeneticAlgorithmEngineFactory.create_engine(
+        engine = GeneticAlgorithmEngineFactory.create_engine(
             self.backtest_service, ga_config
         )
-        self._current_experiment_id = experiment_id
         if experiment_id:
-            self._register_active_engine(experiment_id, self.ga_engine)
+            self._register_active_engine(experiment_id, engine)
+
+        return engine
 
     def stop_experiment(self, experiment_id: str) -> bool:
         """
@@ -133,11 +133,6 @@ class ExperimentManager:
             停止処理が受け付けられた場合はTrue
         """
         engine = self._get_active_engine(experiment_id)
-        if engine is None and self.ga_engine and (
-            self._current_experiment_id is None
-            or self._current_experiment_id == experiment_id
-        ):
-            engine = self.ga_engine
 
         if engine:
             engine.stop_evolution()
@@ -162,11 +157,7 @@ class ExperimentManager:
         engine: Optional["GeneticAlgorithmEngine"] = None,
     ) -> None:
         """実験の実行コンテキストをレジストリから解放します。"""
-        should_clear_local_engine = self._current_experiment_id == experiment_id
         self._release_active_engine(experiment_id, engine)
-        if should_clear_local_engine:
-            self._current_experiment_id = None
-            self.ga_engine = None
 
     @classmethod
     def _register_active_engine(

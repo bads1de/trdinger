@@ -15,7 +15,7 @@ from app.services.backtest.services.backtest_service import BacktestService
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
-from app.services.backtest.config.backtest_config import BacktestConfig, BacktestConfigValidationError
+from app.services.backtest.config.backtest_config import BacktestRunConfig, BacktestRunConfigValidationError
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -168,7 +168,7 @@ class TestBacktestSystemComprehensive:
         """設定検証成功のテスト"""
         # 有効な設定
         try:
-            BacktestConfig(**sample_config)
+            BacktestRunConfig(**sample_config)
             assert True  # 検証成功
         except Exception:
             assert False  # 検証失敗
@@ -187,7 +187,7 @@ class TestBacktestSystemComprehensive:
         }
 
         try:
-            BacktestConfig(**invalid_config)
+            BacktestRunConfig(**invalid_config)
             assert False  # 例外が発生すべき
         except Exception:
             assert True  # 期待通りエラー
@@ -200,7 +200,7 @@ class TestBacktestSystemComprehensive:
         }
 
         try:
-            BacktestConfig(**incomplete_config)
+            BacktestRunConfig(**incomplete_config)
             assert False  # 例外が発生すべき
         except Exception:
             assert True  # 期待通りエラー
@@ -413,7 +413,7 @@ class TestBacktestSystemComprehensive:
         }
 
         try:
-            BacktestConfig(**valid_strategy_config)
+            BacktestRunConfig(**valid_strategy_config)
             assert True  # 検証成功
         except Exception:
             assert False  # 検証失敗

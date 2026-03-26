@@ -16,7 +16,7 @@ from typing import (
 from cachetools import LRUCache
 from pydantic import ValidationError
 
-from app.services.backtest.config.backtest_config import BacktestConfig
+from app.services.backtest.config.backtest_config import BacktestRunConfig
 from app.services.backtest.services.backtest_service import BacktestService
 
 from app.services.auto_strategy.config import GAConfig
@@ -91,7 +91,7 @@ class IndividualEvaluator:
         try:
             # モデル変換を試行してバリデーション（型変換などもここで行われる）
             # ここでの目的は必須フィールドの欠落を早期検知すること
-            BacktestConfig(**temp_config)
+            BacktestRunConfig(**temp_config)
         except ValidationError as e:
             logger.warning(f"バックテスト設定の初期バリデーション警告: {e}")
             # ここでは警告に留める
