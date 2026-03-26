@@ -6,8 +6,7 @@ Auto Strategy Config モジュール
 
 モジュール構成:
 - base.py: BaseConfig 基底クラス
-- constants.py: 共通定数・Enum（GA固有定数は ga_constants.py からre-export）
-- ga_constants.py: GA固有の定数定義
+- constants.py: 共通定数・Enum・GA固有定数を統合
 - ga.py: GAConfig ランタイム設定（dataclass）
 - auto_strategy_settings.py: AutoStrategyConfig 環境変数設定（pydantic）
 - trading_settings.py: TradingSettings 取引基本設定

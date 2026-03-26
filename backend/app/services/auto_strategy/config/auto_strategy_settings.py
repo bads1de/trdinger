@@ -14,7 +14,7 @@ from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .ga_constants import GA_DEFAULT_CONFIG
+from .constants import GA_DEFAULT_CONFIG
 
 
 class AutoStrategyConfig(BaseSettings):

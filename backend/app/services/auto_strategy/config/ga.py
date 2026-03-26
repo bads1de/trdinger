@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, cast
 from app.utils.serialization import dataclass_to_dict
 
 from .base import BaseConfig
-from .ga_constants import (
+from .constants import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,

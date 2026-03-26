@@ -10,7 +10,6 @@ from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Dict
 
 from app.utils.serialization import (
-    dataclass_from_dict as _from_dict,
     dataclass_from_json,
     dataclass_to_dict,
     dataclass_to_json,
