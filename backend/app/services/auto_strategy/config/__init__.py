@@ -3,6 +3,18 @@ Auto Strategy Config モジュール
 
 オートストラテジーの全ての設定クラスを提供します。
 重い依存（pandas_ta_classic等）を避けるため、設定クラスは遅延インポートします。
+
+モジュール構成:
+- base.py: BaseConfig 基底クラス
+- constants.py: 共通定数・Enum（GA固有定数は ga_constants.py からre-export）
+- ga_constants.py: GA固有の定数定義
+- ga.py: GAConfig ランタイム設定（dataclass）
+- auto_strategy_settings.py: AutoStrategyConfig 環境変数設定（pydantic）
+- trading_settings.py: TradingSettings 取引基本設定
+- indicator_settings.py: IndicatorSettings テクニカル指標設定
+- tpsl_settings.py: TPSLSettings TP/SL設定
+- position_sizing_settings.py: PositionSizingSettings ポジションサイジング設定
+- validators.py: ConfigValidator バリデーション
 """
 
 # 基底クラス（軽量、依存なし）

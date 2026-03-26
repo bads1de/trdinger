@@ -6,7 +6,6 @@
 
 from .backtest_settings import BacktestConfig
 from .backtest_config import (
-    BacktestConfigValidationError,
     BacktestRunConfig,
     BacktestRunConfigValidationError,
     GeneratedGAParameters,
@@ -18,7 +17,6 @@ __all__ = [
     "BacktestConfig",
     "BacktestRunConfig",
     "BacktestRunConfigValidationError",
-    "BacktestConfigValidationError",
     "GeneratedGAParameters",
     "StrategyConfig",
     "SUPPORTED_STRATEGIES",

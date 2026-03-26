@@ -2,22 +2,22 @@ import os
 import sys
 from pathlib import Path
 
-# Ensure the backend directory is on sys.path so that 'app' package can be imported
+# 'app' パッケージをインポートできるように、backend ディレクトリを sys.path に追加する
 BACKEND_DIR = os.path.abspath(os.path.dirname(__file__))
 REPO_ROOT = os.path.abspath(os.path.join(BACKEND_DIR, os.pardir))
 if BACKEND_DIR not in sys.path:
     sys.path.insert(0, BACKEND_DIR)
 
-# Change working directory to BACKEND_DIR for relative imports
+# 相対インポートのために作業ディレクトリを BACKEND_DIR に変更する
 os.chdir(BACKEND_DIR)
 
-# Allow importing from current directory
+# カレントディレクトリからのインポートを許可する
 if "." not in sys.path:
     sys.path.insert(0, ".")
 
 
 def _is_inside_repo(path: str) -> bool:
-    """Return True when a path resolves inside the repository root."""
+    """指定されたパスがリポジトリルート内に解決される場合に True を返す。"""
     try:
         return os.path.commonpath([os.path.abspath(path), REPO_ROOT]) == REPO_ROOT
     except ValueError:
@@ -25,7 +25,7 @@ def _is_inside_repo(path: str) -> bool:
 
 
 def _default_temp_dir() -> str:
-    """Prefer the user's normal temp directory outside the repository."""
+    """リポジトリ外の通常の一時ディレクトリを優先的に使用する。"""
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         return os.path.join(local_app_data, "Temp")
@@ -36,7 +36,7 @@ def _default_temp_dir() -> str:
 _safe_temp_dir = _default_temp_dir()
 os.makedirs(_safe_temp_dir, exist_ok=True)
 
-# Keep test collection stable even if the shell exports a non-boolean DEBUG value.
+# シェルがブール値以外の DEBUG 値を export していても、テスト収集を安定させる。
 os.environ["DEBUG"] = "false"
 
 for _temp_var in ("TEMP", "TMP", "TMPDIR"):

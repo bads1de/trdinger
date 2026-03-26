@@ -148,7 +148,6 @@ class ParallelEvaluator:
 
         population_size = len(population)
         results: List[Optional[Tuple[float, ...]]] = [None] * population_size
-        index_map = {id(ind): i for i, ind in enumerate(population)}
 
         executor_type = "Process" if self.use_process_pool else "Thread"
         # Executorが起動していない場合は一時的に起動するか、都度作成モードで動作させる
@@ -169,14 +168,14 @@ class ParallelEvaluator:
             self.start()
             try:
                 results = self._evaluate_on_executor(
-                    self._executor, population, results, index_map, default_fitness
+                    self._executor, population, results, default_fitness
                 )
             finally:
                 self.shutdown()
         else:
             # 永続的なExecutorを使用
             results = self._evaluate_on_executor(
-                self._executor, population, results, index_map, default_fitness
+                self._executor, population, results, default_fitness
             )
 
         # Noneが残っている場合はデフォルト値で埋める
@@ -194,7 +193,6 @@ class ParallelEvaluator:
         executor,
         population: List[Any],
         results: List[Optional[Tuple[float, ...]]],
-        index_map: dict,
         default_fitness: Tuple[float, ...],
     ) -> List[Optional[Tuple[float, ...]]]:
         """
@@ -204,7 +202,6 @@ class ParallelEvaluator:
             executor: ProcessPoolExecutor または ThreadPoolExecutor
             population: 評価対象の個体リスト
             results: 結果格納用リスト
-            index_map: 個体IDマップ
             default_fitness: デフォルト値
 
         Returns:
@@ -262,18 +259,6 @@ class ParallelEvaluator:
                 future.cancel()
 
         return results
-
-    def _evaluate_single(self, individual: Any) -> Tuple[float, ...]:
-        """
-        単一個体の評価を実行
-
-        Args:
-            individual: 評価対象の個体
-
-        Returns:
-            適応度（フィットネス）のタプル
-        """
-        return self.evaluate_func(individual)
 
     def _categorize_error(self, error: Exception, index: int) -> str:
         """

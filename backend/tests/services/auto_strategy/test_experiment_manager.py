@@ -5,6 +5,7 @@ ExperimentManagerのテスト
 from unittest.mock import MagicMock, Mock, patch
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.services.experiment_manager import ExperimentManager
 
 
@@ -60,16 +61,40 @@ class TestExperimentManager:
             "timeframe": "1h",
             "start_date": "2024-01-01",
             "end_date": "2024-12-19",
+            "initial_capital": 10000,
         }
 
+        experiment_info = {
+            "db_id": 7,
+            "name": "AUTO_STRATEGY_GA_2024-01-02_TEST_RUN_",
+            "status": "running",
+            "config": {"experiment_id": "test_exp_001"},
+        }
+        self.manager.persistence_service.get_experiment_info.return_value = (
+            experiment_info
+        )
+
+        strategy = StrategyGene(id="abcdef123456")
         mock_ga_engine = MagicMock()
-        mock_ga_engine.run_evolution.return_value = {"winning_individuals": []}
+        mock_ga_engine.run_evolution.return_value = {
+            "best_strategy": strategy,
+            "best_fitness": 1.5,
+            "all_strategies": [strategy],
+            "fitness_scores": [1.5],
+        }
         mock_ga_engine.is_stop_requested.return_value = False
         with patch(
             "app.services.auto_strategy.core.engine.ga_engine_factory.GeneticAlgorithmEngineFactory.create_engine",
             return_value=mock_ga_engine,
         ):
             self.manager.initialize_ga_engine(ga_config, "test_exp_001")
+
+        self.mock_backtest_service.run_backtest.return_value = {
+            "performance_metrics": {"total_return": 0.1},
+            "equity_curve": [],
+            "trade_history": [],
+            "execution_time": 0.25,
+        }
 
         self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
 
@@ -82,13 +107,28 @@ class TestExperimentManager:
         )
         self.manager.persistence_service.save_experiment_result.assert_called_once_with(
             "test_exp_001",
-            {"winning_individuals": []},
+            {
+                "best_strategy": strategy,
+                "best_fitness": 1.5,
+                "all_strategies": [strategy],
+                "fitness_scores": [1.5],
+            },
             ga_config,
             expected_backtest_config,
+            experiment_info=experiment_info,
         )
+        self.manager.persistence_service.save_backtest_result.assert_called_once()
+        saved_backtest_result = (
+            self.manager.persistence_service.save_backtest_result.call_args.args[0]
+        )
+        assert saved_backtest_result["strategy_name"] == "AS_GA_240102_abcdef"
+        assert saved_backtest_result["config_json"]["experiment_id"] == "test_exp_001"
+        assert saved_backtest_result["config_json"]["db_experiment_id"] == 7
+        assert saved_backtest_result["config_json"]["fitness_score"] == 1.5
         self.manager.persistence_service.complete_experiment.assert_called_once_with(
             "test_exp_001"
         )
+        self.mock_backtest_service.run_backtest.assert_called_once()
         assert ExperimentManager._get_active_engine("test_exp_001") is None
 
     def test_run_experiment_exception(self):

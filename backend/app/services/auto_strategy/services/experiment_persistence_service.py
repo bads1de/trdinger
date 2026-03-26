@@ -4,13 +4,11 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 """
 
 import logging
-import re
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
-from app.services.backtest.services.backtest_service import BacktestService
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
@@ -18,7 +16,6 @@ from database.repositories.generated_strategy_repository import (
 )
 
 from ..config import GAConfig
-from ..genes import StrategyGene
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +25,14 @@ class ExperimentPersistenceService:
     実験永続化サービス
     """
 
-    def __init__(self, db_session_factory, backtest_service: BacktestService):
+    def __init__(self, db_session_factory):
         """
         初期化
 
         Args:
             db_session_factory: DBセッションファクトリ
-            backtest_service: バックテストサービス
         """
         self.db_session_factory = db_session_factory
-        self.backtest_service = backtest_service
         self.serializer = GeneSerializer()
 
     def create_experiment(
@@ -74,18 +69,23 @@ class ExperimentPersistenceService:
         result: Dict[str, Any],
         ga_config: GAConfig,
         backtest_config: Dict[str, Any],
-    ):
+        experiment_info: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """実験結果をデータベースに保存"""
-        experiment_info = self.get_experiment_info(experiment_id)
+        if not isinstance(experiment_info, dict):
+            experiment_info = self.get_experiment_info(experiment_id)
+
         if not experiment_info:
             logger.error(f"実験情報が見つかりません: {experiment_id}")
             return
 
         logger.info(f"実験結果保存開始: {experiment_id}")
 
+        # backtest_config は互換性のために受け取るが、この保存処理では使わない。
+
         with self.db_session_factory() as db:
-            self._save_best_strategy_and_run_detailed_backtest(
-                db, experiment_id, experiment_info, result, ga_config, backtest_config
+            self._save_best_strategy(
+                db, experiment_id, experiment_info, result, ga_config
             )
             self._save_other_strategies(db, experiment_info, result, ga_config)
 
@@ -94,18 +94,27 @@ class ExperimentPersistenceService:
 
         logger.info(f"実験結果保存完了: {experiment_id}")
 
-    def _save_best_strategy_and_run_detailed_backtest(
+    def save_backtest_result(self, result_data: Dict[str, Any]) -> None:
+        """詳細バックテスト結果をデータベースに保存"""
+        if not result_data:
+            logger.warning("保存対象のバックテスト結果がありません")
+            return
+
+        with self.db_session_factory() as db:
+            backtest_result_repo = BacktestResultRepository(db)
+            backtest_result_repo.save_backtest_result(result_data)
+            logger.info("最良戦略のバックテスト結果を保存しました。")
+
+    def _save_best_strategy(
         self,
         db: Session,
         experiment_id: str,
         experiment_info: Dict[str, Any],
         result: Dict[str, Any],
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
     ):
-        """最良戦略を保存し、詳細なバックテストを実行して結果を保存する"""
+        """最良戦略を保存する"""
         generated_strategy_repo = GeneratedStrategyRepository(db)
-        backtest_result_repo = BacktestResultRepository(db)
 
         db_experiment_id = experiment_info["db_id"]
         best_strategy = result["best_strategy"]
@@ -130,116 +139,8 @@ class ExperimentPersistenceService:
         )
 
         logger.info(
-            f"最良戦略を保存しました (ID: {best_strategy_record.id}). 詳細バックテストを開始します..."
+            f"最良戦略を保存しました (ID: {best_strategy_record.id})"
         )
-
-        # 詳細バックテストの実行
-        detailed_config = self._prepare_detailed_backtest_config(
-            best_strategy, experiment_info, backtest_config
-        )
-        detailed_result = self.backtest_service.run_backtest(detailed_config)
-
-        # バックテスト結果の保存
-        result_data = self._prepare_backtest_result_data(
-            detailed_result,
-            detailed_config,
-            experiment_id,
-            db_experiment_id,
-            fitness_score,
-        )
-        backtest_result_repo.save_backtest_result(result_data)
-        logger.info("最良戦略のバックテスト結果を保存しました。")
-
-    def _prepare_detailed_backtest_config(
-        self,
-        best_strategy: StrategyGene,
-        experiment_info: Dict[str, Any],
-        backtest_config: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """
-        詳細バックテスト用の最終的な設定を構築
-
-        元の実験名から不要な情報を削ぎ落とし、読みやすい戦略名（AS_...）を生成し、
-        戦略の遺伝子データをバックテスト設定に組み込みます。
-
-        Args:
-            best_strategy: 最良個体の遺伝子
-            experiment_info: 文脈情報としての実験情報辞書
-            backtest_config: ベースとなるバックテスト設定
-
-        Returns:
-            詳細バックテスト実行用の設定辞書
-        """
-        config = backtest_config.copy()
-
-        # 元の実験名から不要な部分を削除し、日付を整形
-        original_name = experiment_info.get("name", "")
-        # 'AUTO_STRATEGY_GA_' プレフィックスを削除
-        cleaned_name = re.sub(r"^AUTO_STRATEGY_GA_", "GA_", original_name)
-        # 日付部分を 'YYMMDD' 形式に変換
-        cleaned_name = re.sub(
-            r"(\d{4})-(\d{2})-(\d{2})",
-            lambda m: f"{m.group(1)[2:]}{m.group(2)}{m.group(3)}",
-            cleaned_name,
-        )
-        # シンボル名 (例: _BTC_USDT_) を削除
-        cleaned_name = re.sub(r"_[A-Z]+_[A-Z]+_", "_", cleaned_name)
-        # 末尾のアンダースコアを削除
-        cleaned_name = cleaned_name.rstrip("_")
-
-        # 新しい戦略名を生成
-        strategy_name = f"AS_{cleaned_name}_{best_strategy.id[:6]}"
-
-        config["strategy_name"] = strategy_name
-        config["strategy_config"] = {
-            "strategy_type": "GENERATED_GA",
-            "parameters": {
-                "strategy_gene": self.serializer.strategy_gene_to_dict(best_strategy)
-            },
-        }
-        return config
-
-    def _prepare_backtest_result_data(
-        self,
-        detailed_result: Dict[str, Any],
-        config: Dict[str, Any],
-        experiment_id: str,
-        db_experiment_id: int,
-        best_fitness: float,
-    ) -> Dict[str, Any]:
-        """
-        データベースの backtest_results テーブルへ保存するためのレコードデータを構築
-
-        Args:
-            detailed_result: 詳細バックテストの実行結果
-            config: バックテスト実行時に使用した設定
-            experiment_id: フロントエンド向けUUID
-            db_experiment_id: データベース上の実験ID
-            best_fitness: GAで得られた最適適応度
-
-        Returns:
-            リポジトリに渡すためのレコード用辞書
-        """
-        return {
-            "strategy_name": config["strategy_name"],
-            "symbol": config["symbol"],
-            "timeframe": config["timeframe"],
-            "start_date": config["start_date"],
-            "end_date": config["end_date"],
-            "initial_capital": config["initial_capital"],
-            "commission_rate": config.get("commission_rate", 0.001),
-            "config_json": {
-                "strategy_config": config["strategy_config"],
-                "experiment_id": experiment_id,
-                "db_experiment_id": db_experiment_id,
-                "fitness_score": best_fitness,
-            },
-            "performance_metrics": detailed_result.get("performance_metrics", {}),
-            "equity_curve": detailed_result.get("equity_curve", []),
-            "trade_history": detailed_result.get("trade_history", []),
-            "execution_time": detailed_result.get("execution_time"),
-            "status": "completed",
-        }
 
     def _save_other_strategies(
         self,

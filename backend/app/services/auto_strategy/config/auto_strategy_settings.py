@@ -1,9 +1,12 @@
 """
 Auto Strategy 環境変数設定
 
-遺伝的アルゴリズムによる自動戦略生成のデフォルトパラメータを
-環境変数から読み込みます。
-unified_config.py 経由でアプリケーション全体に提供されます。
+AutoStrategyConfig は環境変数経由でアプリケーション全体の設定を提供する pydantic モデルです。
+unified_config.py 経由で使用され、主に API 層やサービス初期化時に参照されます。
+
+注意: GAConfig (ga.py) は GA 実行時のランタイム設定用 dataclass です。
+両者は役割が異なりますが、基本的なGAパラメータのデフォルト値は
+ga_constants.GA_DEFAULT_CONFIG を共有しています。
 """
 
 from typing import List
@@ -11,23 +14,38 @@ from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .ga_constants import GA_DEFAULT_CONFIG
+
 
 class AutoStrategyConfig(BaseSettings):
-    """自動戦略生成設定。
+    """自動戦略生成設定（環境変数ベース）。
 
     遺伝的アルゴリズムによる自動戦略生成の各種パラメータを設定します。
+    環境変数 `AUTO_STRATEGY_*` から値を読み取ります。
     """
 
-    # 遺伝的アルゴリズム基本設定
-    population_size: int = Field(default=50, description="個体数")
-    generations: int = Field(default=20, description="世代数")
+    # 遺伝的アルゴリズム基本設定（デフォルト値は ga_constants.GA_DEFAULT_CONFIG と同期）
+    population_size: int = Field(
+        default=GA_DEFAULT_CONFIG["population_size"], description="個体数"
+    )
+    generations: int = Field(
+        default=GA_DEFAULT_CONFIG["generations"], description="世代数"
+    )
     tournament_size: int = Field(default=3, description="トーナメントサイズ")
-    crossover_rate: float = Field(default=0.8, description="交叉率")
-    mutation_rate: float = Field(default=0.1, description="突然変異率")
-    elite_size: int = Field(default=5, description="エリート保存数")
+    crossover_rate: float = Field(
+        default=GA_DEFAULT_CONFIG["crossover_rate"], description="交叉率"
+    )
+    mutation_rate: float = Field(
+        default=GA_DEFAULT_CONFIG["mutation_rate"], description="突然変異率"
+    )
+    elite_size: int = Field(
+        default=GA_DEFAULT_CONFIG["elite_size"], description="エリート保存数"
+    )
 
     # 戦略生成制約
-    max_indicators: int = Field(default=5, description="最大指標数")
+    max_indicators: int = Field(
+        default=GA_DEFAULT_CONFIG["max_indicators"], description="最大指標数"
+    )
     min_indicators: int = Field(default=2, description="最小指標数")
     max_conditions: int = Field(default=5, description="最大条件数")
     min_conditions: int = Field(default=2, description="最小条件数")

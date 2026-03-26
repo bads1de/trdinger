@@ -12,6 +12,7 @@ from app.services.backtest.services.backtest_service import BacktestService
 
 from ..config.ga import GAConfig
 from ..core.engine.evolution_runner import EvolutionStoppedError
+from .experiment_backtest_service import ExperimentBacktestService
 from .experiment_persistence_service import ExperimentPersistenceService
 
 if TYPE_CHECKING:
@@ -38,6 +39,7 @@ class ExperimentManager:
         """初期化"""
         self.backtest_service = backtest_service
         self.persistence_service = persistence_service
+        self.experiment_backtest_service = ExperimentBacktestService(backtest_service)
 
     def run_experiment(
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
@@ -79,9 +81,31 @@ class ExperimentManager:
                     self.persistence_service.stop_experiment(experiment_id)
                     return
 
+                experiment_info = self.persistence_service.get_experiment_info(
+                    experiment_id
+                )
+
+                detailed_backtest_result_data = (
+                    self.experiment_backtest_service.create_detailed_backtest_result_data(
+                        result=result,
+                        ga_config=ga_config,
+                        backtest_config=run_backtest_config,
+                        experiment_id=experiment_id,
+                        experiment_info=experiment_info,
+                    )
+                )
+
                 # 結果の永続化
                 self.persistence_service.save_experiment_result(
-                    experiment_id, result, ga_config, run_backtest_config
+                    experiment_id,
+                    result,
+                    ga_config,
+                    run_backtest_config,
+                    experiment_info=experiment_info,
+                )
+
+                self.persistence_service.save_backtest_result(
+                    detailed_backtest_result_data
                 )
 
                 if engine.is_stop_requested() is True:

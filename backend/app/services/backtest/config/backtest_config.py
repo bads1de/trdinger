@@ -23,9 +23,6 @@ class BacktestRunConfigValidationError(Exception):
         self.errors = errors or []
 
 
-# 後方互換性エイリアス
-BacktestConfigValidationError = BacktestRunConfigValidationError
-
 
 class GeneratedGAParameters(BaseModel):
     """GA生成戦略のパラメータ"""
@@ -113,12 +110,10 @@ class BacktestRunConfig(BaseModel):
             errors.append("end_dateは現在時刻より前である必要があります")
 
         if errors:
-            raise BacktestConfigValidationError(
+            raise BacktestRunConfigValidationError(
                 f"バックテスト設定が無効です: {', '.join(errors)}", errors
             )
 
         return self
 
 
-# 後方互換性エイリアス
-BacktestConfig = BacktestRunConfig

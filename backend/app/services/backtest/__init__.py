@@ -10,7 +10,6 @@ import sys as _sys
 
 from .config import (
     BacktestConfig,
-    BacktestConfigValidationError,
     BacktestRunConfig,
     BacktestRunConfigValidationError,
     StrategyConfig,
@@ -34,7 +33,6 @@ __all__ = [
     "BacktestConfig",
     "BacktestRunConfig",
     "BacktestRunConfigValidationError",
-    "BacktestConfigValidationError",
     "StrategyConfig",
     "SUPPORTED_STRATEGIES",
     "BacktestDataService",

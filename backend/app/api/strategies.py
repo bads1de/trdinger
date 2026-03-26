@@ -16,7 +16,7 @@ from app.services.auto_strategy.services.generated_strategy_service import (
     GeneratedStrategyService,
 )
 from app.utils.error_handler import ErrorHandler
-from app.utils.response import ensure_response_dict, extract_response_data, now_iso
+from app.utils.response import now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -84,26 +84,20 @@ async def get_strategies(
     """
 
     async def _get_strategies():
-        result = ensure_response_dict(
-            strategy_service.get_strategies_with_response(
-                limit=limit,
-                offset=offset,
-                risk_level=risk_level,
-                experiment_id=experiment_id,
-                min_fitness=min_fitness,
-                sort_by=sort_by,
-                sort_order=sort_order,
-            )
+        result = strategy_service.get_strategies(
+            limit=limit,
+            offset=offset,
+            risk_level=risk_level,
+            experiment_id=experiment_id,
+            min_fitness=min_fitness,
+            sort_by=sort_by,
+            sort_order=sort_order,
         )
 
-        payload = extract_response_data(result)
         return StrategiesResponse(
-            success=result.get("success", False),
-            strategies=result.get("strategies") or payload.get("strategies", []),
-            total_count=result.get("total_count", payload.get("total_count", 0)),
-            has_more=result.get("has_more", payload.get("has_more", False)),
-            message=result.get("message", "戦略が正常に取得されました"),
-            timestamp=result.get("timestamp", now_iso()),
+            strategies=result.get("strategies", []),
+            total_count=result.get("total_count", 0),
+            has_more=result.get("has_more", False),
         )
 
     return await ErrorHandler.safe_execute_async(_get_strategies)

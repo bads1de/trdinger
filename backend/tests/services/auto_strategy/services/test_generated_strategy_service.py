@@ -24,7 +24,6 @@ class TestGeneratedStrategyService:
         # patch.objectを使ってインスタンスの属性を置き換えるのが安全。
         service = GeneratedStrategyService(mock_db_session)
         service.generated_strategy_repo = MagicMock()
-        service.backtest_result_repo = MagicMock()
         return service
 
     @pytest.fixture

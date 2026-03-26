@@ -166,6 +166,7 @@ class TestE2EFlow:
 
         # 2. 結果保存
         assert mock_persistence_service.save_experiment_result.called
+        assert mock_persistence_service.save_backtest_result.called
 
         # 完了ステータス更新
         mock_persistence_service.complete_experiment.assert_called_with(experiment_id)

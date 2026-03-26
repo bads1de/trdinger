@@ -62,7 +62,7 @@ class AutoStrategyService:
 
             # 永続化サービスの初期化
             self.persistence_service = ExperimentPersistenceService(
-                self.db_session_factory, self.backtest_service
+                self.db_session_factory
             )
 
             # 実験管理マネージャーの初期化

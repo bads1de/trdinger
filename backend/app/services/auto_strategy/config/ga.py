@@ -1,7 +1,10 @@
 """
 GA実行時設定クラス
 
-GAConfigクラスとGAProgressクラスを提供します。
+GAConfig クラスを提供します。
+GAConfig は GA エンジンのランタイム設定用 dataclass です。
+環境変数ベースの設定が必要な場合は auto_strategy_settings.AutoStrategyConfig を使用してください。
+両者の基本パラメータのデフォルト値は ga_constants.GA_DEFAULT_CONFIG を共有しています。
 """
 
 import json
@@ -10,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, cast
 
 from .base import BaseConfig
-from .constants import (
+from .ga_constants import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,

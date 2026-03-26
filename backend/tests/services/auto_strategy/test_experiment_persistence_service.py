@@ -25,9 +25,8 @@ class TestExperimentPersistenceService:
         self.mock_db_session_factory.return_value.__enter__.return_value = (
             self.mock_db_session
         )
-        self.mock_backtest_service = Mock()
         self.persistence_service = ExperimentPersistenceService(
-            self.mock_db_session_factory, self.mock_backtest_service
+            self.mock_db_session_factory
         )
 
     def test_create_experiment(self):
@@ -194,52 +193,59 @@ class TestExperimentPersistenceService:
             "config": {"experiment_id": experiment_id},
         }
 
-        with patch.object(
-            self.persistence_service, "get_experiment_info"
-        ) as mock_get_info:
-            mock_get_info.return_value = experiment_info
+        with patch(
+            "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
+        ) as mock_strat_repo_cls, patch.object(
+            self.persistence_service.serializer,
+            "strategy_gene_to_dict",
+            return_value={"serialized": True},
+        ) as mock_strategy_to_dict:
 
-            with (
-                patch(
-                    "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
-                ) as mock_strat_repo_cls,
-                patch(
-                    "app.services.auto_strategy.services.experiment_persistence_service.BacktestResultRepository"
-                ) as mock_bt_repo_cls,
-                patch.object(
-                    self.persistence_service.serializer,
-                    "strategy_gene_to_dict",
-                    return_value={"serialized": True},
-                ) as mock_strategy_to_dict,
-            ):
+            mock_strat_repo = mock_strat_repo_cls.return_value
+            mock_strat_repo.save_strategy.return_value = Mock(id=555)
 
-                mock_strat_repo = mock_strat_repo_cls.return_value
-                mock_strat_repo.save_strategy.return_value = Mock(id=555)
+            self.persistence_service.save_experiment_result(
+                experiment_id,
+                result,
+                ga_config,
+                backtest_config,
+                experiment_info=experiment_info,
+            )
 
-                mock_bt_repo = mock_bt_repo_cls.return_value
-                mock_bt_repo.save_backtest_result.return_value = {"id": 999}
+            # 最良戦略が保存されたか確認
+            mock_strat_repo.save_strategy.assert_called()
+            assert mock_strategy_to_dict.call_count == 1
 
-                self.mock_backtest_service.run_backtest.return_value = {
-                    "performance_metrics": {},
-                    "equity_curve": [],
-                    "trade_history": [],
-                    "execution_time": 1.0,
-                }
+    def test_save_backtest_result(self):
+        """詳細バックテスト結果保存のテスト"""
+        result_data = {
+            "strategy_name": "AS_TEST_123456",
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-02",
+            "initial_capital": 10000,
+            "commission_rate": 0.001,
+            "config_json": {
+                "strategy_config": {"strategy_type": "GENERATED_GA"},
+                "experiment_id": "exp_001",
+                "db_experiment_id": 100,
+                "fitness_score": 1.5,
+            },
+            "performance_metrics": {"total_return": 0.1},
+            "equity_curve": [],
+            "trade_history": [],
+            "execution_time": 1.0,
+            "status": "completed",
+        }
 
-                self.persistence_service.save_experiment_result(
-                    experiment_id, result, ga_config, backtest_config
-                )
+        with patch(
+            "app.services.auto_strategy.services.experiment_persistence_service.BacktestResultRepository"
+        ) as mock_bt_repo_cls:
+            mock_bt_repo = mock_bt_repo_cls.return_value
 
-                # 最良戦略が保存されたか確認
-                mock_strat_repo.save_strategy.assert_called()
-                assert mock_strategy_to_dict.call_count == 2
+            self.persistence_service.save_backtest_result(result_data)
 
-                # 詳細バックテストが実行されたか確認
-                self.mock_backtest_service.run_backtest.assert_called_once()
-
-                # バックテスト結果が保存されたか確認
-                mock_bt_repo.save_backtest_result.assert_called_once()
-
-
+            mock_bt_repo.save_backtest_result.assert_called_once_with(result_data)
 
 

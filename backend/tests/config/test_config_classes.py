@@ -206,10 +206,11 @@ class TestAutoStrategyConfig:
     def test_initialization_with_defaults(self):
         """デフォルト値での初期化テスト"""
         config = AutoStrategyConfig()
-        assert config.population_size == 50
-        assert config.generations == 20
+        # デフォルト値は ga_constants.GA_DEFAULT_CONFIG と同期
+        assert config.population_size == 100
+        assert config.generations == 50
         assert config.mutation_rate == 0.1
-        assert config.max_indicators == 5
+        assert config.max_indicators == 10
         assert config.min_indicators == 2
 
     def test_new_fields_integration(self):
@@ -217,7 +218,7 @@ class TestAutoStrategyConfig:
         config = AutoStrategyConfig()
         assert config.fallback_symbol == "BTC/USDT:USDT"
         assert config.crossover_rate == 0.8
-        assert config.elite_size == 5
+        assert config.elite_size == 10
         assert config.enable_multi_objective is False
         assert config.objectives == ["total_return"]
 

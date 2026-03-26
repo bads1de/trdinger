@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 from sklearn.pipeline import Pipeline
 
-from app.utils.data_processing.pipelines.comprehensive_pipeline import (
+from app.services.ml.preprocessing.comprehensive_pipeline import (
     create_comprehensive_pipeline,
     create_eda_pipeline,
     create_production_pipeline,

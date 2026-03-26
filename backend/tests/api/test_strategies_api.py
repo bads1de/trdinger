@@ -45,7 +45,7 @@ def mock_strategy_integration_service() -> Mock:
         Mock: モックされた戦略統合サービス
     """
     mock_service = Mock()
-    mock_service.get_strategies_with_response = Mock()
+    mock_service.get_strategies = Mock()
     return mock_service
 
 
@@ -138,7 +138,7 @@ class TestGetStrategies:
             sample_strategies_list: サンプル戦略リスト
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": sample_strategies_list,
             "total_count": len(sample_strategies_list),
@@ -172,7 +172,7 @@ class TestGetStrategies:
             sample_strategy: サンプル戦略
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": [sample_strategy],
             "total_count": 1,
@@ -218,7 +218,7 @@ class TestGetStrategies:
         sorted_strategies = sorted(
             sample_strategies_list, key=lambda x: x["fitness_score"], reverse=True
         )
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": sorted_strategies,
             "total_count": len(sorted_strategies),
@@ -257,7 +257,7 @@ class TestGetStrategies:
             sample_strategies_list: サンプル戦略リスト
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": sample_strategies_list[:2],
             "total_count": 3,
@@ -292,7 +292,7 @@ class TestGetStrategies:
             mock_strategy_integration_service: 戦略統合サービスモック
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": [],
             "total_count": 0,
@@ -338,7 +338,7 @@ class TestGetStrategies:
             expected_status: 期待されるステータスコード
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": [],
             "total_count": 0,
@@ -375,7 +375,7 @@ class TestGetStrategies:
             offset: オフセット値
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": [],
             "total_count": 0,
@@ -415,7 +415,7 @@ class TestGetStrategies:
         """
         # モックの設定
         filtered_strategy = {**sample_strategy, "risk_level": risk_level}
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": [filtered_strategy],
             "total_count": 1,
@@ -452,7 +452,7 @@ class TestGetStrategies:
             sample_strategy: サンプル戦略
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": [sample_strategy],
             "total_count": 1,
@@ -491,7 +491,7 @@ class TestGetStrategies:
         filtered_strategies = [
             s for s in sample_strategies_list if s["fitness_score"] >= 0.8
         ]
-        mock_strategy_integration_service.get_strategies_with_response.return_value = {
+        mock_strategy_integration_service.get_strategies.return_value = {
             "success": True,
             "strategies": filtered_strategies,
             "total_count": len(filtered_strategies),
@@ -530,7 +530,7 @@ class TestErrorHandling:
             mock_strategy_integration_service: 戦略統合サービスモック
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies_with_response.side_effect = (
+        mock_strategy_integration_service.get_strategies.side_effect = (
             Exception("Database error")
         )
 
@@ -562,7 +562,6 @@ class TestErrorHandling:
 
         # アサーション
         assert response.status_code == 422
-
 
 
 

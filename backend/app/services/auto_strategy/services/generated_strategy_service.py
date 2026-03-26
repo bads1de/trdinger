@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, cast
 from sqlalchemy.orm import Session
 
 from database.models import BacktestResult, GeneratedStrategy
-from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
@@ -31,7 +30,6 @@ class GeneratedStrategyService:
         """初期化"""
         self.db = db
         self.generated_strategy_repo = GeneratedStrategyRepository(db)
-        self.backtest_result_repo = BacktestResultRepository(db)
 
     def get_strategies(
         self,
@@ -195,7 +193,7 @@ class GeneratedStrategyService:
     def _extract_parameters(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
         """パラメータを抽出"""
         return {
-            "indicators": gene_data.get("indicators", {}),
+            "indicators": gene_data.get("indicators", []),
             "risk_management": gene_data.get("risk_management", {}),
             "long_entry_conditions": gene_data.get("long_entry_conditions", {}),
             "short_entry_conditions": gene_data.get("short_entry_conditions", {}),
@@ -252,6 +250,9 @@ class GeneratedStrategyService:
     ) -> Dict[str, Any]:
         """
         戦略を取得してAPIレスポンス形式で返す
+
+        互換性維持用のラッパーです。新規呼び出しは `get_strategies()` を
+        直接使ってください。
 
         Args:
             limit: 取得件数制限
