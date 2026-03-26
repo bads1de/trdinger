@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from deap import tools
 
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator

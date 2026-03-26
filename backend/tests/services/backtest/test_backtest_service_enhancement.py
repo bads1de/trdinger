@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 from app.services.backtest.execution.backtest_executor import BacktestExecutionError
 
 class TestBacktestServiceEnhancement:
@@ -14,14 +14,14 @@ class TestBacktestServiceEnhancement:
         mock_session = MagicMock()
         mock_db_gen.__next__.return_value = mock_session
         
-        with patch("app.services.backtest.backtest_service.get_db", return_value=mock_db_gen):
+        with patch("app.services.backtest.services.backtest_service.get_db", return_value=mock_db_gen):
             service.ensure_data_service_initialized()
             
             assert service.data_service is not None
             assert service._db_session == mock_session
 
     def test_ensure_data_service_initialized_failure(self, service):
-        with patch("app.services.backtest.backtest_service.get_db") as mock_get_db:
+        with patch("app.services.backtest.services.backtest_service.get_db") as mock_get_db:
             mock_get_db.return_value.__next__.side_effect = Exception("DB connection error")
             with pytest.raises(BacktestExecutionError) as excinfo:
                 service.ensure_data_service_initialized()
@@ -87,7 +87,7 @@ class TestBacktestServiceEnhancement:
         db_session = MagicMock()
         
         with patch.object(service, 'run_backtest', return_value={"id": 1}) as mock_run, \
-             patch("app.services.backtest.backtest_service.BacktestResultRepository") as MockRepo:
+             patch("app.services.backtest.services.backtest_service.BacktestResultRepository") as MockRepo:
             
             MockRepo.return_value.save_backtest_result.return_value = {"id": 1, "saved": True}
             

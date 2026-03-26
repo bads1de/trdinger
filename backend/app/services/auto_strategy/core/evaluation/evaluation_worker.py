@@ -9,7 +9,7 @@ import logging
 from typing import Any, Tuple, Optional, Dict
 
 # 遅延インポートなどで循環参照を避ける
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 from .individual_evaluator import IndividualEvaluator
 
 logger = logging.getLogger(__name__)

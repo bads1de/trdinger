@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks
 
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 from database.connection import SessionLocal
 
 from ..config import GAConfig

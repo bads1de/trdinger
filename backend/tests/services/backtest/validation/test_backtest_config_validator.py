@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
 from pydantic import ValidationError
-from app.services.backtest.backtest_config import BacktestConfig, BacktestConfigValidationError
+from app.services.backtest.config.backtest_config import BacktestConfig, BacktestConfigValidationError
 
 
 class TestBacktestConfig:

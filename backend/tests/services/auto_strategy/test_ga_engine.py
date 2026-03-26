@@ -14,7 +14,7 @@ from app.services.auto_strategy.core.individual_evaluator import (
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 
 
 class TestGeneticAlgorithmEngine:

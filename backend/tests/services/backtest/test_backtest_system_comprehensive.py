@@ -10,12 +10,12 @@ import pandas as pd
 import pytest
 from sqlalchemy.orm import Session
 
-from app.services.backtest.backtest_data_service import BacktestDataService
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_data_service import BacktestDataService
+from app.services.backtest.services.backtest_service import BacktestService
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
-from app.services.backtest.backtest_config import BacktestConfig, BacktestConfigValidationError
+from app.services.backtest.config.backtest_config import BacktestConfig, BacktestConfigValidationError
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository

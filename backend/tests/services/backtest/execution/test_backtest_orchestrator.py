@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.services.backtest.backtest_data_service import BacktestDataService
+from app.services.backtest.services.backtest_data_service import BacktestDataService
 from app.services.backtest.execution.backtest_orchestrator import BacktestOrchestrator
 
 

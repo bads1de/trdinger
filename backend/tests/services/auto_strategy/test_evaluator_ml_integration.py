@@ -13,7 +13,7 @@ from app.services.auto_strategy.core.hybrid_individual_evaluator import (
     HybridIndividualEvaluator,
 )
 from app.services.auto_strategy.genes import StrategyGene
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 
 
 class TestEvaluatorMLIntegration(unittest.TestCase):

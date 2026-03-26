@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from app.services.backtest.backtest_data_service import BacktestDataService
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_data_service import BacktestDataService
+from app.services.backtest.services.backtest_service import BacktestService
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
@@ -224,7 +224,7 @@ def test_execute_and_save_backtest_success(
         backtest_service, "run_backtest", return_value=sample_converted_result
     ):
         with patch(
-            "app.services.backtest.backtest_service.BacktestResultRepository",
+            "app.services.backtest.services.backtest_service.BacktestResultRepository",
             return_value=mock_backtest_repo,
         ):
             mock_backtest_repo.save_backtest_result.return_value = {
@@ -280,7 +280,7 @@ def test_execute_and_save_backtest_save_error(
         backtest_service, "run_backtest", return_value=sample_converted_result
     ):
         with patch(
-            "app.services.backtest.backtest_service.BacktestResultRepository",
+            "app.services.backtest.services.backtest_service.BacktestResultRepository",
             return_value=mock_backtest_repo,
         ):
             mock_backtest_repo.save_backtest_result.side_effect = Exception(

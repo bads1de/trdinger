@@ -341,7 +341,7 @@ class MLTrainingService(BaseResourceManager):
                         )
 
                     # データ準備
-                    from app.services.backtest.backtest_data_service import (
+                    from app.services.backtest.services.backtest_data_service import (
                         BacktestDataService,
                     )
 

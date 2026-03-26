@@ -7,7 +7,7 @@ GA実験の実行と管理を担当します。
 import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 
 from ..config.ga import GAConfig
 from .experiment_persistence_service import ExperimentPersistenceService

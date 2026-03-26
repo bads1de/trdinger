@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from app.services.backtest.backtest_config import (
+from app.services.backtest.config.backtest_config import (
     BacktestConfig,
     BacktestConfigValidationError,
 )

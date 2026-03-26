@@ -7,7 +7,7 @@ GAエンジンの構築とコンポーネントの初期化を担当します。
 import logging
 
 
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 from .ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator

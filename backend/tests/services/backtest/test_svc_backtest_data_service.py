@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from app.services.backtest.backtest_data_service import BacktestDataService
+from app.services.backtest.services.backtest_data_service import BacktestDataService
 from app.services.backtest.data.data_integration_service import DataIntegrationError
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository

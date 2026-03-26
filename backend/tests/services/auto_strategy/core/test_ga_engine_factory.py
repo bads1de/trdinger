@@ -9,7 +9,7 @@ from app.services.auto_strategy.core.ga_engine_factory import (
     GeneticAlgorithmEngineFactory,
 )
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 
 
 class TestGAEngineFactory:

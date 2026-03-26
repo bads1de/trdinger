@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.hybrid.hybrid_predictor import HybridPredictor
 from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.services.backtest_service import BacktestService
 from app.services.ml.common.exceptions import MLPredictionError, MLTrainingError
 from app.services.ml.models.model_manager import model_manager
 

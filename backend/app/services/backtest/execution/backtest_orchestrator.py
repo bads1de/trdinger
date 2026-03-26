@@ -11,8 +11,8 @@ from typing import Any, Dict, Optional
 import pandas as pd
 from pydantic import ValidationError
 
-from app.services.backtest.backtest_config import BacktestConfig, BacktestConfigValidationError
-from ..backtest_data_service import BacktestDataService
+from ..config.backtest_config import BacktestConfig, BacktestConfigValidationError
+from ..services.backtest_data_service import BacktestDataService
 from ..conversion.backtest_result_converter import (
     BacktestResultConversionError,
     BacktestResultConverter,

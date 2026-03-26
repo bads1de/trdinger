@@ -43,7 +43,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (  # noq
 )
 from app.services.auto_strategy.genes.strategy import StrategyGene  # noqa: E402
 from app.services.auto_strategy.serializers.serialization import GeneSerializer  # noqa: E402
-from app.services.backtest.backtest_service import BacktestService  # noqa: E402
+from app.services.backtest.services.backtest_service import BacktestService  # noqa: E402
 
 # ロギング設定
 logging.basicConfig(

@@ -11,7 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 # 実装予定のモジュール（まだ存在しない）
-from app.services.backtest.backtest_config import (
+from app.services.backtest.config.backtest_config import (
     BacktestConfig,
     StrategyConfig,
     GeneratedGAParameters,

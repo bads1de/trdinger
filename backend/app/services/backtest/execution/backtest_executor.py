@@ -12,7 +12,7 @@ import pandas as pd
 from backtesting import Backtest, Strategy
 from backtesting.lib import FractionalBacktest
 
-from ..backtest_data_service import BacktestDataService
+from ..services.backtest_data_service import BacktestDataService
 
 logger = logging.getLogger(__name__)
 

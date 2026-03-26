@@ -16,8 +16,8 @@ from typing import (
 from cachetools import LRUCache
 from pydantic import ValidationError
 
-from app.services.backtest.backtest_config import BacktestConfig
-from app.services.backtest.backtest_service import BacktestService
+from app.services.backtest.config.backtest_config import BacktestConfig
+from app.services.backtest.services.backtest_service import BacktestService
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.genes import StrategyGene

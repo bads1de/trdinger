@@ -32,7 +32,7 @@ def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> Dict[str, Any]:
     from app.services.auto_strategy.generators.random_gene_generator import (
         RandomGeneGenerator,
     )
-    from app.services.backtest.backtest_service import BacktestService
+    from app.services.backtest.services.backtest_service import BacktestService
 
     # 軽量設定
     config = GAConfig(

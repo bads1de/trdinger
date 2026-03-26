@@ -12,7 +12,7 @@ from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.core.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
-from app.services.backtest.backtest_data_service import BacktestDataService
+from app.services.backtest.services.backtest_data_service import BacktestDataService
 from app.services.ml.label_generation import EventDrivenLabelGenerator
 
 
