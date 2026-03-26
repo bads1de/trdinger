@@ -20,6 +20,12 @@ from .data_conversion import (
     OpenInterestDataConverter,
     parse_timestamp_safe,
 )
+from .serialization import (
+    dataclass_from_dict,
+    dataclass_from_json,
+    dataclass_to_dict,
+    dataclass_to_json,
+)
 from .error_handler import (
     DataError,
     ErrorHandler,
@@ -54,6 +60,11 @@ __all__ = [
     "OpenInterestDataConverter",
     "DataConversionError",
     "parse_timestamp_safe",
+    # シリアライズ
+    "dataclass_to_dict",
+    "dataclass_to_json",
+    "dataclass_from_dict",
+    "dataclass_from_json",
 ]
 
 

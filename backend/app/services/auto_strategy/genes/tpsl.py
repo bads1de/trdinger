@@ -8,6 +8,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from app.utils.serialization import dataclass_to_dict
+
 from .base_gene import BaseGene
 from ..config.constants import TPSLMethod
 
@@ -301,14 +303,7 @@ class TPSLResult:
 
     def to_dict(self) -> Dict[str, Any]:
         """辞書形式に変換"""
-        return {
-            "stop_loss_pct": self.stop_loss_pct,
-            "take_profit_pct": self.take_profit_pct,
-            "method_used": self.method_used,
-            "confidence_score": self.confidence_score,
-            "expected_performance": self.expected_performance,
-            "metadata": self.metadata,
-        }
+        return dataclass_to_dict(self)
 
 
 def create_random_tpsl_gene(config: Any = None) -> TPSLGene:

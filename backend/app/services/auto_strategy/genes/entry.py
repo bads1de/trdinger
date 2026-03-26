@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, List, Tuple
 
+from app.utils.serialization import dataclass_to_dict
+
 from ..config.constants import EntryType
 
 
@@ -85,18 +87,7 @@ class EntryGene:
         Returns:
             辞書形式のデータ
         """
-        return {
-            "entry_type": (
-                self.entry_type.value
-                if isinstance(self.entry_type, EntryType)
-                else self.entry_type
-            ),
-            "limit_offset_pct": self.limit_offset_pct,
-            "stop_offset_pct": self.stop_offset_pct,
-            "order_validity_bars": self.order_validity_bars,
-            "enabled": self.enabled,
-            "priority": self.priority,
-        }
+        return dataclass_to_dict(self)
 
     @classmethod
     def from_dict(cls, data: dict) -> "EntryGene":

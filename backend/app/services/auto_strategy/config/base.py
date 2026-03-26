@@ -4,11 +4,17 @@ BaseConfigクラス
 設定クラスの基底クラスを提供します。
 """
 
-import json
 import logging
 from abc import ABC
 from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Dict
+
+from app.utils.serialization import (
+    dataclass_from_dict as _from_dict,
+    dataclass_from_json,
+    dataclass_to_dict,
+    dataclass_to_json,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -70,37 +76,13 @@ class BaseConfig(ABC):
 
     def to_dict(self) -> Dict[str, Any]:
         """設定オブジェクトを辞書に変換"""
-        try:
-            result = {}
-            for field_info in fields(self):
-                value = getattr(self, field_info.name)
-                # 複雑なオブジェクトの場合は文字列化
-                if hasattr(value, "__dict__"):
-                    result[field_info.name] = str(value)
-                else:
-                    result[field_info.name] = value
-            return result
-        except Exception as e:
-            logger.error(f"設定辞書変換エラー: {e}", exc_info=True)
-            return {}
+        return dataclass_to_dict(self)
 
     def to_json(self) -> str:
         """設定オブジェクトをJSON文字列に変換"""
-        try:
-            return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"JSON変換エラー: {e}", exc_info=True)
-            return "{}"
+        return dataclass_to_json(self)
 
     @classmethod
     def from_json(cls, json_str: str) -> "BaseConfig":
         """JSON文字列から設定オブジェクトを復元"""
-        try:
-            data = json.loads(json_str)
-            return cls.from_dict(data)
-        except json.JSONDecodeError as e:
-            logger.error(f"JSON復元エラー: {e}", exc_info=True)
-            return cls()
-        except Exception as e:
-            logger.error(f"JSON復元エラー: {e}", exc_info=True)
-            raise ValueError(f"JSON からの復元に失敗しました: {e}")
+        return dataclass_from_json(cls, json_str)

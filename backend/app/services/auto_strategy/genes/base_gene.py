@@ -6,8 +6,11 @@
 
 import logging
 from abc import ABC, abstractmethod
+from dataclasses import is_dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Tuple, Union
+
+from app.utils.serialization import dataclass_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -31,30 +34,29 @@ class BaseGene(ABC):
 
     def to_dict(self) -> Dict[str, Any]:
         """オブジェクトを辞書形式に変換"""
+        # dataclass サブクラスは汎用ユーティリティに委譲
+        if is_dataclass(self):
+            return dataclass_to_dict(self)
+
+        # 非 dataclass サブクラス向けフォールバック
         result = {}
-        
-        # 属性名のリストを取得（dataclass, slots, dictの順で優先）
+
         keys = []
-        if hasattr(self, "__dataclass_fields__"):
-            keys = list(self.__dataclass_fields__.keys())
-        elif hasattr(self, "__slots__"):
+        if hasattr(self, "__slots__"):
             keys = list(self.__slots__)
         elif hasattr(self, "__dict__"):
             keys = list(self.__dict__.keys())
 
         for key in keys:
-            if key.startswith("_"):  # プライベート属性は除外
+            if key.startswith("_"):
                 continue
 
             value = getattr(self, key, None)
 
-            # Enumの処理
             if hasattr(value, "value"):
                 result[key] = value.value
-            # datetimeの処理
             elif isinstance(value, datetime):
                 result[key] = value.isoformat()
-            # その他の値
             else:
                 result[key] = value
 

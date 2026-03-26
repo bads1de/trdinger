@@ -5,9 +5,11 @@ MLモデルレジストリ・メタデータ
 """
 
 import logging
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
+
+from app.utils.serialization import dataclass_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +100,7 @@ class ModelMetadata:
             self.created_at = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        return dataclass_to_dict(self)
 
     @classmethod
     def from_training_result(

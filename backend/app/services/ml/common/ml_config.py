@@ -5,8 +5,10 @@ ML関連設定クラス
 設定はサービス配下で完結し、環境変数ベースで上書きできます。
 """
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
+
+from app.utils.serialization import dataclass_to_dict
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -231,7 +233,7 @@ class LabelGenerationConfig:
         Returns:
             Dict[str, Any]: 設定内容を辞書形式で返します。
         """
-        return asdict(self)
+        return dataclass_to_dict(self)
 
 
 class MLTrainingConfig(BaseSettings):

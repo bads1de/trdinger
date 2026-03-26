@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
+from app.utils.serialization import dataclass_to_dict
+
 
 @dataclass(slots=True)
 class ToolGene:
@@ -35,11 +37,7 @@ class ToolGene:
         Returns:
             辞書表現
         """
-        return {
-            "tool_name": self.tool_name,
-            "enabled": self.enabled,
-            "params": self.params.copy(),
-        }
+        return dataclass_to_dict(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ToolGene":

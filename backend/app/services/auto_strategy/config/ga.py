@@ -7,10 +7,11 @@ GAConfig は GA エンジンのランタイム設定用 dataclass です。
 両者の基本パラメータのデフォルト値は ga_constants.GA_DEFAULT_CONFIG を共有しています。
 """
 
-import json
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, cast
+
+from app.utils.serialization import dataclass_to_dict
 
 from .base import BaseConfig
 from .ga_constants import (
@@ -218,82 +219,7 @@ class GAConfig(BaseConfig):
         Returns:
             設定値を含む辞書
         """
-        return {
-            "population_size": self.population_size,
-            "generations": self.generations,
-            "crossover_rate": self.crossover_rate,
-            "mutation_rate": self.mutation_rate,
-            "elite_size": self.elite_size,
-            "fitness_weights": self.fitness_weights,
-            "primary_metric": self.primary_metric,
-            "max_indicators": self.max_indicators,
-            "enable_multi_objective": self.enable_multi_objective,
-            "objectives": self.objectives,
-            "objective_weights": self.objective_weights,
-            "dynamic_objective_reweighting": self.dynamic_objective_reweighting,
-            "objective_dynamic_scalars": self.objective_dynamic_scalars,
-            "parameter_ranges": self.parameter_ranges,
-            "threshold_ranges": self.threshold_ranges,
-            "fitness_constraints": self.fitness_constraints,
-            "min_indicators": self.min_indicators,
-            "min_conditions": self.min_conditions,
-            "max_conditions": self.max_conditions,
-            "zero_trades_penalty": self.zero_trades_penalty,
-            "constraint_violation_penalty": self.constraint_violation_penalty,
-            "crossover_field_selection_probability": self.crossover_field_selection_probability,
-            "indicator_param_mutation_range": self.indicator_param_mutation_range,
-            "risk_param_mutation_range": self.risk_param_mutation_range,
-            "indicator_add_delete_probability": self.indicator_add_delete_probability,
-            "indicator_add_vs_delete_probability": self.indicator_add_vs_delete_probability,
-            "condition_change_probability_multiplier": self.condition_change_probability_multiplier,
-            "condition_selection_probability": self.condition_selection_probability,
-            "condition_operator_switch_probability": self.condition_operator_switch_probability,
-            "valid_condition_operators": self.valid_condition_operators,
-            "tpsl_gene_creation_probability_multiplier": self.tpsl_gene_creation_probability_multiplier,
-            "position_sizing_gene_creation_probability_multiplier": self.position_sizing_gene_creation_probability_multiplier,
-            "adaptive_mutation_variance_threshold": self.adaptive_mutation_variance_threshold,
-            "adaptive_mutation_rate_decrease_multiplier": self.adaptive_mutation_rate_decrease_multiplier,
-            "adaptive_mutation_rate_increase_multiplier": self.adaptive_mutation_rate_increase_multiplier,
-            "parallel_processes": self.parallel_processes,
-            "random_state": self.random_state,
-            "enable_parallel_evaluation": self.enable_parallel_evaluation,
-            "max_evaluation_workers": self.max_evaluation_workers,
-            "evaluation_timeout": self.evaluation_timeout,
-            "log_level": self.log_level,
-            "save_intermediate_results": self.save_intermediate_results,
-            "ml_filter_enabled": self.ml_filter_enabled,
-            "ml_model_path": self.ml_model_path,
-            "preprocess_features": self.preprocess_features,
-            "fallback_start_date": self.fallback_start_date,
-            "fallback_end_date": self.fallback_end_date,
-            "enable_fitness_sharing": self.enable_fitness_sharing,
-            "sharing_radius": self.sharing_radius,
-            "sharing_alpha": self.sharing_alpha,
-            "sampling_threshold": self.sampling_threshold,
-            "sampling_ratio": self.sampling_ratio,
-            "tpsl_method_constraints": self.tpsl_method_constraints,
-            "tpsl_sl_range": self.tpsl_sl_range,
-            "tpsl_tp_range": self.tpsl_tp_range,
-            "tpsl_rr_range": self.tpsl_rr_range,
-            "tpsl_atr_multiplier_range": self.tpsl_atr_multiplier_range,
-            "oos_split_ratio": self.oos_split_ratio,
-            "oos_fitness_weight": self.oos_fitness_weight,
-            "enable_walk_forward": self.enable_walk_forward,
-            "wfa_n_folds": self.wfa_n_folds,
-            "wfa_train_ratio": self.wfa_train_ratio,
-            "wfa_anchored": self.wfa_anchored,
-            "enable_multi_timeframe": self.enable_multi_timeframe,
-            "available_timeframes": self.available_timeframes,
-            "mtf_indicator_probability": self.mtf_indicator_probability,
-            "parameter_range_preset": self.parameter_range_preset,
-            "enable_parameter_tuning": self.enable_parameter_tuning,
-            "tuning_n_trials": self.tuning_n_trials,
-            "tuning_elite_count": self.tuning_elite_count,
-            "tuning_use_wfa": self.tuning_use_wfa,
-            "tuning_include_indicators": self.tuning_include_indicators,
-            "tuning_include_tpsl": self.tuning_include_tpsl,
-            "tuning_include_thresholds": self.tuning_include_thresholds,
-        }
+        return dataclass_to_dict(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
@@ -357,17 +283,3 @@ class GAConfig(BaseConfig):
             **defaults,
             "primary_metric": self.primary_metric,
         }
-
-    def to_json(self) -> str:
-        """JSON文字列に変換（BaseConfigの機能を活用）"""
-        return super().to_json()
-
-    @classmethod
-    def from_json(cls, json_str: str) -> "GAConfig":
-        """JSON文字列から復元（BaseConfigの機能を活用）"""
-        try:
-            data = json.loads(json_str)
-            return cls.from_dict(data)
-        except Exception as e:
-            logger.error(f"JSON復元エラー: {e}", exc_info=True)
-            raise ValueError(f"JSON からの復元に失敗しました: {e}")
