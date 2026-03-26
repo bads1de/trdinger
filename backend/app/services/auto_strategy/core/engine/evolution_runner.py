@@ -8,7 +8,7 @@
 import gc
 import logging
 import random
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
 
 import numpy as np
 from deap import tools
@@ -18,6 +18,10 @@ from .ga_utils import _invalidate_individual_cache, _set_fitness_values
 from ..evaluation.parallel_evaluator import ParallelEvaluator
 
 logger = logging.getLogger(__name__)
+
+
+class EvolutionStoppedError(RuntimeError):
+    """進化処理が停止要求によって中断されたことを示す例外"""
 
 
 class EvolutionRunner:
@@ -54,7 +58,11 @@ class EvolutionRunner:
         self.parallel_evaluator = parallel_evaluator
 
     def run_evolution(
-        self, population: List[Any], config: Any, halloffame: Optional[Any] = None
+        self,
+        population: List[Any],
+        config: Any,
+        halloffame: Optional[Any] = None,
+        should_stop: Optional[Callable[[], bool]] = None,
     ) -> tuple[List[Any], Any]:
         """
         進化アルゴリズムの実行（単一・多目的 統一版）
@@ -71,6 +79,9 @@ class EvolutionRunner:
         Returns:
             (最終個体群, 進化ログ)
         """
+        if should_stop and should_stop():
+            raise EvolutionStoppedError("進化処理は開始前に停止されました")
+
         logger.info(
             f"進化アルゴリズムを開始（世代数: {config.generations}, 目的数: {len(config.objectives)}）"
         )
@@ -87,6 +98,11 @@ class EvolutionRunner:
 
         # 世代ループ
         for gen in range(config.generations):
+            if should_stop and should_stop():
+                raise EvolutionStoppedError(
+                    f"進化処理は世代 {gen + 1} の開始前に停止されました"
+                )
+
             # GC制御: 世代の変わり目でまとめて回収し、計算中の停止を防ぐ
             gc.collect()
             gc.disable()
@@ -131,11 +147,21 @@ class EvolutionRunner:
                 invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
                 self._evaluate_invalid_individuals(invalid_ind)
 
+                if should_stop and should_stop():
+                    raise EvolutionStoppedError(
+                        f"進化処理は世代 {gen + 1} の評価後に停止されました"
+                    )
+
                 # 次世代の選択 (mu+lambda)
                 # toolbox.select は DEAPSetup で NSGA-II などが登録されている
                 population[:] = self.toolbox.select(
                     offspring + population, len(population)
                 )
+
+                if should_stop and should_stop():
+                    raise EvolutionStoppedError(
+                        f"進化処理は世代 {gen + 1} の選択後に停止されました"
+                    )
 
                 self._update_dynamic_objective_scalars(population, config)
 

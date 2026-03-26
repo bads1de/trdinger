@@ -76,8 +76,10 @@ class TestDEAPSetup:
         )
 
         # FitnessMultiが作成されたことを確認
+        assert deap_setup.fitness_class_name is not None
+        assert deap_setup.fitness_class_name.startswith("FitnessMulti_")
         mock_creator.create.assert_any_call(
-            "FitnessMulti", base.Fitness, weights=(1.0, -1.0)
+            deap_setup.fitness_class_name, base.Fitness, weights=(1.0, -1.0)
         )
 
     @patch(
@@ -97,16 +99,21 @@ class TestDEAPSetup:
 
         # create呼び出しの検証（Individual）
         calls = mock_creator.create.call_args_list
-        # 引数リストの中から第1引数が"Individual"であるものを探す
+        # 引数リストの中から第1引数が動的なIndividual名であるものを探す
         individual_call = None
         for c in calls:
-            if c[0][0] == "Individual":
+            if c[0][0] == deap_setup.individual_class_name:
                 individual_call = c
                 break
 
         assert individual_call is not None
+        assert deap_setup.individual_class_name is not None
+        assert deap_setup.individual_class_name.startswith("Individual_")
         assert individual_call[0][1] == StrategyGene
         assert "fitness" in individual_call[1]
+        assert individual_call[1]["fitness"] == getattr(
+            mock_creator, deap_setup.fitness_class_name
+        )
 
     @patch(
         "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
@@ -253,30 +260,27 @@ class TestDEAPSetup:
 
         individual_class = deap_setup.get_individual_class()
         assert individual_class is not None
-        assert individual_class == mock_creator.Individual
+        assert individual_class == getattr(mock_creator, deap_setup.individual_class_name)
 
     @patch(
         "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
     )
-    def test_setup_deap_deletes_existing_classes(
+    def test_setup_deap_generates_unique_class_names(
         self, mock_creator, deap_setup, mock_config, mock_functions
     ):
-        """既存クラスの削除テスト"""
-        # 既存のクラスをセット
-        setattr(mock_creator, "FitnessMulti", Mock())
-        setattr(mock_creator, "Individual", Mock())
+        """実行ごとに一意なクラス名が採番されることを確認する"""
 
-        # 削除されたことを確認するためのside_effect再定義
-        original_side_effect = mock_creator.create.side_effect
-
-        def verifying_side_effect(name, *args, **kwargs):
-            if name in ["FitnessMulti", "Individual"] and hasattr(mock_creator, name):
-                pytest.fail(
-                    f"Attribute '{name}' should have been deleted before create() was called."
-                )
-            original_side_effect(name, *args, **kwargs)
-
-        mock_creator.create.side_effect = verifying_side_effect
+        deap_setup.setup_deap(
+            mock_config,
+            mock_functions["create_individual"],
+            mock_functions["evaluate"],
+            mock_functions["crossover"],
+            mock_functions["mutate"],
+        )
+        first_fitness_name = deap_setup.fitness_class_name
+        first_individual_name = deap_setup.individual_class_name
+        first_fitness_class = getattr(mock_creator, first_fitness_name)
+        first_individual_class = getattr(mock_creator, first_individual_name)
 
         deap_setup.setup_deap(
             mock_config,
@@ -286,9 +290,12 @@ class TestDEAPSetup:
             mock_functions["mutate"],
         )
 
-        # 最終的に存在することを確認
-        assert hasattr(mock_creator, "FitnessMulti")
-        assert hasattr(mock_creator, "Individual")
+        assert first_fitness_name != deap_setup.fitness_class_name
+        assert first_individual_name != deap_setup.individual_class_name
+        assert first_fitness_name.startswith("FitnessMulti_")
+        assert first_individual_name.startswith("Individual_")
+        assert getattr(mock_creator, first_fitness_name) is first_fitness_class
+        assert getattr(mock_creator, first_individual_name) is first_individual_class
 
     @patch(
         "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
@@ -318,7 +325,6 @@ class TestDEAPSetup:
         """セットアップ前の個体クラス取得テスト"""
         individual_class = deap_setup.get_individual_class()
         assert individual_class is None
-
 
 
 

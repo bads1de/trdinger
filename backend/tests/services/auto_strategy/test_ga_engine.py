@@ -174,6 +174,12 @@ class TestGeneticAlgorithmEngine:
         engine.deap_setup.setup_deap.assert_called_once()
         mock_toolbox.population.assert_called_with(n=10)
         mock_runner_cls.assert_called_once()
+        run_kwargs = mock_runner_instance.run_evolution.call_args.kwargs
+        assert "should_stop" in run_kwargs
+        assert callable(run_kwargs["should_stop"])
+        assert run_kwargs["should_stop"]() is False
+        engine.stop_evolution()
+        assert run_kwargs["should_stop"]() is True
 
     @patch("app.services.auto_strategy.core.ga_engine.ParallelEvaluator")
     @patch("app.services.auto_strategy.core.ga_engine.EvolutionRunner")
@@ -240,3 +246,6 @@ class TestGeneticAlgorithmEngine:
         runner_pos_args = mock_runner_cls.call_args[0]
         # 5番目の引数 (インデックス4) が parallel_evaluator
         assert runner_pos_args[4] == mock_instance
+        run_kwargs = mock_runner_instance.run_evolution.call_args.kwargs
+        assert "should_stop" in run_kwargs
+        assert callable(run_kwargs["should_stop"])

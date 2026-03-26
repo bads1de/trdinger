@@ -6,6 +6,7 @@ DEAPライブラリを使用したGA実装。
 
 import logging
 import time
+import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -17,7 +18,7 @@ from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
 from app.services.auto_strategy.genes import StrategyGene
 from .deap_setup import DEAPSetup
-from .evolution_runner import EvolutionRunner
+from .evolution_runner import EvolutionRunner, EvolutionStoppedError
 from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import (
     _gene_kwargs,
@@ -61,6 +62,7 @@ class GeneticAlgorithmEngine:
 
         # 実行状態
         self.is_running = False
+        self._stop_event = threading.Event()
 
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
@@ -145,6 +147,8 @@ class GeneticAlgorithmEngine:
                 backtest_config,
             )
 
+            self._raise_if_stop_requested("開始前")
+
             # バックテスト設定にデフォルトの日付を設定（存在しない場合）
             if "start_date" not in backtest_config:
                 backtest_config["start_date"] = config.fallback_start_date
@@ -158,14 +162,20 @@ class GeneticAlgorithmEngine:
                     f"GA Engine - Using fallback end_date: {config.fallback_end_date}"
                 )
 
+            self._raise_if_stop_requested("バックテスト設定準備後")
+
             # バックテスト設定を保存
             self.individual_evaluator.set_backtest_config(backtest_config)
 
             # コンテキスト設定（省略可能）
             self._set_generator_context(backtest_config)
 
+            self._raise_if_stop_requested("コンテキスト設定後")
+
             # DEAP環境のセットアップ
             self.setup_deap(config)
+
+            self._raise_if_stop_requested("DEAPセットアップ後")
 
             # ツールボックスと統計情報の取得
             toolbox = self.deap_setup.get_toolbox()
@@ -198,6 +208,8 @@ class GeneticAlgorithmEngine:
                         f"(注入率: {config.seed_injection_rate * 100:.1f}%)"
                     )
 
+            self._raise_if_stop_requested("初期集団生成後")
+
             # 適応的突然変異用mutate_wrapperの設定
             individual_class = self.deap_setup.get_individual_class()
             mutate_wrapper = create_deap_mutate_wrapper(
@@ -208,22 +220,23 @@ class GeneticAlgorithmEngine:
             # 独立したEvolutionRunnerの作成（並列評価対応）
             parallel_evaluator = self._create_parallel_evaluator(config)
 
-            # 並列評価器の起動
-            if parallel_evaluator:
-                parallel_evaluator.start()
-
             try:
+                # 並列評価器の起動
+                if parallel_evaluator:
+                    parallel_evaluator.start()
+
+                self._raise_if_stop_requested("進化実行前")
+
                 runner = self._create_evolution_runner(
                     toolbox, stats, population, config, parallel_evaluator
                 )
-
-                # 初期個体群の評価（並列評価対応）
-                runner._evaluate_population(population)
 
                 # 最適化アルゴリズムの実行
                 population, logbook, halloffame = self._run_optimization(
                     runner, population, config
                 )
+
+                self._raise_if_stop_requested("最適化後")
 
                 # 最良個体の処理と結果生成
                 result = self._process_results(
@@ -238,6 +251,9 @@ class GeneticAlgorithmEngine:
                 if parallel_evaluator:
                     parallel_evaluator.shutdown()
 
+        except EvolutionStoppedError:
+            logger.info("進化実行が停止されました")
+            raise
         except Exception as e:
             logger.error(f"進化実行エラー: {e}")
             raise
@@ -391,7 +407,12 @@ class GeneticAlgorithmEngine:
             halloffame = tools.HallOfFame(maxsize=1)
 
         # 統一された進化メソッドを実行
-        population, logbook = runner.run_evolution(population, config, halloffame)
+        population, logbook = runner.run_evolution(
+            population,
+            config,
+            halloffame,
+            should_stop=self._stop_event.is_set,
+        )
 
         return population, logbook, halloffame
 
@@ -516,7 +537,21 @@ class GeneticAlgorithmEngine:
 
     def stop_evolution(self):
         """進化を停止します。"""
+        self._stop_event.set()
         self.is_running = False
+
+    def is_stop_requested(self) -> bool:
+        """停止要求が出ているかを返します。"""
+        return self._stop_event.is_set()
+
+    def _raise_if_stop_requested(self, context: str = "") -> None:
+        """停止要求がある場合は EvolutionStoppedError を送出します。"""
+        if self._stop_event.is_set():
+            if context:
+                raise EvolutionStoppedError(
+                    f"停止要求により中断されました: {context}"
+                )
+            raise EvolutionStoppedError("停止要求により中断されました")
 
     def _create_strategy_individual(self):
         """戦略個体生成を行います。

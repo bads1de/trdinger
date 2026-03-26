@@ -11,6 +11,9 @@ import numpy as np
 import pytest
 
 from app.services.auto_strategy.core.ga_engine import EvolutionRunner
+from app.services.auto_strategy.core.engine.evolution_runner import (
+    EvolutionStoppedError,
+)
 
 
 class _DummyFitness:
@@ -244,6 +247,24 @@ class TestEvolutionRunner:
         # HOF update called at start + each generation
         assert mock_hof.update.call_count == config.generations + 1
 
+    def test_run_evolution_respects_should_stop(
+        self, mock_toolbox, mock_stats, dummy_population, config
+    ):
+        """停止フラグが立ったら進化ループを中断すること"""
+        runner = EvolutionRunner(toolbox=mock_toolbox, stats=mock_stats)
+        config.generations = 3
+        should_stop = Mock(side_effect=[False, True])
+
+        with pytest.raises(EvolutionStoppedError):
+            runner.run_evolution(
+                dummy_population,
+                config,
+                should_stop=should_stop,
+            )
+
+        mock_toolbox.mate.assert_not_called()
+        mock_toolbox.mutate.assert_not_called()
+        mock_toolbox.select.assert_not_called()
 
 
 

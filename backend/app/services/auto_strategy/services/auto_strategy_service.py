@@ -106,13 +106,20 @@ class AutoStrategyService:
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
-        # 4. GAエンジンの初期化
-        self._initialize_ga_engine(ga_config)
+        try:
+            # 4. GAエンジンの初期化
+            self._initialize_ga_engine(experiment_id, ga_config)
 
-        # 5. バックグラウンドタスクの開始
-        self._start_experiment_in_background(
-            experiment_id, ga_config, backtest_config, background_tasks
-        )
+            # 5. バックグラウンドタスクの開始
+            self._start_experiment_in_background(
+                experiment_id, ga_config, backtest_config, background_tasks
+            )
+        except Exception:
+            # 途中失敗時は、作成済みのレコードと実行コンテキストを明示的に失敗扱いにする
+            if self.experiment_manager:
+                self.experiment_manager.release_experiment(experiment_id)
+            self.persistence_service.fail_experiment(experiment_id)
+            raise
 
         logger.info(
             f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
@@ -184,16 +191,17 @@ class AutoStrategyService:
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
-    def _initialize_ga_engine(self, ga_config: GAConfig):
+    def _initialize_ga_engine(self, experiment_id: str, ga_config: GAConfig):
         """
         GAエンジンを初期化
 
         Args:
+            experiment_id: 実験ID
             ga_config: 実験で使用するGA設定
         """
         if not self.experiment_manager:
             raise RuntimeError("実験管理マネージャーが初期化されていません。")
-        self.experiment_manager.initialize_ga_engine(ga_config)
+        self.experiment_manager.initialize_ga_engine(ga_config, experiment_id)
 
     def _start_experiment_in_background(
         self,
@@ -257,7 +265,7 @@ class AutoStrategyService:
                 else:
                     return {
                         "success": False,
-                        "message": "実験の停止に失敗しました",
+                        "message": "実行中の実験が見つかりませんでした",
                     }
             else:
                 return {

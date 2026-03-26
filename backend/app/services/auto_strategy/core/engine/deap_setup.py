@@ -5,6 +5,7 @@ DEAPライブラリの設定とツールボックスの初期化を担当するD
 """
 
 import logging
+import uuid
 from typing import Optional
 
 from deap import base, creator, tools
@@ -26,6 +27,8 @@ class DEAPSetup:
         """初期化"""
         self.toolbox: Optional[base.Toolbox] = None
         self.Individual = None
+        self.fitness_class_name: Optional[str] = None
+        self.individual_class_name: Optional[str] = None
 
     def setup_deap(
         self,
@@ -46,25 +49,24 @@ class DEAPSetup:
             mutate_func: 突然変異関数
         """
         # 多目的最適化用フィットネスクラスの定義
-        fitness_class_name = "FitnessMulti"
+        # DEAP creator はグローバルなので、実行単位ごとに一意な名前を使う
+        suffix = uuid.uuid4().hex[:8]
+        fitness_class_name = f"FitnessMulti_{suffix}"
+        individual_class_name = f"Individual_{suffix}"
+        self.fitness_class_name = fitness_class_name
+        self.individual_class_name = individual_class_name
         weights = tuple(config.objective_weights)
         logger.info(f"多目的最適化モード: 目的={config.objectives}, 重み={weights}")
-
-        # 既存のフィットネスクラスを削除（再定義のため）
-        if hasattr(creator, fitness_class_name):
-            delattr(creator, fitness_class_name)
 
         # フィットネスクラスを作成
         creator.create(fitness_class_name, base.Fitness, weights=weights)
         fitness_class = getattr(creator, fitness_class_name)
 
-        # 個体クラスの定義
-        if hasattr(creator, "Individual"):
-            delattr(creator, "Individual")
-
         # StrategyGeneを継承し、fitness属性を持つクラスを作成
-        creator.create("Individual", StrategyGene, fitness=fitness_class)  # type: ignore
-        self.Individual = creator.Individual  # type: ignore # 生成したクラスをインスタンス変数に格納
+        creator.create(
+            individual_class_name, StrategyGene, fitness=fitness_class
+        )  # type: ignore
+        self.Individual = getattr(creator, individual_class_name)  # type: ignore
 
         # ツールボックスの初期化
         self.toolbox = base.Toolbox()

@@ -104,7 +104,44 @@ def test_start_strategy_generation_success(
     assert result_exp_id == experiment_id
     mock_persistence_service.create_experiment.assert_called_once()
     mock_experiment_manager.initialize_ga_engine.assert_called_once()
+    init_args = mock_experiment_manager.initialize_ga_engine.call_args.args
+    assert init_args[1] == experiment_id
+    assert isinstance(init_args[0], GAConfig)
     assert len(background_tasks.tasks) == 1
+
+
+def test_start_strategy_generation_cleans_up_on_failure(
+    auto_strategy_service, mock_persistence_service, mock_experiment_manager
+):
+    """異常系: バックグラウンドタスク登録失敗時に実験レコードを失敗扱いにする"""
+    experiment_id = "test-exp-id"
+    experiment_name = "Test Experiment"
+    ga_config_dict = {
+        "population_size": 10,
+        "generations": 5,
+        "crossover_rate": 0.8,
+        "mutation_rate": 0.1,
+        "elite_size": 2,
+    }
+    backtest_config_dict = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
+    background_tasks = BackgroundTasks()
+
+    with patch.object(
+        auto_strategy_service,
+        "_start_experiment_in_background",
+        side_effect=RuntimeError("boom"),
+    ):
+        with pytest.raises(RuntimeError):
+            auto_strategy_service.start_strategy_generation(
+                experiment_id,
+                experiment_name,
+                ga_config_dict,
+                backtest_config_dict,
+                background_tasks,
+            )
+
+    mock_experiment_manager.release_experiment.assert_called_once_with(experiment_id)
+    mock_persistence_service.fail_experiment.assert_called_once_with(experiment_id)
 
 
 def test_start_strategy_generation_invalid_ga_config(auto_strategy_service):
@@ -158,7 +195,7 @@ def test_stop_experiment_failure(auto_strategy_service, mock_experiment_manager)
     result = auto_strategy_service.stop_experiment(experiment_id)
 
     # 検証
-    assert result == {"success": False, "message": "実験の停止に失敗しました"}
+    assert result == {"success": False, "message": "実行中の実験が見つかりませんでした"}
 
 
 def test_stop_experiment_manager_not_initialized(auto_strategy_service):
@@ -209,7 +246,7 @@ def test_initialize_ga_engine_runtime_error(auto_strategy_service):
         RuntimeError, match="実験管理マネージャーが初期化されていません。"
     ):
         auto_strategy_service._initialize_ga_engine(
-            GAConfig.from_dict({})
+            "test-exp-id", GAConfig.from_dict({})
         )  # Assuming GAConfig has a from_dict method
 
 
@@ -228,7 +265,5 @@ def test_start_background_task_added(auto_strategy_service, mock_experiment_mana
     task = background_tasks.tasks[0]
     assert task.func == mock_experiment_manager.run_experiment
     assert task.args == (experiment_id, ga_config, backtest_config)
-
-
 
 
