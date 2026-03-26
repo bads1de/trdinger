@@ -141,3 +141,88 @@ class BaseFeatureCalculator(ABC):
         # DataFrame断片化を避けるため、辞書で収集 → pd.concat()で一括追加
         result_df = pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
         return result_df
+
+    def handle_calculation_error(
+        self, error: Exception, context: str, df: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        計算エラーを処理し、空の結果DataFrameを返す
+
+        Args:
+            error: 発生したエラー
+            context: エラーが発生したコンテキスト
+            df: 元のDataFrame
+
+        Returns:
+            元のDataFrameのコピー
+        """
+        logger.error(f"特徴量計算エラー ({context}): {error}")
+        return df.copy()
+
+    def clip_extreme_values(
+        self,
+        series: pd.Series,
+        lower_bound: float = -1e6,
+        upper_bound: float = 1e6,
+    ) -> pd.Series:
+        """
+        極端な値をクリッピングする
+
+        Args:
+            series: 対象のSeries
+            lower_bound: 下限値
+            upper_bound: 上限値
+
+        Returns:
+            クリッピングされたSeries
+        """
+        return series.clip(lower=lower_bound, upper=upper_bound)
+
+    def batch_calculate_ratio(
+        self,
+        numerators: Any,
+        denominators: Any,
+        fill_value: float = 0.0,
+    ) -> Any:
+        """
+        バッチで比率を計算する（ゼロ除算対応）
+
+        Args:
+            numerators: 分子（SeriesまたはSeriesの辞書）
+            denominators: 分母（SeriesまたはSeriesの辞書）
+            fill_value: ゼロ除算時の置換値
+
+        Returns:
+            計算された比率（入力と同じ型）
+        """
+        # 辞書型入力の場合
+        if isinstance(numerators, dict) and isinstance(denominators, dict):
+            if not numerators:
+                return {}
+            result = {}
+            for key in numerators:
+                if key in denominators:
+                    num = numerators[key]
+                    den = denominators[key]
+                    safe_den = den.replace(0, np.nan)
+                    result[key] = (num / safe_den).fillna(fill_value)
+            return result
+
+        # Series型入力の場合
+        safe_denominators = denominators.replace(0, np.nan)
+        result = numerators / safe_denominators
+        return result.fillna(fill_value)
+
+    def safe_ratio_calculation(
+        self,
+        numerator: pd.Series,
+        denominator: pd.Series,
+        fill_value: float = 0.0,
+    ) -> pd.Series:
+        """
+        安全な比率計算の共通エイリアス。
+
+        既存の特徴量計算クラスには `safe_ratio_calculation` を呼ぶ実装があり、
+        それを Base クラス側で受けられるようにして後方互換性を保つ。
+        """
+        return self.batch_calculate_ratio(numerator, denominator, fill_value)

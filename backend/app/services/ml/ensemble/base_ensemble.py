@@ -20,6 +20,21 @@ from ..common.exceptions import MLModelError
 logger = logging.getLogger(__name__)
 
 
+def evaluate_model_predictions(
+    y_true: pd.Series,
+    y_pred: np.ndarray,
+    y_pred_proba: Optional[np.ndarray] = None,
+) -> Dict[str, Any]:
+    """評価処理の共通ラッパー。
+
+    旧テストや一部の呼び出し側がモジュール関数として patch しているため、
+    互換性を保つ目的で公開しておく。
+    """
+    return metrics_collector.calculate_comprehensive_metrics(
+        y_true, y_pred, y_pred_proba
+    )
+
+
 class BaseEnsemble(ABC):
     """
     アンサンブル学習の基底クラス
@@ -209,7 +224,7 @@ class BaseEnsemble(ABC):
         Returns:
             評価指標の辞書
         """
-        result = metrics_collector.calculate_comprehensive_metrics(y_true, y_pred, y_pred_proba)
+        result = evaluate_model_predictions(y_true, y_pred, y_pred_proba)
 
         logger.info("✅ アンサンブル評価指標計算完了（共通評価関数使用）")
 

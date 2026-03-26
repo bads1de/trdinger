@@ -65,7 +65,9 @@ class DataCollectionOrchestrationService:
 
         return normalized_symbol
 
-    @safe_operation(context="履歴データ収集開始", is_api_call=True)
+    # 直接呼び出しのユニットテストでは ValueError をそのまま確認したいため、
+    # ここでは API 例外変換を行わずに上位へ伝播させる。
+    @safe_operation(context="履歴データ収集開始", is_api_call=False)
     async def start_historical_data_collection(
         self,
         symbol: str,

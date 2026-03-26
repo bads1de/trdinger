@@ -34,6 +34,25 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         """初期化"""
         super().__init__()
 
+    def safe_ratio_calculation(
+        self,
+        numerator: pd.Series,
+        denominator: pd.Series,
+        fill_value: float = 0.0,
+    ) -> pd.Series:
+        """
+        安全な比率計算（ゼロ除算対応）
+
+        Args:
+            numerator: 分子
+            denominator: 分母
+            fill_value: ゼロ除算時の置換値
+
+        Returns:
+            計算された比率
+        """
+        return self.batch_calculate_ratio(numerator, denominator, fill_value)
+
     def calculate_features(
         self, df: pd.DataFrame, config: Dict[str, Any]
     ) -> pd.DataFrame:

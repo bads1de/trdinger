@@ -90,7 +90,7 @@ class TestBacktestSystemComprehensive:
             "end_date": "2023-12-31",
             "initial_capital": 10000,
             "commission_rate": 0.001,
-            "strategy_config": {"period": 20},
+            "strategy_config": {"strategy_type": "MANUAL", "parameters": {"period": 20}},
         }
 
     def test_backtest_data_service_initialization(self, backtest_data_service):
@@ -362,7 +362,7 @@ class TestBacktestSystemComprehensive:
 
         # リポジトリのモック
         with patch(
-            "app.services.backtest.backtest_service.BacktestResultRepository"
+            "database.repositories.backtest_result_repository.BacktestResultRepository"
         ) as MockRepo:
             mock_repo = Mock()
             mock_repo.save_backtest_result.return_value = True

@@ -86,7 +86,7 @@ class TestModelManager:
     # ---------------------------------------------------------------------------
 
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=True)
-    @patch("app.services.ml.models.model_manager.glob.glob")
+    @patch("glob.glob")
     @patch("app.services.ml.models.model_manager.os.path.getmtime")
     def test_get_latest_model(self, mock_getmtime, mock_glob, mock_exists, manager):
         """最新モデルのファイルパス取得"""
@@ -100,7 +100,7 @@ class TestModelManager:
         assert latest == "/mock/models/model2.pkl"
 
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=True)
-    @patch("app.services.ml.models.model_manager.glob.glob")
+    @patch("glob.glob")
     @patch("app.services.ml.models.model_manager.os.stat")
     def test_list_models(self, mock_stat, mock_glob, mock_exists, manager):
         """保存されているモデルの一覧取得"""
@@ -130,7 +130,7 @@ class TestModelManager:
     # ---------------------------------------------------------------------------
 
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=True)
-    @patch("app.services.ml.models.model_manager.glob.glob")
+    @patch("glob.glob")
     @patch("app.services.ml.models.model_manager.os.path.getmtime")
     @patch("app.services.ml.models.model_manager.os.remove")
     def test_cleanup_expired_models(
@@ -152,7 +152,7 @@ class TestModelManager:
         mock_remove.assert_any_call("/mock/models/old.pkl")
         mock_remove.assert_any_call("/mock/models/old.meta.json")
 
-    @patch("app.services.ml.models.model_manager.glob.glob")
+    @patch("glob.glob")
     @patch("app.services.ml.models.model_manager.os.path.getmtime")
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=True)
     @patch("app.services.ml.models.model_manager.os.remove")

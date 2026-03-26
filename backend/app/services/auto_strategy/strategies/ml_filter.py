@@ -32,7 +32,7 @@ class MLFilter:
     def precompute_ml_features(self) -> None:
         """ML予測に必要な全期間の特徴量を一括計算してキャッシュする"""
         try:
-            from ..core.hybrid_feature_adapter import HybridFeatureAdapter
+            from ..core.hybrid.hybrid_feature_adapter import HybridFeatureAdapter
 
             # アダプターの初期化
             self.strategy.feature_adapter = HybridFeatureAdapter()
@@ -123,7 +123,7 @@ class MLFilter:
         HybridFeatureAdapterに委譲して一貫性を確保します。
         """
         try:
-            from ..core.hybrid_feature_adapter import HybridFeatureAdapter
+            from ..core.hybrid.hybrid_feature_adapter import HybridFeatureAdapter
 
             # アダプターの初期化（まだ存在しない場合）
             if not hasattr(self.strategy, "feature_adapter"):

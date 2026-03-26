@@ -547,11 +547,17 @@ class IndividualEvaluator:
         )
 
 
-# バックワード互換性のための再エクスポート
-# 旧: from app.services.auto_strategy.core.individual_evaluator import calculate_ulcer_index
-# 新: 同じパスで引き続き利用可能
+# 旧 shim モジュール向けの公開シンボルをここでも提供する
 from .evaluation_metrics import (  # noqa: E402, F401
     REFERENCE_TRADES_PER_DAY,
     _calculate_ulcer_index_numba,
     _ensure_datetime,
+    calculate_trade_frequency_penalty,
+    calculate_ulcer_index,
 )
+
+__all__ = [
+    "IndividualEvaluator",
+    "calculate_trade_frequency_penalty",
+    "calculate_ulcer_index",
+]

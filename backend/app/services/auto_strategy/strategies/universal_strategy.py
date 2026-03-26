@@ -13,7 +13,7 @@ from typing import Any, List, Optional, Tuple, Union, cast
 import pandas as pd
 from backtesting import Strategy
 
-from ..core.condition_evaluator import ConditionEvaluator
+from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes.entry import EntryGene
 from ..config.constants import EntryType
 from ..genes.conditions import StateTracker
@@ -510,7 +510,7 @@ class UniversalStrategy(Strategy):
                     return
 
                 # 4. MLフィルター判定
-                if self.ml_predictor and not self.ml_filter.ml_allows_entry(direction):
+                if self.ml_predictor and not self._ml_allows_entry(direction):
                     return
 
                 # 5. TP/SLおよびエントリーパラメータの計算
@@ -558,6 +558,40 @@ class UniversalStrategy(Strategy):
             logger.error(f"戦略実行エラー: {e}")
 
     # ===== ML フィルターメソッド =====
+
+    def _ml_allows_entry(self, direction: float) -> bool:
+        """
+        MLフィルターがエントリーを許可するかチェック
+
+        Args:
+            direction: 1.0 (Long) or -1.0 (Short)
+
+        Returns:
+            True: エントリー許可, False: エントリーブロック
+        """
+        return self.ml_filter.ml_allows_entry(direction)
+
+    def _prepare_current_features(self) -> Optional[pd.DataFrame]:
+        """
+        MLフィルター用の現在の特徴量を準備
+
+        Returns:
+            特徴量DataFrame、準備できない場合はNone
+        """
+        return self.ml_filter.prepare_current_features()
+
+    def _process_stateful_triggers(self):
+        """ステートフルトリガーを処理"""
+        self.stateful_conditions_evaluator.process_stateful_triggers()
+
+    def _get_stateful_entry_direction(self) -> Optional[float]:
+        """
+        ステートフルエントリーの方向を取得
+
+        Returns:
+            1.0 (Long), -1.0 (Short), または None
+        """
+        return self.stateful_conditions_evaluator.get_stateful_entry_direction()
 
     # ===== ツールフィルターメソッド =====
 

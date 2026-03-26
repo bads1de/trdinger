@@ -109,3 +109,67 @@ class BacktestResultConverter:
             return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
         else:
             raise ValueError(f"サポートされていない日付形式: {type(date_value)}")
+
+    def _extract_statistics(self, stats: Any) -> Dict[str, Any]:
+        """
+        統計情報を抽出（テスト互換性のため）
+
+        Args:
+            stats: backtesting.pyの統計結果
+
+        Returns:
+            統計情報辞書
+        """
+        return self._stats_calculator.calculate_statistics(stats)
+
+    def _convert_trade_history(self, stats: Any) -> list:
+        """
+        取引履歴を変換（テスト互換性のため）
+
+        Args:
+            stats: backtesting.pyの統計結果
+
+        Returns:
+            取引履歴リスト
+        """
+        return self._trade_transformer.transform(stats)
+
+    def _convert_equity_curve(self, stats: Any) -> list:
+        """
+        エクイティカーブを変換（テスト互換性のため）
+
+        Args:
+            stats: backtesting.pyの統計結果
+
+        Returns:
+            エクイティカーブリスト
+        """
+        return self._equity_transformer.transform(stats)
+
+    def _safe_float_conversion(self, value: Any) -> float:
+        """安全なfloat変換"""
+        return self._stats_calculator._safe_float_conversion(value)
+
+    def _safe_int_conversion(self, value: Any) -> int:
+        """安全なint変換"""
+        return self._stats_calculator._safe_int_conversion(value)
+
+    def _safe_timestamp_conversion(self, value: Any) -> Any:
+        """安全なtimestamp変換"""
+        if value is None:
+            return None
+        try:
+            import pandas as pd
+
+            if pd.isna(value):
+                return None
+        except (ValueError, TypeError):
+            pass
+        try:
+            if isinstance(value, datetime):
+                return value
+            import pandas as pd
+
+            return pd.to_datetime(value).to_pydatetime()
+        except Exception:
+            return None

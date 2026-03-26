@@ -200,9 +200,9 @@ class TestFetchOhlcvData:
         )
 
         assert result is not None
-        # _get_cached_ohlcv_data はカラム名を大文字化してキャッシュする
+        # ML特徴量生成に合わせて列名は小文字で正規化される
         expected_df = db_df.copy()
-        expected_df.columns = expected_df.columns.str.capitalize()
+        expected_df.columns = expected_df.columns.str.lower()
         pd.testing.assert_frame_equal(result, expected_df)
         # キャッシュに保存されていることを確認
         cache_key = ("ohlcv", "BTCUSDT", "1h", "2023-01-01", "2023-12-31")
@@ -693,7 +693,6 @@ class TestShouldApplyPreprocessing:
         config = Mock(spec=[])  # preprocess_features属性なし
 
         assert evaluator._should_apply_preprocessing(config) is True
-
 
 
 

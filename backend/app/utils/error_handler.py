@@ -5,9 +5,13 @@ APIErrorHandler と MLErrorHandler の重複機能を統合し、
 一貫性のあるエラー処理とログ出力を提供します。
 """
 
+import concurrent.futures
 import functools
 import inspect
 import logging
+import math
+import platform
+import signal
 import time
 from contextlib import contextmanager
 from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar
@@ -245,6 +249,135 @@ class ErrorHandler:
             return wrapper
         return decorator
 
+    @staticmethod
+    def handle_timeout(func: Callable[..., T], timeout: int, *args: Any, **kwargs: Any) -> T:
+        """
+        タイムアウト付きで関数を実行する（Windows/Unix両対応）
+
+        Args:
+            func: 実行する関数
+            timeout: タイムアウト秒数
+            *args: 関数に渡す位置引数
+            **kwargs: 関数に渡すキーワード引数
+
+        Returns:
+            関数の実行結果
+
+        Raises:
+            TimeoutError: タイムアウト発生時
+        """
+        if platform.system() == "Windows":
+            # Windows: スレッドベースのタイムアウト
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(func, *args, **kwargs)
+                try:
+                    return future.result(timeout=timeout)
+                except concurrent.futures.TimeoutError:
+                    raise TimeoutError(f"操作がタイムアウトしました ({timeout}秒)")
+        else:
+            # Unix: シグナルベースのタイムアウト
+            def timeout_handler(signum: int, frame: Any) -> None:
+                raise TimeoutError(f"操作がタイムアウトしました ({timeout}秒)")
+
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old_handler)
+
+    @staticmethod
+    def validate_predictions(predictions: Any) -> bool:
+        """
+        ML予測値をバリデーションする
+
+        Args:
+            predictions: 予測値（辞書形式、"up", "down", "range" キーが必要）
+
+        Returns:
+            バリデーション結果（True/False）
+        """
+        if predictions is None:
+            logger.warning("予測値がNoneです")
+            return False
+
+        if not isinstance(predictions, dict):
+            logger.warning(f"予測値は辞書形式である必要があります: {type(predictions)}")
+            return False
+
+        required_keys = {"up", "down", "range"}
+        if not required_keys.issubset(predictions.keys()):
+            missing = required_keys - set(predictions.keys())
+            logger.warning(f"予測値に必須キーが不足しています: {missing}")
+            return False
+
+        for key, value in predictions.items():
+            if value is None:
+                logger.warning(f"予測値 '{key}' がNoneです")
+                return False
+            if isinstance(value, float):
+                if math.isnan(value):
+                    logger.warning(f"予測値 '{key}' にNaNが含まれています")
+                    return False
+                if math.isinf(value):
+                    logger.warning(f"予測値 '{key}' にInfが含まれています")
+                    return False
+                if value < 0.0 or value > 1.0:
+                    logger.warning(f"予測値 '{key}' が範囲外です: {value}")
+                    return False
+
+        total = sum(predictions[k] for k in required_keys)
+        if total < 0.8 or total > 1.2:
+            logger.warning(f"予測値の合計が範囲外です: {total}")
+            return False
+
+        return True
+
+    @staticmethod
+    def validate_dataframe(
+        df: Any,
+        required_columns: Optional[list] = None,
+        min_rows: int = 0,
+    ) -> bool:
+        """
+        DataFrameをバリデーションする
+
+        Args:
+            df: バリデーション対象のDataFrame
+            required_columns: 必須カラムのリスト
+            min_rows: 最小行数
+
+        Returns:
+            バリデーション結果（True/False）
+        """
+        import pandas as pd
+
+        if df is None:
+            logger.warning("データフレームが空です")
+            return False
+
+        if not isinstance(df, pd.DataFrame):
+            logger.warning(f"DataFrame型である必要があります: {type(df)}")
+            return False
+
+        if df.empty:
+            logger.warning("データフレームが空です")
+            return False
+
+        if min_rows > 0 and len(df) < min_rows:
+            logger.warning(f"データ行数が不足しています: {len(df)} < {min_rows}")
+            return False
+
+        if required_columns:
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                logger.warning(f"必須カラムが不足しています: {missing_columns}")
+                return False
+
+        return True
+
+
 # --- デコレータとコンテキストマネージャー ---
 
 
@@ -353,15 +486,32 @@ def ensure_db_initialized(
 ) -> None:
     """DB が利用可能でなければ 500 を返す。"""
     from database.connection import init_db
- 
+
     if init_db():
         return
- 
+
     logger.error(error_message)
     raise HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=error_message,
     )
+
+
+def timeout_decorator(timeout_seconds: int = 30):
+    """タイムアウトデコレータ
+
+    Args:
+        timeout_seconds: タイムアウト秒数
+    """
+
+    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> T:
+            return ErrorHandler.handle_timeout(func, timeout_seconds, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 

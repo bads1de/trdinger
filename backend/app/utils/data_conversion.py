@@ -232,3 +232,56 @@ class OpenInterestDataConverter:
             db_records.append(db_record)
 
         return db_records
+
+
+def normalize_market_symbol(symbol: Any) -> str:
+    """
+    市場シンボルを正規化する
+
+    BybitService._normalize_symbol_for_ccxt および
+    BaseDataCollectionOrchestrationService._normalize_derivative_symbol
+    の共通化を目的とする。
+
+    Args:
+        symbol: 正規化するシンボル（例: "BTC/USDT", "BTCUSDT", "BTC/USDT:USDT"）
+
+    Returns:
+        正規化されたシンボル（例: "BTC/USDT:USDT"）
+    """
+    if symbol is None:
+        return ""
+
+    # 非文字列入力はstr()変換
+    if not isinstance(symbol, str):
+        symbol = str(symbol)
+
+    # 空文字列の場合はそのまま返す
+    if not symbol:
+        return symbol
+
+    # 大文字に変換
+    normalized = symbol.upper().strip()
+
+    # すでにコロン付きの場合はそのまま返す（例: "BTC/USDT:USDT"）
+    if ":" in normalized:
+        return normalized
+
+    # ハイフンをスラッシュに変換
+    normalized = normalized.replace("-", "/")
+
+    # スラッシュ付きシンボルの処理（例: "BTC/USDT" -> "BTC/USDT:USDT"）
+    if "/" in normalized:
+        if normalized.endswith("/USDT"):
+            return f"{normalized}:USDT"
+        elif normalized.endswith("/USD"):
+            return f"{normalized}:USD"
+        elif normalized.endswith("/BUSD"):
+            return f"{normalized}:BUSD"
+        elif normalized.endswith("/USDC"):
+            return f"{normalized}:USDC"
+        # その他のQuote通貨
+        return normalized
+
+    # スラッシュがない場合（例: "BTCUSDT" -> "BTCUSDT:USDT"）
+    # その他のQuote通貨
+    return f"{normalized}:USDT"

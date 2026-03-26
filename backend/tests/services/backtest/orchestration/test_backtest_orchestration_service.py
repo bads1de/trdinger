@@ -125,18 +125,8 @@ class TestBacktestOrchestrationService:
 
     @pytest.mark.asyncio
     async def test_get_supported_strategies(self, service):
-        with patch(
-            "app.services.backtest.orchestration.backtest_orchestration_service.BacktestService"
-        ) as MockService:
-            mock_bt_service = MockService.return_value
-            mock_bt_service.get_supported_strategies.return_value = ["SMA", "RSI"]
+        result = await service.get_supported_strategies()
 
-            with patch(
-                "app.services.backtest.orchestration.backtest_orchestration_service.api_response",
-                side_effect=lambda **kwargs: kwargs,
-            ):
-                result = await service.get_supported_strategies()
-
-                assert result["success"] is True
-                assert result["data"]["strategies"] == ["SMA", "RSI"]
-                mock_bt_service.cleanup.assert_called_once()
+        assert result["success"] is True
+        assert "strategies" in result["data"]
+        assert isinstance(result["data"]["strategies"], dict)

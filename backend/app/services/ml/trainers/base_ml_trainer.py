@@ -23,7 +23,8 @@ from ..common.utils import (
     get_feature_importance_unified,
     prepare_data_for_prediction,
 )
-from ..cross_validation import PurgedKFold, get_t1_series
+from .. import cross_validation as cross_validation_module
+from ..cross_validation import PurgedKFold
 from ..common.exceptions import MLModelError
 from ..feature_engineering.feature_engineering_service import FeatureEngineeringService
 from ..label_generation.label_generation_service import LabelGenerationService
@@ -368,7 +369,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             "timeframe", self.config.training.label_generation.timeframe
         )
 
-        t1 = get_t1_series(
+        t1 = cross_validation_module.get_t1_series(
             X.index,
             t1_horizon_n,
             timeframe=timeframe,

@@ -53,8 +53,9 @@ class EnsembleTrainer(BaseMLTrainer):
 
         models = ensemble_config.get("models", [])
         model_type = ensemble_config.get("model_type")
+        self.is_single_model = bool(model_type or len(models) == 1)
 
-        if model_type or len(models) == 1:
+        if self.is_single_model:
             self.model_type = model_type or models[0]
             if not models:
                 self.ensemble_config["models"] = [self.model_type]
@@ -65,6 +66,25 @@ class EnsembleTrainer(BaseMLTrainer):
             f"EnsembleTrainer初期化: method={self.ensemble_method}, "
             f"model_type={self.model_type}, strict_error_mode={self.strict_error_mode}"
         )
+
+    def predict_proba(self, features_df: pd.DataFrame) -> np.ndarray:
+        """アンサンブルの確率予測を返す。"""
+        if self.ensemble_model is None or not getattr(
+            self.ensemble_model, "is_fitted", False
+        ):
+            raise ModelError("学習済みアンサンブルモデルがありません")
+
+        try:
+            return np.asarray(self.ensemble_model.predict_proba(features_df))
+        except Exception as e:
+            if self.strict_error_mode:
+                logger.error(f"アンサンブル確率予測エラー: {e}")
+                raise ModelError(f"アンサンブル確率予測に失敗しました: {e}")
+
+            logger.warning(
+                f"確率予測に失敗したためゼロ配列でフォールバックします: {e}"
+            )
+            return np.zeros((len(features_df), 2))
 
     def _extract_optimized_parameters(
         self, training_params: Dict[str, Any]

@@ -2,8 +2,7 @@ import pytest
 import pandas as pd
 from fastapi import HTTPException
 
-from app.api.common import ensure_db_initialized
-from app.utils.error_handler import ErrorHandler, safe_operation
+from app.utils.error_handler import ErrorHandler, ensure_db_initialized, safe_operation
 from app.utils.response import (
     api_response,
     ensure_response_dict,
@@ -75,12 +74,12 @@ class TestUtilsExtra:
         assert extract_response_data({"data": None}) == {}
 
     def test_ensure_db_initialized_success(self, monkeypatch):
-        monkeypatch.setattr("app.api.common.init_db", lambda: True)
+        monkeypatch.setattr("database.connection.init_db", lambda: True)
 
         ensure_db_initialized()
 
     def test_ensure_db_initialized_failure(self, monkeypatch):
-        monkeypatch.setattr("app.api.common.init_db", lambda: False)
+        monkeypatch.setattr("database.connection.init_db", lambda: False)
 
         with pytest.raises(HTTPException) as exc_info:
             ensure_db_initialized()

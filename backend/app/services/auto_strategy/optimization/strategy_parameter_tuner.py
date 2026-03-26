@@ -10,7 +10,7 @@ from typing import Any, Dict, Optional
 from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
 from ..config.ga import GAConfig
-from ..core.individual_evaluator import IndividualEvaluator
+from ..core.evaluation.individual_evaluator import IndividualEvaluator
 from ..genes.strategy import StrategyGene
 from .strategy_parameter_space import StrategyParameterSpace
 
