@@ -51,6 +51,7 @@ class TestExperimentPersistenceService:
             assert result_id == experiment_id
             mock_repo.create_experiment.assert_called_once()
             call_kwargs = mock_repo.create_experiment.call_args[1]
+            assert call_kwargs["experiment_id"] == experiment_id
             assert call_kwargs["name"] == experiment_name
             assert call_kwargs["config"]["experiment_id"] == experiment_id
             assert call_kwargs["total_generations"] == 10
@@ -86,23 +87,22 @@ class TestExperimentPersistenceService:
             "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
         ) as mock_repo_cls:
             mock_repo = mock_repo_cls.return_value
-            mock_exp1 = Mock()
-            mock_exp1.config = {"experiment_id": "other-uuid"}
-            mock_exp2 = Mock()
-            mock_exp2.id = 2
-            mock_exp2.name = "Target Exp"
-            mock_exp2.status = "running"
-            mock_exp2.config = {"experiment_id": target_uuid}
-            mock_exp2.created_at = datetime.now()
-            mock_exp2.completed_at = None
+            mock_exp = Mock()
+            mock_exp.id = 2
+            mock_exp.name = "Target Exp"
+            mock_exp.status = "running"
+            mock_exp.config = {"experiment_id": target_uuid}
+            mock_exp.created_at = datetime.now()
+            mock_exp.completed_at = None
 
-            mock_repo.get_recent_experiments.return_value = [mock_exp1, mock_exp2]
+            mock_repo.get_by_experiment_id.return_value = mock_exp
 
             info = self.persistence_service.get_experiment_info(target_uuid)
 
             assert info is not None
             assert info["db_id"] == 2
             assert info["name"] == "Target Exp"
+            mock_repo.get_by_experiment_id.assert_called_once_with(target_uuid)
 
     def test_complete_experiment(self):
         """実験完了処理のテスト"""

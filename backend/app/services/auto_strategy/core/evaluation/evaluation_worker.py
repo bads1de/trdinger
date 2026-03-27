@@ -71,12 +71,12 @@ def worker_evaluate_individual(individual: Any) -> Tuple[float, ...]:
     """
     global _WORKER_EVALUATOR, _WORKER_CONFIG
     
-    if _WORKER_EVALUATOR is None:
-        logger.error("Worker evaluator not initialized!")
+    if _WORKER_EVALUATOR is None or _WORKER_CONFIG is None:
+        logger.error("Worker evaluator or config not initialized!")
         return (0.0,)
         
     try:
-        return _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)
+        return _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)  # type: ignore[arg-type]
     except Exception as e:
         logger.error(f"Evaluation error in worker: {e}")
         return (0.0,)

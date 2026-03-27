@@ -279,8 +279,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         基底クラスの _get_cached_ohlcv_data を使用して DB アクセスを最小化します。
         """
         ohlcv_data = self._get_cached_ohlcv_data(
-            symbol=backtest_config.get("symbol"),
-            timeframe=backtest_config.get("timeframe"),
+            symbol=str(backtest_config.get("symbol", "")),
+            timeframe=str(backtest_config.get("timeframe", "")),
             start_date=backtest_config.get("start_date"),
             end_date=backtest_config.get("end_date"),
             cache_prefix="ohlcv",

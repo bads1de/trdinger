@@ -185,7 +185,7 @@ class GeneticAlgorithmEngine:
             stats = self._create_statistics()
 
             # 初期個体群の生成（評価なし）
-            population = toolbox.population(n=config.population_size)
+            population = toolbox.population(n=config.population_size)  # type: ignore[attr-defined]
 
             # シード戦略の注入（ハイブリッド初期化）
             if config.use_seed_strategies:
@@ -200,9 +200,12 @@ class GeneticAlgorithmEngine:
                 )
                 if num_to_inject > 0:
                     individual_class = self.deap_setup.get_individual_class()
-                    for i in range(num_to_inject):
-                        seed = seeds[i % len(seeds)]
-                        population[i] = individual_class(**_gene_kwargs(seed))
+                    if individual_class is not None:
+                        for i in range(num_to_inject):
+                            seed = seeds[i % len(seeds)]
+                            population[i] = individual_class(**_gene_kwargs(seed))
+                    else:
+                        logger.warning("個体クラスが未初期化のため、シード戦略の注入をスキップしました")
                     logger.info(
                         f"シード戦略を {num_to_inject} 個注入しました "
                         f"(注入率: {config.seed_injection_rate * 100:.1f}%)"
@@ -273,8 +276,8 @@ class GeneticAlgorithmEngine:
                 smart_gen = getattr(self.gene_generator, "smart_condition_generator")
                 if smart_gen and hasattr(smart_gen, "set_context"):
                     smart_gen.set_context(timeframe=tf, symbol=sym)
-        except Exception:
-            pass
+        except (AttributeError, TypeError) as e:
+            logger.debug(f"コンテキスト設定スキップ: {e}")
 
     def _create_statistics(self):
         """
@@ -499,7 +502,7 @@ class GeneticAlgorithmEngine:
                     continue
 
                 best_strategies.append(
-                    {"strategy": gene, "fitness_values": list(ind.fitness.values)}
+                    {"strategy": gene, "fitness_values": list(ind.fitness.values)}  # type: ignore[union-attr]
                 )
         else:
             # 単一目的最適化の場合

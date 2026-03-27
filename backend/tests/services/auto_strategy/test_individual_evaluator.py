@@ -388,7 +388,7 @@ class TestIndividualEvaluator:
         assert result[3] == 0.55  # win_rate
 
     def test_calculate_multi_objective_fitness_unknown_objective(self):
-        """未知の目的のテスト"""
+        """未知の目的のテスト（制約違反時のペナルティ値確認）"""
         backtest_result = {"performance_metrics": {"total_trades": 1}}
         ga_config = GAConfig()
         ga_config.objectives = ["unknown_objective"]
@@ -397,7 +397,12 @@ class TestIndividualEvaluator:
             backtest_result, ga_config
         )
 
-        assert result == (0.0,)  # 未知の目的は0.0
+        # 制約違反（min_trades=10 > total_trades=1）によりペナルティ値が返される
+        # 未知の目的は最大化方向とみなされ、ペナルティは -inf
+        import math
+
+        assert len(result) == 1
+        assert math.isinf(result[0]) and result[0] < 0
 
     def test_evaluate_individual_with_ml_filter(self):
         """MLフィルターが有効な場合の個体評価テスト"""

@@ -8,6 +8,7 @@ Auto Strategy Config モジュール
 - base.py: BaseConfig 基底クラス
 - constants.py: 共通定数・Enum・GA固有定数を統合
 - ga.py: GAConfig ランタイム設定（dataclass）
+- sub_configs.py: GAConfig サブ設定（MutationConfig, EvaluationConfig 等）
 - auto_strategy_settings.py: AutoStrategyConfig 環境変数設定（pydantic）
 - validators.py: ConfigValidator バリデーション
 """
@@ -17,6 +18,14 @@ from .base import BaseConfig
 
 # auto_strategy_settings.py は軽量（pydanticのみ）
 from .auto_strategy_settings import AutoStrategyConfig
+
+# サブ設定クラス
+from .sub_configs import (
+    EvaluationConfig,
+    HybridConfig,
+    MutationConfig,
+    TuningConfig,
+)
 
 
 def __getattr__(name: str):
@@ -32,4 +41,8 @@ __all__ = [
     "BaseConfig",
     "AutoStrategyConfig",
     "GAConfig",
+    "MutationConfig",
+    "EvaluationConfig",
+    "HybridConfig",
+    "TuningConfig",
 ]

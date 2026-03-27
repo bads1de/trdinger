@@ -23,12 +23,31 @@ class GAExperimentRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, GAExperiment)
 
+    def get_by_experiment_id(
+        self, experiment_id: str
+    ) -> Optional[GAExperiment]:
+        """
+        フロントエンド由来のexperiment_idで実験を取得
+
+        Args:
+            experiment_id: フロントエンドで生成されたUUID
+
+        Returns:
+            GA実験、または見つからない場合はNone
+        """
+        return (
+            self.db.query(GAExperiment)
+            .filter(GAExperiment.experiment_id == experiment_id)
+            .first()
+        )
+
     def create_experiment(
         self,
         name: str,
         config: Dict[str, Any],
         total_generations: int,
         status: str = "running",
+        experiment_id: Optional[str] = None,
     ) -> GAExperiment:
         """
         新しいGA実験を作成
@@ -47,6 +66,7 @@ class GAExperimentRepository(BaseRepository):
         @safe_operation(context="GA実験作成", is_api_call=False)
         def _create_experiment():
             experiment = GAExperiment(
+                experiment_id=experiment_id,
                 name=name,
                 config=config,
                 status=status,

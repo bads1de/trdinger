@@ -5,7 +5,9 @@
 """
 
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TypeVar
+
+T = TypeVar("T")
 
 
 class GeneticUtils:
@@ -90,6 +92,96 @@ class GeneticUtils:
     def extract_gene_params(gene) -> Dict[str, Any]:
         """遺伝子オブジェクトから公開フィールドを抽出"""
         return GeneticUtils._extract_gene_params(gene)
+
+    @staticmethod
+    def smart_copy(value: Any) -> Any:
+        """
+        値をスマートにコピーする。
+        
+        clone() メソッドを持つオブジェクトは clone() を使用し、
+        リストやディクショネリは再帰的にコピーします。
+        
+        Args:
+            value: コピー対象の値
+            
+        Returns:
+            コピーされた値
+        """
+        if hasattr(value, "clone"):
+            return value.clone()
+        if isinstance(value, list):
+            return [GeneticUtils.smart_copy(item) for item in value]
+        if isinstance(value, dict):
+            return value.copy()
+        return value
+
+    @staticmethod
+    def crossover_optional_gene(
+        parent1_gene: Optional[T],
+        parent2_gene: Optional[T],
+        gene_class: type,
+    ) -> Tuple[Optional[T], Optional[T]]:
+        """
+        オプショナルな遺伝子の交叉を実行する汎用ヘルパー。
+        
+        両方の親が存在する場合は交叉を実行し、
+        片方のみの場合はクローンを作成し、
+        両方なければ None を返します。
+        
+        Args:
+            parent1_gene: 親1の遺伝子（None可）
+            parent2_gene: 親2の遺伝子（None可）
+            gene_class: 遺伝子クラス（crossover メソッドを持つ）
+            
+        Returns:
+            (child1_gene, child2_gene) のタプル
+        """
+        if parent1_gene and parent2_gene:
+            return gene_class.crossover(parent1_gene, parent2_gene)
+        if parent1_gene:
+            return parent1_gene, parent1_gene.clone()
+        if parent2_gene:
+            return parent2_gene, parent2_gene.clone()
+        return None, None
+
+    @staticmethod
+    def copy_conditions(conditions: List[Any]) -> List[Any]:
+        """
+        条件リストをスマートコピーする。
+        
+        Args:
+            conditions: 条件のリスト
+            
+        Returns:
+            コピーされた条件のリスト
+        """
+        return [GeneticUtils.smart_copy(c) for c in conditions]
+
+    @staticmethod
+    def copy_stateful_conditions(conditions: List[Any]) -> List[Any]:
+        """
+        ステートフル条件リストをクローンする。
+        
+        Args:
+            conditions: ステートフル条件のリスト
+            
+        Returns:
+            クローンされたステートフル条件のリスト
+        """
+        return [c.clone() for c in conditions]
+
+    @staticmethod
+    def copy_tool_genes(tools: List[Any]) -> List[Any]:
+        """
+        ツール遺伝子リストをクローンする。
+        
+        Args:
+            tools: ツール遺伝子のリスト
+            
+        Returns:
+            クローンされたツール遺伝子のリスト
+        """
+        return [t.clone() for t in tools]
 
     @staticmethod
     def crossover_generic_genes(

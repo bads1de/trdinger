@@ -24,6 +24,12 @@ from .constants import (
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
 )
+from .sub_configs import (
+    EvaluationConfig,
+    HybridConfig,
+    MutationConfig,
+    TuningConfig,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +216,12 @@ class GAConfig(BaseConfig):
         }
     )
 
+    # サブ設定（ネスト辞書からの復元用、None時はフラットフィールドを使用）
+    mutation_config: Optional[MutationConfig] = None
+    evaluation_config: Optional[EvaluationConfig] = None
+    hybrid_config: Optional[HybridConfig] = None
+    tuning_config: Optional[TuningConfig] = None
+
     def to_dict(self) -> Dict[str, Any]:
         """
         設定オブジェクトを辞書形式に変換
@@ -226,8 +238,8 @@ class GAConfig(BaseConfig):
         """
         辞書形式からGAConfigインスタンスを生成
 
-        パラメータが不足している場合は定数で定義された
-        デフォルト値で補完します。
+        フラット辞書とネスト辞書（mutation_config等）の両方に対応する。
+        ネスト辞書が存在する場合、サブ設定からフラットフィールドへ逆展開する。
 
         Args:
             data: 設定値を含む辞書
@@ -272,8 +284,19 @@ class GAConfig(BaseConfig):
             if key not in data or data[key] is None:
                 data[key] = default_value
 
+        # ネスト辞書からのサブ設定復元
+        working = dict(data)
+        if "mutation_config" in working and isinstance(working["mutation_config"], dict):
+            working["mutation_config"] = MutationConfig.from_dict(working["mutation_config"])
+        if "evaluation_config" in working and isinstance(working["evaluation_config"], dict):
+            working["evaluation_config"] = EvaluationConfig.from_dict(working["evaluation_config"])
+        if "hybrid_config" in working and isinstance(working["hybrid_config"], dict):
+            working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
+        if "tuning_config" in working and isinstance(working["tuning_config"], dict):
+            working["tuning_config"] = TuningConfig.from_dict(working["tuning_config"])
+
         # BaseConfigのfrom_dict処理を使用
-        return cast(GAConfig, super().from_dict(data))
+        return cast(GAConfig, super().from_dict(working))
 
     def get_default_values(self) -> Dict[str, Any]:
         """BaseConfig用のデフォルト値を取得（自動生成を利用）"""

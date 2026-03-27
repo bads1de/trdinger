@@ -6,15 +6,7 @@ Bybitデータ収集サービスの設定クラス
 """
 
 from dataclasses import dataclass
-from typing import Any, Type, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from app.utils.data_conversion import (
-        FundingRateDataConverter,
-        OpenInterestDataConverter,
-    )
-    from database.repositories.funding_rate_repository import FundingRateRepository
-    from database.repositories.open_interest_repository import OpenInterestRepository
+from typing import Any, Type
 
 
 @dataclass

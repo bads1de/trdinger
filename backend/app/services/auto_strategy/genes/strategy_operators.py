@@ -13,6 +13,7 @@ import numpy as np
 
 from .conditions import ConditionGroup
 from .entry import EntryGene
+from .genetic_utils import GeneticUtils
 from .position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,
@@ -20,17 +21,6 @@ from .position_sizing import (
 from .tpsl import TPSLGene, create_random_tpsl_gene
 
 logger = logging.getLogger(__name__)
-
-
-def smart_copy(value: Any) -> Any:
-    """値をスマートにコピーする。"""
-    if hasattr(value, "clone"):
-        return value.clone()
-    if isinstance(value, list):
-        return [smart_copy(item) for item in value]
-    if isinstance(value, dict):
-        return value.copy()
-    return value
 
 
 def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
@@ -235,39 +225,24 @@ def crossover_tpsl_genes(
     parent1_tpsl: Optional[TPSLGene],
     parent2_tpsl: Optional[TPSLGene],
 ) -> Tuple[Optional[TPSLGene], Optional[TPSLGene]]:
-    if parent1_tpsl and parent2_tpsl:
-        return TPSLGene.crossover(parent1_tpsl, parent2_tpsl)
-    if parent1_tpsl:
-        return parent1_tpsl, parent1_tpsl.clone()
-    if parent2_tpsl:
-        return parent2_tpsl, parent2_tpsl.clone()
-    return None, None
+    """TPSL遺伝子の交叉を実行する。"""
+    return GeneticUtils.crossover_optional_gene(parent1_tpsl, parent2_tpsl, TPSLGene)
 
 
 def crossover_position_sizing_genes(
     parent1_ps: Optional[PositionSizingGene],
     parent2_ps: Optional[PositionSizingGene],
 ) -> Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]:
-    if parent1_ps and parent2_ps:
-        return PositionSizingGene.crossover(parent1_ps, parent2_ps)
-    if parent1_ps:
-        return parent1_ps, parent1_ps.clone()
-    if parent2_ps:
-        return parent2_ps, parent2_ps.clone()
-    return None, None
+    """ポジションサイジング遺伝子の交叉を実行する。"""
+    return GeneticUtils.crossover_optional_gene(parent1_ps, parent2_ps, PositionSizingGene)
 
 
 def crossover_entry_genes(
     parent1_entry: Optional[EntryGene],
     parent2_entry: Optional[EntryGene],
 ) -> Tuple[Optional[EntryGene], Optional[EntryGene]]:
-    if parent1_entry and parent2_entry:
-        return EntryGene.crossover(parent1_entry, parent2_entry)
-    if parent1_entry:
-        return parent1_entry, parent1_entry.clone()
-    if parent2_entry:
-        return parent2_entry, parent2_entry.clone()
-    return None, None
+    """エントリー遺伝子の交叉を実行する。"""
+    return GeneticUtils.crossover_optional_gene(parent1_entry, parent2_entry, EntryGene)
 
 
 def crossover_strategy_genes(
@@ -315,13 +290,11 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
         val2 = getattr(parent2, field_name)
 
         if random.random() < selection_prob:
-            child1_params[field_name] = smart_copy(val1)
-            child2_params[field_name] = smart_copy(val2)
+            child1_params[field_name] = GeneticUtils.smart_copy(val1)
+            child2_params[field_name] = GeneticUtils.smart_copy(val2)
         else:
-            child1_params[field_name] = smart_copy(val2)
-            child2_params[field_name] = smart_copy(val1)
-
-    from .genetic_utils import GeneticUtils
+            child1_params[field_name] = GeneticUtils.smart_copy(val2)
+            child2_params[field_name] = GeneticUtils.smart_copy(val1)
 
     c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
     child1_params["metadata"] = c1_meta
@@ -382,49 +355,38 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
         parent2.short_entry_gene,
     )
 
-    from .genetic_utils import GeneticUtils
-
     c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
 
-    def copy_conditions(conds):
-        return [smart_copy(c) for c in conds]
+    if random.random() < 0.5:
+        c1_long_cond = GeneticUtils.copy_conditions(parent1.long_entry_conditions)
+        c2_long_cond = GeneticUtils.copy_conditions(parent2.long_entry_conditions)
+    else:
+        c1_long_cond = GeneticUtils.copy_conditions(parent2.long_entry_conditions)
+        c2_long_cond = GeneticUtils.copy_conditions(parent1.long_entry_conditions)
 
     if random.random() < 0.5:
-        c1_long_cond = copy_conditions(parent1.long_entry_conditions)
-        c2_long_cond = copy_conditions(parent2.long_entry_conditions)
+        c1_short_cond = GeneticUtils.copy_conditions(parent1.short_entry_conditions)
+        c2_short_cond = GeneticUtils.copy_conditions(parent2.short_entry_conditions)
     else:
-        c1_long_cond = copy_conditions(parent2.long_entry_conditions)
-        c2_long_cond = copy_conditions(parent1.long_entry_conditions)
+        c1_short_cond = GeneticUtils.copy_conditions(parent2.short_entry_conditions)
+        c2_short_cond = GeneticUtils.copy_conditions(parent1.short_entry_conditions)
 
     if random.random() < 0.5:
-        c1_short_cond = copy_conditions(parent1.short_entry_conditions)
-        c2_short_cond = copy_conditions(parent2.short_entry_conditions)
+        c1_stateful = GeneticUtils.copy_stateful_conditions(parent1.stateful_conditions)
+        c2_stateful = GeneticUtils.copy_stateful_conditions(parent2.stateful_conditions)
     else:
-        c1_short_cond = copy_conditions(parent2.short_entry_conditions)
-        c2_short_cond = copy_conditions(parent1.short_entry_conditions)
-
-    def copy_stateful(conds):
-        return [c.clone() for c in conds]
-
-    if random.random() < 0.5:
-        c1_stateful = copy_stateful(parent1.stateful_conditions)
-        c2_stateful = copy_stateful(parent2.stateful_conditions)
-    else:
-        c1_stateful = copy_stateful(parent2.stateful_conditions)
-        c2_stateful = copy_stateful(parent1.stateful_conditions)
-
-    def copy_tools(tools):
-        return [t.clone() for t in tools]
+        c1_stateful = GeneticUtils.copy_stateful_conditions(parent2.stateful_conditions)
+        c2_stateful = GeneticUtils.copy_stateful_conditions(parent1.stateful_conditions)
 
     c1_tool = (
-        copy_tools(parent1.tool_genes)
+        GeneticUtils.copy_tool_genes(parent1.tool_genes)
         if random.random() < 0.5
-        else copy_tools(parent2.tool_genes)
+        else GeneticUtils.copy_tool_genes(parent2.tool_genes)
     )
     c2_tool = (
-        copy_tools(parent2.tool_genes)
+        GeneticUtils.copy_tool_genes(parent2.tool_genes)
         if random.random() < 0.5
-        else copy_tools(parent1.tool_genes)
+        else GeneticUtils.copy_tool_genes(parent1.tool_genes)
     )
 
     child1 = strategy_gene_class(

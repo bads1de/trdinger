@@ -4,6 +4,7 @@
 遺伝的アルゴリズムの個体評価を担当します。
 """
 
+import hashlib
 import logging
 import threading
 from typing import (
@@ -83,6 +84,22 @@ class IndividualEvaluator:
             data_cache=self._data_cache,
             lock=self._lock,
         )
+
+    def _build_cache_key(self, gene: Any) -> str:
+        """遺伝子構造に基づく安定したキャッシュキーを生成する。
+
+        id属性が有効な場合はそれを使用し、空文字列やNoneの場合は
+        シリアライズ結果のMD5ハッシュで補完する。
+        """
+        gene_id = getattr(gene, "id", "") or ""
+        if gene_id:
+            return gene_id
+        try:
+            serialized = GeneSerializer().strategy_gene_to_dict(gene)
+            raw = str(sorted(serialized.items(), key=lambda x: str(x[0])))
+            return hashlib.md5(raw.encode()).hexdigest()
+        except Exception:
+            return str(gene)
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
         """バックテスト設定を設定"""
@@ -233,14 +250,15 @@ class IndividualEvaluator:
             else:
                 gene = individual
 
-            # 遺伝子の文字列表現（パラメータ全体を含む）を一意なキーとして使用
-            cache_key = getattr(gene, "id", str(gene))
+            # 安定したキャッシュキーの生成
+            cache_key = self._build_cache_key(gene)
 
-            with self._lock:
-                if cache_key in self._result_cache:
-                    self._cache_hits += 1
-                    return self._result_cache[cache_key]
-                self._cache_misses += 1
+            # ロックフリー読み取り: キャッシュヒット時はロック不要
+            cached = self._result_cache.get(cache_key)
+            if cached is not None:
+                self._cache_hits += 1
+                return cached
+            self._cache_misses += 1
 
             # バックテスト設定のベースを取得
             base_backtest_config = (
@@ -254,7 +272,7 @@ class IndividualEvaluator:
                 gene, base_backtest_config, config
             )
 
-            # 結果をキャッシュ
+            # 結果をキャッシュ（ロック付き書き込み）
             with self._lock:
                 self._result_cache[cache_key] = fitness
 
@@ -262,7 +280,7 @@ class IndividualEvaluator:
 
         except Exception as e:
             logger.error(f"個体評価エラー: {e}")
-            return tuple(0.0 for _ in getattr(config, "objectives", []))
+            return self._fitness_calculator.get_penalty_values(config)
 
     def _get_cached_data(self, backtest_config: Dict[str, Any]) -> Any:
         """キャッシュされたバックテストデータを取得"""

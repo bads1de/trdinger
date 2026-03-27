@@ -30,28 +30,34 @@ class AutoStrategyService:
     GA実行、進捗管理、結果保存、戦略テストを統合的に管理します。
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        backtest_service: Optional[BacktestService] = None,
+        persistence_service: Optional[ExperimentPersistenceService] = None,
+        experiment_manager: Optional[ExperimentManager] = None,
+        experiment_application_service: Optional[ExperimentApplicationService] = None,
+    ):
         """
         初期化
+
+        Args:
+            backtest_service: バックテストサービス（DI対応、未指定時は内部生成）
+            persistence_service: 永続化サービス（DI対応、未指定時は内部生成）
+            experiment_manager: 実験管理マネージャー（DI対応、未指定時は内部生成）
+            experiment_application_service: 実験アプリケーションサービス（DI対応、未指定時は内部生成）
         """
         # データベースセッションファクトリ
         self.db_session_factory = SessionLocal
 
-        # サービスの初期化
-        self.backtest_service: BacktestService
-        self.persistence_service: ExperimentPersistenceService
-
-        # 管理マネージャー
-        self.experiment_manager: Optional[ExperimentManager] = None
-        self.experiment_application_service: Optional[ExperimentApplicationService] = (
-            None
-        )
-
-        # Note: _init_services is called synchronously from __init__.
-        # If it were truly async, it would need to be awaited,
-        # which is not directly possible in __init__.
-        # Keeping it synchronous for now to maintain functional integrity.
-        self._init_services()
+        if backtest_service and persistence_service and experiment_manager and experiment_application_service:
+            # DI モード: 全依存が注入された場合
+            self.backtest_service = backtest_service
+            self.persistence_service = persistence_service
+            self.experiment_manager = experiment_manager
+            self.experiment_application_service = experiment_application_service
+        else:
+            # 従来モード: 内部初期化
+            self._init_services()
 
     def _init_services(self) -> None:
         """

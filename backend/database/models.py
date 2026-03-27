@@ -326,6 +326,9 @@ class GAExperiment(Base):
     # 主キー
     id = Column(Integer, primary_key=True, autoincrement=True)
 
+    # フロントエンド由来の実験UUID（高速検索用）
+    experiment_id = Column(String(255), nullable=True, unique=True)
+
     # 実験名
     name = Column(String(255), nullable=False)
 
@@ -355,6 +358,7 @@ class GAExperiment(Base):
     __table_args__ = (
         Index("idx_ga_experiments_status", "status"),
         Index("idx_ga_experiments_created", "created_at"),
+        Index("idx_ga_experiments_experiment_id", "experiment_id"),
     )
 
     def __repr__(self):

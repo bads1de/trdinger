@@ -72,7 +72,8 @@ class HybridFeatureAdapter:
     def _get_dataframe_hash(self, df: pd.DataFrame) -> Optional[int]:
         """DataFrame の内容からキャッシュ用ハッシュを生成する。"""
         try:
-            return int(pd.util.hash_pandas_object(df, index=True).sum())
+            from pandas.util import hash_pandas_object
+            return int(hash_pandas_object(df, index=True).sum())  # type: ignore[call-arg]
         except Exception:
             return None
 
@@ -207,7 +208,7 @@ class HybridFeatureAdapter:
                 derived_features = temp_df[new_cols]
                 
                 # キャッシュ保存
-                self._cache_derived_features(ohlcv_data, derived_features)
+                self._cache_derived_features(ohlcv_data, derived_features)  # type: ignore[arg-type]
             
             # 派生特徴量を結合
             if not derived_features.empty:
@@ -243,6 +244,8 @@ class HybridFeatureAdapter:
         periods = [
             i.parameters.get("period") for i in enabled_inds if "period" in i.parameters
         ]
+        # None を除外して数値のみにする
+        numeric_periods = [p for p in periods if isinstance(p, (int, float))]
 
         features = {
             "indicator_count": len(enabled_inds),
@@ -250,7 +253,7 @@ class HybridFeatureAdapter:
             "long_condition_count": long_c,
             "short_condition_count": short_c,
             "has_long_short_separation": int(bool(gene.has_long_short_separation())),
-            "avg_indicator_period": np.mean(periods) if periods else 0.0,
+            "avg_indicator_period": np.mean(numeric_periods) if numeric_periods else 0.0,
         }
 
         # 指標の有無
@@ -324,7 +327,7 @@ class HybridFeatureAdapter:
             from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
 
             if self._preprocess_trainer is None:
-                self._preprocess_trainer = BaseMLTrainer(
+                self._preprocess_trainer = BaseMLTrainer(  # type: ignore[abstract]
                     trainer_config={"type": "single", "model_type": "lightgbm"},
                 )
 
@@ -422,7 +425,7 @@ class WaveletFeatureTransformer:
 
             numeric_series = series.astype(float)
             for scale in self.scales:
-                detail = self._haar_detail(numeric_series, scale)
+                detail = self._haar_detail(numeric_series, scale)  # type: ignore[arg-type]
                 new_column = f"wavelet_{column}_scale_{scale}"
                 features_df[new_column] = detail
 

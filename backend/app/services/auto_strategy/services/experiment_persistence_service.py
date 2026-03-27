@@ -53,6 +53,7 @@ class ExperimentPersistenceService:
                 "experiment_id": experiment_id,
             }
             ga_experiment_repo.create_experiment(
+                experiment_id=experiment_id,
                 name=experiment_name,
                 config=config_data,
                 total_generations=ga_config.generations,
@@ -257,18 +258,18 @@ class ExperimentPersistenceService:
             ]
 
     def get_experiment_info(self, experiment_id: str) -> Optional[Dict[str, Any]]:
-        """実験情報を取得"""
+        """実験情報を取得（experiment_idカラムによる高速検索）。"""
         with self.db_session_factory() as db:
             repo = GAExperimentRepository(db)
+
+            # 1. experiment_idカラムによる直接検索（最速）
+            exp = repo.get_by_experiment_id(experiment_id)
+            if exp:
+                return self._map_experiment_info(exp)
+
+            # 2. 後方互換: 名前またはDB IDで照合
             experiments = repo.get_recent_experiments(limit=100)
-
             for exp in experiments:
-                # 1. config内のexperiment_idで照合
-                cfg = exp.config or {}
-                if cfg.get("experiment_id") == experiment_id:
-                    return self._map_experiment_info(exp)
-
-                # 2. 名前またはDB IDで照合
                 if str(exp.name) == experiment_id or str(exp.id) == experiment_id:
                     return self._map_experiment_info(exp)
 

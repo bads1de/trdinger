@@ -23,8 +23,25 @@ class FitnessCalculator:
     単一目的・多目的フィットネスの計算、ロング・ショートバランス評価を行います。
     """
 
+    # 最小化目的（ペナルティ値は最大化）と最大化目的（ペナルティ値は最小化）の分類
+    _MINIMIZE_OBJECTIVES = {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
+
     def __init__(self) -> None:
         pass
+
+    def get_penalty_values(self, config: "GAConfig") -> Tuple[float, ...]:
+        """一貫したペナルティ値のタプルを返す。
+
+        評価エラー時や制約違反時に使用する。目的関数の方向性に応じて
+        適切なペナルティ値を設定する。
+        """
+        penalty_values = []
+        for obj in config.objectives:
+            if obj in self._MINIMIZE_OBJECTIVES:
+                penalty_values.append(float("inf"))
+            else:
+                penalty_values.append(-float("inf"))
+        return tuple(penalty_values)
 
     def extract_performance_metrics(
         self, backtest_result: Dict[str, Any]
@@ -160,8 +177,8 @@ class FitnessCalculator:
 
             return max(0.0, fitness)
 
-        except Exception as e:
-            logger.error(f"フィットネス計算エラー: {e}")
+        except (KeyError, TypeError, ValueError) as e:
+            logger.error(f"フィットネス計算エラー: {e}", exc_info=True)
             return config.constraint_violation_penalty
 
     def calculate_long_short_balance(
@@ -222,8 +239,8 @@ class FitnessCalculator:
 
             return max(0.0, min(1.0, balance_score))
 
-        except Exception as e:
-            logger.error(f"ロング・ショートバランス計算エラー: {e}")
+        except (KeyError, TypeError, ValueError) as e:
+            logger.error(f"ロング・ショートバランス計算エラー: {e}", exc_info=True)
             return 0.5
 
     def calculate_multi_objective_fitness(
@@ -249,17 +266,7 @@ class FitnessCalculator:
 
             min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
             if total_trades < min_trades_req:
-                penalty_values = []
-                for obj in config.objectives:
-                    if obj in [
-                        "max_drawdown",
-                        "ulcer_index",
-                        "trade_frequency_penalty",
-                    ]:
-                        penalty_values.append(1.0)
-                    else:
-                        penalty_values.append(config.constraint_violation_penalty)
-                return tuple(penalty_values)
+                return self.get_penalty_values(config)
 
             fitness_values = []
 
@@ -296,6 +303,6 @@ class FitnessCalculator:
 
             return tuple(fitness_values)
 
-        except Exception as e:
-            logger.error(f"多目的フィットネス計算エラー: {e}")
-            return tuple(0.0 for _ in config.objectives)
+        except (KeyError, TypeError, ValueError) as e:
+            logger.error(f"多目的フィットネス計算エラー: {e}", exc_info=True)
+            return self.get_penalty_values(config)

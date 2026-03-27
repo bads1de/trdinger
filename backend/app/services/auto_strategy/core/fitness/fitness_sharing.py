@@ -126,13 +126,13 @@ class FitnessSharing:
                     
                     if gene is not None:
                         genes.append(gene)
-                        vector = self._vectorize_gene(gene)
+                        vector = self._vectorize_gene(gene)  # type: ignore[arg-type]
                         vectors.append(vector)
                         valid_indices.append(i)
                         
                         # キャッシュ保存
                         try:
-                            individual._feature_vector = vector
+                            individual._feature_vector = vector  # type: ignore[attr-defined]
                         except AttributeError:
                             pass # 属性設定できないオブジェクトの場合はスキップ
                     else:
@@ -554,7 +554,7 @@ class FitnessSharing:
                 try:
                     gene = self.gene_serializer.from_list(individual, StrategyGene)
                     if gene is not None:
-                        vector = self._vectorize_gene(gene)
+                        vector = self._vectorize_gene(gene)  # type: ignore[arg-type]
                         vectors.append(vector)
                         valid_indices.append(i)
                 except Exception:
@@ -567,7 +567,7 @@ class FitnessSharing:
             n_clusters = min(len(vectors), 3)  # 最大3クラスタ
 
             # KMeansクラスタリング（高速化のためn_init=1に変更）
-            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=1)
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=int(1))  # type: ignore[call-arg]
             labels = kmeans.fit_predict(vectors)
 
             # シルエットスコア計算
