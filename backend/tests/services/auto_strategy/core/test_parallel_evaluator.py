@@ -5,7 +5,7 @@ ParallelEvaluatorのユニットテスト
 import time
 from unittest.mock import MagicMock, patch
 
-from app.services.auto_strategy.core.parallel_evaluator import (
+from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
     ParallelEvaluator,
 )
 
@@ -195,11 +195,11 @@ class TestParallelEvaluator:
         mock_executor_instance.submit.return_value = mock_future
 
         with patch(
-            "app.services.auto_strategy.core.parallel_evaluator.ProcessPoolExecutor",
+            "app.services.auto_strategy.core.evaluation.parallel_evaluator.ProcessPoolExecutor",
             return_value=mock_executor_instance,
         ) as mock_executor_cls:
             with patch(
-                "app.services.auto_strategy.core.parallel_evaluator.as_completed",
+                "app.services.auto_strategy.core.evaluation.parallel_evaluator.as_completed",
                 return_value=[mock_future],
             ):
                 initializer_mock = MagicMock()

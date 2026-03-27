@@ -300,3 +300,180 @@ class TestBaseMLTrainer:
 
         assert trainer._model is None
         assert trainer.is_trained is False
+
+    # ------------------------------------------------------------------
+    # save_model
+    # ------------------------------------------------------------------
+
+    def test_save_model_raises_when_not_trained(self, trainer):
+        """未学習状態で save_model を呼ぶとエラー"""
+        from app.services.ml.common.exceptions import MLModelError
+
+        with pytest.raises(MLModelError, match="学習済みモデルがありません"):
+            trainer.save_model("test_model")
+
+    def test_save_model_success(self, trainer):
+        """学習済みモデルの保存成功"""
+        trainer.is_trained = True
+        trainer.feature_columns = ["f1", "f2"]
+        trainer._model = MagicMock()
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
+            return_value="/saved/path",
+        ):
+            path = trainer.save_model("my_model", metadata={"acc": 0.9})
+            assert path == "/saved/path"
+
+    # ------------------------------------------------------------------
+    # get_feature_importance
+    # ------------------------------------------------------------------
+
+    def test_get_feature_importance_not_trained(self, trainer):
+        """未学習時は空辞書を返す"""
+        assert trainer.get_feature_importance() == {}
+
+    def test_get_feature_importance_trained(self, trainer):
+        """学習済みの重要度取得"""
+        trainer.is_trained = True
+        trainer.feature_columns = ["f1", "f2"]
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.get_feature_importance_unified",
+            return_value={"f1": 0.8, "f2": 0.2},
+        ):
+            imp = trainer.get_feature_importance(top_n=5)
+            assert imp["f1"] == 0.8
+
+    # ------------------------------------------------------------------
+    # _split_data
+    # ------------------------------------------------------------------
+
+    def test_split_data_default(self, trainer, sample_data):
+        """デフォルトの時系列分割"""
+        X = pd.DataFrame(np.random.randn(150, 3), index=sample_data.index)
+        y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
+
+        X_tr, X_te, y_tr, y_te = trainer._split_data(X, y, test_size=0.2)
+
+        assert len(X_tr) == 120
+        assert len(X_te) == 30
+        # 時系列順序の検証
+        assert X_tr.index[-1] < X_te.index[0]
+
+    def test_split_data_custom_size(self, trainer, sample_data):
+        """カスタムサイズの分割"""
+        X = pd.DataFrame(np.random.randn(150, 3), index=sample_data.index)
+        y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
+
+        X_tr, X_te, y_tr, y_te = trainer._split_data(X, y, test_size=0.3)
+        assert len(X_tr) == 105
+        assert len(X_te) == 45
+
+    # ------------------------------------------------------------------
+    # _preprocess_data
+    # ------------------------------------------------------------------
+
+    def test_preprocess_data_scaling(self, trainer):
+        """スケーリングのテスト"""
+        X_tr = pd.DataFrame({"a": [1.0, 2.0, 3.0], "b": [10.0, 20.0, 30.0]})
+        X_te = pd.DataFrame({"a": [4.0, 5.0], "b": [40.0, 50.0]})
+
+        X_tr_s, X_te_s = trainer._preprocess_data(X_tr, X_te)
+
+        assert isinstance(X_tr_s, pd.DataFrame)
+        assert isinstance(X_te_s, pd.DataFrame)
+        # スケーリング後は平均≈0
+        assert abs(X_tr_s["a"].mean()) < 1e-10
+
+    # ------------------------------------------------------------------
+    # _format_training_result
+    # ------------------------------------------------------------------
+
+    def test_format_training_result(self, trainer):
+        """学習結果の整形"""
+        trainer.feature_columns = ["f1", "f2", "f3"]
+        X = pd.DataFrame(np.random.randn(10, 3))
+        y = pd.Series(np.random.randint(0, 2, 10))
+
+        res = trainer._format_training_result({"accuracy": 0.9}, X, y)
+
+        assert res["success"] is True
+        assert res["feature_count"] == 3
+        assert res["total_samples"] == 10
+        assert res["accuracy"] == 0.9
+
+    # ------------------------------------------------------------------
+    # _apply_feature_selection
+    # ------------------------------------------------------------------
+
+    def test_apply_feature_selection_fallback_on_error(self, trainer):
+        """特徴量選択エラー時は全特徴量をそのまま使用"""
+        X_tr = pd.DataFrame({"f1": [1, 2, 3], "f2": [4, 5, 6]})
+        X_te = pd.DataFrame({"f1": [7, 8], "f2": [9, 10]})
+        y_tr = pd.Series([0, 1, 0])
+
+        mock_selector = MagicMock()
+        mock_selector.fit.side_effect = Exception("fit error")
+        trainer.feature_selector = mock_selector
+
+        X_tr_out, X_te_out = trainer._apply_feature_selection(X_tr, X_te, y_tr)
+
+        assert list(X_tr_out.columns) == ["f1", "f2"]
+        assert list(X_te_out.columns) == ["f1", "f2"]
+
+    # ------------------------------------------------------------------
+    # _prepare_training_data
+    # ------------------------------------------------------------------
+
+    def test_prepare_training_data_raises_on_error(self, trainer, sample_data):
+        """ラベル生成エラー時は DataError"""
+        from app.utils.error_handler import DataError
+
+        with patch.object(
+            trainer.label_service,
+            "prepare_labels",
+            side_effect=Exception("label error"),
+        ):
+            with pytest.raises(DataError, match="準備に失敗"):
+                trainer._prepare_training_data(sample_data, sample_data)
+
+    # ------------------------------------------------------------------
+    # _cleanup_models
+    # ------------------------------------------------------------------
+
+    def test_cleanup_models_clears_state(self, trainer):
+        """モデルクリーンアップで状態がリセットされる"""
+        from app.services.ml.common.base_resource_manager import CleanupLevel
+
+        trainer.is_trained = True
+        trainer._model = MagicMock()
+        trainer.feature_columns = ["f1"]
+        trainer.current_model_path = "/some/path"
+
+        trainer._cleanup_models(CleanupLevel.THOROUGH)
+
+        assert trainer._model is None
+        assert trainer.is_trained is False
+        assert trainer.feature_columns is None
+
+    # ------------------------------------------------------------------
+    # predict_signal 異常系
+    # ------------------------------------------------------------------
+
+    def test_predict_signal_returns_default_on_error(self, trainer, sample_data):
+        """予測エラー時はデフォルト値を返す"""
+        trainer.is_trained = True
+        trainer.feature_columns = ["f1", "f2"]
+        trainer.predict = MagicMock(side_effect=RuntimeError("inference error"))
+
+        features = pd.DataFrame(
+            np.random.randn(5, 2), columns=["f1", "f2"], index=sample_data.index[:5]
+        )
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction",
+            return_value=features,
+        ):
+            result = trainer.predict_signal(features)
+            assert "is_valid" in result

@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, Mock, call, patch
 import numpy as np
 import pytest
 
-from app.services.auto_strategy.core.ga_engine import EvolutionRunner
+from app.services.auto_strategy.core.engine.ga_engine import EvolutionRunner
 from app.services.auto_strategy.core.engine.evolution_runner import (
     EvolutionStoppedError,
 )

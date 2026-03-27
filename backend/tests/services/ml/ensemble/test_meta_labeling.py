@@ -102,3 +102,34 @@ class TestMetaLabelingService:
         assert "base_prob_mean" in res.columns
         assert res.loc[0, "base_prob_mean"] == pytest.approx(0.2)
         assert res.loc[1, "base_prob_mean"] == pytest.approx(0.8)
+
+    def test_predict_raises_when_not_trained(self, sample_data):
+        """未学習状態で predict を呼ぶと RuntimeError"""
+        X, y, primary_proba, base_probs = sample_data
+        service = MetaLabelingService()
+
+        with pytest.raises(RuntimeError, match="学習されていません"):
+            service.predict(X, primary_proba, base_probs)
+
+    def test_create_meta_labels_no_trend(self):
+        """一次モデルがトレンドなしと予測した場合の空マスク"""
+        service = MetaLabelingService()
+        y_true = pd.Series([1, 0, 1], index=[0, 1, 2])
+        proba = pd.Series([0.1, 0.2, 0.3], index=[0, 1, 2])
+
+        mask, y_meta = service.create_meta_labels(proba, y_true, threshold=0.9)
+
+        assert mask.sum() == 0
+        assert len(y_meta) == 0
+
+    def test_init_model_lightgbm(self):
+        """LightGBM モデル初期化"""
+        service = MetaLabelingService(model_type="lightgbm")
+        model = service._init_model()
+        assert model is not None
+
+    def test_init_model_unsupported_raises(self):
+        """未サポートモデルタイプでエラー"""
+        service = MetaLabelingService(model_type="unsupported")
+        with pytest.raises(ValueError, match="未サポート"):
+            service._init_model()

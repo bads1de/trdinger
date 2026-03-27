@@ -9,8 +9,8 @@ from unittest.mock import Mock, patch
 import pytest
 from cachetools import LRUCache
 
-from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
-from app.services.auto_strategy.core.parallel_evaluator import (
+from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
     ParallelEvaluator,
 )
 

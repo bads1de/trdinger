@@ -36,7 +36,7 @@ class ConfigValidator:
         if isinstance(config, GAConfig):
             errors.extend(ConfigValidator._validate_ga_config(config))
 
-        # 将来的に TradingSettings などの検証が必要になったらここに追加
+        # 将来的に GAConfig 以外の設定検証が必要になったらここに追加
 
         return len(errors) == 0, errors
 

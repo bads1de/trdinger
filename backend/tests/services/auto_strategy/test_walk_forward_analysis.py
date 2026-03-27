@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 
 
 class TestWalkForwardAnalysis:
@@ -129,7 +129,7 @@ class TestWalkForwardAnalysis:
         assert config.wfa_anchored is True
 
     @patch(
-        "app.services.auto_strategy.core.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
     )
     def test_evaluate_with_walk_forward_calls_perform_evaluation(
         self, mock_perform_eval, evaluator, wfa_config, mock_gene
@@ -153,7 +153,7 @@ class TestWalkForwardAnalysis:
         assert len(result) > 0
 
     @patch(
-        "app.services.auto_strategy.core.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
     )
     def test_wfa_averages_oos_scores(
         self, mock_perform_eval, evaluator, wfa_config, mock_gene
@@ -175,7 +175,7 @@ class TestWalkForwardAnalysis:
         assert 0.0 <= result[0] <= 1.0
 
     @patch(
-        "app.services.auto_strategy.core.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
     )
     def test_wfa_anchored_mode(self, mock_perform_eval, evaluator, mock_gene):
         """Anchored WFA モードのテスト"""
@@ -199,7 +199,7 @@ class TestWalkForwardAnalysis:
         assert mock_perform_eval.call_count >= 1
 
     @patch(
-        "app.services.auto_strategy.core.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
     )
     def test_wfa_fallback_on_missing_dates(
         self, mock_perform_eval, evaluator, wfa_config, mock_gene
@@ -246,7 +246,7 @@ class TestWFAEdgeCases:
         return gene
 
     @patch(
-        "app.services.auto_strategy.core.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
     )
     def test_wfa_short_period_fallback(self, mock_perform_eval, evaluator, mock_gene):
         """期間が短すぎる場合のフォールバックテスト"""
@@ -272,7 +272,7 @@ class TestWFAEdgeCases:
         assert isinstance(result, tuple)
 
     @patch(
-        "app.services.auto_strategy.core.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
     )
     def test_wfa_single_fold(self, mock_perform_eval, evaluator, mock_gene):
         """単一フォールドのテスト"""
@@ -320,7 +320,7 @@ class TestWFAMultiObjective:
         return gene
 
     @patch(
-        "app.services.auto_strategy.core.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
     )
     def test_wfa_multi_objective(self, mock_perform_eval, evaluator, mock_gene):
         """多目的最適化での WFA テスト"""

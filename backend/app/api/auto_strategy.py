@@ -119,7 +119,7 @@ async def generate_strategy(
                 experiment_name=request.experiment_name,
                 ga_config_dict=request.ga_config,
                 backtest_config_dict=request.base_config,
-                background_tasks=background_tasks,
+                task_scheduler=background_tasks,
             )
             logger.info(f"戦略生成タスクをバックグラウンドで開始: {experiment_id}")
 
@@ -189,5 +189,4 @@ async def stop_experiment(
             )
 
     return await ErrorHandler.safe_execute_async(_stop_experiment)
-
 

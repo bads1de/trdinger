@@ -7,8 +7,8 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core.parallel_evaluator import ParallelEvaluator
-from app.services.auto_strategy.core.evaluation_worker import (
+from app.services.auto_strategy.core.evaluation.parallel_evaluator import ParallelEvaluator
+from app.services.auto_strategy.core.evaluation.evaluation_worker import (
     initialize_worker_process,
     worker_evaluate_individual,
 )

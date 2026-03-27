@@ -140,7 +140,7 @@ class TestHybridIndividualEvaluator:
         - BacktestServiceとHybridPredictorが設定される
         """
 
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -162,7 +162,7 @@ class TestHybridIndividualEvaluator:
         """
         ML予測を含む個体評価テスト
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -199,7 +199,7 @@ class TestHybridIndividualEvaluator:
         """
         ML予測なしの個体評価テスト（従来のGA評価）
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -235,7 +235,7 @@ class TestHybridIndividualEvaluator:
         - prediction_scoreが正しく計算される
         - fitness = base_fitness + prediction_weight * prediction_score
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -284,7 +284,7 @@ class TestHybridIndividualEvaluator:
         - balance_scoreとprediction_scoreが両方考慮される
         - 重み付けが正しく適用される
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -337,7 +337,7 @@ class TestHybridIndividualEvaluator:
         - 複数の目的関数値が返される
         - prediction_scoreが目的の一つとして含まれる
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -368,7 +368,7 @@ class TestHybridIndividualEvaluator:
         - バックテストエラー時にデフォルト値が返される
         - ML予測エラー時もデフォルト値が返される
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -399,7 +399,7 @@ class TestHybridIndividualEvaluator:
         - MLTrainingError発生時にデフォルト予測値が使われる
         - エラーログが出力される
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -432,7 +432,7 @@ class TestHybridIndividualEvaluator:
         - 取引回数が0の場合、低いフィットネス値が返される
         - ML予測は実行されない（または無視される）
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -471,7 +471,7 @@ class TestHybridIndividualEvaluator:
         - prediction_weightが設定で変更可能
         - 重みが0の場合、従来のGA評価と同じ
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -513,7 +513,7 @@ class TestHybridIndividualEvaluator:
         assert fitness[0] > 0
 
     @patch(
-        "app.services.auto_strategy.core.hybrid_feature_adapter.HybridFeatureAdapter"
+        "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
     )
     def test_feature_adapter_integration(
         self,
@@ -526,7 +526,7 @@ class TestHybridIndividualEvaluator:
         """
         HybridFeatureAdapterとの統合テスト
         """
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 

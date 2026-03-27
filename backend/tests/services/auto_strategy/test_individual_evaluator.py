@@ -7,7 +7,7 @@ import pytest
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.core.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
 
 
@@ -75,6 +75,27 @@ class TestIndividualEvaluator:
         config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
         self.evaluator.set_backtest_config(config)
         assert self.evaluator._fixed_backtest_config == config
+
+    def test_build_parallel_worker_initargs(self):
+        """並列ワーカー初期化引数の構築テスト"""
+        backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
+        ga_config = GAConfig()
+        main_data = pd.DataFrame({"close": [1, 2]})
+        minute_data = pd.DataFrame({"close": [1, 2]})
+
+        self.evaluator.set_backtest_config(backtest_config)
+        self.evaluator._get_cached_data = Mock(return_value=main_data)
+        self.evaluator._get_cached_minute_data = Mock(return_value=minute_data)
+
+        result = self.evaluator.build_parallel_worker_initargs(ga_config)
+
+        assert result is not None
+        run_backtest_config, run_ga_config, shared_data = result
+        assert run_backtest_config == backtest_config
+        assert run_backtest_config is not backtest_config
+        assert run_ga_config is ga_config
+        assert shared_data["main_data"] is main_data
+        assert shared_data["minute_data"] is minute_data
 
     def test_evaluate_individual_success(self):
         """個体評価成功のテスト"""

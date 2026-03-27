@@ -7,8 +7,8 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
-from app.services.auto_strategy.core.individual_evaluator import (
+from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.core.evaluation.individual_evaluator import (
     IndividualEvaluator,
 )
 from app.services.auto_strategy.generators.random_gene_generator import (
@@ -116,7 +116,7 @@ class TestGeneticAlgorithmEngine:
         assert engine.individual_evaluator is not None
         assert engine.deap_setup is not None
 
-    @patch("app.services.auto_strategy.core.ga_engine.EvolutionRunner")
+    @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
     def test_run_evolution_flow(
         self,
         mock_runner_cls,
@@ -181,8 +181,8 @@ class TestGeneticAlgorithmEngine:
         engine.stop_evolution()
         assert run_kwargs["should_stop"]() is True
 
-    @patch("app.services.auto_strategy.core.ga_engine.ParallelEvaluator")
-    @patch("app.services.auto_strategy.core.ga_engine.EvolutionRunner")
+    @patch("app.services.auto_strategy.core.engine.ga_engine.ParallelEvaluator")
+    @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
     def test_run_evolution_with_parallel_config(
         self,
         mock_runner_cls,
@@ -226,15 +226,24 @@ class TestGeneticAlgorithmEngine:
         mock_config.fallback_start_date = "2024-01-01"
         mock_config.fallback_end_date = "2024-01-02"
 
-        # モックデータ返却設定
-        engine.individual_evaluator._get_cached_data = Mock(return_value=pd.DataFrame({"close": [1, 2]}))
-        engine.individual_evaluator._get_cached_minute_data = Mock(return_value=None)
+        # 並列ワーカー初期化引数の public API を使用
+        shared_data = {"main_data": pd.DataFrame({"close": [1, 2]})}
+        engine.individual_evaluator.build_parallel_worker_initargs = Mock(
+            return_value=(
+                {"symbol": "BTC/USDT", "timeframe": "1h"},
+                mock_config,
+                shared_data,
+            )
+        )
 
         # 実行
         engine.run_evolution(mock_config, {"symbol": "BTC/USDT", "timeframe": "1h"})
 
         # ParallelEvaluatorが初期化されたことを確認
         mock_parallel_evaluator_cls.assert_called_once()
+        engine.individual_evaluator.build_parallel_worker_initargs.assert_called_once_with(
+            mock_config
+        )
 
         # start()とshutdown()が呼ばれたことを確認
         mock_instance = mock_parallel_evaluator_cls.return_value

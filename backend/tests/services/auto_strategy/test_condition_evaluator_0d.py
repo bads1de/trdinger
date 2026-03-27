@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from unittest.mock import MagicMock
-from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
+from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
 
 
 class TestConditionEvaluator0D(unittest.TestCase):

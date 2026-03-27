@@ -14,6 +14,7 @@ import pandas as pd
 from ..genes.entry import EntryGene
 from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.pending_order import PendingOrder
+from .runtime_state import resolve_runtime_state
 
 logger = logging.getLogger(__name__)
 
@@ -153,16 +154,12 @@ class OrderManager:
         else:
             self.strategy.sell(size=order.size)
 
-        # 戦略の内部状態を一括更新
-        updates = {
-            "_entry_price": fill_price,
-            "_sl_price": order.sl_price,
-            "_tp_price": order.tp_price,
-            "_position_direction": order.direction,
-        }
-        for attr, val in updates.items():
-            if hasattr(self.strategy, attr):
-                setattr(self.strategy, attr, val)
+        resolve_runtime_state(self.strategy).set_open_position(
+            entry_price=fill_price,
+            sl_price=order.sl_price,
+            tp_price=order.tp_price,
+            direction=order.direction,
+        )
 
     def _get_bar_duration(self) -> Optional[pd.Timedelta]:
         """現在のタイムフレームのバー期間を取得"""

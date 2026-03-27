@@ -4,6 +4,15 @@ Auto Strategy Utils パッケージ
 戦略生成・評価・統合に関連する共通ユーティリティを提供します。
 """
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..core.strategy.operand_grouping import (
+        OperandGroup,
+        OperandGroupingSystem,
+        operand_grouping_system,
+    )
+    from .normalization import NormalizationUtils, create_default_strategy_gene
 
 def __getattr__(name: str):
     """遅延インポートで循環インポートを回避"""
@@ -30,12 +39,6 @@ def __getattr__(name: str):
             "create_default_strategy_gene": create_default_strategy_gene,
         }[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-from .normalization import (
-    NormalizationUtils,
-    create_default_strategy_gene,
-)
 
 
 __all__ = [

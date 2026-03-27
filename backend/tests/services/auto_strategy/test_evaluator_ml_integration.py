@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
     HybridIndividualEvaluator,
 )
 from app.services.auto_strategy.genes import StrategyGene
@@ -44,7 +44,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         self.gene = StrategyGene()
 
     @patch(
-        "app.services.auto_strategy.core.hybrid_individual_evaluator.model_manager"
+        "app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator.model_manager"
     )
     def test_evaluate_individual_passes_ml_model(self, mock_model_manager):
         """
@@ -92,7 +92,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         self.assertEqual(parameters["ml_filter_threshold"], 0.5)
 
     @patch(
-        "app.services.auto_strategy.core.hybrid_individual_evaluator.model_manager"
+        "app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator.model_manager"
     )
     def test_evaluate_individual_handles_load_error(self, mock_model_manager):
         """モデルロードエラー時にMLフィルターが無効化されることをテスト"""

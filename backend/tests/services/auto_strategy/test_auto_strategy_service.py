@@ -5,6 +5,9 @@ from fastapi import BackgroundTasks
 from fastapi.exceptions import HTTPException
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.services.experiment_application_service import (
+    ExperimentApplicationService,
+)
 from app.services.auto_strategy.services.auto_strategy_service import (
     AutoStrategyService,
 )
@@ -68,6 +71,10 @@ def auto_strategy_service(
         service.backtest_service = mock_backtest_service
         service.persistence_service = mock_persistence_service
         service.experiment_manager = mock_experiment_manager
+        service.experiment_application_service = ExperimentApplicationService(
+            mock_experiment_manager,
+            mock_persistence_service,
+        )
         return service
 
 
@@ -127,8 +134,8 @@ def test_start_strategy_generation_cleans_up_on_failure(
     background_tasks = BackgroundTasks()
 
     with patch.object(
-        auto_strategy_service,
-        "_start_experiment_in_background",
+        auto_strategy_service.experiment_application_service,
+        "schedule_experiment",
         side_effect=RuntimeError("boom"),
     ):
         with pytest.raises(RuntimeError):
@@ -201,7 +208,7 @@ def test_stop_experiment_failure(auto_strategy_service, mock_experiment_manager)
 def test_stop_experiment_manager_not_initialized(auto_strategy_service):
     """異常系: experiment_managerが初期化されていない場合"""
     # 準備
-    auto_strategy_service.experiment_manager = None
+    auto_strategy_service.experiment_application_service.experiment_manager = None
 
     # 実行
     result = auto_strategy_service.stop_experiment("some-id")
@@ -241,7 +248,7 @@ def test_create_experiment_called_with_correct_args(
 
 def test_initialize_ga_engine_runtime_error(auto_strategy_service):
     """異常系: experiment_managerなしでGAエンジンを初期化しようとするとRuntimeError"""
-    auto_strategy_service.experiment_manager = None
+    auto_strategy_service.experiment_application_service.experiment_manager = None
     with pytest.raises(
         RuntimeError, match="実験管理マネージャーが初期化されていません。"
     ):
@@ -265,5 +272,3 @@ def test_start_background_task_added(auto_strategy_service, mock_experiment_mana
     task = background_tasks.tasks[0]
     assert task.func == mock_experiment_manager.run_experiment
     assert task.args == (experiment_id, ga_config, backtest_config)
-
-

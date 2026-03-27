@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 from unittest.mock import Mock, patch
 
-from app.services.auto_strategy.core.hybrid_feature_adapter import (
+from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
 from app.services.ml.common.exceptions import MLFeatureError
@@ -135,6 +135,38 @@ class TestHybridFeatureAdapter:
 
         assert result["close_lag1"].iloc[0] == 0
         assert result["volume_lag1"].iloc[0] == 0
+
+    def test_cached_derived_features_does_not_store_dataframe_hash(
+        self, adapter, sample_ohlcv
+    ):
+        """DataFrame 自体にキャッシュ用属性を載せないことを確認"""
+        features = pd.DataFrame(
+            {"derived": np.arange(len(sample_ohlcv), dtype=float)},
+            index=sample_ohlcv.index,
+        )
+
+        adapter._cache_derived_features(sample_ohlcv, features)
+
+        assert not hasattr(sample_ohlcv, "_cached_hash")
+        cached = adapter._get_cached_derived_features(sample_ohlcv)
+        assert cached is not None
+        pd.testing.assert_frame_equal(cached, features)
+
+    def test_cached_derived_features_reflects_dataframe_mutation(
+        self, adapter, sample_ohlcv
+    ):
+        """同じ DataFrame を in-place 更新したら古い派生特徴量を返さない"""
+        features = pd.DataFrame(
+            {"derived": np.arange(len(sample_ohlcv), dtype=float)},
+            index=sample_ohlcv.index,
+        )
+
+        adapter._cache_derived_features(sample_ohlcv, features)
+
+        sample_ohlcv.loc[sample_ohlcv.index[0], "close"] *= 10
+
+        cached = adapter._get_cached_derived_features(sample_ohlcv)
+        assert cached is None
 
     @patch("app.services.ml.trainers.base_ml_trainer.BaseMLTrainer")
     def test_apply_preprocessing_with_trainer(self, MockTrainer, adapter, sample_ohlcv):

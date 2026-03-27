@@ -5,7 +5,6 @@ GA実験の実行と管理を担当します。
 """
 
 import logging
-import threading
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
@@ -13,10 +12,11 @@ from app.services.backtest.services.backtest_service import BacktestService
 from ..config.ga import GAConfig
 from ..core.engine.evolution_runner import EvolutionStoppedError
 from .experiment_backtest_service import ExperimentBacktestService
+from .experiment_engine_registry import ExperimentEngineRegistry
 from .experiment_persistence_service import ExperimentPersistenceService
 
 if TYPE_CHECKING:
-    from ..core.ga_engine import GeneticAlgorithmEngine
+    from ..core.engine.ga_engine import GeneticAlgorithmEngine
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,11 @@ class ExperimentManager:
     GA実験の実行と管理を担当します。
     """
 
-    _active_engines: ClassVar[Dict[str, "GeneticAlgorithmEngine"]] = {}
-    _registry_lock: ClassVar[threading.RLock] = threading.RLock()
+    _engine_registry: ClassVar[ExperimentEngineRegistry] = ExperimentEngineRegistry()
+    _active_engines: ClassVar[Dict[str, "GeneticAlgorithmEngine"]] = (
+        _engine_registry.active_engines
+    )
+    _registry_lock = _engine_registry.lock
 
     def __init__(
         self,
@@ -61,9 +64,7 @@ class ExperimentManager:
         def _execute():
             engine = self._get_active_engine(experiment_id)
             if not engine:
-                raise RuntimeError(
-                    f"GAエンジンが初期化されていません: {experiment_id}"
-                )
+                raise RuntimeError(f"GAエンジンが初期化されていません: {experiment_id}")
 
             run_backtest_config = backtest_config.copy()
             run_backtest_config["experiment_id"] = experiment_id
@@ -85,14 +86,12 @@ class ExperimentManager:
                     experiment_id
                 )
 
-                detailed_backtest_result_data = (
-                    self.experiment_backtest_service.create_detailed_backtest_result_data(
-                        result=result,
-                        ga_config=ga_config,
-                        backtest_config=run_backtest_config,
-                        experiment_id=experiment_id,
-                        experiment_info=experiment_info,
-                    )
+                detailed_backtest_result_data = self.experiment_backtest_service.create_detailed_backtest_result_data(
+                    result=result,
+                    ga_config=ga_config,
+                    backtest_config=run_backtest_config,
+                    experiment_id=experiment_id,
+                    experiment_info=experiment_info,
                 )
 
                 # 結果の永続化
@@ -136,7 +135,7 @@ class ExperimentManager:
         self, ga_config: GAConfig, experiment_id: Optional[str] = None
     ) -> "GeneticAlgorithmEngine":
         """GAエンジンを初期化（Factoryを使用）"""
-        from ..core.ga_engine_factory import GeneticAlgorithmEngineFactory
+        from ..core.engine.ga_engine_factory import GeneticAlgorithmEngineFactory
 
         engine = GeneticAlgorithmEngineFactory.create_engine(
             self.backtest_service, ga_config
@@ -187,15 +186,13 @@ class ExperimentManager:
     def _register_active_engine(
         cls, experiment_id: str, engine: "GeneticAlgorithmEngine"
     ) -> None:
-        with cls._registry_lock:
-            cls._active_engines[experiment_id] = engine
+        cls._engine_registry.register(experiment_id, engine)
 
     @classmethod
     def _get_active_engine(
         cls, experiment_id: str
     ) -> Optional["GeneticAlgorithmEngine"]:
-        with cls._registry_lock:
-            return cls._active_engines.get(experiment_id)
+        return cls._engine_registry.get(experiment_id)
 
     @classmethod
     def _release_active_engine(
@@ -203,9 +200,4 @@ class ExperimentManager:
         experiment_id: str,
         engine: Optional["GeneticAlgorithmEngine"] = None,
     ) -> None:
-        with cls._registry_lock:
-            current = cls._active_engines.get(experiment_id)
-            if current is None:
-                return
-            if engine is None or current is engine:
-                cls._active_engines.pop(experiment_id, None)
+        cls._engine_registry.release(experiment_id, engine)

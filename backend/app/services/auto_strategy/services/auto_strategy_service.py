@@ -8,13 +8,15 @@ import logging
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import BackgroundTasks
-
 from app.services.backtest.services.backtest_service import BacktestService
 from database.connection import SessionLocal
 
 from ..config import GAConfig
 from ..config.constants import DEFAULT_SYMBOL
+from .experiment_application_service import (
+    ExperimentApplicationService,
+    TaskScheduler,
+)
 from .experiment_manager import ExperimentManager
 from .experiment_persistence_service import ExperimentPersistenceService
 
@@ -41,6 +43,9 @@ class AutoStrategyService:
 
         # 管理マネージャー
         self.experiment_manager: Optional[ExperimentManager] = None
+        self.experiment_application_service: Optional[ExperimentApplicationService] = (
+            None
+        )
 
         # Note: _init_services is called synchronously from __init__.
         # If it were truly async, it would need to be awaited,
@@ -69,6 +74,10 @@ class AutoStrategyService:
             self.experiment_manager = ExperimentManager(
                 self.backtest_service, self.persistence_service
             )
+            self.experiment_application_service = ExperimentApplicationService(
+                self.experiment_manager,
+                self.persistence_service,
+            )
 
         _init_services_impl()
 
@@ -78,7 +87,7 @@ class AutoStrategyService:
         experiment_name: str,
         ga_config_dict: Dict[str, Any],
         backtest_config_dict: Dict[str, Any],
-        background_tasks: BackgroundTasks,
+        task_scheduler: TaskScheduler,
     ) -> str:
         """
         戦略生成を開始
@@ -88,7 +97,7 @@ class AutoStrategyService:
             experiment_name: 実験名
             ga_config_dict: GA設定の辞書
             backtest_config_dict: バックテスト設定の辞書
-            background_tasks: FastAPIのバックグラウンドタスク
+            task_scheduler: 実行タスクを登録する scheduler
 
         Returns:
             実験ID（入力されたものと同じ）
@@ -102,24 +111,16 @@ class AutoStrategyService:
         backtest_config = self._prepare_backtest_config(backtest_config_dict)
 
         # 3. 実験の作成
-        self._create_experiment(
-            experiment_id, experiment_name, ga_config, backtest_config
+        if not self.experiment_application_service:
+            raise RuntimeError("実験 application service が初期化されていません。")
+
+        self.experiment_application_service.start_experiment(
+            experiment_id=experiment_id,
+            experiment_name=experiment_name,
+            ga_config=ga_config,
+            backtest_config=backtest_config,
+            task_scheduler=task_scheduler,
         )
-
-        try:
-            # 4. GAエンジンの初期化
-            self._initialize_ga_engine(experiment_id, ga_config)
-
-            # 5. バックグラウンドタスクの開始
-            self._start_experiment_in_background(
-                experiment_id, ga_config, backtest_config, background_tasks
-            )
-        except Exception:
-            # 途中失敗時は、作成済みのレコードと実行コンテキストを明示的に失敗扱いにする
-            if self.experiment_manager:
-                self.experiment_manager.release_experiment(experiment_id)
-            self.persistence_service.fail_experiment(experiment_id)
-            raise
 
         logger.info(
             f"戦略生成実験のバックグラウンドタスクを追加しました: {experiment_id}"
@@ -187,7 +188,9 @@ class AutoStrategyService:
             backtest_config: バックテスト設定
         """
         # フロントエンドから送信されたexperiment_idを使用
-        self.persistence_service.create_experiment(
+        if not self.experiment_application_service:
+            raise RuntimeError("実験 application service が初期化されていません。")
+        self.experiment_application_service.create_experiment(
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
@@ -199,23 +202,27 @@ class AutoStrategyService:
             experiment_id: 実験ID
             ga_config: 実験で使用するGA設定
         """
-        if not self.experiment_manager:
-            raise RuntimeError("実験管理マネージャーが初期化されていません。")
-        self.experiment_manager.initialize_ga_engine(ga_config, experiment_id)
+        if not self.experiment_application_service:
+            raise RuntimeError("実験 application service が初期化されていません。")
+        self.experiment_application_service.initialize_ga_engine(
+            experiment_id, ga_config
+        )
 
     def _start_experiment_in_background(
         self,
         experiment_id: str,
         ga_config: GAConfig,
         backtest_config: Dict[str, Any],
-        background_tasks: BackgroundTasks,
+        task_scheduler: TaskScheduler,
     ):
         """実験をバックグラウンドタスクで開始する"""
-        background_tasks.add_task(
-            self.experiment_manager.run_experiment,
+        if not self.experiment_application_service:
+            raise RuntimeError("実験 application service が初期化されていません。")
+        self.experiment_application_service.schedule_experiment(
             experiment_id,
             ga_config,
             backtest_config,
+            task_scheduler,
         )
 
     def list_experiments(self) -> List[Dict[str, Any]]:
@@ -229,7 +236,9 @@ class AutoStrategyService:
 
         @safe_operation(context="実験一覧取得", is_api_call=False, default_return=[])
         def _list_experiments():
-            return self.persistence_service.list_experiments()
+            if not self.experiment_application_service:
+                return []
+            return self.experiment_application_service.list_experiments()
 
         return _list_experiments()
 
@@ -254,23 +263,11 @@ class AutoStrategyService:
             },
         )
         def _stop_experiment():
-            if self.experiment_manager:
-                # ExperimentManager.stop_experiment()はboolを返すので、Dict形式に変換
-                stop_result = self.experiment_manager.stop_experiment(experiment_id)
-                if stop_result:
-                    return {
-                        "success": True,
-                        "message": "実験が正常に停止されました",
-                    }
-                else:
-                    return {
-                        "success": False,
-                        "message": "実行中の実験が見つかりませんでした",
-                    }
-            else:
+            if not self.experiment_application_service:
                 return {
                     "success": False,
-                    "message": "実験管理マネージャーが初期化されていません",
+                    "message": "実験 application service が初期化されていません",
                 }
+            return self.experiment_application_service.stop_experiment(experiment_id)
 
         return _stop_experiment()

@@ -437,6 +437,138 @@ class TestOriginalIndicators:
         assert "FIBO_CYCLE_5" in result.columns
         assert "FIBO_SIGNAL_5" in result.columns
 
+    # Harmonic Resonance テスト
+    def test_harmonic_resonance_valid_data(self, sample_df):
+        """有効データでのHarmonic Resonance計算テスト"""
+        from app.services.indicators.technical_indicators.original.flow import (
+            harmonic_resonance,
+        )
+
+        hri, signal = harmonic_resonance(
+            sample_df["close"], sample_df["high"], sample_df["low"]
+        )
+        assert isinstance(hri, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(hri) == len(sample_df)
+        assert len(signal) == len(sample_df)
+        assert hri.name == "HARMONIC_RESONANCE"
+
+    def test_harmonic_resonance_invalid_length(self, sample_df):
+        """不正なlengthパラメータ"""
+        from app.services.indicators.technical_indicators.original.flow import (
+            harmonic_resonance,
+        )
+
+        with pytest.raises(ValueError, match="length must be >= 10"):
+            harmonic_resonance(
+                sample_df["close"], sample_df["high"], sample_df["low"], length=5
+            )
+
+    def test_harmonic_resonance_invalid_bands(self, sample_df):
+        """不正なresonance_bandsパラメータ"""
+        from app.services.indicators.technical_indicators.original.flow import (
+            harmonic_resonance,
+        )
+
+        with pytest.raises(ValueError, match="resonance_bands"):
+            harmonic_resonance(
+                sample_df["close"], sample_df["high"], sample_df["low"],
+                resonance_bands=2
+            )
+
+    def test_calculate_harmonic_resonance_wrapper(self, sample_df):
+        """calculate_harmonic_resonanceラッパーのテスト"""
+        result = OriginalIndicators.calculate_harmonic_resonance(sample_df)
+        assert isinstance(result, pd.DataFrame)
+        assert "HARMONIC_RESONANCE" in result.columns
+        assert "HRI_SIGNAL" in result.columns
+
+    # Chaos Fractal Dimension テスト
+    def test_chaos_fractal_dimension_valid_data(self, sample_df):
+        """有効データでのChaos Fractal Dimension計算テスト"""
+        from app.services.indicators.technical_indicators.original.flow import (
+            chaos_fractal_dimension,
+        )
+
+        ctf, signal = chaos_fractal_dimension(
+            sample_df["close"], sample_df["high"], sample_df["low"],
+            sample_df["volume"]
+        )
+        assert isinstance(ctf, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(ctf) == len(sample_df)
+        assert ctf.name == "CHAOS_FRACTAL_DIM"
+
+    def test_chaos_fractal_dimension_invalid_length(self, sample_df):
+        """不正なlengthパラメータ"""
+        from app.services.indicators.technical_indicators.original.flow import (
+            chaos_fractal_dimension,
+        )
+
+        with pytest.raises(ValueError, match="length must be >= 15"):
+            chaos_fractal_dimension(
+                sample_df["close"], sample_df["high"], sample_df["low"],
+                sample_df["volume"], length=10
+            )
+
+    def test_chaos_fractal_dimension_invalid_embedding(self, sample_df):
+        """不正なembedding_dimパラメータ"""
+        from app.services.indicators.technical_indicators.original.flow import (
+            chaos_fractal_dimension,
+        )
+
+        with pytest.raises(ValueError, match="embedding_dim"):
+            chaos_fractal_dimension(
+                sample_df["close"], sample_df["high"], sample_df["low"],
+                sample_df["volume"], embedding_dim=1
+            )
+
+    def test_calculate_chaos_fractal_dimension_wrapper(self, sample_df):
+        """calculate_chaos_fractal_dimensionラッパーのテスト"""
+        result = OriginalIndicators.calculate_chaos_fractal_dimension(sample_df)
+        assert isinstance(result, pd.DataFrame)
+        assert "CHAOS_FRACTAL_DIM" in result.columns
+        assert "CTFD_SIGNAL" in result.columns
+
+    # Connors RSI テスト
+    def test_connors_rsi_valid_data(self, sample_data):
+        """有効データでのConnors RSI計算テスト"""
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            connors_rsi,
+        )
+
+        result = connors_rsi(sample_data, rsi_periods=3, streak_periods=2, rank_periods=10)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_data)
+        valid = result.dropna()
+        assert (valid >= 0).all() and (valid <= 100).all()
+
+    def test_connors_rsi_invalid_rsi_periods(self, sample_data):
+        """不正なrsi_periodsパラメータ"""
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            connors_rsi,
+        )
+
+        with pytest.raises(ValueError, match="rsi_periods must be >= 2"):
+            connors_rsi(sample_data, rsi_periods=1)
+
+    def test_connors_rsi_invalid_streak_periods(self, sample_data):
+        """不正なstreak_periodsパラメータ"""
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            connors_rsi,
+        )
+
+        with pytest.raises(ValueError, match="streak_periods must be >= 1"):
+            connors_rsi(sample_data, streak_periods=0)
+
+    def test_calculate_connors_rsi_wrapper(self, sample_data):
+        """calculate_connors_rsiラッパーのテスト"""
+        result = OriginalIndicators.calculate_connors_rsi(
+            pd.DataFrame({"close": sample_data})
+        )
+        assert isinstance(result, pd.DataFrame)
+        assert any("CONNORS_RSI" in col for col in result.columns)
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

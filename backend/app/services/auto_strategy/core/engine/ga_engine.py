@@ -314,31 +314,14 @@ class GeneticAlgorithmEngine:
         worker_initargs = ()
 
         try:
-            # バックテスト設定の取得
-            backtest_config = getattr(
-                self.individual_evaluator, "_fixed_backtest_config", {}
+            worker_initargs = self.individual_evaluator.build_parallel_worker_initargs(
+                config
             )
-            if not backtest_config:
+            if not worker_initargs:
                 logger.warning(
                     "バックテスト設定が見つかりません。並列評価をスキップします。"
                 )
                 return None
-
-            shared_data = {}
-            # メインデータを取得（キャッシュになければロードされる）
-            main_data = self.individual_evaluator._get_cached_data(backtest_config)
-            if main_data is not None and not main_data.empty:
-                shared_data["main_data"] = main_data
-
-            # 1分足データを取得（存在する場合）
-            minute_data = self.individual_evaluator._get_cached_minute_data(
-                backtest_config
-            )
-            if minute_data is not None:
-                shared_data["minute_data"] = minute_data
-
-            # 初期化引数: (backtest_config, ga_config, shared_data)
-            worker_initargs = (backtest_config, config, shared_data)
 
             logger.info("並列ワーカー用の初期化パラメータを準備しました")
 

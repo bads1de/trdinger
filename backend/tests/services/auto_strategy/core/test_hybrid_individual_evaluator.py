@@ -15,7 +15,7 @@ class TestHybridIndividualEvaluatorInit:
 
     def test_init_with_defaults(self):
         """デフォルト設定での初期化"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -28,10 +28,10 @@ class TestHybridIndividualEvaluatorInit:
 
     def test_init_with_predictor(self):
         """予測器を指定しての初期化"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
-        from app.services.auto_strategy.core.hybrid_predictor import HybridPredictor
+        from app.services.auto_strategy.core.hybrid.hybrid_predictor import HybridPredictor
 
         mock_backtest_service = Mock()
         mock_predictor = Mock(spec=HybridPredictor)
@@ -43,7 +43,7 @@ class TestHybridIndividualEvaluatorInit:
 
     def test_init_with_feature_adapter(self):
         """特徴量アダプタを指定しての初期化"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -62,7 +62,7 @@ class TestEnsureBacktestDefaults:
     @pytest.fixture
     def evaluator(self):
         """テスト用のevaluatorを作成"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -133,7 +133,7 @@ class TestFetchOhlcvData:
     @pytest.fixture
     def evaluator_with_data_service(self):
         """data_serviceを持つevaluatorを作成"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -210,7 +210,7 @@ class TestFetchOhlcvData:
 
     def test_returns_none_when_data_service_unavailable(self):
         """data_serviceが利用できない場合はNoneを返す"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -241,7 +241,7 @@ class TestCalculateFitness:
     @pytest.fixture
     def evaluator(self):
         """テスト用evaluatorを作成"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -351,7 +351,7 @@ class TestCalculateMultiObjectiveFitness:
     @pytest.fixture
     def evaluator(self):
         """テスト用evaluatorを作成"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -472,7 +472,7 @@ class TestPerformSingleEvaluation:
     @pytest.fixture
     def mock_dependencies(self):
         """モック依存関係"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -646,7 +646,7 @@ class TestShouldApplyPreprocessing:
 
     def test_returns_true_when_preprocess_features_is_true(self):
         """preprocess_featuresがTrueの場合Trueを返す"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -663,7 +663,7 @@ class TestShouldApplyPreprocessing:
 
     def test_returns_false_when_preprocess_features_is_false(self):
         """preprocess_featuresがFalseの場合Falseを返す"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 
@@ -680,7 +680,7 @@ class TestShouldApplyPreprocessing:
 
     def test_returns_default_true_when_attribute_missing(self):
         """属性が存在しない場合はTrueを返す"""
-        from app.services.auto_strategy.core.hybrid_individual_evaluator import (
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
 

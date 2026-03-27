@@ -15,7 +15,6 @@ from backtesting import Strategy
 
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes.entry import EntryGene
-from ..config.constants import EntryType
 from ..genes.conditions import StateTracker
 from ..genes import (
     Condition,
@@ -28,9 +27,12 @@ from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.position_sizing_service import PositionSizingService
 from ..services.indicator_service import IndicatorCalculator
 from ..tpsl.tpsl_service import TPSLService
+from .entry_decision_engine import EntryDecisionEngine
 from .ml_filter import MLFilter
 from .order_manager import OrderManager
+from .position_exit_engine import PositionExitEngine
 from .position_manager import PositionManager
+from .runtime_state import StrategyRuntimeState
 from .stateful_conditions import StatefulConditionsEvaluator
 
 logger = logging.getLogger(__name__)
@@ -55,6 +57,54 @@ class UniversalStrategy(Strategy):
         0.5  # MLフィルター閾値（is_valid >= threshold でエントリー許可）
     )
 
+    @property
+    def _sl_price(self) -> float | None:
+        return self.runtime_state.sl_price
+
+    @_sl_price.setter
+    def _sl_price(self, value: float | None) -> None:
+        self.runtime_state.sl_price = value
+
+    @property
+    def _tp_price(self) -> float | None:
+        return self.runtime_state.tp_price
+
+    @_tp_price.setter
+    def _tp_price(self, value: float | None) -> None:
+        self.runtime_state.tp_price = value
+
+    @property
+    def _entry_price(self) -> float | None:
+        return self.runtime_state.entry_price
+
+    @_entry_price.setter
+    def _entry_price(self, value: float | None) -> None:
+        self.runtime_state.entry_price = value
+
+    @property
+    def _position_direction(self) -> float:
+        return self.runtime_state.position_direction
+
+    @_position_direction.setter
+    def _position_direction(self, value: float) -> None:
+        self.runtime_state.position_direction = value
+
+    @property
+    def _tp_reached(self) -> bool:
+        return self.runtime_state.tp_reached
+
+    @_tp_reached.setter
+    def _tp_reached(self, value: bool) -> None:
+        self.runtime_state.tp_reached = value
+
+    @property
+    def _trailing_tp_sl(self) -> float | None:
+        return self.runtime_state.trailing_tp_sl
+
+    @_trailing_tp_sl.setter
+    def _trailing_tp_sl(self, value: float | None) -> None:
+        self.runtime_state.trailing_tp_sl = value
+
     def __init__(self, broker, data, params):
         """
         初期化
@@ -70,6 +120,7 @@ class UniversalStrategy(Strategy):
         self.entry_executor = EntryExecutor()  # エントリー注文実行サービス
         self.lower_tf_simulator = LowerTimeframeSimulator()  # 1分足シミュレーター
         self.state_tracker = StateTracker()  # ステートフル条件用
+        self.runtime_state = StrategyRuntimeState()
         self._current_bar_index = 0  # バーインデックストラッカー
 
         # 注文管理マネージャーの初期化
@@ -77,18 +128,12 @@ class UniversalStrategy(Strategy):
 
         # ヘルパークラスの初期化
         self.position_manager = PositionManager(self)
+        self.position_exit_engine = PositionExitEngine(self)
         self.stateful_conditions_evaluator = StatefulConditionsEvaluator(self)
         self.ml_filter = MLFilter(self)
+        self.entry_decision_engine = EntryDecisionEngine(self)
 
         self._minute_data = None  # 1分足DataFrame（パラメータから取得）
-
-        # 悲観的約定ロジック用: SL/TP管理変数
-        self._sl_price: float | None = None
-        self._tp_price: float | None = None
-        self._entry_price: float | None = None
-        self._position_direction: float = 0.0  # 1.0=Long, -1.0=Short, 0.0=No position
-        self._tp_reached: bool = False  # トレーリングTP用: TP到達後フラグ
-        self._trailing_tp_sl: float | None = None  # トレーリングTP用: 利益確保ライン
 
         # パラメータの検証と設定
         if params is None:
@@ -484,75 +529,15 @@ class UniversalStrategy(Strategy):
             self.stateful_conditions_evaluator.process_stateful_triggers()
 
             # 2. 既存ポジションの悲観的決済チェック
-            if self.position and self._sl_price is not None:
-                if self.position_manager.check_pessimistic_exit():
-                    return
+            if self.position_exit_engine.handle_open_position():
+                return
 
             # 3. 新規エントリー判定（ノーポジション時）
             if not self.position:
-                if self._tools_block_entry():
-                    return
-
-                # 方向の決定（優先順位: 通常ロング > 通常ショート > ステートフル）
-                direction = 0.0
-                if self._check_entry_conditions(1.0):
-                    direction = 1.0
-                elif self._check_entry_conditions(-1.0):
-                    direction = -1.0
-                else:
-                    stateful_dir = (
-                        self.stateful_conditions_evaluator.get_stateful_entry_direction()
-                    )
-                    if stateful_dir is not None:
-                        direction = stateful_dir
-
+                direction = self.entry_decision_engine.determine_entry_direction()
                 if direction == 0.0:
                     return
-
-                # 4. MLフィルター判定
-                if self.ml_predictor and not self._ml_allows_entry(direction):
-                    return
-
-                # 5. TP/SLおよびエントリーパラメータの計算
-                current_price = self.data.Close[-1]
-                sl_price, tp_price = self._calculate_effective_tpsl_prices(
-                    direction, current_price
-                )
-
-                entry_gene = self._get_effective_entry_gene(direction)
-                entry_params = self.entry_executor.calculate_entry_params(
-                    entry_gene, current_price, direction
-                )
-                position_size = self._calculate_position_size()
-
-                # 6. 注文実行
-                is_market = (
-                    entry_gene is None
-                    or not entry_gene.enabled
-                    or entry_gene.entry_type == EntryType.MARKET
-                )
-                if is_market:
-                    if direction > 0:
-                        self.buy(size=position_size)
-                    else:
-                        self.sell(size=position_size)
-
-                    self._entry_price, self._sl_price, self._tp_price = (
-                        current_price,
-                        sl_price,
-                        tp_price,
-                    )
-                    self._position_direction = direction
-                else:
-                    self.order_manager.create_pending_order(
-                        direction=direction,
-                        size=position_size,
-                        entry_params=entry_params,
-                        sl_price=sl_price,
-                        tp_price=tp_price,
-                        entry_gene=entry_gene,
-                        current_bar_index=self._current_bar_index,
-                    )
+                self.entry_decision_engine.execute_entry(direction)
 
         except Exception as e:
             logger.error(f"戦略実行エラー: {e}")

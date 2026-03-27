@@ -208,7 +208,7 @@ class TestStatefulConditionEvaluation:
 
     def test_evaluate_stateful_condition_trigger_and_follow(self, mock_strategy):
         """トリガー発生後、フォロー条件が成立する場合"""
-        from app.services.auto_strategy.core.condition_evaluator import (
+        from app.services.auto_strategy.core.evaluation.condition_evaluator import (
             ConditionEvaluator,
         )
 
@@ -242,7 +242,7 @@ class TestStatefulConditionEvaluation:
 
     def test_evaluate_stateful_condition_trigger_too_old(self, mock_strategy):
         """トリガーがlookback_barsより古い場合はFalse"""
-        from app.services.auto_strategy.core.condition_evaluator import (
+        from app.services.auto_strategy.core.evaluation.condition_evaluator import (
             ConditionEvaluator,
         )
 
@@ -271,7 +271,7 @@ class TestStatefulConditionEvaluation:
 
     def test_evaluate_stateful_condition_no_trigger(self, mock_strategy):
         """トリガーが一度も発生していない場合はFalse"""
-        from app.services.auto_strategy.core.condition_evaluator import (
+        from app.services.auto_strategy.core.evaluation.condition_evaluator import (
             ConditionEvaluator,
         )
 
@@ -295,7 +295,7 @@ class TestStatefulConditionEvaluation:
 
     def test_evaluate_stateful_condition_follow_fails(self, mock_strategy):
         """トリガーは範囲内だがフォロー条件が不成立の場合はFalse"""
-        from app.services.auto_strategy.core.condition_evaluator import (
+        from app.services.auto_strategy.core.evaluation.condition_evaluator import (
             ConditionEvaluator,
         )
 
@@ -324,7 +324,7 @@ class TestStatefulConditionEvaluation:
 
     def test_check_and_record_trigger(self, mock_strategy):
         """トリガー条件の評価と記録"""
-        from app.services.auto_strategy.core.condition_evaluator import (
+        from app.services.auto_strategy.core.evaluation.condition_evaluator import (
             ConditionEvaluator,
         )
 
@@ -465,7 +465,7 @@ class TestStatefulConditionIntegration:
         2. 数バー後にフォロー条件も成立
         3. エントリーシグナルが発生
         """
-        from app.services.auto_strategy.core.condition_evaluator import (
+        from app.services.auto_strategy.core.evaluation.condition_evaluator import (
             ConditionEvaluator,
         )
 
@@ -524,7 +524,7 @@ class TestStatefulConditionIntegration:
         トリガーがlookback期間内に再発生した場合、
         期限が更新されることを確認
         """
-        from app.services.auto_strategy.core.condition_evaluator import (
+        from app.services.auto_strategy.core.evaluation.condition_evaluator import (
             ConditionEvaluator,
         )
 

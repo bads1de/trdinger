@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
-from app.services.auto_strategy.core.fitness_sharing import FitnessSharing
+from app.services.auto_strategy.core.fitness.fitness_sharing import FitnessSharing
 from app.services.auto_strategy.genes import (
     Condition,
     ConditionGroup,
@@ -145,7 +145,7 @@ class TestFitnessSharing:
         """拡張ベクトル化のテスト (指標、オペレータ、期間など)"""
         with pytest.MonkeyPatch.context() as m:
             m.setattr(
-                "app.services.auto_strategy.core.fitness_sharing.get_valid_indicator_types",
+                "app.services.auto_strategy.core.fitness.fitness_sharing.get_valid_indicator_types",
                 lambda: ["SMA", "EMA", "RSI", "MACD"],
             )
             fitness_sharing.__init__(sharing_radius=0.1)

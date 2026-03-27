@@ -5,7 +5,6 @@
 """
 
 import importlib as _importlib
-import sys as _sys
 
 _ATTRIBUTE_EXPORTS = {
     "DEAPSetup": ".engine.deap_setup",
@@ -72,23 +71,3 @@ __all__ = [
     "OperandGroupingSystem",
     "operand_grouping_system",
 ]
-
-# Backward compatibility for legacy shim module paths.
-for _alias, _target in {
-    "condition_evaluator": ".evaluation.condition_evaluator",
-    "parallel_evaluator": ".evaluation.parallel_evaluator",
-    "individual_evaluator": ".evaluation.individual_evaluator",
-    "evaluation_metrics": ".evaluation.evaluation_metrics",
-    "evaluator_wrapper": ".evaluation.evaluator_wrapper",
-    "evaluation_worker": ".evaluation.evaluation_worker",
-    "hybrid_feature_adapter": ".hybrid.hybrid_feature_adapter",
-    "hybrid_individual_evaluator": ".hybrid.hybrid_individual_evaluator",
-    "hybrid_predictor": ".hybrid.hybrid_predictor",
-    "operand_grouping": ".strategy.operand_grouping",
-    "ga_engine": ".engine.ga_engine",
-    "ga_engine_factory": ".engine.ga_engine_factory",
-    "fitness_sharing": ".fitness.fitness_sharing",
-}.items():
-    _module = _importlib.import_module(_target, __name__)
-    _sys.modules[f"{__name__}.{_alias}"] = _module
-    setattr(_sys.modules[__name__], _alias, _module)

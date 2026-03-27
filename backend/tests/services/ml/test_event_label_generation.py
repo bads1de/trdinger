@@ -9,7 +9,7 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.auto_strategy.core.hybrid_feature_adapter import (
+from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
 from app.services.backtest.services.backtest_data_service import BacktestDataService

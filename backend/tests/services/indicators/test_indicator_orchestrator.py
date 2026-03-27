@@ -262,56 +262,43 @@ class TestTechnicalIndicatorService:
         assert cache_key[0] == "SMA"
 
     def test_cache_invalidation_bug(self, indicator_service, sample_df):
-        """キャッシュ無効化バグの再現テスト
-        データの中身が変わっても、インデックスと長さが同じならキャッシュヒットしてしまう問題
-        """
+        """キャッシュ無効化が in-place 更新でも効くことを確認する"""
         params = {"length": 5}
         indicator = "SMA"
+        data = sample_df.copy()
 
         # 1回目の計算
-        result1 = indicator_service.calculate_indicator(sample_df, indicator, params)
+        result1 = indicator_service.calculate_indicator(data, indicator, params)
 
-        # データを変更（インデックスと長さは維持）
-        sample_df_changed = sample_df.copy()
-        sample_df_changed["close"] = sample_df_changed["close"] * 2  # 値を2倍にする
+        # 同じ DataFrame を in-place 更新する
+        data["close"] = data["close"] * 2  # 値を2倍にする
 
         # 2回目の計算
-        result2 = indicator_service.calculate_indicator(sample_df_changed, indicator, params)
+        result2 = indicator_service.calculate_indicator(data, indicator, params)
 
-        # 本来は異なる結果になるべきだが、バグがある場合は同じ結果（キャッシュ）が返る
-        # 修正後は、ここで assert not np.array_equal(...) がパスするようになるはず
-        assert not np.array_equal(result1, result2), "データが変更されたのにキャッシュされた古い結果が返されています"
+        # 本来は異なる結果になるべき。NaN を同位置に含んでも判定できるようにする。
+        assert not np.allclose(
+            result1,
+            result2,
+            equal_nan=True,
+        ), "データが変更されたのにキャッシュされた古い結果が返されています"
 
-    def test_dataframe_hash_caching(self, indicator_service, sample_df):
-        """DataFrameハッシュキャッシュのテスト"""
+    def test_cache_key_reflects_dataframe_mutation(self, indicator_service, sample_df):
+        """キャッシュキーが DataFrame の内容変化を反映することを確認する"""
         params = {"length": 5}
         indicator = "SMA"
-        
-        # 1. 属性がない状態
-        assert not hasattr(sample_df, "_cached_hash")
-        
-        # 2. キー生成を呼ぶ（内部でハッシュ計算される）
-        indicator_service._make_cache_key(indicator, params, sample_df)
-        
-        # 属性が付与されていることを確認
-        assert hasattr(sample_df, "_cached_hash")
-        
-        # 3. 再度呼ぶ（ハッシュ計算がスキップされることを確認）
-        # pd.util.hash_pandas_object をモックして呼ばれないことを確認
-        with patch("pandas.util.hash_pandas_object") as mock_hash:
-            indicator_service._make_cache_key(indicator, params, sample_df)
-            mock_hash.assert_not_called()
-            
-        # 4. データの内容が変わったらどうなるか？
-        # DataFrameはミュータブルなので、中身を変えても _cached_hash は残る（これがリスク）
-        # しかしGAのコンテキストではデータはイミュータブルとして扱われる前提。
-        # もしデータが変わるなら新しいオブジェクトになるか、属性を消す必要がある。
-        # ここでは「属性があればそれを使う」という仕様通りか確認。
-        
-        # 強制的に属性を書き換える
-        sample_df._cached_hash = 99999
-        key = indicator_service._make_cache_key(indicator, params, sample_df)
-        assert key[2][3] == 99999 # ハッシュ値が書き換わっていること
+        data = sample_df.copy()
+
+        # 1. 生成時に DataFrame へ属性を載せない
+        key1 = indicator_service._make_cache_key(indicator, params, data)
+        assert key1 is not None
+        assert not hasattr(data, "_cached_hash")
+
+        # 2. 同じ DataFrame を in-place 更新したらキーが変わる
+        data.loc[data.index[0], "close"] = data.loc[data.index[0], "close"] * 10
+        key2 = indicator_service._make_cache_key(indicator, params, data)
+        assert key2 is not None
+        assert key1 != key2
 
     def test_registry_has_indicators(self, indicator_service):
         """レジストリに指標が登録されているか確認"""
@@ -362,4 +349,3 @@ class TestTechnicalIndicatorService:
         # MACDは複数の値を返す（tuple）
         assert result is not None
         assert isinstance(result, tuple)
-

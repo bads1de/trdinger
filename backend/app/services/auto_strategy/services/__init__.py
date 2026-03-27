@@ -10,7 +10,9 @@ from ..tpsl.tpsl_service import TPSLService
 from .auto_strategy_service import AutoStrategyService
 
 # managers からの統合
+from .experiment_application_service import ExperimentApplicationService
 from .experiment_backtest_service import ExperimentBacktestService
+from .experiment_engine_registry import ExperimentEngineRegistry
 from .experiment_manager import ExperimentManager
 
 # persistence からの統合
@@ -22,12 +24,10 @@ __all__ = [
     "TPSLService",
     # Backtest
     "ExperimentBacktestService",
+    "ExperimentApplicationService",
+    "ExperimentEngineRegistry",
     # Managers
     "ExperimentManager",
     # Persistence
     "ExperimentPersistenceService",
 ]
-
-
-
-

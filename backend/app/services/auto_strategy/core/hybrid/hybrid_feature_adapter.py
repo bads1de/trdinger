@@ -69,26 +69,30 @@ class HybridFeatureAdapter:
         content = f"{str(wavelet_config)}{use_derived}"
         return hashlib.md5(content.encode()).hexdigest()
 
+    def _get_dataframe_hash(self, df: pd.DataFrame) -> Optional[int]:
+        """DataFrame の内容からキャッシュ用ハッシュを生成する。"""
+        try:
+            return int(pd.util.hash_pandas_object(df, index=True).sum())
+        except Exception:
+            return None
+
     def _get_cached_derived_features(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
         """キャッシュされた派生特徴量を取得"""
-        if hasattr(df, "_cached_hash"):
-            data_hash = df._cached_hash
-        else:
-            # ハッシュ計算（初回のみ）
-            try:
-                data_hash = pd.util.hash_pandas_object(df).sum()
-                df._cached_hash = data_hash
-            except Exception:
-                return None
-        
+        data_hash = self._get_dataframe_hash(df)
+        if data_hash is None:
+            return None
+
         key = (data_hash, self._config_hash)
         return self._derived_cache.get(key)
 
     def _cache_derived_features(self, df: pd.DataFrame, features: pd.DataFrame):
         """派生特徴量をキャッシュに保存"""
-        if hasattr(df, "_cached_hash"):
-            key = (df._cached_hash, self._config_hash)
-            self._derived_cache[key] = features
+        data_hash = self._get_dataframe_hash(df)
+        if data_hash is None:
+            return
+
+        key = (data_hash, self._config_hash)
+        self._derived_cache[key] = features
 
     @staticmethod
     def _sanitize_feature_frame(features_df: pd.DataFrame) -> pd.DataFrame:

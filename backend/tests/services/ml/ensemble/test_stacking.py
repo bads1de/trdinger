@@ -201,3 +201,61 @@ class TestStackingEnsemble:
         ensemble.cleanup()
         assert ensemble.is_fitted is False
         assert not ensemble._fitted_base_models
+
+    def test_predict_proba_raises_when_not_fitted(self, config, sample_data):
+        """未学習状態で predict_proba を呼ぶとエラー"""
+        X, y = sample_data
+        ensemble = StackingEnsemble(config)
+
+        with pytest.raises(Exception):
+            ensemble.predict_proba(X)
+
+    def test_predict(self, config, sample_data):
+        """predict メソッドのテスト (predict_proba への委譲)"""
+        X, y = sample_data
+        ensemble = StackingEnsemble(config)
+
+        # predict_proba をモック化して predict の委譲を確認
+        ensemble.is_fitted = True
+        expected = np.array([[0.3, 0.7], [0.6, 0.4]])
+
+        with patch.object(ensemble, "predict_proba", return_value=expected) as mock_pp:
+            preds = ensemble.predict(X.iloc[:2])
+            mock_pp.assert_called_once()
+            np.testing.assert_array_equal(preds, expected)
+
+    def test_properties(self, config):
+        """プロパティのテスト"""
+        ensemble = StackingEnsemble(config)
+
+        # base_models プロパティ
+        assert ensemble.base_models == ["lightgbm", "xgboost"]
+        ensemble.base_models = ["catboost"]
+        assert ensemble.base_models == ["catboost"]
+
+        # meta_model プロパティ
+        assert ensemble.meta_model == "logistic_regression"
+        ensemble.meta_model = "lightgbm"
+        assert ensemble.meta_model == "lightgbm"
+
+    def test_fit_with_single_model(self, sample_data):
+        """単一ベースモデルでの学習"""
+        X, y = sample_data
+        config = {
+            "base_models": ["lightgbm"],
+            "meta_model": "logistic_regression",
+            "cv_folds": 2,
+            "cv_strategy": "kfold",
+        }
+        ensemble = StackingEnsemble(config)
+
+        with patch.object(ensemble, "_create_base_model") as mock_create:
+            mock_m = MagicMock()
+            mock_m.predict_proba.return_value = np.zeros((len(X) // 2, 2))
+            mock_create.return_value = mock_m
+
+            with patch("app.services.ml.ensemble.stacking.cross_val_predict") as mock_cvp:
+                mock_cvp.return_value = np.full((len(X), 2), 0.5)
+                result = ensemble.fit(X, y, X_test=X, y_test=y)
+                assert ensemble.is_fitted is True
+                assert "lightgbm" in result["fitted_base_models"]

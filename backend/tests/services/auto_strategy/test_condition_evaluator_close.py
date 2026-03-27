@@ -12,7 +12,7 @@ from unittest.mock import Mock
 
 import pandas as pd
 
-from app.services.auto_strategy.core.condition_evaluator import ConditionEvaluator
+from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.genes import Condition
 
 

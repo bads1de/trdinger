@@ -25,7 +25,9 @@ from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
 
 from ..fitness.fitness_calculator import FitnessCalculator
+from .backtest_data_provider import BacktestDataProvider
 from .evaluation_strategies import EvaluationStrategy
+from .run_config_builder import RunConfigBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +71,18 @@ class IndividualEvaluator:
         self._cache_hits = 0
         self._cache_misses = 0
 
-        # 委譲先コンポーネント
+        self._initialize_components()
+
+    def _initialize_components(self) -> None:
+        """委譲先コンポーネントを初期化する。"""
         self._fitness_calculator = FitnessCalculator()
         self._evaluation_strategy = EvaluationStrategy(self)
+        self._run_config_builder = RunConfigBuilder()
+        self._data_provider = BacktestDataProvider(
+            backtest_service=self.backtest_service,
+            data_cache=self._data_cache,
+            lock=self._lock,
+        )
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
         """バックテスト設定を設定"""
@@ -123,6 +134,26 @@ class IndividualEvaluator:
                 "cache_misses": self._cache_misses,
             }
 
+    def build_parallel_worker_initargs(
+        self, config: GAConfig
+    ) -> Optional[Tuple[Dict[str, Any], GAConfig, Dict[str, Any]]]:
+        """並列ワーカー初期化に必要な引数を構築する。"""
+        if not self._fixed_backtest_config:
+            return None
+
+        backtest_config = self._fixed_backtest_config.copy()
+        shared_data: Dict[str, Any] = {}
+
+        main_data = self._get_cached_data(backtest_config)
+        if main_data is not None and not getattr(main_data, "empty", False):
+            shared_data["main_data"] = main_data
+
+        minute_data = self._get_cached_minute_data(backtest_config)
+        if minute_data is not None:
+            shared_data["minute_data"] = minute_data
+
+        return (backtest_config, config, shared_data)
+
     def __getstate__(self):
         """Pickle化時の状態取得（ロック、キャッシュ、委譲先を除外）"""
         state = self.__dict__.copy()
@@ -142,6 +173,10 @@ class IndividualEvaluator:
             del state["_fitness_calculator"]
         if "_evaluation_strategy" in state:
             del state["_evaluation_strategy"]
+        if "_run_config_builder" in state:
+            del state["_run_config_builder"]
+        if "_data_provider" in state:
+            del state["_data_provider"]
 
         return state
 
@@ -156,9 +191,7 @@ class IndividualEvaluator:
         if not hasattr(self, "_result_cache"):
             self._result_cache = LRUCache(maxsize=self._max_cache_size * 100)
 
-        # 委譲先コンポーネントを再生成
-        self._fitness_calculator = FitnessCalculator()
-        self._evaluation_strategy = EvaluationStrategy(self)
+        self._initialize_components()
 
     def evaluate(self, individual: Any, config: GAConfig) -> Tuple[float, ...]:
         """
@@ -233,41 +266,7 @@ class IndividualEvaluator:
 
     def _get_cached_data(self, backtest_config: Dict[str, Any]) -> Any:
         """キャッシュされたバックテストデータを取得"""
-        # 並列ワーカー内の共有データをチェック
-        try:
-            from .parallel_evaluator import get_worker_data
-
-            worker_data = get_worker_data("main_data")
-            if worker_data is not None:
-                return worker_data
-        except ImportError:
-            pass
-
-        symbol = backtest_config.get("symbol")
-        timeframe = backtest_config.get("timeframe")
-        start_date = backtest_config.get("start_date")
-        end_date = backtest_config.get("end_date")
-
-        # キーの作成（文字列化して一意性を確保）
-        key = (symbol, timeframe, str(start_date), str(end_date))
-
-        with self._lock:
-            if key not in self._data_cache:
-                import pandas as pd
-
-                self.backtest_service.ensure_data_service_initialized()
-
-                data = self.backtest_service.data_service.get_data_for_backtest(
-                    symbol=symbol,
-                    timeframe=timeframe,
-                    start_date=pd.to_datetime(start_date),
-                    end_date=pd.to_datetime(end_date),
-                )
-
-                self._data_cache[key] = data
-                logger.debug(f"バックテストデータをキャッシュしました: {key}")
-
-            return self._data_cache[key]
+        return self._data_provider.get_cached_backtest_data(backtest_config)
 
     def _get_cached_minute_data(self, backtest_config: Dict[str, Any]) -> Any:
         """
@@ -281,45 +280,7 @@ class IndividualEvaluator:
         Returns:
             1分足のDataFrame、またはデータが存在しない場合はNone
         """
-        try:
-            from .parallel_evaluator import get_worker_data
-
-            worker_data = get_worker_data("minute_data")
-            if worker_data is not None:
-                return worker_data
-        except ImportError:
-            pass
-
-        symbol = backtest_config.get("symbol")
-        start_date = backtest_config.get("start_date")
-        end_date = backtest_config.get("end_date")
-
-        key = ("minute", symbol, "1m", str(start_date), str(end_date))
-
-        with self._lock:
-            if key not in self._data_cache:
-                try:
-                    import pandas as pd
-
-                    self.backtest_service.ensure_data_service_initialized()
-
-                    data = self.backtest_service.data_service.get_data_for_backtest(
-                        symbol=symbol,
-                        timeframe="1m",
-                        start_date=pd.to_datetime(start_date),
-                        end_date=pd.to_datetime(end_date),
-                    )
-                    if not data.empty:
-                        self._data_cache[key] = data
-                        logger.debug(f"1分足データをキャッシュしました: {key}")
-                    else:
-                        logger.debug(f"1分足データが空です: {key}")
-                        return None
-                except Exception as e:
-                    logger.warning(f"1分足データ取得エラー: {e}")
-                    return None
-
-            return self._data_cache.get(key)
+        return self._data_provider.get_cached_minute_data(backtest_config)
 
     def _get_cached_ohlcv_data(
         self,
@@ -345,55 +306,13 @@ class IndividualEvaluator:
         Returns:
             OHLCVのDataFrame、またはデータが存在しない場合はNone
         """
-        import pandas as pd
-
-        if not all([symbol, timeframe, start_date, end_date]):
-            logger.warning(
-                "OHLCVデータ取得: 必須パラメータが不足しています "
-                f"(symbol={symbol}, timeframe={timeframe}, "
-                f"start_date={start_date}, end_date={end_date})"
-            )
-            return None
-
-        cache_key = (cache_prefix, symbol, timeframe, str(start_date), str(end_date))
-
-        with self._lock:
-            if cache_key in self._data_cache:
-                cached_data = self._data_cache[cache_key]
-                if hasattr(cached_data, "empty") and not cached_data.empty:
-                    logger.debug(f"OHLCVデータ: キャッシュヒット (key={cache_key})")
-                    return cached_data
-
-        data_service = getattr(self.backtest_service, "data_service", None)
-        if data_service is None:
-            logger.warning("data_service が利用できません。")
-            return None
-
-        try:
-            if hasattr(self.backtest_service, "ensure_data_service_initialized"):
-                self.backtest_service.ensure_data_service_initialized()
-
-            ohlcv_data = data_service.get_ohlcv_data(
-                symbol, timeframe, start_date, end_date
-            )
-
-            if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
-                with self._lock:
-                    self._data_cache[cache_key] = ohlcv_data
-                logger.debug(
-                    f"OHLCVデータ: DB から取得・キャッシュ保存 (key={cache_key})"
-                )
-                return ohlcv_data
-            else:
-                logger.warning(
-                    f"OHLCVデータが空または無効です: symbol={symbol}, "
-                    f"timeframe={timeframe}"
-                )
-                return None
-
-        except Exception as exc:
-            logger.warning(f"OHLCVデータ取得エラー: {exc}")
-            return None
+        return self._data_provider.get_cached_ohlcv_data(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_date=start_date,
+            end_date=end_date,
+            cache_prefix=cache_prefix,
+        )
 
     def _perform_single_evaluation(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
@@ -444,29 +363,7 @@ class IndividualEvaluator:
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Optional[Dict[str, Any]]:
         """バックテスト実行用設定の構築（高速化版）"""
-        try:
-            config_dict = backtest_config.copy()
-
-            strategy_parameters = {
-                "strategy_gene": gene,
-                "ml_filter_enabled": config.ml_filter_enabled,
-                "ml_model_path": config.ml_model_path,
-            }
-
-            config_dict["strategy_config"] = {
-                "strategy_type": "GENERATED_GA",
-                "parameters": strategy_parameters,
-            }
-            gene_id = getattr(gene, "id", "unknown")[:8]
-            config_dict["strategy_name"] = f"GA_Individual_{gene_id}"
-
-            # 高速化フラグ: BacktestOrchestratorでのバリデーションをスキップ
-            config_dict["_skip_validation"] = True
-
-            return config_dict
-        except Exception as e:
-            logger.error(f"バックテスト設定生成エラー: {e}")
-            return None
+        return self._run_config_builder.build_run_config(gene, backtest_config, config)
 
     def _inject_external_objects(
         self,
@@ -475,10 +372,11 @@ class IndividualEvaluator:
         config: GAConfig,
     ) -> None:
         """実行設定への外部オブジェクト注入（1分足データ）"""
-        # 1分足データを取得（1分足シミュレーション用）
         minute_data = self._get_cached_minute_data(backtest_config)
-        if minute_data is not None:
-            run_config["strategy_config"]["parameters"]["minute_data"] = minute_data
+        self._run_config_builder.inject_external_objects(
+            run_config,
+            minute_data=minute_data,
+        )
 
     def _get_evaluation_context(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig

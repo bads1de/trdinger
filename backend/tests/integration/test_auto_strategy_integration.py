@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.config.unified_config import GAConfig
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.strategy import StrategyGene
@@ -150,7 +150,7 @@ class TestAutoStrategyE2E:
             mock_ga_engine: モックGAエンジン
         """
         with patch(
-            "app.services.auto_strategy.core.ga_engine.GeneticAlgorithmEngine"
+            "app.services.auto_strategy.core.engine.ga_engine.GeneticAlgorithmEngine"
         ) as mock_ga_class:
             mock_ga_class.return_value = mock_ga_engine
 
@@ -509,7 +509,7 @@ class TestAutoStrategyPerformance:
         Note:
             実行時間が長いため@pytest.mark.slowでマーク
         """
-        # GAConfigはpopulation_sizeのデフォルトは50なので明示的に設定が必要
+        # GAConfig の現在のデフォルト値を前提にする
         # ただしテストではデフォルト値を確認するため、テスト条件を調整
         config = GAConfig()  # デフォルト値を使用
 
@@ -525,9 +525,7 @@ class TestAutoStrategyPerformance:
 
         # 合理的な時間内に完了することを確認
         assert duration < 10  # 10秒以内（実際のGAではもっと長い）
-        assert config.population_size == 50  # デフォルト値
-        assert config.generations == 20  # デフォルト値
-
-
+        assert config.population_size == 100  # デフォルト値
+        assert config.generations == 50  # デフォルト値
 
 

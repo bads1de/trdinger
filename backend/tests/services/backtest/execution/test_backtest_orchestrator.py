@@ -124,14 +124,18 @@ def test_run_skip_validation(orchestrator, sample_config):
     orchestrator._executor.execute_backtest = MagicMock()
     orchestrator._result_converter.convert_backtest_results = MagicMock(return_value={})
 
-    # BacktestConfigをパッチ
+    # バリデーションスキップ時は model_construct が使われることを確認
     with patch(
-        "app.services.backtest.execution.backtest_orchestrator.BacktestConfig"
+        "app.services.backtest.execution.backtest_orchestrator.BacktestRunConfig"
     ) as MockConfig:
+        mock_instance = MagicMock(
+            strategy_config=MagicMock(model_dump=MagicMock(return_value={}))
+        )
+        MockConfig.model_construct.return_value = mock_instance
         orchestrator.run(sample_config)
 
-        # バリデーション（BacktestConfigの初期化）が行われていないことを確認
-        MockConfig.assert_not_called()
+        # model_construct は呼ばれるが、通常の __call__ (バリデーション付き) は呼ばれない
+        MockConfig.model_construct.assert_called_once()
 
     # それでもバックテストは実行されることを確認
     orchestrator._executor.execute_backtest.assert_called_once()
