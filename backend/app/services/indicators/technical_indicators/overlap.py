@@ -59,7 +59,7 @@ class OverlapIndicators:
         return run_series_indicator(
             data,
             length,
-            lambda: ta.ema(data, window=length, adjust=False, sma=True),
+            lambda: ta.ema(data, length=length, adjust=False, sma=True),
         )
 
     @staticmethod
@@ -80,7 +80,7 @@ class OverlapIndicators:
             raise TypeError("data must be pandas Series")
 
         return run_series_indicator(
-            data, length, lambda: ta.wma(data, window=length)
+            data, length, lambda: ta.wma(data, length=length)
         )
 
     @staticmethod
@@ -146,7 +146,7 @@ class OverlapIndicators:
         return run_series_indicator(
             data,
             length,
-            lambda: ta.dema(data, window=length),
+            lambda: ta.dema(data, length=length),
             min_data_length=length * 2,
         )
 

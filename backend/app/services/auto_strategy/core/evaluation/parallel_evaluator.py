@@ -90,6 +90,12 @@ class ParallelEvaluator:
         # 世代ごとの統計リセットフラグ
         self._auto_reset_per_generation = True
 
+        # 最適化: バッチ処理とキャッシュ
+        self._batch_size = 10
+        self._evaluation_cache: Dict[str, Tuple[float, ...]] = {}
+        self._cache_hits = 0
+        self._cache_misses = 0
+
     def start(self):
         """
         Executorを起動して保持します。

@@ -19,6 +19,7 @@ from app.services.auto_strategy.generators.random_gene_generator import RandomGe
 from app.services.auto_strategy.genes import StrategyGene
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner, EvolutionStoppedError
+from .optimized_evolution_runner import OptimizedEvolutionRunner
 from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import (
     _gene_kwargs,
@@ -371,7 +372,8 @@ class GeneticAlgorithmEngine:
             else None
         )
 
-        return EvolutionRunner(
+        # 最適化版のEvolutionRunnerを使用
+        return OptimizedEvolutionRunner(
             toolbox, stats, fitness_sharing, population, parallel_evaluator
         )
 

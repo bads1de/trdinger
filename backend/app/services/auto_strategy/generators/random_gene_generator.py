@@ -75,6 +75,13 @@ class RandomGeneGenerator:
         self.min_conditions = config.min_conditions
         self.threshold_ranges = config.threshold_ranges
 
+        # 最適化: キャッシュ
+        self._indicator_cache: List[IndicatorGene] = []
+        self._tpsl_cache: List[TPSLGene] = []
+        self._position_sizing_cache: List[PositionSizingGene] = []
+        self._tool_genes_cache: List[ToolGene] = []
+        self._caches_initialized = False
+
     @staticmethod
     def _create_enabled_tpsl_gene(config: Any) -> TPSLGene:
         """ランダム生成したTP/SL遺伝子を有効化して返す"""

@@ -148,6 +148,11 @@ class GAConfig(BaseConfig):
     fallback_start_date: str = "2024-01-01"
     fallback_end_date: str = "2024-04-09"
 
+    # PurgedKFold設定（過学習対策）
+    enable_purged_kfold: bool = False  # PurgedKFoldを有効にするフラグ
+    purged_kfold_splits: int = 5       # 分割数
+    purged_kfold_embargo: float = 0.01 # エンバーゴ率
+
     # MLフィルター設定
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None

@@ -26,8 +26,11 @@ from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
 
 from ..fitness.fitness_calculator import FitnessCalculator
+from ..fitness.optimized_fitness_calculator import OptimizedFitnessCalculator
 from .backtest_data_provider import BacktestDataProvider
+from .optimized_data_provider import OptimizedBacktestDataProvider
 from .evaluation_strategies import EvaluationStrategy
+from .optimized_evaluation_strategies import OptimizedEvaluationStrategy
 from .run_config_builder import RunConfigBuilder
 
 logger = logging.getLogger(__name__)
@@ -76,13 +79,18 @@ class IndividualEvaluator:
 
     def _initialize_components(self) -> None:
         """委譲先コンポーネントを初期化する。"""
-        self._fitness_calculator = FitnessCalculator()
-        self._evaluation_strategy = EvaluationStrategy(self)
+        # 最適化されたフィットネス計算を使用
+        self._fitness_calculator = OptimizedFitnessCalculator()
+        # 最適化された評価ストラテジーを使用
+        self._evaluation_strategy = OptimizedEvaluationStrategy(self, max_workers=2)
         self._run_config_builder = RunConfigBuilder()
-        self._data_provider = BacktestDataProvider(
+        # 最適化されたデータプロバイダーを使用
+        self._data_provider = OptimizedBacktestDataProvider(
             backtest_service=self.backtest_service,
-            data_cache=self._data_cache,
+            data_cache=self._data_cache,  # type: ignore
             lock=self._lock,
+            prefetch_enabled=True,
+            max_prefetch_workers=2,
         )
 
     def _build_cache_key(self, gene: Any) -> str:

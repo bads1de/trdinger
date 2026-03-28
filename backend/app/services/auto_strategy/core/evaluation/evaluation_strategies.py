@@ -43,6 +43,12 @@ class EvaluationStrategy:
         Returns:
             算出された適応度（タプル）
         """
+        # PurgedKFold評価（過学習対策）
+        if getattr(config, "enable_purged_kfold", False):
+            return self._evaluate_with_purged_kfold(
+                gene, base_backtest_config, config
+            )
+
         if getattr(config, "enable_walk_forward", False):
             return self._evaluate_with_walk_forward(
                 gene, base_backtest_config, config
@@ -226,6 +232,108 @@ class EvaluationStrategy:
 
         except Exception as e:
             logger.error(f"WFA評価中エラー: {e}")
+            return self._evaluator._perform_single_evaluation(
+                gene, base_backtest_config, config
+            )
+
+    def _evaluate_with_purged_kfold(
+        self,
+        gene,
+        base_backtest_config: Dict[str, Any],
+        config: GAConfig,
+    ) -> Tuple[float, ...]:
+        """
+        PurgedKFold評価（過学習対策）
+
+        MLで実装しているPurgedKFoldをGAに適用し、未来からのデータリークを防ぎます。
+        """
+        try:
+            n_splits = getattr(config, "purged_kfold_splits", 5)
+            embargo_pct = getattr(config, "purged_kfold_embargo", 0.01)
+
+            start_date = pd.to_datetime(base_backtest_config.get("start_date"))
+            end_date = pd.to_datetime(base_backtest_config.get("end_date"))
+
+            if start_date is None or end_date is None:
+                logger.warning("PurgedKFold: 期間が不明なため通常評価にフォールバック")
+                return self._evaluator._perform_single_evaluation(
+                    gene, base_backtest_config, config
+                )
+
+            # データ期間を分割
+            total_duration = end_date - start_date
+            fold_duration = total_duration / n_splits
+
+            oos_fitness_values = []
+
+            for fold_idx in range(n_splits):
+                # テストセットの期間を計算
+                test_start = start_date + (fold_duration * fold_idx)
+                test_end = start_date + (fold_duration * (fold_idx + 1))
+
+                # エンバーゴ期間を計算
+                embargo_duration = (test_end - test_start) * embargo_pct
+
+                # 訓練セットを計算（パージングとエンバーゴ適用）
+                train_configs = []
+
+                # テストセットより前の期間
+                if test_start > start_date:
+                    train_config = base_backtest_config.copy()
+                    train_config["start_date"] = start_date.strftime("%Y-%m-%d %H:%M:%S")
+                    train_config["end_date"] = (test_start - embargo_duration).strftime("%Y-%m-%d %H:%M:%S")
+                    train_configs.append(train_config)
+
+                # テストセットより後の期間
+                if test_end < end_date:
+                    train_config = base_backtest_config.copy()
+                    train_config["start_date"] = (test_end + embargo_duration).strftime("%Y-%m-%d %H:%M:%S")
+                    train_config["end_date"] = end_date.strftime("%Y-%m-%d %H:%M:%S")
+                    train_configs.append(train_config)
+
+                # 訓練セットで評価
+                train_fitness_values = []
+                for train_config in train_configs:
+                    train_fitness = self._evaluator._perform_single_evaluation(
+                        gene, train_config, config
+                    )
+                    train_fitness_values.append(train_fitness)
+
+                # テストセットで評価
+                test_config = base_backtest_config.copy()
+                test_config["start_date"] = test_start.strftime("%Y-%m-%d %H:%M:%S")
+                test_config["end_date"] = test_end.strftime("%Y-%m-%d %H:%M:%S")
+
+                test_fitness = self._evaluator._perform_single_evaluation(
+                    gene, test_config, config
+                )
+
+                oos_fitness_values.append(test_fitness)
+
+            if not oos_fitness_values:
+                logger.warning("PurgedKFold: 有効なフォールドがないため通常評価にフォールバック")
+                return self._evaluator._perform_single_evaluation(
+                    gene, base_backtest_config, config
+                )
+
+            # 平均フィットネス計算
+            num_objectives = len(oos_fitness_values[0])
+            averaged_fitness = []
+
+            for obj_idx in range(num_objectives):
+                obj_values = [f[obj_idx] for f in oos_fitness_values]
+                avg_value = sum(obj_values) / len(obj_values)
+                averaged_fitness.append(max(0.0, avg_value))
+
+            logger.info(
+                f"PurgedKFold評価完了: {len(oos_fitness_values)}フォールド, "
+                f"平均OOS={tuple(round(v, 4) for v in averaged_fitness)}"
+            )
+
+            return tuple(averaged_fitness)
+
+        except Exception as e:
+            logger.error(f"PurgedKFold評価中エラー: {e}")
             return self._evaluator._perform_single_evaluation(
                 gene, base_backtest_config, config
             )
