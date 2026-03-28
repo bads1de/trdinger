@@ -160,7 +160,7 @@ class OptimizedParallelEvaluator:
 
         # タスクを提出
         for i, ind, cache_key in tasks_to_submit:
-            future = self._executor.submit(self._evaluate_with_cache, ind, cache_key)
+            future = self._executor.submit(self._evaluate_with_cache, ind, cache_key)  # type: ignore[union-attr]
             future_to_index[future] = i
 
         # 結果を収集

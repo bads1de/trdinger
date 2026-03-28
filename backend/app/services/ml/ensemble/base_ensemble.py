@@ -292,7 +292,7 @@ class BaseEnsemble(ABC):
         if hasattr(self, "_fitted_base_models") and self._fitted_base_models:
             data = {
                 "fitted_base_models": self._fitted_base_models,
-                "fitted_meta_model": self._fitted_meta_model,
+                "fitted_meta_model": getattr(self, "_fitted_meta_model", None),
                 "base_model_types": getattr(self, "_base_model_types", []),
                 "meta_model_type": getattr(
                     self, "_meta_model_type", "logistic_regression"

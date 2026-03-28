@@ -6,7 +6,7 @@ ML学習基盤クラス
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -78,13 +78,13 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.trainer_config = trainer_config or {}
 
-        self.scaler = StandardScaler()
-        self.feature_columns = None
-        self.is_trained = False
-        self._model = None
-        self.current_model_path = None
-        self.current_model_metadata = None
-        self.metadata = None
+        self.scaler: Optional[StandardScaler] = StandardScaler()
+        self.feature_columns: Optional[List[str]] = None
+        self.is_trained: bool = False
+        self._model: Any = None
+        self.current_model_path: Optional[str] = None
+        self.current_model_metadata: Optional[Dict[str, Any]] = None
+        self.metadata: Optional[Dict[str, Any]] = None
 
     @property
     def config(self):
@@ -209,6 +209,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             return self.config.prediction.get_default_predictions()
 
         try:
+            if self.feature_columns is None:
+                logger.warning("特徴量カラムが設定されていません")
+                return self.config.prediction.get_default_predictions()
+
             # 1. 前処理（カラム調整、スケーリング）- 共通ユーティリティを直接使用
             processed_features = prepare_data_for_prediction(
                 features_df,
@@ -510,6 +514,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """特徴量重要度を取得"""
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
+            return {}
+
+        if self._model is None or self.feature_columns is None:
             return {}
 
         return get_feature_importance_unified(

@@ -39,7 +39,7 @@ class CalculatorFactory:
         method_str = normalize_enum_name(method)
 
         calculator_class = method_map.get(method_str, FixedRatioCalculator)
-        return calculator_class()
+        return calculator_class()  # type: ignore[abstract]
 
     @staticmethod
     def get_available_methods() -> Dict[str, str]:

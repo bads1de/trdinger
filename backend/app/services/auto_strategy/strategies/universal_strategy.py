@@ -474,7 +474,7 @@ class UniversalStrategy(Strategy):
             return None, None
 
         market_data = {}
-        tpsl_method = active_tpsl_gene.method
+        tpsl_method = active_tpsl_gene.method  # type: ignore[attr-defined]
 
         if tpsl_method in (
             TPSLMethod.VOLATILITY_BASED,

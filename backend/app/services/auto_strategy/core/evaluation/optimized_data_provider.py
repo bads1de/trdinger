@@ -45,7 +45,7 @@ class OptimizedBacktestDataProvider:
         # プリフェッチ設定
         self._prefetch_enabled = prefetch_enabled
         self._prefetch_executor = ThreadPoolExecutor(max_workers=max_prefetch_workers)
-        self._prefetch_cache: Dict[str, Any] = {}
+        self._prefetch_cache: Dict[tuple, Any] = {}
 
     def _acquire_read_lock(self):
         """読み取りロックを取得"""

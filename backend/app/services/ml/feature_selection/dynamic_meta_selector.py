@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Union
+from typing import List, Dict, Optional, Union
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectorMixin
 from scipy.cluster.hierarchy import linkage, fcluster
@@ -32,7 +32,7 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         self.min_features = min_features
         self.n_shadow_iterations = n_shadow_iterations
         self.random_state = random_state
-        self.support_mask_ = None
+        self.support_mask_: Optional[np.ndarray] = None
         self.feature_names_in_ = None
         self.selected_features_ = None
 
@@ -47,7 +47,7 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         cluster_labels = fcluster(
             linkage_matrix, 1 - self.clustering_threshold, criterion="distance"
         )
-        clusters = {}
+        clusters: Dict[int, List[str]] = {}
         for i, label in enumerate(cluster_labels):
             if label not in clusters:
                 clusters[label] = []
@@ -154,7 +154,8 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
 
         # primary_proba が漏れていたら強制的に戻す
         if (
-            "primary_proba" in self.feature_names_in_
+            self.feature_names_in_ is not None
+            and "primary_proba" in self.feature_names_in_
             and "primary_proba" not in final_candidates
         ):
             final_candidates.append("primary_proba")
@@ -172,8 +173,9 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         self.selected_features_ = final_candidates
 
         # support_mask_ の作成
+        feature_names: List[str] = self.feature_names_in_ if self.feature_names_in_ is not None else []
         self.support_mask_ = np.array(
-            [f in final_candidates for f in self.feature_names_in_]
+            [f in final_candidates for f in feature_names]
         )
 
         logger.info(

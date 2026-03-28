@@ -39,9 +39,9 @@ class BacktestService:
         Args:
             data_service: データ変換サービス（テスト時にモックを注入可能）
         """
-        self.data_service = data_service
-        self._db_session = None  # DBセッション保持用
-        self._orchestrator = None  # 遅延初期化
+        self.data_service: Optional[BacktestDataService] = data_service
+        self._db_session: Optional[Session] = None  # DBセッション保持用
+        self._orchestrator: Optional[BacktestOrchestrator] = None  # 遅延初期化
 
     def run_backtest(
         self, config: Dict[str, Any], preloaded_data: Optional[pd.DataFrame] = None

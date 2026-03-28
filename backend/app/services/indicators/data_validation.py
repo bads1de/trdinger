@@ -387,7 +387,7 @@ def validate_input(data: pd.Series, period: int) -> None:
 
 
 def validate_series_params(
-    data: pd.Series, length: int = None, min_data_length: int = 0
+    data: pd.Series, length: Optional[int] = None, min_data_length: int = 0
 ) -> Optional[pd.Series]:
     """
     指標計算用のパラメータ検証（共通化用）
@@ -412,7 +412,7 @@ def validate_series_params(
 
 def validate_multi_series_params(
     series_dict: dict,
-    length: int = None,
+    length: Optional[int] = None,
     min_data_length: int = 0,
 ) -> Optional[pd.Series]:
     """

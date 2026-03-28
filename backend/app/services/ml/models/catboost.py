@@ -70,7 +70,7 @@ class CatBoostModel(BaseGradientBoostingModel):
             logger.info("auto_class_weights='Balanced'を適用")
         elif isinstance(class_weight, dict):
             # カスタムクラスウェイトの設定
-            catboost_params["class_weights"] = list(class_weight.values())
+            catboost_params["class_weights"] = list(class_weight.values())  # type: ignore[assignment]
             logger.info(f"カスタムクラスウェイト: {class_weight}")
 
         return catboost_params if catboost_params else None
@@ -166,6 +166,8 @@ class CatBoostModel(BaseGradientBoostingModel):
         """
         モデルから生の予測値（確率）を取得します。
         """
+        if self.model is None:
+            raise ModelError("学習済みモデルがありません")
         return self.model.predict_proba(data)
 
 

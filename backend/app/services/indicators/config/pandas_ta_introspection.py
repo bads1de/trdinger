@@ -36,10 +36,10 @@ def _build_sample_ohlcv_frame(
         low = close - 1
         volume = np.random.randint(100, 1000, rows).astype(float)
     else:
-        open_ = np.random.uniform(100, 110, rows)
-        high = np.random.uniform(105, 115, rows)
-        low = np.random.uniform(95, 105, rows)
-        close = np.random.uniform(100, 110, rows)
+        open_ = np.random.uniform(100, 110, rows)  # type: ignore[assignment]
+        high = np.random.uniform(105, 115, rows)  # type: ignore[assignment]
+        low = np.random.uniform(95, 105, rows)  # type: ignore[assignment]
+        close = np.random.uniform(100, 110, rows)  # type: ignore[assignment]
         volume = np.random.uniform(1000, 5000, rows)
 
     frame = pd.DataFrame(

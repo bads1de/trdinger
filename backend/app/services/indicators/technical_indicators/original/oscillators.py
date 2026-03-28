@@ -94,7 +94,7 @@ def _njit_is_prime(n: int) -> bool:
 
 
 def _get_prime_sequence(length: int) -> list[int]:
-    primes = []
+    primes: list[int] = []
     num = 2
     while len(primes) < length:
         if _njit_is_prime(num):

@@ -157,7 +157,7 @@ class MLManagementOrchestrationService:
         MLモデルの現在の状態を取得
         """
         # デフォルトステータスの初期化
-        status = {
+        status: Dict[str, Any] = {
             "is_model_loaded": False,
             "is_loaded": False,  # 後方互換性のため保持
             "is_trained": False,

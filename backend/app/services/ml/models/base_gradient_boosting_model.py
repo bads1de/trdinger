@@ -193,7 +193,7 @@ class BaseGradientBoostingModel(ABC):
             }
 
             # best_iterationなど、モデル固有の属性を結果に追加
-            if hasattr(self.model, "best_iteration"):
+            if self.model is not None and hasattr(self.model, "best_iteration"):
                 result["best_iteration"] = self.model.best_iteration
 
             return result

@@ -5,9 +5,9 @@ import SymbolSelector from '../../components/common/SymbolSelector';
 import { TradingPair } from '@/types/market-data';
 
 const mockSymbols: TradingPair[] = [
-  { symbol: 'BTC/USDT', base: 'BTC', quote: 'USDT', type: 'spot' },
-  { symbol: 'ETH/USDT', base: 'ETH', quote: 'USDT', type: 'spot' },
-  { symbol: 'XRP/USDT', base: 'XRP', quote: 'USDT', type: 'spot' },
+  { symbol: 'BTC/USDT', name: 'Bitcoin / USDT', base: 'BTC', quote: 'USDT' },
+  { symbol: 'ETH/USDT', name: 'Ethereum / USDT', base: 'ETH', quote: 'USDT' },
+  { symbol: 'XRP/USDT', name: 'Ripple / USDT', base: 'XRP', quote: 'USDT' },
 ];
 
 describe('SymbolSelector', () => {

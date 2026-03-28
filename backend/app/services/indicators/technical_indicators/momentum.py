@@ -74,7 +74,7 @@ class MomentumIndicators:
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """MACD"""
         result = run_series_indicator(
             data,
@@ -157,7 +157,7 @@ class MomentumIndicators:
         k: int = 14,
         d: int = 3,
         smooth_k: int = 3,
-        d_length: int = None,
+        d_length: Optional[int] = None,
     ) -> Tuple[pd.Series, pd.Series]:
         """
         ストキャスティクス（Stochastic Oscillator）

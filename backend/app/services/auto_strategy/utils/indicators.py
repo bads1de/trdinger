@@ -58,8 +58,8 @@ def get_all_indicators(include_composite: bool = True) -> List[str]:
         all_types.extend(COMPOSITE_INDICATORS)
 
     # 重複除去して順序維持
-    seen = set()
-    return [x for x in all_types if not (x in seen or seen.add(x))]
+    seen: set[str] = set()
+    return [x for x in all_types if x not in seen and not seen.add(x)]  # type: ignore[func-returns-value]
 
 
 def get_volume_indicators() -> List[str]:

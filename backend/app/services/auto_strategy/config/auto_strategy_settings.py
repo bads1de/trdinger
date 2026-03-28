@@ -26,10 +26,10 @@ class AutoStrategyConfig(BaseSettings):
 
     # 遺伝的アルゴリズム基本設定（デフォルト値は ga_constants.GA_DEFAULT_CONFIG と同期）
     population_size: int = Field(
-        default=GA_DEFAULT_CONFIG["population_size"], description="個体数"
+        default=int(GA_DEFAULT_CONFIG["population_size"]), description="個体数"
     )
     generations: int = Field(
-        default=GA_DEFAULT_CONFIG["generations"], description="世代数"
+        default=int(GA_DEFAULT_CONFIG["generations"]), description="世代数"
     )
     tournament_size: int = Field(default=3, description="トーナメントサイズ")
     crossover_rate: float = Field(
@@ -39,12 +39,12 @@ class AutoStrategyConfig(BaseSettings):
         default=GA_DEFAULT_CONFIG["mutation_rate"], description="突然変異率"
     )
     elite_size: int = Field(
-        default=GA_DEFAULT_CONFIG["elite_size"], description="エリート保存数"
+        default=int(GA_DEFAULT_CONFIG["elite_size"]), description="エリート保存数"
     )
 
     # 戦略生成制約
     max_indicators: int = Field(
-        default=GA_DEFAULT_CONFIG["max_indicators"], description="最大指標数"
+        default=int(GA_DEFAULT_CONFIG["max_indicators"]), description="最大指標数"
     )
     min_indicators: int = Field(default=2, description="最小指標数")
     max_conditions: int = Field(default=5, description="最大条件数")

@@ -211,7 +211,7 @@ class BybitService(ABC):
         """
         untilパラメータを使用したページネーション（ファンディングレート用）
         """
-        all_data = []
+        all_data: List[Dict[str, Any]] = []
         page_count = 0
         # 最新の時刻から開始（Bybit APIは新しいデータから古いデータの順で返す）
         until_time = int(datetime.now(timezone.utc).timestamp() * 1000)
@@ -284,7 +284,7 @@ class BybitService(ABC):
         """
         時間範囲を使用したページネーション（オープンインタレスト用）
         """
-        all_data = []
+        all_data: List[Dict[str, Any]] = []
         page_count = 0
         end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
 

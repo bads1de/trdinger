@@ -302,7 +302,7 @@ class DataFrequencyManager:
         Returns:
             検証結果の辞書
         """
-        validation_result = {
+        validation_result: Dict[str, Any] = {
             "is_valid": True,
             "warnings": [],
             "errors": [],

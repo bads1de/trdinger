@@ -125,7 +125,7 @@ def dataclass_from_dict(cls: Type[T], data: Dict[str, Any]) -> T:
     try:
         # クラス側に from_dict があればそちらを優先
         if hasattr(cls, "from_dict") and callable(getattr(cls, "from_dict")):
-            return cls.from_dict(data)  # type: ignore[return-value]
+            return cls.from_dict(data)  # type: ignore[attr-defined, return-value]
 
         # フォールバック: デフォルトインスタンスを作って setattr
         instance = cls()

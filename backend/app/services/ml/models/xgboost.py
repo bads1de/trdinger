@@ -117,6 +117,8 @@ class XGBoostModel(BaseGradientBoostingModel):
         """
         モデルから生の予測値（確率）を取得します。
         """
+        if self.model is None:
+            raise ModelError("学習済みモデルがありません")
         return self.model.predict(data)
 
 

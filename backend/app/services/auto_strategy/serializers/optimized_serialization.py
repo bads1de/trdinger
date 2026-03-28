@@ -7,12 +7,12 @@
 import hashlib
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict
 
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
 if TYPE_CHECKING:
-    from ..genes import Condition, EntryGene, IndicatorGene, PositionSizingGene, TPSLGene
+    from ..genes import Condition, IndicatorGene
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,9 @@ class OptimizedDictConverter:
             return self._deserialize_cache[cache_key]
 
         # デシリアライズ実行
-        result = self._strategy_gene_codec.dict_to_strategy_gene(data)
+        from ..genes import StrategyGene
+
+        result = self._strategy_gene_codec.dict_to_strategy_gene(data, StrategyGene)
 
         # キャッシュに保存
         if len(self._deserialize_cache) < self._cache_size:
@@ -129,6 +131,7 @@ class OptimizedDictConverter:
         """辞書形式から指標遺伝子を復元"""
         try:
             from ..genes import IndicatorGene
+
             return IndicatorGene(
                 type=data["type"],
                 parameters=data["parameters"],
@@ -176,6 +179,7 @@ class OptimizedDictConverter:
         """辞書形式から条件を復元"""
         try:
             from ..genes import Condition
+
             return Condition(
                 left_operand=data["left_operand"],
                 operator=data["operator"],

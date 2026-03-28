@@ -53,16 +53,16 @@ class OptimizedGeneGenerator:
             smart_context: スマート条件生成のコンテキスト
         """
         self.config = config
-        self.smart_context = smart_context or {}
+        self.smart_context: Dict[str, Any] = smart_context or {}
 
         # スマート条件生成器
         self.smart_condition_generator = ConditionGenerator(ga_config=config)
         try:
             self.smart_condition_generator.set_context(
-                timeframe=smart_context.get("timeframe"),
-                symbol=smart_context.get("symbol"),
-                threshold_profile=smart_context.get("threshold_profile"),
-                regime_thresholds=smart_context.get("regime_thresholds"),
+                timeframe=self.smart_context.get("timeframe"),
+                symbol=self.smart_context.get("symbol"),
+                threshold_profile=self.smart_context.get("threshold_profile"),
+                regime_thresholds=self.smart_context.get("regime_thresholds"),
             )
         except Exception:
             pass
@@ -159,8 +159,8 @@ class OptimizedGeneGenerator:
             self._initialize_caches()
 
         # テンプレートをクローンしてランダムに有効/無効を設定
-        tool_genes = []
-        for tool in self._tool_genes_template:
+        tool_genes: List[ToolGene] = []
+        for tool in self._tool_genes_template or []:
             enabled = random.random() < 0.5
             tool_genes.append(
                 ToolGene(

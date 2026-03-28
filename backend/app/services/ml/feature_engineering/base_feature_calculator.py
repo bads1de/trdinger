@@ -211,7 +211,7 @@ class BaseFeatureCalculator(ABC):
         # Series型入力の場合
         safe_denominators = denominators.replace(0, np.nan)
         result = numerators / safe_denominators
-        return result.fillna(fill_value)
+        return result.fillna(fill_value)  # type: ignore[attr-defined]
 
     def safe_ratio_calculation(
         self,

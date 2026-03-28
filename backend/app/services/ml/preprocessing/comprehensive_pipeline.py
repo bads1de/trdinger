@@ -291,7 +291,7 @@ def validate_comprehensive_pipeline(
     """
     logger.info("包括的パイプラインを検証中...")
 
-    validation_results = {
+    validation_results: Dict[str, Any] = {
         "pipeline_creation": True,
         "fit_success": False,
         "transform_success": False,

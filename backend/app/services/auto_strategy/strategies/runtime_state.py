@@ -141,5 +141,5 @@ def resolve_runtime_state(
     """strategy が持つ runtime_state を返し、なければ互換アダプタを返す。"""
     runtime_state = getattr(strategy, "runtime_state", None)
     if getattr(runtime_state, "__runtime_state_marker__", False) is True:
-        return runtime_state
+        return runtime_state  # type: ignore[return-value]
     return LegacyStrategyRuntimeStateAdapter(strategy)

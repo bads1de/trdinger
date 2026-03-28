@@ -144,21 +144,21 @@ class FitnessSharing:
             if len(vectors) < 2:
                 return population
 
-            vectors = np.array(vectors)
+            vectors_array = np.array(vectors)
 
             # ベクトル次元数チェックとパディング（次元不一致対策）
-            max_dim = max(v.shape[0] for v in vectors if isinstance(v, np.ndarray))
-            vectors_padded = []
-            for v in vectors:
+            max_dim = max(v.shape[0] for v in vectors_array if isinstance(v, np.ndarray))
+            vectors_padded: list[np.ndarray[Any, Any]] = []
+            for v in vectors_array:
                 if v.shape[0] < max_dim:
                     padding = np.zeros(max_dim - v.shape[0])
                     vectors_padded.append(np.concatenate([v, padding]))
                 else:
                     vectors_padded.append(v)
-            vectors = np.array(vectors_padded)
+            vectors_array = np.array(vectors_padded)
 
             # 最適化されたニッチカウント計算
-            niche_counts_vectorized = self.compute_niche_counts_vectorized(vectors)
+            niche_counts_vectorized = self.compute_niche_counts_vectorized(vectors_array)
 
             # 全個体用のニッチカウント配列を作成（デフォルト1.0）
             niche_counts = [1.0] * len(population)
@@ -375,7 +375,7 @@ class FitnessSharing:
 
             total_similarity = 0.0
             for val1, val2, calc_func, weight in components:
-                similarity = calc_func(val1, val2)
+                similarity = calc_func(val1, val2)  # type: ignore[operator]
                 total_similarity += similarity * weight
 
             return max(0.0, min(1.0, total_similarity))
@@ -446,7 +446,7 @@ class FitnessSharing:
         if res is not None:
             return res
 
-        similar_count = 0
+        similar_count = 0.0
         total = max(len(conditions1), len(conditions2))
         if total == 0:
             return 1.0
@@ -563,15 +563,15 @@ class FitnessSharing:
             if len(vectors) <= 1:
                 return population
 
-            vectors = np.array(vectors)
-            n_clusters = min(len(vectors), 3)  # 最大3クラスタ
+            vectors_array = np.array(vectors)
+            n_clusters = min(len(vectors_array), 3)  # 最大3クラスタ
 
             # KMeansクラスタリング（高速化のためn_init=1に変更）
             kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=int(1))  # type: ignore[call-arg]
-            labels = kmeans.fit_predict(vectors)
+            labels = kmeans.fit_predict(vectors_array)
 
             # シルエットスコア計算
-            silhouette_vals = silhouette_samples(vectors, labels)
+            silhouette_vals = silhouette_samples(vectors_array, labels)
 
             # フィットネス調整
             for j, idx in enumerate(valid_indices):

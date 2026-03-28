@@ -73,7 +73,7 @@ class GeneticAlgorithmEngine:
             logger.info("[Hybrid] ハイブリッドGA+MLモードで起動")
             from ..hybrid.hybrid_individual_evaluator import HybridIndividualEvaluator
 
-            self.individual_evaluator = HybridIndividualEvaluator(
+            self.individual_evaluator: Any = HybridIndividualEvaluator(
                 backtest_service=backtest_service,
                 predictor=hybrid_predictor,
                 feature_adapter=hybrid_feature_adapter,
@@ -83,7 +83,7 @@ class GeneticAlgorithmEngine:
             self.individual_evaluator = IndividualEvaluator(backtest_service)
 
         self.individual_class = None  # setup_deap時に設定
-        self.fitness_sharing = None  # setup_deap時に初期化
+        self.fitness_sharing: Any = None  # setup_deap時に初期化
 
     def setup_deap(self, config: GAConfig) -> None:
         """

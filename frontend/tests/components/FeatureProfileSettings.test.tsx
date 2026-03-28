@@ -16,6 +16,7 @@ import type { FeatureEngineeringConfig } from "@/types/ml-config";
 
 describe("FeatureProfileSettings", () => {
   const mockConfig: FeatureEngineeringConfig = {
+    featureAllowlist: null,
     profile: "production",
     customAllowlist: null,
   };
@@ -71,6 +72,7 @@ describe("FeatureProfileSettings", () => {
 
     it("現在のプロファイルが選択されている（research）", () => {
       const researchConfig: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "research",
         customAllowlist: null,
       };
@@ -90,6 +92,7 @@ describe("FeatureProfileSettings", () => {
 
     it("プロファイル変更が動作する（research → production）", async () => {
       const researchConfig: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "research",
         customAllowlist: null,
       };
@@ -143,6 +146,7 @@ describe("FeatureProfileSettings", () => {
 
     it("researchプロファイルの説明が表示される", () => {
       const researchConfig: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "research",
         customAllowlist: null,
       };
@@ -271,6 +275,7 @@ describe("FeatureProfileSettings", () => {
   describe("カスタムallowlist表示", () => {
     it("カスタムallowlistが設定されている場合、特徴量数が表示される", () => {
       const configWithAllowlist: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "production",
         customAllowlist: ["RSI_14", "MACD_Signal", "BB_Position"],
       };
@@ -289,6 +294,7 @@ describe("FeatureProfileSettings", () => {
 
     it("カスタムallowlistが設定されている場合、警告メッセージが表示される", () => {
       const configWithAllowlist: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "production",
         customAllowlist: ["RSI_14", "MACD_Signal"],
       };
@@ -366,6 +372,7 @@ describe("FeatureProfileSettings", () => {
 
     it("エラー時にも既存のcustomAllowlistは保持される", async () => {
       const configWithAllowlist: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "production",
         customAllowlist: ["RSI_14"],
       };
@@ -392,6 +399,7 @@ describe("FeatureProfileSettings", () => {
   describe("エッジケース", () => {
     it("空のcustomAllowlistでレンダリングできる", () => {
       const emptyConfig: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "production",
         customAllowlist: [],
       };
@@ -480,6 +488,7 @@ describe("FeatureProfileSettings", () => {
 
     it("customAllowlistが設定されている場合、textareaにJSON表示される", () => {
       const configWithAllowlist: FeatureEngineeringConfig = {
+        featureAllowlist: null,
         profile: "production",
         customAllowlist: ["RSI_14", "MACD_Signal"],
       };

@@ -43,12 +43,12 @@ class GAConfig(BaseConfig):
     """
 
     # 基本GA設定
-    population_size: int = GA_DEFAULT_CONFIG["population_size"]
-    generations: int = GA_DEFAULT_CONFIG["generations"]
+    population_size: int = int(GA_DEFAULT_CONFIG["population_size"])
+    generations: int = int(GA_DEFAULT_CONFIG["generations"])
     crossover_rate: float = GA_DEFAULT_CONFIG["crossover_rate"]
     mutation_rate: float = GA_DEFAULT_CONFIG["mutation_rate"]
-    elite_size: int = GA_DEFAULT_CONFIG["elite_size"]
-    max_indicators: int = GA_DEFAULT_CONFIG["max_indicators"]
+    elite_size: int = int(GA_DEFAULT_CONFIG["elite_size"])
+    max_indicators: int = int(GA_DEFAULT_CONFIG["max_indicators"])
 
     # 戦略生成制約
     min_indicators: int = 1
@@ -92,10 +92,10 @@ class GAConfig(BaseConfig):
 
     # パラメータ範囲
     parameter_ranges: Dict[str, List] = field(
-        default_factory=lambda: GA_PARAMETER_RANGES.copy()
+        default_factory=lambda: cast(Dict[str, List], GA_PARAMETER_RANGES.copy())
     )
     threshold_ranges: Dict[str, List[float]] = field(
-        default_factory=lambda: GA_THRESHOLD_RANGES.copy()
+        default_factory=lambda: cast(Dict[str, List[float]], GA_THRESHOLD_RANGES.copy())
     )
 
     # フィットネス設定
@@ -110,10 +110,10 @@ class GAConfig(BaseConfig):
     fitness_sharing: Dict[str, Any] = field(
         default_factory=lambda: GA_DEFAULT_FITNESS_SHARING.copy()
     )
-    enable_fitness_sharing: bool = GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
+    enable_fitness_sharing: bool = bool(GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"])
     sharing_radius: float = GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
     sharing_alpha: float = GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
-    sampling_threshold: int = GA_DEFAULT_FITNESS_SHARING["sampling_threshold"]
+    sampling_threshold: int = int(GA_DEFAULT_FITNESS_SHARING["sampling_threshold"])
     sampling_ratio: float = GA_DEFAULT_FITNESS_SHARING["sampling_ratio"]
 
     # 多目的最適化設定

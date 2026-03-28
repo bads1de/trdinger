@@ -37,7 +37,7 @@ class ConditionGenerator:
         self.logger = logger
         self.ga_config_obj = ga_config  # GAConfigオブジェクトを保持
 
-        self.context = {
+        self.context: Dict[str, Any] = {
             "timeframe": None,
             "symbol": None,
             "threshold_profile": "normal",
@@ -324,7 +324,7 @@ class ConditionGenerator:
         """条件リストを確率的に階層化"""
         if len(conditions) < 2:
             return conditions
-        res = []
+        res: List[Union[Condition, ConditionGroup]] = []
         i = 0
         while i < len(conditions):
             if i + 1 < len(conditions) and random.random() < 0.3:
@@ -380,7 +380,7 @@ class ConditionGenerator:
         self, indicators: List[IndicatorGene]
     ) -> Dict[IndicatorType, List[IndicatorGene]]:
         """動的指標分類（統合されたタイプ取得メソッドを使用）"""
-        categorized = {
+        categorized: Dict[IndicatorType, List[IndicatorGene]] = {
             IndicatorType.MOMENTUM: [],
             IndicatorType.TREND: [],
             IndicatorType.VOLATILITY: [],

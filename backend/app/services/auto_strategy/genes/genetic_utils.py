@@ -137,11 +137,11 @@ class GeneticUtils:
             (child1_gene, child2_gene) のタプル
         """
         if parent1_gene and parent2_gene:
-            return gene_class.crossover(parent1_gene, parent2_gene)
+            return gene_class.crossover(parent1_gene, parent2_gene)  # type: ignore[attr-defined]
         if parent1_gene:
-            return parent1_gene, parent1_gene.clone()
+            return parent1_gene, parent1_gene.clone()  # type: ignore[attr-defined]
         if parent2_gene:
-            return parent2_gene, parent2_gene.clone()
+            return parent2_gene, parent2_gene.clone()  # type: ignore[attr-defined]
         return None, None
 
     @staticmethod

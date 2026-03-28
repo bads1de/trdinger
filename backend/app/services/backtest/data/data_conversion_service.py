@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import List
+from typing import List, Optional
 
 import pandas as pd
 
@@ -24,7 +24,7 @@ class DataConversionError(ValueError):
     より具体的に表現するために使用します。
     """
 
-    def __init__(self, message: str, original_error: Exception = None):
+    def __init__(self, message: str, original_error: Optional[Exception] = None):
         """
         DataConversionError クラスの初期化
 

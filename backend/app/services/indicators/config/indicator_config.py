@@ -363,7 +363,7 @@ class IndicatorConfig:
                 else:
                     params[param_name] = random.uniform(float(min_val), float(max_val))
             else:
-                params[param_name] = param_config.default_value
+                params[param_name] = param_config.default_value  # type: ignore[assignment]
 
         return params
 

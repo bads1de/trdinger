@@ -64,7 +64,7 @@ class OptimizedFitnessCalculator:
         - NumPy配列の活用
         """
         # キャッシュチェック
-        cache_key = id(backtest_result)
+        cache_key: str = str(id(backtest_result))
         if self._cache_enabled and cache_key in self._metrics_cache:
             return self._metrics_cache[cache_key]
 
@@ -343,8 +343,8 @@ class OptimizedFitnessCalculator:
         else:
             profit_balance = 0.3
 
-        balance_score = 0.6 * trade_balance + 0.4 * profit_balance
-        return float(max(0.0, min(1.0, balance_score)))
+        balance_score = float(0.6 * trade_balance + 0.4 * profit_balance)
+        return max(0.0, min(1.0, balance_score))
 
     def calculate_multi_objective_fitness(
         self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs

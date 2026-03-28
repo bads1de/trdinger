@@ -11,7 +11,7 @@
 import gc
 import logging
 import random
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 from deap import tools
@@ -63,8 +63,8 @@ class OptimizedEvolutionRunner:
         self.parallel_evaluator = parallel_evaluator
 
         # 最適化: 交叉・突然変異のキャッシュ
-        self._crossover_cache = {}
-        self._mutation_cache = {}
+        self._crossover_cache: Dict[str, Any] = {}
+        self._mutation_cache: Dict[str, Any] = {}
 
     def run_evolution(
         self,

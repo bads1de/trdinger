@@ -112,7 +112,7 @@ class SeedStrategyFactory:
         ]
 
         # Long: DMP > 45 AND ADX > 45
-        long_conditions = [
+        long_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[
@@ -133,7 +133,7 @@ class SeedStrategyFactory:
         ]
 
         # Short: DMN > 45 AND ADX > 45
-        short_conditions = [
+        short_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[
@@ -191,7 +191,7 @@ class SeedStrategyFactory:
         ]
 
         # Long: RSI > 75 (強い上昇モメンタム)
-        long_conditions = [
+        long_conditions: list[Condition | ConditionGroup] = [
             Condition(
                 left_operand={"type": "indicator", "name": "RSI_14"},
                 operator=">",
@@ -201,7 +201,7 @@ class SeedStrategyFactory:
         ]
 
         # Short: RSI < 25 (強い下落モメンタム)
-        short_conditions = [
+        short_conditions: list[Condition | ConditionGroup] = [
             Condition(
                 left_operand={"type": "indicator", "name": "RSI_14"},
                 operator="<",
@@ -245,7 +245,7 @@ class SeedStrategyFactory:
         ]
 
         # Long: Close > BBU (Upper Band)
-        long_conditions = [
+        long_conditions: list[Condition | ConditionGroup] = [
             Condition(
                 left_operand="close",
                 operator=">",
@@ -255,7 +255,7 @@ class SeedStrategyFactory:
         ]
 
         # Short: Close < BBL (Lower Band)
-        short_conditions = [
+        short_conditions: list[Condition | ConditionGroup] = [
             Condition(
                 left_operand="close",
                 operator="<",
@@ -300,7 +300,7 @@ class SeedStrategyFactory:
         ]
 
         # Long: Close > KAMA AND DMP > 40 AND ADX > 20
-        long_conditions = [
+        long_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[
@@ -327,7 +327,7 @@ class SeedStrategyFactory:
         ]
 
         # Short: Close < KAMA AND DMN > 40 AND ADX > 20
-        short_conditions = [
+        short_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[
@@ -395,7 +395,7 @@ class SeedStrategyFactory:
 
         # 簡易版WAE Long: MACD > Signal AND MACD > 0
         # (本来はBB Width > Dead Zone の条件も必要だが、条件式の制約上省略)
-        long_conditions = [
+        long_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[
@@ -416,7 +416,7 @@ class SeedStrategyFactory:
         ]
 
         # Short: MACD < Signal AND MACD < 0
-        short_conditions = [
+        short_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[
@@ -477,7 +477,7 @@ class SeedStrategyFactory:
         ]
 
         # Long: Close > T3 AND ADX > 20
-        long_conditions = [
+        long_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[
@@ -498,7 +498,7 @@ class SeedStrategyFactory:
         ]
 
         # Short: Close < T3 AND ADX > 20
-        short_conditions = [
+        short_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
                 conditions=[

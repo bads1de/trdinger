@@ -136,7 +136,7 @@ class StrategyGeneDictCodec:
 
             for field, cls in mapping.items():
                 gene_data = data.get(field)
-                sub_genes[field] = cls.from_dict(gene_data) if gene_data else None
+                sub_genes[field] = cls.from_dict(gene_data) if gene_data else None  # type: ignore[attr-defined]
 
             stateful_conditions = [
                 self.converter.dict_to_stateful_condition(sc_data)

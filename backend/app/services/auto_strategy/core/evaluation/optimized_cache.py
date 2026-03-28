@@ -32,9 +32,9 @@ class OptimizedCacheSystem:
         result_cache_size: int = 10000,
     ):
         # 階層的キャッシュ
-        self._structure_cache = LRUCache(maxsize=structure_cache_size)
-        self._param_cache = LRUCache(maxsize=param_cache_size)
-        self._result_cache = LRUCache(maxsize=result_cache_size)
+        self._structure_cache: LRUCache[str, Any] = LRUCache(maxsize=structure_cache_size)
+        self._param_cache: LRUCache[str, Any] = LRUCache(maxsize=param_cache_size)
+        self._result_cache: LRUCache[str, Any] = LRUCache(maxsize=result_cache_size)
 
         # スレッドセーフのためのロック
         self._lock = threading.Lock()
@@ -188,8 +188,8 @@ class DataCacheOptimizer:
     """
 
     def __init__(self, max_cache_size: int = 100):
-        self._data_cache = LRUCache(maxsize=max_cache_size)
-        self._minute_data_cache = LRUCache(maxsize=max_cache_size)
+        self._data_cache: LRUCache[str, Any] = LRUCache(maxsize=max_cache_size)
+        self._minute_data_cache: LRUCache[str, Any] = LRUCache(maxsize=max_cache_size)
         self._lock = threading.Lock()
 
         # 統計情報

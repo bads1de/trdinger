@@ -6,7 +6,7 @@
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import ccxt
 
@@ -155,7 +155,7 @@ class HistoricalDataService:
         for i in range(max_iterations):
             await asyncio.sleep(self.request_delay)
 
-            params = {}
+            params: dict[str, int] = {}
             if end_timestamp:
                 params["end"] = end_timestamp
 
@@ -234,7 +234,7 @@ class HistoricalDataService:
         timeframes = unified_config.market.supported_timeframes
         logger.info(f"処理対象時間足: {timeframes}")
 
-        results = {
+        results: dict[str, Any] = {
             "symbol": symbol,
             "timeframe": timeframe,
             "success": True,

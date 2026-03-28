@@ -163,5 +163,3 @@ const DataResetButton: React.FC<DataResetButtonProps> = ({
 };
 
 export default DataResetButton;
-
-export default DataResetButton;

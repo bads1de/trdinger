@@ -6,7 +6,7 @@ Sample Entropy, Fractal Dimension, VPIN Approximation など、
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pandas as pd
 
@@ -22,7 +22,7 @@ class ComplexityFeatureCalculator(BaseFeatureCalculator):
     """
 
     def calculate_features(
-        self, df: pd.DataFrame, config: Dict[str, Any] = None
+        self, df: pd.DataFrame, config: Dict[str, Any] = None  # type: ignore[assignment]
     ) -> pd.DataFrame:
         """
         複雑性に関連する特徴量を計算

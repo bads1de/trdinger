@@ -41,7 +41,7 @@ class BaseGene(ABC):
         # 非 dataclass サブクラス向けフォールバック
         result = {}
 
-        keys = []
+        keys: List[str] = []
         if hasattr(self, "__slots__"):
             keys = list(self.__slots__)
         elif hasattr(self, "__dict__"):
@@ -53,7 +53,7 @@ class BaseGene(ABC):
 
             value = getattr(self, key, None)
 
-            if hasattr(value, "value"):
+            if value is not None and hasattr(value, "value"):
                 result[key] = value.value
             elif isinstance(value, datetime):
                 result[key] = value.isoformat()
@@ -134,7 +134,7 @@ class BaseGene(ABC):
         init_params = {}
 
         # クラスアノテーションを取得（継承チェーンを含む）
-        annotations = {}
+        annotations: Dict[str, Any] = {}
         for base in reversed(cls.__mro__):
             annotations.update(getattr(base, "__annotations__", {}))
 

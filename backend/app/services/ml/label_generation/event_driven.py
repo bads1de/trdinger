@@ -169,7 +169,9 @@ class EventDrivenLabelGenerator:
 
         return labels
 
-    def _resolve_regime_factors(self, regime_value: Optional[int]) -> Dict[str, float]:
+    def _resolve_regime_factors(self, regime_value: Union[int, str, None]) -> Dict[str, float]:
+        if regime_value is None:
+            return self.REGIME_FACTORS["default"]
         return self.REGIME_FACTORS.get(regime_value, self.REGIME_FACTORS["default"])
 
     def _first_touch_label(

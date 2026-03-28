@@ -14,7 +14,7 @@ pandas-taと独自実装のテクニカル指標を統一的に管理し、
 import inspect
 import logging
 import warnings
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -155,6 +155,7 @@ class TechnicalIndicatorService:
             cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
 
             # データのメタデータを抽出
+            data_meta: tuple
             if not df.empty:
                 # 全列のハッシュの合計を使うことで、どの列が変わっても検知できるようにする
                 data_hash = pd.util.hash_pandas_object(df, index=True).sum()
@@ -176,7 +177,7 @@ class TechnicalIndicatorService:
         """pandas-ta用の設定辞書を取得"""
         config = self.registry.get_indicator_config(indicator_type)
         if config and config.pandas_function:
-            params_mapping = {}
+            params_mapping: Dict[str, List[str]] = {}
             if config.param_map:
                 for alias, target in config.param_map.items():
                     if target and target != "data":

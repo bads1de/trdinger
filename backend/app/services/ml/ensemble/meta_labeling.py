@@ -28,7 +28,7 @@ class MetaLabelingService:
         feature_selection_params: Optional[Dict[str, Any]] = None,
     ):
         self.model_type = model_type
-        self.model = None
+        self.model: Any = None
         self.is_trained = False
         self.base_model_names = base_model_names
         self.model_params = model_params or {}
@@ -38,8 +38,8 @@ class MetaLabelingService:
             "min_features": 5,
             "random_state": 42,
         }
-        self.selector = None
-        self.selected_features = None
+        self.selector: Any = None
+        self.selected_features: Optional[List[str]] = None
 
     def _add_base_model_statistics(
         self, X_meta: pd.DataFrame, base_probs_filtered: pd.DataFrame
@@ -172,7 +172,7 @@ class MetaLabelingService:
             X_meta = self.selector.fit_transform(X_meta, y_meta)
             self.selected_features = X_meta.columns.tolist()
             logger.info(
-                f"Meta-labeling dynamic feature selection: {len(self.selector.feature_names_in_)} -> {len(self.selected_features)} features selected."
+                f"Meta-labeling dynamic feature selection: {len(getattr(self.selector, 'feature_names_in_', []))} -> {len(self.selected_features or [])} features selected."
             )
 
         self.model = self._init_model()

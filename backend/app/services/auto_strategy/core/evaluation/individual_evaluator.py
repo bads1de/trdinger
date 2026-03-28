@@ -14,7 +14,7 @@ from typing import (
     Tuple,
 )
 
-from cachetools import LRUCache
+from cachetools import LRUCache  # type: ignore[import-untyped]
 from pydantic import ValidationError
 
 from app.services.backtest.config.backtest_config import BacktestRunConfig
@@ -62,7 +62,7 @@ class IndividualEvaluator:
             max_cache_size: データキャッシュの最大サイズ（LRU方式で古いエントリを削除）
         """
         self.backtest_service = backtest_service
-        self._fixed_backtest_config = None
+        self._fixed_backtest_config: Optional[Dict[str, Any]] = None
         self._max_cache_size = max_cache_size or self.DEFAULT_MAX_CACHE_SIZE
         # データキャッシュ（重いデータ用）
         self._data_cache: LRUCache = LRUCache(maxsize=self._max_cache_size)
@@ -269,7 +269,7 @@ class IndividualEvaluator:
             self._cache_misses += 1
 
             # バックテスト設定のベースを取得
-            base_backtest_config = (
+            base_backtest_config: Dict[str, Any] = (
                 self._fixed_backtest_config.copy()
                 if self._fixed_backtest_config
                 else {}

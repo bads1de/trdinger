@@ -279,13 +279,13 @@ class ErrorHandler:
             def timeout_handler(signum: int, frame: Any) -> None:
                 raise TimeoutError(f"操作がタイムアウトしました ({timeout}秒)")
 
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(timeout)
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)  # type: ignore[attr-defined]
+            signal.alarm(timeout)  # type: ignore[attr-defined]
             try:
                 return func(*args, **kwargs)
             finally:
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, old_handler)
+                signal.alarm(0)  # type: ignore[attr-defined]
+                signal.signal(signal.SIGALRM, old_handler)  # type: ignore[attr-defined]
 
     @staticmethod
     def validate_predictions(predictions: Any) -> bool:

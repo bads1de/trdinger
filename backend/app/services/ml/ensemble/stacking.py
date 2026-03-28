@@ -88,7 +88,7 @@ class StackingEnsemble(BaseEnsemble):
         """後方互換性のためのセッター"""
         self._base_model_types = value
 
-    @property
+    @property  # type: ignore[override]
     def meta_model(self) -> str:
         """後方互換性のためのプロパティ"""
         return self._meta_model_type
@@ -473,7 +473,7 @@ class StackingEnsemble(BaseEnsemble):
             model_data = joblib.load(model_path)
 
             payload = model_data
-            sidecar_metadata = {}
+            sidecar_metadata: Dict[str, Any] = {}
             if isinstance(model_data, dict):
                 sidecar_metadata = model_data.get("metadata", {}) or {}
                 if "model" in model_data:

@@ -80,7 +80,7 @@ class LightGBMModel(BaseGradientBoostingModel):
         """
         LightGBM固有の学習プロセスを実行します。
         """
-        callbacks = [lgb.log_evaluation(0)]
+        callbacks: list[Any] = [lgb.log_evaluation(0)]
 
         valid_sets = [train_data]
         valid_names = ["train"]
@@ -128,6 +128,9 @@ class LightGBMModel(BaseGradientBoostingModel):
         """
         モデルから生の予測値（確率）を取得します。
         """
+        if self.model is None:
+            raise ModelError("学習済みモデルがありません")
+
         return cast(
             np.ndarray,
             self.model.predict(data, num_iteration=self.model.best_iteration),

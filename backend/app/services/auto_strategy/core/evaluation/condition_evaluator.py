@@ -188,8 +188,8 @@ class ConditionEvaluator:
                     l_curr = left_val
                     r_curr = right_val
                     # shift属性チェックをhasattrでなくtry-exceptで行う方がPythonicで高速
-                    l_prev = l_curr.shift(1)
-                    r_prev = r_curr.shift(1)
+                    l_prev = l_curr.shift(1)  # type: ignore[union-attr]
+                    r_prev = r_curr.shift(1)  # type: ignore[union-attr]
                     return (l_curr > r_curr) & (l_prev <= r_prev)
                 except AttributeError:
                     # shiftがない場合（numpy arrayなど）
@@ -199,8 +199,8 @@ class ConditionEvaluator:
                 try:
                     l_curr = left_val
                     r_curr = right_val
-                    l_prev = l_curr.shift(1)
-                    r_prev = r_curr.shift(1)
+                    l_prev = l_curr.shift(1)  # type: ignore[union-attr]
+                    r_prev = r_curr.shift(1)  # type: ignore[union-attr]
                     return (l_curr < r_curr) & (l_prev >= r_prev)
                 except AttributeError:
                     return None

@@ -31,7 +31,7 @@ class HybridFeatureAdapter:
 
     # 派生特徴量のキャッシュ（クラスレベル）
     # (data_hash, wavelet_config_hash) -> derived_features_df
-    _derived_cache = LRUCache(maxsize=20)
+    _derived_cache: LRUCache[Any, Any] = LRUCache(maxsize=20)
 
     def __init__(
         self,
@@ -331,7 +331,9 @@ class HybridFeatureAdapter:
                     trainer_config={"type": "single", "model_type": "lightgbm"},
                 )
 
-            return self._preprocess_trainer._preprocess_data  # type: ignore[return-value]
+            if self._preprocess_trainer is not None:
+                return self._preprocess_trainer._preprocess_data  # type: ignore[return-value]
+            return None
         except Exception as exc:
             logger.warning(f"BaseMLTrainer初期化に失敗しました: {exc}")
             return None

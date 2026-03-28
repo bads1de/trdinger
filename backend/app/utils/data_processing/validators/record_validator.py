@@ -92,7 +92,7 @@ class RecordValidator:
 
         try:
             for record in ohlcv_records:
-                sanitized_record = {}
+                sanitized_record: Dict[str, Any] = {}
 
                 # シンボルの正規化
                 sanitized_record["symbol"] = str(record["symbol"]).strip().upper()
