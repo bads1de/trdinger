@@ -13,12 +13,17 @@ import logging
 import random
 from typing import Any, Callable, Dict, List, Optional
 
-import numpy as np
+
 from deap import tools
 
 from app.services.auto_strategy.core.fitness.fitness_sharing import FitnessSharing
-from app.services.auto_strategy.core.engine.ga_utils import _invalidate_individual_cache, _set_fitness_values
-from app.services.auto_strategy.core.evaluation.parallel_evaluator import ParallelEvaluator
+from app.services.auto_strategy.core.engine.ga_utils import (
+    _invalidate_individual_cache,
+    _set_fitness_values,
+)
+from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
+    ParallelEvaluator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -166,9 +171,7 @@ class OptimizedEvolutionRunner:
         logger.info("進化アルゴリズム完了")
         return population, logbook
 
-    def _apply_crossover_batch(
-        self, offspring: List[Any], config: Any
-    ) -> List[Any]:
+    def _apply_crossover_batch(self, offspring: List[Any], config: Any) -> List[Any]:
         """
         交叉のバッチ処理（最適化版）
 
@@ -195,9 +198,7 @@ class OptimizedEvolutionRunner:
 
         return offspring
 
-    def _apply_mutation_batch(
-        self, offspring: List[Any], config: Any
-    ) -> List[Any]:
+    def _apply_mutation_batch(self, offspring: List[Any], config: Any) -> List[Any]:
         """
         突然変異のバッチ処理（最適化版）
 
@@ -278,7 +279,9 @@ class OptimizedEvolutionRunner:
             for ind, fit in zip(invalid_individuals, fitnesses):
                 ind.fitness.values = fit
 
-    def _update_dynamic_objective_scalars(self, population: List[Any], config: Any) -> None:
+    def _update_dynamic_objective_scalars(
+        self, population: List[Any], config: Any
+    ) -> None:
         """
         動的目的スカラーの更新
 
@@ -290,7 +293,10 @@ class OptimizedEvolutionRunner:
             return
 
         try:
-            from app.services.auto_strategy.core.fitness.objective_weights import ObjectiveWeights
+            from app.services.auto_strategy.core.fitness.objective_weights import (
+                ObjectiveWeights,
+            )
+
             ObjectiveWeights.update_scalars(population, config)
         except Exception as e:
             logger.debug(f"動的目的スカラー更新エラー: {e}")

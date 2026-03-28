@@ -6,7 +6,7 @@
 
 import logging
 import threading
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from concurrent.futures import ThreadPoolExecutor
 
 import pandas as pd
@@ -222,7 +222,11 @@ class OptimizedBacktestDataProvider:
         # プリフェッチデータをチェック
         if self._prefetch_enabled and cache_key in self._prefetch_cache:
             prefetch_data = self._prefetch_cache[cache_key]
-            if prefetch_data is not None and hasattr(prefetch_data, "empty") and not prefetch_data.empty:
+            if (
+                prefetch_data is not None
+                and hasattr(prefetch_data, "empty")
+                and not prefetch_data.empty
+            ):
                 # プリフェッチデータをキャッシュに移動
                 self._acquire_write_lock()
                 try:

@@ -6,12 +6,15 @@
 
 import logging
 import math
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 import numpy as np
 
 from app.services.auto_strategy.config.ga import GAConfig
-from ..evaluation.evaluation_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
+from ..evaluation.evaluation_metrics import (
+    calculate_trade_frequency_penalty,
+    calculate_ulcer_index,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +31,18 @@ class OptimizedFitnessCalculator:
     """
 
     # 最小化目的（ペナルティ値は最大化）と最大化目的（ペナルティ値は最小化）の分類
-    _MINIMIZE_OBJECTIVES = frozenset({"max_drawdown", "ulcer_index", "trade_frequency_penalty"})
+    _MINIMIZE_OBJECTIVES = frozenset(
+        {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
+    )
 
     # デフォルトフィットネス重み（辞書アクセスを避けるためタプルで保持）
-    _DEFAULT_WEIGHTS = (0.3, 0.4, 0.2, 0.1, 0.1)  # total_return, sharpe, max_dd, win_rate, balance
+    _DEFAULT_WEIGHTS = (
+        0.3,
+        0.4,
+        0.2,
+        0.1,
+        0.1,
+    )  # total_return, sharpe, max_dd, win_rate, balance
 
     def __init__(self) -> None:
         # 計算済みメトリクスのキャッシュ
@@ -219,7 +230,11 @@ class OptimizedFitnessCalculator:
 
             trade_penalty_weight = fw.get("trade_frequency_penalty", 0.0)
             if trade_penalty_weight > 0:
-                fitness -= trade_penalty_weight * trade_scale * metrics["trade_frequency_penalty"]
+                fitness -= (
+                    trade_penalty_weight
+                    * trade_scale
+                    * metrics["trade_frequency_penalty"]
+                )
 
             return max(0.0, fitness)
 
@@ -299,10 +314,13 @@ class OptimizedFitnessCalculator:
     def _calculate_balance_score_numpy(self, trade_history: list) -> float:
         """NumPy版（大規模データ向け）"""
         # NumPy配列に変換
-        trades_array = np.array([
-            (trade.get("size", 0.0), trade.get("pnl", 0.0))
-            for trade in trade_history
-        ], dtype=np.float64)
+        trades_array = np.array(
+            [
+                (trade.get("size", 0.0), trade.get("pnl", 0.0))
+                for trade in trade_history
+            ],
+            dtype=np.float64,
+        )
 
         if len(trades_array) == 0:
             return 0.5

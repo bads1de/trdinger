@@ -6,7 +6,7 @@
 """
 
 import random
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from .base import BaseTool, ToolContext
 from .registry import register_tool

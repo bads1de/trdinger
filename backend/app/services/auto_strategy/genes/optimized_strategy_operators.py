@@ -11,19 +11,10 @@ from __future__ import annotations
 
 import logging
 import random
-import uuid
-from typing import Any, List, Optional, Tuple
-
-import numpy as np
+from typing import Any, List, Tuple
 
 from .conditions import ConditionGroup
-from .entry import EntryGene
 from .genetic_utils import GeneticUtils
-from .position_sizing import (
-    PositionSizingGene,
-    create_random_position_sizing_gene,
-)
-from .tpsl import TPSLGene, create_random_tpsl_gene
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +33,15 @@ def mutate_indicators_batch(
     min_multiplier, max_multiplier = config.indicator_param_mutation_range
 
     for individual in individuals:
-        mutated = individual.clone() if hasattr(individual, 'clone') else individual
+        mutated = individual.clone() if hasattr(individual, "clone") else individual
 
         for i, indicator in enumerate(mutated.indicators):
             if random.random() < mutation_rate:
                 for param_name, param_value in indicator.parameters.items():
-                    if isinstance(param_value, (int, float)) and random.random() < mutation_rate:
+                    if (
+                        isinstance(param_value, (int, float))
+                        and random.random() < mutation_rate
+                    ):
                         if (
                             param_name == "period"
                             and hasattr(config, "parameter_ranges")
@@ -121,9 +115,12 @@ def mutate_conditions_batch(
             mutate_item(conditions[idx])
 
     for individual in individuals:
-        mutated = individual.clone() if hasattr(individual, 'clone') else individual
+        mutated = individual.clone() if hasattr(individual, "clone") else individual
 
-        for conditions in (mutated.long_entry_conditions, mutated.short_entry_conditions):
+        for conditions in (
+            mutated.long_entry_conditions,
+            mutated.short_entry_conditions,
+        ):
             if random.random() < mutation_threshold:
                 maybe_mutate_branch(conditions)
 
@@ -204,11 +201,19 @@ def crossover_strategy_genes(
                 child1_indicators.append(ind2.clone() if ind2 else ind1.clone())
                 child2_indicators.append(ind1.clone() if ind1 else ind2.clone())
 
-        child1_long_conditions = GeneticUtils.copy_conditions(parent1.long_entry_conditions)
-        child1_short_conditions = GeneticUtils.copy_conditions(parent2.short_entry_conditions)
+        child1_long_conditions = GeneticUtils.copy_conditions(
+            parent1.long_entry_conditions
+        )
+        child1_short_conditions = GeneticUtils.copy_conditions(
+            parent2.short_entry_conditions
+        )
 
-        child2_long_conditions = GeneticUtils.copy_conditions(parent2.long_entry_conditions)
-        child2_short_conditions = GeneticUtils.copy_conditions(parent1.short_entry_conditions)
+        child2_long_conditions = GeneticUtils.copy_conditions(
+            parent2.long_entry_conditions
+        )
+        child2_short_conditions = GeneticUtils.copy_conditions(
+            parent1.short_entry_conditions
+        )
 
         child1 = gene_class(
             indicators=child1_indicators,

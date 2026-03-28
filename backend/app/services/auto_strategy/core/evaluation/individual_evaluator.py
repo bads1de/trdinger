@@ -25,11 +25,8 @@ from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
 
-from ..fitness.fitness_calculator import FitnessCalculator
 from ..fitness.optimized_fitness_calculator import OptimizedFitnessCalculator
-from .backtest_data_provider import BacktestDataProvider
 from .optimized_data_provider import OptimizedBacktestDataProvider
-from .evaluation_strategies import EvaluationStrategy
 from .optimized_evaluation_strategies import OptimizedEvaluationStrategy
 from .run_config_builder import RunConfigBuilder
 
