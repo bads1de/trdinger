@@ -508,6 +508,11 @@ class TestPerformSingleEvaluation:
         evaluator = mock_dependencies
         gene = Mock()
         gene.id = "test_gene_12345678"
+        gene.indicators = []
+        gene.position_sizing_gene = None
+        gene.tpsl_gene = None
+        gene.long_tpsl_gene = None
+        gene.short_tpsl_gene = None
 
         config = Mock()
         config.objectives = ["weighted_score"]
@@ -561,6 +566,11 @@ class TestPerformSingleEvaluation:
 
         gene = Mock()
         gene.id = "test_gene_12345678"
+        gene.indicators = []
+        gene.position_sizing_gene = None
+        gene.tpsl_gene = None
+        gene.long_tpsl_gene = None
+        gene.short_tpsl_gene = None
 
         config = Mock()
         config.objectives = ["weighted_score"]

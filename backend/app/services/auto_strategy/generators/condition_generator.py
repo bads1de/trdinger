@@ -80,12 +80,13 @@ class ConditionGenerator:
         trend_pref = ("SMA", "EMA")
 
         # フォールバック候補の抽出
+        trend_categories = {"trend", "overlap", "custom"}
         trend_pool: List[IndicatorGene] = []
         for ind in indicators or []:
             if not getattr(ind, "enabled", True):
                 continue
             cfg = indicator_registry.get_indicator_config(ind.type)
-            if cfg and getattr(cfg, "category", None) == "trend":
+            if cfg and getattr(cfg, "category", None) in trend_categories:
                 trend_pool.append(ind)
 
         # 優先候補の決定

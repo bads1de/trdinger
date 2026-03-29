@@ -21,7 +21,9 @@ class TestOptimizedEvaluationStrategy:
             enable_walk_forward=False,
             oos_split_ratio=0.0,
         )
-        self.strategy._evaluate_with_purged_kfold_parallel = Mock(return_value=(0.42,))
+        self.strategy._evaluate_with_purged_kfold_report = Mock(
+            return_value=Mock(aggregated_fitness=(0.42,))
+        )
 
         result = self.strategy.execute(
             object(),
@@ -33,7 +35,7 @@ class TestOptimizedEvaluationStrategy:
         )
 
         assert result == (0.42,)
-        self.strategy._evaluate_with_purged_kfold_parallel.assert_called_once()
+        self.strategy._evaluate_with_purged_kfold_report.assert_called_once()
         self.evaluator._perform_single_evaluation.assert_not_called()
 
     def test_purged_kfold_averages_test_fold_results(self):
@@ -53,6 +55,7 @@ class TestOptimizedEvaluationStrategy:
             purged_kfold_embargo=0.0,
             enable_walk_forward=False,
             oos_split_ratio=0.0,
+            objectives=["weighted_score"],
         )
 
         result = self.strategy.execute(
@@ -64,7 +67,8 @@ class TestOptimizedEvaluationStrategy:
             config,
         )
 
-        assert result == (0.675,)
+        # robust aggregation: median(1.0, 0.5) * 0.7 + min(1.0, 0.5) * 0.3 = 0.75 * 0.7 + 0.5 * 0.3 = 0.675
+        assert result[0] == pytest.approx(0.675)
 
     def test_execute_report_returns_scenarios_for_oos(self):
         self.evaluator._perform_single_evaluation.side_effect = [(1.0,), (0.4,)]

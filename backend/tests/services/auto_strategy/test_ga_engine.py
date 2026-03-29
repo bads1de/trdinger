@@ -196,7 +196,7 @@ class TestGeneticAlgorithmEngine:
             config,
         )
 
-    @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
+    @patch("app.services.auto_strategy.core.engine.ga_engine.OptimizedEvolutionRunner")
     def test_run_evolution_flow(
         self,
         mock_runner_cls,
@@ -232,8 +232,9 @@ class TestGeneticAlgorithmEngine:
             Mock()
         )
 
-        # Config mock
-        mock_config = Mock()
+        # Config mock - use real GAConfig for complete attribute coverage
+        from app.services.auto_strategy.config.ga import GAConfig
+        mock_config = GAConfig()
         mock_config.population_size = 10
         mock_config.generations = 5
         mock_config.enable_parallel_evaluation = False
@@ -244,6 +245,7 @@ class TestGeneticAlgorithmEngine:
         mock_config.seed_injection_rate = 0.1
         mock_config.fallback_start_date = "2024-01-01"
         mock_config.fallback_end_date = "2024-01-02"
+        mock_config.objectives = ["weighted_score"]
 
         backtest_config = {"symbol": "BTCUSDT", "timeframe": "1h"}
 
@@ -262,7 +264,7 @@ class TestGeneticAlgorithmEngine:
         assert run_kwargs["should_stop"]() is True
 
     @patch("app.services.auto_strategy.core.engine.ga_engine.ParallelEvaluator")
-    @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
+    @patch("app.services.auto_strategy.core.engine.ga_engine.OptimizedEvolutionRunner")
     def test_run_evolution_with_parallel_config(
         self,
         mock_runner_cls,
@@ -292,8 +294,9 @@ class TestGeneticAlgorithmEngine:
         mock_runner_instance = mock_runner_cls.return_value
         mock_runner_instance.run_evolution.return_value = ([mock_ind], Mock())
 
-        # Config
-        mock_config = Mock()
+        # Config - use real GAConfig for complete attribute coverage
+        from app.services.auto_strategy.config.ga import GAConfig
+        mock_config = GAConfig()
         mock_config.enable_parallel_evaluation = True
         mock_config.max_evaluation_workers = 4
         mock_config.evaluation_timeout = 60.0
@@ -305,6 +308,7 @@ class TestGeneticAlgorithmEngine:
         mock_config.seed_injection_rate = 0.1
         mock_config.fallback_start_date = "2024-01-01"
         mock_config.fallback_end_date = "2024-01-02"
+        mock_config.objectives = ["weighted_score"]
 
         # 並列ワーカー初期化引数の public API を使用
         shared_data = {"main_data": pd.DataFrame({"close": [1, 2]})}

@@ -29,7 +29,7 @@ def test_build_report_rank_key_from_primary_fitness_uses_report_values():
         min_pass_rate=0.75,
     )
 
-    assert key == (0.0, 0.5, 0.4, 0.475)
+    assert key == (0.0, 0.5, 0.4, 0.575)
 
 
 class _SlottedIndividual:

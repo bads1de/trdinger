@@ -56,6 +56,7 @@ class TestConfigValidator:
         config.robustness_stress_slippage = [0.0003]
         config.robustness_stress_commission_multipliers = [1.5]
         config.robustness_aggregate_method = "robust"
+        config.robustness_validation_symbols = None
 
         return config
 

@@ -335,15 +335,16 @@ class TestBaseMLTrainer:
 
     def test_get_feature_importance_trained(self, trainer):
         """学習済みの重要度取得"""
+        import numpy as np
+
         trainer.is_trained = True
         trainer.feature_columns = ["f1", "f2"]
+        mock_model = MagicMock()
+        mock_model.feature_importances_ = np.array([0.8, 0.2])
+        trainer._model = mock_model
 
-        with patch(
-            "app.services.ml.trainers.base_ml_trainer.get_feature_importance_unified",
-            return_value={"f1": 0.8, "f2": 0.2},
-        ):
-            imp = trainer.get_feature_importance(top_n=5)
-            assert imp["f1"] == 0.8
+        imp = trainer.get_feature_importance(top_n=5)
+        assert imp["f1"] == 0.8
 
     # ------------------------------------------------------------------
     # _split_data

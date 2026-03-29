@@ -806,18 +806,18 @@ class TestIndividualEvaluator:
         assert self.mock_backtest_service.run_backtest.call_count == 2
 
         # 1回目の呼び出し（IS）の引数確認
+        # warmup調整（SMA period=20 → 21 bars × 1h = 21時間前倒し）を反映
         call_args_is = self.mock_backtest_service.run_backtest.call_args_list[0].kwargs[
             "config"
         ]
-        assert str(call_args_is["start_date"]) == "2024-01-01 00:00:00"
-        # 10日 * 0.8 = 8日後 = 1月9日
+        assert str(call_args_is["start_date"]) == "2023-12-31 03:00:00"
         assert str(call_args_is["end_date"]) == "2024-01-09 00:00:00"
 
         # 2回目の呼び出し（OOS）の引数確認
         call_args_oos = self.mock_backtest_service.run_backtest.call_args_list[
             1
         ].kwargs["config"]
-        assert str(call_args_oos["start_date"]) == "2024-01-09 00:00:00"
+        assert str(call_args_oos["start_date"]) == "2024-01-08 03:00:00"
         assert str(call_args_oos["end_date"]) == "2024-01-11 00:00:00"
 
         # フィットネス計算の検証
