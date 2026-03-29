@@ -322,6 +322,27 @@ class TestMLFilterIntegration:
             result = strategy._ml_allows_entry(direction=1.0)
             assert result is True
 
+    def test_invalid_ml_predictor_contract_skips_feature_preparation_and_allows_entry(
+        self, mock_broker, mock_data, valid_gene
+    ):
+        """predict/is_trained 契約を満たさない predictor は即フェイルセーフする"""
+        with patch.object(UniversalStrategy, "init"):
+            params = {
+                "strategy_gene": valid_gene,
+                "ml_predictor": {"raw": "model-dict"},
+            }
+            strategy = UniversalStrategy(mock_broker, mock_data, params)
+            strategy._data = mock_data
+
+            with patch.object(
+                strategy.ml_filter,
+                "prepare_current_features",
+            ) as mock_prepare_features:
+                result = strategy._ml_allows_entry(direction=1.0)
+
+        assert result is True
+        mock_prepare_features.assert_not_called()
+
     def test_ml_filter_threshold_customizable(
         self, mock_broker, mock_data, valid_gene, mock_ml_predictor
     ):

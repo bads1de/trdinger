@@ -8,6 +8,9 @@ BacktestServiceを通じてUniversalStrategyに渡しているかを検証しま
 import unittest
 from unittest.mock import MagicMock, patch
 
+import numpy as np
+import pandas as pd
+
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
     HybridIndividualEvaluator,
@@ -53,7 +56,13 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         """
         # MLモデルのロードをモック
         mock_model = MagicMock()
-        mock_model_manager.load_model.return_value = mock_model
+        mock_model.predict_proba.return_value = np.array([[0.1, 0.9]])
+        mock_model_manager.load_model.return_value = {
+            "model": mock_model,
+            "scaler": None,
+            "feature_columns": ["close"],
+            "metadata": {},
+        }
 
         with (
             patch.object(self.evaluator, "_get_cached_data", return_value=MagicMock()),
@@ -85,7 +94,16 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         parameters = strategy_config.get("parameters", {})
 
         self.assertIn("ml_predictor", parameters)
-        self.assertEqual(parameters["ml_predictor"], mock_model)
+        self.assertFalse(isinstance(parameters["ml_predictor"], dict))
+        self.assertTrue(callable(getattr(parameters["ml_predictor"], "predict", None)))
+        self.assertTrue(
+            callable(getattr(parameters["ml_predictor"], "is_trained", None))
+        )
+        self.assertTrue(parameters["ml_predictor"].is_trained())
+        prediction = parameters["ml_predictor"].predict(
+            pd.DataFrame({"close": [100.0]})
+        )
+        self.assertEqual(prediction["is_valid"], 0.9)
 
         # 3. ml_filter_threshold が設定されていること
         self.assertIn("ml_filter_threshold", parameters)

@@ -5,7 +5,10 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core.hybrid.hybrid_predictor import HybridPredictor
+from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
+    HybridPredictor,
+    RuntimeModelPredictorAdapter,
+)
 from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 from app.services.backtest.services.backtest_service import BacktestService
 from app.services.ml.common.exceptions import MLPredictionError, MLTrainingError
@@ -193,14 +196,18 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         # MLフィルター設定
         if config.ml_filter_enabled and config.ml_model_path:
             try:
-                ml_filter_model = model_manager.load_model(config.ml_model_path)
-                if ml_filter_model:
+                ml_filter_model = RuntimeModelPredictorAdapter(
+                    model_manager.load_model(config.ml_model_path)
+                )
+                if ml_filter_model.is_trained():
                     run_config["strategy_config"]["parameters"][
                         "ml_predictor"
                     ] = ml_filter_model
                     run_config["strategy_config"]["parameters"][
                         "ml_filter_threshold"
                     ] = 0.5
+                else:
+                    run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
             except Exception:
                 run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
         elif config.ml_filter_enabled:

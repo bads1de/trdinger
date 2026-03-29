@@ -10,6 +10,7 @@ from unittest.mock import Mock, MagicMock, patch
 from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
     HybridPredictor,
     MLPredictionError,
+    RuntimeModelPredictorAdapter,
 )
 
 
@@ -169,6 +170,17 @@ class TestHybridPredictor:
         predictor.service.load_model.return_value = False
         assert predictor.load_model("path") is False
 
+    def test_load_latest_models_uses_model_type_pattern(
+        self, predictor, mock_model_manager
+    ):
+        """単一モデルでは model_type を使って最新モデルを解決する"""
+        predictor.service.load_model.return_value = True
+
+        assert predictor.load_latest_models() is True
+
+        mock_model_manager.get_latest_model.assert_called_with("lightgbm")
+        predictor.service.load_model.assert_called_once_with("/path/to/model.pkl")
+
     def test_get_available_models(self):
         """利用可能モデルの取得"""
         models = HybridPredictor.get_available_models()
@@ -235,3 +247,40 @@ class TestHybridPredictor:
         assert len(info["models"]) == 2
         assert info["models"][0]["acc"] == 0.8
         assert info["models"][1]["acc"] == 0.85
+
+
+class TestRuntimeModelPredictorAdapter:
+    """保存済みモデルを runtime predictor として扱う薄いアダプタのテスト"""
+
+    def test_predict_uses_loaded_model_artifacts(self):
+        """model/scaler/feature_columns から is_valid を推論できる"""
+        model = Mock()
+        model.predict_proba.return_value = np.array(
+            [
+                [0.4, 0.6],
+                [0.2, 0.8],
+            ]
+        )
+
+        adapter = RuntimeModelPredictorAdapter(
+            {
+                "model": model,
+                "scaler": None,
+                "feature_columns": ["close", "volume"],
+                "metadata": {},
+            }
+        )
+
+        result = adapter.predict(
+            pd.DataFrame(
+                {
+                    "close": [100.0, 101.0],
+                    "volume": [10.0, 11.0],
+                    "ignored": [1.0, 2.0],
+                }
+            )
+        )
+
+        assert adapter.is_trained() is True
+        assert result["is_valid"] == pytest.approx(0.8)
+        model.predict_proba.assert_called_once()

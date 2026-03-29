@@ -100,6 +100,14 @@ class GeneticAlgorithmEngineFactory:
             logger.info(f"単一モデルを使用: {model_type}")
             predictor = HybridPredictor(trainer_type="single", model_type=model_type)
 
+        try:
+            if predictor.load_latest_models():
+                logger.info("ハイブリッド予測器に最新モデルをロードしました")
+            else:
+                logger.info("ロード可能な最新モデルが見つからないため中立予測で継続します")
+        except Exception as exc:
+            logger.warning(f"最新モデルのロードに失敗したため中立予測で継続します: {exc}")
+
         # 特徴量アダプタの初期化
         adapter = HybridFeatureAdapter()
 

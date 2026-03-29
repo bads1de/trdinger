@@ -8,12 +8,117 @@ import numpy as np
 import pandas as pd
 
 from app.services.ml.common.exceptions import MLPredictionError
+from app.services.ml.common.utils import prepare_data_for_prediction
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
     from app.services.ml.orchestration.ml_training_orchestration_service import MLTrainingService
     from app.services.ml.model_manager import ModelManager
+
+
+class RuntimeModelPredictorAdapter:
+    """
+    保存済みモデルアセットを runtime predictor 契約へ変換する薄いアダプタ。
+
+    `model_manager.load_model()` の戻り値辞書、または直接モデルオブジェクトを受け取り、
+    `predict(DataFrame) -> {"is_valid": float}` / `is_trained() -> bool` を提供します。
+    """
+
+    def __init__(self, model_data: Any):
+        if isinstance(model_data, dict):
+            self.model = model_data.get("model")
+            self.scaler = model_data.get("scaler")
+            self.feature_columns = model_data.get("feature_columns")
+            self.metadata = model_data.get("metadata", {})
+        else:
+            self.model = model_data
+            self.scaler = None
+            self.feature_columns = None
+            self.metadata = {}
+
+    def is_trained(self) -> bool:
+        """モデルが推論可能状態かを判定する。"""
+        if self.model is None:
+            return False
+
+        is_trained_attr = getattr(self.model, "is_trained", None)
+        if isinstance(is_trained_attr, bool):
+            return is_trained_attr
+        if callable(is_trained_attr):
+            try:
+                result = is_trained_attr()
+                if isinstance(result, bool):
+                    return result
+            except Exception:
+                logger.debug("runtime predictor の is_trained 呼び出しに失敗しました")
+
+        is_fitted_attr = getattr(self.model, "is_fitted", None)
+        if isinstance(is_fitted_attr, bool):
+            return is_fitted_attr
+
+        return True
+
+    def predict(self, features_df: pd.DataFrame) -> Dict[str, float]:
+        """保存済みモデルを使って is_valid 予測を返す。"""
+        try:
+            if features_df is None or features_df.empty or not self.is_trained():
+                return HybridPredictor._default_prediction()
+
+            prepared_features = self._prepare_features(features_df)
+            raw_prediction = self._run_model(prepared_features)
+            return self._normalise_runtime_prediction(raw_prediction)
+        except Exception as exc:
+            logger.warning(f"runtime predictor 予測エラー: {exc}")
+            return HybridPredictor._default_prediction()
+
+    def _prepare_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
+        """保存時の feature_columns / scaler を使って推論入力を揃える。"""
+        if self.feature_columns:
+            return prepare_data_for_prediction(
+                features_df,
+                expected_columns=list(self.feature_columns),
+                scaler=self.scaler,
+            )
+
+        prepared = features_df.copy()
+        return prepared.ffill().fillna(0.0)
+
+    def _run_model(self, features_df: pd.DataFrame) -> Any:
+        """モデル固有の予測関数を呼び出す。"""
+        predict_proba = getattr(self.model, "predict_proba", None)
+        if callable(predict_proba):
+            return predict_proba(features_df)
+
+        predict = getattr(self.model, "predict", None)
+        if callable(predict):
+            return predict(features_df)
+
+        raise MLPredictionError("runtime predictor が predict/predict_proba を持っていません")
+
+    @staticmethod
+    def _normalise_runtime_prediction(raw_prediction: Any) -> Dict[str, float]:
+        """モデル出力を `{\"is_valid\": ...}` 形式に正規化する。"""
+        if isinstance(raw_prediction, dict):
+            return HybridPredictor._normalise_prediction(raw_prediction)
+
+        predictions = np.asarray(raw_prediction)
+        if predictions.ndim == 0:
+            latest_pred = predictions.item()
+        elif predictions.ndim == 1:
+            latest_pred = predictions[-1]
+        else:
+            latest_pred = predictions[-1]
+
+        latest_array = np.asarray(latest_pred)
+        if latest_array.ndim == 0:
+            is_valid = float(latest_array)
+        elif latest_array.shape[0] >= 2:
+            is_valid = float(latest_array[1])
+        else:
+            is_valid = float(latest_array[0])
+
+        return HybridPredictor._normalise_prediction({"is_valid": is_valid})
 
 
 class HybridPredictor:
@@ -207,7 +312,7 @@ class HybridPredictor:
             logger.error(f"モデルロードエラー: {e}")
             return False
 
-    def get_latest_model(self) -> Optional[str]:
+    def get_latest_model(self, model_name_pattern: Optional[str] = None) -> Optional[str]:
         """
         最新モデルのパスを取得
 
@@ -215,12 +320,40 @@ class HybridPredictor:
             モデルパス（存在しない場合はNone）
         """
         try:
-            # model_typeに基づいて最新モデルを取得
-            model_path = self.model_manager.get_latest_model()
+            pattern = model_name_pattern or self.model_type or "*"
+            model_path = self.model_manager.get_latest_model(pattern)
             return model_path
         except Exception as e:
             logger.error(f"最新モデル取得エラー: {e}")
             return None
+
+    def load_latest_models(self) -> bool:
+        """
+        利用可能な最新モデルを各サービスへロードする。
+
+        Returns:
+            少なくとも1つのモデルをロードできた場合はTrue
+        """
+        loaded_any = False
+
+        if self.model_types and len(self.model_types) > 1:
+            for model_type, service in zip(self.model_types, self.services):
+                latest_model = self.get_latest_model(model_type)
+                if latest_model is None:
+                    logger.info(f"最新モデルが見つからないためスキップします: {model_type}")
+                    continue
+                if service.load_model(latest_model):
+                    loaded_any = True
+                else:
+                    logger.warning(f"最新モデルのロードに失敗しました: {latest_model}")
+            return loaded_any
+
+        latest_model = self.get_latest_model(self.model_type)
+        if latest_model is None:
+            logger.info(f"最新モデルが見つかりませんでした: {self.model_type}")
+            return False
+
+        return self.load_model(latest_model)
 
     def is_trained(self) -> bool:
         """

@@ -8,6 +8,9 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.core.engine.ga_engine_factory import (
+    GeneticAlgorithmEngineFactory,
+)
 from app.services.auto_strategy.core.engine.report_selection import (
     set_two_stage_metadata,
 )
@@ -155,6 +158,68 @@ class TestGeneticAlgorithmEngine:
         assert best_individual is robust_leader
         assert best_gene is robust_leader
         assert best_strategies is None
+
+    @patch("app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator")
+    @patch("app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter")
+    @patch("app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor")
+    def test_factory_loads_latest_hybrid_model_when_available(
+        self,
+        mock_predictor_cls,
+        mock_adapter_cls,
+        mock_gene_generator_cls,
+        mock_backtest_service,
+    ):
+        """hybrid_mode では起動時に最新モデルのロードを試みる"""
+        predictor = Mock()
+        predictor.load_latest_models.return_value = True
+        mock_predictor_cls.return_value = predictor
+        mock_adapter_cls.return_value = Mock()
+        mock_gene_generator_cls.return_value = Mock()
+
+        config = Mock()
+        config.log_level = "INFO"
+        config.hybrid_mode = True
+        config.hybrid_model_types = None
+        config.hybrid_model_type = "lightgbm"
+
+        engine = GeneticAlgorithmEngineFactory.create_engine(
+            mock_backtest_service,
+            config,
+        )
+
+        predictor.load_latest_models.assert_called_once_with()
+        assert engine.hybrid_mode is True
+
+    @patch("app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator")
+    @patch("app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter")
+    @patch("app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor")
+    def test_factory_keeps_hybrid_engine_when_no_latest_model_exists(
+        self,
+        mock_predictor_cls,
+        mock_adapter_cls,
+        mock_gene_generator_cls,
+        mock_backtest_service,
+    ):
+        """最新モデルがなくても hybrid エンジン初期化は継続する"""
+        predictor = Mock()
+        predictor.load_latest_models.return_value = False
+        mock_predictor_cls.return_value = predictor
+        mock_adapter_cls.return_value = Mock()
+        mock_gene_generator_cls.return_value = Mock()
+
+        config = Mock()
+        config.log_level = "INFO"
+        config.hybrid_mode = True
+        config.hybrid_model_types = None
+        config.hybrid_model_type = "lightgbm"
+
+        engine = GeneticAlgorithmEngineFactory.create_engine(
+            mock_backtest_service,
+            config,
+        )
+
+        predictor.load_latest_models.assert_called_once_with()
+        assert engine.hybrid_mode is True
 
     def test_tuning_reselection_respects_disabled_two_stage_selection(
         self,

@@ -6,6 +6,7 @@ UniversalStrategyのMLフィルター関連ロジックを担当します。
 """
 
 import logging
+from typing import Any
 
 import pandas as pd
 
@@ -28,6 +29,13 @@ class MLFilter:
             strategy: UniversalStrategyインスタンス
         """
         self.strategy = strategy
+
+    @staticmethod
+    def _has_predictor_contract(predictor: Any) -> bool:
+        """runtime predictor 契約を満たすかを判定する。"""
+        return callable(getattr(predictor, "predict", None)) and callable(
+            getattr(predictor, "is_trained", None)
+        )
 
     def precompute_ml_features(self) -> None:
         """ML予測に必要な全期間の特徴量を一括計算してキャッシュする"""
@@ -73,12 +81,15 @@ class MLFilter:
         if self.strategy.ml_predictor is None:
             return True
 
+        if not self._has_predictor_contract(self.strategy.ml_predictor):
+            logger.warning("ML予測器が predictor 契約を満たしていないためフェイルセーフします")
+            return True
+
         # ML予測器が学習済みでない場合はエントリーを許可
         try:
-            if hasattr(self.strategy.ml_predictor, "is_trained"):
-                if not self.strategy.ml_predictor.is_trained():
-                    logger.debug("ML予測器未学習: エントリー許可")
-                    return True
+            if not self.strategy.ml_predictor.is_trained():
+                logger.debug("ML予測器未学習: エントリー許可")
+                return True
         except Exception as e:
             logger.warning(f"ML学習状態チェックエラー: {e}")
             return True
@@ -102,6 +113,9 @@ class MLFilter:
 
             # 3. ML予測を実行
             prediction = self.strategy.ml_predictor.predict(features)
+            if not isinstance(prediction, dict):
+                logger.warning("ML予測結果が辞書形式ではないためフェイルセーフします")
+                return True
 
             # ダマシ予測モデルの判定
             # is_valid: エントリーが有効である確率 (0.0-1.0)
