@@ -30,6 +30,8 @@ class BaseGradientBoostingModel(ABC):
         self.feature_columns: Optional[List[str]] = None
         self.classes_ = None  # sklearn互換性のため
         self.random_state = random_state
+        self.task_type = kwargs.pop("task_type", "classification")
+        self.last_training_result: Dict[str, Any] = {}
 
         # その他のパラメータを設定
         for key, value in kwargs.items():
@@ -87,7 +89,7 @@ class BaseGradientBoostingModel(ABC):
                 **kwargs,
             )
 
-            self.classes_ = np.unique(y)
+            self.classes_ = None if self._is_regression_task() else np.unique(y)
             return self
 
         except Exception as e:
@@ -108,29 +110,29 @@ class BaseGradientBoostingModel(ABC):
         try:
             self.feature_columns = X_train.columns.tolist()
             num_classes = len(np.unique(y_train))
+            is_regression = self._is_regression_task()
 
             # class_weightの処理
             sample_weight = None
             class_weight = kwargs.get("class_weight")
 
             # CatBoost用のclass_weight処理（サブクラスでオーバーライド可能）
-            catboost_params = self._handle_class_weight_for_catboost(
-                class_weight, kwargs
-            )
-            if catboost_params:
-                # CatBoost固有のパラメータがある場合は、kwargsに追加
-                kwargs.update(catboost_params)
-            elif class_weight:
-                # LightGBM/XGBoost用のsample_weight処理
-                try:
-                    sample_weight = compute_sample_weight(
-                        class_weight=class_weight, y=y_train
-                    )
-                    logger.info(
-                        f"class_weight={class_weight} を適用してsample_weightを計算しました"
-                    )
-                except Exception as e:
-                    logger.warning(f"sample_weightの計算に失敗しました: {e}")
+            if not is_regression:
+                catboost_params = self._handle_class_weight_for_catboost(
+                    class_weight, kwargs
+                )
+                if catboost_params:
+                    kwargs.update(catboost_params)
+                elif class_weight:
+                    try:
+                        sample_weight = compute_sample_weight(
+                            class_weight=class_weight, y=y_train
+                        )
+                        logger.info(
+                            f"class_weight={class_weight} を適用してsample_weightを計算しました"
+                        )
+                    except Exception as e:
+                        logger.warning(f"sample_weightの計算に失敗しました: {e}")
 
             # モデル固有のデータセット作成
             train_data = self._create_dataset(X_train, y_train, sample_weight)
@@ -158,20 +160,34 @@ class BaseGradientBoostingModel(ABC):
 
             # 予測と評価 (検証データがある場合のみ)
             detailed_metrics = {}
-            if valid_data is not None and y_test is not None:
-                y_pred_proba = self._get_prediction_proba(valid_data)
-                y_pred_class = (
-                    np.argmax(y_pred_proba, axis=1)
-                    if num_classes > 2
-                    else (y_pred_proba > 0.5).astype(int)
-                )
+            if valid_data is not None and y_test is not None and X_test is not None:
+                if is_regression:
+                    y_pred = np.asarray(self.predict(cast(pd.DataFrame, X_test)))
+                    detailed_metrics = (
+                        metrics_collector.calculate_volatility_regression_metrics(
+                            np.asarray(y_test),
+                            y_pred,
+                        )
+                    )
+                    logger.info(
+                        f"{self.ALGORITHM_NAME}回帰モデル学習完了: "
+                        f"QLIKE={detailed_metrics.get('qlike', 0.0):.4f}, "
+                        f"RMSE(log_rv)={detailed_metrics.get('rmse_log_rv', 0.0):.4f}"
+                    )
+                else:
+                    y_pred_proba = self._get_prediction_proba(valid_data)
+                    y_pred_class = (
+                        np.argmax(y_pred_proba, axis=1)
+                        if num_classes > 2
+                        else (y_pred_proba > 0.5).astype(int)
+                    )
 
-                detailed_metrics = metrics_collector.calculate_comprehensive_metrics(
-                    y_test, y_pred_class, y_pred_proba
-                )
-                logger.info(
-                    f"{self.ALGORITHM_NAME}モデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
-                )
+                    detailed_metrics = metrics_collector.calculate_comprehensive_metrics(
+                        y_test, y_pred_class, y_pred_proba
+                    )
+                    logger.info(
+                        f"{self.ALGORITHM_NAME}モデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
+                    )
             else:
                 logger.info(f"{self.ALGORITHM_NAME}モデル学習完了 (検証データなし)")
 
@@ -182,7 +198,7 @@ class BaseGradientBoostingModel(ABC):
 
             result = {
                 "algorithm": self.ALGORITHM_NAME,
-                "num_classes": num_classes,
+                "num_classes": 1 if is_regression else num_classes,
                 "train_samples": len(X_train),
                 "test_samples": len(X_test) if X_test is not None else 0,
                 "feature_count": (
@@ -196,6 +212,7 @@ class BaseGradientBoostingModel(ABC):
             if self.model is not None and hasattr(self.model, "best_iteration"):
                 result["best_iteration"] = self.model.best_iteration
 
+            self.last_training_result = result
             return result
 
         except Exception as e:
@@ -266,6 +283,9 @@ class BaseGradientBoostingModel(ABC):
         if self.feature_columns and not isinstance(X, pd.DataFrame):
             X = self._coerce_feature_frame(X, self.feature_columns)
 
+        if self._is_regression_task():
+            data = self._prepare_input_for_prediction(cast(pd.DataFrame, X))
+            return self._predict_raw(data)
         return predict_class_from_proba(self.predict_proba(X))
 
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
@@ -274,6 +294,8 @@ class BaseGradientBoostingModel(ABC):
         """
         if not self.is_trained or self.model is None:
             raise ModelError("学習済みモデルがありません")
+        if self._is_regression_task():
+            raise ModelError("回帰タスクでは predict_proba は利用できません")
 
         # feature_columnsを使用してDataFrameを整形
         if self.feature_columns and not isinstance(X, pd.DataFrame):
@@ -311,5 +333,10 @@ class BaseGradientBoostingModel(ABC):
             self.model, self.feature_columns or [], top_n=top_n
         )
 
+    def _is_regression_task(self) -> bool:
+        return str(getattr(self, "task_type", "classification")).lower() in {
+            "volatility_regression",
+            "regression",
+        }
 
 

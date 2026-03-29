@@ -28,6 +28,8 @@ class GeneratedGAParameters(BaseModel):
     """GA生成戦略のパラメータ"""
 
     strategy_gene: Dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
+    volatility_gate_enabled: bool = False
+    volatility_model_path: Optional[str] = None
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None
     ml_predictor: Optional[Any] = None  # MLモデルインスタンス
@@ -115,5 +117,4 @@ class BacktestRunConfig(BaseModel):
             )
 
         return self
-
 

@@ -54,11 +54,12 @@ class LightGBMModel(BaseGradientBoostingModel):
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """LightGBM固有のパラメータ生成"""
-        is_multi = num_classes > 2
+        is_regression = self._is_regression_task()
+        is_multi = num_classes > 2 and not is_regression
         params = {
-            "objective": "multiclass" if is_multi else "binary",
-            "num_class": num_classes if is_multi else None,
-            "metric": "multi_logloss" if is_multi else "binary_logloss",
+            "objective": "regression" if is_regression else ("multiclass" if is_multi else "binary"),
+            "num_class": None if is_regression else (num_classes if is_multi else None),
+            "metric": "rmse" if is_regression else ("multi_logloss" if is_multi else "binary_logloss"),
             "boosting_type": "gbdt", "verbose": -1, "random_state": self.random_state,
             "num_leaves": kwargs.get("num_leaves", 31),
             "learning_rate": kwargs.get("learning_rate", self.learning_rate),
@@ -135,6 +136,5 @@ class LightGBMModel(BaseGradientBoostingModel):
             np.ndarray,
             self.model.predict(data, num_iteration=self.model.best_iteration),
         )
-
 
 

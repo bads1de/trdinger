@@ -9,7 +9,7 @@ MLモデルのトレーニングフローを制御し、
 import logging
 import threading
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -32,6 +32,7 @@ from app.services.ml.models.model_manager import model_manager
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.config import get_default_ensemble_config, get_default_single_model_config
 from ..ensemble.ensemble_trainer import EnsembleTrainer
+from ..trainers.volatility_regression_trainer import VolatilityRegressionTrainer
 import os
 
 logger = logging.getLogger(__name__)
@@ -53,7 +54,13 @@ def load_model_metadata_safely(model_path: str) -> Optional[Dict[str, Any]]:
 def get_latest_model_with_info(model_name_pattern: str = "*") -> Optional[Dict[str, Any]]:
     """最新モデルの情報とメトリクスを取得"""
     try:
-        latest_model = model_manager.get_latest_model(model_name_pattern)
+        latest_model = model_manager.get_latest_model(
+            model_name_pattern,
+            metadata_filters={
+                "task_type": "volatility_regression",
+                "target_kind": "log_realized_vol",
+            },
+        )
         if not latest_model or not os.path.exists(latest_model):
             return None
 
@@ -87,12 +94,14 @@ def get_model_info_with_defaults(model_info: Optional[Dict[str, Any]] = None) ->
     return {
         **m,
         "model_type": meta.get("model_type", "Unknown"),
+        "task_type": meta.get("task_type", "volatility_regression"),
+        "target_kind": meta.get("target_kind", "log_realized_vol"),
         "feature_count": meta.get("feature_count", 0),
         "training_samples": meta.get("training_samples", 0),
         "test_samples": meta.get("test_samples", 0),
         "last_updated": f["modified_at"].isoformat(),
         "file_size_mb": f["size_mb"],
-        "num_classes": meta.get("num_classes", 2),
+        "num_classes": meta.get("num_classes", 1),
         "best_iteration": meta.get("best_iteration", 0),
         "train_test_split": meta.get("train_test_split", 0.8),
         "random_state": meta.get("random_state", 42),
@@ -138,10 +147,18 @@ class MLTrainingService(BaseResourceManager):
         """初期化"""
         super().__init__()
         self.trainer_type = trainer_type
-        config = self._create_trainer_config(
-            trainer_type, ensemble_config, single_model_config
-        )
-        self.trainer = EnsembleTrainer(ensemble_config=config)
+        self.trainer: Union[VolatilityRegressionTrainer, EnsembleTrainer]
+        if trainer_type == "single":
+            model_type = (single_model_config or {}).get("model_type", "lightgbm")
+            self.trainer = VolatilityRegressionTrainer(
+                model_type=model_type,
+                model_params=single_model_config or {},
+            )
+        else:
+            config = self._create_trainer_config(
+                trainer_type, ensemble_config, single_model_config
+            )
+            self.trainer = EnsembleTrainer(ensemble_config=config)
         self.optimization_service = OptimizationService()
 
     def _create_trainer_config(
@@ -258,8 +275,12 @@ class MLTrainingService(BaseResourceManager):
             raise ValueError(
                 "cross_validation_folds は 1 以上である必要があります"
             )
-        if config.threshold_method not in {"TREND_SCANNING", "TRIPLE_BARRIER"}:
-            raise ValueError("無効なthreshold_methodです")
+        if config.task_type != "volatility_regression":
+            raise ValueError("現在サポートしている task_type は volatility_regression のみです")
+        if config.target_kind != "log_realized_vol":
+            raise ValueError("現在サポートしている target_kind は log_realized_vol のみです")
+        if config.ensemble_config and getattr(config.ensemble_config, "enabled", False):
+            raise ValueError("volatility_regression では ensemble_config はサポートしていません")
 
     async def get_training_status(self) -> Dict[str, Any]:
         """トレーニング状態を取得"""
@@ -423,21 +444,14 @@ class MLTrainingService(BaseResourceManager):
         self, config: Any
     ) -> Tuple[str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
         """設定からトレーナータイプ等を決定"""
-        trainer_type = "ensemble"
-        ensemble_cfg = (
-            config.ensemble_config.model_dump()
-            if config.ensemble_config
-            else get_default_ensemble_config()
-        )
-        if not ensemble_cfg.get("enabled", True):
-            trainer_type = "single"
-
+        trainer_type = "single"
+        ensemble_cfg = None
         single_cfg = (
             config.single_model_config.model_dump()
             if config.single_model_config
             else None
         )
-        if not single_cfg and trainer_type == "single":
+        if not single_cfg:
             single_cfg = get_default_single_model_config()
 
         return trainer_type, ensemble_cfg, single_cfg
@@ -454,8 +468,16 @@ class MLTrainingService(BaseResourceManager):
         """実際の学習処理"""
         # 現在のインスタンスを更新
         self.trainer_type = trainer_type
-        cfg = self._create_trainer_config(trainer_type, ensemble_cfg, single_cfg)
-        self.trainer = EnsembleTrainer(ensemble_config=cfg)
+        self.trainer: Union[VolatilityRegressionTrainer, EnsembleTrainer]
+        if config.task_type == "volatility_regression":
+            model_type = (single_cfg or {}).get("model_type", "lightgbm")
+            self.trainer = VolatilityRegressionTrainer(
+                model_type=model_type,
+                model_params=single_cfg or {},
+            )
+        else:
+            cfg = self._create_trainer_config(trainer_type, ensemble_cfg, single_cfg)
+            self.trainer = EnsembleTrainer(ensemble_config=cfg)
 
         opt_settings = (
             config.optimization_settings
@@ -555,18 +577,34 @@ class MLTrainingService(BaseResourceManager):
         """APIリクエスト設定を学習用パラメータに変換する"""
         test_size = self._resolve_test_size(config)
         cross_validation_folds = config.cross_validation_folds
+        gate_quantile = getattr(config, "gate_quantile", 0.67)
+        legacy_quantile = getattr(config, "quantile_threshold", None)
+        explicit_fields = set(getattr(config, "model_fields_set", set()) or [])
+        deprecated_threshold_fields = {
+            "threshold_up",
+            "threshold_down",
+            "threshold_method",
+        }
+        used_deprecated_fields = sorted(explicit_fields.intersection(deprecated_threshold_fields))
+        if used_deprecated_fields:
+            logger.warning(
+                "旧方向予測キーは非推奨のため無視します: %s",
+                ", ".join(used_deprecated_fields),
+            )
+        if legacy_quantile is not None and gate_quantile == 0.67:
+            gate_quantile = legacy_quantile
 
         return {
             "test_size": test_size,
+            "symbol": config.symbol,
             "timeframe": config.timeframe,
             "train_test_split": config.train_test_split,
             "validation_split": config.validation_split,
             "prediction_horizon": config.prediction_horizon,
             "horizon_n": config.prediction_horizon,
-            "threshold_method": config.threshold_method,
-            "threshold_up": config.threshold_up,
-            "threshold_down": config.threshold_down,
-            "quantile_threshold": config.quantile_threshold,
+            "task_type": config.task_type,
+            "target_kind": config.target_kind,
+            "gate_quantile": gate_quantile,
             "use_cross_validation": cross_validation_folds > 1,
             "cv_splits": cross_validation_folds,
             "cross_validation_folds": cross_validation_folds,
@@ -600,6 +638,9 @@ class MLTrainingService(BaseResourceManager):
 
         best_params, is_optimized, opt_result = {}, False, None
         if optimization_settings and optimization_settings.enabled:
+            task_type = kwargs.get("task_type", self.trainer.config.training.task_type)
+            if task_type == "volatility_regression":
+                raise ValueError("volatility_regression では optimization_settings をサポートしていません")
             logger.info("ハイパーパラメータ最適化を開始")
             try:
                 opt_result = self.optimization_service.optimize_parameters(
@@ -637,9 +678,13 @@ class MLTrainingService(BaseResourceManager):
 
 
 
+    def generate_forecast(self, features_df: pd.DataFrame) -> Dict[str, float]:
+        """ボラティリティ予測を生成"""
+        return self.trainer.predict_volatility(features_df)
+
     def generate_signals(self, features_df: pd.DataFrame) -> Dict[str, float]:
-        """シグナル生成"""
-        return self.trainer.predict_signal(features_df)
+        """後方互換の薄いラッパー。"""
+        return self.generate_forecast(features_df)
 
     def load_model(self, model_path: str) -> bool:
         """モデルを読み込む"""
@@ -660,7 +705,7 @@ class MLTrainingService(BaseResourceManager):
     @staticmethod
     def get_available_single_models() -> list[str]:
         """利用可能な単一モデルのリストを取得"""
-        return ["lightgbm", "xgboost", "catboost"]
+        return ["lightgbm", "xgboost"]
 
     # --- リソース管理 ---
     def _cleanup_temporary_files(self, level: CleanupLevel):

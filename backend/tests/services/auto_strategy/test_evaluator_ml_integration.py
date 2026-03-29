@@ -39,8 +39,8 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
 
         # テスト用GA設定（MLフィルター有効）
         self.ga_config = GAConfig(
-            ml_filter_enabled=True,
-            ml_model_path="dummy/path/to/model",
+            volatility_gate_enabled=True,
+            volatility_model_path="dummy/path/to/model",
         )
 
         # ダミー遺伝子
@@ -56,12 +56,17 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         """
         # MLモデルのロードをモック
         mock_model = MagicMock()
-        mock_model.predict_proba.return_value = np.array([[0.1, 0.9]])
+        mock_model.predict.return_value = np.array([0.9])
+        mock_model.is_trained = True
         mock_model_manager.load_model.return_value = {
             "model": mock_model,
             "scaler": None,
             "feature_columns": ["close"],
-            "metadata": {},
+            "metadata": {
+                "task_type": "volatility_regression",
+                "target_kind": "log_realized_vol",
+                "gate_cutoff_log_rv": 0.5,
+            },
         }
 
         with (
@@ -103,11 +108,11 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         prediction = parameters["ml_predictor"].predict(
             pd.DataFrame({"close": [100.0]})
         )
-        self.assertEqual(prediction["is_valid"], 0.9)
+        self.assertEqual(prediction["forecast_log_rv"], 0.9)
+        self.assertTrue(prediction["gate_open"])
 
-        # 3. ml_filter_threshold が設定されていること
-        self.assertIn("ml_filter_threshold", parameters)
-        self.assertEqual(parameters["ml_filter_threshold"], 0.5)
+        # 3. volatility gate が設定されていること
+        self.assertTrue(parameters["volatility_gate_enabled"])
 
     @patch(
         "app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator.model_manager"
@@ -135,6 +140,6 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         parameters = run_config["strategy_config"]["parameters"]
 
         # ml_filter_enabled が False に上書きされていること
-        self.assertFalse(parameters["ml_filter_enabled"])
+        self.assertFalse(parameters["volatility_gate_enabled"])
         # ml_predictor が設定されていないこと（またはNone）
         self.assertIsNone(parameters.get("ml_predictor"))

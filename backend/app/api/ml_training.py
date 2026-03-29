@@ -111,17 +111,28 @@ class MLTrainingRequest(BaseModel):
     end_date: str = Field(..., description="終了日（YYYY-MM-DD）")
     validation_split: float = Field(default=0.2, description="検証データ分割比率")
     prediction_horizon: int = Field(default=24, description="予測期間（時間）")
-    threshold_up: float = Field(default=0.02, description="上昇判定閾値（方向予測用）")
-    threshold_down: float = Field(
-        default=-0.02, description="下落判定閾値（方向予測用）"
+    task_type: str = Field(
+        default="volatility_regression",
+        description="学習タスク種別",
     )
-    # ボラティリティ予測用パラメータ
+    target_kind: str = Field(
+        default="log_realized_vol",
+        description="目的変数種別",
+    )
+    gate_quantile: float = Field(
+        default=0.67,
+        description="high-vol gate を開くための学習分位点",
+    )
+    threshold_up: float = Field(default=0.02, description="旧方向予測互換キー（未使用）")
+    threshold_down: float = Field(
+        default=-0.02, description="旧方向予測互換キー（未使用）"
+    )
     quantile_threshold: float = Field(
-        default=0.33, description="トレンド判定の分位数閾値（上位N%）"
+        default=0.67, description="旧互換キー（gate_quantileへ読み替え）"
     )
     threshold_method: str = Field(
         default="TREND_SCANNING",
-        description="閾値判定方法 (TREND_SCANNING, TRIPLE_BARRIER)",
+        description="旧互換キー（未使用）",
     )
     save_model: bool = Field(default=True, description="モデルを保存するか")
     # 新しい設定項目
@@ -267,6 +278,5 @@ async def stop_ml_training(
         return await ml_service.stop_training()
 
     return await ErrorHandler.safe_execute_async(_stop_training)
-
 
 

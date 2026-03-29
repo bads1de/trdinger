@@ -12,6 +12,8 @@ class TestRunConfigBuilder:
         gene.id = "gene-123456789"
 
         ga_config = Mock()
+        ga_config.volatility_gate_enabled = True
+        ga_config.volatility_model_path = "/tmp/model.pkl"
         ga_config.ml_filter_enabled = True
         ga_config.ml_model_path = "/tmp/model.pkl"
 
@@ -26,9 +28,9 @@ class TestRunConfigBuilder:
         assert result["_skip_validation"] is True
         assert result["strategy_name"] == "GA_Individual_gene-123"
         assert result["strategy_config"]["parameters"]["strategy_gene"] is gene
-        assert result["strategy_config"]["parameters"]["ml_filter_enabled"] is True
+        assert result["strategy_config"]["parameters"]["volatility_gate_enabled"] is True
         assert (
-            result["strategy_config"]["parameters"]["ml_model_path"]
+            result["strategy_config"]["parameters"]["volatility_model_path"]
             == "/tmp/model.pkl"
         )
 
@@ -54,6 +56,8 @@ class TestRunConfigBuilder:
         gene.id = "gene-123456789"
 
         ga_config = Mock()
+        ga_config.volatility_gate_enabled = False
+        ga_config.volatility_model_path = None
         ga_config.ml_filter_enabled = False
         ga_config.ml_model_path = None
 

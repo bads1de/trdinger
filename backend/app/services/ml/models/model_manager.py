@@ -311,7 +311,11 @@ class ModelManager:
             logger.error(f"モデル読み込みエラー: {e}")
             raise MLModelError(f"モデル読み込みに失敗しました: {e}")
 
-    def get_latest_model(self, model_name_pattern: str = "*") -> Optional[str]:
+    def get_latest_model(
+        self,
+        model_name_pattern: str = "*",
+        metadata_filters: Optional[Dict[str, Any]] = None,
+    ) -> Optional[str]:
         """
         最新のモデルファイルパスを取得
 
@@ -323,6 +327,18 @@ class ModelManager:
         """
         try:
             all_model_files = self._collect_model_files(model_name_pattern)
+
+            if not all_model_files:
+                return None
+
+            if metadata_filters:
+                filtered_files = []
+                for model_path in all_model_files:
+                    model_info = self.load_metadata_only(model_path)
+                    metadata = (model_info or {}).get("metadata", {})
+                    if all(metadata.get(key) == value for key, value in metadata_filters.items()):
+                        filtered_files.append(model_path)
+                all_model_files = filtered_files
 
             if not all_model_files:
                 return None

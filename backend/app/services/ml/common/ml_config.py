@@ -113,18 +113,28 @@ class MLModelConfig(BaseSettings):
 class MLPredictionConfig(BaseSettings):
     """ML 予測設定。
 
-    MLモデルの予測結果の確率値やデフォルト値を設定します。
-    二値分類（メタラベリング / ダマシ予測）専用です。
+    MLモデルのボラティリティ回帰結果と fail-open 用デフォルト値を設定します。
     """
 
-    # 二値分類用（is_valid: エントリーが有効である確率）
-    default_is_valid_prob: float = Field(
-        default=0.5, alias="DEFAULT_IS_VALID_PROB", description="デフォルトの有効確率"
+    default_forecast_log_rv: float = Field(
+        default=0.0,
+        alias="DEFAULT_FORECAST_LOG_RV",
+        description="デフォルトの将来対数実現ボラティリティ予測値",
     )
-    fallback_is_valid_prob: float = Field(
-        default=0.5,
-        alias="FALLBACK_IS_VALID_PROB",
-        description="フォールバック有効確率",
+    fallback_forecast_log_rv: float = Field(
+        default=0.0,
+        alias="FALLBACK_FORECAST_LOG_RV",
+        description="フォールバックの将来対数実現ボラティリティ予測値",
+    )
+    default_gate_open: bool = Field(
+        default=True,
+        alias="DEFAULT_GATE_OPEN",
+        description="デフォルトの volatility gate 開閉状態（fail-open）",
+    )
+    fallback_gate_open: bool = Field(
+        default=True,
+        alias="FALLBACK_GATE_OPEN",
+        description="フォールバック時の volatility gate 開閉状態（fail-open）",
     )
 
     min_probability: float = Field(default=0.0, alias="MIN_PROBABILITY")
@@ -136,20 +146,28 @@ class MLPredictionConfig(BaseSettings):
         """デフォルトの予測値を取得します。
 
         Returns:
-            Dict[str, float]: is_validのデフォルト確率値。
+            Dict[str, float]: volatility gate 用のデフォルト予測値。
         """
+        forecast_vol = float(max(0.0, __import__("math").exp(self.default_forecast_log_rv)))
         return {
-            "is_valid": self.default_is_valid_prob,
+            "forecast_log_rv": self.default_forecast_log_rv,
+            "forecast_vol": forecast_vol,
+            "gate_open": self.default_gate_open,
         }
 
     def get_fallback_predictions(self) -> Dict[str, float]:
         """フォールバック予測値を取得します。
 
         Returns:
-            Dict[str, float]: is_validのフォールバック確率値。
+            Dict[str, float]: volatility gate 用のフォールバック予測値。
         """
+        forecast_vol = float(
+            max(0.0, __import__("math").exp(self.fallback_forecast_log_rv))
+        )
         return {
-            "is_valid": self.fallback_is_valid_prob,
+            "forecast_log_rv": self.fallback_forecast_log_rv,
+            "forecast_vol": forecast_vol,
+            "gate_open": self.fallback_gate_open,
         }
 
     model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_", extra="ignore")
@@ -247,9 +265,9 @@ class MLTrainingConfig(BaseSettings):
     lgb_learning_rate: float = Field(default=0.1, description="学習率")
     lgb_max_depth: int = Field(default=10, description="最大深度")
     lgb_num_leaves: int = Field(default=31, description="葉の数")
-    lgb_objective: str = Field(default="binary", description="目的関数（二値分類）")
-    lgb_num_class: int = Field(default=2, description="クラス数（二値分類）")
-    lgb_metric: str = Field(default="binary_logloss", description="評価指標")
+    lgb_objective: str = Field(default="regression", description="目的関数")
+    lgb_num_class: int = Field(default=1, description="クラス数")
+    lgb_metric: str = Field(default="rmse", description="評価指標")
     lgb_boosting_type: str = Field(default="gbdt", description="ブースティングタイプ")
     lgb_feature_fraction: float = Field(default=0.9, description="特徴量採用率")
     lgb_bagging_fraction: float = Field(default=0.8, description="バギング採用率")
@@ -290,6 +308,23 @@ class MLTrainingConfig(BaseSettings):
 
     performance_threshold: float = Field(default=0.05, alias="PERFORMANCE_THRESHOLD")
     validation_split: float = Field(default=0.2, alias="VALIDATION_SPLIT")
+
+    # 正規タスク設定
+    task_type: str = Field(
+        default="volatility_regression",
+        alias="TASK_TYPE",
+        description="学習タスク種別",
+    )
+    target_kind: str = Field(
+        default="log_realized_vol",
+        alias="TARGET_KIND",
+        description="目的変数種別",
+    )
+    gate_quantile: float = Field(
+        default=0.67,
+        alias="GATE_QUANTILE",
+        description="high-vol gate を開くための分位点閾値",
+    )
 
     # クラス不均衡対策
     use_class_weight: bool = Field(
@@ -332,6 +367,35 @@ class MLTrainingConfig(BaseSettings):
         if v is None:
             return LabelGenerationConfig()
         raise ValueError(f"無効なlabel_generation設定: {type(v)}")
+
+    @field_validator("task_type")
+    @classmethod
+    def validate_task_type(cls, v: str) -> str:
+        valid_types = {"volatility_regression", "classification"}
+        if v not in valid_types:
+            raise ValueError(
+                f"無効な task_type です: {v}. "
+                f"サポートされている値: {', '.join(sorted(valid_types))}"
+            )
+        return v
+
+    @field_validator("target_kind")
+    @classmethod
+    def validate_target_kind(cls, v: str) -> str:
+        valid_targets = {"log_realized_vol", "classification_label"}
+        if v not in valid_targets:
+            raise ValueError(
+                f"無効な target_kind です: {v}. "
+                f"サポートされている値: {', '.join(sorted(valid_targets))}"
+            )
+        return v
+
+    @field_validator("gate_quantile")
+    @classmethod
+    def validate_gate_quantile(cls, v: float) -> float:
+        if not 0.0 < v < 1.0:
+            raise ValueError("gate_quantile は 0 より大きく 1 未満である必要があります")
+        return v
 
     model_config = SettingsConfigDict(env_prefix="ML_TRAINING_", extra="ignore")
 

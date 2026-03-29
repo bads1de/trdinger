@@ -54,9 +54,9 @@ class UniversalStrategy(Strategy):
     timeframe = "1h"
     evaluation_start = None
     ml_predictor = None  # MLフィルター用予測器
-    ml_filter_threshold = (
-        0.5  # MLフィルター閾値（is_valid >= threshold でエントリー許可）
-    )
+    volatility_gate_enabled = False
+    volatility_model_path = None
+    ml_filter_threshold = 0.5  # 旧互換の非推奨パラメータ。現行 gate 判定では未使用。
 
     @property
     def _sl_price(self) -> float | None:
@@ -186,7 +186,20 @@ class UniversalStrategy(Strategy):
         # === ML フィルター設定 ===
         # HybridPredictor インスタンス（オプション）
         self.ml_predictor = params.get("ml_predictor")
-        # ML フィルター閾値（エントリー許可のための方向スコア差分）
+        self.volatility_gate_enabled = params.get(
+            "volatility_gate_enabled",
+            params.get("ml_filter_enabled", False),
+        )
+        self.volatility_model_path = params.get(
+            "volatility_model_path",
+            params.get("ml_model_path"),
+        )
+        self.ml_filter_enabled = self.volatility_gate_enabled
+        if "ml_filter_threshold" in params:
+            logger.warning(
+                "ml_filter_threshold は非推奨のため無視されます。volatility gate は学習済み cut-off で判定します"
+            )
+        # 旧互換フィールド。volatility gate 化後は参照しない。
         self.ml_filter_threshold = params.get("ml_filter_threshold", 0.5)
 
         # ベクトル化評価結果のキャッシュ
@@ -385,7 +398,7 @@ class UniversalStrategy(Strategy):
                 self._init_indicator(indicator_gene)
 
             # 2. MLフィルター用の特徴量事前計算
-            if self.ml_predictor:
+            if self.volatility_gate_enabled and self.ml_predictor:
                 self.ml_filter.precompute_ml_features()
 
             # 3. エントリー条件のベクトル化事前計算

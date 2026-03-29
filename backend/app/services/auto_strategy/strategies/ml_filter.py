@@ -65,11 +65,8 @@ class MLFilter:
         """
         MLがエントリーを許可するかチェック
 
-        MLフィルター（ダマシ予測モデル）が設定されている場合、
-        予測結果に基づいてエントリーの可否を判断します。
-
-        ダマシ予測モデルは「このエントリーシグナルが有効かどうか」を
-        0-1の確率で出力します。is_valid が閾値以上であればエントリーを許可。
+        volatility gate が設定されている場合、予測ボラティリティが high-vol
+        レジームと判定された時だけエントリーを許可します。
 
         Args:
             direction: 取引方向 (1.0=Long, -1.0=Short) ※現在は方向に関係なく判定
@@ -77,6 +74,13 @@ class MLFilter:
         Returns:
             True: エントリー許可, False: エントリー拒否
         """
+        gate_enabled = bool(
+            getattr(self.strategy, "volatility_gate_enabled", False)
+            or getattr(self.strategy, "ml_filter_enabled", False)
+        )
+        if not gate_enabled:
+            return True
+
         # ML予測器が設定されていない場合はエントリーを許可
         if self.strategy.ml_predictor is None:
             return True
@@ -117,11 +121,15 @@ class MLFilter:
                 logger.warning("ML予測結果が辞書形式ではないためフェイルセーフします")
                 return True
 
-            # ダマシ予測モデルの判定
-            # is_valid: エントリーが有効である確率 (0.0-1.0)
-            # 閾値以上であればエントリーを許可
-            is_valid = prediction.get("is_valid", 0.5)
-            allowed = is_valid >= self.strategy.ml_filter_threshold
+            raw_gate_open = prediction.get("gate_open", True)
+            if isinstance(raw_gate_open, bool):
+                gate_open = raw_gate_open
+            else:
+                try:
+                    gate_open = float(raw_gate_open) >= 0.5
+                except (TypeError, ValueError):
+                    gate_open = True
+            allowed = gate_open
 
             return allowed
 

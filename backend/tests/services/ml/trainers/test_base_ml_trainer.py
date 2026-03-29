@@ -8,12 +8,9 @@ from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
 # テスト用の具象クラス
 class MockTrainer(BaseMLTrainer):
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
-        # クラス確率を返す (2クラス分類を想定)
+        # future_log_realized_vol を返す
         n = len(features_df)
-        probs = np.zeros((n, 2))
-        probs[:, 0] = 0.3  # class 0
-        probs[:, 1] = 0.7  # class 1
-        return probs
+        return np.full(n, 0.7)
 
     def _train_model_impl(
         self,
@@ -25,9 +22,11 @@ class MockTrainer(BaseMLTrainer):
     ) -> dict:
         self._model = MagicMock()
         return {
-            "accuracy": 0.8,
-            "balanced_accuracy": 0.75,
-            "f1_score": 0.78,
+            "qlike": 0.12,
+            "rmse_log_rv": 0.08,
+            "mae_log_rv": 0.05,
+            "gate_cutoff_log_rv": 0.6,
+            "gate_cutoff_vol": float(np.exp(0.6)),
         }
 
 
@@ -70,11 +69,11 @@ class TestBaseMLTrainer:
             ),
         ):
             with patch.object(
-                trainer.label_service,
-                "prepare_labels",
+                trainer.target_service,
+                "prepare_targets",
                 return_value=(
                     pd.DataFrame(np.random.randn(140, 10)),
-                    pd.Series(np.random.randint(0, 2, 140)),
+                    pd.Series(np.random.randn(140)),
                 ),
             ):
                 with patch(
@@ -85,21 +84,22 @@ class TestBaseMLTrainer:
 
                     assert result["success"] is True
                     assert trainer.is_trained is True
-                    assert "accuracy" in result
+                    assert "qlike" in result
                     assert result["model_path"] == "/path/to/model"
 
-    def test_predict_signal_not_trained(self, trainer, sample_data):
+    def test_predict_volatility_not_trained(self, trainer, sample_data):
         """未学習状態での予測"""
         # 未学習時はデフォルト値を返すべき
-        result = trainer.predict_signal(sample_data)
-        assert "is_valid" in result
-        # デフォルト値を確認（configの設定によるが、通常は0.5や0.0など）
+        result = trainer.predict_volatility(sample_data)
+        assert "forecast_log_rv" in result
+        assert "gate_open" in result
 
-    def test_predict_signal_success(self, trainer, sample_data):
+    def test_predict_volatility_success(self, trainer, sample_data):
         """学習後の予測シグナル取得"""
         trainer.is_trained = True
         trainer.feature_columns = ["feat1", "feat2"]
         trainer._model = MagicMock()
+        trainer.current_model_metadata = {"gate_cutoff_log_rv": 0.6}
 
         features = pd.DataFrame(
             np.random.randn(10, 2),
@@ -111,15 +111,17 @@ class TestBaseMLTrainer:
             "app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction",
             return_value=features,
         ):
-            result = trainer.predict_signal(features)
-            assert "is_valid" in result
-            assert result["is_valid"] == 0.7  # MockTrainerのpredictが返す値
+            result = trainer.predict_volatility(features)
+            assert "forecast_log_rv" in result
+            assert result["forecast_log_rv"] == 0.7
+            assert result["gate_open"] is True
 
-    def test_predict_signal_uses_latest_1d_prediction(self, trainer, sample_data):
+    def test_predict_volatility_uses_latest_1d_prediction(self, trainer, sample_data):
         """1次元の予測配列でも最新値を使うことを確認"""
         trainer.is_trained = True
         trainer.feature_columns = ["feat1", "feat2"]
-        trainer.predict = MagicMock(return_value=np.array([0, 0, 1]))
+        trainer.current_model_metadata = {"gate_cutoff_log_rv": 0.6}
+        trainer.predict = MagicMock(return_value=np.array([0.1, 0.2, 1.0]))
 
         features = pd.DataFrame(
             np.random.randn(3, 2),
@@ -131,9 +133,10 @@ class TestBaseMLTrainer:
             "app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction",
             return_value=features,
         ):
-            result = trainer.predict_signal(features)
+            result = trainer.predict_volatility(features)
 
-        assert result["is_valid"] == 1.0
+        assert result["forecast_log_rv"] == 1.0
+        assert result["gate_open"] is True
 
     def test_load_model_failure(self, trainer):
         """モデル読み込み失敗"""
@@ -151,7 +154,10 @@ class TestBaseMLTrainer:
             "model": MagicMock(),
             "scaler": MagicMock(),
             "feature_columns": ["f1", "f2"],
-            "metadata": {"type": "test"},
+            "metadata": {
+                "task_type": "volatility_regression",
+                "target_kind": "log_realized_vol",
+            },
         }
         with patch(
             "app.services.ml.trainers.base_ml_trainer.model_manager.load_model",
@@ -161,6 +167,50 @@ class TestBaseMLTrainer:
             assert result is True
             assert trainer.is_trained is True
             assert trainer.feature_columns == ["f1", "f2"]
+
+    def test_load_model_rejects_incompatible_metadata_without_mutating_state(self, trainer):
+        """互換性のないモデルは拒否し、内部状態を汚さない"""
+        trainer._model = None
+        trainer.feature_columns = None
+        trainer.is_trained = False
+
+        model_data = {
+            "model": MagicMock(),
+            "scaler": MagicMock(),
+            "feature_columns": ["f1", "f2"],
+            "metadata": {
+                "task_type": "classification",
+                "target_kind": "classification_label",
+            },
+        }
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.model_manager.load_model",
+            return_value=model_data,
+        ):
+            result = trainer.load_model("/path/to/model")
+
+        assert result is False
+        assert trainer._model is None
+        assert trainer.feature_columns is None
+        assert trainer.is_trained is False
+
+    def test_load_model_rejects_missing_task_metadata(self, trainer):
+        """task_type/target_kind が欠落した旧モデルも拒否する"""
+        model_data = {
+            "model": MagicMock(),
+            "scaler": MagicMock(),
+            "feature_columns": ["f1", "f2"],
+            "metadata": {},
+        }
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.model_manager.load_model",
+            return_value=model_data,
+        ):
+            result = trainer.load_model("/path/to/model")
+
+        assert result is False
+        assert trainer._model is None
+        assert trainer.is_trained is False
 
     def test_calculate_features_fallback(self, trainer, sample_data):
         """特徴量計算エラー時のフォールバック"""
@@ -176,7 +226,7 @@ class TestBaseMLTrainer:
     def test_cross_validation_flow(self, trainer, sample_data):
         """クロスバリデーションのフロー確認"""
         X = pd.DataFrame(np.random.randn(150, 5), index=sample_data.index)
-        y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
+        y = pd.Series(np.random.randn(150), index=sample_data.index)
 
         with patch(
             "app.services.ml.trainers.base_ml_trainer.PurgedKFold"
@@ -187,18 +237,18 @@ class TestBaseMLTrainer:
             ]
 
             # 各フォールドの結果をシミュレート
-            trainer._train_model_impl = MagicMock(return_value={"accuracy": 0.8})
+            trainer._train_model_impl = MagicMock(return_value={"qlike": 0.2})
 
             result = trainer._time_series_cross_validate(X, y, cv_splits=2)
 
             assert "cv_scores" in result
             assert len(result["cv_scores"]) == 2
-            assert result["mean_score"] == 0.8
+            assert result["mean_score"] == 0.2
 
     def test_cross_validation_uses_training_params_for_t1(self, trainer, sample_data):
         """CV用のt1計算が学習パラメータを使うことを確認"""
         X = pd.DataFrame(np.random.randn(150, 5), index=sample_data.index)
-        y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
+        y = pd.Series(np.random.randn(150), index=sample_data.index)
 
         with patch("app.services.ml.cross_validation.get_t1_series") as mock_t1:
             mock_t1.return_value = pd.Series(X.index, index=X.index)
@@ -208,7 +258,7 @@ class TestBaseMLTrainer:
                 mock_kfold.return_value.split.return_value = [
                     (np.arange(100), np.arange(100, 120)),
                 ]
-                trainer._train_model_impl = MagicMock(return_value={"accuracy": 0.8})
+                trainer._train_model_impl = MagicMock(return_value={"qlike": 0.2})
 
                 result = trainer._time_series_cross_validate(
                     X, y, cv_splits=2, horizon_n=12, timeframe="1h"
@@ -225,7 +275,7 @@ class TestBaseMLTrainer:
             columns=["feat1", "feat2", "feat3", "feat4"],
             index=sample_data.index,
         )
-        y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
+        y = pd.Series(np.random.randn(150), index=sample_data.index)
 
         X_tr = X_all.iloc[:120].copy()
         X_te = X_all.iloc[120:].copy()
@@ -245,7 +295,7 @@ class TestBaseMLTrainer:
             call_order.append("cv")
             pd.testing.assert_frame_equal(X_cv, X_tr)
             pd.testing.assert_series_equal(y_cv, y_tr)
-            return {"cv_scores": [0.8], "mean_score": 0.8}
+            return {"cv_scores": [0.2], "mean_score": 0.2}
 
         def fit_side_effect(X_fit, y_fit):
             call_order.append("fit")
@@ -428,13 +478,13 @@ class TestBaseMLTrainer:
     # ------------------------------------------------------------------
 
     def test_prepare_training_data_raises_on_error(self, trainer, sample_data):
-        """ラベル生成エラー時は DataError"""
+        """ターゲット生成エラー時は DataError"""
         from app.utils.error_handler import DataError
 
         with patch.object(
-            trainer.label_service,
-            "prepare_labels",
-            side_effect=Exception("label error"),
+            trainer.target_service,
+            "prepare_targets",
+            side_effect=Exception("target error"),
         ):
             with pytest.raises(DataError, match="準備に失敗"):
                 trainer._prepare_training_data(sample_data, sample_data)
@@ -459,10 +509,10 @@ class TestBaseMLTrainer:
         assert trainer.feature_columns is None
 
     # ------------------------------------------------------------------
-    # predict_signal 異常系
+    # predict_volatility 異常系
     # ------------------------------------------------------------------
 
-    def test_predict_signal_returns_default_on_error(self, trainer, sample_data):
+    def test_predict_volatility_returns_default_on_error(self, trainer, sample_data):
         """予測エラー時はデフォルト値を返す"""
         trainer.is_trained = True
         trainer.feature_columns = ["f1", "f2"]
@@ -476,5 +526,5 @@ class TestBaseMLTrainer:
             "app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction",
             return_value=features,
         ):
-            result = trainer.predict_signal(features)
-            assert "is_valid" in result
+            result = trainer.predict_volatility(features)
+            assert "forecast_log_rv" in result

@@ -156,6 +156,9 @@ class GAConfig(BaseConfig):
     purged_kfold_embargo: float = 0.01 # エンバーゴ率
 
     # MLフィルター設定
+    volatility_gate_enabled: bool = False
+    volatility_model_path: Optional[str] = None
+    gate_quantile: float = 0.67
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None
     preprocess_features: bool = True  # 特徴量前処理を適用するかどうか
@@ -246,6 +249,17 @@ class GAConfig(BaseConfig):
     two_stage_selection_config: Optional[TwoStageSelectionConfig] = None
     robustness_config: Optional[RobustnessConfig] = None
 
+    def __post_init__(self) -> None:
+        self.volatility_gate_enabled = bool(
+            self.volatility_gate_enabled or self.ml_filter_enabled
+        )
+        self.ml_filter_enabled = self.volatility_gate_enabled
+
+        if self.volatility_model_path is None and self.ml_model_path is not None:
+            self.volatility_model_path = self.ml_model_path
+        if self.ml_model_path is None and self.volatility_model_path is not None:
+            self.ml_model_path = self.volatility_model_path
+
     def to_dict(self) -> Dict[str, Any]:
         """
         設定オブジェクトを辞書形式に変換
@@ -307,6 +321,9 @@ class GAConfig(BaseConfig):
             "two_stage_elite_count": 3,
             "two_stage_candidate_pool_size": 5,
             "two_stage_min_pass_rate": 0.5,
+            "volatility_gate_enabled": False,
+            "volatility_model_path": None,
+            "gate_quantile": 0.67,
             "robustness_validation_symbols": None,
             "robustness_regime_windows": [],
             "robustness_stress_slippage": [],

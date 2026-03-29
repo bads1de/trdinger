@@ -31,6 +31,7 @@ from ..label_generation.label_generation_service import LabelGenerationService
 from ..feature_selection.feature_selector import FeatureSelector
 from ..common.registry import ModelMetadata
 from ..models.model_manager import model_manager
+from ..targets.volatility_target_service import VolatilityTargetService
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.feature_service = FeatureEngineeringService()
         self.label_service = LabelGenerationService()
+        self.target_service = VolatilityTargetService()
 
         # 特徴量選択器の初期化（動的ノイズ除去設定）
         # 新しい sklearn 互換 API を使用
@@ -132,6 +134,29 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 2. データ分割（時系列ホールドアウト）
             X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
 
+            gate_quantile = float(
+                training_params.get(
+                    "gate_quantile",
+                    self.config.training.gate_quantile,
+                )
+            )
+            gate_cutoff_log_rv = float(y_tr.quantile(gate_quantile))
+            gate_cutoff_vol = float(np.exp(gate_cutoff_log_rv))
+            training_params = {
+                **training_params,
+                "task_type": training_params.get(
+                    "task_type",
+                    self.config.training.task_type,
+                ),
+                "target_kind": training_params.get(
+                    "target_kind",
+                    self.config.training.target_kind,
+                ),
+                "gate_quantile": gate_quantile,
+                "gate_cutoff_log_rv": gate_cutoff_log_rv,
+                "gate_cutoff_vol": gate_cutoff_vol,
+            }
+
             # 3. クロスバリデーション（特徴量選択の前に実行してリークを防ぐ）
             cv_res = None
             if training_params.get("use_cross_validation", False):
@@ -190,19 +215,18 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             予測結果
         """
 
-    def predict_signal(self, features_df: pd.DataFrame) -> Dict[str, float]:
+    def predict_volatility(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """
-        最新の特徴量データからシグナル（有効確率）を予測
+        最新の特徴量データから将来ボラティリティを予測
 
         入力データの前処理、期待される形式への変換、モデル推論を行い、
-        最終的な「エントリーが有効である確率」を返します。
+        最終的な `forecast_log_rv`, `forecast_vol`, `gate_open` を返します。
 
         Args:
             features_df: 特徴量DataFrame（生データ）
 
         Returns:
-            予測確率の辞書:
-            - {"is_valid": float}: エントリーが有効である期待確率 (0.0〜1.0)
+            ボラティリティ予測結果
         """
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
@@ -220,8 +244,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 scaler=self.scaler,
             )
 
-            # 2. 予測実行（サブクラスのpredictを呼び出し）
-            # predictは確率配列またはクラス配列を返すことを期待
             predictions = np.asarray(self.predict(processed_features))
 
             # 3. 最新の予測結果を取得（時系列データの場合は最後の行）
@@ -234,22 +256,28 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             latest_pred_array = np.asarray(latest_pred)
 
-            # 4. 結果の整形（二値分類専用）
             if latest_pred_array.ndim == 0:
-                is_valid = float(latest_pred_array)
-            elif latest_pred_array.shape[0] >= 2:
-                # 2クラス分類
-                is_valid = float(latest_pred_array[1])
+                forecast_log_rv = float(latest_pred_array)
             else:
-                is_valid = float(latest_pred_array[0])
+                forecast_log_rv = float(latest_pred_array.reshape(-1)[-1])
+
+            metadata = self.current_model_metadata or self.metadata or {}
+            gate_cutoff_log_rv = float(metadata.get("gate_cutoff_log_rv", 0.0))
+            forecast_vol = float(np.exp(forecast_log_rv))
 
             return {
-                "is_valid": is_valid,
+                "forecast_log_rv": forecast_log_rv,
+                "forecast_vol": forecast_vol,
+                "gate_open": bool(forecast_log_rv >= gate_cutoff_log_rv),
             }
 
         except Exception as e:
-            logger.error(f"シグナル予測エラー: {e}")
+            logger.error(f"ボラティリティ予測エラー: {e}")
             return self.config.prediction.get_default_predictions()
+
+    def predict_signal(self, features_df: pd.DataFrame) -> Dict[str, float]:
+        """後方互換の薄いラッパー。"""
+        return self.predict_volatility(features_df)
 
     @abstractmethod
     def _train_model_impl(
@@ -294,9 +322,18 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """学習用データを準備"""
         try:
-            features_clean, labels_numeric = self.label_service.prepare_labels(
-                features_df, ohlcv_df, **training_params
+            task_type = training_params.get(
+                "task_type",
+                self.config.training.task_type,
             )
+            if task_type == "volatility_regression":
+                features_clean, labels_numeric = self.target_service.prepare_targets(
+                    features_df, ohlcv_df, **training_params
+                )
+            else:
+                features_clean, labels_numeric = self.label_service.prepare_labels(
+                    features_df, ohlcv_df, **training_params
+                )
 
             self.feature_columns = features_clean.columns.tolist()
             return features_clean, labels_numeric
@@ -384,6 +421,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         cv_scores = []
         fold_results = []
+        task_type = training_params.get("task_type", self.config.training.task_type)
 
         for fold, (train_idx, test_idx) in enumerate(splitter.split(X, y)):
             X_train_cv, X_test_cv = X.iloc[train_idx], X.iloc[test_idx]
@@ -414,9 +452,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             fold_results.append(fold_result)
 
-            score = fold_result.get(
-                "balanced_accuracy", fold_result.get("accuracy", 0.0)
-            )
+            if task_type == "volatility_regression":
+                score = fold_result.get("qlike", 0.0)
+            else:
+                score = fold_result.get(
+                    "balanced_accuracy", fold_result.get("accuracy", 0.0)
+                )
             cv_scores.append(score)
 
         mean_score = np.mean(cv_scores) if cv_scores else 0.0
@@ -533,16 +574,34 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         if model_data is None:
             return False
 
-        self._model = model_data.get("model")
-        self.scaler = model_data.get("scaler")
-        self.feature_columns = model_data.get("feature_columns")
+        loaded_model = model_data.get("model")
+        loaded_scaler = model_data.get("scaler")
+        loaded_feature_columns = model_data.get("feature_columns")
+        metadata = model_data.get("metadata", {})
+        task_type = metadata.get("task_type")
+        target_kind = metadata.get("target_kind")
 
-        if self._model is None:
+        if loaded_model is None:
             raise MLModelError("モデルデータにモデルが含まれていません")
+        if task_type != self.config.training.task_type:
+            logger.warning(
+                "期待する task_type と異なるモデルのため読み込みを拒否します: %s",
+                task_type,
+            )
+            return False
+        if target_kind != self.config.training.target_kind:
+            logger.warning(
+                "期待する target_kind と異なるモデルのため読み込みを拒否します: %s",
+                target_kind,
+            )
+            return False
 
+        self._model = loaded_model
+        self.scaler = loaded_scaler
+        self.feature_columns = loaded_feature_columns
         self.is_trained = True
         self.current_model_path = model_path
-        self.current_model_metadata = model_data.get("metadata", {})
+        self.current_model_metadata = metadata
         self.metadata = self.current_model_metadata
         return True
 

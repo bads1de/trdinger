@@ -154,6 +154,10 @@ class ConfigValidator:
             errors.append(
                 f"プライマリメトリクス '{config.primary_metric}' がフィットネス重みに含まれていません"
             )
+        if "prediction_score" in config.fitness_weights:
+            errors.append("prediction_score はボラ回帰化に伴い fitness_weights ではサポートされません")
+        if "prediction_score" in getattr(config, "objectives", []):
+            errors.append("prediction_score はボラ回帰化に伴い objectives ではサポートされません")
 
         # 指標設定
         check_range(config.max_indicators, 1, 10, "最大指標数")

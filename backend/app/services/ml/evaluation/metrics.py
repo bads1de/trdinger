@@ -24,6 +24,7 @@ from sklearn.metrics import (
     precision_recall_fscore_support,
     roc_auc_score,
 )
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from app.utils.error_handler import safe_operation
 
@@ -402,6 +403,33 @@ class MetricsCalculator:
 
         return sample_weights
 
+    def calculate_volatility_regression_metrics(
+        self,
+        y_true: np.ndarray,
+        y_pred: np.ndarray,
+    ) -> Dict[str, float]:
+        """future_log_realized_vol 回帰用の評価指標を計算。"""
+        y_true = np.asarray(y_true, dtype=float)
+        y_pred = np.asarray(y_pred, dtype=float)
+
+        if y_true.size == 0 or y_pred.size == 0:
+            return {
+                "qlike": 0.0,
+                "rmse_log_rv": 0.0,
+                "mae_log_rv": 0.0,
+            }
+
+        eps = 1e-12
+        true_var = np.exp(2.0 * y_true)
+        pred_var = np.maximum(np.exp(2.0 * y_pred), eps)
+        qlike = float(np.mean(np.log(pred_var + eps) + true_var / pred_var))
+
+        return {
+            "qlike": qlike,
+            "rmse_log_rv": float(np.sqrt(mean_squared_error(y_true, y_pred))),
+            "mae_log_rv": float(mean_absolute_error(y_true, y_pred)),
+        }
+
 
 def get_default_metrics() -> Dict[str, float]:
     """デフォルトの評価メトリクス辞書を返す（全て0.0初期化）"""
@@ -422,6 +450,9 @@ def get_default_metrics() -> Dict[str, float]:
         "ppv",
         "log_loss",
         "brier_score",
+        "qlike",
+        "rmse_log_rv",
+        "mae_log_rv",
         "loss",
         "val_accuracy",
         "val_loss",

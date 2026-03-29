@@ -267,17 +267,19 @@ class TestMLConfig:
     def test_prediction_config(self):
         """予測設定のテスト"""
         config = MLConfig()
-        assert config.prediction.default_is_valid_prob == 0.5
-        assert config.prediction.fallback_is_valid_prob == 0.5
+        assert config.prediction.default_forecast_log_rv == 0.0
+        assert config.prediction.fallback_forecast_log_rv == 0.0
 
     def test_prediction_methods(self):
         """予測設定のメソッドテスト"""
         config = MLConfig()
         default_preds = config.prediction.get_default_predictions()
-        assert default_preds["is_valid"] == 0.5
+        assert default_preds["forecast_log_rv"] == 0.0
+        assert default_preds["gate_open"] is True
 
         fallback_preds = config.prediction.get_fallback_predictions()
-        assert fallback_preds["is_valid"] == 0.5
+        assert fallback_preds["forecast_log_rv"] == 0.0
+        assert fallback_preds["gate_open"] is True
 
     def test_training_config(self):
         """学習設定のテスト"""
@@ -355,8 +357,8 @@ class TestConfigValidation:
     def test_ml_prediction_probability_range(self):
         """ML予測確率の範囲テスト"""
         config = MLPredictionConfig()
-        assert 0.0 <= config.default_is_valid_prob <= 1.0
-        assert 0.0 <= config.fallback_is_valid_prob <= 1.0
+        assert isinstance(config.default_gate_open, bool)
+        assert isinstance(config.fallback_gate_open, bool)
 
 
 class TestEnvironmentVariableSupport:
@@ -487,6 +489,20 @@ class TestGAConfigRuntime:
         assert any(
             "フィットネス重みの合計は1.0である必要があります" in e for e in errors
         )
+
+    def test_validate_prediction_score_is_rejected(self):
+        """prediction_score はボラ回帰化に伴い拒否される"""
+        config = GAConfigRuntime()
+        config.fitness_weights = {
+            "total_return": 0.3,
+            "sharpe_ratio": 0.3,
+            "max_drawdown": 0.2,
+            "win_rate": 0.1,
+            "prediction_score": 0.1,
+        }
+        is_valid, errors = ConfigValidator.validate(config)
+        assert is_valid is False
+        assert any("prediction_score" in e for e in errors)
 
     def test_validate_missing_required_metrics(self):
         """必要なメトリクスが不足する場合の検証"""

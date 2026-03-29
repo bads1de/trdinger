@@ -64,6 +64,9 @@ def training_config():
         validation_split=0.2,
         prediction_horizon=12,
         cross_validation_folds=3,
+        task_type="volatility_regression",
+        target_kind="log_realized_vol",
+        gate_quantile=0.67,
         threshold_method="TRIPLE_BARRIER",
         threshold_up=0.02,
         threshold_down=0.01,
@@ -75,8 +78,10 @@ def training_config():
         learning_rate=0.1,
         save_model=False,
         optimization_settings=None,
-        ensemble_config=SimpleNamespace(model_dump=lambda: {"enabled": True}),
-        single_model_config=None,
+        ensemble_config=None,
+        single_model_config=SimpleNamespace(
+            model_dump=lambda: {"model_type": "lightgbm"}
+        ),
     )
 
 
@@ -103,6 +108,51 @@ def test_build_training_params_includes_timeframe(service, training_config):
     assert params["use_cross_validation"] is True
     assert params["cv_splits"] == 3
     assert params["test_size"] == pytest.approx(0.2)
+
+
+def test_get_latest_model_with_info_filters_to_volatility_regression():
+    with patch.object(
+        orchestration_module.model_manager,
+        "get_latest_model",
+        return_value="/tmp/model.pkl",
+    ) as mock_get_latest:
+        with patch.object(orchestration_module.os.path, "exists", return_value=True):
+            with patch.object(
+                orchestration_module,
+                "load_model_metadata_safely",
+                return_value={
+                    "metadata": {
+                        "model_type": "lightgbm",
+                        "task_type": "volatility_regression",
+                        "target_kind": "log_realized_vol",
+                    }
+                },
+            ):
+                with patch.object(
+                    orchestration_module.model_manager,
+                    "extract_model_performance_metrics",
+                    return_value={},
+                ):
+                    with patch.object(
+                        orchestration_module.os.path,
+                        "getsize",
+                        return_value=1024,
+                    ):
+                        with patch.object(
+                            orchestration_module.os.path,
+                            "getmtime",
+                            return_value=0,
+                        ):
+                            result = orchestration_module.get_latest_model_with_info()
+
+    assert result is not None
+    mock_get_latest.assert_called_once_with(
+        "*",
+        metadata_filters={
+            "task_type": "volatility_regression",
+            "target_kind": "log_realized_vol",
+        },
+    )
 
 
 def test_start_training_schedules_background_task(service, training_config):

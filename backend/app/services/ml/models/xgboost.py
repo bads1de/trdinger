@@ -56,10 +56,15 @@ class XGBoostModel(BaseGradientBoostingModel):
         """
         XGBoost固有のパラメータディクショナリを生成します。
         """
+        is_regression = self._is_regression_task()
         params = {
-            "objective": "multi:softprob" if num_classes > 2 else "binary:logistic",
-            "num_class": num_classes if num_classes > 2 else None,
-            "eval_metric": "mlogloss" if num_classes > 2 else "logloss",
+            "objective": (
+                "reg:squarederror"
+                if is_regression
+                else ("multi:softprob" if num_classes > 2 else "binary:logistic")
+            ),
+            "num_class": None if is_regression else (num_classes if num_classes > 2 else None),
+            "eval_metric": "rmse" if is_regression else ("mlogloss" if num_classes > 2 else "logloss"),
             "max_depth": kwargs.get("max_depth", self.max_depth),
             "learning_rate": kwargs.get("learning_rate", self.learning_rate),
             "subsample": kwargs.get("subsample", 0.8),
@@ -120,6 +125,5 @@ class XGBoostModel(BaseGradientBoostingModel):
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
         return self.model.predict(data)
-
 
 

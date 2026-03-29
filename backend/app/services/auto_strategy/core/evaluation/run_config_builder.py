@@ -22,10 +22,21 @@ class RunConfigBuilder:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
             config_dict = backtest_config.copy()
+            volatility_gate_enabled = bool(
+                getattr(config, "volatility_gate_enabled", False)
+                or getattr(config, "ml_filter_enabled", False)
+            )
+            volatility_model_path = getattr(
+                config,
+                "volatility_model_path",
+                None,
+            ) or getattr(config, "ml_model_path", None)
             strategy_parameters = {
                 "strategy_gene": gene,
-                "ml_filter_enabled": config.ml_filter_enabled,
-                "ml_model_path": config.ml_model_path,
+                "volatility_gate_enabled": volatility_gate_enabled,
+                "volatility_model_path": volatility_model_path,
+                "ml_filter_enabled": volatility_gate_enabled,
+                "ml_model_path": volatility_model_path,
             }
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:

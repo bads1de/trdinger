@@ -76,6 +76,8 @@ class HybridConfig:
     mode: bool = False
     model_type: str = "lightgbm"
     model_types: Optional[List[str]] = None
+    volatility_gate_enabled: bool = False
+    volatility_model_path: Optional[str] = None
     ml_filter_enabled: bool = False
     ml_model_path: Optional[str] = None
     preprocess_features: bool = True

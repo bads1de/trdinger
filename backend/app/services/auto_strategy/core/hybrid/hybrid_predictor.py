@@ -22,11 +22,13 @@ class RuntimeModelPredictorAdapter:
     保存済みモデルアセットを runtime predictor 契約へ変換する薄いアダプタ。
 
     `model_manager.load_model()` の戻り値辞書、または直接モデルオブジェクトを受け取り、
-    `predict(DataFrame) -> {"is_valid": float}` / `is_trained() -> bool` を提供します。
+    `predict(DataFrame) -> {"forecast_log_rv", "forecast_vol", "gate_open"}` /
+    `is_trained() -> bool` を提供します。
     """
 
     def __init__(self, model_data: Any):
-        if isinstance(model_data, dict):
+        self._loaded_from_model_artifacts = isinstance(model_data, dict)
+        if self._loaded_from_model_artifacts:
             self.model = model_data.get("model")
             self.scaler = model_data.get("scaler")
             self.feature_columns = model_data.get("feature_columns")
@@ -41,6 +43,11 @@ class RuntimeModelPredictorAdapter:
         """モデルが推論可能状態かを判定する。"""
         if self.model is None:
             return False
+        if self._loaded_from_model_artifacts:
+            if self.metadata.get("task_type") != "volatility_regression":
+                return False
+            if self.metadata.get("target_kind") != "log_realized_vol":
+                return False
 
         is_trained_attr = getattr(self.model, "is_trained", None)
         if isinstance(is_trained_attr, bool):
@@ -60,14 +67,19 @@ class RuntimeModelPredictorAdapter:
         return True
 
     def predict(self, features_df: pd.DataFrame) -> Dict[str, float]:
-        """保存済みモデルを使って is_valid 予測を返す。"""
+        """保存済みモデルを使ってボラティリティ予測を返す。"""
         try:
             if features_df is None or features_df.empty or not self.is_trained():
                 return HybridPredictor._default_prediction()
 
             prepared_features = self._prepare_features(features_df)
             raw_prediction = self._run_model(prepared_features)
-            return self._normalise_runtime_prediction(raw_prediction)
+            normalised = self._normalise_runtime_prediction(raw_prediction)
+            gate_cutoff_log_rv = float(self.metadata.get("gate_cutoff_log_rv", 0.0))
+            normalised["gate_open"] = bool(
+                normalised.get("forecast_log_rv", 0.0) >= gate_cutoff_log_rv
+            )
+            return normalised
         except Exception as exc:
             logger.warning(f"runtime predictor 予測エラー: {exc}")
             return HybridPredictor._default_prediction()
@@ -86,6 +98,15 @@ class RuntimeModelPredictorAdapter:
 
     def _run_model(self, features_df: pd.DataFrame) -> Any:
         """モデル固有の予測関数を呼び出す。"""
+        predict_volatility = getattr(self.model, "predict_volatility", None)
+        if callable(predict_volatility):
+            return predict_volatility(features_df)
+
+        if self.metadata.get("task_type") == "volatility_regression":
+            predict = getattr(self.model, "predict", None)
+            if callable(predict):
+                return predict(features_df)
+
         predict_proba = getattr(self.model, "predict_proba", None)
         if callable(predict_proba):
             return predict_proba(features_df)
@@ -98,7 +119,7 @@ class RuntimeModelPredictorAdapter:
 
     @staticmethod
     def _normalise_runtime_prediction(raw_prediction: Any) -> Dict[str, float]:
-        """モデル出力を `{\"is_valid\": ...}` 形式に正規化する。"""
+        """モデル出力を volatility gate 形式に正規化する。"""
         if isinstance(raw_prediction, dict):
             return HybridPredictor._normalise_prediction(raw_prediction)
 
@@ -112,13 +133,13 @@ class RuntimeModelPredictorAdapter:
 
         latest_array = np.asarray(latest_pred)
         if latest_array.ndim == 0:
-            is_valid = float(latest_array)
-        elif latest_array.shape[0] >= 2:
-            is_valid = float(latest_array[1])
+            forecast_log_rv = float(latest_array)
         else:
-            is_valid = float(latest_array[0])
+            forecast_log_rv = float(latest_array.reshape(-1)[-1])
 
-        return HybridPredictor._normalise_prediction({"is_valid": is_valid})
+        return HybridPredictor._normalise_prediction(
+            {"forecast_log_rv": forecast_log_rv}
+        )
 
 
 class HybridPredictor:
@@ -188,13 +209,16 @@ class HybridPredictor:
     @staticmethod
     def _default_prediction() -> Dict[str, float]:
         """
-        デフォルトの予測値を返す（二値分類 / ダマシ予測専用）
+        デフォルトの予測値を返す（volatility gate 専用）
 
         Returns:
             デフォルトの予測確率辞書
         """
-        # is_valid = 0.5 は「判断不能」を意味する
-        return {"is_valid": 0.5}
+        return {
+            "forecast_log_rv": 0.0,
+            "forecast_vol": 1.0,
+            "gate_open": True,
+        }
 
     @staticmethod
     def get_available_models() -> List[str]:
@@ -218,7 +242,11 @@ class HybridPredictor:
             for s in self.services:
                 if self._service_is_trained(s):
                     self._run_time_series_cv(s, features_df)
-                    preds.append(s.generate_signals(features_df))
+                    generate_forecast = getattr(s, "generate_forecast", None)
+                    if callable(generate_forecast):
+                        preds.append(generate_forecast(features_df))
+                    else:
+                        preds.append(s.generate_signals(features_df))
 
             if not preds:
                 logger.warning("予測可能なモデルがありません")
@@ -321,7 +349,13 @@ class HybridPredictor:
         """
         try:
             pattern = model_name_pattern or self.model_type or "*"
-            model_path = self.model_manager.get_latest_model(pattern)
+            model_path = self.model_manager.get_latest_model(
+                pattern,
+                metadata_filters={
+                    "task_type": "volatility_regression",
+                    "target_kind": "log_realized_vol",
+                },
+            )
             return model_path
         except Exception as e:
             logger.error(f"最新モデル取得エラー: {e}")
@@ -431,7 +465,7 @@ class HybridPredictor:
     @staticmethod
     def _normalise_prediction(prediction: Dict[str, float]) -> Dict[str, float]:
         """
-        予測結果を正規化（二値分類 / ダマシ予測専用）
+        予測結果を正規化（volatility gate 専用）
 
         Args:
             prediction: 生の予測結果
@@ -439,15 +473,41 @@ class HybridPredictor:
         Returns:
             正規化された予測結果
         """
-        # is_validが含まれている場合
+        if "forecast_log_rv" in prediction:
+            forecast_log_rv = float(prediction.get("forecast_log_rv", 0.0))
+            if not np.isfinite(forecast_log_rv):
+                forecast_log_rv = 0.0
+            forecast_vol = prediction.get("forecast_vol")
+            if forecast_vol is None:
+                forecast_vol = float(np.exp(forecast_log_rv))
+            forecast_vol = float(forecast_vol)
+            if not np.isfinite(forecast_vol) or forecast_vol < 0.0:
+                forecast_vol = float(np.exp(forecast_log_rv))
+            gate_cutoff_log_rv = float(prediction.get("gate_cutoff_log_rv", 0.0))
+            raw_gate_open = prediction.get("gate_open")
+            if isinstance(raw_gate_open, bool):
+                gate_open = raw_gate_open
+            elif raw_gate_open is None:
+                gate_open = forecast_log_rv >= gate_cutoff_log_rv
+            else:
+                try:
+                    gate_open = float(raw_gate_open) >= 0.5
+                except (TypeError, ValueError):
+                    gate_open = forecast_log_rv >= gate_cutoff_log_rv
+            return {
+                "forecast_log_rv": forecast_log_rv,
+                "forecast_vol": forecast_vol,
+                "gate_open": gate_open,
+            }
+
         if "is_valid" in prediction:
             is_valid = float(prediction.get("is_valid", 0.5))
-            # 0-1の範囲に制限
-            is_valid = max(0.0, min(1.0, is_valid))
-            if not np.isfinite(is_valid):
-                is_valid = 0.5
-            return {"is_valid": is_valid}
+            return {
+                "forecast_log_rv": 0.0,
+                "forecast_vol": 1.0,
+                "gate_open": bool(is_valid >= 0.5),
+            }
 
         # 未知のフォーマットの場合はデフォルトを返す
         logger.warning(f"未知の予測フォーマット: {prediction.keys()}")
-        return {"is_valid": 0.5}
+        return HybridPredictor._default_prediction()

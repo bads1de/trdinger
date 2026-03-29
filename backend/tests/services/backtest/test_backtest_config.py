@@ -36,6 +36,7 @@ def valid_strategy_config_dict(valid_strategy_gene_dict) -> Dict[str, Any]:
         "strategy_type": "GENERATED_GA",
         "parameters": {
             "strategy_gene": valid_strategy_gene_dict,
+            "volatility_gate_enabled": False,
             "ml_filter_enabled": False,
         },
     }
@@ -61,6 +62,7 @@ def test_strategy_config_validation(valid_strategy_config_dict):
     config = StrategyConfig(**valid_strategy_config_dict)
     assert config.strategy_type == "GENERATED_GA"
     assert isinstance(config.parameters, GeneratedGAParameters)
+    assert config.parameters.volatility_gate_enabled is False
     assert config.parameters.ml_filter_enabled is False
 
 
@@ -105,7 +107,6 @@ def test_serialization(valid_backtest_config_dict):
     assert data["strategy_config"]["strategy_type"] == "GENERATED_GA"
     # 日付はdatetimeオブジェクトのまま（json化する際は別途対応が必要だがdumpでは維持）
     assert isinstance(data["start_date"], datetime)
-
 
 
 

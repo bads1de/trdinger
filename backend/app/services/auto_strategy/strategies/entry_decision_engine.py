@@ -45,7 +45,11 @@ class EntryDecisionEngine:
         if direction == 0.0:
             return False
 
-        if self.strategy.ml_predictor and not self.strategy._ml_allows_entry(direction):
+        if (
+            getattr(self.strategy, "volatility_gate_enabled", False)
+            and self.strategy.ml_predictor
+            and not self.strategy._ml_allows_entry(direction)
+        ):
             return False
 
         current_price = self.strategy.data.Close[-1]

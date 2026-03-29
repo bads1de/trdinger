@@ -64,6 +64,10 @@ algorithm_registry = AlgorithmRegistry()
 class ModelMetadata:
     """MLモデルのメタデータを管理するdataclass"""
 
+    # タスク情報
+    task_type: str = "volatility_regression"
+    target_kind: str = "log_realized_vol"
+
     # 基本性能指標
     accuracy: float = 0.0
     precision: float = 0.0
@@ -84,15 +88,26 @@ class ModelMetadata:
     log_loss: float = 0.0
     brier_score: float = 0.0
 
+    # 回帰指標
+    qlike: float = 0.0
+    rmse_log_rv: float = 0.0
+    mae_log_rv: float = 0.0
+
     # モデル情報
     feature_count: int = 0
     training_samples: int = 0
     test_samples: int = 0
     best_iteration: int = 0
-    num_classes: int = 2
+    num_classes: int = 1
     train_test_split: float = 0.8
     random_state: int = 42
     model_type: str = ""
+    symbol: str = ""
+    timeframe: str = ""
+    prediction_horizon: int = 1
+    gate_quantile: float = 0.67
+    gate_cutoff_log_rv: float = 0.0
+    gate_cutoff_vol: float = 1.0
     created_at: Optional[str] = None
 
     def __post_init__(self):
@@ -112,6 +127,8 @@ class ModelMetadata:
     ) -> "ModelMetadata":
         r, p = training_result, training_params
         return cls(
+            task_type=p.get("task_type", "volatility_regression"),
+            target_kind=p.get("target_kind", "log_realized_vol"),
             accuracy=r.get("accuracy", 0.0),
             precision=r.get("precision", 0.0),
             recall=r.get("recall", 0.0),
@@ -128,14 +145,23 @@ class ModelMetadata:
             ppv=r.get("ppv", 0.0),
             log_loss=r.get("log_loss", 0.0),
             brier_score=r.get("brier_score", 0.0),
+            qlike=r.get("qlike", 0.0),
+            rmse_log_rv=r.get("rmse_log_rv", 0.0),
+            mae_log_rv=r.get("mae_log_rv", 0.0),
             feature_count=feature_count,
-            training_samples=r.get("training_samples", 0),
+            training_samples=r.get("training_samples", r.get("train_samples", 0)),
             test_samples=r.get("test_samples", 0),
             best_iteration=r.get("best_iteration", 0),
-            num_classes=r.get("num_classes", 2),
+            num_classes=r.get("num_classes", 1),
             train_test_split=p.get("train_test_split", 0.8),
             random_state=p.get("random_state", 42),
             model_type=model_type,
+            symbol=p.get("symbol", ""),
+            timeframe=p.get("timeframe", ""),
+            prediction_horizon=int(p.get("prediction_horizon", p.get("horizon_n", 1))),
+            gate_quantile=float(p.get("gate_quantile", 0.67)),
+            gate_cutoff_log_rv=float(r.get("gate_cutoff_log_rv", 0.0)),
+            gate_cutoff_vol=float(r.get("gate_cutoff_vol", 1.0)),
         )
 
     def log_summary(self) -> None:
@@ -147,10 +173,18 @@ class ModelMetadata:
 
     def validate(self) -> Dict[str, Any]:
         errors, warnings = [], []
-        if not 0.0 <= self.accuracy <= 1.0:
-            errors.append(f"精度が範囲外です: {self.accuracy}")
-        if not 0.0 <= self.f1_score <= 1.0:
-            errors.append(f"F1スコアが範囲外です: {self.f1_score}")
+        if self.task_type == "volatility_regression":
+            if self.rmse_log_rv < 0.0:
+                errors.append(f"RMSE(log_rv) が範囲外です: {self.rmse_log_rv}")
+            if self.mae_log_rv < 0.0:
+                errors.append(f"MAE(log_rv) が範囲外です: {self.mae_log_rv}")
+            if self.qlike < 0.0:
+                warnings.append(f"QLIKE が負値です: {self.qlike}")
+        else:
+            if not 0.0 <= self.accuracy <= 1.0:
+                errors.append(f"精度が範囲外です: {self.accuracy}")
+            if not 0.0 <= self.f1_score <= 1.0:
+                errors.append(f"F1スコアが範囲外です: {self.f1_score}")
         if self.feature_count <= 0:
             warnings.append(f"特徴量数が0以下です: {self.feature_count}")
         if self.training_samples <= 0:

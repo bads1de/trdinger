@@ -82,27 +82,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             予測シグナルを含むコンテキスト辞書
         """
-        if not self.predictor:
-            return {}
-
-        try:
-            ohlcv_data = self._fetch_ohlcv_data(backtest_config, config)
-            if ohlcv_data is not None and not ohlcv_data.empty:
-                features_df = self.feature_adapter.gene_to_features(
-                    gene,
-                    ohlcv_data,
-                    apply_preprocessing=self._should_apply_preprocessing(config),
-                )
-
-                prediction_signals = self.predictor.predict(features_df)
-                logger.debug("ML予測: %s", prediction_signals)
-                return {"prediction_signals": prediction_signals}
-
-        except (MLTrainingError, MLPredictionError) as e:
-            logger.warning(f"ML予測エラー: {e}")
-        except Exception as e:
-            logger.error(f"ML予測エラー（予期しない）: {e}")
-
         return {}
 
     def _calculate_fitness(
@@ -119,36 +98,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             フィットネス値
         """
-        base_fitness = super()._calculate_fitness(
-            backtest_result, config, **kwargs
-        )
-
-        prediction_signals = kwargs.get("prediction_signals")
-
-        try:
-            metrics = self._extract_performance_metrics(backtest_result)
-            total_trades = metrics.get("total_trades", 0)
-        except Exception:
-            total_trades = 0
-
-        if total_trades == 0:
-            return max(0.0, base_fitness)
-
-        if prediction_signals:
-            prediction_score = self._extract_prediction_score(prediction_signals)
-            prediction_weight = config.fitness_weights.get("prediction_score", 0.1)
-
-            fitness = base_fitness + prediction_weight * prediction_score
-
-            logger.debug(
-                f"Fitness: base={base_fitness:.4f}, "
-                f"pred_score={prediction_score:.4f}, "
-                f"final={fitness:.4f}"
-            )
-
-            return max(0.0, fitness)
-
-        return base_fitness
+        return super()._calculate_fitness(backtest_result, config, **kwargs)
 
     def _calculate_multi_objective_fitness(
         self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
@@ -164,24 +114,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             各目的の評価値のタプル
         """
-        base_fitness_values = super()._calculate_multi_objective_fitness(
+        return super()._calculate_multi_objective_fitness(
             backtest_result, config, **kwargs
         )
-
-        fitness_list = list(base_fitness_values)
-        prediction_signals = kwargs.get("prediction_signals")
-
-        if "prediction_score" in config.objectives:
-            pred_score_index = config.objectives.index("prediction_score")
-
-            if prediction_signals:
-                fitness_list[pred_score_index] = self._extract_prediction_score(
-                    prediction_signals
-                )
-            else:
-                fitness_list[pred_score_index] = 0.0
-
-        return tuple(fitness_list)
 
     def _inject_external_objects(
         self,
@@ -194,33 +129,35 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         super()._inject_external_objects(run_config, backtest_config, config)
 
         # MLフィルター設定
-        if config.ml_filter_enabled and config.ml_model_path:
+        gate_enabled = bool(
+            getattr(config, "volatility_gate_enabled", False)
+            or getattr(config, "ml_filter_enabled", False)
+        )
+        model_path = getattr(config, "volatility_model_path", None) or getattr(
+            config, "ml_model_path", None
+        )
+
+        if gate_enabled and model_path:
             try:
                 ml_filter_model = RuntimeModelPredictorAdapter(
-                    model_manager.load_model(config.ml_model_path)
+                    model_manager.load_model(model_path)
                 )
                 if ml_filter_model.is_trained():
                     run_config["strategy_config"]["parameters"][
                         "ml_predictor"
                     ] = ml_filter_model
                     run_config["strategy_config"]["parameters"][
-                        "ml_filter_threshold"
-                    ] = 0.5
+                        "volatility_gate_enabled"
+                    ] = True
                 else:
-                    run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
+                    run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = False
             except Exception:
-                run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
-        elif config.ml_filter_enabled:
-            run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
-
-    @staticmethod
-    def _extract_prediction_score(prediction_signals: Dict[str, Any]) -> float:
-        """予測シグナルから中心化されたスコアを抽出"""
-        if "is_valid" in prediction_signals:
-            return prediction_signals["is_valid"] - 0.5
-        if "trend" in prediction_signals:
-            return prediction_signals["trend"] - 0.5
-        return prediction_signals.get("up", 0.0) - prediction_signals.get("down", 0.0)
+                run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = False
+        elif gate_enabled and self.predictor and self.predictor.is_trained():
+            run_config["strategy_config"]["parameters"]["ml_predictor"] = self.predictor
+            run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = True
+        elif gate_enabled:
+            run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = False
 
     def _create_feature_adapter(
         self,

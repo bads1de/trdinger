@@ -24,9 +24,10 @@ class TestHybridPredictor:
         ) as mock_cls:
             # Create a mock service class that returns a mock service instance
             service_instance = Mock()
-            # Default behavior for service (二値分類: is_valid)
-            service_instance.generate_signals.return_value = {
-                "is_valid": 0.75,
+            service_instance.generate_forecast.return_value = {
+                "forecast_log_rv": 0.75,
+                "forecast_vol": float(np.exp(0.75)),
+                "gate_open": True,
             }
             service_instance.get_available_single_models.return_value = [
                 "lightgbm",
@@ -85,24 +86,32 @@ class TestHybridPredictor:
         assert mock_training_service_cls.call_count == 2
 
     def test_predict_single(self, predictor):
-        """単一モデルでの予測（二値分類）"""
+        """単一モデルでの予測（ボラ回帰）"""
         df = pd.DataFrame({"close": [100, 101]})
         result = predictor.predict(df)
 
-        assert "is_valid" in result
-        assert 0.0 <= result["is_valid"] <= 1.0
+        assert "forecast_log_rv" in result
+        assert "gate_open" in result
 
     def test_predict_ensemble_average(
         self, mock_training_service_cls, mock_model_manager
     ):
-        """アンサンブル予測（平均化、二値分類）"""
+        """アンサンブル予測（平均化、ボラ回帰）"""
         # Setup mock to return different values for different instances
         service1 = Mock()
-        service1.generate_signals.return_value = {"is_valid": 0.8}
+        service1.generate_forecast.return_value = {
+            "forecast_log_rv": 0.8,
+            "forecast_vol": float(np.exp(0.8)),
+            "gate_open": True,
+        }
         service1.trainer.is_trained = True
 
         service2 = Mock()
-        service2.generate_signals.return_value = {"is_valid": 0.6}
+        service2.generate_forecast.return_value = {
+            "forecast_log_rv": 0.6,
+            "forecast_vol": float(np.exp(0.6)),
+            "gate_open": True,
+        }
         service2.trainer.is_trained = True
 
         mock_training_service_cls.side_effect = [service1, service2]
@@ -112,30 +121,33 @@ class TestHybridPredictor:
         df = pd.DataFrame({"close": [100]})
         result = predictor.predict(df)
 
-        # Average: is_valid=(0.8+0.6)/2 = 0.7
-        assert result["is_valid"] == pytest.approx(0.7)
+        assert result["forecast_log_rv"] == pytest.approx(0.7)
 
-    def test_predict_is_valid_mode(self, predictor):
-        """二値分類（is_valid）モードの予測"""
-        predictor.service.generate_signals.return_value = {"is_valid": 0.85}
+    def test_predict_forecast_mode(self, predictor):
+        """forecast モードの予測"""
+        predictor.service.generate_forecast.return_value = {
+            "forecast_log_rv": 0.85,
+            "forecast_vol": float(np.exp(0.85)),
+            "gate_open": True,
+        }
 
         df = pd.DataFrame({"close": [100]})
         result = predictor.predict(df)
 
-        assert "is_valid" in result
-        assert 0.0 <= result["is_valid"] <= 1.0
+        assert "forecast_log_rv" in result
+        assert result["gate_open"] is True
 
     def test_predict_empty_input(self, predictor):
         """空入力のハンドリング"""
         with pytest.raises(MLPredictionError, match="特徴量DataFrameが空"):
             predictor.predict(pd.DataFrame())
 
-        def test_predict_model_error(self, predictor):
-            """モデルエラー時のデフォルトフォールバック"""
-            predictor.service.generate_signals.side_effect = Exception("Model error")
+    def test_predict_model_error(self, predictor):
+        """モデルエラー時は予測失敗として扱う"""
+        predictor.service.generate_forecast.side_effect = Exception("Model error")
 
-            with pytest.raises(MLPredictionError, match="予測失敗"):
-                predictor.predict(pd.DataFrame({"a": [1]}))
+        with pytest.raises(MLPredictionError, match="予測失敗"):
+            predictor.predict(pd.DataFrame({"a": [1]}))
 
     def test_predict_untrained_model(self, predictor):
         """未学習モデルのハンドリング"""
@@ -149,9 +161,8 @@ class TestHybridPredictor:
         df = pd.DataFrame({"close": [100]})
         result = predictor.predict(df)
 
-        # Default prediction for "fakeout" mode (default in _default_prediction)
-        # {"is_valid": 0.5} - 判断不能を意味する
-        assert result["is_valid"] == 0.5
+        assert result["forecast_log_rv"] == 0.0
+        assert result["gate_open"] is True
 
     def test_predict_batch(self, predictor):
         """バッチ予測"""
@@ -178,7 +189,13 @@ class TestHybridPredictor:
 
         assert predictor.load_latest_models() is True
 
-        mock_model_manager.get_latest_model.assert_called_with("lightgbm")
+        mock_model_manager.get_latest_model.assert_called_with(
+            "lightgbm",
+            metadata_filters={
+                "task_type": "volatility_regression",
+                "target_kind": "log_realized_vol",
+            },
+        )
         predictor.service.load_model.assert_called_once_with("/path/to/model.pkl")
 
     def test_get_available_models(self):
@@ -192,21 +209,18 @@ class TestHybridPredictor:
         assert info["status"] == "trained"
 
     def test_normalise_prediction(self):
-        """予測値の正規化（二値分類）"""
-        # is_valid case
-        pred = {"is_valid": 0.75}
+        """予測値の正規化（ボラ回帰）"""
+        pred = {"forecast_log_rv": 0.75}
         norm = HybridPredictor._normalise_prediction(pred)
-        assert norm["is_valid"] == pytest.approx(0.75)
+        assert norm["forecast_log_rv"] == pytest.approx(0.75)
 
-        # Out of range case (should be clamped)
-        pred = {"is_valid": 1.5}
+        pred = {"forecast_log_rv": 1.5}
         norm = HybridPredictor._normalise_prediction(pred)
-        assert norm["is_valid"] == 1.0
+        assert norm["forecast_log_rv"] == 1.5
 
-        # Negative case (should be clamped)
-        pred = {"is_valid": -0.1}
+        pred = {"forecast_log_rv": -0.1}
         norm = HybridPredictor._normalise_prediction(pred)
-        assert norm["is_valid"] == 0.0
+        assert norm["forecast_log_rv"] == pytest.approx(-0.1)
 
     def test_get_latest_model(self, predictor, mock_model_manager):
         """最新モデルパスの取得"""
@@ -253,21 +267,21 @@ class TestRuntimeModelPredictorAdapter:
     """保存済みモデルを runtime predictor として扱う薄いアダプタのテスト"""
 
     def test_predict_uses_loaded_model_artifacts(self):
-        """model/scaler/feature_columns から is_valid を推論できる"""
+        """model/scaler/feature_columns から forecast を推論できる"""
         model = Mock()
-        model.predict_proba.return_value = np.array(
-            [
-                [0.4, 0.6],
-                [0.2, 0.8],
-            ]
-        )
+        model.predict.return_value = np.array([0.6, 0.8])
+        model.is_trained = True
 
         adapter = RuntimeModelPredictorAdapter(
             {
                 "model": model,
                 "scaler": None,
                 "feature_columns": ["close", "volume"],
-                "metadata": {},
+                "metadata": {
+                    "task_type": "volatility_regression",
+                    "target_kind": "log_realized_vol",
+                    "gate_cutoff_log_rv": 0.7,
+                },
             }
         )
 
@@ -282,5 +296,28 @@ class TestRuntimeModelPredictorAdapter:
         )
 
         assert adapter.is_trained() is True
-        assert result["is_valid"] == pytest.approx(0.8)
-        model.predict_proba.assert_called_once()
+        assert result["forecast_log_rv"] == pytest.approx(0.8)
+        assert result["gate_open"] is True
+        model.predict.assert_called_once()
+
+    def test_rejects_legacy_model_without_volatility_metadata(self):
+        """旧モデル資産は task metadata が無ければ runtime 採用しない"""
+        model = Mock()
+        model.predict.return_value = np.array([0.8])
+        model.is_trained = True
+
+        adapter = RuntimeModelPredictorAdapter(
+            {
+                "model": model,
+                "scaler": None,
+                "feature_columns": ["close"],
+                "metadata": {},
+            }
+        )
+
+        result = adapter.predict(pd.DataFrame({"close": [100.0]}))
+
+        assert adapter.is_trained() is False
+        assert result["forecast_log_rv"] == 0.0
+        assert result["gate_open"] is True
+        model.predict.assert_not_called()
