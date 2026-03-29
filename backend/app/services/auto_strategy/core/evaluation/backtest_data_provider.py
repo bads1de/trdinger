@@ -18,22 +18,31 @@ class BacktestDataProvider:
         self._data_cache = data_cache
         self._lock = lock
 
+    @staticmethod
+    def _extract_worker_data(worker_payload: Any, expected_key: tuple[Any, ...]) -> Any:
+        """共有ワーカーデータが現在の要求期間と一致する場合のみ返す。"""
+        if not isinstance(worker_payload, dict):
+            return None
+        if worker_payload.get("key") != expected_key:
+            return None
+        return worker_payload.get("data")
+
     def get_cached_backtest_data(self, backtest_config: Dict[str, Any]) -> Any:
         """メイン時間軸のバックテストデータをキャッシュ付きで取得する。"""
-        try:
-            from .parallel_evaluator import get_worker_data
-
-            worker_data = get_worker_data("main_data")
-            if worker_data is not None:
-                return worker_data
-        except ImportError:
-            pass
-
         symbol = backtest_config.get("symbol")
         timeframe = backtest_config.get("timeframe")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")
         key = (symbol, timeframe, str(start_date), str(end_date))
+
+        try:
+            from .parallel_evaluator import get_worker_data
+
+            worker_data = self._extract_worker_data(get_worker_data("main_data"), key)
+            if worker_data is not None:
+                return worker_data
+        except ImportError:
+            pass
 
         with self._lock:
             if key not in self._data_cache:
@@ -53,19 +62,19 @@ class BacktestDataProvider:
 
     def get_cached_minute_data(self, backtest_config: Dict[str, Any]) -> Any:
         """1分足データをキャッシュ付きで取得する。"""
-        try:
-            from .parallel_evaluator import get_worker_data
-
-            worker_data = get_worker_data("minute_data")
-            if worker_data is not None:
-                return worker_data
-        except ImportError:
-            pass
-
         symbol = backtest_config.get("symbol")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")
         key = ("minute", symbol, "1m", str(start_date), str(end_date))
+
+        try:
+            from .parallel_evaluator import get_worker_data
+
+            worker_data = self._extract_worker_data(get_worker_data("minute_data"), key)
+            if worker_data is not None:
+                return worker_data
+        except ImportError:
+            pass
 
         with self._lock:
             if key not in self._data_cache:

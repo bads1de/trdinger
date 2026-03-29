@@ -49,6 +49,13 @@ class TestConfigValidator:
         config.parameter_ranges = {"param1": [0, 10]}
         config.log_level = "INFO"
         config.parallel_processes = 4
+        config.enable_two_stage_selection = True
+        config.two_stage_elite_count = 3
+        config.two_stage_candidate_pool_size = 5
+        config.two_stage_min_pass_rate = 0.5
+        config.robustness_stress_slippage = [0.0003]
+        config.robustness_stress_commission_multipliers = [1.5]
+        config.robustness_aggregate_method = "robust"
 
         return config
 
@@ -168,3 +175,39 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any("並列プロセス数は32以下" in e for e in errors)
+
+    def test_validate_ga_config_two_stage_selection(self, ga_config):
+        ga_config.two_stage_elite_count = 0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("二段階選抜エリート数" in e for e in errors)
+
+        ga_config.two_stage_elite_count = 3
+        ga_config.two_stage_candidate_pool_size = 2
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("二段階選抜候補数" in e for e in errors)
+
+        ga_config.two_stage_candidate_pool_size = 5
+        ga_config.two_stage_min_pass_rate = 1.2
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("二段階選抜 pass rate" in e for e in errors)
+
+    def test_validate_ga_config_robustness(self, ga_config):
+        ga_config.robustness_stress_slippage = [-0.0001]
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("robustness の slippage" in e for e in errors)
+
+        ga_config.robustness_stress_slippage = [0.0002]
+        ga_config.robustness_stress_commission_multipliers = [0.0]
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("robustness の commission multiplier" in e for e in errors)
+
+        ga_config.robustness_stress_commission_multipliers = [1.5]
+        ga_config.robustness_aggregate_method = "unsupported"
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("robustness_aggregate_method" in e for e in errors)

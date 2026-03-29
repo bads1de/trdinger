@@ -47,3 +47,26 @@ class TestRunConfigBuilder:
         assert run_config["strategy_config"]["parameters"]["minute_data"] == {
             "rows": 10
         }
+
+    def test_build_run_config_forwards_evaluation_start_when_present(self):
+        builder = RunConfigBuilder()
+        gene = Mock()
+        gene.id = "gene-123456789"
+
+        ga_config = Mock()
+        ga_config.ml_filter_enabled = False
+        ga_config.ml_model_path = None
+
+        backtest_config = {
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "_evaluation_start": "2024-01-02 00:00:00",
+        }
+
+        result = builder.build_run_config(gene, backtest_config, ga_config)
+
+        assert result is not None
+        assert (
+            result["strategy_config"]["parameters"]["evaluation_start"]
+            == "2024-01-02 00:00:00"
+        )

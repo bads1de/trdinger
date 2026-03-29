@@ -4,6 +4,7 @@
 設定クラスの検証ロジックを分離・集約します。
 """
 
+from datetime import datetime
 import logging
 from typing import List, Tuple
 
@@ -182,5 +183,102 @@ class ConfigValidator:
                 errors.append("並列プロセス数は正の整数である必要があります")
             elif config.parallel_processes > 32:
                 errors.append("並列プロセス数は32以下である必要があります")
+
+        if getattr(config, "enable_two_stage_selection", False):
+            if (
+                not isinstance(config.two_stage_elite_count, (int, float))
+                or int(config.two_stage_elite_count) <= 0
+            ):
+                errors.append("二段階選抜エリート数は正の整数である必要があります")
+            elif isinstance(config.population_size, (int, float)) and int(
+                config.two_stage_elite_count
+            ) >= int(config.population_size):
+                errors.append("二段階選抜エリート数は個体数未満である必要があります")
+
+            if (
+                not isinstance(config.two_stage_candidate_pool_size, (int, float))
+                or int(config.two_stage_candidate_pool_size) <= 0
+            ):
+                errors.append("二段階選抜候補数は正の整数である必要があります")
+            elif int(config.two_stage_candidate_pool_size) < int(
+                config.two_stage_elite_count
+            ):
+                errors.append(
+                    "二段階選抜候補数は二段階選抜エリート数以上である必要があります"
+                )
+
+            if (
+                not isinstance(config.two_stage_min_pass_rate, (int, float))
+                or not 0.0 <= float(config.two_stage_min_pass_rate) <= 1.0
+            ):
+                errors.append("二段階選抜 pass rate は0.0-1.0の範囲である必要があります")
+
+        robustness_slippage = getattr(config, "robustness_stress_slippage", []) or []
+        validation_symbols = getattr(config, "robustness_validation_symbols", None)
+        if validation_symbols is not None and not isinstance(validation_symbols, list):
+            errors.append("robustness_validation_symbols はリストである必要があります")
+
+        regime_windows = getattr(config, "robustness_regime_windows", []) or []
+        if not isinstance(regime_windows, list):
+            errors.append("robustness の regime windows はリストである必要があります")
+        else:
+            for window in regime_windows:
+                if not isinstance(window, dict):
+                    errors.append("robustness の regime window は辞書である必要があります")
+                    break
+
+                name = window.get("name")
+                start_date = window.get("start_date")
+                end_date = window.get("end_date")
+                if not name or not isinstance(name, str):
+                    errors.append("robustness の regime window は name が必要です")
+                    break
+                if not isinstance(start_date, str) or not isinstance(end_date, str):
+                    errors.append(
+                        "robustness の regime window は start_date/end_date が必要です"
+                    )
+                    break
+                try:
+                    parsed_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                    parsed_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+                except ValueError:
+                    errors.append(
+                        "robustness の regime window の日付形式が不正です"
+                    )
+                    break
+                if parsed_start >= parsed_end:
+                    errors.append(
+                        "robustness の regime window は start_date < end_date である必要があります"
+                    )
+                    break
+
+        if not isinstance(robustness_slippage, list):
+            errors.append("robustness の slippage はリストである必要があります")
+        else:
+            for slippage in robustness_slippage:
+                if not isinstance(slippage, (int, float)) or float(slippage) < 0.0:
+                    errors.append("robustness の slippage は0以上の数値である必要があります")
+                    break
+
+        commission_multipliers = (
+            getattr(config, "robustness_stress_commission_multipliers", []) or []
+        )
+        if not isinstance(commission_multipliers, list):
+            errors.append(
+                "robustness の commission multiplier はリストである必要があります"
+            )
+        else:
+            for multiplier in commission_multipliers:
+                if not isinstance(multiplier, (int, float)) or float(multiplier) <= 0.0:
+                    errors.append(
+                        "robustness の commission multiplier は正の数値である必要があります"
+                    )
+                    break
+
+        aggregate_method = getattr(config, "robustness_aggregate_method", "robust")
+        if aggregate_method not in {"robust", "mean"}:
+            errors.append(
+                "robustness_aggregate_method は {'robust', 'mean'} のいずれかである必要があります"
+            )
 
         return errors

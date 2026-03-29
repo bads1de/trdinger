@@ -9,6 +9,9 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy.orm import Session
 
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
+from app.services.auto_strategy.core.evaluation.report_persistence import (
+    attach_evaluation_summary,
+)
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
@@ -120,6 +123,7 @@ class ExperimentPersistenceService:
         db_experiment_id = experiment_info["db_id"]
         best_strategy = result["best_strategy"]
         best_fitness = result["best_fitness"]
+        evaluation_summary = result.get("best_evaluation_summary")
 
         # フィットネス値の整理
         if ga_config.enable_multi_objective and isinstance(best_fitness, (list, tuple)):
@@ -131,9 +135,11 @@ class ExperimentPersistenceService:
                 best_fitness if isinstance(best_fitness, (int, float)) else 0.0
             )
 
+        gene_data = self.serializer.strategy_gene_to_dict(best_strategy)
+        gene_data = attach_evaluation_summary(gene_data, evaluation_summary)
         best_strategy_record = generated_strategy_repo.save_strategy(
             experiment_id=db_experiment_id,
-            gene_data=self.serializer.strategy_gene_to_dict(best_strategy),
+            gene_data=gene_data,
             generation=ga_config.generations,
             fitness_score=fitness_score,
             fitness_values=fitness_values,
@@ -158,6 +164,7 @@ class ExperimentPersistenceService:
         best_strategy = result["best_strategy"]
         db_experiment_id = experiment_info["db_id"]
         generated_strategy_repo = GeneratedStrategyRepository(db)
+        evaluation_summaries = result.get("evaluation_summaries", {})
 
         strategies_data = []
         fitness_scores = result.get("fitness_scores", [])
@@ -165,10 +172,16 @@ class ExperimentPersistenceService:
             if strategy.id != best_strategy.id:
                 # fitness_scoresの範囲内にあるかチェック
                 fitness_score = fitness_scores[i] if i < len(fitness_scores) else 0.0
+                strategy_key = self._get_strategy_result_key(strategy)
+                gene_data = self.serializer.strategy_gene_to_dict(strategy)
+                gene_data = attach_evaluation_summary(
+                    gene_data,
+                    evaluation_summaries.get(strategy_key),
+                )
                 strategies_data.append(
                     {
                         "experiment_id": db_experiment_id,
-                        "gene_data": self.serializer.strategy_gene_to_dict(strategy),
+                        "gene_data": gene_data,
                         "generation": ga_config.generations,
                         "fitness_score": fitness_score,
                     }
@@ -192,6 +205,7 @@ class ExperimentPersistenceService:
 
         db_experiment_id = experiment_info["db_id"]
         generated_strategy_repo = GeneratedStrategyRepository(db)
+        evaluation_summaries = result.get("evaluation_summaries", {})
 
         strategies_data = []
         for solution in pareto_front:
@@ -199,10 +213,16 @@ class ExperimentPersistenceService:
             fitness_values = solution.get("fitness_values")
 
             if strategy and fitness_values:
+                strategy_key = self._get_strategy_result_key(strategy)
+                gene_data = self.serializer.strategy_gene_to_dict(strategy)
+                gene_data = attach_evaluation_summary(
+                    gene_data,
+                    evaluation_summaries.get(strategy_key),
+                )
                 strategies_data.append(
                     {
                         "experiment_id": db_experiment_id,
-                        "gene_data": self.serializer.strategy_gene_to_dict(strategy),
+                        "gene_data": gene_data,
                         "generation": ga_config.generations,
                         "fitness_score": (fitness_values[0] if fitness_values else 0.0),
                         "fitness_values": fitness_values,
@@ -286,3 +306,11 @@ class ExperimentPersistenceService:
             "created_at": exp.created_at,
             "completed_at": exp.completed_at,
         }
+
+    @staticmethod
+    def _get_strategy_result_key(strategy: Any) -> str:
+        """result 内部の summary 対応付けキーを返す。"""
+        strategy_id = getattr(strategy, "id", None)
+        if strategy_id not in (None, ""):
+            return str(strategy_id)
+        return str(id(strategy))

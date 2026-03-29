@@ -17,6 +17,18 @@ from app.services.auto_strategy.genes.conditions import Condition, ConditionGrou
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 
 
+def _single_output_ref_name(strategy: StrategyGene, indicator_type: str) -> str:
+    indicator = next(i for i in strategy.indicators if i.type == indicator_type)
+    return f"{indicator.type}_{indicator.id[:8]}"
+
+
+def _multi_output_ref_name(
+    strategy: StrategyGene, indicator_type: str, output_index: int
+) -> str:
+    indicator = next(i for i in strategy.indicators if i.type == indicator_type)
+    return f"{indicator.type}_{indicator.id[:8]}_{output_index}"
+
+
 class TestSeedStrategyFactory:
     """SeedStrategyFactory のテストクラス"""
 
@@ -105,6 +117,25 @@ class TestDMIExtremeTrend:
         assert isinstance(strategy.tpsl_gene, TPSLGene)
         assert strategy.tpsl_gene.enabled is True
 
+    def test_uses_runtime_indicator_reference_names(self):
+        """条件が実行時の指標登録名を参照すること"""
+        strategy = SeedStrategyFactory.create_dmi_extreme_trend()
+        long_group = strategy.long_entry_conditions[0]
+        short_group = strategy.short_entry_conditions[0]
+
+        assert long_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
+            strategy, "ADX", 1
+        )
+        assert long_group.conditions[1].left_operand["name"] == _multi_output_ref_name(
+            strategy, "ADX", 0
+        )
+        assert short_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
+            strategy, "ADX", 2
+        )
+        assert short_group.conditions[1].left_operand["name"] == _multi_output_ref_name(
+            strategy, "ADX", 0
+        )
+
 
 class TestRSIMomentum:
     """RSI Momentum 戦略のテスト"""
@@ -146,6 +177,19 @@ class TestBollingerBreakout:
         assert isinstance(long_cond, Condition)
         assert long_cond.left_operand == "close"
 
+    def test_uses_registered_band_names(self):
+        """バンド参照が実行時の登録名を使うこと"""
+        strategy = SeedStrategyFactory.create_bollinger_breakout()
+
+        assert (
+            strategy.long_entry_conditions[0].right_operand["name"]
+            == _multi_output_ref_name(strategy, "BBANDS", 0)
+        )
+        assert (
+            strategy.short_entry_conditions[0].right_operand["name"]
+            == _multi_output_ref_name(strategy, "BBANDS", 2)
+        )
+
 
 class TestKAMAADXHybrid:
     """KAMA-ADX Hybrid 戦略のテスト"""
@@ -179,6 +223,27 @@ class TestWAE:
         assert "MACD" in indicator_types
         assert "BBANDS" in indicator_types
         assert "ATR" in indicator_types
+
+    def test_uses_registered_macd_names(self):
+        """MACD条件が実行時の登録名を使うこと"""
+        strategy = SeedStrategyFactory.create_wae()
+        long_group = strategy.long_entry_conditions[0]
+        short_group = strategy.short_entry_conditions[0]
+
+        assert long_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
+            strategy, "MACD", 0
+        )
+        assert (
+            long_group.conditions[0].right_operand["name"]
+            == _multi_output_ref_name(strategy, "MACD", 1)
+        )
+        assert short_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
+            strategy, "MACD", 0
+        )
+        assert (
+            short_group.conditions[0].right_operand["name"]
+            == _multi_output_ref_name(strategy, "MACD", 1)
+        )
 
 
 class TestTrendilo:

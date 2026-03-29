@@ -27,6 +27,9 @@ class RunConfigBuilder:
                 "ml_filter_enabled": config.ml_filter_enabled,
                 "ml_model_path": config.ml_model_path,
             }
+            evaluation_start = backtest_config.get("_evaluation_start")
+            if evaluation_start is not None:
+                strategy_parameters["evaluation_start"] = evaluation_start
 
             config_dict["strategy_config"] = {
                 "strategy_type": "GENERATED_GA",

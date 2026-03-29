@@ -28,7 +28,9 @@ from .sub_configs import (
     EvaluationConfig,
     HybridConfig,
     MutationConfig,
+    RobustnessConfig,
     TuningConfig,
+    TwoStageSelectionConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -211,6 +213,21 @@ class GAConfig(BaseConfig):
     tuning_include_tpsl: bool = True  # TPSLパラメータを最適化
     tuning_include_thresholds: bool = False  # 条件閾値を最適化
 
+    # 二段階選抜設定
+    enable_two_stage_selection: bool = True
+    two_stage_elite_count: int = 3
+    two_stage_candidate_pool_size: int = 5
+    two_stage_min_pass_rate: float = 0.5
+
+    # 二段階選抜用 robustness 設定
+    robustness_validation_symbols: Optional[List[str]] = None
+    robustness_regime_windows: List[Dict[str, str]] = field(default_factory=list)
+    robustness_stress_slippage: List[float] = field(default_factory=list)
+    robustness_stress_commission_multipliers: List[float] = field(
+        default_factory=list
+    )
+    robustness_aggregate_method: str = "robust"
+
     # 階層的GA設定（サブGA）
     hierarchical_ga_config: Dict[str, Any] = field(
         default_factory=lambda: {
@@ -226,6 +243,8 @@ class GAConfig(BaseConfig):
     evaluation_config: Optional[EvaluationConfig] = None
     hybrid_config: Optional[HybridConfig] = None
     tuning_config: Optional[TuningConfig] = None
+    two_stage_selection_config: Optional[TwoStageSelectionConfig] = None
+    robustness_config: Optional[RobustnessConfig] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -252,6 +271,8 @@ class GAConfig(BaseConfig):
         Returns:
             初期化されたGAConfigインスタンス
         """
+        provided_keys = {key for key, value in data.items() if value is not None}
+
         # デフォルト値を設定
         defaults = {
             "population_size": GA_DEFAULT_CONFIG["population_size"],
@@ -282,6 +303,15 @@ class GAConfig(BaseConfig):
             "enable_multi_objective": False,
             "objectives": DEFAULT_GA_OBJECTIVES,
             "objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS,
+            "enable_two_stage_selection": True,
+            "two_stage_elite_count": 3,
+            "two_stage_candidate_pool_size": 5,
+            "two_stage_min_pass_rate": 0.5,
+            "robustness_validation_symbols": None,
+            "robustness_regime_windows": [],
+            "robustness_stress_slippage": [],
+            "robustness_stress_commission_multipliers": [],
+            "robustness_aggregate_method": "robust",
         }
 
         # デフォルト値をマージ
@@ -299,6 +329,54 @@ class GAConfig(BaseConfig):
             working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
         if "tuning_config" in working and isinstance(working["tuning_config"], dict):
             working["tuning_config"] = TuningConfig.from_dict(working["tuning_config"])
+        if "two_stage_selection_config" in working and isinstance(
+            working["two_stage_selection_config"], dict
+        ):
+            working["two_stage_selection_config"] = TwoStageSelectionConfig.from_dict(
+                working["two_stage_selection_config"]
+            )
+        if "robustness_config" in working and isinstance(
+            working["robustness_config"], dict
+        ):
+            working["robustness_config"] = RobustnessConfig.from_dict(
+                working["robustness_config"]
+            )
+
+        two_stage_config = working.get("two_stage_selection_config")
+        if isinstance(two_stage_config, TwoStageSelectionConfig):
+            if "enable_two_stage_selection" not in provided_keys:
+                working["enable_two_stage_selection"] = two_stage_config.enabled
+            if "two_stage_elite_count" not in provided_keys:
+                working["two_stage_elite_count"] = two_stage_config.elite_count
+            if "two_stage_candidate_pool_size" not in provided_keys:
+                working["two_stage_candidate_pool_size"] = (
+                    two_stage_config.candidate_pool_size
+                )
+            if "two_stage_min_pass_rate" not in provided_keys:
+                working["two_stage_min_pass_rate"] = two_stage_config.min_pass_rate
+
+        robustness_config = working.get("robustness_config")
+        if isinstance(robustness_config, RobustnessConfig):
+            if "robustness_validation_symbols" not in provided_keys:
+                working["robustness_validation_symbols"] = (
+                    robustness_config.validation_symbols
+                )
+            if "robustness_regime_windows" not in provided_keys:
+                working["robustness_regime_windows"] = (
+                    robustness_config.regime_windows
+                )
+            if "robustness_stress_slippage" not in provided_keys:
+                working["robustness_stress_slippage"] = (
+                    robustness_config.stress_slippage
+                )
+            if "robustness_stress_commission_multipliers" not in provided_keys:
+                working["robustness_stress_commission_multipliers"] = (
+                    robustness_config.stress_commission_multipliers
+                )
+            if "robustness_aggregate_method" not in provided_keys:
+                working["robustness_aggregate_method"] = (
+                    robustness_config.aggregate_method
+                )
 
         # BaseConfigのfrom_dict処理を使用
         return cast(GAConfig, super().from_dict(working))

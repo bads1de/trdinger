@@ -62,6 +62,7 @@ class BacktestOrchestrator:
         try:
             # 高速化フラグの確認
             skip_validation = config.pop("_skip_validation", False)
+            include_raw_stats = config.pop("_include_raw_stats", False)
 
             if skip_validation:
                 # バリデーションスキップ（GAなど信頼できる内部呼び出し用）
@@ -128,6 +129,9 @@ class BacktestOrchestrator:
                 config_json=config_json,
             )
 
+            if include_raw_stats:
+                result["_raw_stats"] = stats
+
             return result
 
         except (
@@ -145,6 +149,5 @@ class BacktestOrchestrator:
     def get_supported_strategies(self) -> Dict[str, Any]:
         """サポートされている戦略一覧を取得"""
         return self._executor.get_supported_strategies()
-
 
 

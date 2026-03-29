@@ -45,6 +45,30 @@ class SeedStrategyFactory:
         )
 
     @staticmethod
+    def _indicator_ref_name(
+        indicator: IndicatorGene, output_index: Optional[int] = None
+    ) -> str:
+        """実行時の登録規約に合わせた指標参照名を生成"""
+        base_name = (
+            f"{indicator.type}_{indicator.id[:8]}"
+            if indicator.id
+            else indicator.type
+        )
+        if output_index is None:
+            return base_name
+        return f"{base_name}_{output_index}"
+
+    @classmethod
+    def _indicator_ref(
+        cls, indicator: IndicatorGene, output_index: Optional[int] = None
+    ) -> dict[str, str]:
+        """Condition で使う指標参照辞書を生成"""
+        return {
+            "type": "indicator",
+            "name": cls._indicator_ref_name(indicator, output_index),
+        }
+
+    @staticmethod
     def _seed_metadata(seed_name: str) -> dict[str, str]:
         """シード戦略の共通メタデータを生成"""
         return {"seed_strategy": seed_name, "version": "1.0"}
@@ -106,10 +130,9 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        # 指標: ADX (DMP, DMN, ADX を返す)
-        indicators = [
-            cls._create_indicator_gene("ADX", {"length": 14}),
-        ]
+        # 指標: ADX (ADX, DMP, DMN を返す)
+        adx_indicator = cls._create_indicator_gene("ADX", {"length": 14})
+        indicators = [adx_indicator]
 
         # Long: DMP > 45 AND ADX > 45
         long_conditions: list[Condition | ConditionGroup] = [
@@ -117,13 +140,13 @@ class SeedStrategyFactory:
                 operator="AND",
                 conditions=[
                     Condition(
-                        left_operand={"type": "indicator", "name": "DMP_14"},
+                        left_operand=cls._indicator_ref(adx_indicator, 1),
                         operator=">",
                         right_operand=45.0,
                         direction="long",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "ADX_14"},
+                        left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
                         right_operand=45.0,
                         direction="long",
@@ -138,13 +161,13 @@ class SeedStrategyFactory:
                 operator="AND",
                 conditions=[
                     Condition(
-                        left_operand={"type": "indicator", "name": "DMN_14"},
+                        left_operand=cls._indicator_ref(adx_indicator, 2),
                         operator=">",
                         right_operand=45.0,
                         direction="short",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "ADX_14"},
+                        left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
                         right_operand=45.0,
                         direction="short",
@@ -186,14 +209,13 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        indicators = [
-            cls._create_indicator_gene("RSI", {"period": 14}),
-        ]
+        rsi_indicator = cls._create_indicator_gene("RSI", {"period": 14})
+        indicators = [rsi_indicator]
 
         # Long: RSI > 75 (強い上昇モメンタム)
         long_conditions: list[Condition | ConditionGroup] = [
             Condition(
-                left_operand={"type": "indicator", "name": "RSI_14"},
+                left_operand=cls._indicator_ref(rsi_indicator),
                 operator=">",
                 right_operand=75.0,
                 direction="long",
@@ -203,7 +225,7 @@ class SeedStrategyFactory:
         # Short: RSI < 25 (強い下落モメンタム)
         short_conditions: list[Condition | ConditionGroup] = [
             Condition(
-                left_operand={"type": "indicator", "name": "RSI_14"},
+                left_operand=cls._indicator_ref(rsi_indicator),
                 operator="<",
                 right_operand=25.0,
                 direction="short",
@@ -240,16 +262,17 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        indicators = [
-            cls._create_indicator_gene("BBANDS", {"length": 20, "std": 2.0}),
-        ]
+        bbands_indicator = cls._create_indicator_gene(
+            "BBANDS", {"length": 20, "std": 2.0}
+        )
+        indicators = [bbands_indicator]
 
         # Long: Close > BBU (Upper Band)
         long_conditions: list[Condition | ConditionGroup] = [
             Condition(
                 left_operand="close",
                 operator=">",
-                right_operand={"type": "indicator", "name": "BBU_20_2.0"},
+                right_operand=cls._indicator_ref(bbands_indicator, 0),
                 direction="long",
             )
         ]
@@ -259,7 +282,7 @@ class SeedStrategyFactory:
             Condition(
                 left_operand="close",
                 operator="<",
-                right_operand={"type": "indicator", "name": "BBL_20_2.0"},
+                right_operand=cls._indicator_ref(bbands_indicator, 2),
                 direction="short",
             )
         ]
@@ -294,10 +317,9 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        indicators = [
-            cls._create_indicator_gene("KAMA", {"length": 30}),
-            cls._create_indicator_gene("ADX", {"length": 13}),
-        ]
+        kama_indicator = cls._create_indicator_gene("KAMA", {"length": 30})
+        adx_indicator = cls._create_indicator_gene("ADX", {"length": 13})
+        indicators = [kama_indicator, adx_indicator]
 
         # Long: Close > KAMA AND DMP > 40 AND ADX > 20
         long_conditions: list[Condition | ConditionGroup] = [
@@ -307,17 +329,17 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand="close",
                         operator=">",
-                        right_operand={"type": "indicator", "name": "KAMA_30"},
+                        right_operand=cls._indicator_ref(kama_indicator),
                         direction="long",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "DMP_13"},
+                        left_operand=cls._indicator_ref(adx_indicator, 1),
                         operator=">",
                         right_operand=40.0,
                         direction="long",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "ADX_13"},
+                        left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
                         right_operand=20.0,
                         direction="long",
@@ -334,17 +356,17 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand="close",
                         operator="<",
-                        right_operand={"type": "indicator", "name": "KAMA_30"},
+                        right_operand=cls._indicator_ref(kama_indicator),
                         direction="short",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "DMN_13"},
+                        left_operand=cls._indicator_ref(adx_indicator, 2),
                         operator=">",
                         right_operand=40.0,
                         direction="short",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "ADX_13"},
+                        left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
                         right_operand=20.0,
                         direction="short",
@@ -387,11 +409,14 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        indicators = [
-            cls._create_indicator_gene("MACD", {"fast": 12, "slow": 26, "signal": 9}),
-            cls._create_indicator_gene("BBANDS", {"length": 20, "std": 2.0}),
-            cls._create_indicator_gene("ATR", {"length": 100}),
-        ]
+        macd_indicator = cls._create_indicator_gene(
+            "MACD", {"fast": 12, "slow": 26, "signal": 9}
+        )
+        bbands_indicator = cls._create_indicator_gene(
+            "BBANDS", {"length": 20, "std": 2.0}
+        )
+        atr_indicator = cls._create_indicator_gene("ATR", {"length": 100})
+        indicators = [macd_indicator, bbands_indicator, atr_indicator]
 
         # 簡易版WAE Long: MACD > Signal AND MACD > 0
         # (本来はBB Width > Dead Zone の条件も必要だが、条件式の制約上省略)
@@ -400,13 +425,13 @@ class SeedStrategyFactory:
                 operator="AND",
                 conditions=[
                     Condition(
-                        left_operand={"type": "indicator", "name": "MACD_12_26_9"},
+                        left_operand=cls._indicator_ref(macd_indicator, 0),
                         operator=">",
-                        right_operand={"type": "indicator", "name": "MACDs_12_26_9"},
+                        right_operand=cls._indicator_ref(macd_indicator, 1),
                         direction="long",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "MACD_12_26_9"},
+                        left_operand=cls._indicator_ref(macd_indicator, 0),
                         operator=">",
                         right_operand=0.0,
                         direction="long",
@@ -421,13 +446,13 @@ class SeedStrategyFactory:
                 operator="AND",
                 conditions=[
                     Condition(
-                        left_operand={"type": "indicator", "name": "MACD_12_26_9"},
+                        left_operand=cls._indicator_ref(macd_indicator, 0),
                         operator="<",
-                        right_operand={"type": "indicator", "name": "MACDs_12_26_9"},
+                        right_operand=cls._indicator_ref(macd_indicator, 1),
                         direction="short",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "MACD_12_26_9"},
+                        left_operand=cls._indicator_ref(macd_indicator, 0),
                         operator="<",
                         right_operand=0.0,
                         direction="short",
@@ -471,10 +496,9 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        indicators = [
-            cls._create_indicator_gene("T3", {"length": 200, "a": 0.7}),
-            cls._create_indicator_gene("ADX", {"length": 14}),
-        ]
+        t3_indicator = cls._create_indicator_gene("T3", {"length": 200, "a": 0.7})
+        adx_indicator = cls._create_indicator_gene("ADX", {"length": 14})
+        indicators = [t3_indicator, adx_indicator]
 
         # Long: Close > T3 AND ADX > 20
         long_conditions: list[Condition | ConditionGroup] = [
@@ -484,11 +508,11 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand="close",
                         operator=">",
-                        right_operand={"type": "indicator", "name": "T3_200_0.7"},
+                        right_operand=cls._indicator_ref(t3_indicator),
                         direction="long",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "ADX_14"},
+                        left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
                         right_operand=20.0,
                         direction="long",
@@ -505,11 +529,11 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand="close",
                         operator="<",
-                        right_operand={"type": "indicator", "name": "T3_200_0.7"},
+                        right_operand=cls._indicator_ref(t3_indicator),
                         direction="short",
                     ),
                     Condition(
-                        left_operand={"type": "indicator", "name": "ADX_14"},
+                        left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
                         right_operand=20.0,
                         direction="short",

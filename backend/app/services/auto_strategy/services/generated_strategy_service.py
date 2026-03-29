@@ -10,6 +10,9 @@ from typing import Any, Dict, List, Optional, cast
 
 from sqlalchemy.orm import Session
 
+from app.services.auto_strategy.core.evaluation.report_persistence import (
+    extract_evaluation_summary,
+)
 from database.models import BacktestResult, GeneratedStrategy
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
@@ -122,6 +125,7 @@ class GeneratedStrategyService:
 
             # リスクレベルの計算
             risk_level = self._calculate_risk_level(performance_metrics)
+            evaluation_summary = self._extract_evaluation_summary(gene_data)
 
             return {
                 "id": f"auto_{strategy.id}",
@@ -140,6 +144,17 @@ class GeneratedStrategyService:
                 "experiment_id": strategy.experiment_id,
                 "generation": strategy.generation,
                 "fitness_score": strategy.fitness_score,
+                "evaluation_summary": evaluation_summary,
+                "robustness_pass_rate": (
+                    evaluation_summary.get("pass_rate")
+                    if isinstance(evaluation_summary, dict)
+                    else None
+                ),
+                "selection_rank": (
+                    evaluation_summary.get("selection_rank")
+                    if isinstance(evaluation_summary, dict)
+                    else None
+                ),
                 "created_at": (
                     strategy.created_at.isoformat()
                     if strategy.created_at is not None
@@ -202,6 +217,12 @@ class GeneratedStrategyService:
             "short_tpsl_gene": gene_data.get("short_tpsl_gene", None),
             "position_sizing_gene": gene_data.get("position_sizing_gene", None),
         }
+
+    def _extract_evaluation_summary(
+        self, gene_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """保存済みの評価 summary を取得する。"""
+        return extract_evaluation_summary(gene_data)
 
     def _extract_performance_metrics(
         self, backtest_result: Optional[BacktestResult]

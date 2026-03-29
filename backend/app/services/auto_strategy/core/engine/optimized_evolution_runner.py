@@ -13,6 +13,7 @@ import logging
 import random
 from typing import Any, Callable, Dict, List, Optional
 
+import numpy as np
 
 from deap import tools
 
@@ -20,6 +21,16 @@ from app.services.auto_strategy.core.fitness.fitness_sharing import FitnessShari
 from app.services.auto_strategy.core.engine.ga_utils import (
     _invalidate_individual_cache,
     _set_fitness_values,
+)
+from app.services.auto_strategy.core.engine.report_selection import (
+    build_report_rank_key,
+    extract_primary_fitness,
+    get_individual_identity,
+    merge_reranked_elites,
+    get_two_stage_elite_count,
+    get_two_stage_pool_size,
+    is_evaluation_report,
+    set_two_stage_metadata,
 )
 from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
     ParallelEvaluator,
@@ -50,6 +61,7 @@ class OptimizedEvolutionRunner:
         fitness_sharing: Optional[FitnessSharing] = None,
         population: Optional[List[Any]] = None,
         parallel_evaluator: Optional[ParallelEvaluator] = None,
+        individual_evaluator: Optional[Any] = None,
     ):
         """
         初期化
@@ -66,8 +78,10 @@ class OptimizedEvolutionRunner:
         self.fitness_sharing = fitness_sharing
         self.population = population  # 適応的突然変異用
         self.parallel_evaluator = parallel_evaluator
+        self.individual_evaluator = individual_evaluator
 
-        # 最適化: 交叉・突然変異のキャッシュ
+        # 互換性維持のためキャッシュ領域は残すが、
+        # 確率的オペレータの結果自体は再利用しない。
         self._crossover_cache: Dict[str, Any] = {}
         self._mutation_cache: Dict[str, Any] = {}
 
@@ -146,8 +160,11 @@ class OptimizedEvolutionRunner:
                     )
 
                 # 次世代の選択 (mu+lambda)
-                population[:] = self.toolbox.select(
-                    offspring + population, len(population)
+                candidate_population = offspring + population
+                population[:] = self._apply_two_stage_selection(
+                    candidate_population,
+                    len(population),
+                    config,
                 )
 
                 if should_stop and should_stop():
@@ -177,19 +194,11 @@ class OptimizedEvolutionRunner:
 
         最適化:
         - インデックスを使ってリストを直接更新
-        - 交叉キャッシュの活用
         """
         for i in range(0, len(offspring) - 1, 2):
             if random.random() < config.crossover_rate:
                 child1, child2 = offspring[i], offspring[i + 1]
-
-                # キャッシュチェック
-                cache_key = self._get_crossover_cache_key(child1, child2)
-                if cache_key in self._crossover_cache:
-                    new_child1, new_child2 = self._crossover_cache[cache_key]
-                else:
-                    new_child1, new_child2 = self.toolbox.mate(child1, child2)
-                    self._crossover_cache[cache_key] = (new_child1, new_child2)
+                new_child1, new_child2 = self.toolbox.mate(child1, child2)
 
                 offspring[i] = new_child1
                 offspring[i + 1] = new_child2
@@ -204,20 +213,12 @@ class OptimizedEvolutionRunner:
 
         最適化:
         - インデックスを使ってリストを直接更新
-        - 突然変異キャッシュの活用
         """
         for i in range(len(offspring)):
             if random.random() < config.mutation_rate:
                 mutant = offspring[i]
-
-                # キャッシュチェック
-                cache_key = self._get_mutation_cache_key(mutant)
-                if cache_key in self._mutation_cache:
-                    new_mutant = self._mutation_cache[cache_key]
-                else:
-                    result = self.toolbox.mutate(mutant)
-                    new_mutant = result[0]
-                    self._mutation_cache[cache_key] = new_mutant
+                result = self.toolbox.mutate(mutant)
+                new_mutant = result[0]
 
                 offspring[i] = new_mutant
                 _invalidate_individual_cache(offspring[i])
@@ -290,16 +291,210 @@ class OptimizedEvolutionRunner:
             config: GA設定
         """
         if not getattr(config, "dynamic_objective_reweighting", False):
+            config.objective_dynamic_scalars = {}
             return
 
-        try:
-            from app.services.auto_strategy.core.fitness.objective_weights import (
-                ObjectiveWeights,
-            )
+        if not population:
+            config.objective_dynamic_scalars = {}
+            return
 
-            ObjectiveWeights.update_scalars(population, config)
-        except Exception as e:
-            logger.debug(f"動的目的スカラー更新エラー: {e}")
+        scalars: dict[str, float] = {}
+        for index, objective in enumerate(getattr(config, "objectives", [])):
+            values: List[float] = []
+            for individual in population:
+                fitness = getattr(individual, "fitness", None)
+                if not fitness or not getattr(fitness, "valid", False):
+                    continue
+
+                fitness_values = getattr(fitness, "values", ())
+                if len(fitness_values) <= index:
+                    continue
+
+                try:
+                    values.append(float(fitness_values[index]))
+                except (TypeError, ValueError):
+                    continue
+
+            if not values:
+                continue
+
+            average_value = float(np.mean(values))
+            if objective in {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}:
+                scalars[objective] = min(2.0, 1.0 + max(average_value, 0.0))
+            else:
+                scalars[objective] = 1.0
+
+        config.objective_dynamic_scalars = scalars
+
+    def _apply_two_stage_selection(
+        self,
+        candidate_population: List[Any],
+        population_size: int,
+        config: Any,
+    ) -> List[Any]:
+        """粗選抜後に report ベースでエリートを差し替える。"""
+        selected = list(self.toolbox.select(candidate_population, population_size))
+        self._clear_two_stage_metadata(selected)
+
+        elite_count = get_two_stage_elite_count(config, population_size)
+        if elite_count <= 0 or self.individual_evaluator is None:
+            return selected
+
+        rerank_pool_size = get_two_stage_pool_size(
+            len(candidate_population), elite_count, config
+        )
+        rerank_candidates = self._select_top_candidates(
+            candidate_population,
+            rerank_pool_size,
+        )
+        reranked_elites = self._select_report_ranked_elites(
+            rerank_candidates,
+            elite_count,
+            config,
+        )
+        if not reranked_elites:
+            return selected
+
+        self._mark_two_stage_elites(reranked_elites)
+
+        return merge_reranked_elites(selected, reranked_elites, population_size)
+
+    def _select_top_candidates(
+        self,
+        candidate_population: List[Any],
+        limit: int,
+    ) -> List[Any]:
+        """単一目的 fitness の上位候補を返す。"""
+        if limit <= 0:
+            return []
+        ranked = sorted(
+            candidate_population,
+            key=extract_primary_fitness,
+            reverse=True,
+        )
+        return ranked[:limit]
+
+    def _select_report_ranked_elites(
+        self,
+        candidates: List[Any],
+        elite_count: int,
+        config: Any,
+    ) -> List[tuple[Any, tuple[float, ...]]]:
+        """候補を report ベースで再ランクしてエリートを返す。"""
+        ranked_candidates = []
+        seen_keys = set()
+
+        for candidate in candidates:
+            candidate_key = get_individual_identity(candidate)
+            if candidate_key in seen_keys:
+                continue
+            seen_keys.add(candidate_key)
+
+            report = self._resolve_evaluation_report(candidate, config)
+            rank_key = build_report_rank_key(
+                candidate,
+                report,
+                getattr(config, "two_stage_min_pass_rate", 0.0),
+            )
+            ranked_candidates.append((rank_key, candidate))
+
+        ranked_candidates.sort(key=lambda item: item[0], reverse=True)
+        return [
+            (candidate, rank_key)
+            for rank_key, candidate in ranked_candidates[:elite_count]
+        ]
+
+    def _resolve_evaluation_report(
+        self,
+        candidate: Any,
+        config: Any,
+    ) -> Optional[Any]:
+        """候補の report を取得し、必要なら主プロセスで再評価する。"""
+        if self.individual_evaluator is None:
+            return None
+
+        report = None
+        get_cached_robustness_report = getattr(
+            self.individual_evaluator,
+            "get_cached_robustness_report",
+            None,
+        )
+        evaluate_robustness_report = getattr(
+            self.individual_evaluator,
+            "evaluate_robustness_report",
+            None,
+        )
+        if callable(get_cached_robustness_report):
+            report = get_cached_robustness_report(candidate, config)
+            if not is_evaluation_report(report):
+                report = None
+
+        if report is None and callable(evaluate_robustness_report):
+            try:
+                report = evaluate_robustness_report(candidate, config)
+                if not is_evaluation_report(report):
+                    report = None
+            except Exception as exc:
+                logger.debug("二段階選抜用の robustness 評価に失敗しました: %s", exc)
+
+        get_cached_report = getattr(
+            self.individual_evaluator,
+            "get_cached_evaluation_report",
+            None,
+        )
+        if report is None and callable(get_cached_report):
+            report = get_cached_report(candidate)
+            if not is_evaluation_report(report):
+                report = None
+
+        if report is None:
+            evaluate_individual = getattr(
+                self.individual_evaluator,
+                "evaluate_individual",
+                None,
+            )
+            if callable(evaluate_individual):
+                try:
+                    evaluate_individual(candidate, config)
+                except Exception as exc:
+                    logger.debug("二段階選抜用の再評価に失敗しました: %s", exc)
+
+            if callable(get_cached_report):
+                report = get_cached_report(candidate)
+                if not is_evaluation_report(report):
+                    report = None
+
+        return report
+
+    def _clear_two_stage_metadata(self, individuals: List[Any]) -> None:
+        """前世代の二段階選抜メタデータをクリアする。"""
+        seen_keys = set()
+        for individual in individuals:
+            candidate_key = get_individual_identity(individual)
+            if candidate_key in seen_keys:
+                continue
+            seen_keys.add(candidate_key)
+            self._set_two_stage_metadata(individual, None, None)
+
+    def _mark_two_stage_elites(
+        self,
+        reranked_elites: List[tuple[Any, tuple[float, ...]]],
+    ) -> None:
+        """二段階選抜で確定したエリートへ順位を付与する。"""
+        for rank, (individual, score) in enumerate(reranked_elites):
+            self._set_two_stage_metadata(individual, rank, score)
+
+    def _set_two_stage_metadata(
+        self,
+        individual: Any,
+        rank: Optional[int],
+        score: Optional[Any],
+    ) -> None:
+        """個体へ二段階選抜のメタデータを付与する。"""
+        try:
+            set_two_stage_metadata(individual, rank, score)
+        except Exception:
+            logger.debug("二段階選抜メタデータの設定をスキップしました")
 
     def clear_caches(self):
         """キャッシュをクリア"""

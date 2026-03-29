@@ -71,6 +71,15 @@ class OptimizedBacktestDataProvider:
         self._read_lock.release()
         self._write_lock.release()
 
+    @staticmethod
+    def _extract_worker_data(worker_payload: Any, expected_key: tuple[Any, ...]) -> Any:
+        """共有ワーカーデータが現在の要求期間と一致する場合のみ返す。"""
+        if not isinstance(worker_payload, dict):
+            return None
+        if worker_payload.get("key") != expected_key:
+            return None
+        return worker_payload.get("data")
+
     def get_cached_backtest_data(self, backtest_config: Dict[str, Any]) -> Any:
         """
         メイン時間軸のバックテストデータをキャッシュ付きで取得（最適化版）。
@@ -80,20 +89,20 @@ class OptimizedBacktestDataProvider:
         - キャッシュヒットの高速化
         - ワーカーデータの優先チェック
         """
-        try:
-            from .parallel_evaluator import get_worker_data
-
-            worker_data = get_worker_data("main_data")
-            if worker_data is not None:
-                return worker_data
-        except ImportError:
-            pass
-
         symbol = backtest_config.get("symbol")
         timeframe = backtest_config.get("timeframe")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")
         key = (symbol, timeframe, str(start_date), str(end_date))
+
+        try:
+            from .parallel_evaluator import get_worker_data
+
+            worker_data = self._extract_worker_data(get_worker_data("main_data"), key)
+            if worker_data is not None:
+                return worker_data
+        except ImportError:
+            pass
 
         # 読み取りロックでキャッシュチェック
         self._acquire_read_lock()
@@ -132,19 +141,21 @@ class OptimizedBacktestDataProvider:
         - 読み取り専用ロックの使用
         - キャッシュヒットの高速化
         """
-        try:
-            from .parallel_evaluator import get_worker_data
-
-            worker_data = get_worker_data("minute_data")
-            if worker_data is not None:
-                return worker_data
-        except ImportError:
-            pass
-
         symbol = backtest_config.get("symbol")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")
         key = ("minute", symbol, "1m", str(start_date), str(end_date))
+
+        try:
+            from .parallel_evaluator import get_worker_data
+
+            worker_data = self._extract_worker_data(
+                get_worker_data("minute_data"), key
+            )
+            if worker_data is not None:
+                return worker_data
+        except ImportError:
+            pass
 
         # 読み取りロックでキャッシュチェック
         self._acquire_read_lock()

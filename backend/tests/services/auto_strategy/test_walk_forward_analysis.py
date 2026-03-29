@@ -4,8 +4,6 @@ Walk-Forward Analysis (WFA) のテスト
 IndividualEvaluator の WFA 機能をテストします。
 """
 
-from datetime import datetime, timedelta
-from typing import Any, Dict, Tuple
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -349,7 +347,6 @@ class TestWFAMultiObjective:
         # 評価が呼ばれた回数だけ目的値が返される
         if mock_perform_eval.call_count > 0:
             assert len(result) == 3
-
 
 
 

@@ -102,6 +102,30 @@ class TestUniversalStrategyAll:
                 strategy.next()
                 strategy.buy.assert_called_once()
 
+    def test_next_skips_entry_before_evaluation_start(
+        self, mock_broker, mock_data, valid_gene
+    ):
+        mock_data.index = pd.date_range("2024-01-01 00:00:00", periods=3, freq="h")
+        params = {
+            "strategy_gene": valid_gene,
+            "evaluation_start": "2024-01-01 03:00:00",
+        }
+
+        with patch(
+            "app.services.auto_strategy.strategies.universal_strategy.ConditionEvaluator"
+        ) as MockEval:
+            strategy = UniversalStrategy(mock_broker, mock_data, params)
+            strategy.buy = MagicMock()
+
+            with patch.object(
+                UniversalStrategy, "position", new_callable=PropertyMock
+            ) as mock_pos:
+                mock_pos.return_value = None
+                strategy.next()
+
+            strategy.buy.assert_not_called()
+            MockEval.return_value.evaluate_conditions.assert_not_called()
+
     def test_runtime_state_properties_stay_in_sync(
         self, mock_broker, mock_data, valid_gene
     ):

@@ -1,0 +1,69 @@
+from types import SimpleNamespace
+
+import pytest
+
+from app.services.auto_strategy.core.evaluation.optimized_evaluation_strategies import (
+    OptimizedEvaluationStrategy,
+)
+
+
+class _StubEvaluator:
+    def __init__(self):
+        self.calls = []
+
+    def _perform_single_evaluation(self, _gene, backtest_config, _config):
+        self.calls.append(
+            (
+                backtest_config["start_date"],
+                backtest_config["end_date"],
+                backtest_config["symbol"],
+            )
+        )
+        if str(backtest_config["start_date"]).startswith("2024-07-01"):
+            return (0.3,)
+        return (0.8,)
+
+
+def test_execute_robustness_report_adds_regime_windows():
+    evaluator = _StubEvaluator()
+    strategy = OptimizedEvaluationStrategy(evaluator, max_workers=2)
+    config = SimpleNamespace(
+        enable_purged_kfold=False,
+        enable_walk_forward=False,
+        oos_split_ratio=0.0,
+        objectives=["weighted_score"],
+        fitness_constraints={},
+        two_stage_min_pass_rate=0.5,
+        robustness_validation_symbols=[],
+        robustness_stress_slippage=[],
+        robustness_stress_commission_multipliers=[],
+        robustness_regime_windows=[
+            {
+                "name": "bear",
+                "start_date": "2024-07-01 00:00:00",
+                "end_date": "2024-08-01 00:00:00",
+            }
+        ],
+        robustness_aggregate_method="robust",
+    )
+
+    report = strategy.execute_robustness_report(
+        object(),
+        {
+            "symbol": "BTCUSDT",
+            "commission_rate": 0.001,
+            "slippage": 0.001,
+            "start_date": "2024-01-01 00:00:00",
+            "end_date": "2024-02-01 00:00:00",
+        },
+        config,
+    )
+
+    assert [scenario.name for scenario in report.scenarios] == ["base", "regime_bear"]
+    assert report.scenarios[1].metadata["regime_name"] == "bear"
+    assert report.scenarios[1].metadata["start_date"] == "2024-07-01 00:00:00"
+    assert report.aggregated_fitness[0] == pytest.approx(0.475)
+    assert evaluator.calls == [
+        ("2024-01-01 00:00:00", "2024-02-01 00:00:00", "BTCUSDT"),
+        ("2024-07-01 00:00:00", "2024-08-01 00:00:00", "BTCUSDT"),
+    ]

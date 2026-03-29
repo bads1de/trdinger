@@ -28,6 +28,7 @@ class GAPresets:
             max_conditions=2,
             enable_parameter_tuning=False,
             enable_walk_forward=False,
+            enable_two_stage_selection=False,
             use_seed_strategies=True,
             seed_injection_rate=0.15,
             enable_parallel_evaluation=True,
@@ -58,6 +59,25 @@ class GAPresets:
             seed_injection_rate=0.1,
             enable_fitness_sharing=True,
             enable_parallel_evaluation=True,
+            enable_two_stage_selection=True,
+            two_stage_elite_count=5,
+            two_stage_candidate_pool_size=12,
+            two_stage_min_pass_rate=0.6,
+            tuning_elite_count=5,
+            robustness_regime_windows=[
+                {
+                    "name": "early_trend",
+                    "start_date": "2024-01-01 00:00:00",
+                    "end_date": "2024-02-15 00:00:00",
+                },
+                {
+                    "name": "late_chop",
+                    "start_date": "2024-02-15 00:00:00",
+                    "end_date": "2024-04-09 00:00:00",
+                },
+            ],
+            robustness_stress_slippage=[0.0002, 0.0005],
+            robustness_stress_commission_multipliers=[1.5],
         )
 
     @staticmethod
@@ -80,6 +100,11 @@ class GAPresets:
             use_seed_strategies=True,
             enable_fitness_sharing=True,
             enable_parallel_evaluation=True,
+            enable_two_stage_selection=True,
+            two_stage_elite_count=4,
+            two_stage_candidate_pool_size=8,
+            robustness_stress_slippage=[0.0003],
+            robustness_stress_commission_multipliers=[1.5],
         )
 
     @staticmethod
@@ -127,9 +152,27 @@ class GAPresets:
             seed_injection_rate=0.1,
             enable_parameter_tuning=True,
             tuning_n_trials=50,
+            tuning_elite_count=4,
             enable_walk_forward=True,
             wfa_n_folds=4,
             enable_parallel_evaluation=True,
+            enable_two_stage_selection=True,
+            two_stage_elite_count=4,
+            two_stage_candidate_pool_size=8,
+            robustness_regime_windows=[
+                {
+                    "name": "cycle_a",
+                    "start_date": "2024-01-01 00:00:00",
+                    "end_date": "2024-02-20 00:00:00",
+                },
+                {
+                    "name": "cycle_b",
+                    "start_date": "2024-02-20 00:00:00",
+                    "end_date": "2024-04-09 00:00:00",
+                },
+            ],
+            robustness_stress_slippage=[0.0003],
+            robustness_stress_commission_multipliers=[1.5],
         )
         # 長期向けフィットネス重み
         config.fitness_weights = {

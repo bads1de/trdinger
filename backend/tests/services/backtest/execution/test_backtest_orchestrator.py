@@ -139,3 +139,24 @@ def test_run_skip_validation(orchestrator, sample_config):
 
     # それでもバックテストは実行されることを確認
     orchestrator._executor.execute_backtest.assert_called_once()
+
+
+def test_run_can_include_raw_stats_for_internal_evaluation(orchestrator, sample_config):
+    sample_config["_include_raw_stats"] = True
+    raw_stats = MagicMock(name="raw_stats")
+
+    orchestrator._strategy_factory.create_strategy_class = MagicMock(
+        return_value="StrategyClass"
+    )
+    orchestrator._strategy_factory.get_strategy_parameters = MagicMock(
+        return_value={"param": 1}
+    )
+    orchestrator._executor.execute_backtest = MagicMock(return_value=raw_stats)
+    orchestrator._result_converter.convert_backtest_results = MagicMock(
+        return_value={"result": "ok"}
+    )
+
+    result = orchestrator.run(sample_config)
+
+    assert result["result"] == "ok"
+    assert result["_raw_stats"] is raw_stats

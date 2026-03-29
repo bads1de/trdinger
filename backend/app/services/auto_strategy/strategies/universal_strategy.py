@@ -52,6 +52,7 @@ class UniversalStrategy(Strategy):
     strategy_gene = None
     minute_data = None
     timeframe = "1h"
+    evaluation_start = None
     ml_predictor = None  # MLフィルター用予測器
     ml_filter_threshold = (
         0.5  # MLフィルター閾値（is_valid >= threshold でエントリー許可）
@@ -154,6 +155,10 @@ class UniversalStrategy(Strategy):
 
         # ベースタイムフレーム（パラメータから取得、デフォルトは1h）
         self.base_timeframe = params.get("timeframe", "1h")
+        self.evaluation_start = params.get("evaluation_start")
+        self._evaluation_start = self._normalize_evaluation_start(
+            self.evaluation_start
+        )
 
         # 1分足データの取得（1分足シミュレーション用）
         self._minute_data = params.get("minute_data")
@@ -235,6 +240,37 @@ class UniversalStrategy(Strategy):
     def _get_effective_entry_gene(self, direction: float) -> Union[None, EntryGene]:
         """有効なエントリー遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         return self._get_effective_sub_gene(direction, "entry")
+
+    def _normalize_evaluation_start(self, value: Any) -> Optional[pd.Timestamp]:
+        """評価開始時刻を pandas.Timestamp に正規化する。"""
+        if value is None or value == "":
+            return None
+
+        try:
+            return pd.Timestamp(value)
+        except Exception:
+            logger.warning(f"evaluation_start の解析に失敗しました: {value}")
+            return None
+
+    def _is_evaluation_bar(self) -> bool:
+        """現在バーが評価開始時刻以降かを返す。"""
+        if self._evaluation_start is None:
+            return True
+
+        if not hasattr(self.data, "index") or len(self.data.index) == 0:
+            return True
+
+        current_time = pd.Timestamp(self.data.index[-1])
+        if current_time.tzinfo is not None and self._evaluation_start.tzinfo is None:
+            evaluation_start = self._evaluation_start.tz_localize(current_time.tzinfo)
+        elif current_time.tzinfo is None and self._evaluation_start.tzinfo is not None:
+            evaluation_start = self._evaluation_start.tz_localize(None)
+        elif current_time.tzinfo != self._evaluation_start.tzinfo:
+            evaluation_start = self._evaluation_start.tz_convert(current_time.tzinfo)
+        else:
+            evaluation_start = self._evaluation_start
+
+        return current_time >= evaluation_start
 
     def _check_entry_conditions(self, direction: float) -> bool:
         """指定された方向のエントリー条件をチェック"""
@@ -318,7 +354,7 @@ class UniversalStrategy(Strategy):
                             atr = np.mean(tr)
                             if current_price > 0:
                                 market_data["atr_pct"] = atr / current_price
-                except Exception as e:
+                except Exception:
                     # logger.warning(f"ATR calculation failed in position sizing: {e}")
                     pass
 
@@ -520,6 +556,9 @@ class UniversalStrategy(Strategy):
         """各バーでの戦略実行"""
         try:
             self._current_bar_index += 1
+
+            if not self._is_evaluation_bar():
+                return
 
             # 1. 保留注文とステートフルトリガーの処理
             self.order_manager.check_pending_order_fills(

@@ -54,3 +54,17 @@ class TestConditionGenerator:
         assert isinstance(long_conditions, list)
         assert isinstance(short_conditions, list)
         assert isinstance(exit_conditions, list)
+
+    def test_normalize_conditions_uses_registered_indicator_name_for_fallback(self):
+        """フォールバック条件が指標タイプではなく登録済み指標名を参照することをテスト"""
+        ema_indicator = IndicatorGene(
+            id="ema123456789",
+            type="EMA",
+            parameters={"period": 20},
+            enabled=True,
+        )
+
+        normalized = self.generator.normalize_conditions([], "long", [ema_indicator])
+
+        assert len(normalized) == 1
+        assert normalized[0].right_operand == "EMA_ema12345"

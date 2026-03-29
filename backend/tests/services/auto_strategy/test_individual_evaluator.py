@@ -2,8 +2,7 @@
 IndividualEvaluatorのテスト
 """
 
-from unittest.mock import Mock
-import pytest
+from unittest.mock import Mock, patch
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
@@ -76,6 +75,175 @@ class TestIndividualEvaluator:
         self.evaluator.set_backtest_config(config)
         assert self.evaluator._fixed_backtest_config == config
 
+    def test_prepare_backtest_config_for_evaluation_adds_warmup_window(self):
+        gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="EMA", parameters={"length": 20}, enabled=True)
+            ],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+        )
+        backtest_config = {
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-10 00:00:00",
+            "end_date": "2024-01-12 00:00:00",
+        }
+
+        prepared = self.evaluator._prepare_backtest_config_for_evaluation(
+            gene, backtest_config
+        )
+
+        assert prepared["_evaluation_start"] == "2024-01-10 00:00:00"
+        assert prepared["end_date"] == "2024-01-12 00:00:00"
+        assert prepared["start_date"] == "2024-01-09 03:00:00"
+
+    def test_perform_single_evaluation_extends_run_window_for_indicator_warmup(self):
+        mock_individual = StrategyGene(
+            id="warmup-gene",
+            indicators=[
+                IndicatorGene(type="EMA", parameters={"length": 20}, enabled=True)
+            ],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+        )
+        market_data = pd.DataFrame(
+            {
+                "open": [100.0, 101.0],
+                "high": [101.0, 102.0],
+                "low": [99.0, 100.0],
+                "close": [100.5, 101.5],
+                "volume": [10.0, 11.0],
+            },
+            index=pd.date_range("2024-01-09 03:00:00", periods=2, freq="h"),
+        )
+
+        mock_result = {
+            "performance_metrics": {"total_trades": 1},
+            "trade_history": [],
+            "equity_curve": [],
+            "_raw_stats": Mock(),
+        }
+
+        self.evaluator._get_cached_data = Mock(return_value=market_data)
+        self.evaluator._get_cached_minute_data = Mock(return_value=None)
+        self.evaluator._calculate_multi_objective_fitness = Mock(return_value=(0.42,))
+        self.evaluator._apply_evaluation_window_to_result = Mock(
+            return_value=mock_result
+        )
+        self.mock_backtest_service.run_backtest.return_value = mock_result
+
+        ga_config = GAConfig()
+        ga_config.objectives = ["weighted_score"]
+
+        fitness = self.evaluator._perform_single_evaluation(
+            mock_individual,
+            {
+                "symbol": "BTC/USDT:USDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-10 00:00:00",
+                "end_date": "2024-01-12 00:00:00",
+                "initial_capital": 10000.0,
+                "commission_rate": 0.001,
+                "strategy_name": "WarmupTest",
+            },
+            ga_config,
+        )
+
+        run_config = self.mock_backtest_service.run_backtest.call_args.kwargs["config"]
+        assert run_config["_include_raw_stats"] is True
+        assert run_config["start_date"] == "2024-01-09 03:00:00"
+        assert (
+            run_config["strategy_config"]["parameters"]["evaluation_start"]
+            == "2024-01-10 00:00:00"
+        )
+        assert fitness == (0.42,)
+
+    def test_apply_evaluation_window_to_result_recomputes_trimmed_window(self):
+        market_data = pd.DataFrame(
+            {
+                "open": [100.0, 100.0, 100.0, 110.0],
+                "high": [101.0, 101.0, 111.0, 111.0],
+                "low": [99.0, 99.0, 109.0, 109.0],
+                "close": [100.0, 100.0, 110.0, 110.0],
+                "volume": [10.0, 10.0, 10.0, 10.0],
+            },
+            index=pd.date_range("2024-01-01 00:00:00", periods=4, freq="D"),
+        )
+        raw_stats = Mock()
+        raw_stats._equity_curve = pd.DataFrame(
+            {
+                "Equity": [10000.0, 10000.0, 11000.0, 11000.0],
+                "DrawdownPct": [0.0, 0.0, 0.0, 0.0],
+            },
+            index=market_data.index,
+        )
+        raw_stats._trades = pd.DataFrame(
+            {
+                "Size": [1],
+                "EntryBar": [2],
+                "ExitBar": [3],
+                "EntryPrice": [100.0],
+                "ExitPrice": [110.0],
+                "SL": [None],
+                "TP": [None],
+                "PnL": [10.0],
+                "Commission": [0.0],
+                "ReturnPct": [0.10],
+                "EntryTime": [market_data.index[2]],
+                "ExitTime": [market_data.index[3]],
+                "Duration": [market_data.index[3] - market_data.index[2]],
+                "Tag": [None],
+            }
+        )
+
+        converted_result = {
+            "strategy_name": "WarmupTest",
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "initial_capital": 10000.0,
+            "config_json": {},
+            "performance_metrics": {},
+            "trade_history": [],
+            "equity_curve": [],
+        }
+
+        with (
+            patch.object(
+                self.evaluator,
+                "_compute_window_stats",
+                return_value="window_stats",
+            ) as mock_compute_window_stats,
+            patch(
+                "app.services.backtest.conversion.backtest_result_converter.BacktestResultConverter.convert_backtest_results",
+                return_value={
+                    "strategy_name": "WarmupTest",
+                    "symbol": "BTC/USDT:USDT",
+                    "timeframe": "1h",
+                    "initial_capital": 10000.0,
+                    "performance_metrics": {"total_return": 10.0},
+                    "trade_history": [{"pnl": 10.0}],
+                    "equity_curve": [{"equity": 10000.0}, {"equity": 11000.0}],
+                    "start_date": pd.Timestamp("2024-01-03 00:00:00").to_pydatetime(),
+                    "end_date": pd.Timestamp("2024-01-04 00:00:00").to_pydatetime(),
+                    "config_json": {},
+                },
+            ),
+        ):
+            adjusted = self.evaluator._apply_evaluation_window_to_result(
+                converted_result,
+                raw_stats,
+                market_data,
+                pd.Timestamp("2024-01-03 00:00:00"),
+                pd.Timestamp("2024-01-04 00:00:00"),
+            )
+
+        trades_df, equity_values, ohlc_data = mock_compute_window_stats.call_args.args
+        assert list(ohlc_data.index) == list(market_data.index[2:])
+        assert list(equity_values) == [11000.0, 11000.0]
+        assert trades_df["EntryBar"].tolist() == [0]
+        assert adjusted["performance_metrics"]["total_return"] == 10.0
+
     def test_build_parallel_worker_initargs(self):
         """並列ワーカー初期化引数の構築テスト"""
         backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
@@ -94,8 +262,21 @@ class TestIndividualEvaluator:
         assert run_backtest_config == backtest_config
         assert run_backtest_config is not backtest_config
         assert run_ga_config is ga_config
-        assert shared_data["main_data"] is main_data
-        assert shared_data["minute_data"] is minute_data
+        assert shared_data["main_data"]["key"] == (
+            "BTC/USDT:USDT",
+            "1h",
+            "None",
+            "None",
+        )
+        assert shared_data["main_data"]["data"] is main_data
+        assert shared_data["minute_data"]["key"] == (
+            "minute",
+            "BTC/USDT:USDT",
+            "1m",
+            "None",
+            "None",
+        )
+        assert shared_data["minute_data"]["data"] is minute_data
 
     def test_evaluate_individual_success(self):
         """個体評価成功のテスト"""
@@ -531,7 +712,7 @@ class TestIndividualEvaluator:
         assert result_no_ml[0] == expected_fitness_no_ml
 
         # 2. MLフィルター有効で評価
-        result_with_ml = self.evaluator.evaluate(mock_individual, ga_config_with_ml)
+        self.evaluator.evaluate(mock_individual, ga_config_with_ml)
         # run_backtestがMLフィルターありの引数で呼ばれたことを検証
         call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
         backtest_config_passed = call_kwargs["config"]

@@ -7,9 +7,13 @@ GA実験で最良個体に対する詳細バックテストの構築と実行を
 
 import logging
 import re
+from copy import deepcopy
 from typing import Any, Dict, Optional
 
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
+from app.services.auto_strategy.core.evaluation.report_persistence import (
+    attach_backtest_evaluation_summary,
+)
 from app.services.backtest.services.backtest_service import BacktestService
 
 from ..config import GAConfig
@@ -65,6 +69,7 @@ class ExperimentBacktestService:
         experiment_name = str(experiment_data.get("name", experiment_id))
         db_experiment_id = int(experiment_data.get("db_id", 0) or 0)
         fitness_score = self._normalize_fitness_score(best_fitness, ga_config)
+        evaluation_summary = result.get("best_evaluation_summary")
 
         detailed_config = self._prepare_detailed_backtest_config(
             best_strategy=best_strategy,
@@ -81,6 +86,7 @@ class ExperimentBacktestService:
             experiment_id=experiment_id,
             db_experiment_id=db_experiment_id,
             best_fitness=fitness_score,
+            evaluation_summary=evaluation_summary,
         )
 
     def _normalize_fitness_score(self, best_fitness: Any, ga_config: GAConfig) -> float:
@@ -133,10 +139,21 @@ class ExperimentBacktestService:
         experiment_id: str,
         db_experiment_id: int,
         best_fitness: float,
+        evaluation_summary: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         backtest_results テーブルへ保存するためのレコードデータを構築
         """
+        config_json = {
+            "strategy_config": deepcopy(config["strategy_config"]),
+            "experiment_id": experiment_id,
+            "db_experiment_id": db_experiment_id,
+            "fitness_score": best_fitness,
+        }
+        config_json = attach_backtest_evaluation_summary(
+            config_json,
+            evaluation_summary,
+        )
         return {
             "strategy_name": config["strategy_name"],
             "symbol": config["symbol"],
@@ -145,12 +162,7 @@ class ExperimentBacktestService:
             "end_date": config["end_date"],
             "initial_capital": config["initial_capital"],
             "commission_rate": config.get("commission_rate", 0.001),
-            "config_json": {
-                "strategy_config": config["strategy_config"],
-                "experiment_id": experiment_id,
-                "db_experiment_id": db_experiment_id,
-                "fitness_score": best_fitness,
-            },
+            "config_json": config_json,
             "performance_metrics": detailed_result.get("performance_metrics", {}),
             "equity_curve": detailed_result.get("equity_curve", []),
             "trade_history": detailed_result.get("trade_history", []),

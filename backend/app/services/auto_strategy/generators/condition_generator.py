@@ -80,28 +80,31 @@ class ConditionGenerator:
         trend_pref = ("SMA", "EMA")
 
         # フォールバック候補の抽出
-        trend_pool = []
+        trend_pool: List[IndicatorGene] = []
         for ind in indicators or []:
             if not getattr(ind, "enabled", True):
                 continue
             cfg = indicator_registry.get_indicator_config(ind.type)
             if cfg and getattr(cfg, "category", None) == "trend":
-                trend_pool.append(ind.type)
+                trend_pool.append(ind)
 
         # 優先候補の決定
-        pref = [n for n in trend_pool if n in trend_pref]
-        trend_name = (
+        pref = [ind for ind in trend_pool if ind.type in trend_pref]
+        selected_trend_indicator = (
             random.choice(pref)
             if pref
-            else (
-                random.choice(trend_pool) if trend_pool else random.choice(trend_pref)
-            )
+            else (random.choice(trend_pool) if trend_pool else None)
+        )
+        trend_name = (
+            self._get_indicator_name(selected_trend_indicator)
+            if selected_trend_indicator
+            else "open"
         )
 
         fallback = Condition(
             left_operand="close",
             operator=">" if side == "long" else "<",
-            right_operand=trend_name or "open",
+            right_operand=trend_name,
         )
 
         if not conds:

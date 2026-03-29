@@ -33,6 +33,71 @@ class TestGAConfig:
         assert restored.population_size == 150
         assert restored.generations == 75
 
+    def test_two_stage_and_robustness_defaults(self):
+        """二段階選抜と robustness のデフォルト設定を確認"""
+        config = GAConfig()
+
+        assert config.enable_two_stage_selection is True
+        assert config.two_stage_elite_count == 3
+        assert config.two_stage_candidate_pool_size == 5
+        assert config.two_stage_min_pass_rate == 0.5
+        assert config.robustness_validation_symbols is None
+        assert config.robustness_stress_slippage == []
+        assert config.robustness_stress_commission_multipliers == []
+        assert config.robustness_aggregate_method == "robust"
+
+    def test_two_stage_and_robustness_serialize_deserialize(self):
+        """二段階選抜/robustness 設定がシリアライズされることを確認"""
+        original = GAConfig(
+            enable_two_stage_selection=True,
+            two_stage_elite_count=4,
+            two_stage_candidate_pool_size=9,
+            two_stage_min_pass_rate=0.75,
+            robustness_validation_symbols=["ETH/USDT:USDT", "SOL/USDT:USDT"],
+            robustness_stress_slippage=[0.0003, 0.0006],
+            robustness_stress_commission_multipliers=[1.5, 2.0],
+        )
+
+        data = original.to_dict()
+        restored = GAConfig(**data)
+
+        assert restored.two_stage_elite_count == 4
+        assert restored.two_stage_candidate_pool_size == 9
+        assert restored.two_stage_min_pass_rate == 0.75
+        assert restored.robustness_validation_symbols == [
+            "ETH/USDT:USDT",
+            "SOL/USDT:USDT",
+        ]
+        assert restored.robustness_stress_slippage == [0.0003, 0.0006]
+        assert restored.robustness_stress_commission_multipliers == [1.5, 2.0]
+
+    def test_from_dict_expands_nested_two_stage_and_robustness_config(self):
+        """ネスト設定からフラット設定へ復元されることを確認"""
+        restored = GAConfig.from_dict(
+            {
+                "two_stage_selection_config": {
+                    "enabled": True,
+                    "elite_count": 6,
+                    "candidate_pool_size": 12,
+                    "min_pass_rate": 0.8,
+                },
+                "robustness_config": {
+                    "validation_symbols": ["ETH/USDT:USDT"],
+                    "stress_slippage": [0.0004],
+                    "stress_commission_multipliers": [1.5],
+                    "aggregate_method": "mean",
+                },
+            }
+        )
+
+        assert restored.two_stage_elite_count == 6
+        assert restored.two_stage_candidate_pool_size == 12
+        assert restored.two_stage_min_pass_rate == 0.8
+        assert restored.robustness_validation_symbols == ["ETH/USDT:USDT"]
+        assert restored.robustness_stress_slippage == [0.0004]
+        assert restored.robustness_stress_commission_multipliers == [1.5]
+        assert restored.robustness_aggregate_method == "mean"
+
     def test_mutation_settings_defaults(self):
         """突然変異関連のデフォルト設定が正しいことを確認"""
         config = GAConfig()

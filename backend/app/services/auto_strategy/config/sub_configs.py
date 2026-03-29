@@ -104,3 +104,36 @@ class TuningConfig:
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)
+
+
+@dataclass
+class TwoStageSelectionConfig:
+    """二段階選抜関連設定。"""
+
+    enabled: bool = True
+    elite_count: int = 3
+    candidate_pool_size: int = 5
+    min_pass_rate: float = 0.5
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "TwoStageSelectionConfig":
+        known = {f.name for f in cls.__dataclass_fields__.values()}
+        filtered = {k: v for k, v in data.items() if k in known}
+        return cls(**filtered)
+
+
+@dataclass
+class RobustnessConfig:
+    """robustness 評価関連設定。"""
+
+    validation_symbols: Optional[List[str]] = None
+    regime_windows: List[dict] = field(default_factory=list)
+    stress_slippage: List[float] = field(default_factory=list)
+    stress_commission_multipliers: List[float] = field(default_factory=list)
+    aggregate_method: str = "robust"
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "RobustnessConfig":
+        known = {f.name for f in cls.__dataclass_fields__.values()}
+        filtered = {k: v for k, v in data.items() if k in known}
+        return cls(**filtered)

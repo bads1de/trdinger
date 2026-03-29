@@ -8,6 +8,9 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
+from app.services.auto_strategy.core.engine.report_selection import (
+    set_two_stage_metadata,
+)
 from app.services.auto_strategy.core.evaluation.individual_evaluator import (
     IndividualEvaluator,
 )
@@ -115,6 +118,83 @@ class TestGeneticAlgorithmEngine:
         assert engine.gene_generator is not None
         assert engine.individual_evaluator is not None
         assert engine.deap_setup is not None
+
+    def test_extract_best_individuals_prefers_two_stage_leader(
+        self,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """単一目的では二段階選抜の先頭個体を最終bestとして採用する"""
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        from app.services.auto_strategy.genes import StrategyGene
+
+        robust_leader = Mock()
+        robust_leader.__class__ = StrategyGene
+        robust_leader.fitness.valid = True
+        robust_leader.fitness.values = (0.8,)
+        set_two_stage_metadata(robust_leader, 0, (1.0, 1.0, 0.8, 0.8))
+
+        raw_best = Mock()
+        raw_best.__class__ = StrategyGene
+        raw_best.fitness.valid = True
+        raw_best.fitness.values = (1.2,)
+
+        config = Mock()
+        config.enable_multi_objective = False
+
+        best_individual, best_gene, best_strategies = engine._extract_best_individuals(
+            [raw_best, robust_leader],
+            config,
+            halloffame=[raw_best],
+        )
+
+        assert best_individual is robust_leader
+        assert best_gene is robust_leader
+        assert best_strategies is None
+
+    def test_tuning_reselection_respects_disabled_two_stage_selection(
+        self,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """二段階選抜が無効なら tuning 後の再選抜も raw fitness を使う"""
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        current_best = object()
+        config = Mock()
+        config.enable_multi_objective = False
+        config.enable_two_stage_selection = False
+
+        engine._select_tuning_candidates = Mock(return_value=["candidate"])
+        engine._tune_candidate_genes = Mock(return_value=["tuned"])
+        engine._select_best_tuned_candidate = Mock(
+            return_value=("wrong", -1.0, None)
+        )
+        engine._select_best_tuned_candidate_by_fitness = Mock(
+            return_value=("tuned", 1.23, {"mode": "single"})
+        )
+
+        result = engine._tune_and_select_best_gene(
+            population=[],
+            current_best_gene=current_best,
+            config=config,
+            fallback_fitness=0.5,
+            fallback_summary={"mode": "single"},
+        )
+
+        assert result == ("tuned", 1.23, {"mode": "single"})
+        engine._select_best_tuned_candidate.assert_not_called()
+        engine._select_best_tuned_candidate_by_fitness.assert_called_once_with(
+            ["tuned"],
+            config,
+        )
 
     @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
     def test_run_evolution_flow(

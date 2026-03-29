@@ -5,6 +5,7 @@ Optuna を使用して戦略パラメータを最適化します。
 """
 
 import logging
+import uuid
 from typing import Any, Dict, Optional
 
 from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
@@ -84,6 +85,7 @@ class StrategyParameterTuner:
         # 目的関数
         def objective(params: Dict[str, Any]) -> float:
             tuned = self.parameter_space_builder.apply_params_to_gene(gene, params)
+            self._refresh_tuned_gene_identity(tuned, gene)
             return self._evaluate_gene(tuned)
 
         try:
@@ -93,12 +95,14 @@ class StrategyParameterTuner:
             best_gene = self.parameter_space_builder.apply_params_to_gene(
                 gene, res.best_params
             )
+            self._refresh_tuned_gene_identity(best_gene, gene)
             best_gene.metadata.update(
                 {
                     "optuna_tuned": True,
                     "optuna_best_score": res.best_score,
                     "optuna_trials": res.total_evaluations,
                     "optuna_time": res.optimization_time,
+                    "optuna_source_gene_id": getattr(gene, "id", ""),
                 }
             )
             return best_gene
@@ -175,3 +179,14 @@ class StrategyParameterTuner:
             tuned_genes.append(tuned_gene)
 
         return tuned_genes
+
+    @staticmethod
+    def _refresh_tuned_gene_identity(
+        tuned_gene: StrategyGene, source_gene: StrategyGene
+    ) -> None:
+        """チューニング後遺伝子が元個体と cache key を共有しないよう ID を更新する。"""
+        source_id = str(getattr(source_gene, "id", "") or "")
+        tuned_id = str(getattr(tuned_gene, "id", "") or "")
+        if tuned_id and tuned_id != source_id:
+            return
+        tuned_gene.id = str(uuid.uuid4())
