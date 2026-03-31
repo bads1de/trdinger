@@ -35,6 +35,7 @@ class TestCreateGaConfig:
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
+            min_trades=None,
         )
 
         config = run_auto_strategy.create_ga_config(args)
@@ -60,6 +61,7 @@ class TestCreateGaConfig:
             verbose=True,
             start_date="2023-01-01",
             end_date="2023-12-31",
+            min_trades=None,
         )
 
         config = run_auto_strategy.create_ga_config(args)

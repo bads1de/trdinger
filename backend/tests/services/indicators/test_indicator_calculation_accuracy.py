@@ -341,7 +341,7 @@ class TestATRCalculationAccuracy:
             )
 
     def test_atr_is_average_of_tr(self, known_ohlcv):
-        """ATRがTRの移動平均であることを検証"""
+        """ATRがTRのRMA（Wilder's smoothing）であることを検証"""
         high = known_ohlcv["high"]
         low = known_ohlcv["low"]
         close = known_ohlcv["close"]
@@ -350,16 +350,21 @@ class TestATRCalculationAccuracy:
         atr = VolatilityIndicators.atr(high, low, close, length=length)
         tr = VolatilityIndicators.true_range(high, low, close)
 
-        # pandas-taのtrue_rangeは最初の値がNaNになるため、
-        # ATR[length] = TR[1:length+1].mean()（NaNを除いて平均）
-        valid_tr = tr.iloc[1:length + 1]  # NaNを除いたTR
-        expected_atr = valid_tr.mean()
-        actual_atr = atr.iloc[length]
+        # RMA（Wilder's smoothing）でATRを手動計算
+        # pandas-taの実装: tr.dropna() → 先頭にNaNを付加 → ewm(alpha=1/length, min_periods=length).mean()
+        alpha = 1.0 / length
+        tr_clean = tr.dropna()
+        tr_padded = pd.Series([np.nan] + list(tr_clean.values))
+        expected_rma = tr_padded.ewm(alpha=alpha, min_periods=length).mean()
 
-        if not np.isnan(actual_atr):
-            assert np.isclose(actual_atr, expected_atr, rtol=1e-5), (
-                f"ATR[{length}]がTR平均と一致しない: expected={expected_atr}, actual={actual_atr}"
-            )
+        # expected_rma[i] が ATR[i] に対応する（indices are aligned）
+        for i in range(len(atr)):
+            actual_val = atr.iloc[i]
+            expected_val = expected_rma.iloc[i] if i < len(expected_rma) else np.nan
+            if not np.isnan(actual_val) and not np.isnan(expected_val):
+                assert np.isclose(actual_val, expected_val, rtol=1e-5), (
+                    f"ATR[{i}]がRMAと一致しない: expected={expected_val}, actual={actual_val}"
+                )
 
     def test_atr_positive_values(self, known_ohlcv):
         """ATRが常に正の値であることを検証"""

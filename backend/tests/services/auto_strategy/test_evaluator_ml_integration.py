@@ -56,6 +56,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         """
         # MLモデルのロードをモック
         mock_model = MagicMock()
+        mock_model.predict_volatility = None  # prevent MagicMock auto-attr from intercepting _run_model
         mock_model.predict.return_value = np.array([0.9])
         mock_model.is_trained = True
         mock_model_manager.load_model.return_value = {
