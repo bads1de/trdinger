@@ -12,7 +12,7 @@ import pandas as pd
 # Add backend to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from app.utils.data_processing.pipelines.preprocessing_pipeline import (
+from app.utils.data_processing.preprocessing_pipeline import (
     CategoricalPipelineTransformer,
     create_preprocessing_pipeline,
 )

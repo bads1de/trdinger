@@ -9,12 +9,15 @@ from sklearn.base import BaseEstimator
 from sklearn.inspection import permutation_importance
 
 from ..config import FeatureSelectionConfig
-from ..utils import get_default_estimator
+from ..utils import get_task_appropriate_estimator
 from .base import BaseSelectionStrategy
 
 
 class PermutationStrategy(BaseSelectionStrategy):
-    """Permutation Importance による選択"""
+    """Permutation Importance による選択
+
+    ターゲットが回帰か分類かを自動判定して適切なestimatorを選択する。
+    """
 
     def __init__(self, estimator: Optional[BaseEstimator] = None):
         self.estimator = estimator
@@ -26,7 +29,8 @@ class PermutationStrategy(BaseSelectionStrategy):
         feature_names: List[str],
         config: FeatureSelectionConfig,
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        model = self.estimator or get_default_estimator(
+        model = self.estimator or get_task_appropriate_estimator(
+            y,
             n_estimators=50,
             random_state=config.random_state,
             n_jobs=config.n_jobs,

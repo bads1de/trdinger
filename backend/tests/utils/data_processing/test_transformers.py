@@ -10,7 +10,7 @@ import pandas as pd
 import pytest
 from sklearn.ensemble import IsolationForest
 
-from app.utils.data_processing.pipelines.preprocessing_pipeline import (
+from app.utils.data_processing.preprocessing_pipeline import (
     CategoricalEncoderTransformer,
     CategoricalPipelineTransformer,
     DtypeOptimizerTransformer,

@@ -14,7 +14,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
 
 try:
-    from app.utils.data_processing.validators.data_validator import (
+    from app.utils.data_processing.data_validator import (
         validate_data_integrity,
         validate_extended_data,
         validate_ohlcv_data,

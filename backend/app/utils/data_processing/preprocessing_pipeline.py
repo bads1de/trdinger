@@ -20,7 +20,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
 
-from ..transformers.dtype_optimizer import optimize_dataframe_dtypes
+from .dtype_optimizer import optimize_dataframe_dtypes
 
 
 class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):

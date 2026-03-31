@@ -12,7 +12,7 @@ from datetime import datetime
 import pandas as pd
 import pytest
 
-from app.utils.data_processing.validators.record_validator import (
+from app.utils.data_processing.record_validator import (
     DataValidator,
     RecordValidator,
 )

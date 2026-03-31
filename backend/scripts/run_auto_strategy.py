@@ -171,6 +171,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="ファイル保存をスキップし、標準出力のみに出力",
     )
+    parser.add_argument(
+        "--min-trades",
+        type=int,
+        default=None,
+        help="最小取引回数制約 (デフォルト: 設定ファイル依存, 0で無効化)",
+    )
 
     return parser.parse_args()
 
@@ -201,20 +207,28 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
     if not 0 <= args.mutation_rate <= 1:
         raise ValueError("突然変異率は0から1の範囲である必要があります")
 
-    return GAConfig(
+    # fitness_constraints の上書き
+    fitness_constraints = None
+    if args.min_trades is not None:
+        from app.services.auto_strategy.config.constants import DEFAULT_FITNESS_CONSTRAINTS
+        fitness_constraints = DEFAULT_FITNESS_CONSTRAINTS.copy()
+        fitness_constraints["min_trades"] = args.min_trades
+
+    config_kwargs = dict(
         population_size=args.population,
         generations=args.generations,
         crossover_rate=args.crossover_rate,
         mutation_rate=args.mutation_rate,
         elite_size=args.elite_size,
-        # 並列評価設定
         enable_parallel_evaluation=not args.no_parallel,
-        # ログレベル
         log_level="DEBUG" if args.verbose else "INFO",
-        # フォールバック設定
         fallback_start_date=args.start_date,
         fallback_end_date=args.end_date,
     )
+    if fitness_constraints is not None:
+        config_kwargs["fitness_constraints"] = fitness_constraints
+
+    return GAConfig(**config_kwargs)
 
 
 def create_backtest_config(args: argparse.Namespace) -> Dict[str, Any]:

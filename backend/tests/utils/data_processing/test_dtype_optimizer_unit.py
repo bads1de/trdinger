@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.utils.data_processing.transformers.dtype_optimizer import DtypeOptimizer
+from app.utils.data_processing.dtype_optimizer import DtypeOptimizer
 
 
 class TestDtypeOptimizerUnit:

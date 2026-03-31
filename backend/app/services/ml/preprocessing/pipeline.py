@@ -19,7 +19,7 @@ from sklearn.preprocessing import (
     StandardScaler,
 )
 
-from app.utils.data_processing.pipelines.preprocessing_pipeline import (
+from app.utils.data_processing.preprocessing_pipeline import (
     create_preprocessing_pipeline,
 )
 

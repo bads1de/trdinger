@@ -165,9 +165,7 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """平均真の値幅"""
         def compute():
-            result = ta.atr(
-                high=high.values, low=low.values, close=close.values, length=length
-            )
+            result = ta.atr(high=high, low=low, close=close, length=length)
             if result is None:
                 logger.error("ATR: Calculation returned None - returning NaN series")
             return result

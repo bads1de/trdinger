@@ -11,8 +11,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from .transformers.dtype_optimizer import DtypeOptimizer
-from .validators.data_validator import (
+from .dtype_optimizer import DtypeOptimizer
+from .data_validator import (
     validate_data_integrity,
     validate_extended_data,
     validate_ohlcv_data,

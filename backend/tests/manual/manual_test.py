@@ -14,7 +14,7 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.services.ml.feature_engineering.price_features import PriceFeatureCalculator
-from app.utils.data_processing.validators.data_validator import validate_data_integrity
+from app.utils.data_processing.data_validator import validate_data_integrity
 
 
 def test_timestamp_validation():
