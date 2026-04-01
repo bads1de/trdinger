@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import random
 import uuid
-from typing import Any, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import numpy as np
 
@@ -95,6 +95,30 @@ def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
             maybe_mutate_branch(conditions)
 
 
+def mutate_indicators_batch(
+    individuals: List[Any], mutation_rate: float, config: Any
+) -> List[Any]:
+    """指標遺伝子の突然変異処理（バッチ版）。"""
+    results: List[Any] = []
+    for individual in individuals:
+        mutated = individual.clone() if hasattr(individual, "clone") else individual
+        mutate_indicators(mutated, mutation_rate, config)
+        results.append(mutated)
+    return results
+
+
+def mutate_conditions_batch(
+    individuals: List[Any], mutation_rate: float, config: Any
+) -> List[Any]:
+    """条件の突然変異処理（バッチ版）。"""
+    results: List[Any] = []
+    for individual in individuals:
+        mutated = individual.clone() if hasattr(individual, "clone") else individual
+        mutate_conditions(mutated, mutation_rate, config)
+        results.append(mutated)
+    return results
+
+
 def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
     """StrategyGene の突然変異を実行する。"""
     try:
@@ -176,6 +200,18 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
     except Exception as e:
         logger.error(f"戦略遺伝子突然変異エラー: {e}")
         return gene
+
+
+def mutate_strategy_gene_batch(
+    individuals: List[Any], config: Any, mutation_rate: float = 0.1
+) -> List[Any]:
+    """StrategyGene の突然変異をバッチで実行する。"""
+    mutated = mutate_indicators_batch(individuals, mutation_rate, config)
+    mutated = mutate_conditions_batch(mutated, mutation_rate, config)
+    return [
+        mutate_strategy_gene(individual, config, mutation_rate=mutation_rate)
+        for individual in mutated
+    ]
 
 
 def adaptive_mutate_strategy_gene(
@@ -260,6 +296,29 @@ def crossover_strategy_genes(
     except Exception as e:
         logger.error(f"戦略遺伝子交叉エラー: {e}")
         return parent1, parent2
+
+
+def crossover_strategy_genes_batch(
+    individuals: List[Any], config: Any, crossover_rate: float = 0.8
+) -> List[Tuple[Any, Any]]:
+    """StrategyGene の交叉をバッチで実行する。"""
+    results: List[Tuple[Any, Any]] = []
+
+    for i in range(0, len(individuals) - 1, 2):
+        if random.random() < crossover_rate:
+            parent1 = individuals[i]
+            parent2 = individuals[i + 1]
+            child1, child2 = crossover_strategy_genes(
+                type(parent1),
+                parent1,
+                parent2,
+                config,
+            )
+            results.append((child1, child2))
+        else:
+            results.append((individuals[i], individuals[i + 1]))
+
+    return results
 
 
 def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):

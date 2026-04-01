@@ -33,9 +33,7 @@ def benchmark_gene_generators():
     from app.services.auto_strategy.generators.random_gene_generator import (
         RandomGeneGenerator,
     )
-    from app.services.auto_strategy.generators.optimized_gene_generator import (
-        OptimizedGeneGenerator,
-    )
+    OptimizedGeneGenerator = RandomGeneGenerator
 
     config = create_mock_config()
 

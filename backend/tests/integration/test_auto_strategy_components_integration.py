@@ -1,7 +1,7 @@
 """
-最適化コンポーネントの結合テスト
+Auto Strategy コンポーネントの結合テスト
 
-最適化されたコンポーネントが正しく連携して動作するかを検証します。
+標準経路に統合されたコンポーネントが正しく連携して動作するかを検証します。
 """
 
 import os
@@ -19,7 +19,7 @@ import pandas as pd
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
-from app.services.auto_strategy.core.fitness.optimized_fitness_calculator import OptimizedFitnessCalculator
+from app.services.auto_strategy.core.fitness.fitness_calculator import FitnessCalculator
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
 from app.services.auto_strategy.genes import (
     Condition,
@@ -120,13 +120,13 @@ def calculate_rsi(prices, period):
 # 結合テスト
 # =============================================================================
 
-class TestOptimizedComponentsIntegration:
-    """最適化コンポーネントの結合テスト"""
+class TestAutoStrategyComponentsIntegration:
+    """Auto Strategy コンポーネントの結合テスト"""
 
-    def test_individual_evaluator_with_optimized_fitness_calculator(
+    def test_individual_evaluator_with_fitness_calculator(
         self, ga_config, mock_backtest_result
     ):
-        """IndividualEvaluatorとOptimizedFitnessCalculatorの結合テスト"""
+        """IndividualEvaluator と FitnessCalculator の結合テスト"""
         mock_backtest_service = MagicMock()
         mock_backtest_service.run_backtest.return_value = mock_backtest_result
 
@@ -158,12 +158,12 @@ class TestOptimizedComponentsIntegration:
         assert len(result) > 0
         assert elapsed < 1.0  # 1秒以内に完了
 
-    def test_condition_evaluator_with_optimized_fitness_calculator(
+    def test_condition_evaluator_with_fitness_calculator(
         self, ga_config, mock_strategy
     ):
-        """ConditionEvaluatorとOptimizedFitnessCalculatorの結合テスト"""
+        """ConditionEvaluator と FitnessCalculator の結合テスト"""
         condition_evaluator = ConditionEvaluator()
-        fitness_calculator = OptimizedFitnessCalculator()
+        fitness_calculator = FitnessCalculator()
 
         # 条件評価
         condition = Condition(
@@ -327,7 +327,7 @@ class TestPerformanceBenchmark:
 
     def test_fitness_calculation_performance(self, ga_config, mock_backtest_result):
         """フィットネス計算のパフォーマンステスト"""
-        calculator = OptimizedFitnessCalculator()
+        calculator = FitnessCalculator()
 
         # ウームアップ
         for _ in range(10):

@@ -7,7 +7,7 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 
 import logging
 import random
-from typing import Any, List
+from typing import Any, Dict, List, Optional
 
 from app.utils.error_handler import safe_operation
 
@@ -79,8 +79,7 @@ class RandomGeneGenerator:
         self._indicator_cache: List[IndicatorGene] = []
         self._tpsl_cache: List[TPSLGene] = []
         self._position_sizing_cache: List[PositionSizingGene] = []
-        self._tool_genes_cache: List[ToolGene] = []
-        self._caches_initialized = False
+        self._tool_genes_template: Optional[List[ToolGene]] = None
 
     @staticmethod
     def _create_enabled_tpsl_gene(config: Any) -> TPSLGene:
@@ -88,6 +87,83 @@ class RandomGeneGenerator:
         gene = create_random_tpsl_gene(config)
         gene.enabled = True
         return gene
+
+    def _initialize_caches(self) -> None:
+        """生成用キャッシュを初期化する。"""
+        for _ in range(10):
+            indicators = generate_random_indicators(self.config)
+            if indicators:
+                self._indicator_cache.extend(indicators)
+
+        for _ in range(10):
+            self._tpsl_cache.append(create_random_tpsl_gene(self.config))
+
+        for _ in range(10):
+            self._position_sizing_cache.append(
+                create_random_position_sizing_gene(self.config)
+            )
+
+        self._tool_genes_template = self._generate_tool_genes_template()
+
+    def _generate_tool_genes_template(self) -> List[ToolGene]:
+        """ツール遺伝子テンプレートを生成する。"""
+        tool_genes: List[ToolGene] = []
+        for tool in tool_registry.get_all():
+            tool_genes.append(
+                ToolGene(
+                    tool_name=tool.name,
+                    enabled=random.random() < 0.5,
+                    params=tool.get_default_params(),
+                )
+            )
+        return tool_genes
+
+    def _get_cached_indicators(self) -> List[IndicatorGene]:
+        """キャッシュからインジケーターを取得する。"""
+        if not self._indicator_cache:
+            self._initialize_caches()
+
+        n_indicators = random.randint(self.min_indicators, self.max_indicators)
+        if len(self._indicator_cache) >= n_indicators:
+            return [ind.clone() for ind in random.sample(self._indicator_cache, n_indicators)]
+        return generate_random_indicators(self.config)
+
+    def _get_cached_tpsl(self) -> TPSLGene:
+        """キャッシュからTP/SL遺伝子を取得する。"""
+        if not self._tpsl_cache:
+            self._initialize_caches()
+
+        if self._tpsl_cache:
+            gene = random.choice(self._tpsl_cache).clone()
+        else:
+            gene = create_random_tpsl_gene(self.config)
+        gene.enabled = True
+        return gene
+
+    def _get_cached_position_sizing(self) -> PositionSizingGene:
+        """キャッシュからポジションサイジング遺伝子を取得する。"""
+        if not self._position_sizing_cache:
+            self._initialize_caches()
+
+        if self._position_sizing_cache:
+            return random.choice(self._position_sizing_cache).clone()
+        return create_random_position_sizing_gene(self.config)
+
+    def _get_cached_tool_genes(self) -> List[ToolGene]:
+        """キャッシュからツール遺伝子を取得する。"""
+        if self._tool_genes_template is None:
+            self._initialize_caches()
+
+        tool_genes: List[ToolGene] = []
+        for tool in self._tool_genes_template or []:
+            tool_genes.append(
+                ToolGene(
+                    tool_name=tool.tool_name,
+                    enabled=random.random() < 0.5,
+                    params=tool.params.copy(),
+                )
+            )
+        return tool_genes
 
     @safe_operation(
         context="ランダム戦略遺伝子生成",
@@ -119,15 +195,11 @@ class RandomGeneGenerator:
         Returns:
             生成されたStrategyGeneオブジェクト
         """
-        # 指標を生成
-        indicators = generate_random_indicators(self.config)
-
-        # TP/SL遺伝子を生成
-        tpsl_gene = self._create_enabled_tpsl_gene(self.config)
-
-        # Long/Short TP/SL遺伝子も個別に生成
-        long_tpsl_gene = self._create_enabled_tpsl_gene(self.config)
-        short_tpsl_gene = self._create_enabled_tpsl_gene(self.config)
+        # キャッシュを活用して指標とサブ遺伝子を生成
+        indicators = self._get_cached_indicators()
+        tpsl_gene = self._get_cached_tpsl()
+        long_tpsl_gene = self._get_cached_tpsl()
+        short_tpsl_gene = self._get_cached_tpsl()
 
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
@@ -153,7 +225,7 @@ class RandomGeneGenerator:
         }
 
         # ポジションサイジング遺伝子を生成（GA最適化対象）
-        position_sizing_gene = create_random_position_sizing_gene(self.config)
+        position_sizing_gene = self._get_cached_position_sizing()
 
         # エントリー遺伝子を生成（GA最適化対象）
         entry_gene = create_random_entry_gene(self.config)
@@ -161,7 +233,7 @@ class RandomGeneGenerator:
         short_entry_gene = create_random_entry_gene(self.config)
 
         # ツール遺伝子を生成（週末フィルターなど）
-        tool_genes = self._generate_tool_genes()
+        tool_genes = self._get_cached_tool_genes()
 
         return StrategyGene.assemble(
             indicators=indicators,
@@ -178,6 +250,22 @@ class RandomGeneGenerator:
             risk_management=risk_management,
             metadata={"generated_by": "RandomGeneGenerator"},
         )
+
+    def clear_caches(self) -> None:
+        """生成キャッシュをクリアする。"""
+        self._indicator_cache.clear()
+        self._tpsl_cache.clear()
+        self._position_sizing_cache.clear()
+        self._tool_genes_template = None
+
+    def get_cache_statistics(self) -> Dict[str, Any]:
+        """キャッシュ統計を返す。"""
+        return {
+            "indicator_cache_size": len(self._indicator_cache),
+            "tpsl_cache_size": len(self._tpsl_cache),
+            "position_sizing_cache_size": len(self._position_sizing_cache),
+            "tool_genes_template_size": len(self._tool_genes_template or []),
+        }
 
     def _generate_tool_genes(self) -> List[ToolGene]:
         """

@@ -153,11 +153,11 @@ def test_fitness_calculator():
     logger.info("\n=== FitnessCalculatorテスト ===")
 
     from app.services.auto_strategy.config.ga import GAConfig
-    from app.services.auto_strategy.core.fitness.optimized_fitness_calculator import (
-        OptimizedFitnessCalculator,
+    from app.services.auto_strategy.core.fitness.fitness_calculator import (
+        FitnessCalculator,
     )
 
-    calculator = OptimizedFitnessCalculator()
+    calculator = FitnessCalculator()
     config = GAConfig()
 
     backtest_result = create_mock_backtest_result()

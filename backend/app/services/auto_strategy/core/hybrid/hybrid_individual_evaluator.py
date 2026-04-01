@@ -34,6 +34,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         backtest_service: BacktestService,
         predictor: Optional[HybridPredictor] = None,
         feature_adapter: Optional["HybridFeatureAdapter"] = None,
+        cache_size: int = 1000,
     ):
         """
         初期化
@@ -46,6 +47,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         super().__init__(backtest_service)
         self.predictor = predictor
         self.feature_adapter = feature_adapter or self._create_feature_adapter()
+        self._prediction_cache: Dict[str, Any] = {}
+        self._feature_cache: Dict[str, Any] = {}
+        self._cache_size = cache_size
 
     def _prepare_run_config(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
@@ -236,3 +240,16 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         normalized = ohlcv_data.copy()
         normalized.columns = [str(column).lower() for column in normalized.columns]
         return normalized
+
+    def clear_caches(self) -> None:
+        """ハイブリッド評価用のキャッシュをクリアする。"""
+        self._prediction_cache.clear()
+        self._feature_cache.clear()
+
+    def get_cache_statistics(self) -> Dict[str, Any]:
+        """ハイブリッド評価用のキャッシュ統計を返す。"""
+        return {
+            "prediction_cache_size": len(self._prediction_cache),
+            "feature_cache_size": len(self._feature_cache),
+            "cache_limit": self._cache_size,
+        }

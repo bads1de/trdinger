@@ -5,14 +5,17 @@ GAエンジンの構築とコンポーネントの初期化を担当します。
 """
 
 import logging
+from typing import TYPE_CHECKING
 
 
 from app.services.backtest.services.backtest_service import BacktestService
-from .ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from .ga_engine import GeneticAlgorithmEngine
 
 
 class GeneticAlgorithmEngineFactory:
@@ -23,7 +26,7 @@ class GeneticAlgorithmEngineFactory:
     @staticmethod
     def create_engine(
         backtest_service: BacktestService, ga_config: GAConfig
-    ) -> GeneticAlgorithmEngine:
+    ) -> "GeneticAlgorithmEngine":
         """
         GA 設定および各種サービスに基づき、GA エンジンを構築
 
@@ -57,6 +60,8 @@ class GeneticAlgorithmEngineFactory:
             )
 
         # エンジンの生成
+        from .ga_engine import GeneticAlgorithmEngine
+
         engine = GeneticAlgorithmEngine(
             backtest_service=backtest_service,
             gene_generator=gene_generator,

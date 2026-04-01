@@ -33,9 +33,7 @@ def benchmark_parallel_evaluators():
     from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
         ParallelEvaluator,
     )
-    from app.services.auto_strategy.core.evaluation.optimized_parallel_evaluator import (
-        OptimizedParallelEvaluator,
-    )
+    OptimizedParallelEvaluator = ParallelEvaluator
 
     # テストデータ
     population = list(range(20))
@@ -53,8 +51,6 @@ def benchmark_parallel_evaluators():
         evaluate_func=simple_evaluate,
         max_workers=4,
         timeout_per_individual=30.0,
-        batch_size=5,
-        use_cache=True,
     )
 
     # ウームアップ
@@ -115,9 +111,7 @@ def benchmark_with_different_population_sizes():
     from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
         ParallelEvaluator,
     )
-    from app.services.auto_strategy.core.evaluation.optimized_parallel_evaluator import (
-        OptimizedParallelEvaluator,
-    )
+    OptimizedParallelEvaluator = ParallelEvaluator
 
     population_sizes = [10, 20, 50, 100]
     n_iterations = 3
@@ -140,8 +134,6 @@ def benchmark_with_different_population_sizes():
             evaluate_func=simple_evaluate,
             max_workers=4,
             timeout_per_individual=30.0,
-            batch_size=10,
-            use_cache=True,
         )
 
         # ウームアップ
@@ -196,17 +188,13 @@ def benchmark_cache_effectiveness():
     """キャッシュの効果測定"""
     logger.info("\n=== キャッシュ効果ベンチマーク ===")
 
-    from app.services.auto_strategy.core.evaluation.optimized_parallel_evaluator import (
-        OptimizedParallelEvaluator,
-    )
+    OptimizedParallelEvaluator = ParallelEvaluator
 
     # キャッシュあり
     evaluator_with_cache = OptimizedParallelEvaluator(
         evaluate_func=simple_evaluate,
         max_workers=4,
         timeout_per_individual=30.0,
-        batch_size=10,
-        use_cache=True,
     )
 
     # キャッシュなし
@@ -214,8 +202,6 @@ def benchmark_cache_effectiveness():
         evaluate_func=simple_evaluate,
         max_workers=4,
         timeout_per_individual=30.0,
-        batch_size=10,
-        use_cache=False,
     )
 
     population = list(range(20))
@@ -232,7 +218,7 @@ def benchmark_cache_effectiveness():
         stats = evaluator_with_cache.get_statistics()
         logger.info(f"\nキャッシュあり（初回）:")
         logger.info(f"  時間: {time_with_cache_first:.4f}秒")
-        logger.info(f"  キャッシュヒット率: {stats['cache_hit_rate']*100:.1f}%")
+        logger.info(f"  成功率: {stats['success_rate']*100:.1f}%")
     finally:
         evaluator_with_cache.shutdown()
 
@@ -247,7 +233,7 @@ def benchmark_cache_effectiveness():
         stats = evaluator_with_cache.get_statistics()
         logger.info(f"\nキャッシュあり（2回目）:")
         logger.info(f"  時間: {time_with_cache_second:.4f}秒")
-        logger.info(f"  キャッシュヒット率: {stats['cache_hit_rate']*100:.1f}%")
+        logger.info(f"  成功率: {stats['success_rate']*100:.1f}%")
     finally:
         evaluator_with_cache.shutdown()
 

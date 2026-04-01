@@ -1,9 +1,8 @@
 """
-最適化コンポーネントのテスト
-
-最適化されたフィットネス計算、条件評価、並列評価のテストを提供します。
+フィットネス計算、条件評価、指標計算のテスト
 """
 
+import copy
 import os
 import sys
 
@@ -16,7 +15,7 @@ from unittest.mock import MagicMock, Mock
 
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
-from app.services.auto_strategy.core.fitness.optimized_fitness_calculator import OptimizedFitnessCalculator
+from app.services.auto_strategy.core.fitness.fitness_calculator import FitnessCalculator
 from app.services.auto_strategy.genes import Condition, ConditionGroup
 
 
@@ -103,15 +102,15 @@ def calculate_rsi(prices, period):
 
 
 # =============================================================================
-# OptimizedFitnessCalculator のテスト
+# FitnessCalculator のテスト
 # =============================================================================
 
-class TestOptimizedFitnessCalculator:
-    """最適化されたフィットネス計算のテスト"""
+class TestFitnessCalculator:
+    """フィットネス計算のテスト"""
 
     def setup_method(self):
         """テストセットアップ"""
-        self.calculator = OptimizedFitnessCalculator()
+        self.calculator = FitnessCalculator()
 
     def test_calculate_fitness_basic(self, ga_config, mock_backtest_result):
         """基本的なフィットネス計算テスト"""
@@ -220,6 +219,19 @@ class TestOptimizedFitnessCalculator:
 
         assert fitness1 == fitness2, "キャッシュクリア後も同じ結果を返すべき"
 
+    def test_extract_performance_metrics_uses_content_based_cache_key(
+        self, mock_backtest_result
+    ):
+        """同一内容の別オブジェクトが同じキャッシュを使うこと"""
+        result_a = copy.deepcopy(mock_backtest_result)
+        result_b = copy.deepcopy(mock_backtest_result)
+
+        metrics_a = self.calculator.extract_performance_metrics(result_a)
+        metrics_b = self.calculator.extract_performance_metrics(result_b)
+
+        assert metrics_a == metrics_b
+        assert len(self.calculator._metrics_cache) == 1
+
 
 # =============================================================================
 # ConditionEvaluator のテスト
@@ -313,11 +325,11 @@ class TestConditionEvaluator:
 
 
 # =============================================================================
-# インジケーター計算の正確性テスト（最適化コード用）
+# インジケーター計算の正確性テスト
 # =============================================================================
 
-class TestIndicatorCalculationForOptimizedCode:
-    """最適化コードで使用されるインジケーター計算のテスト"""
+class TestIndicatorCalculation:
+    """インジケーター計算のテスト"""
 
     def test_sma_calculation_accuracy(self):
         """SMA計算の正確性テスト"""
@@ -437,7 +449,7 @@ class TestEdgeCases:
 
     def test_fitness_with_nan_metrics(self, ga_config):
         """NaNメトリクスでのフィットネス計算テスト"""
-        calculator = OptimizedFitnessCalculator()
+        calculator = FitnessCalculator()
 
         backtest_result = {
             "performance_metrics": {
@@ -460,7 +472,7 @@ class TestEdgeCases:
 
     def test_fitness_with_infinite_metrics(self, ga_config):
         """無限大メトリクスでのフィットネス計算テスト"""
-        calculator = OptimizedFitnessCalculator()
+        calculator = FitnessCalculator()
 
         backtest_result = {
             "performance_metrics": {

@@ -27,6 +27,7 @@ class TestGAEngineFactory:
         assert isinstance(engine, GeneticAlgorithmEngine)
         assert engine.individual_evaluator is not None
         assert engine.gene_generator is not None
+        assert engine.gene_generator.__class__.__name__ == "RandomGeneGenerator"
 
     def test_create_engine_with_custom_config(self):
         """カスタム設定を用いたエンジンの作成テスト"""
@@ -39,6 +40,7 @@ class TestGAEngineFactory:
         )
 
         assert isinstance(engine, GeneticAlgorithmEngine)
+        assert engine.gene_generator.__class__.__name__ == "RandomGeneGenerator"
         # engine.gene_generator.config を確認
         assert engine.gene_generator.config.population_size == 10
 

@@ -333,7 +333,7 @@ def optimize_comprehensive_pipeline(
     X: pd.DataFrame,
     y: pd.Series,
     task_type: str = "regression",
-    time_budget: float = 60.0,
+    time_budget: Optional[float] = None,
 ) -> Pipeline:
     """
     データ特性と制約に基づいて最適化された包括的パイプラインを作成。
@@ -342,7 +342,7 @@ def optimize_comprehensive_pipeline(
         X: 特徴量DataFrame
         y: ターゲット系列
         task_type: MLタスクの種類 ('regression', 'classification')
-        time_budget: 最適化のための時間予算（秒）
+        time_budget: 後方互換のための予約引数（現状は未使用）
 
     Returns:
         最適化された包括的パイプライン
@@ -388,6 +388,5 @@ def optimize_comprehensive_pipeline(
         f"Optimized comprehensive pipeline created with {n_features_opt or 'all'} features"
     )
     return pipeline
-
 
 

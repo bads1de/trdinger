@@ -5,9 +5,13 @@
 DictConverterとGeneSerializerを統合し、JSON/Dict形式の相互変換を提供します。
 """
 
+import copy
+import hashlib
 import json
 import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional
+
+from app.utils.serialization import dataclass_to_dict
 
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
@@ -27,12 +31,51 @@ class DictConverter:
     再帰的な変換を管理します。
     """
 
-    def __init__(self) -> None:
+    def __init__(self, cache_size: int = 1000) -> None:
         self._strategy_gene_codec = StrategyGeneDictCodec(self)
+        self._cache_size = cache_size
+        self._serialize_cache: Dict[str, Dict[str, Any]] = {}
+        self._deserialize_cache: Dict[str, Any] = {}
+
+    def _generate_cache_key(self, strategy_gene: Any) -> str:
+        """戦略遺伝子の構造に基づいて安定したキャッシュキーを生成する。"""
+        try:
+            key_payload = dataclass_to_dict(strategy_gene)
+            key_str = json.dumps(
+                key_payload,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=str,
+            )
+            return hashlib.sha256(key_str.encode("utf-8")).hexdigest()[:32]
+        except Exception:
+            return str(id(strategy_gene))
+
+    def _generate_dict_cache_key(self, data: Dict[str, Any]) -> str:
+        """辞書データ用のキャッシュキーを生成する。"""
+        try:
+            key_str = json.dumps(data, sort_keys=True, ensure_ascii=False, default=str)
+            return hashlib.sha256(key_str.encode("utf-8")).hexdigest()[:32]
+        except Exception:
+            return str(id(data))
 
     def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換"""
-        return self._strategy_gene_codec.strategy_gene_to_dict(strategy_gene)
+        try:
+            cache_key = self._generate_cache_key(strategy_gene)
+            if cache_key in self._serialize_cache:
+                result = self._serialize_cache[cache_key]
+            else:
+                result = self._strategy_gene_codec.strategy_gene_to_dict(strategy_gene)
+                if len(self._serialize_cache) < self._cache_size:
+                    self._serialize_cache[cache_key] = result
+            try:
+                return copy.deepcopy(result)
+            except Exception:
+                return result
+        except Exception as e:
+            logger.error(f"戦略遺伝子辞書変換エラー: {e}")
+            raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
 
     def indicator_gene_to_dict(self, indicator_gene) -> Dict[str, Any]:
         """
@@ -263,9 +306,28 @@ class DictConverter:
 
     def dict_to_strategy_gene(self, data: Any, strategy_gene_class: Any):
         """辞書形式のデータから戦略遺伝子オブジェクトを復元"""
-        return self._strategy_gene_codec.dict_to_strategy_gene(
-            data, strategy_gene_class
-        )
+        try:
+            if strategy_gene_class is None:
+                from ..genes import StrategyGene
+
+                strategy_gene_class = StrategyGene
+
+            cache_key = self._generate_dict_cache_key(data)
+            if cache_key in self._deserialize_cache:
+                result = self._deserialize_cache[cache_key]
+            else:
+                result = self._strategy_gene_codec.dict_to_strategy_gene(
+                    data, strategy_gene_class
+                )
+                if len(self._deserialize_cache) < self._cache_size:
+                    self._deserialize_cache[cache_key] = result
+            try:
+                return copy.deepcopy(result)
+            except Exception:
+                return result
+        except Exception as e:
+            logger.error(f"戦略遺伝子復元エラー: {e}")
+            raise ValueError(f"戦略遺伝子の復元に失敗: {e}")
 
     def dict_to_condition(self, data: Dict[str, Any]) -> "Condition":
         """辞書形式から条件を復元"""
@@ -336,6 +398,19 @@ class DictConverter:
             logger.error(f"StatefulCondition復元エラー: {e}")
             raise ValueError(f"StatefulConditionの復元に失敗: {e}")
 
+    def clear_caches(self) -> None:
+        """最適化されたキャッシュをクリアする。"""
+        self._serialize_cache.clear()
+        self._deserialize_cache.clear()
+
+    def get_cache_statistics(self) -> Dict[str, Any]:
+        """最適化されたキャッシュ統計を返す。"""
+        return {
+            "serialize_cache_size": len(self._serialize_cache),
+            "deserialize_cache_size": len(self._deserialize_cache),
+            "cache_limit": self._cache_size,
+        }
+
 
 class GeneSerializer(DictConverter):
     """
@@ -345,9 +420,9 @@ class GeneSerializer(DictConverter):
     DEAP 個体のリスト復元だけを追加します。
     """
 
-    def __init__(self):
+    def __init__(self, cache_size: int = 1000):
         """後方互換のために self を dict_converter として公開します。"""
-        super().__init__()
+        super().__init__(cache_size=cache_size)
         self.dict_converter = self
 
     def from_list(self, individual_list: list, strategy_gene_class: Any):

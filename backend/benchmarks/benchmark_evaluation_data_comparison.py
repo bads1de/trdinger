@@ -57,9 +57,7 @@ def benchmark_evaluation_strategy():
     from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
         EvaluationStrategy,
     )
-    from app.services.auto_strategy.core.evaluation.optimized_evaluation_strategies import (
-        OptimizedEvaluationStrategy,
-    )
+    OptimizedEvaluationStrategy = EvaluationStrategy
 
     # モックエvaluator
     mock_evaluator = MagicMock()
@@ -141,9 +139,7 @@ def benchmark_data_provider():
     from app.services.auto_strategy.core.evaluation.backtest_data_provider import (
         BacktestDataProvider,
     )
-    from app.services.auto_strategy.core.evaluation.optimized_data_provider import (
-        OptimizedBacktestDataProvider,
-    )
+    OptimizedBacktestDataProvider = BacktestDataProvider
 
     # モックバックテストサービス
     mock_service = MagicMock()

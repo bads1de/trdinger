@@ -20,7 +20,6 @@ from app.services.auto_strategy.generators.random_gene_generator import RandomGe
 from app.services.auto_strategy.genes import StrategyGene
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner, EvolutionStoppedError
-from .optimized_evolution_runner import OptimizedEvolutionRunner
 from .report_selection import (
     build_report_rank_key_from_primary_fitness,
     extract_primary_fitness,
@@ -81,9 +80,11 @@ class GeneticAlgorithmEngine:
         # ハイブリッドモードに応じてEvaluatorを選択
         if hybrid_mode:
             logger.info("[Hybrid] ハイブリッドGA+MLモードで起動")
-            from ..hybrid.hybrid_individual_evaluator import HybridIndividualEvaluator
+            from ..hybrid.hybrid_individual_evaluator import (
+                HybridIndividualEvaluator,
+            )
 
-            self.individual_evaluator: Any = HybridIndividualEvaluator(
+            self.individual_evaluator = HybridIndividualEvaluator(
                 backtest_service=backtest_service,
                 predictor=hybrid_predictor,
                 feature_adapter=hybrid_feature_adapter,
@@ -382,8 +383,7 @@ class GeneticAlgorithmEngine:
             else None
         )
 
-        # 最適化版のEvolutionRunnerを使用
-        return OptimizedEvolutionRunner(
+        return EvolutionRunner(
             toolbox,
             stats,
             fitness_sharing,

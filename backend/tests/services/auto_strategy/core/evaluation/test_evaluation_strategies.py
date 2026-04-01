@@ -4,16 +4,16 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.core.evaluation.optimized_evaluation_strategies import (
-    OptimizedEvaluationStrategy,
+from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
+    EvaluationStrategy,
 )
 
 
-class TestOptimizedEvaluationStrategy:
+class TestEvaluationStrategy:
     def setup_method(self):
         self.evaluator = Mock()
         self.evaluator._perform_single_evaluation = Mock(return_value=(0.0,))
-        self.strategy = OptimizedEvaluationStrategy(self.evaluator, max_workers=2)
+        self.strategy = EvaluationStrategy(self.evaluator)
 
     def test_execute_prefers_purged_kfold_when_enabled(self):
         config = SimpleNamespace(
@@ -110,6 +110,19 @@ class TestOptimizedEvaluationStrategy:
             assert "_embargo_seconds" not in config
             assert config["symbol"] == "BTCUSDT"
             assert config["timeframe"] == "1h"
+
+    def test_precompute_purged_kfold_configs_applies_embargo_gap(self):
+        configs = self.strategy._precompute_purged_kfold_configs(
+            start_date=pd.Timestamp("2024-01-01 00:00:00"),
+            end_date=pd.Timestamp("2024-01-11 00:00:00"),
+            n_splits=2,
+            embargo_pct=0.1,
+            base_backtest_config={"symbol": "BTCUSDT", "timeframe": "1h"},
+        )
+
+        assert len(configs) == 2
+        assert configs[0][1]["end_date"] == "2024-01-05 12:00:00"
+        assert configs[1][1]["start_date"] == "2024-01-06 12:00:00"
 
     def test_execute_robustness_report_adds_symbol_and_cost_scenarios(self):
         def side_effect(_gene, backtest_config, _config):

@@ -1,5 +1,5 @@
 """
-最新の最適化（ハイブリッドGA+ML、シリアライゼーション、交叉・突然変異演算子）のテスト
+ハイブリッド GA、シリアライゼーション、交叉・突然変異演算子のテスト
 """
 
 import os
@@ -39,17 +39,17 @@ def ga_config():
 # OptimizedHybridIndividualEvaluator のテスト
 # =============================================================================
 
-class TestOptimizedHybridIndividualEvaluator:
-    """最適化されたハイブリッドGA個体評価器のテスト"""
+class TestHybridIndividualEvaluator:
+    """ハイブリッドGA個体評価器のテスト"""
 
     def test_initialization(self):
         """初期化テスト"""
-        from app.services.auto_strategy.core.hybrid.optimized_hybrid_individual_evaluator import (
-            OptimizedHybridIndividualEvaluator,
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
+            HybridIndividualEvaluator,
         )
 
         mock_backtest_service = MagicMock()
-        evaluator = OptimizedHybridIndividualEvaluator(
+        evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             cache_size=100,
         )
@@ -59,12 +59,12 @@ class TestOptimizedHybridIndividualEvaluator:
 
     def test_cache_statistics(self):
         """キャッシュ統計テスト"""
-        from app.services.auto_strategy.core.hybrid.optimized_hybrid_individual_evaluator import (
-            OptimizedHybridIndividualEvaluator,
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
+            HybridIndividualEvaluator,
         )
 
         mock_backtest_service = MagicMock()
-        evaluator = OptimizedHybridIndividualEvaluator(
+        evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             cache_size=100,
         )
@@ -77,12 +77,12 @@ class TestOptimizedHybridIndividualEvaluator:
 
     def test_clear_caches(self):
         """キャッシュクリアテスト"""
-        from app.services.auto_strategy.core.hybrid.optimized_hybrid_individual_evaluator import (
-            OptimizedHybridIndividualEvaluator,
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
+            HybridIndividualEvaluator,
         )
 
         mock_backtest_service = MagicMock()
-        evaluator = OptimizedHybridIndividualEvaluator(
+        evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             cache_size=100,
         )
@@ -102,27 +102,27 @@ class TestOptimizedHybridIndividualEvaluator:
 # OptimizedDictConverter のテスト
 # =============================================================================
 
-class TestOptimizedDictConverter:
-    """最適化されたシリアライゼーションのテスト"""
+class TestGeneSerializer:
+    """GeneSerializer のテスト"""
 
     def test_initialization(self):
         """初期化テスト"""
-        from app.services.auto_strategy.serializers.optimized_serialization import (
-            OptimizedDictConverter,
+        from app.services.auto_strategy.serializers.serialization import (
+            GeneSerializer,
         )
 
-        converter = OptimizedDictConverter(cache_size=100)
+        converter = GeneSerializer(cache_size=100)
 
         assert converter is not None
         assert converter._cache_size == 100
 
     def test_cache_statistics(self):
         """キャッシュ統計テスト"""
-        from app.services.auto_strategy.serializers.optimized_serialization import (
-            OptimizedDictConverter,
+        from app.services.auto_strategy.serializers.serialization import (
+            GeneSerializer,
         )
 
-        converter = OptimizedDictConverter(cache_size=100)
+        converter = GeneSerializer(cache_size=100)
 
         stats = converter.get_cache_statistics()
 
@@ -132,11 +132,11 @@ class TestOptimizedDictConverter:
 
     def test_clear_caches(self):
         """キャッシュクリアテスト"""
-        from app.services.auto_strategy.serializers.optimized_serialization import (
-            OptimizedDictConverter,
+        from app.services.auto_strategy.serializers.serialization import (
+            GeneSerializer,
         )
 
-        converter = OptimizedDictConverter(cache_size=100)
+        converter = GeneSerializer(cache_size=100)
 
         # キャッシュにデータを追加
         converter._serialize_cache["test"] = {"type": "SMA"}
@@ -153,12 +153,12 @@ class TestOptimizedDictConverter:
 # 最適化された交叉・突然変異演算子のテスト
 # =============================================================================
 
-class TestOptimizedStrategyOperators:
-    """最適化された交叉・突然変異演算子のテスト"""
+class TestStrategyOperators:
+    """交叉・突然変異演算子のテスト"""
 
     def test_mutate_strategy_gene_batch(self, ga_config):
         """突然変異バッチ処理テスト"""
-        from app.services.auto_strategy.genes.optimized_strategy_operators import (
+        from app.services.auto_strategy.genes.strategy_operators import (
             mutate_strategy_gene_batch,
         )
         from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
@@ -185,7 +185,7 @@ class TestOptimizedStrategyOperators:
 
     def test_crossover_strategy_genes_batch(self, ga_config):
         """交叉バッチ処理テスト"""
-        from app.services.auto_strategy.genes.optimized_strategy_operators import (
+        from app.services.auto_strategy.genes.strategy_operators import (
             crossover_strategy_genes_batch,
         )
         from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
@@ -216,31 +216,31 @@ class TestOptimizedStrategyOperators:
 # 統合テスト
 # =============================================================================
 
-class TestIntegration:
-    """最新の最適化の統合テスト"""
+class TestHybridSerializationOperators:
+    """ハイブリッド個体評価、シリアライザー、演算子の統合テスト"""
 
     def test_all_optimizations_work_together(self, ga_config):
         """全ての最適化が連携して動作するかテスト"""
-        from app.services.auto_strategy.core.hybrid.optimized_hybrid_individual_evaluator import (
-            OptimizedHybridIndividualEvaluator,
+        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
+            HybridIndividualEvaluator,
         )
-        from app.services.auto_strategy.serializers.optimized_serialization import (
-            OptimizedDictConverter,
+        from app.services.auto_strategy.serializers.serialization import (
+            GeneSerializer,
         )
-        from app.services.auto_strategy.genes.optimized_strategy_operators import (
+        from app.services.auto_strategy.genes.strategy_operators import (
             mutate_strategy_gene_batch,
         )
         from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
 
         # ハイブリッド評価器
         mock_backtest_service = MagicMock()
-        hybrid_evaluator = OptimizedHybridIndividualEvaluator(
+        hybrid_evaluator = HybridIndividualEvaluator(
             backtest_service=mock_backtest_service,
             cache_size=100,
         )
 
         # シリアライザー
-        serializer = OptimizedDictConverter(cache_size=100)
+        serializer = GeneSerializer(cache_size=100)
 
         # テスト用遺伝子を生成
         individuals = []

@@ -3,12 +3,12 @@ from unittest.mock import Mock, patch
 
 import pandas as pd
 
-from app.services.auto_strategy.core.evaluation.optimized_data_provider import (
-    OptimizedBacktestDataProvider,
+from app.services.auto_strategy.core.evaluation.backtest_data_provider import (
+    BacktestDataProvider,
 )
 
 
-class TestOptimizedBacktestDataProvider:
+class TestBacktestDataProviderCache:
     def test_get_cached_backtest_data_ignores_worker_data_for_mismatched_key(self):
         mock_service = Mock()
         mock_service.ensure_data_service_initialized = Mock()
@@ -16,7 +16,7 @@ class TestOptimizedBacktestDataProvider:
         mock_df = pd.DataFrame({"close": [1, 2, 3]})
         mock_service.data_service.get_data_for_backtest.return_value = mock_df
 
-        provider = OptimizedBacktestDataProvider(
+        provider = BacktestDataProvider(
             backtest_service=mock_service,
             data_cache={},
             lock=threading.Lock(),

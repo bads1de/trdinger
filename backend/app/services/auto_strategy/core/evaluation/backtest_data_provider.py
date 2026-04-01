@@ -1,11 +1,13 @@
-"""
-IndividualEvaluator 用のバックテストデータ取得ヘルパー。
-"""
+"""IndividualEvaluator 用のバックテストデータ取得ヘルパー。"""
 
 from __future__ import annotations
 
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -13,10 +15,20 @@ logger = logging.getLogger(__name__)
 class BacktestDataProvider:
     """キャッシュ付きのバックテスト用データ取得を担当する。"""
 
-    def __init__(self, backtest_service, data_cache, lock):
+    def __init__(
+        self,
+        backtest_service,
+        data_cache,
+        lock,
+        prefetch_enabled: bool = True,
+        max_prefetch_workers: int = 2,
+    ):
         self.backtest_service = backtest_service
         self._data_cache = data_cache
-        self._lock = lock
+        self._lock = lock or threading.RLock()
+        self._prefetch_enabled = prefetch_enabled
+        self._prefetch_executor = ThreadPoolExecutor(max_workers=max_prefetch_workers)
+        self._prefetch_cache: Dict[tuple, Any] = {}
 
     @staticmethod
     def _extract_worker_data(worker_payload: Any, expected_key: tuple[Any, ...]) -> Any:
@@ -45,20 +57,22 @@ class BacktestDataProvider:
             pass
 
         with self._lock:
-            if key not in self._data_cache:
-                import pandas as pd
+            if key in self._data_cache:
+                return self._data_cache[key]
 
-                self.backtest_service.ensure_data_service_initialized()
-                data = self.backtest_service.data_service.get_data_for_backtest(
-                    symbol=symbol,
-                    timeframe=timeframe,
-                    start_date=pd.to_datetime(start_date),
-                    end_date=pd.to_datetime(end_date),
-                )
-                self._data_cache[key] = data
-                logger.debug(f"バックテストデータをキャッシュしました: {key}")
-
-            return self._data_cache[key]
+        self.backtest_service.ensure_data_service_initialized()
+        data = self.backtest_service.data_service.get_data_for_backtest(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_date=pd.to_datetime(start_date),
+            end_date=pd.to_datetime(end_date),
+        )
+        with self._lock:
+            if key in self._data_cache:
+                return self._data_cache[key]
+            self._data_cache[key] = data
+        logger.debug(f"バックテストデータをキャッシュしました: {key}")
+        return data
 
     def get_cached_minute_data(self, backtest_config: Dict[str, Any]) -> Any:
         """1分足データをキャッシュ付きで取得する。"""
@@ -77,28 +91,29 @@ class BacktestDataProvider:
             pass
 
         with self._lock:
-            if key not in self._data_cache:
-                try:
-                    import pandas as pd
+            if key in self._data_cache:
+                return self._data_cache[key]
 
-                    self.backtest_service.ensure_data_service_initialized()
-                    data = self.backtest_service.data_service.get_data_for_backtest(
-                        symbol=symbol,
-                        timeframe="1m",
-                        start_date=pd.to_datetime(start_date),
-                        end_date=pd.to_datetime(end_date),
-                    )
-                    if not data.empty:
-                        self._data_cache[key] = data
-                        logger.debug(f"1分足データをキャッシュしました: {key}")
-                    else:
-                        logger.debug(f"1分足データが空です: {key}")
-                        return None
-                except Exception as e:
-                    logger.warning(f"1分足データ取得エラー: {e}")
-                    return None
-
-            return self._data_cache.get(key)
+        try:
+            self.backtest_service.ensure_data_service_initialized()
+            data = self.backtest_service.data_service.get_data_for_backtest(
+                symbol=symbol,
+                timeframe="1m",
+                start_date=pd.to_datetime(start_date),
+                end_date=pd.to_datetime(end_date),
+            )
+            if not data.empty:
+                with self._lock:
+                    if key in self._data_cache:
+                        return self._data_cache[key]
+                    self._data_cache[key] = data
+                logger.debug(f"1分足データをキャッシュしました: {key}")
+                return data
+            logger.debug(f"1分足データが空です: {key}")
+            return None
+        except Exception as e:
+            logger.warning(f"1分足データ取得エラー: {e}")
+            return None
 
     def get_cached_ohlcv_data(
         self,
@@ -109,8 +124,6 @@ class BacktestDataProvider:
         cache_prefix: str = "ohlcv",
     ) -> Any:
         """OHLCV データを汎用キャッシュ経由で取得する。"""
-        import pandas as pd
-
         if not all([symbol, timeframe, start_date, end_date]):
             logger.warning(
                 "OHLCVデータ取得: 必須パラメータが不足しています "
@@ -128,6 +141,21 @@ class BacktestDataProvider:
                     logger.debug(f"OHLCVデータ: キャッシュヒット (key={cache_key})")
                     return cached_data
 
+        if self._prefetch_enabled:
+            with self._lock:
+                prefetch_data = self._prefetch_cache.get(cache_key)
+                if (
+                    prefetch_data is not None
+                    and hasattr(prefetch_data, "empty")
+                    and not prefetch_data.empty
+                ):
+                    self._data_cache[cache_key] = prefetch_data
+                    self._prefetch_cache.pop(cache_key, None)
+                    logger.debug(
+                        f"OHLCVデータ: プリフェッチヒット (key={cache_key})"
+                    )
+                    return prefetch_data
+
         data_service = getattr(self.backtest_service, "data_service", None)
         if data_service is None:
             logger.warning("data_service が利用できません。")
@@ -143,9 +171,10 @@ class BacktestDataProvider:
 
             if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
                 with self._lock:
-                    self._data_cache[cache_key] = ohlcv_data
+                    if cache_key not in self._data_cache:
+                        self._data_cache[cache_key] = ohlcv_data
                 logger.debug(
-                    f"OHLCVデータ: DB から取得・キャッシュ保存 (key={cache_key})"
+                    f"OHLCVデータ: DBから取得・キャッシュ保存 (key={cache_key})"
                 )
                 return ohlcv_data
 
@@ -153,7 +182,61 @@ class BacktestDataProvider:
                 f"OHLCVデータが空または無効です: symbol={symbol}, timeframe={timeframe}"
             )
             return None
-
         except Exception as exc:
             logger.warning(f"OHLCVデータ取得エラー: {exc}")
             return None
+
+    def prefetch_data(
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: Any,
+        end_date: Any,
+        cache_prefix: str = "ohlcv",
+    ) -> None:
+        """データをプリフェッチする。"""
+        if not self._prefetch_enabled:
+            return
+
+        cache_key = (cache_prefix, symbol, timeframe, str(start_date), str(end_date))
+
+        with self._lock:
+            if cache_key in self._data_cache:
+                return
+
+        def _prefetch_task():
+            try:
+                data_service = getattr(self.backtest_service, "data_service", None)
+                if data_service is None:
+                    return
+
+                if hasattr(self.backtest_service, "ensure_data_service_initialized"):
+                    self.backtest_service.ensure_data_service_initialized()
+
+                ohlcv_data = data_service.get_ohlcv_data(
+                    symbol, timeframe, start_date, end_date
+                )
+
+                if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
+                    with self._lock:
+                        self._prefetch_cache[cache_key] = ohlcv_data
+                    logger.debug(f"プリフェッチ完了: {cache_key}")
+            except Exception as e:
+                logger.debug(f"プリフェッチエラー: {e}")
+
+        self._prefetch_executor.submit(_prefetch_task)
+
+    def clear_cache(self) -> None:
+        """キャッシュをクリアする。"""
+        with self._lock:
+            self._data_cache.clear()
+            self._prefetch_cache.clear()
+
+    def get_cache_statistics(self) -> Dict[str, Any]:
+        """キャッシュ統計を取得する。"""
+        with self._lock:
+            return {
+                "cache_size": len(self._data_cache),
+                "prefetch_size": len(self._prefetch_cache),
+                "readers": 0,
+            }

@@ -53,6 +53,7 @@ class PurgedKFold(_BaseKFold):
         groups: Optional[Any] = None,
     ):
         """データを訓練セットとテストセットに分割するためのインデックスを生成"""
+        _ = groups
         if not isinstance(X, pd.DataFrame) or not X.index.equals(self.t1.index):
             raise ValueError("X must be a DataFrame and have the same index as t1.")
 

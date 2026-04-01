@@ -68,6 +68,8 @@ class EvolutionRunner:
         self.population = population  # 適応的突然変異用
         self.parallel_evaluator = parallel_evaluator
         self.individual_evaluator = individual_evaluator
+        self._crossover_cache: dict[str, Any] = {}
+        self._mutation_cache: dict[str, Any] = {}
 
     def run_evolution(
         self,
@@ -133,27 +135,8 @@ class EvolutionRunner:
                 # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
                 offspring = list(self.toolbox.map(self.toolbox.clone, population))
 
-                # 交叉
-                # インデックスを使ってリストを直接更新する（mateが新しいオブジェクトを返すため）
-                for i in range(0, len(offspring) - 1, 2):
-                    child1, child2 = offspring[i], offspring[i + 1]
-                    if random.random() < config.crossover_rate:
-                        new_child1, new_child2 = self.toolbox.mate(child1, child2)
-                        offspring[i] = new_child1
-                        offspring[i + 1] = new_child2
-                        _invalidate_individual_cache(offspring[i])
-                        _invalidate_individual_cache(offspring[i + 1])
-
-                # 突然変異
-                # インデックスを使ってリストを直接更新する（mutateが新しいオブジェクトを返すため）
-                for i in range(len(offspring)):
-                    mutant = offspring[i]
-                    if random.random() < config.mutation_rate:
-                        # mutateはタプル(ind,)を返す
-                        result = self.toolbox.mutate(mutant)
-                        new_mutant = result[0]
-                        offspring[i] = new_mutant
-                        _invalidate_individual_cache(offspring[i])
+                offspring = self._apply_crossover_batch(offspring, config)
+                offspring = self._apply_mutation_batch(offspring, config)
 
                 # 未評価個体の評価（並列評価対応）
                 invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
@@ -193,6 +176,53 @@ class EvolutionRunner:
 
         logger.info("進化アルゴリズム完了")
         return population, logbook
+
+    def _apply_crossover_batch(self, offspring: List[Any], config: Any) -> List[Any]:
+        """交叉のバッチ処理。"""
+        for i in range(0, len(offspring) - 1, 2):
+            if random.random() < config.crossover_rate:
+                child1, child2 = offspring[i], offspring[i + 1]
+                new_child1, new_child2 = self.toolbox.mate(child1, child2)
+                offspring[i] = new_child1
+                offspring[i + 1] = new_child2
+                _invalidate_individual_cache(offspring[i])
+                _invalidate_individual_cache(offspring[i + 1])
+
+        return offspring
+
+    def _apply_mutation_batch(self, offspring: List[Any], config: Any) -> List[Any]:
+        """突然変異のバッチ処理。"""
+        for i in range(len(offspring)):
+            if random.random() < config.mutation_rate:
+                mutant = offspring[i]
+                result = self.toolbox.mutate(mutant)
+                new_mutant = result[0]
+                offspring[i] = new_mutant
+                _invalidate_individual_cache(offspring[i])
+
+        return offspring
+
+    def _get_crossover_cache_key(self, parent1: Any, parent2: Any) -> str:
+        """交叉キャッシュキーを生成する。"""
+        try:
+            p1_id = getattr(parent1, "id", "") or str(id(parent1))
+            p2_id = getattr(parent2, "id", "") or str(id(parent2))
+            return f"{p1_id}:{p2_id}"
+        except Exception:
+            return str(id(parent1)) + ":" + str(id(parent2))
+
+    def _get_mutation_cache_key(self, individual: Any) -> str:
+        """突然変異キャッシュキーを生成する。"""
+        try:
+            ind_id = getattr(individual, "id", "") or str(id(individual))
+            return ind_id
+        except Exception:
+            return str(id(individual))
+
+    def clear_caches(self) -> None:
+        """バッチ互換のキャッシュ領域をクリアする。"""
+        self._crossover_cache.clear()
+        self._mutation_cache.clear()
 
     def _evaluate_population(self, population: List[Any]) -> List[Any]:
         """

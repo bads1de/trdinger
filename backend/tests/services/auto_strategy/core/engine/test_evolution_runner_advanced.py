@@ -1,9 +1,8 @@
 # ruff: noqa: E402
 """
-最適化された進化エンジンのテスト
+進化エンジンの詳細テスト
 """
 
-import importlib.util
 import os
 import sys
 from types import SimpleNamespace
@@ -21,23 +20,13 @@ from app.services.auto_strategy.core.evaluation.evaluation_report import (
     EvaluationReport,
     ScenarioEvaluation,
 )
+from app.services.auto_strategy.core.engine.evolution_runner import (
+    EvolutionRunner,
+    EvolutionStoppedError,
+)
 from app.services.auto_strategy.core.engine.report_selection import (
     get_two_stage_rank,
 )
-
-# 直接インポート（ga_engineを経由しない）
-optimized_evolution_runner_path = os.path.join(
-    backend_dir, "app", "services", "auto_strategy", "core", "engine", "optimized_evolution_runner.py"
-)
-spec = importlib.util.spec_from_file_location(
-    "optimized_evolution_runner",
-    optimized_evolution_runner_path
-)
-optimized_evolution_runner_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(optimized_evolution_runner_module)
-
-OptimizedEvolutionRunner = optimized_evolution_runner_module.OptimizedEvolutionRunner
-EvolutionStoppedError = optimized_evolution_runner_module.EvolutionStoppedError
 
 
 @pytest.fixture
@@ -88,8 +77,8 @@ def mock_population():
     return population
 
 
-class TestOptimizedEvolutionRunner:
-    """最適化された進化エンジンのテスト"""
+class TestEvolutionRunnerAdvanced:
+    """進化エンジンの詳細テスト"""
 
     def setup_method(self):
         """テストセットアップ"""
@@ -97,7 +86,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_initialization(self, mock_toolbox, mock_stats):
         """初期化テスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -109,7 +98,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_run_evolution_basic(self, mock_toolbox, mock_stats, mock_config, mock_population):
         """基本的な進化実行テスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -124,7 +113,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_run_evolution_with_halloffame(self, mock_toolbox, mock_stats, mock_config, mock_population):
         """殿堂入り個体リスト付き進化実行テスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -143,7 +132,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_run_evolution_stopped_before_start(self, mock_toolbox, mock_stats, mock_config, mock_population):
         """開始前に停止した場合のテスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -160,7 +149,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_crossover_batch(self, mock_toolbox, mock_stats, mock_config, mock_population):
         """交叉バッチ処理テスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -172,7 +161,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_mutation_batch(self, mock_toolbox, mock_stats, mock_config, mock_population):
         """突然変異バッチ処理テスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -184,7 +173,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_evaluate_population(self, mock_toolbox, mock_stats, mock_population):
         """個体群評価テスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -196,7 +185,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_evaluate_invalid_individuals(self, mock_toolbox, mock_stats, mock_population):
         """未評価個体評価テスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -212,7 +201,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_clear_caches(self, mock_toolbox, mock_stats):
         """キャッシュクリアテスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -229,7 +218,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_get_crossover_cache_key(self, mock_toolbox, mock_stats):
         """交叉キャッシュキーテスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -245,7 +234,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_get_mutation_cache_key(self, mock_toolbox, mock_stats):
         """突然変異キャッシュキーテスト"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -259,7 +248,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_crossover_recomputes_for_same_parent_ids(self, mock_toolbox, mock_stats):
         """同一IDの親でも交叉結果を使い回さないこと"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -292,7 +281,7 @@ class TestOptimizedEvolutionRunner:
 
     def test_mutation_recomputes_for_same_individual_id(self, mock_toolbox, mock_stats):
         """同一IDの個体でも突然変異結果を使い回さないこと"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -321,7 +310,7 @@ class TestOptimizedEvolutionRunner:
         self, mock_toolbox, mock_stats
     ):
         """最適化版でもリスク指標の動的スカラーが更新されること"""
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
@@ -413,7 +402,7 @@ class TestOptimizedEvolutionRunner:
             }[individual.id]
         )
 
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
             individual_evaluator=mock_evaluator,
@@ -482,7 +471,7 @@ class TestOptimizedEvolutionRunner:
             }[individual.id]
         )
 
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
             individual_evaluator=mock_evaluator,
@@ -503,15 +492,15 @@ class TestOptimizedEvolutionRunner:
         assert selected == [robust_candidate, robust_candidate]
 
 
-class TestOptimizedEvolutionRunnerWithParallelEvaluator:
-    """並列評価器付き最適化された進化エンジンのテスト"""
+class TestEvolutionRunnerWithParallelEvaluator:
+    """並列評価器付き進化エンジンのテスト"""
 
     def test_run_evolution_with_parallel_evaluator(self, mock_toolbox, mock_stats, mock_config, mock_population):
         """並列評価器付き進化実行テスト"""
         mock_parallel_evaluator = MagicMock()
         mock_parallel_evaluator.evaluate_population.return_value = [(0.5,) for _ in range(10)]
 
-        runner = OptimizedEvolutionRunner(
+        runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
             parallel_evaluator=mock_parallel_evaluator,

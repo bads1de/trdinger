@@ -77,9 +77,7 @@ def benchmark_fitness_calculators():
     from app.services.auto_strategy.core.fitness.fitness_calculator import (
         FitnessCalculator,
     )
-    from app.services.auto_strategy.core.fitness.optimized_fitness_calculator import (
-        OptimizedFitnessCalculator,
-    )
+    OptimizedFitnessCalculator = FitnessCalculator
 
     # 計算器の初期化
     original_calculator = FitnessCalculator()
@@ -142,9 +140,7 @@ def benchmark_multi_objective_fitness():
     from app.services.auto_strategy.core.fitness.fitness_calculator import (
         FitnessCalculator,
     )
-    from app.services.auto_strategy.core.fitness.optimized_fitness_calculator import (
-        OptimizedFitnessCalculator,
-    )
+    OptimizedFitnessCalculator = FitnessCalculator
 
     # 計算器の初期化
     original_calculator = FitnessCalculator()
@@ -206,9 +202,7 @@ def benchmark_with_different_trade_counts():
     from app.services.auto_strategy.core.fitness.fitness_calculator import (
         FitnessCalculator,
     )
-    from app.services.auto_strategy.core.fitness.optimized_fitness_calculator import (
-        OptimizedFitnessCalculator,
-    )
+    OptimizedFitnessCalculator = FitnessCalculator
 
     original_calculator = FitnessCalculator()
     optimized_calculator = OptimizedFitnessCalculator()

@@ -102,7 +102,7 @@ class TestGeneticAlgorithmEngine:
 
         # ハイブリッドモードであることを確認
         assert engine.hybrid_mode is True
-        # HybridIndividualEvaluatorが使用されていることを確認
+        # 標準名のハイブリッド評価器が使用され、内部最適化は実装側に吸収される
         assert type(engine.individual_evaluator).__name__ == "HybridIndividualEvaluator"
 
     def test_engine_components_are_set(
@@ -261,7 +261,7 @@ class TestGeneticAlgorithmEngine:
             config,
         )
 
-    @patch("app.services.auto_strategy.core.engine.ga_engine.OptimizedEvolutionRunner")
+    @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
     def test_run_evolution_flow(
         self,
         mock_runner_cls,
@@ -329,7 +329,7 @@ class TestGeneticAlgorithmEngine:
         assert run_kwargs["should_stop"]() is True
 
     @patch("app.services.auto_strategy.core.engine.ga_engine.ParallelEvaluator")
-    @patch("app.services.auto_strategy.core.engine.ga_engine.OptimizedEvolutionRunner")
+    @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
     def test_run_evolution_with_parallel_config(
         self,
         mock_runner_cls,

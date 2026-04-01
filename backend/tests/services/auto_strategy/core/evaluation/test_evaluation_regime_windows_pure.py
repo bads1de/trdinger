@@ -1,9 +1,11 @@
+"""EvaluationStrategy のレジームウィンドウ関連テスト。"""
+
 from types import SimpleNamespace
 
 import pytest
 
-from app.services.auto_strategy.core.evaluation.optimized_evaluation_strategies import (
-    OptimizedEvaluationStrategy,
+from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
+    EvaluationStrategy,
 )
 
 
@@ -26,7 +28,7 @@ class _StubEvaluator:
 
 def test_execute_robustness_report_adds_regime_windows():
     evaluator = _StubEvaluator()
-    strategy = OptimizedEvaluationStrategy(evaluator, max_workers=2)
+    strategy = EvaluationStrategy(evaluator)
     config = SimpleNamespace(
         enable_purged_kfold=False,
         enable_walk_forward=False,

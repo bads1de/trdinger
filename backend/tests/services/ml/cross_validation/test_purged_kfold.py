@@ -32,6 +32,16 @@ class TestPurgedKFold:
         with pytest.raises(ValueError, match="X must be a DataFrame and have the same index as t1"):
             next(pkf.split(X_wrong))
 
+    def test_split_accepts_groups_keyword(self, sample_data):
+        """groups キーワード引数を受け付けること"""
+        X, y, t1 = sample_data
+        pkf = PurgedKFold(n_splits=3, t1=t1)
+
+        groups = pd.Series(np.arange(len(X)), index=X.index)
+        splits = list(pkf.split(X, y, groups=groups))
+
+        assert len(splits) == 3
+
     def test_purging_logic(self, sample_data):
         """パージングが正しく行われているか（未来のリーク防止）"""
         X, y, t1 = sample_data

@@ -6,8 +6,12 @@
 """
 
 import logging
+import hashlib
+import json
 import math
 from typing import Any, Dict, Tuple
+
+import numpy as np
 
 from app.services.auto_strategy.config.ga import GAConfig
 from ..evaluation.evaluation_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
@@ -27,7 +31,42 @@ class FitnessCalculator:
     _MINIMIZE_OBJECTIVES = {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
 
     def __init__(self) -> None:
-        pass
+        # メトリクスキャッシュ（同一 backtest_result の再計算を避ける）
+        self._metrics_cache: Dict[str, Dict[str, Any]] = {}
+        self._cache_enabled = True
+
+    def clear_cache(self) -> None:
+        """メトリクスキャッシュをクリアする。"""
+        self._metrics_cache.clear()
+
+    @staticmethod
+    def _json_default(value: Any) -> Any:
+        """JSON キー生成時の非標準値を文字列または素値に落とす。"""
+        if isinstance(value, np.generic):
+            return value.item()
+        return str(value)
+
+    def _generate_cache_key(self, backtest_result: Dict[str, Any]) -> str:
+        """バックテスト結果の内容から安定したキャッシュキーを生成する。"""
+        payload = {
+            "performance_metrics": backtest_result.get("performance_metrics") or {},
+            "equity_curve": backtest_result.get("equity_curve") or [],
+            "trade_history": backtest_result.get("trade_history") or [],
+            "start_date": backtest_result.get("start_date"),
+            "end_date": backtest_result.get("end_date"),
+        }
+
+        try:
+            cache_text = json.dumps(
+                payload,
+                sort_keys=True,
+                ensure_ascii=False,
+                default=self._json_default,
+            )
+        except (TypeError, ValueError):
+            cache_text = repr(payload)
+
+        return hashlib.sha256(cache_text.encode("utf-8")).hexdigest()
 
     def get_penalty_values(self, config: "GAConfig") -> Tuple[float, ...]:
         """一貫したペナルティ値のタプルを返す。
@@ -55,50 +94,71 @@ class FitnessCalculator:
         Returns:
             抽出されたパフォーマンスメトリクス
         """
-        performance_metrics = backtest_result.get("performance_metrics", {})
+        cache_key = self._generate_cache_key(backtest_result)
+        if self._cache_enabled and cache_key in self._metrics_cache:
+            return self._metrics_cache[cache_key]
+
+        performance_metrics = backtest_result.get("performance_metrics") or {}
+
+        total_return = performance_metrics.get("total_return", 0.0)
+        sharpe_ratio = performance_metrics.get("sharpe_ratio", 0.0)
+        max_drawdown = performance_metrics.get("max_drawdown", 1.0)
+        win_rate = performance_metrics.get("win_rate", 0.0)
+        profit_factor = performance_metrics.get("profit_factor", 0.0)
+        sortino_ratio = performance_metrics.get("sortino_ratio", 0.0)
+        calmar_ratio = performance_metrics.get("calmar_ratio", 0.0)
+        total_trades = performance_metrics.get("total_trades", 0)
+
+        def _sanitize_float(value: Any, default: float) -> float:
+            if value is None or not isinstance(value, (int, float)):
+                return default
+            value_float = float(value)
+            if isinstance(value_float, float) and not math.isfinite(value_float):
+                return default
+            return value_float
+
+        total_return = _sanitize_float(total_return, 0.0)
+        sharpe_ratio = _sanitize_float(sharpe_ratio, 0.0)
+        max_drawdown = _sanitize_float(max_drawdown, 1.0)
+        win_rate = _sanitize_float(win_rate, 0.0)
+        profit_factor = _sanitize_float(profit_factor, 0.0)
+        sortino_ratio = _sanitize_float(sortino_ratio, 0.0)
+        calmar_ratio = _sanitize_float(calmar_ratio, 0.0)
+        total_trades = int(_sanitize_float(total_trades, 0.0))
+
+        if max_drawdown < 0:
+            max_drawdown = 0.0
+
+        equity_curve = backtest_result.get("equity_curve")
+        ulcer_index = calculate_ulcer_index(equity_curve) if equity_curve else 0.0
+
+        trade_history = backtest_result.get("trade_history")
+        trade_penalty = (
+            calculate_trade_frequency_penalty(
+                total_trades=total_trades,
+                start_date=backtest_result.get("start_date"),
+                end_date=backtest_result.get("end_date"),
+                trade_history=trade_history,
+            )
+            if trade_history
+            else 0.0
+        )
 
         metrics = {
-            "total_return": performance_metrics.get("total_return", 0.0),
-            "sharpe_ratio": performance_metrics.get("sharpe_ratio", 0.0),
-            "max_drawdown": performance_metrics.get("max_drawdown", 1.0),
-            "win_rate": performance_metrics.get("win_rate", 0.0),
-            "profit_factor": performance_metrics.get("profit_factor", 0.0),
-            "sortino_ratio": performance_metrics.get("sortino_ratio", 0.0),
-            "calmar_ratio": performance_metrics.get("calmar_ratio", 0.0),
-            "total_trades": performance_metrics.get("total_trades", 0),
+            "total_return": total_return,
+            "sharpe_ratio": sharpe_ratio,
+            "max_drawdown": max_drawdown,
+            "win_rate": win_rate,
+            "profit_factor": profit_factor,
+            "sortino_ratio": sortino_ratio,
+            "calmar_ratio": calmar_ratio,
+            "total_trades": total_trades,
+            "ulcer_index": ulcer_index,
+            "trade_frequency_penalty": trade_penalty,
         }
 
-        for key, value in list(metrics.items()):
-
-            def is_invalid_value(val):
-                return (
-                    val is None
-                    or (isinstance(val, float) and not math.isfinite(val))
-                    or not isinstance(val, (int, float))
-                )
-
-            if is_invalid_value(value):
-                if key == "max_drawdown":
-                    metrics[key] = 1.0
-                elif key == "total_trades":
-                    metrics[key] = 0
-                else:
-                    metrics[key] = 0.0
-            elif (
-                key == "max_drawdown" and isinstance(value, (int, float)) and value < 0
-            ):
-                metrics[key] = 0.0
-
-        equity_curve = backtest_result.get("equity_curve", [])
-        metrics["ulcer_index"] = calculate_ulcer_index(equity_curve)
-
-        trade_history = backtest_result.get("trade_history", [])
-        metrics["trade_frequency_penalty"] = calculate_trade_frequency_penalty(
-            total_trades=metrics["total_trades"],
-            start_date=backtest_result.get("start_date"),
-            end_date=backtest_result.get("end_date"),
-            trade_history=trade_history,
-        )
+        if self._cache_enabled:
+            self._metrics_cache[cache_key] = metrics
 
         return metrics
 
@@ -181,6 +241,110 @@ class FitnessCalculator:
             logger.error(f"フィットネス計算エラー: {e}", exc_info=True)
             return config.constraint_violation_penalty
 
+    def _calculate_balance_score_fast(
+        self, backtest_result: Dict[str, Any]
+    ) -> float:
+        """ロング・ショートバランススコア計算（最適化版）。"""
+        trade_history = backtest_result.get("trade_history")
+        if not trade_history:
+            return 0.5
+
+        try:
+            n_trades = len(trade_history)
+            if n_trades < 50:
+                return self._calculate_balance_score_inline(trade_history)
+            return self._calculate_balance_score_numpy(trade_history)
+        except Exception as e:
+            logger.debug(f"バランススコア計算エラー: {e}")
+            return 0.5
+
+    def _calculate_balance_score_inline(self, trade_history: list) -> float:
+        """小規模データ向けのインライン計算。"""
+        long_count = 0
+        short_count = 0
+        long_pnl = 0.0
+        short_pnl = 0.0
+
+        for trade in trade_history:
+            size = trade.get("size", 0.0)
+            pnl = trade.get("pnl", 0.0)
+            if size > 0:
+                long_count += 1
+                long_pnl += pnl
+            elif size < 0:
+                short_count += 1
+                short_pnl += pnl
+
+        total_count = long_count + short_count
+        if total_count == 0:
+            return 0.5
+
+        long_ratio = long_count / total_count
+        short_ratio = short_count / total_count
+        trade_balance = 1.0 - abs(long_ratio - short_ratio)
+
+        total_pnl = long_pnl + short_pnl
+        if total_pnl > 0:
+            if long_pnl > 0 and short_pnl > 0:
+                profit_balance = 1.0
+            elif long_pnl > 0 or short_pnl > 0:
+                profit_balance = 0.7
+            else:
+                profit_balance = 0.5
+        elif long_pnl < 0 and short_pnl < 0:
+            profit_balance = 0.1
+        else:
+            profit_balance = 0.3
+
+        balance_score = 0.6 * trade_balance + 0.4 * profit_balance
+        return float(max(0.0, min(1.0, balance_score)))
+
+    def _calculate_balance_score_numpy(self, trade_history: list) -> float:
+        """大規模データ向けの NumPy 版計算。"""
+        trades_array = np.array(
+            [(trade.get("size", 0.0), trade.get("pnl", 0.0)) for trade in trade_history],
+            dtype=np.float64,
+        )
+
+        if len(trades_array) == 0:
+            return 0.5
+
+        sizes = trades_array[:, 0]
+        pnls = trades_array[:, 1]
+
+        long_mask = sizes > 0
+        short_mask = sizes < 0
+
+        long_count = np.sum(long_mask)
+        short_count = np.sum(short_mask)
+        total_count = long_count + short_count
+
+        if total_count == 0:
+            return 0.5
+
+        long_ratio = long_count / total_count
+        short_ratio = short_count / total_count
+        trade_balance = 1.0 - abs(long_ratio - short_ratio)
+
+        long_pnl = np.sum(pnls[long_mask]) if long_count > 0 else 0.0
+        short_pnl = np.sum(pnls[short_mask]) if short_count > 0 else 0.0
+        total_pnl = long_pnl + short_pnl
+
+        if total_pnl > 0:
+            if long_pnl > 0 and short_pnl > 0:
+                profit_balance = 1.0
+            elif long_pnl > 0 or short_pnl > 0:
+                profit_balance = 0.7
+            else:
+                profit_balance = 0.5
+        elif long_pnl < 0 and short_pnl < 0:
+            profit_balance = 0.1
+        else:
+            profit_balance = 0.3
+
+        balance_score = float(0.6 * trade_balance + 0.4 * profit_balance)
+        return max(0.0, min(1.0, balance_score))
+
     def calculate_long_short_balance(
         self, backtest_result: Dict[str, Any]
     ) -> float:
@@ -194,50 +358,7 @@ class FitnessCalculator:
             バランススコア（0.0-1.0）
         """
         try:
-            trade_history = backtest_result.get("trade_history", [])
-            if not trade_history:
-                return 0.5
-
-            long_trades = []
-            short_trades = []
-            long_pnl = 0.0
-            short_pnl = 0.0
-
-            for trade in trade_history:
-                size = trade.get("size", 0.0)
-                pnl = trade.get("pnl", 0.0)
-
-                if size > 0:
-                    long_trades.append(trade)
-                    long_pnl += pnl
-                elif size < 0:
-                    short_trades.append(trade)
-                    short_pnl += pnl
-
-            total_trades = len(long_trades) + len(short_trades)
-            if total_trades == 0:
-                return 0.5
-
-            long_ratio = len(long_trades) / total_trades
-            short_ratio = len(short_trades) / total_trades
-            trade_balance = 1.0 - abs(long_ratio - short_ratio)
-
-            total_pnl = long_pnl + short_pnl
-            profit_balance = 0.5
-
-            if total_pnl > 0:
-                if long_pnl > 0 and short_pnl > 0:
-                    profit_balance = 1.0
-                elif long_pnl > 0 or short_pnl > 0:
-                    profit_balance = 0.7
-            elif long_pnl < 0 and short_pnl < 0:
-                profit_balance = 0.1
-            else:
-                profit_balance = 0.3
-
-            balance_score = 0.6 * trade_balance + 0.4 * profit_balance
-
-            return max(0.0, min(1.0, balance_score))
+            return self._calculate_balance_score_fast(backtest_result)
 
         except (KeyError, TypeError, ValueError) as e:
             logger.error(f"ロング・ショートバランス計算エラー: {e}", exc_info=True)
