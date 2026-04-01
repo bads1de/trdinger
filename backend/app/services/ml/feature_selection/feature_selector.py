@@ -147,7 +147,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         self,
         X: Union[pd.DataFrame, np.ndarray],
         y: Union[pd.Series, np.ndarray],
-        **fit_params,
+        **_fit_params,
     ) -> Union[pd.DataFrame, np.ndarray]:
         self.fit(X, y)
         return self.transform(X)

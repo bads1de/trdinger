@@ -8,10 +8,7 @@ import numpy as np
 import pandas as pd
 from numba import njit, prange
 
-from ...data_validation import (
-    handle_pandas_ta_errors,
-    validate_multi_series_params,
-)
+from ...data_validation import handle_pandas_ta_errors, validate_multi_series_params
 
 
 @njit(cache=True)
@@ -537,7 +534,9 @@ def _njit_quantum_flow_loop(
         corr_component = correlation_score[i]
         vol_component = volatility[i]
 
-        integrated = wavelet_component * 0.4 + corr_component * 0.3 + vol_component * 0.3
+        integrated = (
+            wavelet_component * 0.4 + corr_component * 0.3 + vol_component * 0.3
+        )
 
     raw_integrated = np.zeros(n)
     for i in prange(length, n):
@@ -616,7 +615,9 @@ def quantum_flow(
         prices, highs, lows, volumes, length, wavelet_result
     )
 
-    signal = pd.Series(flow_values, index=close.index).rolling(window=flow_length).mean()
+    signal = (
+        pd.Series(flow_values, index=close.index).rolling(window=flow_length).mean()
+    )
     signal.name = "QUANTUM_FLOW_SIGNAL"
 
     flow_series = pd.Series(flow_values, index=close.index, name="QUANTUM_FLOW")
@@ -699,9 +700,7 @@ def harmonic_resonance(
 
 
 @handle_pandas_ta_errors
-def calculate_harmonic_resonance(
-    data, length=20, resonance_bands=5, signal_length=3
-):
+def calculate_harmonic_resonance(data, length=20, resonance_bands=5, signal_length=3):
     """Harmonic Resonance Indicator計算のラッパーメソッド."""
     if not isinstance(data, pd.DataFrame):
         raise TypeError("data must be pandas DataFrame")
@@ -715,7 +714,9 @@ def calculate_harmonic_resonance(
     high = data["high"]
     low = data["low"]
 
-    hri, signal = harmonic_resonance(close, high, low, length, resonance_bands, signal_length)
+    hri, signal = harmonic_resonance(
+        close, high, low, length, resonance_bands, signal_length
+    )
 
     result = pd.DataFrame(
         {

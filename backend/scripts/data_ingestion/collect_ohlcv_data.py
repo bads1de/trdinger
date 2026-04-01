@@ -44,7 +44,6 @@ async def collect_ohlcv_data(symbol: str, timeframe: str):
                 symbol=symbol,
                 timeframe=timeframe,
                 repository=repository,
-                since_timestamp=None,
             )
 
             end_time = datetime.now(timezone.utc)

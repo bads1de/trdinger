@@ -276,7 +276,7 @@ class ErrorHandler:
                     raise TimeoutError(f"操作がタイムアウトしました ({timeout}秒)")
         else:
             # Unix: シグナルベースのタイムアウト
-            def timeout_handler(signum: int, frame: Any) -> None:
+            def timeout_handler(_signum: int, _frame: Any) -> None:
                 raise TimeoutError(f"操作がタイムアウトしました ({timeout}秒)")
 
             old_handler = signal.signal(signal.SIGALRM, timeout_handler)  # type: ignore[attr-defined]

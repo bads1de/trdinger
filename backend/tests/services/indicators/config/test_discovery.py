@@ -137,6 +137,21 @@ class TestDiscoverAll:
 
         assert len(names) == len(set(names)), "重複するインジケーター設定があります"
 
+    def test_custom_trend_package_takes_priority_for_duplicate_names(self):
+        """custom trend 系の同名指標が pandas_ta より優先されること"""
+        configs = DynamicIndicatorDiscovery.discover_all()
+        expected_modules = {
+            "AROON": "app.services.indicators.technical_indicators.trend",
+            "VORTEX": "app.services.indicators.technical_indicators.trend",
+        }
+
+        for indicator_name, expected_module in expected_modules.items():
+            config = next(
+                c for c in configs if c.indicator_name == indicator_name
+            )
+            assert config.adapter_function is not None
+            assert config.adapter_function.__module__ == expected_module
+
 
 class TestAnalyzeFunction:
     """_analyze_function のテスト"""

@@ -14,6 +14,7 @@ from ...data_validation import (
     validate_multi_series_params,
     validate_series_params,
 )
+from .trend import _format_param
 
 
 @njit(cache=True)
@@ -383,64 +384,6 @@ def _njit_connors_rsi_loop(
 
 
 @handle_pandas_ta_errors
-def elder_ray(
-    high: pd.Series,
-    low: pd.Series,
-    close: pd.Series,
-    length: int = 13,
-    ema_length: int = 16,
-) -> Tuple[pd.Series, pd.Series]:
-    """Elder Ray Index."""
-    length = int(length)
-    ema_length = int(ema_length)
-    if length <= 0:
-        raise ValueError("length must be positive")
-    if ema_length <= 0:
-        raise ValueError("ema_length must be positive")
-
-    validation = validate_multi_series_params(
-        {"high": high, "low": low, "close": close}, ema_length
-    )
-    if validation is not None:
-        return create_nan_series_bundle(close, 2)
-
-    ema = close.ewm(span=ema_length, adjust=False).mean()
-    bull_power = high - ema
-    bear_power = low - ema
-    return bull_power, bear_power
-
-
-@handle_pandas_ta_errors
-def calculate_elder_ray(data, length=13, ema_length=16):
-    """Elder Ray Index計算のラッパーメソッド."""
-    length = int(length)
-    ema_length = int(ema_length)
-    if not isinstance(data, pd.DataFrame):
-        raise TypeError("data must be pandas DataFrame")
-
-    required_columns = ["high", "low", "close"]
-    for col in required_columns:
-        if col not in data.columns:
-            raise ValueError(f"Missing required column: {col}")
-
-    high = data["high"]
-    low = data["low"]
-    close = data["close"]
-
-    bull_power, bear_power = elder_ray(high, low, close, length, ema_length)
-
-    result = pd.DataFrame(
-        {
-            f"Elder_Ray_Bull_{length}_{ema_length}": bull_power,
-            f"Elder_Ray_Bear_{length}_{ema_length}": bear_power,
-        },
-        index=data.index,
-    )
-
-    return result
-
-
-@handle_pandas_ta_errors
 def prime_oscillator(
     close: pd.Series, length: int = 14, signal_length: int = 3
 ) -> Tuple[pd.Series, pd.Series]:
@@ -607,9 +550,7 @@ def adaptive_entropy(
     if short_length >= long_length:
         raise ValueError("short_length must be < long_length")
 
-    validation = validate_series_params(
-        close, long_length, min_data_length=long_length
-    )
+    validation = validate_series_params(close, long_length, min_data_length=long_length)
     if validation is not None:
         nan_osc = pd.Series(
             np.full(len(close), np.nan),
@@ -663,9 +604,7 @@ def adaptive_entropy(
 
 
 @handle_pandas_ta_errors
-def calculate_adaptive_entropy(
-    data, short_length=14, long_length=28, signal_length=5
-):
+def calculate_adaptive_entropy(data, short_length=14, long_length=28, signal_length=5):
     """Adaptive Entropy Oscillator計算のラッパーメソッド."""
     if not isinstance(data, pd.DataFrame):
         raise TypeError("data must be pandas DataFrame")
@@ -708,9 +647,7 @@ def connors_rsi(
         raise ValueError("rank_periods must be >= 2")
 
     max_period = max(rsi_periods, streak_periods, rank_periods)
-    validation = validate_series_params(
-        close, max_period, min_data_length=max_period
-    )
+    validation = validate_series_params(close, max_period, min_data_length=max_period)
     if validation is not None:
         return pd.Series(
             np.full(len(close), np.nan),
@@ -719,9 +656,7 @@ def connors_rsi(
         )
 
     prices = close.astype(float).to_numpy()
-    result = _njit_connors_rsi_loop(
-        prices, rsi_periods, streak_periods, rank_periods
-    )
+    result = _njit_connors_rsi_loop(prices, rsi_periods, streak_periods, rank_periods)
 
     return pd.Series(
         result,
@@ -751,4 +686,284 @@ def calculate_connors_rsi(data, rsi_periods=3, streak_periods=2, rank_periods=10
         index=data.index,
     )
 
+    return result
+
+
+@njit(cache=True)
+def _njit_damiani_volatmeter_loop(high, low, close, vis_atr, vis_std, sed_atr, sed_std):
+    n = len(close)
+    result = np.full(n, np.nan, dtype=np.float64)
+    min_len = max(sed_atr, sed_std)
+    if n < min_len + 1:
+        return result
+
+    tr = np.zeros(n, dtype=np.float64)
+    for i in range(1, n):
+        tr[i] = max(
+            high[i] - low[i],
+            max(abs(high[i] - close[i - 1]), abs(low[i] - close[i - 1])),
+        )
+
+    for i in range(min_len, n):
+        s_atr = 0.0
+        for j in range(i - vis_atr + 1, i + 1):
+            s_atr += tr[j]
+        s_atr /= float(vis_atr)
+
+        l_atr = 0.0
+        for j in range(i - sed_atr + 1, i + 1):
+            l_atr += tr[j]
+        l_atr /= float(sed_atr)
+
+        sma_s = 0.0
+        for j in range(i - vis_std + 1, i + 1):
+            sma_s += close[j]
+        sma_s /= float(vis_std)
+        var_s = 0.0
+        for j in range(i - vis_std + 1, i + 1):
+            d = close[j] - sma_s
+            var_s += d * d
+        std_s = np.sqrt(var_s / float(vis_std))
+
+        sma_l = 0.0
+        for j in range(i - sed_std + 1, i + 1):
+            sma_l += close[j]
+        sma_l /= float(sed_std)
+        var_l = 0.0
+        for j in range(i - sed_std + 1, i + 1):
+            d = close[j] - sma_l
+            var_l += d * d
+        std_l = np.sqrt(var_l / float(sed_std))
+
+        if std_s > 1e-12 and std_l > 1e-12:
+            result[i] = s_atr / std_s - l_atr / std_l
+
+    return result
+
+
+@handle_pandas_ta_errors
+def damiani_volatmeter(
+    high, low, close, vis_atr=13, vis_std=20, sed_atr=40, sed_std=100, threshold=1.4
+):
+    """Damiani Volatmeter.
+
+    Compares short-term to long-term volatility to filter market conditions.
+    Low values = noisy/choppy (avoid trading), High values = sufficient volatility.
+
+    Args:
+        high: High price series. low: Low price series. close: Close price series.
+        vis_atr/vis_std: Short-term periods. sed_atr/sed_std: Long-term periods.
+        threshold: Volatility threshold. Default 1.4.
+    Returns:
+        Tuple of (volatmeter, threshold_line).
+    """
+    min_data = max(sed_atr, sed_std) + 1
+    validation = validate_multi_series_params(
+        {"high": high, "low": low, "close": close}, min_data, min_data_length=min_data
+    )
+    if validation is not None:
+        nan1 = pd.Series(
+            np.full(len(close), np.nan),
+            index=close.index,
+            name=f"DAMIANI_{vis_atr}_{sed_atr}",
+        )
+        nan2 = pd.Series(
+            np.full(len(close), threshold),
+            index=close.index,
+            name=f"DAMIANI_THR_{threshold}",
+        )
+        return nan1, nan2
+
+    result = _njit_damiani_volatmeter_loop(
+        high.values.astype(float),
+        low.values.astype(float),
+        close.values.astype(float),
+        vis_atr,
+        vis_std,
+        sed_atr,
+        sed_std,
+    )
+    osc = pd.Series(result, index=close.index, name=f"DAMIANI_{vis_atr}_{sed_atr}")
+    thr = pd.Series(
+        np.full(len(close), threshold),
+        index=close.index,
+        name=f"DAMIANI_THR_{threshold}",
+    )
+    return osc, thr
+
+
+@handle_pandas_ta_errors
+def calculate_damiani_volatmeter(
+    data, vis_atr=13, vis_std=20, sed_atr=40, sed_std=100, threshold=1.4
+):
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("data must be pandas DataFrame")
+    for col in ["high", "low", "close"]:
+        if col not in data.columns:
+            raise ValueError(f"Missing required column: {col}")
+    osc, thr = damiani_volatmeter(
+        data["high"],
+        data["low"],
+        data["close"],
+        vis_atr,
+        vis_std,
+        sed_atr,
+        sed_std,
+        threshold,
+    )
+    return pd.DataFrame({osc.name: osc, thr.name: thr}, index=data.index)
+
+
+@njit(cache=True)
+def _njit_kairi_loop(prices, length):
+    n = len(prices)
+    result = np.full(n, np.nan, dtype=np.float64)
+    if n < length:
+        return result
+    for i in range(length - 1, n):
+        sma = 0.0
+        for j in range(i - length + 1, i + 1):
+            sma += prices[j]
+        sma /= float(length)
+        if abs(sma) > 1e-12:
+            result[i] = ((prices[i] - sma) / sma) * 100.0
+    return result
+
+
+@handle_pandas_ta_errors
+def kairi_relative_index(close, length=14, signal_length=3):
+    """Kairi Relative Index (KRI).
+
+    Percentage deviation of price from its moving average.
+    Positive = above MA, negative = below MA.
+
+    Args:
+        close: Close price series. length: SMA period. Default 14.
+    Returns:
+        Tuple of (kri, signal).
+    """
+    validation = validate_series_params(close, length, min_data_length=length)
+    if validation is not None:
+        nan1 = pd.Series(
+            np.full(len(close), np.nan), index=close.index, name=f"KRI_{length}"
+        )
+        nan2 = pd.Series(
+            np.full(len(close), np.nan), index=close.index, name=f"KRI_SIGNAL_{length}"
+        )
+        return nan1, nan2
+
+    result = _njit_kairi_loop(close.values.astype(float), length)
+    osc = pd.Series(result, index=close.index, name=f"KRI_{length}")
+    sig = osc.rolling(window=signal_length, min_periods=1).mean()
+    sig.name = f"KRI_SIGNAL_{length}"
+    return osc, sig
+
+
+@handle_pandas_ta_errors
+def calculate_kairi_relative_index(data, length=14, signal_length=3):
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("data must be pandas DataFrame")
+    if "close" not in data.columns:
+        raise ValueError("Missing required column: close")
+    kri, sig = kairi_relative_index(data["close"], length, signal_length)
+    return pd.DataFrame({kri.name: kri, sig.name: sig}, index=data.index)
+
+
+@njit(parallel=True, cache=True)
+def _njit_entropy_volatility_loop(
+    returns: np.ndarray,
+    win: int,
+    m_val: int,
+    r_val: float,
+) -> np.ndarray:
+    n = len(returns)
+    res = np.full(n, np.nan)
+    for i in prange(win - 1, n):
+        chunk = returns[i - win + 1 : i + 1]
+        # 標準偏差を計算
+        mean = 0.0
+        for val in chunk:
+            mean += val
+        mean /= len(chunk)
+        variance = 0.0
+        for val in chunk:
+            variance += (val - mean) ** 2
+        std = np.sqrt(variance / len(chunk))
+        if std < 1e-12:
+            res[i] = 0.0
+            continue
+        thresh = r_val * std
+        # サンプルエントロピー計算
+        a_count = 0
+        b_count = 0
+        for j in range(len(chunk) - m_val):
+            for k in range(j + 1, len(chunk) - m_val):
+                # m_val次元の距離を計算
+                match_m = True
+                for m in range(m_val):
+                    if abs(chunk[j + m] - chunk[k + m]) > thresh:
+                        match_m = False
+                        break
+                if match_m:
+                    b_count += 1
+                    # m_val+1次元の距離を計算
+                    if abs(chunk[j + m_val] - chunk[k + m_val]) <= thresh:
+                        a_count += 1
+        if a_count > 0 and b_count > 0:
+            res[i] = -np.log(a_count / b_count)
+        else:
+            res[i] = 0.0
+    return res
+
+
+@handle_pandas_ta_errors
+def entropy_volatility_index(
+    close: pd.Series,
+    length: int = 30,
+    m_val: int = 2,
+    r_val: float = 0.2,
+) -> pd.Series:
+    """エントロピーボラティリティインデックス (EVI)."""
+    if length < 1:
+        raise ValueError("length must be >= 1")
+    if m_val < 1:
+        raise ValueError("m_val must be >= 1")
+    if r_val <= 0:
+        raise ValueError("r_val must be > 0")
+
+    validation = validate_series_params(close, length)
+    if validation is not None:
+        return pd.Series(
+            np.full(len(close), np.nan),
+            index=close.index,
+            name=f"EVI_{length}_{m_val}_{_format_param(r_val)}",
+        )
+
+    returns = np.log(close / close.shift(1)).to_numpy()
+    returns[0] = 0.0
+    evi = _njit_entropy_volatility_loop(returns, length, m_val, r_val)
+    return pd.Series(
+        evi,
+        index=close.index,
+        name=f"EVI_{length}_{m_val}_{_format_param(r_val)}",
+    )
+
+
+@handle_pandas_ta_errors
+def calculate_entropy_volatility_index(data, length=30, m_val=2, r_val=0.2):
+    """エントロピーボラティリティインデックス計算のラッパーメソッド."""
+    if not isinstance(data, pd.DataFrame):
+        raise TypeError("data must be pandas DataFrame")
+
+    required_columns = ["close"]
+    for col in required_columns:
+        if col not in data.columns:
+            raise ValueError(f"Missing required column: {col}")
+
+    close = data["close"]
+    evi = entropy_volatility_index(
+        close, length=length, m_val=m_val, r_val=r_val
+    )
+
+    result = pd.DataFrame({evi.name: evi}, index=data.index)
     return result

@@ -468,7 +468,6 @@ class DataCollectionOrchestrationService:
                     symbol,
                     timeframe,
                     repository,
-                    None,  # since_timestamp は使用せずページネーションで全データ取得
                 )
             )
 

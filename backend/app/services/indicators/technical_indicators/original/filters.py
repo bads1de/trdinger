@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Final, Tuple
 
 import numpy as np
 import pandas as pd
 from numba import njit, prange
 
-from ...data_validation import handle_pandas_ta_errors, validate_series_params
+from ...data_validation import (
+    handle_pandas_ta_errors,
+    validate_multi_series_params,
+    validate_series_params,
+)
 
 ALPHA_MIN: Final[float] = 0.01
 ALPHA_MAX: Final[float] = 1.0
@@ -76,57 +80,6 @@ def _njit_frama_loop(
     return filt
 
 
-@njit(cache=True)
-def _njit_super_smoother_loop(
-    prices: np.ndarray, c1: float, c2: float, c3: float
-) -> np.ndarray:
-    n = len(prices)
-    filt = np.full(n, np.nan)
-    filt[0] = prices[0]
-    if n > 1:
-        filt[1] = prices[1]
-    for i in range(2, n):
-        filt[i] = (
-            c1 * (prices[i] + prices[i - 1]) / 2.0 + c2 * filt[i - 1] + c3 * filt[i - 2]
-        )
-    return filt
-
-
-@njit(cache=True)
-def _njit_mcginley_dynamic_loop(prices: np.ndarray, length: int, k: float) -> np.ndarray:
-    n = len(prices)
-    result = np.empty(n)
-    result[:] = np.nan
-
-    if n == 0:
-        return result
-
-    result[0] = prices[0]
-
-    for i in range(1, n):
-        price = prices[i]
-        prev_md = result[i - 1]
-
-        if np.isnan(prev_md) or prev_md == 0:
-            result[i] = price
-            continue
-
-        ratio = price / prev_md
-        if ratio < 0.1:
-            ratio = 0.1
-        elif ratio > 10.0:
-            ratio = 10.0
-
-        denominator = k * length * (ratio**4)
-        if denominator < 1e-10:
-            denominator = 1e-10
-
-        md_change = (price - prev_md) / denominator
-        result[i] = prev_md + md_change
-
-    return result
-
-
 @handle_pandas_ta_errors
 def frama(close: pd.Series, length: int = 16, slow: int = 200) -> pd.Series:
     """Fractal Adaptive Moving Average (FRAMA)."""
@@ -158,71 +111,3 @@ def frama(close: pd.Series, length: int = 16, slow: int = 200) -> pd.Series:
     )
 
     return pd.Series(result, index=close.index, name="FRAMA")
-
-
-@handle_pandas_ta_errors
-def super_smoother(close: pd.Series, length: int = 10) -> pd.Series:
-    """Ehlers 2-Pole Super Smoother Filter."""
-    if length < 2:
-        raise ValueError("length must be >= 2")
-
-    validation = validate_series_params(close, length, min_data_length=length)
-    if validation is not None:
-        return pd.Series(
-            np.full(len(close), np.nan), index=close.index, name="SUPER_SMOOTHER"
-        )
-
-    prices = close.astype(float).to_numpy()
-    f = (np.sqrt(2.0) * np.pi) / float(length)
-    a = np.exp(-f)
-    c2 = 2.0 * a * np.cos(f)
-    c3 = -(a**2)
-    c1 = 1.0 - c2 - c3
-
-    result = _njit_super_smoother_loop(prices, c1, c2, c3)
-    return pd.Series(result, index=close.index, name="SUPER_SMOOTHER")
-
-
-@handle_pandas_ta_errors
-def mcginley_dynamic(close: pd.Series, length: int = 10, k: float = 0.6) -> pd.Series:
-    """McGinley Dynamic (MD)."""
-    if length < 1:
-        raise ValueError("length must be >= 1")
-
-    validation = validate_series_params(close, length, min_data_length=length)
-    if validation is not None:
-        return pd.Series(
-            np.full(len(close), np.nan), index=close.index, name=f"MCGINLEY_{length}"
-        )
-
-    if k <= 0:
-        raise ValueError("k must be > 0")
-
-    prices = close.astype(float).to_numpy()
-    result = _njit_mcginley_dynamic_loop(prices, length, k)
-
-    return pd.Series(result, index=close.index, name=f"MCGINLEY_{length}")
-
-
-@handle_pandas_ta_errors
-def calculate_mcginley_dynamic(data, length=10, k=0.6):
-    """McGinley Dynamic計算のラッパーメソッド."""
-    if not isinstance(data, pd.DataFrame):
-        raise TypeError("data must be pandas DataFrame")
-
-    required_columns = ["close"]
-    for col in required_columns:
-        if col not in data.columns:
-            raise ValueError(f"Missing required column: {col}")
-
-    close = data["close"]
-    md = mcginley_dynamic(close, length, k)
-
-    result = pd.DataFrame(
-        {
-            md.name: md,
-        },
-        index=data.index,
-    )
-
-    return result

@@ -38,6 +38,7 @@ class HistoricalDataService:
         symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
+        since_timestamp: Optional[int] = None,
     ) -> int:
         """
         指定シンボルの履歴データを包括的に収集
@@ -53,6 +54,7 @@ class HistoricalDataService:
         """
         if not repository:
             raise ValueError("リポジトリが必要です")
+        _ = since_timestamp
 
         try:
             logger.info(f"履歴データ収集開始: {symbol} {timeframe}")
@@ -86,7 +88,6 @@ class HistoricalDataService:
         symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
         repository: Optional[OHLCVRepository] = None,
-        since_timestamp: Optional[int] = None,
     ) -> int:
         """
         ページネーションで全期間の履歴データを包括的に収集
@@ -95,7 +96,6 @@ class HistoricalDataService:
             symbol: 取引ペアシンボル
             timeframe: 時間軸
             repository: OHLCVリポジトリ
-            since_timestamp: 開始タイムスタンプ（ミリ秒）- 使用しない（ページネーション用）
 
         Returns:
             保存された件数
@@ -446,5 +446,4 @@ class HistoricalDataService:
         )
 
         return results
-
 

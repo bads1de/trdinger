@@ -214,6 +214,7 @@ class DynamicIndicatorDiscovery:
 
         # 2. 独自実装の指標を自動検出
         custom_modules = []
+        original_modules = []
         from .. import technical_indicators
 
         # technical_indicators パッケージ内の全モジュールをスキャン
@@ -229,11 +230,14 @@ class DynamicIndicatorDiscovery:
                 for name, obj in inspect.getmembers(module, inspect.isclass):
                     # 名前の末尾が Indicators で、かつ Indicators 自体ではないクラス
                     if name.endswith("Indicators") and name != "Indicators":
-                        custom_modules.append(obj)
+                        if module_name == "original":
+                            original_modules.append(obj)
+                        else:
+                            custom_modules.append(obj)
             except Exception as e:
                 logger.warning(f"モジュール {module_name} のスキャンに失敗: {e}")
 
-        for module_class in custom_modules:
+        for module_class in custom_modules + original_modules:
             custom_configs = cls._discover_custom_class(module_class)
             for config in custom_configs:
                 cls._apply_special_overrides(config)

@@ -54,43 +54,6 @@ class TestOriginalIndicators:
         result_min = OriginalIndicators.frama(min_data, length=4, slow=200)
         assert len(result_min) == 4
 
-    # Super Smoother関連テスト
-    def test_calculate_super_smoother_valid_data(self, sample_data):
-        """有効データでのSuper Smoother計算テスト"""
-        result = OriginalIndicators.super_smoother(sample_data, length=10)
-        assert isinstance(result, pd.Series)
-        assert len(result) == len(sample_data)
-        assert result.index.equals(sample_data.index)
-        assert result.name == "SUPER_SMOOTHER"
-        assert result.notna().all()
-        assert result.iloc[0] == sample_data.iloc[0]
-        assert result.iloc[1] == sample_data.iloc[1]
-
-    def test_calculate_super_smoother_insufficient_length(self):
-        """不十分な長さのSuper Smootherテスト"""
-        data = pd.Series([100, 101])
-        with pytest.raises(ValueError, match="length must be >= 2"):
-            OriginalIndicators.super_smoother(data, length=1)
-
-    def test_calculate_super_smoother_empty_data(self):
-        """空データのSuper Smootherテスト"""
-        data = pd.Series([])
-        result = OriginalIndicators.super_smoother(data, length=10)
-        assert isinstance(result, pd.Series)
-        assert len(result) == 0
-
-    def test_calculate_super_smoother_edge_cases(self):
-        """Super Smootherのエッジケーステスト"""
-        # 空データ
-        empty_data = pd.Series([])
-        result_empty = OriginalIndicators.super_smoother(empty_data, length=10)
-        assert len(result_empty) == 0
-
-        # 最小データ長
-        min_data = pd.Series([100, 101])
-        result_min = OriginalIndicators.super_smoother(min_data, length=2)
-        assert len(result_min) == 2
-
     # Adaptive Entropy関連テスト
     def test_adaptive_entropy_valid_data(self, sample_data):
         """有効データでのAdaptive Entropy計算テスト"""
@@ -138,42 +101,6 @@ class TestOriginalIndicators:
         with pytest.raises(ValueError, match="short_length must be < long_length"):
             OriginalIndicators.adaptive_entropy(
                 sample_data, short_length=30, long_length=28, signal_length=5
-            )
-
-    # McGinley Dynamic関連テスト
-    def test_mcginley_dynamic_valid_data(self, sample_data):
-        """有効データでのMcGinley Dynamic計算テスト"""
-        result = OriginalIndicators.mcginley_dynamic(sample_data, length=10, k=0.6)
-        assert isinstance(result, pd.Series)
-        assert len(result) == len(sample_data)
-        assert result.name == "MCGINLEY_10"
-
-    def test_mcginley_dynamic_invalid_length(self, sample_data):
-        """無効なlengthパラメータのMcGinley Dynamicテスト"""
-        with pytest.raises(ValueError, match="length must be >= 1"):
-            OriginalIndicators.mcginley_dynamic(sample_data, length=0)
-
-    def test_mcginley_dynamic_invalid_k(self, sample_data):
-        """無効なkパラメータのMcGinley Dynamicテスト"""
-        with pytest.raises(ValueError, match="k must be > 0"):
-            OriginalIndicators.mcginley_dynamic(sample_data, length=10, k=0)
-
-    # Chande Kroll Stop関連テスト
-    def test_chande_kroll_stop_valid_data(self, sample_df):
-        """有効データでのChande Kroll Stop計算テスト"""
-        long_stop, short_stop = OriginalIndicators.chande_kroll_stop(
-            sample_df["high"], sample_df["low"], sample_df["close"], p=10, x=1, q=9
-        )
-        assert isinstance(long_stop, pd.Series)
-        assert isinstance(short_stop, pd.Series)
-        assert len(long_stop) == len(sample_df)
-        assert len(short_stop) == len(sample_df)
-
-    def test_chande_kroll_stop_invalid_params(self, sample_df):
-        """無効なパラメータのChande Kroll Stopテスト"""
-        with pytest.raises(ValueError, match="p must be >= 1"):
-            OriginalIndicators.chande_kroll_stop(
-                sample_df["high"], sample_df["low"], sample_df["close"], p=0
             )
 
     # Trend Intensity Index関連テスト
@@ -263,33 +190,6 @@ class TestOriginalIndicators:
                 flow_length=2,
             )
 
-    # Elder Ray関連テスト
-    def test_calculate_elder_ray_valid_data(self, sample_df):
-        """有効データでのElder Ray計算テスト"""
-        result = OriginalIndicators.calculate_elder_ray(sample_df)
-        assert isinstance(result, pd.DataFrame)
-        assert "Elder_Ray_Bull_13_16" in result.columns
-        assert "Elder_Ray_Bear_13_16" in result.columns
-
-    def test_calculate_elder_ray_custom_parameters(self, sample_df):
-        """カスタムパラメータでのElder Ray計算テスト"""
-        result = OriginalIndicators.calculate_elder_ray(
-            sample_df, length=10, ema_length=12
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert "Elder_Ray_Bull_10_12" in result.columns
-        assert "Elder_Ray_Bear_10_12" in result.columns
-
-    def test_elder_ray_parameter_validation(self, sample_df):
-        """Elder Rayのパラメータ検証テスト"""
-        # lengthが負
-        with pytest.raises(ValueError, match="length must be positive"):
-            OriginalIndicators.calculate_elder_ray(sample_df, length=-1, ema_length=16)
-
-        # ema_lengthが負
-        with pytest.raises(ValueError, match="ema_length must be positive"):
-            OriginalIndicators.calculate_elder_ray(sample_df, length=13, ema_length=-1)
-
     # Prime Oscillator関連テスト
     def test_calculate_prime_oscillator_valid_data(self, sample_data):
         """有効データでのPrime Number Oscillator計算テスト"""
@@ -369,25 +269,6 @@ class TestOriginalIndicators:
             )
 
     # ラッパーメソッドのテスト
-    def test_calculate_mcginley_dynamic_wrapper(self, sample_data):
-        """McGinley Dynamic DataFrameラッパーメソッドのテスト"""
-        result = OriginalIndicators.calculate_mcginley_dynamic(
-            pd.DataFrame({"close": sample_data}), length=10, k=0.6
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == len(sample_data)
-        assert "MCGINLEY_10" in result.columns
-
-    def test_calculate_chande_kroll_stop_wrapper(self, sample_df):
-        """Chande Kroll Stop DataFrameラッパーメソッドのテスト"""
-        result = OriginalIndicators.calculate_chande_kroll_stop(
-            sample_df, p=10, x=1, q=9
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == len(sample_df)
-        assert "CKS_LONG_10" in result.columns
-        assert "CKS_SHORT_10" in result.columns
-
     def test_calculate_trend_intensity_index_wrapper(self, sample_df):
         """TII DataFrameラッパーメソッドのテスト"""
         result = OriginalIndicators.calculate_trend_intensity_index(
@@ -568,6 +449,91 @@ class TestOriginalIndicators:
         )
         assert isinstance(result, pd.DataFrame)
         assert any("CONNORS_RSI" in col for col in result.columns)
+
+    # Entropy Volatility Index テスト
+    def test_entropy_volatility_index_valid_data(self, sample_data):
+        """有効データでのEVI計算テスト"""
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            entropy_volatility_index,
+        )
+
+        result = entropy_volatility_index(sample_data, length=20, m_val=2, r_val=0.2)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_data)
+        assert result.dropna().min() >= 0
+
+    def test_entropy_volatility_index_invalid_length(self, sample_data):
+        """不正なlengthパラメータ"""
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            entropy_volatility_index,
+        )
+
+        with pytest.raises(ValueError, match="length must be >= 1"):
+            entropy_volatility_index(sample_data, length=0)
+
+    def test_entropy_volatility_index_invalid_m_val(self, sample_data):
+        """不正なm_valパラメータ"""
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            entropy_volatility_index,
+        )
+
+        with pytest.raises(ValueError, match="m_val must be >= 1"):
+            entropy_volatility_index(sample_data, m_val=0)
+
+    def test_entropy_volatility_index_invalid_r_val(self, sample_data):
+        """不正なr_valパラメータ"""
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            entropy_volatility_index,
+        )
+
+        with pytest.raises(ValueError, match="r_val must be > 0"):
+            entropy_volatility_index(sample_data, r_val=0)
+
+    def test_calculate_entropy_volatility_index_wrapper(self, sample_data):
+        """calculate_entropy_volatility_indexラッパーのテスト"""
+        result = OriginalIndicators.calculate_entropy_volatility_index(
+            pd.DataFrame({"close": sample_data})
+        )
+        assert isinstance(result, pd.DataFrame)
+        assert any("EVI" in col for col in result.columns)
+
+    # Direction Entropy テスト
+    def test_direction_entropy_valid_data(self, sample_data):
+        """有効データでのDEI計算テスト"""
+        from app.services.indicators.technical_indicators.original.trend import (
+            direction_entropy,
+        )
+
+        result = direction_entropy(sample_data, length=20, m_val=2)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_data)
+        assert result.dropna().min() >= 0
+
+    def test_direction_entropy_invalid_length(self, sample_data):
+        """不正なlengthパラメータ"""
+        from app.services.indicators.technical_indicators.original.trend import (
+            direction_entropy,
+        )
+
+        with pytest.raises(ValueError, match="length must be >= 1"):
+            direction_entropy(sample_data, length=0)
+
+    def test_direction_entropy_invalid_m_val(self, sample_data):
+        """不正なm_valパラメータ"""
+        from app.services.indicators.technical_indicators.original.trend import (
+            direction_entropy,
+        )
+
+        with pytest.raises(ValueError, match="m_val must be >= 1"):
+            direction_entropy(sample_data, m_val=0)
+
+    def test_calculate_direction_entropy_wrapper(self, sample_data):
+        """calculate_direction_entropyラッパーのテスト"""
+        result = OriginalIndicators.calculate_direction_entropy(
+            pd.DataFrame({"close": sample_data})
+        )
+        assert isinstance(result, pd.DataFrame)
+        assert any("DEI" in col for col in result.columns)
 
 
 if __name__ == "__main__":

@@ -244,7 +244,6 @@ class TestCollectHistoricalDataWithStartDate:
                 symbol="BTC/USDT:USDT",
                 timeframe="1h",
                 repository=mock_repository,
-                since_timestamp=1609459200000,
             )
 
             assert result == 10
