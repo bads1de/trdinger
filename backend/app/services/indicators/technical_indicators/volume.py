@@ -1,18 +1,29 @@
 """
-出来高系テクニカル指標
+出来高系テクニカル指標 (Volume Indicators)
+
+pandas-ta の volume カテゴリに対応。
+出来高と価格の関係性分析に使用する指標群。
 
 登録してあるテクニカルの一覧:
-- OBV (On-Balance Volume)
 - AD (A/Dライン)
 - ADOSC (A/Dオシレーター)
-- CMF (マネーフロー指標)
+- OBV (On-Balance Volume)
+- EOM (Ease of Movement)
+- VWAP (Volume Weighted Average Price)
+- CMF (Chaikin Money Flow)
 - EFI (Elder Force Index)
 - MFI (Money Flow Index)
-- VWAP (出来高加重平均価格)
 - PVO (Percentage Volume Oscillator)
 - PVT (Price Volume Trend)
+- KVO (Klinger Volume Oscillator)
 - NVI (Negative Volume Index)
-- EOM (Ease of Movement)
+- VWAP Z-Score
+- RVOL (Relative Volume)
+- Absorption Score
+- AOBV (Archer OBV)
+- PVI (Positive Volume Index)
+- PVOL (Price-Volume)
+- PVR (Price Volume Rank)
 """
 
 import logging

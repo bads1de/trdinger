@@ -1,6 +1,27 @@
 """
 暗号資産のための高度な特徴量エンジニアリング
 戦略ドキュメント (features_strategy.pdf) からの「強力な特徴量」を実装します。
+
+登録してある特徴量の一覧:
+- Z-Score
+- Void Oscillator
+- Crypto Leverage Index (CLI)
+- Triplet Imbalance
+- Volume Divergence Fakeout
+- Hurst Exponent
+- Sample Entropy
+- Fractal Dimension (Katz)
+- VPIN Approximation
+- Fractional Differentiation (FFD)
+- Liquidation Cascade Score
+- Squeeze Probability
+- Trend Quality
+- OI Weighted Funding Rate
+- Regime Quadrant
+- Whale Divergence
+- OI-Price Confirmation
+- Liquidity Efficiency
+- Leverage Ratio
 """
 
 import logging
@@ -85,7 +106,7 @@ def _njit_count_matches(data: np.ndarray, m_len: int, threshold: float) -> int:
 
 @njit(parallel=True, cache=True)
 def _njit_sample_entropy_loop(
-    data: np.ndarray, win: int, m_val: int, r_val: int
+    data: np.ndarray, win: int, m_val: int, r_val: float
 ) -> np.ndarray:
     n = len(data)
     res = np.zeros(n)
@@ -450,9 +471,8 @@ class AdvancedFeatures:
         清算カスケードスコア
         """
         def _calculate_liquidation_cascade_score() -> pd.Series:
-            return (-1 * np.sign(close.diff()) * open_interest.diff() * volume).fillna(
-                0.0
-            )
+            result = -1 * np.sign(close.diff()) * open_interest.diff() * volume
+            return pd.Series(result, index=close.index).fillna(0.0)
 
         return run_multi_series_indicator(
             {"close": close, "open_interest": open_interest, "volume": volume},
@@ -502,9 +522,10 @@ class AdvancedFeatures:
         トレンド品質（VWAP/OIダイバージェンスの代替指標）
         """
         def _calculate_trend_quality() -> pd.Series:
-            return close.diff().rolling(window=window).corr(open_interest.diff()).fillna(
-                0.0
-            )
+            result = close.diff().rolling(window=window).corr(open_interest.diff())
+            if isinstance(result, pd.DataFrame):
+                return result.iloc[:, 0].fillna(0.0)
+            return result.fillna(0.0)
 
         return run_multi_series_indicator(
             {"close": close, "open_interest": open_interest},

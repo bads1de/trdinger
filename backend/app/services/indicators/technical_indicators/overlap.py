@@ -8,20 +8,35 @@ pandas-ta の overlap カテゴリに対応。
 - SMA (Simple Moving Average)
 - EMA (Exponential Moving Average)
 - WMA (Weighted Moving Average)
+- TRIMA (Triangular Moving Average)
+- ZLMA (Zero Lag Moving Average)
+- ALMA (Arnaud Legoux Moving Average)
 - DEMA (Double Exponential Moving Average)
 - TEMA (Triple Exponential Moving Average)
 - T3 (Tillson's T3 Moving Average)
 - KAMA (Kaufman's Adaptive Moving Average)
 - HMA (Hull Moving Average)
 - VWMA (Volume Weighted Moving Average)
-- ALMA (Arnaud Legoux Moving Average)
-- TRIMA (Triangular Moving Average)
-- ZLMA (Zero Lag Moving Average)
-- RMA (Wilde's Moving Average)
 - LINREG (Linear Regression)
 - LINREGSLOPE (Linear Regression Slope)
+- RMA (Wilder's Moving Average)
 - Supertrend
 - Ichimoku Cloud (一目均衡表)
+- HILO (Gann HiLo)
+- HL2 (High-Low Average)
+- HLC3 (HLC Average)
+- OHLC4 (OHLC Average)
+- Midpoint
+- Midprice
+- VIDYA
+- WCP (Weighted Close Price)
+- MCGD (McGinley Dynamic)
+- JMA (Jurik Moving Average)
+- FWMA (Fibonacci Weighted Moving Average)
+- PWMA (Pascal Weighted Moving Average)
+- SinWMA (Sine Weighted Moving Average)
+- SSF (Ehlers Super Smoother Filter)
+- SWMA (Symmetric Weighted Moving Average)
 """
 
 from typing import Dict, Tuple
@@ -38,6 +53,7 @@ from ..data_validation import (
     run_series_indicator,
     validate_multi_series_params,
 )
+
 
 class OverlapIndicators:
     """
@@ -65,9 +81,9 @@ class OverlapIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def wma(
-        data: pd.Series = None,
+        data: pd.Series | None = None,
         length: int = 14,
-        close: pd.Series = None,
+        close: pd.Series | None = None,
     ) -> pd.Series:
         """加重移動平均"""
         # dataが提供されない場合はcloseを使用
@@ -79,9 +95,7 @@ class OverlapIndicators:
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
-        return run_series_indicator(
-            data, length, lambda: ta.wma(data, length=length)
-        )
+        return run_series_indicator(data, length, lambda: ta.wma(data, length=length))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -312,7 +326,7 @@ class OverlapIndicators:
                     result[f"SUPERTd_{period}_{int(multiplier)}"],
                 )
             except (KeyError, Exception):
-                return create_nan_series_bundle(high, 3)
+                return create_nan_series_bundle(high, 3)  # type: ignore[return-value]
 
     @staticmethod
     def ichimoku(
@@ -490,7 +504,9 @@ class OverlapIndicators:
     def wcp(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
         """Weighted Close Price"""
         return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close}, None, lambda: ta.wcp(high=high, low=low, close=close)
+            {"high": high, "low": low, "close": close},
+            None,
+            lambda: ta.wcp(high=high, low=low, close=close),
         )
 
     @staticmethod

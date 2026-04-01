@@ -191,49 +191,66 @@ class TestOriginalIndicators:
             )
 
     # Prime Oscillator関連テスト
-    def test_calculate_prime_oscillator_valid_data(self, sample_data):
+    def test_prime_oscillator_valid_data(self, sample_data):
         """有効データでのPrime Number Oscillator計算テスト"""
-        result = OriginalIndicators.calculate_prime_oscillator(
-            pd.DataFrame({"close": sample_data})
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            prime_oscillator,
         )
-        assert isinstance(result, pd.DataFrame)
-        assert "PRIME_OSC_14" in result.columns
-        assert "PRIME_SIGNAL_14_3" in result.columns
+
+        result, signal = prime_oscillator(sample_data, length=14, signal_length=3)
+        assert isinstance(result, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(result) == len(sample_data)
+        assert len(signal) == len(sample_data)
         # Prime Oscillatorは正規化（Z-score * 100）されているが、
         # 統計的に-300から300の範囲内に収まることが多い（厳密な制限はない）
-        non_nan_values = result["PRIME_OSC_14"].dropna()
+        non_nan_values = result.dropna()
         if len(non_nan_values) > 0:
             assert non_nan_values.min() >= -300
             assert non_nan_values.max() <= 300
 
-    def test_calculate_prime_oscillator_insufficient_data(self):
+    def test_prime_oscillator_insufficient_data(self):
         """データ不足でのPrime Number Oscillator計算テスト"""
-        data = pd.DataFrame({"close": [100, 101, 102, 103, 104]})
-        result = OriginalIndicators.calculate_prime_oscillator(data)
-        assert isinstance(result, pd.DataFrame)
-        assert "PRIME_OSC_14" in result.columns
-        assert result["PRIME_OSC_14"].isna().all()
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            prime_oscillator,
+        )
+
+        data = pd.Series([100, 101, 102, 103, 104])
+        result, signal = prime_oscillator(data)
+        assert isinstance(result, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert result.isna().all()
+        assert signal.isna().all()
 
     # Fibonacci Cycle関連テスト
-    def test_calculate_fibonacci_cycle_valid_data(self, sample_data):
+    def test_fibonacci_cycle_valid_data(self, sample_data):
         """有効データでのFibonacci Cycle計算テスト"""
-        result = OriginalIndicators.calculate_fibonacci_cycle(
-            pd.DataFrame({"close": sample_data})
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            fibonacci_cycle,
         )
-        assert isinstance(result, pd.DataFrame)
-        assert "FIBO_CYCLE_5" in result.columns
-        assert "FIBO_SIGNAL_5" in result.columns
-        non_nan_values = result["FIBO_CYCLE_5"].dropna()
+
+        cycle, signal = fibonacci_cycle(sample_data)
+        assert isinstance(cycle, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(cycle) == len(sample_data)
+        assert len(signal) == len(sample_data)
+        non_nan_values = cycle.dropna()
         if len(non_nan_values) > 0:
             assert np.isfinite(non_nan_values.min())
             assert np.isfinite(non_nan_values.max())
 
-    def test_calculate_fibonacci_cycle_insufficient_data(self):
+    def test_fibonacci_cycle_insufficient_data(self):
         """データ不足でのFibonacci Cycle計算テスト"""
-        data = pd.DataFrame({"close": [100, 101, 102, 103, 104]})
-        result = OriginalIndicators.calculate_fibonacci_cycle(data)
-        assert isinstance(result, pd.DataFrame)
-        assert "FIBO_CYCLE_5" in result.columns
+        from app.services.indicators.technical_indicators.original.oscillators import (
+            fibonacci_cycle,
+        )
+
+        data = pd.Series([100, 101, 102, 103, 104])
+        cycle, signal = fibonacci_cycle(data)
+        assert isinstance(cycle, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert cycle.isna().all()
+        assert signal.isna().all()
 
     # GRI関連テスト
     def test_calculate_gri_valid_data(self, sample_df):
@@ -267,56 +284,6 @@ class TestOriginalIndicators:
             OriginalIndicators.gri(
                 sample_df["high"], sample_df["low"], sample_df["close"], length=-1
             )
-
-    # ラッパーメソッドのテスト
-    def test_calculate_trend_intensity_index_wrapper(self, sample_df):
-        """TII DataFrameラッパーメソッドのテスト"""
-        result = OriginalIndicators.calculate_trend_intensity_index(
-            sample_df, length=14, sma_length=30
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == len(sample_df)
-        assert "TII_14_30" in result.columns
-
-    def test_calculate_adaptive_entropy_wrapper(self, sample_data):
-        """calculate_adaptive_entropyメソッドのテスト"""
-        result = OriginalIndicators.calculate_adaptive_entropy(
-            pd.DataFrame({"close": sample_data}),
-            short_length=14,
-            long_length=28,
-            signal_length=5,
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert "ADAPTIVE_ENTROPY_OSC_14_28" in result.columns
-        assert "ADAPTIVE_ENTROPY_SIGNAL_14_28_5" in result.columns
-        assert "ADAPTIVE_ENTROPY_RATIO_14_28" in result.columns
-
-    def test_calculate_quantum_flow_wrapper(self, sample_df):
-        """calculate_quantum_flowメソッドのテスト"""
-        result = OriginalIndicators.calculate_quantum_flow(
-            sample_df, length=14, flow_length=9
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert "QUANTUM_FLOW" in result.columns
-        assert "QUANTUM_FLOW_SIGNAL" in result.columns
-
-    def test_calculate_prime_oscillator_wrapper(self, sample_data):
-        """calculate_prime_oscillatorメソッドのテスト"""
-        result = OriginalIndicators.calculate_prime_oscillator(
-            pd.DataFrame({"close": sample_data}), length=14, signal_length=3
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert "PRIME_OSC_14" in result.columns
-        assert "PRIME_SIGNAL_14_3" in result.columns
-
-    def test_calculate_fibonacci_cycle_wrapper(self, sample_data):
-        """calculate_fibonacci_cycleメソッドのテスト"""
-        result = OriginalIndicators.calculate_fibonacci_cycle(
-            pd.DataFrame({"close": sample_data})
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert "FIBO_CYCLE_5" in result.columns
-        assert "FIBO_SIGNAL_5" in result.columns
 
     # Harmonic Resonance テスト
     def test_harmonic_resonance_valid_data(self, sample_df):
@@ -356,13 +323,6 @@ class TestOriginalIndicators:
                 sample_df["close"], sample_df["high"], sample_df["low"],
                 resonance_bands=2
             )
-
-    def test_calculate_harmonic_resonance_wrapper(self, sample_df):
-        """calculate_harmonic_resonanceラッパーのテスト"""
-        result = OriginalIndicators.calculate_harmonic_resonance(sample_df)
-        assert isinstance(result, pd.DataFrame)
-        assert "HARMONIC_RESONANCE" in result.columns
-        assert "HRI_SIGNAL" in result.columns
 
     # Chaos Fractal Dimension テスト
     def test_chaos_fractal_dimension_valid_data(self, sample_df):
@@ -404,12 +364,11 @@ class TestOriginalIndicators:
                 sample_df["volume"], embedding_dim=1
             )
 
-    def test_calculate_chaos_fractal_dimension_wrapper(self, sample_df):
-        """calculate_chaos_fractal_dimensionラッパーのテスト"""
-        result = OriginalIndicators.calculate_chaos_fractal_dimension(sample_df)
-        assert isinstance(result, pd.DataFrame)
-        assert "CHAOS_FRACTAL_DIM" in result.columns
-        assert "CTFD_SIGNAL" in result.columns
+    def test_calculate_wrappers_are_not_exposed(self):
+        """calculate_* のラッパーは公開しない"""
+        assert not any(
+            name.startswith("calculate_") for name in dir(OriginalIndicators)
+        )
 
     # Connors RSI テスト
     def test_connors_rsi_valid_data(self, sample_data):
@@ -442,13 +401,31 @@ class TestOriginalIndicators:
         with pytest.raises(ValueError, match="streak_periods must be >= 1"):
             connors_rsi(sample_data, streak_periods=0)
 
-    def test_calculate_connors_rsi_wrapper(self, sample_data):
-        """calculate_connors_rsiラッパーのテスト"""
-        result = OriginalIndicators.calculate_connors_rsi(
-            pd.DataFrame({"close": sample_data})
+    def test_damiani_volatmeter_valid_data(self, sample_ohlcv):
+        """有効データでのDamiani Volatmeter計算テスト"""
+        osc, threshold = OriginalIndicators.damiani_volatmeter(
+            sample_ohlcv["High"],
+            sample_ohlcv["Low"],
+            sample_ohlcv["Close"],
         )
-        assert isinstance(result, pd.DataFrame)
-        assert any("CONNORS_RSI" in col for col in result.columns)
+        assert isinstance(osc, pd.Series)
+        assert isinstance(threshold, pd.Series)
+        assert len(osc) == len(sample_ohlcv)
+        assert len(threshold) == len(sample_ohlcv)
+        assert not osc.isna().all()
+        assert np.allclose(threshold.dropna().to_numpy(), 1.4)
+
+    def test_kairi_relative_index_valid_data(self, sample_data):
+        """有効データでのKairi Relative Index計算テスト"""
+        result, signal = OriginalIndicators.kairi_relative_index(
+            sample_data, length=14, signal_length=3
+        )
+        assert isinstance(result, pd.Series)
+        assert isinstance(signal, pd.Series)
+        assert len(result) == len(sample_data)
+        assert len(signal) == len(sample_data)
+        assert not result.dropna().empty
+        assert not signal.dropna().empty
 
     # Entropy Volatility Index テスト
     def test_entropy_volatility_index_valid_data(self, sample_data):
@@ -488,52 +465,6 @@ class TestOriginalIndicators:
 
         with pytest.raises(ValueError, match="r_val must be > 0"):
             entropy_volatility_index(sample_data, r_val=0)
-
-    def test_calculate_entropy_volatility_index_wrapper(self, sample_data):
-        """calculate_entropy_volatility_indexラッパーのテスト"""
-        result = OriginalIndicators.calculate_entropy_volatility_index(
-            pd.DataFrame({"close": sample_data})
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert any("EVI" in col for col in result.columns)
-
-    # Direction Entropy テスト
-    def test_direction_entropy_valid_data(self, sample_data):
-        """有効データでのDEI計算テスト"""
-        from app.services.indicators.technical_indicators.original.trend import (
-            direction_entropy,
-        )
-
-        result = direction_entropy(sample_data, length=20, m_val=2)
-        assert isinstance(result, pd.Series)
-        assert len(result) == len(sample_data)
-        assert result.dropna().min() >= 0
-
-    def test_direction_entropy_invalid_length(self, sample_data):
-        """不正なlengthパラメータ"""
-        from app.services.indicators.technical_indicators.original.trend import (
-            direction_entropy,
-        )
-
-        with pytest.raises(ValueError, match="length must be >= 1"):
-            direction_entropy(sample_data, length=0)
-
-    def test_direction_entropy_invalid_m_val(self, sample_data):
-        """不正なm_valパラメータ"""
-        from app.services.indicators.technical_indicators.original.trend import (
-            direction_entropy,
-        )
-
-        with pytest.raises(ValueError, match="m_val must be >= 1"):
-            direction_entropy(sample_data, m_val=0)
-
-    def test_calculate_direction_entropy_wrapper(self, sample_data):
-        """calculate_direction_entropyラッパーのテスト"""
-        result = OriginalIndicators.calculate_direction_entropy(
-            pd.DataFrame({"close": sample_data})
-        )
-        assert isinstance(result, pd.DataFrame)
-        assert any("DEI" in col for col in result.columns)
 
 
 if __name__ == "__main__":

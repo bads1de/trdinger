@@ -7,28 +7,43 @@ pandas-ta の momentum カテゴリに対応。
 登録してあるテクニカルの一覧:
 - RSI (Relative Strength Index)
 - MACD (Moving Average Convergence Divergence)
+- PPO (Percentage Price Oscillator)
+- TRIX (Triple Exponential Average)
 - Stochastic Oscillator
+- Stochastic RSI
 - Williams %R
 - CCI (Commodity Channel Index)
+- CMO (Chande Momentum Oscillator)
+- STC (Schaff Trend Cycle)
+- Fisher Transform
+- KST (Know Sure Thing)
 - ROC (Rate of Change)
 - Momentum
 - QQE (Qualitative Quantitative Estimation)
-- SQUEEZE (Squeeze)
-- STC (Schaff Trend Cycle)
-- CMO (Chande Momentum Oscillator)
-- FISHER (Fisher Transform)
-- KST (Know Sure Thing)
+- Squeeze Pro
 - CTI (Correlation Trend Indicator)
+- APO (Absolute Price Oscillator)
 - TSI (True Strength Index)
 - PGO (Pretty Good Oscillator)
 - PSL (Psychological Line)
+- Squeeze
+- UO (Ultimate Oscillator)
 - AO (Awesome Oscillator)
 - BOP (Balance of Power)
 - CG (Center of Gravity)
-- COPPOCK (Coppock Curve)
-- STOCHRSI (Stochastic RSI)
-- BIAS (Bias Indicator)
-- ER (Efficiency Ratio)
+- Coppock Curve
+- Bias
+- Efficiency Ratio (Kaufman)
+- BRAR (Brayer)
+- CFO (Chande Forecast Oscillator)
+- ERI (Elder Ray Index)
+- Inertia
+- KDJ
+- RSX
+- RVGI (Relative Vigor Index)
+- Slope
+- SMI Ergodic
+- TD Sequential
 """
 
 from typing import Optional, Tuple, Union
@@ -404,9 +419,9 @@ class MomentumIndicators:
 
     @staticmethod
     def roc(
-        data: pd.Series,
+        data: pd.Series | None = None,
         period: int = 10,
-        close: pd.Series = None,
+        close: pd.Series | None = None,
     ) -> pd.Series:
         """変化率"""
         length = period
@@ -438,6 +453,8 @@ class MomentumIndicators:
 
             # フォールバック: RSIを返す
             rsi_result = ta.rsi(data, length=length)
+            if isinstance(rsi_result, pd.DataFrame):
+                return rsi_result.iloc[:, 0]
             return rsi_result if rsi_result is not None else create_nan_series_like(data)
 
         return run_series_indicator(data, length, compute)
@@ -456,7 +473,7 @@ class MomentumIndicators:
         mom_length: int = 12,
         mom_smooth: int = 6,
         use_tr: bool = True,
-    ) -> pd.Series:
+    ) -> pd.Series | pd.DataFrame:
         """Squeeze Pro"""
         return run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
@@ -476,11 +493,6 @@ class MomentumIndicators:
                 use_tr=use_tr,
             ),
         )
-
-    @staticmethod
-    def cti(data: pd.Series, length: int = 12) -> pd.Series:
-        """Correlation Trend Indicator"""
-        return run_series_indicator(data, length, lambda: ta.cti(data, length=length))
 
     @staticmethod
     def apo(
@@ -789,8 +801,8 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def inertia(
         close: pd.Series,
-        high: pd.Series = None,
-        low: pd.Series = None,
+        high: pd.Series | None = None,
+        low: pd.Series | None = None,
         length: int = 20,
         rvi_length: int = 14,
         scalar: float = 100.0,

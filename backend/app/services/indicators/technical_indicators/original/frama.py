@@ -1,16 +1,16 @@
-"""フィルタ系の独自テクニカル指標."""
+"""Fractal Adaptive Moving Average (FRAMA)."""
 
 from __future__ import annotations
 
-from typing import Final, Tuple
+from typing import Final
 
 import numpy as np
 import pandas as pd
 from numba import njit, prange
 
+from ._window_helpers import _window_min_max
 from ...data_validation import (
     handle_pandas_ta_errors,
-    validate_multi_series_params,
     validate_series_params,
 )
 
@@ -31,31 +31,13 @@ def _njit_frama_loop(
     n = len(prices)
     filt = np.full(n, np.nan)
     for i in prange(length - 1, n):
-        n1_high = -1e12
-        n1_low = 1e12
-        for j in range(i - length + 1, i - half + 1):
-            if prices[j] > n1_high:
-                n1_high = prices[j]
-            if prices[j] < n1_low:
-                n1_low = prices[j]
+        n1_high, n1_low = _window_min_max(prices, i - length + 1, i - half + 1)
         n1 = (n1_high - n1_low) / half
 
-        n2_high = -1e12
-        n2_low = 1e12
-        for j in range(i - half + 1, i + 1):
-            if prices[j] > n2_high:
-                n2_high = prices[j]
-            if prices[j] < n2_low:
-                n2_low = prices[j]
+        n2_high, n2_low = _window_min_max(prices, i - half + 1, i + 1)
         n2 = (n2_high - n2_low) / half
 
-        n3_high = -1e12
-        n3_low = 1e12
-        for j in range(i - length + 1, i + 1):
-            if prices[j] > n3_high:
-                n3_high = prices[j]
-            if prices[j] < n3_low:
-                n3_low = prices[j]
+        n3_high, n3_low = _window_min_max(prices, i - length + 1, i + 1)
         n3 = (n3_high - n3_low) / length
 
         if n1 > 1e-9 and n2 > 1e-9 and n3 > 1e-9:

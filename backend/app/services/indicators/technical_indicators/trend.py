@@ -8,11 +8,22 @@ pandas-ta の trend カテゴリに対応。
 - SAR (Parabolic SAR)
 - AMAT (Archer Moving Averages Trends)
 - DPO (Detrended Price Oscillator)
-- VORTEX (Vortex Indicator)
+- Vortex
 - ADX (Average Directional Index)
-- AROON (Aroon Indicator)
+- Aroon
 - CHOP (Choppiness Index)
 - VHF (Vertical Horizontal Filter)
+- CKSP (Chande Kroll Stop)
+- Decay
+- QStick
+- TTM Trend
+- Decreasing
+- Increasing
+- Long Run
+- Short Run
+- Linear Regression Slope
+- Ichimoku Kinko Hyo
+- SMA (Simple Moving Average)
 """
 
 from numba import njit

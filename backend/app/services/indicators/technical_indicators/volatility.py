@@ -12,12 +12,16 @@ pandas-ta の volatility カテゴリに対応。
 - Donchian Channels
 - Acceleration Bands
 - Ulcer Index
-- Relative Volatility Index (RVI)
+- RVI (Relative Volatility Index)
 - True Range
 - Yang-Zhang Volatility
 - Parkinson Volatility
 - Garman-Klass Volatility
-- Mass Index (MASSI)
+- Mass Index
+- Aberration
+- HWC (Holt-Winter Channel)
+- PDIST (Price Distance)
+- Thermo
 """
 
 from numba import njit, prange
