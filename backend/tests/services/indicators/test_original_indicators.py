@@ -466,6 +466,176 @@ class TestOriginalIndicators:
         with pytest.raises(ValueError, match="r_val must be > 0"):
             entropy_volatility_index(sample_data, r_val=0)
 
+    def test_demarker_valid_data(self, sample_df):
+        """有効データでのDeMarker計算テスト"""
+        result = OriginalIndicators.demarker(
+            sample_df["high"], sample_df["low"], length=14
+        )
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_df)
+        valid = result.dropna()
+        assert not valid.empty
+        assert (valid >= 0).all()
+        assert (valid <= 100).all()
+
+    def test_demarker_invalid_length(self, sample_df):
+        """不正なlengthパラメータ"""
+        with pytest.raises(ValueError, match="length must be >= 1"):
+            OriginalIndicators.demarker(sample_df["high"], sample_df["low"], length=0)
+
+    def test_demarker_insufficient_data(self):
+        """データ不足でのDeMarkerテスト"""
+        data = pd.DataFrame(
+            {
+                "high": [101, 102, 103],
+                "low": [99, 100, 101],
+            }
+        )
+        result = OriginalIndicators.demarker(data["high"], data["low"], length=14)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.isna().all()
+
+    def test_rmi_valid_data(self, sample_data):
+        """有効データでのRelative Momentum Index計算テスト"""
+        result = OriginalIndicators.rmi(sample_data, length=14, momentum=5)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_data)
+        valid = result.dropna()
+        assert not valid.empty
+        assert (valid >= 0).all()
+        assert (valid <= 100).all()
+
+    def test_rmi_invalid_parameters(self, sample_data):
+        """不正なRMIパラメータ"""
+        with pytest.raises(ValueError, match="length must be >= 2"):
+            OriginalIndicators.rmi(sample_data, length=1, momentum=5)
+
+        with pytest.raises(ValueError, match="momentum must be >= 1"):
+            OriginalIndicators.rmi(sample_data, length=14, momentum=0)
+
+    def test_rmi_insufficient_data(self):
+        """データ不足でのRMIテスト"""
+        data = pd.Series([100, 101, 102, 103])
+        result = OriginalIndicators.rmi(data, length=14, momentum=5)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.isna().all()
+
+    def test_pfe_valid_data(self, sample_data):
+        """有効データでのPolarized Fractal Efficiency計算テスト"""
+        result = OriginalIndicators.pfe(sample_data, length=10, smoothing_length=5)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_data)
+        valid = result.dropna()
+        assert not valid.empty
+        assert np.isfinite(valid).all()
+        assert valid.abs().max() <= 200
+
+    def test_pfe_invalid_parameters(self, sample_data):
+        """不正なPFEパラメータ"""
+        with pytest.raises(ValueError, match="length must be >= 2"):
+            OriginalIndicators.pfe(sample_data, length=1, smoothing_length=5)
+
+        with pytest.raises(ValueError, match="smoothing_length must be >= 1"):
+            OriginalIndicators.pfe(sample_data, length=10, smoothing_length=0)
+
+    def test_pfe_insufficient_data(self):
+        """データ不足でのPFEテスト"""
+        data = pd.Series([100, 101, 102, 103, 104])
+        result = OriginalIndicators.pfe(data, length=10, smoothing_length=5)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.isna().all()
+
+    def test_mmi_valid_data(self, sample_data):
+        """有効データでのMarket Meanness Index計算テスト"""
+        result = OriginalIndicators.mmi(sample_data, length=20)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_data)
+        valid = result.dropna()
+        assert not valid.empty
+        assert (valid >= 0).all()
+        assert (valid <= 100).all()
+
+    def test_mmi_invalid_length(self, sample_data):
+        """不正なMMI lengthパラメータ"""
+        with pytest.raises(ValueError, match="length must be >= 3"):
+            OriginalIndicators.mmi(sample_data, length=2)
+
+    def test_mmi_insufficient_data(self):
+        """データ不足でのMMIテスト"""
+        data = pd.Series([100, 101, 102])
+        result = OriginalIndicators.mmi(data, length=20)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.isna().all()
+
+    def test_ttf_valid_data(self, sample_df):
+        """有効データでのTrend Trigger Factor計算テスト"""
+        result = OriginalIndicators.ttf(
+            sample_df["high"], sample_df["low"], sample_df["close"], length=15
+        )
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(sample_df)
+        valid = result.dropna()
+        assert not valid.empty
+        assert np.isfinite(valid).all()
+
+    def test_ttf_invalid_length(self, sample_df):
+        """不正なTTF lengthパラメータ"""
+        with pytest.raises(ValueError, match="length must be >= 2"):
+            OriginalIndicators.ttf(
+                sample_df["high"], sample_df["low"], sample_df["close"], length=1
+            )
+
+    def test_ttf_insufficient_data(self):
+        """データ不足でのTTFテスト"""
+        data = pd.DataFrame(
+            {
+                "high": [101, 102, 103, 104, 105, 106],
+                "low": [99, 100, 101, 102, 103, 104],
+                "close": [100, 101, 102, 103, 104, 105],
+            }
+        )
+        result = OriginalIndicators.ttf(data["high"], data["low"], data["close"], length=5)
+        assert isinstance(result, pd.Series)
+        assert len(result) == len(data)
+        assert result.isna().all()
+
+    def test_rwi_valid_data(self, sample_df):
+        """有効データでのRandom Walk Index計算テスト"""
+        rwi_high, rwi_low = OriginalIndicators.rwi(
+            sample_df["high"], sample_df["low"], sample_df["close"], length=14
+        )
+        assert isinstance(rwi_high, pd.Series)
+        assert isinstance(rwi_low, pd.Series)
+        assert len(rwi_high) == len(sample_df)
+        assert len(rwi_low) == len(sample_df)
+        valid_high = rwi_high.dropna()
+        valid_low = rwi_low.dropna()
+        assert not valid_high.empty
+        assert not valid_low.empty
+        assert np.isfinite(valid_high).all()
+        assert np.isfinite(valid_low).all()
+
+    def test_rwi_insufficient_data(self):
+        """データ不足でのRWIテスト"""
+        data = pd.DataFrame(
+            {
+                "high": [101, 102, 103, 104, 105, 106],
+                "low": [99, 100, 101, 102, 103, 104],
+                "close": [100, 101, 102, 103, 104, 105],
+            }
+        )
+        rwi_high, rwi_low = OriginalIndicators.rwi(
+            data["high"], data["low"], data["close"], length=14
+        )
+        assert isinstance(rwi_high, pd.Series)
+        assert isinstance(rwi_low, pd.Series)
+        assert rwi_high.isna().all()
+        assert rwi_low.isna().all()
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

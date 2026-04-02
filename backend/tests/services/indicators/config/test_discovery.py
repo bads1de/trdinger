@@ -130,6 +130,64 @@ class TestDiscoverAll:
         for ind in common_indicators:
             assert ind in names, f"{ind} が検出されていません"
 
+    def test_discover_all_contains_original_non_pandas_indicators(self):
+        """pandas-ta 非依存の original 指標が検出されること"""
+        configs = DynamicIndicatorDiscovery.discover_all()
+        names = {c.indicator_name for c in configs}
+
+        expected = {"DEMARKER", "RMI", "PFE", "MMI", "TTF", "RWI"}
+        assert expected.issubset(names)
+
+    def test_original_oscillators_have_forced_scale_type(self):
+        """original の 0-100 オシレーターが閾値生成込みで登録されること"""
+        configs = {
+            config.indicator_name: config
+            for config in DynamicIndicatorDiscovery.discover_all()
+        }
+
+        for indicator_name in ("DEMARKER", "RMI", "MMI"):
+            config = configs[indicator_name]
+            assert config.scale_type == IndicatorScaleType.OSCILLATOR_0_100
+            assert "normal" in config.thresholds
+
+    def test_ttf_scale_type_and_thresholds(self):
+        """TTF が ±100 系の閾値で登録されること"""
+        configs = {
+            config.indicator_name: config
+            for config in DynamicIndicatorDiscovery.discover_all()
+        }
+
+        config = configs["TTF"]
+        assert config.scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100
+        assert config.min_length_func is not None
+        assert config.min_length_func({"length": 15}) == 30
+        assert config.thresholds["normal"] == {"long_gt": 100, "short_lt": -100}
+
+    def test_rwi_complex_output_registration(self):
+        """RWI が複合結果として登録されること"""
+        configs = {
+            config.indicator_name: config
+            for config in DynamicIndicatorDiscovery.discover_all()
+        }
+
+        config = configs["RWI"]
+        assert config.result_type == IndicatorResultType.COMPLEX
+        assert config.returns == "multiple"
+        assert config.return_cols == ["RWI_HIGH", "RWI_LOW"]
+        assert config.min_length_func is not None
+        assert config.min_length_func({"length": 14}) == 15
+
+    def test_pfe_scale_type_override(self):
+        """PFE がゼロ中心モメンタムとして登録されること"""
+        configs = {
+            config.indicator_name: config
+            for config in DynamicIndicatorDiscovery.discover_all()
+        }
+
+        config = configs["PFE"]
+        assert config.scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED
+        assert "normal" in config.thresholds
+
     def test_discover_all_no_duplicates(self):
         """重複する設定がないこと"""
         configs = DynamicIndicatorDiscovery.discover_all()

@@ -287,6 +287,34 @@ class DynamicIndicatorDiscovery:
                 aliases.update(config.aliases)
             config.aliases = list(aliases)
 
+        if name_upper in {"DEMARKER", "RMI", "MMI"}:
+            config.scale_type = IndicatorScaleType.OSCILLATOR_0_100
+            config.thresholds = config._get_default_thresholds()
+        elif name_upper == "TTF":
+            config.scale_type = IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100
+            config.thresholds = {
+                "aggressive": {"long_gt": 80, "short_lt": -80},
+                "normal": {"long_gt": 100, "short_lt": -100},
+                "conservative": {"long_gt": 120, "short_lt": -120},
+            }
+            config.min_length_func = lambda p: max(int(p.get("length", 15)) * 2, 2)
+        elif name_upper == "RWI":
+            config.result_type = IndicatorResultType.COMPLEX
+            config.returns = "multiple"
+            config.return_cols = ["RWI_HIGH", "RWI_LOW"]
+            config.output_names = ["RWI_HIGH", "RWI_LOW"]
+            config.default_output = "RWI_HIGH"
+            config.scale_type = IndicatorScaleType.MOMENTUM_ZERO_CENTERED
+            config.thresholds = {
+                "aggressive": {"long_gt": 0.8, "short_lt": 0.8},
+                "normal": {"long_gt": 1.0, "short_lt": 1.0},
+                "conservative": {"long_gt": 1.2, "short_lt": 1.2},
+            }
+            config.min_length_func = lambda p: max(int(p.get("length", 14)) + 1, 2)
+        elif name_upper == "PFE":
+            config.scale_type = IndicatorScaleType.MOMENTUM_ZERO_CENTERED
+            config.thresholds = config._get_default_thresholds()
+
         # 3. 特殊なパラメータ制約の付与
         if name_upper == "FRAMA":
             if "length" in config.parameters:
