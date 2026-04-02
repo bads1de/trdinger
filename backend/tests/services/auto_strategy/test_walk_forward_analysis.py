@@ -56,6 +56,8 @@ class TestWalkForwardAnalysis:
                 "initial_balance": 10000,
             }
         )
+        # Mock が _perform_single_evaluation_report を自動生成しないよう明示的に None を設定
+        evaluator._perform_single_evaluation_report = None
         return evaluator
 
     @pytest.fixture
@@ -234,6 +236,7 @@ class TestWFAEdgeCases:
         """IndividualEvaluator インスタンス"""
         mock_service = MagicMock()
         evaluator = IndividualEvaluator(backtest_service=mock_service)
+        evaluator._perform_single_evaluation_report = None
         return evaluator
 
     @pytest.fixture
@@ -308,6 +311,7 @@ class TestWFAMultiObjective:
                 "end_date": "2024-06-01 00:00:00",
             }
         )
+        evaluator._perform_single_evaluation_report = None
         return evaluator
 
     @pytest.fixture

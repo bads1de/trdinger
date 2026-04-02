@@ -59,7 +59,11 @@ class OrderManager:
         if not self.pending_orders or minute_data is None:
             return
 
-        if self.strategy.position:
+        strategy = self.strategy
+        if strategy is None:
+            return
+
+        if strategy.position:
             # 既にポジションがある場合は保留注文をキャンセル
             self.pending_orders.clear()
             return
@@ -149,12 +153,17 @@ class OrderManager:
         """
         約定した注文を実行（Strategyに委譲）
         """
-        if order.is_long:
-            self.strategy.buy(size=order.size)
-        else:
-            self.strategy.sell(size=order.size)
+        strategy = self.strategy
+        if strategy is None:
+            logger.error("Execute filled order failed: strategy instance is None")
+            return
 
-        resolve_runtime_state(self.strategy).set_open_position(
+        if order.is_long:
+            strategy.buy(size=order.size)
+        else:
+            strategy.sell(size=order.size)
+
+        resolve_runtime_state(strategy).set_open_position(
             entry_price=fill_price,
             sl_price=order.sl_price,
             tp_price=order.tp_price,

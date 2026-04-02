@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -139,7 +139,7 @@ class TripleBarrier:
             vertical_barrier_times = pd.Series(pd.NaT, index=target.index)
 
         # targetのインデックスに合わせてアラインメント
-        v_bar = vertical_barrier_times.reindex(target.index).fillna(pd.NaT)
+        v_bar = vertical_barrier_times.reindex(target.index).fillna(cast(Any, pd.NaT))
 
         if side is None:
             side_series = pd.Series(1.0, index=target.index)
@@ -149,9 +149,9 @@ class TripleBarrier:
         # Numba入力用のデータ準備 (すべてNumPy配列/Viewに変換)
 
         # 1. 価格データと時刻
-        close_vals = close.values.astype(np.float64)
+        close_vals = close.to_numpy(dtype=np.float64)
         # 時刻はint64(ns)として扱う (明示的にns解像度に変換)
-        close_times = close.index.astype("datetime64[ns]").astype(np.int64).values
+        close_times = close.index.astype("datetime64[ns]").astype(np.int64).to_numpy()
 
         # 2. イベント開始位置のインデックス
         # get_indexer は見つからない場合 -1 を返す
@@ -168,16 +168,17 @@ class TripleBarrier:
             # 有効な垂直バリア時刻のみインデックス検索
             valid_times = v_bar[valid_v_mask]
             # get_indexer requires exact match which can fail. Use searchsorted to find position.
-            found_idxs = close.index.searchsorted(valid_times, side="left")
+            idx_obj = cast(pd.DatetimeIndex, close.index)
+            found_idxs = idx_obj.searchsorted(valid_times.to_numpy(), side="left")
             found_idxs = np.clip(found_idxs, 0, len(close))
             v_bar_idxs[valid_v_mask] = found_idxs
 
         # 4. 垂直バリアの時刻 (int64)
-        v_bar_times_int = v_bar.astype("datetime64[ns]").astype(np.int64).values
+        v_bar_times_int = v_bar.astype("datetime64[ns]").astype(np.int64).to_numpy()
 
         # 5. その他パラメータ配列
-        target_vals = target.values.astype(np.float64)
-        side_vals = side_series.values.astype(np.float64)
+        target_vals = target.to_numpy(dtype=np.float64)
+        side_vals = side_series.to_numpy(dtype=np.float64)
         pt_mult, sl_mult = pt_sl
 
         # Numba関数の実行

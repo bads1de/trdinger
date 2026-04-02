@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 
 import lightgbm as lgb
@@ -251,7 +251,7 @@ class MetaLabelingService:
         cv = create_temporal_cv_splitter(
             cv_strategy=cv_strategy,
             n_splits=n_splits,
-            index=X_meta_all.index,
+            index=cast(pd.DatetimeIndex, X_meta_all.index),
             t1=t1.loc[target_idx] if t1 is not None else None,
             pct_embargo=pct_embargo,
         )

@@ -24,10 +24,12 @@ pandas-ta の volume カテゴリに対応。
 - PVI (Positive Volume Index)
 - PVOL (Price-Volume)
 - PVR (Price Volume Rank)
+- VFI (Volume Flow Indicator)
+- VP (Volume Profile)
 """
 
 import logging
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -333,18 +335,22 @@ class VolumeIndicators:
 
         def _calculate_mfi() -> pd.Series:
             try:
-                return ta.mfi(
+                res = ta.mfi(
                     high=high, low=low, close=close, volume=volume, length=length
                 )
             except TypeError:
                 # Fallback for strict environments where volume must be int
-                return ta.mfi(
+                res = ta.mfi(
                     high=high,
                     low=low,
                     close=close,
                     volume=volume.astype(int),
                     length=length,
                 )
+            
+            if res is None:
+                return pd.Series(np.nan, index=close.index, dtype=float)
+            return cast(pd.Series, res)
 
         return run_multi_series_indicator(
             {"high": high, "low": low, "close": close, "volume": volume},
@@ -478,8 +484,11 @@ class VolumeIndicators:
                 try:
                     # 時間情報を秒単位のインデックスに変換 (0 - 86400)
                     idx = volume.index
+                    _h = getattr(idx, "hour")
+                    _m = getattr(idx, "minute")
+                    _s = getattr(idx, "second")
                     time_indices = (
-                        idx.hour * 3600 + idx.minute * 60 + idx.second
+                        _h * 3600 + _m * 60 + _s
                     ).values.astype(np.int32)
                     vol_arr = volume.values.astype(np.float64)
 
@@ -581,4 +590,77 @@ class VolumeIndicators:
             {"close": close, "volume": volume},
             None,
             lambda: ta.pvr(close=close, volume=volume),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vfi(
+        close: pd.Series,
+        volume: pd.Series,
+        length: int = 130,
+        coef: float = 0.2,
+        vfactor: float = 0.2,
+        anchored: bool = False,
+    ) -> pd.Series:
+        """
+        Volume Flow Indicator (VFI)
+
+        マネーフローに基づく出来高指標。価格変動と出来高の関係を分析し、
+        買い圧力と売り圧力を検出する。
+
+        Args:
+            close: 終値
+            volume: 出来高
+            length: 期間（デフォルト: 130）
+            coef: 係数（デフォルト: 0.2）
+            vfactor: ボリュームファクター（デフォルト: 0.2）
+            anchored: アンカー版を使用するか（デフォルト: False）
+
+        Returns:
+            VFI の値
+        """
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            length,
+            lambda: ta.vfi(
+                close=close,
+                volume=volume,
+                length=length,
+                coef=coef,
+                vfactor=vfactor,
+                anchored=anchored,
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vp(
+        close: pd.Series,
+        volume: pd.Series,
+        bins: int = 10,
+        width: float | None = None,
+    ) -> pd.DataFrame:
+        """
+        Volume Profile (VP)
+
+        価格レベルごとの出来高分布を計算する。
+        各ビン（価格レンジ）に対する出来高の合計を返す。
+
+        Args:
+            close: 終値
+            volume: 出来高
+            bins: 分割数（デフォルト: 10）
+            width: ビンの幅（指定時はbinsより優先）
+
+        Returns:
+            Volume Profile の DataFrame（Price Level と Volume の列）
+        """
+        def _calculate_vp() -> pd.DataFrame | None:
+            result = ta.vp(close=close, volume=volume, bins=bins, width=width)
+            return result
+
+        return run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            None,
+            _calculate_vp,
         )

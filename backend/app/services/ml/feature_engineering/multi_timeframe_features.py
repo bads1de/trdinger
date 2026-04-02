@@ -177,9 +177,9 @@ class MultiTimeframeFeatureCalculator:
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """RSIを計算"""
-        delta = prices.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+        delta = pd.to_numeric(prices.diff(), errors="coerce").fillna(0.0)
+        gain = (delta.where(delta > 0, 0.0)).rolling(window=period).mean()
+        loss = (-delta.where(delta < 0, 0.0)).rolling(window=period).mean()
 
         rs = gain / (loss + 1e-10)
         rsi = 100 - (100 / (1 + rs))

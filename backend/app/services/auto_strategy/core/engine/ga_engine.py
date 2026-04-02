@@ -8,7 +8,10 @@ import logging
 from math import isfinite
 import time
 import threading
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+
+if TYPE_CHECKING:
+    from ..evaluation.evaluation_report import EvaluationReport
 
 import numpy as np
 from deap import tools
@@ -29,6 +32,7 @@ from .report_selection import (
     is_evaluation_report,
 )
 from ..evaluation.report_persistence import build_report_summary
+from ..evaluation.evaluation_report import EvaluationReport as EvaluationReportType
 from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import (
     _gene_kwargs,
@@ -907,7 +911,7 @@ class GeneticAlgorithmEngine:
 
             rank_key = build_report_rank_key_from_primary_fitness(
                 primary_fitness,
-                report if is_evaluation_report(report) else None,
+                cast(Optional["EvaluationReport"], report if is_evaluation_report(report) else None),  # type: ignore[reportArgumentType]
                 min_pass_rate=float(
                     getattr(config, "two_stage_min_pass_rate", 0.0) or 0.0
                 ),
@@ -1033,7 +1037,7 @@ class GeneticAlgorithmEngine:
             selection_score = None
 
         return build_report_summary(
-            report,
+            cast("EvaluationReport", report),  # type: ignore[reportArgumentType]
             selection_rank=selection_rank if isinstance(selection_rank, int) else None,
             selection_score=selection_score,
             fitness_score=numeric_fitness,

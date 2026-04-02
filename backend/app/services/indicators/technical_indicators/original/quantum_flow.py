@@ -150,7 +150,7 @@ def quantum_flow(
     signal = (
         pd.Series(flow_values, index=close.index).rolling(window=flow_length).mean()
     )
-    signal.name = "QUANTUM_FLOW_SIGNAL"
+    signal.name = "QUANTUM_FLOW_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
     flow_series = pd.Series(flow_values, index=close.index, name="QUANTUM_FLOW")
     return flow_series, signal

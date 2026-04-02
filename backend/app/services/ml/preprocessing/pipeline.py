@@ -41,7 +41,7 @@ def create_ml_pipeline(
 
     logger.info(f"{'分類' if is_classification else '回帰'}パイプラインを作成中...")
 
-    steps = [("preprocessing", create_preprocessing_pipeline(**(preprocessing_params or {})))]
+    steps: list[tuple[str, Any]] = [("preprocessing", create_preprocessing_pipeline(**(preprocessing_params or {})))]
 
     # 特徴量選択
     if feature_selection and n_features is not None and n_features > 0:
@@ -100,7 +100,8 @@ def get_ml_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     try:
         if hasattr(pipeline, "get_feature_names_out"):
             feature_names_out = pipeline.get_feature_names_out()
-            info["n_features_out"] = len(feature_names_out)
+            if feature_names_out is not None:
+                info["n_features_out"] = len(feature_names_out)
     except Exception:
         info["n_features_out"] = None
 

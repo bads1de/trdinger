@@ -2,19 +2,18 @@
 
 import importlib
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 import numpy as np
 import pandas as pd
-
 from app.services.ml.common.exceptions import MLPredictionError
 from app.services.ml.common.utils import prepare_data_for_prediction
+from app.services.ml.models.model_manager import ModelManager
+from app.services.ml.orchestration.ml_training_orchestration_service import (
+    MLTrainingService,
+)
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:  # pragma: no cover - 型チェック専用
-    from app.services.ml.orchestration.ml_training_orchestration_service import MLTrainingService
-    from app.services.ml.model_manager import ModelManager
 
 
 class RuntimeModelPredictorAdapter:
@@ -115,7 +114,9 @@ class RuntimeModelPredictorAdapter:
         if callable(predict):
             return predict(features_df)
 
-        raise MLPredictionError("runtime predictor が predict/predict_proba を持っていません")
+        raise MLPredictionError(
+            "runtime predictor が predict/predict_proba を持っていません"
+        )
 
     @staticmethod
     def _normalise_runtime_prediction(raw_prediction: Any) -> Dict[str, float]:
@@ -309,13 +310,13 @@ class HybridPredictor:
 
         try:
             if hasattr(service, "run_time_series_cv"):
-                service.run_time_series_cv(features_df)
+                service.run_time_series_cv(features_df)  # type: ignore[reportAttributeAccessIssue]
             elif hasattr(service, "time_series_cross_validate"):
-                service.time_series_cross_validate(features_df)
+                service.time_series_cross_validate(features_df)  # type: ignore[reportAttributeAccessIssue]
             elif hasattr(service, "trainer") and hasattr(
                 service.trainer, "time_series_cross_validate"
             ):
-                service.trainer.time_series_cross_validate(features_df)
+                service.trainer.time_series_cross_validate(features_df)  # type: ignore[reportAttributeAccessIssue]
         except Exception as exc:
             logger.warning(f"時系列クロスバリデーション実行エラー: {exc}")
 
@@ -340,7 +341,9 @@ class HybridPredictor:
             logger.error(f"モデルロードエラー: {e}")
             return False
 
-    def get_latest_model(self, model_name_pattern: Optional[str] = None) -> Optional[str]:
+    def get_latest_model(
+        self, model_name_pattern: Optional[str] = None
+    ) -> Optional[str]:
         """
         最新モデルのパスを取得
 
@@ -374,7 +377,9 @@ class HybridPredictor:
             for model_type, service in zip(self.model_types, self.services):
                 latest_model = self.get_latest_model(model_type)
                 if latest_model is None:
-                    logger.info(f"最新モデルが見つからないためスキップします: {model_type}")
+                    logger.info(
+                        f"最新モデルが見つからないためスキップします: {model_type}"
+                    )
                     continue
                 if service.load_model(latest_model):
                     loaded_any = True
@@ -401,7 +406,7 @@ class HybridPredictor:
                 return False
         return True
 
-    def get_model_info(self) -> Dict[str, Any]:
+    async def get_model_info(self) -> Dict[str, Any]:
         """
         モデル情報を取得
 
@@ -409,13 +414,16 @@ class HybridPredictor:
             モデル情報辞書
         """
         if len(self.services) == 1:
-            return self.services[0].get_training_status()
+            return await self.services[0].get_training_status()
         else:
             # 複数モデルの場合は各モデルの情報をリストで返す
+            models = []
+            for s in self.services:
+                models.append(await s.get_training_status())
             return {
                 "trainer_type": "multi_model",
                 "model_count": len(self.services),
-                "models": [s.get_training_status() for s in self.services],
+                "models": models,
             }
 
     @staticmethod
@@ -425,7 +433,9 @@ class HybridPredictor:
         if override is not None:
             return override
 
-        module = importlib.import_module("app.services.ml.orchestration.ml_training_orchestration_service")
+        module = importlib.import_module(
+            "app.services.ml.orchestration.ml_training_orchestration_service"
+        )
         return getattr(module, "MLTrainingService")
 
     @staticmethod

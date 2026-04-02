@@ -204,7 +204,7 @@ class RandomGeneGenerator:
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
         try:
-            self.smart_condition_generator.indicators = indicators
+            setattr(self.smart_condition_generator, "indicators", indicators)
         except Exception:
             pass
         long_entry_conditions, short_entry_conditions, _ = (

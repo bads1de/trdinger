@@ -89,7 +89,7 @@ class MetricsCalculator:
         """
         # pd.Series の場合は numpy 配列に変換
         if hasattr(y_true, "values"):
-            y_true = y_true.values
+            y_true = y_true.values  # type: ignore[reportAttributeAccessIssue]
 
         if level == "full":
             logger.info("📊 包括的な評価指標を計算中(Full)...")
@@ -223,17 +223,19 @@ class MetricsCalculator:
                         for i in range(n_classes)
                         if np.sum(y_true == i) > 0
                     ]
-                    metrics["pr_auc"] = np.mean(pr_aucs) if pr_aucs else 0.0
-
+                    metrics["pr_auc"] = np.mean(np.asarray(pr_aucs)) if pr_aucs else 0.0
+    
             metrics["log_loss"] = log_loss(y_true, y_proba)
             if n_classes == 2:
                 metrics["brier_score"] = brier_score_loss(y_true, y_pos)
             else:
                 metrics["brier_score"] = np.mean(
-                    [
-                        brier_score_loss((y_true == i).astype(int), y_proba[:, i])
-                        for i in range(n_classes)
-                    ]
+                    np.asarray(
+                        [
+                            brier_score_loss((y_true == i).astype(int), y_proba[:, i])
+                            for i in range(n_classes)
+                        ]
+                    )
                 )
         except Exception as e:
             logger.warning(f"確率指標計算エラー: {e}")
@@ -330,9 +332,11 @@ class MetricsCalculator:
     ) -> Dict[str, Any]:
         """クラス別詳細指標を計算"""
         try:
-            p, r, f, s = precision_recall_fscore_support(
+            # average=None の場合、各指標はクラスごとの配列として返される
+            res = precision_recall_fscore_support(
                 y_true, y_pred, average=None, zero_division=self.config.zero_division
             )
+            p, r, f, s = map(np.asanyarray, res)
             labels = np.unique(y_true)
 
             return {

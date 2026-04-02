@@ -124,12 +124,12 @@ class DataProcessor:
                 has_null_check = result_df[col].isnull().any()
                 # has_null_checkがSeriesの場合、.item()でスカラー値を取得
                 if hasattr(has_null_check, "item"):
-                    has_null = has_null_check.item()
+                    has_null = has_null_check.item()  # type: ignore[reportAttributeAccessIssue]
                 else:
                     has_null = bool(has_null_check)
             except (ValueError, AttributeError):
                 # フォールバック: 要素ごとにチェック
-                has_null = result_df[col].isnull().values.any()
+                has_null = bool(np.any(result_df[col].isnull().to_numpy()))
 
             if has_null:
                 # 前方補完 → 線形補完 → ゼロ埋め（未来データを使わない）

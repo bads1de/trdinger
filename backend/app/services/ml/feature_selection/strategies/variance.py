@@ -2,7 +2,7 @@
 分散に基づくフィルタリング戦略（定数・準定数の削除）
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 import numpy as np
 from sklearn.feature_selection import VarianceThreshold
@@ -23,9 +23,9 @@ class VarianceStrategy(BaseSelectionStrategy):
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
         selector = VarianceThreshold(threshold=config.variance_threshold)
         selector.fit(X)
-        mask = selector.get_support()
+        mask = cast(np.ndarray, selector.get_support())
         return mask, {
             "method": "variance",
-            "variances": selector.variances_.tolist(),
+            "variances": cast(np.ndarray, selector.variances_).tolist() if selector.variances_ is not None else [],
             "threshold": config.variance_threshold,
         }

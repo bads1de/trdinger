@@ -50,6 +50,9 @@ def benchmark_evolution_runner():
     mock_toolbox = MagicMock()
     mock_toolbox.evaluate.return_value = (0.5,)
     mock_toolbox.select.return_value = []
+    mock_toolbox.mate.side_effect = lambda c1, c2: (c1, c2)
+    mock_toolbox.mutate.side_effect = lambda c: (c,)
+    mock_toolbox.clone = lambda x: x
 
     # モック統計
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -62,7 +65,8 @@ def benchmark_evolution_runner():
     class MockIndividual:
         def __init__(self):
             self.fitness = MagicMock()
-            self.fitness.values = (np.random.random(),)
+            self.fitness.values = (0.5,)
+            self.fitness.valid = True
 
     # モック集団
     population = [MockIndividual() for _ in range(config.population_size)]
@@ -71,15 +75,14 @@ def benchmark_evolution_runner():
         toolbox=mock_toolbox,
         stats=stats,
         population=population,
-        config=config,
         parallel_evaluator=mock_parallel_evaluator,
     )
 
     # ウームアップ
     for _ in range(3):
-        runner._select_parents()
-        runner._apply_crossover([])
-        runner._apply_mutation([])
+        mock_toolbox.select(population, config.population_size)
+        runner._apply_crossover_batch(population, config)
+        runner._apply_mutation_batch(population, config)
 
     # ベンチマーク実行
     n_iterations = 100
@@ -87,29 +90,33 @@ def benchmark_evolution_runner():
     # 選択演算子
     start_time = time.perf_counter()
     for _ in range(n_iterations):
-        runner._select_parents()
+        mock_toolbox.select(population, config.population_size)
     elapsed_select = time.perf_counter() - start_time
 
     logger.info(f"\n=== 結果 ({n_iterations}回実行) ===")
-    logger.info(f"選択演算子: {elapsed_select:.4f}秒 ({elapsed_select/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"選択演算子: {elapsed_select:.4f}秒 ({elapsed_select/n_iterations*1000:.3f}ms/回)"
+    )
 
     # 交叉演算子
-    parents = [(MockIndividual(), MockIndividual()) for _ in range(10)]
     start_time = time.perf_counter()
     for _ in range(n_iterations):
-        runner._apply_crossover(parents)
+        runner._apply_crossover_batch(population, config)
     elapsed_crossover = time.perf_counter() - start_time
 
-    logger.info(f"交叉演算子: {elapsed_crossover:.4f}秒 ({elapsed_crossover/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"交叉演算子: {elapsed_crossover:.4f}秒 ({elapsed_crossover/n_iterations*1000:.3f}ms/回)"
+    )
 
     # 突然変異演算子
-    offspring = [MockIndividual() for _ in range(10)]
     start_time = time.perf_counter()
     for _ in range(n_iterations):
-        runner._apply_mutation(offspring)
+        runner._apply_mutation_batch(population, config)
     elapsed_mutation = time.perf_counter() - start_time
 
-    logger.info(f"突然変異演算子: {elapsed_mutation:.4f}秒 ({elapsed_mutation/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"突然変異演算子: {elapsed_mutation:.4f}秒 ({elapsed_mutation/n_iterations*1000:.3f}ms/回)"
+    )
 
     return {
         "select_ms": elapsed_select / n_iterations * 1000,
@@ -130,13 +137,17 @@ def benchmark_fitness_sharing():
     config.sharing_radius = 0.1
     config.sharing_alpha = 1.0
 
-    sharing = FitnessSharing(config)
+    sharing = FitnessSharing(
+        sharing_radius=config.sharing_radius, alpha=config.sharing_alpha
+    )
 
     # モック個体
     class MockIndividual:
         def __init__(self, values):
             self.fitness = MagicMock()
             self.fitness.values = values
+            self.fitness.valid = True
+            self._feature_vector = np.random.random(20)  # 近似ベクトル
 
     population = [MockIndividual((np.random.random(),)) for _ in range(20)]
 

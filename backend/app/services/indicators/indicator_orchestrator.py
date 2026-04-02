@@ -27,10 +27,10 @@ from .data_validation import create_nan_result, validate_data_length_with_fallba
 # pandas-ta および pandas, numpy 内部で発生する警告を抑制
 # SettingWithCopyWarning の抑制
 try:
-    from pandas.errors import SettingWithCopyWarning
+    from pandas.errors import SettingWithCopyWarning  # type: ignore[reportAttributeAccessIssue]
 except ImportError:
     try:
-        from pandas.core.common import SettingWithCopyWarning
+        from pandas.core.common import SettingWithCopyWarning  # type: ignore[reportAttributeAccessIssue]
     except ImportError:
         SettingWithCopyWarning = UserWarning
 
@@ -158,7 +158,7 @@ class TechnicalIndicatorService:
             data_meta: tuple
             if not df.empty:
                 # 全列のハッシュの合計を使うことで、どの列が変わっても検知できるようにする
-                data_hash = pd.util.hash_pandas_object(df, index=True).sum()
+                data_hash = pd.util.hash_pandas_object(df, index=True).sum()  # type: ignore[reportAttributeAccessIssue]
 
                 data_meta = (
                     df.index[0],  # 開始日
@@ -255,7 +255,7 @@ class TechnicalIndicatorService:
                     min_length_func = config["min_length"]
                     if callable(min_length_func):
                         min_length = min_length_func({param_name: value})
-                        if isinstance(value, (int, float)) and value < min_length:
+                        if isinstance(value, (int, float)) and isinstance(min_length, (int, float)) and value < min_length:
                             logger.debug(
                                 f"パラメータ {param_name}={value} が最小値 {min_length} 未満のため調整"
                             )
@@ -362,9 +362,9 @@ class TechnicalIndicatorService:
         # 戻り値変換
         if config["returns"] == "single":
             if isinstance(result, pd.Series):
-                return result.values
+                return result.to_numpy()
             elif isinstance(result, pd.DataFrame):
-                return result.iloc[:, 0].values
+                return result.iloc[:, 0].to_numpy()
             else:
                 return np.asarray(result)
         else:
@@ -373,7 +373,7 @@ class TechnicalIndicatorService:
                     selected_cols = []
                     for col in config["return_cols"]:
                         if col in result.columns:
-                            selected_cols.append(result[col].values)
+                            selected_cols.append(result[col].to_numpy())
                         else:
                             matching_cols = [
                                 c
@@ -381,16 +381,16 @@ class TechnicalIndicatorService:
                                 if col in c or col.lower() in c.lower()
                             ]
                             if matching_cols:
-                                selected_cols.append(result[matching_cols[0]].values)
+                                selected_cols.append(result[matching_cols[0]].to_numpy())
                             else:
                                 selected_cols.append(np.full(len(result), np.nan))
                     return tuple(selected_cols)
                 else:
                     return tuple(
-                        result.iloc[:, i].values for i in range(result.shape[1])
+                        result.iloc[:, i].to_numpy() for i in range(result.shape[1])
                     )
             elif isinstance(result, pd.Series):
-                return (result.values,)
+                return (result.to_numpy(),)
             elif isinstance(result, tuple):
                 return tuple(np.asarray(arr) for arr in result)
             else:
@@ -429,8 +429,8 @@ class TechnicalIndicatorService:
         self,
         params: Dict[str, Any],
         config: IndicatorConfig,
-        required_data: Dict[str, pd.Series],
-    ) -> Tuple[Dict[str, Any], Dict[str, pd.Series]]:
+        required_data: Dict[str, Union[pd.Series, pd.DataFrame]],
+    ) -> Tuple[Dict[str, Any], Dict[str, Union[pd.Series, pd.DataFrame]]]:
         """アダプター関数のパラメータをマッピング"""
         converted_params = config.normalize_params(params)
         mapped_params = converted_params.copy()
@@ -533,19 +533,19 @@ class TechnicalIndicatorService:
 
         # 結果の後処理
         if isinstance(result, pd.Series):
-            return result.values
+            return result.to_numpy()
         elif isinstance(result, pd.DataFrame):
             if config.result_type == IndicatorResultType.SINGLE:
-                return result.iloc[:, 0].values
+                return result.iloc[:, 0].to_numpy()
             else:
-                return tuple(result[col].values for col in result.columns)
+                return tuple(result[col].to_numpy() for col in result.columns)
         elif isinstance(result, tuple):
             return tuple(
                 (
-                    arr.values
+                    arr.to_numpy()
                     if isinstance(arr, pd.Series)
                     else (
-                        arr.values if isinstance(arr, pd.DataFrame) else np.asarray(arr)
+                        arr.to_numpy() if isinstance(arr, pd.DataFrame) else np.asarray(arr)
                     )
                 )
                 for arr in result

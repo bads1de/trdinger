@@ -5,7 +5,7 @@ HybridPredictor Tests
 import pytest
 import pandas as pd
 import numpy as np
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import AsyncMock, Mock, MagicMock, patch
 
 from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
     HybridPredictor,
@@ -33,7 +33,9 @@ class TestHybridPredictor:
                 "lightgbm",
                 "rf",
             ]
-            service_instance.get_training_status.return_value = {"status": "trained"}
+            service_instance.get_training_status = AsyncMock(
+                return_value={"status": "trained"}
+            )
             service_instance.trainer.is_trained = True
 
             mock_service_class = Mock(return_value=service_instance)
@@ -203,9 +205,10 @@ class TestHybridPredictor:
         models = HybridPredictor.get_available_models()
         assert "lightgbm" in models  # As returned by mock
 
-    def test_get_model_info(self, predictor):
+    @pytest.mark.asyncio
+    async def test_get_model_info(self, predictor):
         """モデル情報の取得"""
-        info = predictor.get_model_info()
+        info = await predictor.get_model_info()
         assert info["status"] == "trained"
 
     def test_normalise_prediction(self):
@@ -244,18 +247,23 @@ class TestHybridPredictor:
         predictor.service.trainer.model = None
         assert predictor.is_trained() is False
 
-    def test_get_model_info_multi(self, mock_training_service_cls):
+    @pytest.mark.asyncio
+    async def test_get_model_info_multi(self, mock_training_service_cls):
         """複数モデル時のモデル情報取得"""
         service1 = Mock()
-        service1.get_training_status.return_value = {"status": "trained", "acc": 0.8}
+        service1.get_training_status = AsyncMock(
+            return_value={"status": "trained", "acc": 0.8}
+        )
         service2 = Mock()
-        service2.get_training_status.return_value = {"status": "trained", "acc": 0.85}
+        service2.get_training_status = AsyncMock(
+            return_value={"status": "trained", "acc": 0.85}
+        )
 
         mock_training_service_cls.side_effect = [service1, service2]
 
         predictor = HybridPredictor(model_types=["m1", "m2"])
 
-        info = predictor.get_model_info()
+        info = await predictor.get_model_info()
         assert info["trainer_type"] == "multi_model"
         assert info["model_count"] == 2
         assert len(info["models"]) == 2

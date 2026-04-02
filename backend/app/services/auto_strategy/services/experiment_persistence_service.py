@@ -268,10 +268,10 @@ class ExperimentPersistenceService:
                     "experiment_name": exp.name,
                     "status": exp.status,
                     "created_at": (
-                        exp.created_at.isoformat() if exp.created_at else None
+                        exp.created_at.isoformat() if exp.created_at is not None else None
                     ),
                     "completed_at": (
-                        exp.completed_at.isoformat() if exp.completed_at else None
+                        exp.completed_at.isoformat() if exp.completed_at is not None else None
                     ),
                 }
                 for exp in experiments

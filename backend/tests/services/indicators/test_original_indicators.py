@@ -193,7 +193,7 @@ class TestOriginalIndicators:
     # Prime Oscillator関連テスト
     def test_prime_oscillator_valid_data(self, sample_data):
         """有効データでのPrime Number Oscillator計算テスト"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.prime_oscillator import (
             prime_oscillator,
         )
 
@@ -211,7 +211,7 @@ class TestOriginalIndicators:
 
     def test_prime_oscillator_insufficient_data(self):
         """データ不足でのPrime Number Oscillator計算テスト"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.prime_oscillator import (
             prime_oscillator,
         )
 
@@ -225,7 +225,7 @@ class TestOriginalIndicators:
     # Fibonacci Cycle関連テスト
     def test_fibonacci_cycle_valid_data(self, sample_data):
         """有効データでのFibonacci Cycle計算テスト"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.fibonacci_cycle import (
             fibonacci_cycle,
         )
 
@@ -241,7 +241,7 @@ class TestOriginalIndicators:
 
     def test_fibonacci_cycle_insufficient_data(self):
         """データ不足でのFibonacci Cycle計算テスト"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.fibonacci_cycle import (
             fibonacci_cycle,
         )
 
@@ -288,7 +288,7 @@ class TestOriginalIndicators:
     # Harmonic Resonance テスト
     def test_harmonic_resonance_valid_data(self, sample_df):
         """有効データでのHarmonic Resonance計算テスト"""
-        from app.services.indicators.technical_indicators.original.flow import (
+        from app.services.indicators.technical_indicators.original.harmonic_resonance import (
             harmonic_resonance,
         )
 
@@ -303,7 +303,7 @@ class TestOriginalIndicators:
 
     def test_harmonic_resonance_invalid_length(self, sample_df):
         """不正なlengthパラメータ"""
-        from app.services.indicators.technical_indicators.original.flow import (
+        from app.services.indicators.technical_indicators.original.harmonic_resonance import (
             harmonic_resonance,
         )
 
@@ -314,7 +314,7 @@ class TestOriginalIndicators:
 
     def test_harmonic_resonance_invalid_bands(self, sample_df):
         """不正なresonance_bandsパラメータ"""
-        from app.services.indicators.technical_indicators.original.flow import (
+        from app.services.indicators.technical_indicators.original.harmonic_resonance import (
             harmonic_resonance,
         )
 
@@ -327,7 +327,7 @@ class TestOriginalIndicators:
     # Chaos Fractal Dimension テスト
     def test_chaos_fractal_dimension_valid_data(self, sample_df):
         """有効データでのChaos Fractal Dimension計算テスト"""
-        from app.services.indicators.technical_indicators.original.flow import (
+        from app.services.indicators.technical_indicators.original.chaos_fractal_dimension import (
             chaos_fractal_dimension,
         )
 
@@ -342,7 +342,7 @@ class TestOriginalIndicators:
 
     def test_chaos_fractal_dimension_invalid_length(self, sample_df):
         """不正なlengthパラメータ"""
-        from app.services.indicators.technical_indicators.original.flow import (
+        from app.services.indicators.technical_indicators.original.chaos_fractal_dimension import (
             chaos_fractal_dimension,
         )
 
@@ -354,7 +354,7 @@ class TestOriginalIndicators:
 
     def test_chaos_fractal_dimension_invalid_embedding(self, sample_df):
         """不正なembedding_dimパラメータ"""
-        from app.services.indicators.technical_indicators.original.flow import (
+        from app.services.indicators.technical_indicators.original.chaos_fractal_dimension import (
             chaos_fractal_dimension,
         )
 
@@ -373,7 +373,7 @@ class TestOriginalIndicators:
     # Connors RSI テスト
     def test_connors_rsi_valid_data(self, sample_data):
         """有効データでのConnors RSI計算テスト"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.connors_rsi import (
             connors_rsi,
         )
 
@@ -385,7 +385,7 @@ class TestOriginalIndicators:
 
     def test_connors_rsi_invalid_rsi_periods(self, sample_data):
         """不正なrsi_periodsパラメータ"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.connors_rsi import (
             connors_rsi,
         )
 
@@ -394,7 +394,7 @@ class TestOriginalIndicators:
 
     def test_connors_rsi_invalid_streak_periods(self, sample_data):
         """不正なstreak_periodsパラメータ"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.connors_rsi import (
             connors_rsi,
         )
 
@@ -430,7 +430,7 @@ class TestOriginalIndicators:
     # Entropy Volatility Index テスト
     def test_entropy_volatility_index_valid_data(self, sample_data):
         """有効データでのEVI計算テスト"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.entropy_volatility_index import (
             entropy_volatility_index,
         )
 
@@ -441,7 +441,7 @@ class TestOriginalIndicators:
 
     def test_entropy_volatility_index_invalid_length(self, sample_data):
         """不正なlengthパラメータ"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.entropy_volatility_index import (
             entropy_volatility_index,
         )
 
@@ -450,7 +450,7 @@ class TestOriginalIndicators:
 
     def test_entropy_volatility_index_invalid_m_val(self, sample_data):
         """不正なm_valパラメータ"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.entropy_volatility_index import (
             entropy_volatility_index,
         )
 
@@ -459,7 +459,7 @@ class TestOriginalIndicators:
 
     def test_entropy_volatility_index_invalid_r_val(self, sample_data):
         """不正なr_valパラメータ"""
-        from app.services.indicators.technical_indicators.original.oscillators import (
+        from app.services.indicators.technical_indicators.original.entropy_volatility_index import (
             entropy_volatility_index,
         )
 

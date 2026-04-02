@@ -11,10 +11,10 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from ..evaluation.metrics import metrics_collector
-from ..common.utils import get_feature_importance_unified
 from ..common.config import ml_config_manager
 from ..common.exceptions import MLModelError
+from ..common.utils import get_feature_importance_unified
+from ..evaluation.metrics import metrics_collector
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ class BaseEnsemble(ABC):
         self.is_fitted = False
         self.feature_columns: Optional[List[str]] = None
         self.scaler: Optional[Any] = None
+        self._fitted_base_models: Dict[str, Any] = {}
 
     @abstractmethod
     def fit(
@@ -185,7 +186,8 @@ class BaseEnsemble(ABC):
                 depth=params.pop("depth", params.pop("max_depth", 6)),
                 random_seed=seed,
                 thread_count=params.pop(
-                    "thread_count", n_jobs if isinstance(n_jobs, int) and n_jobs > 0 else 1
+                    "thread_count",
+                    n_jobs if isinstance(n_jobs, int) and n_jobs > 0 else 1,
                 ),
                 verbose=params.pop("verbose", 0),
                 allow_writing_files=params.pop("allow_writing_files", False),
@@ -283,7 +285,9 @@ class BaseEnsemble(ABC):
         """アンサンブルモデルを保存"""
         import os
         from datetime import datetime
+
         import joblib
+
         from ..models.model_manager import model_manager
 
         m_name = os.path.basename(base_path)
@@ -341,9 +345,10 @@ class BaseEnsemble(ABC):
 
     def load_models(self, base_path: str) -> bool:
         """アンサンブルモデルを読み込み"""
+        import warnings
+
         import joblib
         from sklearn.exceptions import InconsistentVersionWarning
-        import warnings
 
         from ..common.utils import collect_unique_files
 

@@ -21,6 +21,7 @@ from .constants import (
     SUPPORTED_TIMEFRAMES,
 )
 
+
 class AppConfig(BaseSettings):
     """アプリケーション基本設定。
 
@@ -119,7 +120,9 @@ class MarketConfig(BaseSettings):
     default_exchange: str = Field(default=DEFAULT_MARKET_EXCHANGE)
     default_symbol: str = Field(default=DEFAULT_MARKET_SYMBOL)
     default_timeframe: str = Field(default=DEFAULT_MARKET_TIMEFRAME)
-    default_limit: int = Field(default=DEFAULT_DATA_LIMIT, description="デフォルト取得件数")
+    default_limit: int = Field(
+        default=DEFAULT_DATA_LIMIT, description="デフォルト取得件数"
+    )
     max_limit: int = Field(default=MAX_DATA_LIMIT, description="最大取得件数")
     min_limit: int = Field(default=MIN_DATA_LIMIT, description="最小取得件数")
 
@@ -151,7 +154,9 @@ class DataCollectionConfig(BaseSettings):
     """
 
     # API制限設定
-    default_limit: int = Field(default=DEFAULT_DATA_LIMIT, description="デフォルト取得件数")
+    default_limit: int = Field(
+        default=DEFAULT_DATA_LIMIT, description="デフォルト取得件数"
+    )
     max_limit: int = Field(default=MAX_DATA_LIMIT, description="最大取得件数")
     min_limit: int = Field(default=MIN_DATA_LIMIT, description="最小取得件数")
 

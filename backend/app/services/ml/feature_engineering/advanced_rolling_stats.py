@@ -31,14 +31,14 @@ class AdvancedRollingStatsCalculator:
         """Advanced Rolling Statistics特徴量を計算"""
         res = pd.DataFrame(index=df.index)
         rets = df["close"].pct_change()
-        log_rets = np.log(df["close"] / df["close"].shift(1))
+        log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
         vol = df["volume"]
 
         # 高度なボラティリティ推定量
-        log_hl = np.log(df["high"] / df["low"])
-        park_vol = np.sqrt((1.0 / (4.0 * np.log(2.0))) * log_hl**2)
-        log_co = np.log(df["close"] / df["open"])
-        gk_vol = np.sqrt(0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2)
+        log_hl = pd.Series(np.log(df["high"] / df["low"]), index=df.index)
+        park_vol = pd.Series(np.sqrt((1.0 / (4.0 * np.log(2.0))) * log_hl**2), index=df.index)
+        log_co = pd.Series(np.log(df["close"] / df["open"]), index=df.index)
+        gk_vol = pd.Series(np.sqrt(0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2), index=df.index)
 
         for w in self.windows:
             # 価格統計
@@ -78,7 +78,10 @@ class AdvancedRollingStatsCalculator:
     def _yang_zhang_volatility(self, df: pd.DataFrame, window: int) -> pd.Series:
         """Yang-Zhang Volatility Estimator"""
         # 対数価格
-        l_o, l_h, l_l, l_c = np.log(df["open"]), np.log(df["high"]), np.log(df["low"]), np.log(df["close"])
+        l_o = pd.Series(np.log(pd.to_numeric(df["open"])), index=df.index)
+        l_h = pd.Series(np.log(pd.to_numeric(df["high"])), index=df.index)
+        l_l = pd.Series(np.log(pd.to_numeric(df["low"])), index=df.index)
+        l_c = pd.Series(np.log(pd.to_numeric(df["close"])), index=df.index)
 
         # 1. Overnight Jump & 2. Open-to-Close
         sigma_oj_sq = (l_o - l_c.shift(1)).rolling(window).var()
@@ -90,7 +93,7 @@ class AdvancedRollingStatsCalculator:
 
         # Weight k
         k = 0.34 / (1.34 + (window + 1) / (window - 1))
-        return np.sqrt(sigma_oj_sq + k * sigma_oc_sq + (1 - k) * sigma_rs_sq).fillna(0)
+        return ((sigma_oj_sq + k * sigma_oc_sq + (1 - k) * sigma_rs_sq) ** 0.5).fillna(0)
 
     def _volume_weighted_skew(
         self, returns: pd.Series, volume: pd.Series, window: int

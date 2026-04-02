@@ -549,7 +549,8 @@ class TestMLPredictionIntegration:
         # ML予測が条件に追加されたことを確認
         assert len(enhanced_conditions) == 2
         assert any(
-            "ml_prediction" in str(cond.left_operand) for cond in enhanced_conditions
+            isinstance(cond, Condition) and "ml_prediction" in str(cond.left_operand)
+            for cond in enhanced_conditions
         )
 
     def test_ml_feature_importance_integration(self) -> None:

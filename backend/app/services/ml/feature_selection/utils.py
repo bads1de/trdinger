@@ -3,6 +3,7 @@
 """
 
 import logging
+from typing import cast
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -17,6 +18,8 @@ try:
     LIGHTGBM_AVAILABLE = True
 except ImportError:
     LIGHTGBM_AVAILABLE = False
+    LGBMClassifier = None
+    LGBMRegressor = None
 
 
 def is_regression_target(y: np.ndarray) -> bool:
@@ -35,14 +38,17 @@ def get_default_estimator(
 
     LightGBMが利用可能ならLightGBM、そうでなければRandomForestを返す。
     """
-    if LIGHTGBM_AVAILABLE:
-        return LGBMClassifier(
-            n_estimators=n_estimators,
-            importance_type="gain",
-            random_state=random_state,
-            n_jobs=n_jobs,
-            verbosity=-1,  # 警告抑制
-            force_col_wise=True,  # 警告抑制
+    if LIGHTGBM_AVAILABLE and LGBMClassifier is not None:
+        return cast(
+            BaseEstimator,
+            LGBMClassifier(
+                n_estimators=n_estimators,
+                importance_type="gain",
+                random_state=random_state,
+                n_jobs=n_jobs,
+                verbosity=-1,  # 警告抑制
+                force_col_wise=True,  # 警告抑制
+            ),
         )
     else:
         logger.warning("LightGBM not available, falling back to RandomForest")
@@ -63,14 +69,17 @@ def get_default_regressor(
 
     LightGBMが利用可能ならLGBMRegressor、そうでなければRandomForestRegressorを返す。
     """
-    if LIGHTGBM_AVAILABLE:
-        return LGBMRegressor(
-            n_estimators=n_estimators,
-            importance_type="gain",
-            random_state=random_state,
-            n_jobs=n_jobs,
-            verbosity=-1,
-            force_col_wise=True,
+    if LIGHTGBM_AVAILABLE and LGBMRegressor is not None:
+        return cast(
+            BaseEstimator,
+            LGBMRegressor(
+                n_estimators=n_estimators,
+                importance_type="gain",
+                random_state=random_state,
+                n_jobs=n_jobs,
+                verbosity=-1,
+                force_col_wise=True,
+            ),
         )
     else:
         logger.warning("LightGBM not available, falling back to RandomForestRegressor")

@@ -21,6 +21,7 @@ from ..genes import (
     ConditionGroup,
     IndicatorGene,
     TPSLMethod,
+    TPSLGene,
 )
 from ..positions.entry_executor import EntryExecutor
 from ..positions.lower_tf_simulator import LowerTimeframeSimulator
@@ -246,13 +247,15 @@ class UniversalStrategy(Strategy):
 
         return None
 
-    def _get_effective_tpsl_gene(self, direction: float) -> Union[None, object]:
+    def _get_effective_tpsl_gene(self, direction: float) -> Optional[TPSLGene]:
         """有効なTPSL遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
-        return self._get_effective_sub_gene(direction, "tpsl")
+        target = self._get_effective_sub_gene(direction, "tpsl")
+        return cast(Optional[TPSLGene], target)
 
-    def _get_effective_entry_gene(self, direction: float) -> Union[None, EntryGene]:
+    def _get_effective_entry_gene(self, direction: float) -> Optional[EntryGene]:
         """有効なエントリー遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
-        return self._get_effective_sub_gene(direction, "entry")
+        target = self._get_effective_sub_gene(direction, "entry")
+        return cast(Optional[EntryGene], target)
 
     def _normalize_evaluation_start(self, value: Any) -> Optional[pd.Timestamp]:
         """評価開始時刻を pandas.Timestamp に正規化する。"""
@@ -451,14 +454,17 @@ class UniversalStrategy(Strategy):
                         )
 
                         # pandas-taで計算
-                        self._precomputed_atr = ta.atr(
+                        atr_series = ta.atr(
                             temp_df["high"],
                             temp_df["low"],
                             temp_df["close"],
                             length=lookback,
-                        ).values
-
-                        logger.debug("ATR事前計算完了")
+                        )
+                        if atr_series is not None:
+                            self._precomputed_atr = cast(pd.Series, atr_series).values
+                            logger.debug("ATR事前計算完了")
+                        else:
+                            logger.warning("ATR事前計算失敗: ta.atr が None を返しました")
 
                     except ImportError:
                         # pandas-taがない場合などはフォールバック
@@ -477,7 +483,7 @@ class UniversalStrategy(Strategy):
             self._precomputed_tpsl_atr = {}
             for direction in [1.0, -1.0]:
                 tpsl_gene = self._get_effective_tpsl_gene(direction)
-                if tpsl_gene and tpsl_gene.method in (
+                if tpsl_gene and getattr(tpsl_gene, "method", None) in (
                     TPSLMethod.VOLATILITY_BASED,
                     TPSLMethod.ADAPTIVE,
                     TPSLMethod.STATISTICAL,
@@ -493,10 +499,13 @@ class UniversalStrategy(Strategy):
                                 low = self.data.df["Low"]
                                 close = self.data.df["Close"]
                                 # pandas-taのATR計算
-                                atr_values = ta.atr(
+                                atr_result = ta.atr(
                                     high, low, close, length=atr_period
-                                ).values
-                                self._precomputed_tpsl_atr[atr_period] = atr_values
+                                )
+                                if atr_result is not None:
+                                    self._precomputed_tpsl_atr[atr_period] = cast(
+                                        pd.Series, atr_result
+                                    ).values
                     except Exception as e:
                         logger.debug(f"TP/SL ATR事前計算失敗: {e}")
 
@@ -560,7 +569,7 @@ class UniversalStrategy(Strategy):
 
         return self.tpsl_service.calculate_tpsl_prices(
             current_price=current_price,
-            tpsl_gene=active_tpsl_gene,
+            tpsl_gene=cast(Optional[TPSLGene], active_tpsl_gene),
             position_direction=direction,
             market_data=market_data,
         )
@@ -574,9 +583,12 @@ class UniversalStrategy(Strategy):
                 return
 
             # 1. 保留注文とステートフルトリガーの処理
-            self.order_manager.check_pending_order_fills(
-                self._minute_data, self.data.index[-1], self._current_bar_index
-            )
+            if self._minute_data is not None:
+                self.order_manager.check_pending_order_fills(
+                    cast(pd.DataFrame, self._minute_data),
+                    self.data.index[-1],
+                    self._current_bar_index,
+                )
             self.order_manager.expire_pending_orders(self._current_bar_index)
             self.stateful_conditions_evaluator.process_stateful_triggers()
 

@@ -28,7 +28,10 @@ class PurgedKFold(_BaseKFold):
     """
 
     def __init__(
-        self, n_splits: int = 5, t1: pd.Series = None, pct_embargo: float = 0.01
+        self,
+        n_splits: int = 5,
+        t1: Optional[pd.Series] = None,
+        pct_embargo: float = 0.01,
     ):
         if not isinstance(t1, pd.Series):
             raise ValueError("t1 must be a pandas Series with DatetimeIndex.")
@@ -43,7 +46,7 @@ class PurgedKFold(_BaseKFold):
         super().__init__(n_splits, shuffle=False, random_state=None)
         self.t1 = t1
         # インデックス検証エラーを避けるため、値をnumpy配列として保持
-        self.t1_values = t1.values
+        self.t1_values = t1.to_numpy()
         self.pct_embargo = pct_embargo
 
     def split(
@@ -60,7 +63,7 @@ class PurgedKFold(_BaseKFold):
         indices = np.arange(len(X))
         fold_size = len(X) // self.n_splits
         # 整数（ナノ秒）として取得
-        x_index_ints = X.index.values.view(np.int64)
+        x_index_ints = X.index.to_numpy().view(np.int64)
         t1_values_ints = self.t1_values.view(np.int64)
 
         for i in range(self.n_splits):
@@ -77,7 +80,7 @@ class PurgedKFold(_BaseKFold):
             t1_subset_ints = t1_values_ints[test_idx]
             # NaT は負の値（通常 -9223372036854775808）なので、maxで正しく最新時刻が取れる
             # すべてNaTの場合は 0 または負の値になる
-            test_max_t1_ns = np.max(t1_subset_ints)
+            test_max_t1_ns = np.max(t1_subset_ints)  # type: ignore
 
             if test_max_t1_ns < 0:  # 全てNaTの場合
                 test_max_t1_ns = x_index_ints[end - 1]  # テストセットの末尾を使用
@@ -100,6 +103,3 @@ class PurgedKFold(_BaseKFold):
                 continue
 
             yield train_idx, test_idx
-
-
-# テスト/デバッグ用のヘルパー

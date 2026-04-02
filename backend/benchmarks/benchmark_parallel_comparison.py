@@ -8,12 +8,15 @@ import logging
 import os
 import sys
 import time
-from typing import Any, List, Tuple
+from typing import Any, Tuple
 
 import numpy as np
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
+    ParallelEvaluator,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,6 +36,7 @@ def benchmark_parallel_evaluators():
     from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
         ParallelEvaluator,
     )
+
     OptimizedParallelEvaluator = ParallelEvaluator
 
     # テストデータ
@@ -91,11 +95,17 @@ def benchmark_parallel_evaluators():
 
     # 結果表示
     logger.info(f"\n=== 結果 ({n_iterations}回実行, 20個体) ===")
-    logger.info(f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.1f}ms/回)")
-    logger.info(f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.1f}ms/回)")
+    logger.info(
+        f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.1f}ms/回)"
+    )
+    logger.info(
+        f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.1f}ms/回)"
+    )
 
     speedup = original_time / optimized_time
-    logger.info(f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)")
+    logger.info(
+        f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)"
+    )
 
     return {
         "original_time": original_time,
@@ -111,6 +121,7 @@ def benchmark_with_different_population_sizes():
     from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
         ParallelEvaluator,
     )
+
     OptimizedParallelEvaluator = ParallelEvaluator
 
     population_sizes = [10, 20, 50, 100]
@@ -177,8 +188,12 @@ def benchmark_with_different_population_sizes():
         }
 
         logger.info(f"\n個体数 {pop_size}:")
-        logger.info(f"  オリジナル: {original_time:.4f}秒 ({original_time/n_iterations*1000:.1f}ms/回)")
-        logger.info(f"  最適化版:   {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.1f}ms/回)")
+        logger.info(
+            f"  オリジナル: {original_time:.4f}秒 ({original_time/n_iterations*1000:.1f}ms/回)"
+        )
+        logger.info(
+            f"  最適化版:   {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.1f}ms/回)"
+        )
         logger.info(f"  高速化率:   {speedup:.2f}倍")
 
     return results

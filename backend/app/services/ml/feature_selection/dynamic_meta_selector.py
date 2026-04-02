@@ -188,7 +188,9 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
     ) -> Union[pd.DataFrame, np.ndarray]:
         """選択された特徴量を抽出する"""
         if isinstance(X, pd.DataFrame):
-            return X[self.selected_features_]
+            result = X[self.selected_features_]
+            # 単一列選択時に Series になるのを防ぐ
+            return result if isinstance(result, pd.DataFrame) else result.to_frame()
 
         # NumPy配列の場合はマスクを適用
         return X[:, self.support_mask_]

@@ -72,7 +72,7 @@ class BaseFeatureCalculator(ABC):
         """
 
     def validate_input_data(
-        self, df: pd.DataFrame, required_columns: Optional[list] = None
+        self, df: Optional[pd.DataFrame], required_columns: Optional[list] = None
     ) -> bool:
         """入力データの妥当性を検証"""
         if df is None or df.empty:

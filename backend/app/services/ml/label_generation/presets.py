@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 
 import pandas as pd
 
@@ -63,7 +63,7 @@ def triple_barrier_method_preset(
         else:
             vol = calculate_volatility_std(close.pct_change(), volatility_window)
 
-        t_ev = t_events if t_events is not None else close.index
+        t_ev = t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
         v_bar = pd.Series(close.index, index=close.index).shift(-horizon_n)
 
         tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret)

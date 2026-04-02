@@ -457,21 +457,22 @@ class ModelManager:
             metrics = get_default_metrics()
 
             # メタデータからメトリクスを更新
-            for key in metrics:
-                if key in metadata:
-                    metrics[key] = metadata[key]
+            if metadata is not None:
+                for key in metrics:
+                    if key in metadata:
+                        metrics[key] = metadata[key]
 
-            # classification_report から macro avg をフォールバック
-            if "classification_report" in metadata:
-                report = metadata["classification_report"]
-                if isinstance(report, dict) and "macro avg" in report:
-                    macro_avg = report["macro avg"]
-                    if metrics["precision"] == 0.0:
-                        metrics["precision"] = macro_avg.get("precision", 0.0)
-                    if metrics["recall"] == 0.0:
-                        metrics["recall"] = macro_avg.get("recall", 0.0)
-                    if metrics["f1_score"] == 0.0:
-                        metrics["f1_score"] = macro_avg.get("f1-score", 0.0)
+                # classification_report から macro avg をフォールバック
+                if "classification_report" in metadata:
+                    report = metadata["classification_report"]
+                    if isinstance(report, dict) and "macro avg" in report:
+                        macro_avg = report["macro avg"]
+                        if metrics["precision"] == 0.0:
+                            metrics["precision"] = macro_avg.get("precision", 0.0)
+                        if metrics["recall"] == 0.0:
+                            metrics["recall"] = macro_avg.get("recall", 0.0)
+                        if metrics["f1_score"] == 0.0:
+                            metrics["f1_score"] = macro_avg.get("f1-score", 0.0)
 
             return metrics
 

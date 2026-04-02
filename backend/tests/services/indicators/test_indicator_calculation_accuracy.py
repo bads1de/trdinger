@@ -253,6 +253,85 @@ class TestMACDCalculationAccuracy:
 
 
 # =============================================================================
+# 追加の Momentum 系指標の正確性検証
+# =============================================================================
+
+class TestAdditionalMomentumIndicatorsAccuracy:
+    """新規追加の Momentum 指標の正確性を検証"""
+
+    def test_dm_follows_directional_bias(self):
+        """上昇トレンドでは正の方向性が優勢になることを検証"""
+        high = pd.Series(np.linspace(101.0, 130.0, 30))
+        low = high - 2.0
+
+        dmp, dmn = MomentumIndicators.dm(high, low, length=5)
+
+        valid_dmp = dmp.dropna()
+        valid_dmn = dmn.dropna()
+
+        assert len(valid_dmp) > 0
+        assert len(valid_dmn) > 0
+        assert (valid_dmp >= 0).all()
+        assert (valid_dmn >= 0).all()
+        assert valid_dmp.iloc[-1] > 0
+        assert valid_dmn.iloc[-1] == pytest.approx(0.0, abs=1e-10)
+
+    def test_er_is_one_on_monotonic_series(self):
+        """単調増加系列では ER が 1 に近づくことを検証"""
+        prices = pd.Series(np.linspace(100.0, 129.0, 30))
+
+        result = MomentumIndicators.er(prices, length=10)
+        valid = result.dropna()
+
+        assert len(valid) > 0
+        assert valid.between(0, 1).all()
+        assert valid.iloc[-1] == pytest.approx(1.0, abs=1e-10)
+
+    def test_lrsi_is_bounded_on_trend(self):
+        """LRSI が 0-100 の範囲に収まることを検証"""
+        prices = pd.Series(np.linspace(100.0, 129.0, 30))
+
+        result = MomentumIndicators.lrsi(prices, length=14)
+        valid = result.dropna()
+
+        assert len(valid) > 0
+        assert valid.between(0, 100).all()
+        assert valid.iloc[-1] == pytest.approx(100.0, abs=1e-10)
+
+    def test_trixh_histogram_is_line_minus_signal(self):
+        """TRIXH のヒストグラムが line - signal であることを検証"""
+        prices = pd.Series(np.linspace(100.0, 160.0, 60))
+
+        trix_line, trix_signal, trix_hist = MomentumIndicators.trixh(
+            prices, length=18, signal=9
+        )
+        valid = ~(trix_line.isna() | trix_signal.isna() | trix_hist.isna())
+
+        assert valid.any()
+        assert np.allclose(
+            trix_hist[valid], trix_line[valid] - trix_signal[valid], rtol=1e-5, atol=1e-8
+        )
+
+    def test_vwmacd_histogram_is_line_minus_signal(self):
+        """VWMACD のヒストグラムが line - signal であることを検証"""
+        close = pd.Series(np.linspace(100.0, 160.0, 60))
+        volume = pd.Series(np.linspace(1000.0, 2000.0, 60))
+
+        vwmacd_line, vwmacd_hist, vwmacd_signal = MomentumIndicators.vwmacd(
+            close, volume, fast=12, slow=26, signal=9
+        )
+        valid = ~(vwmacd_line.isna() | vwmacd_hist.isna() | vwmacd_signal.isna())
+
+        assert valid.any()
+        assert np.allclose(
+            vwmacd_hist[valid],
+            vwmacd_line[valid] - vwmacd_signal[valid],
+            rtol=1e-5,
+            atol=1e-8,
+        )
+
+
+# =============================================================================
 # Bollinger Bands の正確性検証
 # =============================================================================
 

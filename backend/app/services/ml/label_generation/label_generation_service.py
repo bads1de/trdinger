@@ -115,7 +115,7 @@ class LabelGenerationService:
         cusum_vol_multiplier: float,
         use_signal_generator: bool,
         signal_config: Optional[Dict[str, Any]],
-    ) -> Optional[pd.Index]:
+    ) -> Optional[pd.DatetimeIndex]:
         """
         ラベリングの起点となるイベント時刻（サンプリングポイント）を検出
 

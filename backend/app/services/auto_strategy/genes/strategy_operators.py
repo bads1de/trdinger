@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import random
 import uuid
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -325,8 +325,8 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
     """ユニフォーム交叉。"""
     selection_prob = config.crossover_field_selection_probability
 
-    child1_params = {"id": str(uuid.uuid4())}
-    child2_params = {"id": str(uuid.uuid4())}
+    child1_params: Dict[str, Any] = {"id": str(uuid.uuid4())}
+    child2_params: Dict[str, Any] = {"id": str(uuid.uuid4())}
 
     fields = [
         "indicators",

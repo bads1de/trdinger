@@ -9,7 +9,7 @@ import hashlib
 import glob
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -59,7 +59,7 @@ def generate_cache_key(
         try:
             if isinstance(obj, pd.DataFrame):
                 # 1. データ内容とインデックスのハッシュ
-                data_hash = pd.util.hash_pandas_object(obj, index=True).values.tobytes()
+                data_hash = pd.util.hash_pandas_object(obj, index=True).values.tobytes()  # type: ignore[reportAttributeAccessIssue]
                 # 2. カラム名のハッシュ（カラム名が変われば結果も変わる可能性があるため）
                 col_hash = str(list(obj.columns)).encode()
                 
@@ -183,13 +183,15 @@ def get_feature_importance_unified(
 
         if importance_scores is not None:
             if hasattr(importance_scores, "tolist") and callable(
-                importance_scores.tolist
+                importance_scores.tolist  # type: ignore[reportAttributeAccessIssue]
             ):
-                scores = importance_scores.tolist()
+                scores = importance_scores.tolist()  # type: ignore[reportAttributeAccessIssue]
             elif isinstance(importance_scores, (list, tuple)):
                 scores = importance_scores
             else:
-                scores = [float(x) for x in importance_scores]
+                scores = [float(x) for x in importance_scores]  # type: ignore
+
+            scores = cast(list, scores)
 
             if len(scores) != len(feature_columns):
                 logger.warning(

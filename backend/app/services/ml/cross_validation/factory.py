@@ -23,7 +23,7 @@ def infer_timeframe(index: pd.DatetimeIndex) -> str:
     if diffs.empty:
         return "1h"
 
-    sec = diffs.mode().iloc[0].total_seconds()
+    sec = int(diffs.mode().iloc[0].total_seconds())
     mapping = {900: "15m", 1800: "30m", 3600: "1h", 14400: "4h", 86400: "1d"}
     if sec in mapping:
         return mapping[sec]

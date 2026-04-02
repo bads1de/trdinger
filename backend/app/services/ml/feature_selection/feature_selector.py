@@ -95,12 +95,11 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
     ) -> "FeatureSelector":
         if isinstance(X, pd.DataFrame):
             self.feature_names_in_ = X.columns.tolist()
-            X = X.values
+            X = np.asarray(X)
         else:
             self.feature_names_in_ = [f"feature_{i}" for i in range(X.shape[1])]
 
-        if isinstance(y, pd.Series):
-            y = y.values
+        y = np.asarray(y)
 
         X, y = self._validate_input(X, y)
         config = self._build_config()
@@ -135,7 +134,8 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
     def transform(
         self, X: Union[pd.DataFrame, np.ndarray]
     ) -> Union[pd.DataFrame, np.ndarray]:
-        X_selected = super().transform(X)
+        """選択された特徴量を抽出する"""
+        X_selected = np.asarray(super().transform(X))
 
         if isinstance(X, pd.DataFrame):
             selected_features = self.get_feature_names_out()

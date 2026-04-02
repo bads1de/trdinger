@@ -3,8 +3,9 @@ GeneratedStrategyRepositoryのテストモジュール
 
 生成戦略リポジトリの機能をテストします。
 """
+# pyright: reportAttributeAccessIssue=none
 
-from typing import Any, Dict
+from typing import Any, Dict, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -100,9 +101,9 @@ class TestSaveStrategy:
 
         # 結果が返されることを確認
         assert result is not None
-        repository.db.add.assert_called_once()
-        repository.db.commit.assert_called_once()
-        repository.db.refresh.assert_called_once()
+        cast(MagicMock, repository.db.add).assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_called_once()
+        cast(MagicMock, repository.db.refresh).assert_called_once()
 
     def test_save_strategy_validates_gene_data(
         self, repository: GeneratedStrategyRepository
@@ -164,11 +165,11 @@ class TestSaveStrategiesBatch:
         # 結果が返されることを確認
         assert result is not None
         assert len(result) == 2
-        repository.db.add_all.assert_called_once()
-        repository.db.commit.assert_called_once()
+        cast(MagicMock, repository.db.add_all).assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_called_once()
 
         # refresh はスキップされる（最適化）
-        assert repository.db.refresh.call_count == 0
+        assert cast(MagicMock, repository.db.refresh).call_count == 0
 
 
 class TestGetStrategiesByExperiment:
@@ -187,7 +188,7 @@ class TestGetStrategiesByExperiment:
         results = repository.get_strategies_by_experiment(100)
 
         assert len(results) == 1
-        assert results[0].experiment_id == 100
+        assert cast(Any, results[0]).experiment_id == 100
 
     def test_get_strategies_by_experiment_with_generation(
         self,
@@ -256,8 +257,8 @@ class TestUnlinkBacktestResult:
         count = repository.unlink_backtest_result(50)
 
         assert count == 5
-        repository.db.commit.assert_called_once()
-        repository.db.query.assert_called_with(GeneratedStrategy)
+        cast(MagicMock, repository.db.commit).assert_called_once()
+        cast(MagicMock, repository.db.query).assert_called_with(GeneratedStrategy)
 
 
 class TestDeleteAllStrategies:
@@ -274,7 +275,7 @@ class TestDeleteAllStrategies:
         count = repository.delete_all_strategies()
 
         assert count == 10
-        repository.db.commit.assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_called_once()
 
 
 class TestValidateGeneData:

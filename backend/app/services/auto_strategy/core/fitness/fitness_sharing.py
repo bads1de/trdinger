@@ -6,10 +6,10 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, cast
 
 import numpy as np
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree  # type: ignore[reportAttributeAccessIssue]
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_samples
 
@@ -229,7 +229,7 @@ class FitnessSharing:
 
     def find_neighbors_kdtree(
         self, vectors: np.ndarray, radius: float
-    ) -> List[np.ndarray]:
+    ) -> Sequence[Sequence[int]]:
         """
         KD-Treeを使用して各点の近傍を探索（O(N log N)）
 
@@ -248,8 +248,7 @@ class FitnessSharing:
 
         # 各点の近傍を検索
         neighbors_list = tree.query_ball_point(vectors, r=radius)
-
-        return neighbors_list
+        return cast(Sequence[Sequence[int]], neighbors_list)
 
     def _normalize_vectors(self, vectors: np.ndarray) -> np.ndarray:
         """
@@ -308,6 +307,7 @@ class FitnessSharing:
 
         # 各個体からサンプルへの距離を計算
         distances, _ = sample_tree.query(vectors, k=min(10, len(sample_indices)))
+        distances = cast(np.ndarray, distances)
 
         # 閾値内のサンプル数をカウントし、全体にスケール
         if distances.ndim == 1:

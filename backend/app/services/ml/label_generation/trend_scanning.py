@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -185,7 +185,7 @@ class TrendScanning:
             pd.DataFrame: columns=["t1", "t_value", "bin", "ret"]
                           binは離散ラベル(1, 0, -1) または t値そのもの
         """
-        t_events = t_events if t_events is not None else close.index
+        t_events = t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
         # t_eventsがclose.indexに含まれるものだけにフィルタ
         t_events = t_events[t_events.isin(close.index)]
         if t_events.empty:

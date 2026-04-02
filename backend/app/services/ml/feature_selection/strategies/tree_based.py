@@ -31,23 +31,24 @@ class TreeBasedStrategy(BaseSelectionStrategy):
         feature_names: List[str],
         config: FeatureSelectionConfig,
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
-        model = self.estimator or get_task_appropriate_estimator(
+        from typing import cast
+        model = cast(Any, self.estimator or get_task_appropriate_estimator(
             y,
             n_estimators=100,
             random_state=config.random_state,
             n_jobs=config.n_jobs,
-        )
+        ))
         model.fit(X, y)
 
         selector = SelectFromModel(
             model, prefit=True, threshold=config.importance_threshold
         )
-        mask = selector.get_support()
+        mask = cast(np.ndarray, selector.get_support())
 
         if config.max_features and mask.sum() > config.max_features:
             mask = self._limit_features(mask, model.feature_importances_, config)
 
-        if mask.sum() < config.min_features:
+        if config.min_features and mask.sum() < config.min_features:
             top_k = np.argsort(model.feature_importances_)[-config.min_features :]
             mask = np.zeros(len(feature_names), dtype=bool)
             mask[top_k] = True

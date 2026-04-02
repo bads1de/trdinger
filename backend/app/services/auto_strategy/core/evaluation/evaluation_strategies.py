@@ -7,11 +7,11 @@ OOS (Out-of-Sample) 検証、Walk-Forward 分析などの
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple, cast
 
 import pandas as pd
-
 from app.services.auto_strategy.config.ga import GAConfig
+
 from .evaluation_report import EvaluationReport, ScenarioEvaluation
 
 if TYPE_CHECKING:
@@ -28,9 +28,9 @@ class EvaluationStrategy:
     通常評価、OOS検証、Walk-Forward 分析のいずれかに振り分けます。
     """
 
-    def __init__(self, evaluator: "IndividualEvaluator") -> None:
+    def __init__(self, evaluator: "IndividualEvaluator", max_workers: int = 2) -> None:
         self._evaluator = evaluator
-        self._max_workers = 2
+        self._max_workers = max_workers
         self._date_cache: Dict[str, Tuple[str, str, str]] = {}
 
     def execute(
@@ -74,9 +74,7 @@ class EvaluationStrategy:
                 gene, base_backtest_config, config, oos_ratio, oos_weight
             )
         else:
-            return self._evaluate_single_report(
-                gene, base_backtest_config, config
-            )
+            return self._evaluate_single_report(gene, base_backtest_config, config)
 
     def execute_robustness_report(
         self, gene: Any, base_backtest_config: Dict[str, Any], config: GAConfig
@@ -169,9 +167,7 @@ class EvaluationStrategy:
 
         base_symbol = str(base_backtest_config.get("symbol", "") or "")
         base_slippage = float(base_backtest_config.get("slippage", 0.0) or 0.0)
-        base_commission = float(
-            base_backtest_config.get("commission_rate", 0.0) or 0.0
-        )
+        base_commission = float(base_backtest_config.get("commission_rate", 0.0) or 0.0)
         base_start_date = str(base_backtest_config.get("start_date", "") or "")
         base_end_date = str(base_backtest_config.get("end_date", "") or "")
 
@@ -322,9 +318,28 @@ class EvaluationStrategy:
         scenario_name: str,
         metadata: Dict[str, Any] | None = None,
     ) -> ScenarioEvaluation:
+        # 1. まず _perform_single_evaluation_report メソッド（新しい推奨される方法）を探す
+        report_method = getattr(
+            self._evaluator, "_perform_single_evaluation_report", None
+        )
+        if callable(report_method):
+            return cast(
+                ScenarioEvaluation,
+                report_method(
+                    gene,
+                    backtest_config,
+                    config,
+                    scenario_name=scenario_name,
+                    metadata=metadata,
+                ),
+            )
+
+        # 2. 次に _perform_single_evaluation メソッド（古い方法）を探す
         perform_single = getattr(self._evaluator, "_perform_single_evaluation", None)
-        if hasattr(perform_single, "mock_calls"):
-            fitness = perform_single(gene, backtest_config, config)
+        if callable(perform_single):
+            fitness = cast(
+                Tuple[float, ...], perform_single(gene, backtest_config, config)
+            )
             return ScenarioEvaluation(
                 name=scenario_name,
                 fitness=tuple(float(value) for value in fitness),
@@ -332,24 +347,9 @@ class EvaluationStrategy:
                 metadata=metadata.copy() if metadata else {},
             )
 
-        report_method = getattr(self._evaluator, "_perform_single_evaluation_report", None)
-        if callable(report_method):
-            return report_method(
-                gene,
-                backtest_config,
-                config,
-                scenario_name=scenario_name,
-                metadata=metadata,
-            )
-
-        fitness = self._evaluator._perform_single_evaluation(
-            gene, backtest_config, config
-        )
-        return ScenarioEvaluation(
-            name=scenario_name,
-            fitness=tuple(float(value) for value in fitness),
-            passed=True,
-            metadata=metadata.copy() if metadata else {},
+        # 3. どちらも見つからない場合はエラー
+        raise AttributeError(
+            f"Evaluator {type(self._evaluator)} lacks necessary evaluation methods."
         )
 
     def _evaluate_with_oos_parallel(
@@ -402,7 +402,7 @@ class EvaluationStrategy:
 
     def _evaluate_with_oos_report(
         self,
-        gene,
+        gene: Any,
         base_backtest_config: Dict[str, Any],
         config: GAConfig,
         oos_ratio: float,
@@ -410,10 +410,18 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """Out-of-Sample (OOS) 検証を含む評価を実行する。"""
         try:
-            start_date = pd.to_datetime(base_backtest_config.get("start_date"))
-            end_date = pd.to_datetime(base_backtest_config.get("end_date"))
+            start_val = base_backtest_config.get("start_date")
+            end_val = base_backtest_config.get("end_date")
 
-            if start_date is None or end_date is None:
+            if start_val is None or end_val is None:
+                return self._evaluate_single_report(gene, base_backtest_config, config)
+
+            start_date = pd.to_datetime(start_val)
+            end_date = pd.to_datetime(end_val)
+
+            if not isinstance(start_date, pd.Timestamp) or not isinstance(
+                end_date, pd.Timestamp
+            ):
                 return self._evaluate_single_report(gene, base_backtest_config, config)
 
             cache_key = f"{start_date}_{end_date}_{oos_ratio}"
@@ -491,17 +499,26 @@ class EvaluationStrategy:
 
     def _evaluate_with_walk_forward_report(
         self,
-        gene,
+        gene: Any,
         base_backtest_config: Dict[str, Any],
         config: GAConfig,
     ) -> EvaluationReport:
         """Walk-Forward Analysis による評価を並列実行する。"""
         try:
-            start_date = pd.to_datetime(base_backtest_config.get("start_date"))
-            end_date = pd.to_datetime(base_backtest_config.get("end_date"))
+            start_val = base_backtest_config.get("start_date")
+            end_val = base_backtest_config.get("end_date")
 
-            if start_date is None or end_date is None:
+            if start_val is None or end_val is None:
                 logger.warning("WFA: 期間が不明なため通常評価にフォールバック")
+                return self._evaluate_single_report(gene, base_backtest_config, config)
+
+            start_date = pd.to_datetime(start_val)
+            end_date = pd.to_datetime(end_val)
+
+            if not isinstance(start_date, pd.Timestamp) or not isinstance(
+                end_date, pd.Timestamp
+            ):
+                logger.warning("WFA: 期間の解析に失敗したため通常評価にフォールバック")
                 return self._evaluate_single_report(gene, base_backtest_config, config)
 
             n_folds = getattr(config, "wfa_n_folds", 5)
@@ -638,7 +655,7 @@ class EvaluationStrategy:
 
     def _evaluate_with_purged_kfold_report(
         self,
-        gene,
+        gene: Any,
         base_backtest_config: Dict[str, Any],
         config: GAConfig,
     ) -> EvaluationReport:
@@ -647,11 +664,20 @@ class EvaluationStrategy:
             n_splits = getattr(config, "purged_kfold_splits", 5)
             embargo_pct = getattr(config, "purged_kfold_embargo", 0.01)
 
-            start_date = pd.to_datetime(base_backtest_config.get("start_date"))
-            end_date = pd.to_datetime(base_backtest_config.get("end_date"))
+            start_val = base_backtest_config.get("start_date")
+            end_val = base_backtest_config.get("end_date")
 
-            if start_date is None or end_date is None:
+            if start_val is None or end_val is None:
                 logger.warning("PurgedKFold: 期間が不明なため通常評価にフォールバック")
+                return self._evaluate_single_report(gene, base_backtest_config, config)
+
+            start_date = pd.to_datetime(start_val)
+            end_date = pd.to_datetime(end_val)
+
+            if not isinstance(start_date, pd.Timestamp) or not isinstance(
+                end_date, pd.Timestamp
+            ):
+                logger.warning("PurgedKFold: 期間の解析に失敗")
                 return self._evaluate_single_report(gene, base_backtest_config, config)
 
             fold_configs = self._precompute_purged_kfold_configs(

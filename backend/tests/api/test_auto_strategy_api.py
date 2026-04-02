@@ -561,7 +561,7 @@ class TestErrorHandling:
         # APIリクエスト（無効なJSON）
         response = test_client.post(
             "/api/auto-strategy/generate",
-            data="invalid json",
+            content="invalid json",
             headers={"Content-Type": "application/json"},
         )
 

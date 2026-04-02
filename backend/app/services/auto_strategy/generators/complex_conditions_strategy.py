@@ -114,7 +114,7 @@ class ComplexConditionsStrategy:
                 th_short = 0
 
         # ロング: Close > Trend AND Momentum > High
-        long_conds = [
+        long_conds: List[Union[Condition, ConditionGroup]] = [
             Condition(left_operand="Close", operator=">", right_operand=t_name),
         ]
         # Momentumの比較対象が "close" の場合は、Momentum > Close (または < Close) になる
@@ -131,7 +131,7 @@ class ComplexConditionsStrategy:
         )
 
         # ショート: Close < Trend AND Momentum < Low
-        short_conds = [
+        short_conds: List[Union[Condition, ConditionGroup]] = [
             Condition(left_operand="Close", operator="<", right_operand=t_name),
         ]
         short_conds.append(

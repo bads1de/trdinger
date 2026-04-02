@@ -107,6 +107,6 @@ def fibonacci_cycle(
         result, index=close.index, name=f"FIBO_CYCLE_{len(cycle_periods)}"
     )
     signal = fibonacci_cycle_result.rolling(window=3).mean()
-    signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"
+    signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"  # type: ignore[reportAttributeAccessIssue]
 
     return fibonacci_cycle_result, signal

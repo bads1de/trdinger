@@ -31,6 +31,8 @@ class LassoStrategy(BaseSelectionStrategy):
             model, prefit=True, threshold=config.importance_threshold
         )
         mask = selector.get_support()
+        if mask is None:
+            mask = np.ones(len(feature_names), dtype=bool)
 
         if mask.sum() < config.min_features:
             top_k = np.argsort(np.abs(model.coef_))[-config.min_features :]

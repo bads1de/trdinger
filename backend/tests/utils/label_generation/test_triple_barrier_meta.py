@@ -3,6 +3,7 @@ import pandas as pd
 import pytest
 import sys
 from pathlib import Path
+from typing import cast
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
@@ -50,7 +51,8 @@ class TestTripleBarrierMetaLabeling:
         # index[10] -> limit index[15]
         # index[20] -> limit index[25] (25番目の価格は100.0)
         vertical_barriers = pd.Series(
-            self.close.index + pd.Timedelta(hours=6), index=self.close.index
+            cast(pd.DatetimeIndex, self.close.index) + pd.Timedelta(hours=6),
+            index=self.close.index,
         )
 
         # ターゲットイベント
@@ -105,12 +107,13 @@ class TestTripleBarrierMetaLabeling:
 
         tb = TripleBarrier(pt=1.0, sl=1.0, min_ret=0.005, num_threads=1)
         vertical_barrier = pd.Series(
-            close.index + pd.Timedelta(hours=24), index=close.index
+            cast(pd.DatetimeIndex, close.index) + pd.Timedelta(hours=24),
+            index=close.index,
         )
 
         events = tb.get_events(
             close=close,
-            t_events=close.index,
+            t_events=cast(pd.DatetimeIndex, close.index),
             pt_sl=[1.0, 1.0],
             target=volatility,
             min_ret=0.005,

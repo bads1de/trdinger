@@ -105,7 +105,7 @@ def adaptive_entropy(
         index=close.index,
         name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}",
     )
-    signal.name = (
+    signal.name = (  # type: ignore[reportAttributeAccessIssue]
         f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}"
     )
     ratio = pd.Series(

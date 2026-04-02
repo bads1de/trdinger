@@ -72,7 +72,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         df_temp = pd.DataFrame(index=df.index)
         df_temp["__orig_index__"] = df.index
         # タイムゾーンを排除して正規化（結合のため）
-        df_temp.index = df_temp.index.tz_localize(None)
+        df_temp.index = pd.DatetimeIndex(df_temp.index).tz_localize(None)
 
         data_temp = data.copy()
         if "timestamp" in data_temp.columns:
@@ -82,7 +82,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             data_temp = data_temp.sort_values("timestamp")
             on_col = "timestamp"
         else:
-            data_temp.index = data_temp.index.tz_localize(None)
+            data_temp.index = pd.to_datetime(data_temp.index).tz_localize(None)
             data_temp = data_temp.sort_index()
             on_col = None
 
@@ -97,7 +97,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         )
 
         # 元のインデックスに戻す
-        merged.index = merged["__orig_index__"]
+        merged.index = merged["__orig_index__"]  # type: ignore[reportAttributeAccessIssue]
         res[target_col + suffix] = merged[target_col].fillna(0.0)
 
         return res, target_col + suffix
@@ -185,12 +185,12 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             return df
 
         # RSI (ベクトル化)
-        delta = oi_s.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14, min_periods=1).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14, min_periods=1).mean()
+        delta = pd.to_numeric(oi_s.diff(), errors="coerce").fillna(0.0)
+        gain = (delta.where(delta > 0, 0.0)).rolling(window=14, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0.0)).rolling(window=14, min_periods=1).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
-        rsi = rsi.fillna(50.0)
+        rsi = pd.Series(np.nan_to_num(rsi, nan=50.0), index=oi_s.index)
 
         # MACD (ベクトル化)
         ema12 = oi_s.ewm(span=12, adjust=False).mean()

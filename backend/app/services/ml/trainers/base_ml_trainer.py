@@ -411,7 +411,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         )
 
         t1 = cross_validation_module.get_t1_series(
-            X.index,
+            pd.to_datetime(X.index),
             t1_horizon_n,
             timeframe=timeframe,
         )
@@ -429,12 +429,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             scaler = StandardScaler()
             X_train_scaled = pd.DataFrame(
-                scaler.fit_transform(X_train_cv),
+                np.asarray(scaler.fit_transform(X_train_cv)),
                 columns=X_train_cv.columns,
                 index=X_train_cv.index,
             )
             X_test_scaled = pd.DataFrame(
-                scaler.transform(X_test_cv),
+                np.asarray(scaler.transform(X_test_cv)),
                 columns=X_test_cv.columns,
                 index=X_test_cv.index,
             )
@@ -482,12 +482,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.scaler = StandardScaler()
 
         X_train_scaled = pd.DataFrame(
-            self.scaler.fit_transform(X_train),
+            np.asarray(self.scaler.fit_transform(X_train)),
             columns=X_train.columns,
             index=X_train.index,
         )
         X_test_scaled = pd.DataFrame(
-            self.scaler.transform(X_test), columns=X_test.columns, index=X_test.index
+            np.asarray(self.scaler.transform(X_test)),
+            columns=X_test.columns,
+            index=X_test.index,
         )
         return X_train_scaled, X_test_scaled
 
@@ -615,7 +617,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         try:
             if self.feature_service is not None:
                 if hasattr(self.feature_service, "cleanup_resources"):
-                    self.feature_service.cleanup_resources()
+                    self.feature_service.cleanup_resources()  # type: ignore[reportAttributeAccessIssue]
 
             self._model = None
             self.scaler = None

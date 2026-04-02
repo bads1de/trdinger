@@ -125,7 +125,7 @@ def create_comprehensive_pipeline(
     ml_pipeline = create_ml_pipeline(**ml_params)
 
     # Combine pipelines
-    steps = [("ml_pipeline", ml_pipeline)]
+    steps: list[tuple[str, Any]] = [("ml_pipeline", ml_pipeline)]
 
     # リクエストされた場合多項式特徴量を追加
     if polynomial_features:
@@ -268,7 +268,8 @@ def get_comprehensive_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     try:
         if hasattr(pipeline, "get_feature_names_out"):
             feature_names_out = pipeline.get_feature_names_out()
-            info["n_features_out"] = len(feature_names_out)
+            if feature_names_out is not None:
+                info["n_features_out"] = len(feature_names_out)
     except Exception:
         info["n_features_out"] = None
 
@@ -381,12 +382,10 @@ def optimize_comprehensive_pipeline(
         scaling=True,
         scaling_method=scaling_method,
         polynomial_features=False,  # Disable by default for optimization
-        target_column=y.name if hasattr(y, "name") else None,
+        target_column=str(y.name) if hasattr(y, "name") and y.name is not None else None,
     )
 
     logger.info(
         f"Optimized comprehensive pipeline created with {n_features_opt or 'all'} features"
     )
     return pipeline
-
-

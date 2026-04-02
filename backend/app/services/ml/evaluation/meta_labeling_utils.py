@@ -36,11 +36,11 @@ def evaluate_meta_labeling(
     p = res.get("precision", 0.0)
     res.update({
         "win_rate": p,
-        "signal_adoption_rate": np.sum(y_pred) / len(y_pred) if len(y_pred) > 0 else 0.0,
+        "signal_adoption_rate": float(np.sum(np.asarray(y_pred))) / len(y_pred) if len(y_pred) > 0 else 0.0,
         "expected_value": (p * 1.0) + ((1 - p) * -1.0),
         "total_samples": len(y_t),
-        "positive_samples": int(np.sum(y_t)),
-        "negative_samples": int(len(y_t) - np.sum(y_t))
+        "positive_samples": int(np.sum(np.asarray(y_t))),
+        "negative_samples": int(len(y_t) - np.sum(np.asarray(y_t)))
     })
 
     return res

@@ -28,11 +28,11 @@ pandas-ta の trend カテゴリに対応。
 
 from numba import njit
 import logging
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
-import pandas_ta_classic as ta
+import pandas_ta_classic as ta  # type: ignore
 
 from ..data_validation import (
     create_nan_series_bundle,
@@ -216,10 +216,10 @@ class TrendIndicators:
                 drift=drift,
                 offset=offset,
             ),
-            fallback_factory=lambda: create_nan_series_bundle(high, 2),
+            fallback_factory=lambda: cast(Tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)),
         )
         if isinstance(result, tuple):
-            return result
+            return cast(Tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -236,7 +236,7 @@ class TrendIndicators:
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """ADX: returns (adx, dmp, dmn)"""
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            return create_nan_series_bundle(high, 3)
+            return cast(Tuple[pd.Series, pd.Series, pd.Series], create_nan_series_bundle(high, 3))
 
         result = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
@@ -254,7 +254,7 @@ class TrendIndicators:
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(Tuple[pd.Series, pd.Series, pd.Series], result)
 
         if result.empty:
             return nan_result()
@@ -279,7 +279,7 @@ class TrendIndicators:
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            return create_nan_series_bundle(high, 3)
+            return cast(Tuple[pd.Series, pd.Series, pd.Series], create_nan_series_bundle(high, 3))
 
         result = run_multi_series_indicator(
             {"high": high, "low": low},
@@ -289,7 +289,7 @@ class TrendIndicators:
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(Tuple[pd.Series, pd.Series, pd.Series], result)
 
         if result.empty:
             return nan_result()
@@ -370,11 +370,11 @@ class TrendIndicators:
             {"high": high, "low": low, "close": close},
             p,
             lambda: ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q),
-            fallback_factory=lambda: create_nan_series_bundle(close, 2),
+            fallback_factory=lambda: cast(Tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(Tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 

@@ -297,12 +297,11 @@ class BaseGradientBoostingModel(ABC):
         if self._is_regression_task():
             raise ModelError("回帰タスクでは predict_proba は利用できません")
 
-        # feature_columnsを使用してDataFrameを整形
-        if self.feature_columns and not isinstance(X, pd.DataFrame):
-            X = self._coerce_feature_frame(X, self.feature_columns)
+        # feature_columnsを使用してDataFrameを整形（常にDataFrameに変換する）
+        X_df = self._coerce_feature_frame(X, self.feature_columns or None)
 
         # モデル固有の入力データ準備
-        data = self._prepare_input_for_prediction(X)
+        data = self._prepare_input_for_prediction(X_df)
 
         # モデル固有の予測実行
         predictions = self._predict_raw(data)

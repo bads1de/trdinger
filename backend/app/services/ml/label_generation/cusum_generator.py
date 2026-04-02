@@ -35,8 +35,10 @@ class CusumSignalGenerator:
 
         # 対数収益率を計算
         # r_t = ln(p_t / p_{t-1})
-        log_returns = np.log(prices / prices.shift(1))
-        log_returns = log_returns.fillna(0)  # 最初は0
+        shifted = prices.shift(1)
+        log_returns: pd.Series = pd.Series(
+            np.log(prices.values / shifted.values), index=prices.index  # type: ignore[arg-type]
+        ).fillna(0)  # 最初は0
 
         # 閾値の準備
         if threshold is not None:
@@ -86,7 +88,12 @@ class CusumSignalGenerator:
 
     def get_daily_volatility(self, close: pd.Series, span: int = 100) -> pd.Series:
         """ローカルボラティリティを計算 (EWM Std of Log Returns)"""
-        return np.log(close / close.shift(1)).ewm(span=span).std()
+        shifted = close.shift(1)
+        log_returns = pd.Series(
+            np.log(close.values / shifted.values),  # type: ignore[arg-type]
+            index=close.index,
+        )
+        return log_returns.ewm(span=span).std()
 
 
 

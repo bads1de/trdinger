@@ -148,9 +148,9 @@ class EventDrivenLabelGenerator:
             return np.array([], dtype=int)
 
         close, high, low = (
-            market_data["close"].values,
-            market_data["high"].values,
-            market_data["low"].values,
+            market_data["close"].to_numpy(),
+            market_data["high"].to_numpy(),
+            market_data["low"].to_numpy(),
         )
         labels = np.zeros(n, dtype=int)
 

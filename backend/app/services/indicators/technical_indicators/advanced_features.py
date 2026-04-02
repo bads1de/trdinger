@@ -25,6 +25,7 @@
 """
 
 import logging
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -221,7 +222,7 @@ class AdvancedFeatures:
         大きな値は、薄商いの中での急騰・急落（ダマシの可能性大）を示す。
         """
         def _calculate_void_oscillator() -> pd.Series:
-            ret = np.log(close / close.shift(1)).fillna(0)
+            ret = cast(pd.Series, np.log(close / close.shift(1))).fillna(0.0).astype(float)
             z_ret = AdvancedFeatures.z_score(ret, window)
             vol_threshold = volume.rolling(window=window).quantile(
                 volume_threshold_quantile
@@ -280,7 +281,7 @@ class AdvancedFeatures:
             upper_shadow = high - close
             lower_shadow = close - low
             imbalance = upper_shadow / (lower_shadow + 1e-9)
-            return np.log(imbalance + 1e-9).fillna(0.0)
+            return cast(pd.Series, np.log(imbalance + 1e-9)).fillna(0.0)
 
         return run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
@@ -403,7 +404,7 @@ class AdvancedFeatures:
             buy_ratio = 1 / (1 + np.exp(-z_score))
             buy_vol = volume * buy_ratio
             sell_vol = volume * (1 - buy_ratio)
-            abs_imbalance = np.abs(buy_vol - sell_vol)
+            abs_imbalance = cast(pd.Series, np.abs(buy_vol - sell_vol))
             return (
                 abs_imbalance.rolling(window=window).sum()
                 / (volume.rolling(window=window).sum() + 1e-9)
@@ -494,10 +495,10 @@ class AdvancedFeatures:
         """
         def _calculate_squeeze_probability() -> pd.Series:
             neg_fr_factor = pd.Series(
-                np.where(funding_rate < 0, funding_rate.abs(), 0), index=close.index
+                np.where(funding_rate < 0, funding_rate.abs(), 0.0), index=close.index, dtype=float
             )
-            delta_oi_factor = open_interest.diff().clip(lower=0)
-            price_location = close - low.rolling(window=lookback).min()
+            delta_oi_factor = open_interest.diff().clip(lower=0.0).astype(float)
+            price_location = (close - low.rolling(window=lookback).min()).astype(float)
             return (neg_fr_factor * delta_oi_factor * price_location).fillna(0.0)
 
         return run_multi_series_indicator(
@@ -524,7 +525,7 @@ class AdvancedFeatures:
         def _calculate_trend_quality() -> pd.Series:
             result = close.diff().rolling(window=window).corr(open_interest.diff())
             if isinstance(result, pd.DataFrame):
-                return result.iloc[:, 0].fillna(0.0)
+                return result.iloc[:, 0].fillna(0.0)  # type: ignore
             return result.fillna(0.0)
 
         return run_multi_series_indicator(
@@ -563,8 +564,8 @@ class AdvancedFeatures:
         3: ロング清算 (Price↓, OI↓) - 買い決済（反発予兆）
         """
         def _calculate_regime_quadrant() -> pd.Series:
-            delta_p = close.diff().fillna(0)
-            delta_oi = open_interest.diff().fillna(0)
+            delta_p = close.diff().fillna(0.0).astype(float)
+            delta_oi = open_interest.diff().fillna(0.0).astype(float)
 
             return pd.Series(
                 np.select(
@@ -628,7 +629,7 @@ class AdvancedFeatures:
         return run_multi_series_indicator(
             {"close": close, "open_interest": open_interest},
             None,
-            lambda: np.sign(close.diff().fillna(0)) * open_interest.diff().fillna(0),
+            lambda: np.sign(close.diff().fillna(0.0).astype(float)) * open_interest.diff().fillna(0.0).astype(float),
         )
 
     @staticmethod

@@ -389,7 +389,7 @@ class ConditionEvaluator:
                 # pandas Series / DataFrame
                 if hasattr(val, "iloc"):
                     if len(val) >= 2:
-                        return float(val.iloc[-2])
+                        return float(val.iloc[-2])  # type: ignore[reportAttributeAccessIssue]
                 # numpy array / list
                 elif hasattr(val, "__getitem__"):
                     # 0次元配列（スカラー）の場合は len() がエラーになるためチェック
@@ -468,7 +468,7 @@ class ConditionEvaluator:
                 except (TypeError, KeyError, IndexError):
                     # PandasのRangeIndexなどで[-1]がキーエラーになる場合のフォールバック
                     if hasattr(obj, "iloc"):
-                        return float(obj.iloc[-1])
+                        return float(obj.iloc[-1])  # type: ignore[reportAttributeAccessIssue]
                     raise
 
             try:

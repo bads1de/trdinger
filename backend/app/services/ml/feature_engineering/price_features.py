@@ -54,7 +54,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         w = 20
         # 範囲、ボラティリティ、スキューネス
         df[f"Close_range_{w}"] = (df["high"].rolling(w).max() - df["low"].rolling(w).min()).fillna(0.0)
-        log_rets = np.log(df["close"] / df["close"].shift(1))
+        log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
         df[f"Historical_Volatility_{w}"] = (log_rets.rolling(w).std() * np.sqrt(252)).fillna(0.0)
         df[f"Price_Skewness_{w}"] = df["close"].rolling(w).skew().fillna(0.0)
         return df
@@ -72,7 +72,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
         """ボラティリティ特徴量を計算"""
-        hl_ratio = np.log(df["high"] / df["low"])
+        hl_ratio = pd.Series(np.log(df["high"] / df["low"]), index=df.index)
         df["Parkinson_Vol_20"] = (hl_ratio.rolling(20).var() * (1 / (4 * np.log(2)))).fillna(0.0)
         return df
 

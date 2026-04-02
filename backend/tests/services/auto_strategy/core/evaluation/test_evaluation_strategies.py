@@ -13,6 +13,7 @@ class TestEvaluationStrategy:
     def setup_method(self):
         self.evaluator = Mock()
         self.evaluator._perform_single_evaluation = Mock(return_value=(0.0,))
+        self.evaluator._perform_single_evaluation_report = None
         self.strategy = EvaluationStrategy(self.evaluator)
 
     def test_execute_prefers_purged_kfold_when_enabled(self):

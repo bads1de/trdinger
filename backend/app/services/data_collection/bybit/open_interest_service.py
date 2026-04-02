@@ -37,7 +37,7 @@ class BybitOpenInterestService(BybitService):
         normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
         return await self._handle_ccxt_errors(
             f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
-            self.exchange.fetch_open_interest_history,
+            self.exchange.fetch_open_interest_history,  # type: ignore[reportAttributeAccessIssue]
             normalized_symbol,
             interval,  # timeframeパラメータを追加
             since,

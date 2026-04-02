@@ -190,7 +190,7 @@ class IndicatorCalculator:
                         shifted = series.shift(1)
                         
                         # タイムゾーン情報を合わせる（必要な場合）
-                        if hasattr(shifted.index, "tz") and hasattr(base_index, "tz"):
+                        if isinstance(shifted.index, pd.DatetimeIndex) and isinstance(base_index, pd.DatetimeIndex):
                             if shifted.index.tz != base_index.tz:
                                 try:
                                     shifted.index = shifted.index.tz_convert(base_index.tz)

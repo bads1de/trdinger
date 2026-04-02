@@ -2,7 +2,7 @@
 単変量統計テストによる特徴量選択戦略
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 import numpy as np
 from sklearn.feature_selection import (
@@ -49,8 +49,14 @@ class UnivariateStrategy(BaseSelectionStrategy):
         if hasattr(selector, "pvalues_") and selector.pvalues_ is not None:
             pvalues = selector.pvalues_.tolist()
 
-        return selector.get_support(), {
+        mask = cast(np.ndarray, selector.get_support())
+
+        return mask, {
             "method": f"univariate_{self.score_func_name}",
-            "scores": selector.scores_.tolist(),
+            "scores": (
+                cast(np.ndarray, selector.scores_).tolist()
+                if selector.scores_ is not None
+                else []
+            ),
             "pvalues": pvalues,
         }

@@ -57,7 +57,7 @@ class FundingRateFeatureCalculator:
         # マージ用の一時的なデータフレームを作成
         df_temp = pd.DataFrame(index=res.index)
         df_temp["__orig_index__"] = res.index
-        df_temp.index = df_temp.index.tz_localize(None)
+        df_temp.index = pd.DatetimeIndex(df_temp.index).tz_localize(None)
 
         f_temp = f_df.sort_values("timestamp").copy()
         f_temp["timestamp"] = pd.to_datetime(f_temp["timestamp"]).dt.tz_localize(None)
@@ -70,7 +70,7 @@ class FundingRateFeatureCalculator:
             right_on="timestamp",
             direction="backward",
         )
-        merged.index = merged["__orig_index__"]
+        merged.index = merged["__orig_index__"]  # type: ignore[reportAttributeAccessIssue]
         res["funding_rate"] = merged["funding_rate"].fillna(self.baseline_rate)
 
         # 2. 数値加工 (ベクトル化)
@@ -82,7 +82,7 @@ class FundingRateFeatureCalculator:
         res["fr_lag_3p"] = res["fr_bps"].shift(3 * self.settlement_interval)
 
         # 周期
-        h = res.index.hour % self.settlement_interval
+        h = pd.DatetimeIndex(res.index).hour % self.settlement_interval  # type: ignore[reportAttributeAccessIssue]
         res["fr_cycle_sin"] = np.sin(2 * np.pi * h / self.settlement_interval)
         res["fr_cycle_cos"] = np.cos(2 * np.pi * h / self.settlement_interval)
 
@@ -128,7 +128,7 @@ class FundingRateFeatureCalculator:
             res["fr_price_corr"] = 0.0
 
         res["fr_extreme"] = np.where(res["fr_bps"].abs() > 10.0, 1, 0)
-        res["fr_direction"] = np.sign(res["fr_dev"].diff()).fillna(0)
+        res["fr_direction"] = pd.Series(np.sign(res["fr_dev"].diff()), index=res.index).fillna(0)
 
         # 不要なカラムを削除して返す
         if "funding_rate" in res.columns:

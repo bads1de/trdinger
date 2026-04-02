@@ -35,7 +35,7 @@ class PermutationStrategy(BaseSelectionStrategy):
             random_state=config.random_state,
             n_jobs=config.n_jobs,
         )
-        model.fit(X, y)
+        model.fit(X, y)  # type: ignore[reportAttributeAccessIssue]
 
         result = permutation_importance(
             model,
@@ -46,7 +46,7 @@ class PermutationStrategy(BaseSelectionStrategy):
             n_jobs=config.n_jobs,
         )
 
-        importances = result.importances_mean
+        importances = result.importances_mean  # type: ignore[reportAttributeAccessIssue]
         mask = importances > config.importance_threshold
 
         if config.max_features and mask.sum() > config.max_features:
@@ -60,5 +60,5 @@ class PermutationStrategy(BaseSelectionStrategy):
         return mask, {
             "method": "permutation",
             "importances_mean": importances.tolist(),
-            "importances_std": result.importances_std.tolist(),
+            "importances_std": result.importances_std.tolist(),  # type: ignore[reportAttributeAccessIssue]
         }

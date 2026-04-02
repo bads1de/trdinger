@@ -50,7 +50,8 @@ class LongShortRatioRepository(BaseRepository):
                 # record内に 'period' キーが存在することを確認する
                 period = record.get("period")
 
-                if not all([symbol, timestamp_val, buy_ratio, sell_ratio, period]):
+                if (symbol is None or timestamp_val is None or 
+                    buy_ratio is None or sell_ratio is None or period is None):
                     logger.debug(f"必須項目が不足しているためレコードをスキップ: {record}")
                     continue
 

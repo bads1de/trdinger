@@ -41,7 +41,8 @@ class VolatilityTargetService:
             raise ValueError(f"価格カラムが存在しません: {price_col}")
 
         prices = pd.to_numeric(ohlcv_norm[price_col], errors="coerce")
-        log_returns = np.log(prices).diff()
+        # np.log(prices) の結果が Series であることを明示して .diff() を使用
+        log_returns = pd.Series(np.log(prices), index=prices.index).diff()
 
         forward_variance = pd.Series(0.0, index=log_returns.index, dtype=float)
         valid_forward_window = pd.Series(True, index=log_returns.index, dtype=bool)
@@ -54,7 +55,7 @@ class VolatilityTargetService:
             valid_forward_window &= shifted_returns.notna()
 
         future_rv = np.sqrt(forward_variance)
-        future_log_rv = np.log(future_rv + 1e-8)
+        future_log_rv = pd.Series(np.log(future_rv + 1e-8), index=future_rv.index)  # type: ignore[reportAttributeAccessIssue]
         future_log_rv = future_log_rv.where(valid_forward_window)
 
         aligned_features = features_df.copy()

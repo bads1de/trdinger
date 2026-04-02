@@ -253,6 +253,8 @@ class TestAutoStrategyE2E:
 
         # バージョンが異なることを確認
         assert v1_strategy.metadata["version"] != v2_strategy.metadata["version"]
+        assert v1_strategy.tpsl_gene is not None
+        assert v2_strategy.tpsl_gene is not None
         assert (
             v1_strategy.tpsl_gene.stop_loss_pct != v2_strategy.tpsl_gene.stop_loss_pct
         )
@@ -428,13 +430,14 @@ class TestAutoStrategyErrorHandling:
         mock_service = Mock()
         mock_service.run_backtest.side_effect = Exception("Backtest failed")
 
+        result: Dict[str, Any] = {"success": True, "error": ""}
         try:
             mock_service.run_backtest({})
         except Exception as e:
             result = {"success": False, "error": str(e)}
 
         assert result["success"] is False
-        assert "failed" in result["error"].lower()
+        assert "failed" in str(result["error"]).lower()
 
     def test_strategy_load_not_found(self) -> None:
         """異常系: 存在しない戦略の読み込み"""

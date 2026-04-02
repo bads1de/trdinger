@@ -6,14 +6,12 @@ ML関連設定クラス
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
-
-from app.utils.serialization import dataclass_to_dict
-
-from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Any, Dict, List
 
 from app.config.constants import DEFAULT_ENSEMBLE_ALGORITHMS, SUPPORTED_TIMEFRAMES
+from app.utils.serialization import dataclass_to_dict
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class EnsembleConfig(BaseSettings):
@@ -148,7 +146,9 @@ class MLPredictionConfig(BaseSettings):
         Returns:
             Dict[str, float]: volatility gate 用のデフォルト予測値。
         """
-        forecast_vol = float(max(0.0, __import__("math").exp(self.default_forecast_log_rv)))
+        forecast_vol = float(
+            max(0.0, __import__("math").exp(self.default_forecast_log_rv))
+        )
         return {
             "forecast_log_rv": self.default_forecast_log_rv,
             "forecast_vol": forecast_vol,

@@ -185,7 +185,7 @@ class HybridFeatureAdapter:
                     .ffill()
                     .rolling(3, min_periods=1)
                     .mean()
-                    .fillna(0)
+                    .fillna(0)  # type: ignore[reportAttributeAccessIssue]
                 )
             else:
                 features_df["sentiment_smoothed"] = 0.0
@@ -422,7 +422,7 @@ class WaveletFeatureTransformer:
             if column not in features_df.columns:
                 continue
             series = features_df[column]
-            if not np.issubdtype(series.dtype, np.number):
+            if not pd.api.types.is_numeric_dtype(series.dtype):
                 continue
 
             numeric_series = series.astype(float)

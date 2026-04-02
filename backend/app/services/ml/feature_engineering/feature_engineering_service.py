@@ -70,7 +70,7 @@ class FeatureEngineeringService:
         self.frequency_manager = DataFrequencyManager()
 
         # 暗号通貨特化特徴量エンジニアリング（デフォルトで有効）
-        self.crypto_features = CryptoFeatures()
+        self.crypto_features: Optional[CryptoFeatures] = CryptoFeatures()
         logger.debug("暗号通貨特化特徴量を有効化しました")
 
     def calculate_advanced_features(
@@ -314,7 +314,7 @@ class FeatureEngineeringService:
         up_volume = ohlcv_1m["volume"] * is_up
 
         # 2. 1時間ごとに集計用のラベル
-        hour_labels = ohlcv_1m.index.floor("1h")
+        hour_labels = pd.DatetimeIndex(ohlcv_1m.index).floor("1h")  # type: ignore[reportAttributeAccessIssue]
         resampler = ohlcv_1m.resample("1h")
 
         agg_features = pd.DataFrame(index=resampler.last().index)
@@ -526,7 +526,7 @@ class FeatureEngineeringService:
 
         interaction_dict = {}
         for col1, col2 in combinations(interactors, 2):
-            v1, v2 = df[col1].values, df[col2].values
+            v1, v2 = np.asarray(df[col1]), np.asarray(df[col2])
             # 比率
             interaction_dict[f"ratio_{col1}_{col2}"] = v1 / (v2 + 1e-9)
             # 積

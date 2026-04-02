@@ -50,5 +50,5 @@ def kairi_relative_index(close, length=14, signal_length=3):
     result = _njit_kairi_loop(close.values.astype(float), length)
     osc = pd.Series(result, index=close.index, name=f"KRI_{length}")
     sig = osc.rolling(window=signal_length, min_periods=1).mean()
-    sig.name = f"KRI_SIGNAL_{length}"
+    sig.name = f"KRI_SIGNAL_{length}"  # type: ignore[reportAttributeAccessIssue]
     return osc, sig

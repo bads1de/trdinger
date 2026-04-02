@@ -31,7 +31,7 @@ def _get_column_series(df: pd.DataFrame, col: str) -> pd.Series:
     """重複列を含む場合は先頭列を使って dtype を判定する。"""
     col_data = df[col]
     if isinstance(col_data, pd.DataFrame):
-        return col_data.iloc[:, 0]
+        return col_data.iloc[:, 0]  # type: ignore
     return col_data
 
 
@@ -55,8 +55,8 @@ def build_optimized_dtype_map(
             optimize_all_numeric and pd.api.types.is_float_dtype(col_series)
         ):
             optimized = pd.to_numeric(col_series, downcast="float")
-            if optimized.dtype != col_series.dtype:
-                dtypes[col] = str(optimized.dtype)
+            if optimized.dtype != col_series.dtype:  # pyright: ignore[reportAttributeAccessIssue]
+                dtypes[col] = str(optimized.dtype)  # pyright: ignore[reportAttributeAccessIssue]
             continue
 
         if col_series.dtype == "int64" or (
@@ -80,11 +80,8 @@ def apply_optimized_dtypes(
     dtype_map: Mapping[str, str],
 ) -> pd.DataFrame:
     """dtype マップを DataFrame に適用する。"""
-    result_df = df.copy()
-    for col, dtype_name in dtype_map.items():
-        if col in result_df.columns:
-            result_df[col] = result_df[col].astype(dtype_name)
-    return result_df
+    valid_dtypes = {k: v for k, v in dtype_map.items() if k in df.columns}
+    return df.astype(valid_dtypes)
 
 
 def optimize_dataframe_dtypes(

@@ -1,7 +1,6 @@
 """Fallback coverage for indicator wrappers when pandas-ta returns None."""
 
-from unittest.mock import patch
-
+import pandas_ta_classic as ta
 import pytest
 
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
@@ -40,6 +39,12 @@ MOMENTUM_CASES = [
     _case("macd", MomentumIndicators.macd, "close"),
     _case("ppo", MomentumIndicators.ppo, "close"),
     _case("trix", MomentumIndicators.trix, "close"),
+    _case("dm", MomentumIndicators.dm, "high", "low"),
+    _case("er", MomentumIndicators.er, "close"),
+    _case("lrsi", MomentumIndicators.lrsi, "close"),
+    _case("po", MomentumIndicators.po, "close"),
+    _case("trixh", MomentumIndicators.trixh, "close"),
+    _case("vwmacd", MomentumIndicators.vwmacd, "close", "volume"),
     _case("stoch", MomentumIndicators.stoch, "high", "low", "close"),
     _case("stochrsi", MomentumIndicators.stochrsi, "close"),
     _case("willr", MomentumIndicators.willr, "high", "low", "close"),
@@ -98,34 +103,42 @@ VOLATILITY_CASES = [
 class TestPerFunctionMock:
     """Exercise None-return fallbacks for the main indicator wrappers."""
 
-    def _run_none_case(self, patch_target, method, sample_values, args):
+    def _run_none_case(self, patch_target, method, sample_values, args, monkeypatch):
         resolved_args = _resolve_args(sample_values, args)
 
         # Some wrappers return fallback arrays, some raise after the helper swallows the error.
-        with patch(f"pandas_ta_classic.{patch_target}", return_value=None):
-            try:
-                method(*resolved_args)
-            except Exception:
-                pass
+        monkeypatch.setattr(ta, patch_target, lambda *args, **kwargs: None)
+        try:
+            method(*resolved_args)
+        except Exception:
+            pass
 
     @pytest.mark.parametrize("patch_target,method,args", VOLUME_CASES)
-    def test_volume_all_none_returns(self, sample_ohlcv_dict, patch_target, method, args):
-        self._run_none_case(patch_target, method, sample_ohlcv_dict, args)
+    def test_volume_all_none_returns(
+        self, sample_ohlcv_dict, patch_target, method, args, monkeypatch
+    ):
+        self._run_none_case(patch_target, method, sample_ohlcv_dict, args, monkeypatch)
 
     @pytest.mark.parametrize("patch_target,method,args", MOMENTUM_CASES)
-    def test_momentum_all_none_returns(self, sample_ohlcv_dict, patch_target, method, args):
-        self._run_none_case(patch_target, method, sample_ohlcv_dict, args)
+    def test_momentum_all_none_returns(
+        self, sample_ohlcv_dict, patch_target, method, args, monkeypatch
+    ):
+        self._run_none_case(patch_target, method, sample_ohlcv_dict, args, monkeypatch)
 
     @pytest.mark.parametrize("patch_target,method,args", OVERLAP_CASES)
-    def test_overlap_all_none_returns(self, sample_ohlcv_dict, patch_target, method, args):
-        self._run_none_case(patch_target, method, sample_ohlcv_dict, args)
+    def test_overlap_all_none_returns(
+        self, sample_ohlcv_dict, patch_target, method, args, monkeypatch
+    ):
+        self._run_none_case(patch_target, method, sample_ohlcv_dict, args, monkeypatch)
 
     @pytest.mark.parametrize("patch_target,method,args", TREND_CASES)
-    def test_trend_all_none_returns(self, sample_ohlcv_dict, patch_target, method, args):
-        self._run_none_case(patch_target, method, sample_ohlcv_dict, args)
+    def test_trend_all_none_returns(
+        self, sample_ohlcv_dict, patch_target, method, args, monkeypatch
+    ):
+        self._run_none_case(patch_target, method, sample_ohlcv_dict, args, monkeypatch)
 
     @pytest.mark.parametrize("patch_target,method,args", VOLATILITY_CASES)
     def test_volatility_all_none_returns(
-        self, sample_ohlcv_dict, patch_target, method, args
+        self, sample_ohlcv_dict, patch_target, method, args, monkeypatch
     ):
-        self._run_none_case(patch_target, method, sample_ohlcv_dict, args)
+        self._run_none_case(patch_target, method, sample_ohlcv_dict, args, monkeypatch)

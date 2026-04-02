@@ -64,7 +64,8 @@ class USLunchFilter(BaseTool):
             # pandasのtz_localizeを使って判定するのがベスト
             # UTCとして解釈し、US/Easternに変換してオフセットを確認
             localized = timestamp.tz_localize("UTC").tz_convert("US/Eastern")
-            return localized.dst().total_seconds() != 0
+            dst_offset = localized.dst()
+            return dst_offset is not None and dst_offset.total_seconds() != 0
         except Exception:
             # タイムゾーン情報がない場合などのフォールバック
             # 簡易的に夏時間を判定（誤差許容）

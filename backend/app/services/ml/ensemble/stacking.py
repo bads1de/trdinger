@@ -15,8 +15,8 @@ from sklearn.model_selection import cross_val_predict
 
 from ....utils.error_handler import ModelError
 from ..common.config import ml_config_manager
-from ..cross_validation import create_temporal_cv_splitter
 from ..common.utils import validate_training_inputs
+from ..cross_validation import create_temporal_cv_splitter
 from .base_ensemble import BaseEnsemble
 
 logger = logging.getLogger(__name__)
@@ -60,7 +60,7 @@ class StackingEnsemble(BaseEnsemble):
         )  # 元特徴量をメタモデルに渡すか
 
         # 学習済みモデルを保持
-        self._fitted_base_models: Dict[str, Any] = {}  # {name: fitted_model}
+        self._fitted_base_models = {}  # {name: fitted_model}
         self._fitted_meta_model: Optional[Any] = None
         self.oof_predictions: Optional[np.ndarray] = None  # OOF予測値を保持
         self.oof_base_model_predictions: Optional[pd.DataFrame] = (
@@ -79,22 +79,28 @@ class StackingEnsemble(BaseEnsemble):
         )
 
     @property
-    def base_models(self) -> List[str]:
+    def base_models(
+        self,
+    ) -> List[str]:  # pyright: ignore[reportIncompatibleVariableOverride]
         """後方互換性のためのプロパティ"""
         return self._base_model_types
 
     @base_models.setter
-    def base_models(self, value: List[str]) -> None:
+    def base_models(
+        self, value: List[str]
+    ) -> None:  # pyright: ignore[reportIncompatibleVariableOverride]
         """後方互換性のためのセッター"""
         self._base_model_types = value
 
-    @property  # type: ignore[override]
-    def meta_model(self) -> str:
+    @property
+    def meta_model(self) -> str:  # pyright: ignore[reportIncompatibleVariableOverride]
         """後方互換性のためのプロパティ"""
         return self._meta_model_type
 
     @meta_model.setter
-    def meta_model(self, value: str) -> None:
+    def meta_model(
+        self, value: str
+    ) -> None:  # pyright: ignore[reportIncompatibleVariableOverride]
         """後方互換性のためのセッター"""
         self._meta_model_type = value
 
@@ -172,8 +178,15 @@ class StackingEnsemble(BaseEnsemble):
         oof_preds = pd.DataFrame(index=X.index)
         for name, estimator in estimators:
             try:
-                pred = cross_val_predict(
-                    estimator, X, y, cv=cv, method="predict_proba", n_jobs=self.n_jobs
+                pred: np.ndarray = np.asarray(
+                    cross_val_predict(
+                        estimator,
+                        X,
+                        y,
+                        cv=cv,
+                        method="predict_proba",
+                        n_jobs=self.n_jobs,
+                    )
                 )
                 oof_preds[name] = pred[:, 1]
             except Exception as e:
@@ -193,21 +206,24 @@ class StackingEnsemble(BaseEnsemble):
         meta_features = (
             pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
         )
-        self._fitted_meta_model = self._create_base_model(
+        fitted_meta_model = self._create_base_model(
             self._meta_model_type, meta_model_params
         )
-        self._fitted_meta_model.fit(meta_features, y)
+        self._fitted_meta_model = fitted_meta_model
+        fitted_meta_model.fit(meta_features, y)
 
         meta_cv = self._create_cv_splitter(X)
-        return cross_val_predict(
-            clone(
-                self._create_base_model(self._meta_model_type, meta_model_params)
-            ),
-            meta_features,
-            y,
-            cv=meta_cv,
-            method="predict_proba",
-            n_jobs=self.n_jobs,
+        return np.asarray(
+            cross_val_predict(
+                clone(
+                    self._create_base_model(self._meta_model_type, meta_model_params)
+                ),
+                meta_features,
+                y,
+                cv=meta_cv,
+                method="predict_proba",
+                n_jobs=self.n_jobs,
+            )
         )
 
     def _fit_base_models_final(
@@ -221,7 +237,7 @@ class StackingEnsemble(BaseEnsemble):
         for name, estimator in estimators:
             try:
                 model = clone(estimator)
-                model.fit(X, y)
+                model.fit(X, y)  # pyright: ignore[reportAttributeAccessIssue]
                 self._fitted_base_models[name] = model
             except Exception as e:
                 logger.warning(f"  {name}の最終フィットエラー: {e}")
@@ -243,7 +259,7 @@ class StackingEnsemble(BaseEnsemble):
         return create_temporal_cv_splitter(
             cv_strategy=cv_strategy,
             n_splits=self.cv_folds,
-            index=X_train.index,
+            index=pd.DatetimeIndex(X_train.index),
             pct_embargo=pct_embargo,
             horizon_n=t1_horizon_n,
         )
@@ -301,7 +317,12 @@ class StackingEnsemble(BaseEnsemble):
             try:
                 params = {}
                 if base_model_params:
-                    params = base_model_params.get(model_type, base_model_params.get(model_type.lower(), {})) or {}
+                    params = (
+                        base_model_params.get(
+                            model_type, base_model_params.get(model_type.lower(), {})
+                        )
+                        or {}
+                    )
                 model = self._create_base_model(model_type, params)
                 estimators.append((model_type, model))
                 logger.info(f"ベースモデル追加: {model_type}")
@@ -432,6 +453,7 @@ class StackingEnsemble(BaseEnsemble):
             import os
 
             import joblib
+
             from ..common.utils import collect_unique_files
 
             # base_path に紐づくファイルを優先し、見つからない場合のみ保存ディレクトリ全体を探す
@@ -594,7 +616,9 @@ class StackingEnsemble(BaseEnsemble):
                 if "passthrough" in sidecar_metadata:
                     self.passthrough = sidecar_metadata["passthrough"]
 
-            self.is_fitted = bool(self._fitted_base_models) and self._fitted_meta_model is not None
+            self.is_fitted = (
+                bool(self._fitted_base_models) and self._fitted_meta_model is not None
+            )
             logger.info(f"スタッキングアンサンブルモデルを読み込みました: {model_path}")
             return True
 

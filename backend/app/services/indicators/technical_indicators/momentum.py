@@ -9,6 +9,12 @@ pandas-ta の momentum カテゴリに対応。
 - MACD (Moving Average Convergence Divergence)
 - PPO (Percentage Price Oscillator)
 - TRIX (Triple Exponential Average)
+- DM (Directional Movement)
+- ER (Efficiency Ratio)
+- LRSI (Laguerre RSI)
+- PO (Projection Oscillator)
+- TRIXH (TRIX Histogram)
+- VWMACD (Volume Weighted MACD)
 - Stochastic Oscillator
 - Stochastic RSI
 - Williams %R
@@ -162,6 +168,146 @@ class MomentumIndicators:
         signal_line = result.iloc[:, 1].to_numpy()
         histogram = trix_line - signal_line
         return trix_line, signal_line, histogram
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def dm(
+        high: pd.Series,
+        low: pd.Series,
+        length: int = 14,
+        mamode: str = "rma",
+        talib: bool | None = None,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> Tuple[pd.Series, pd.Series]:
+        """Directional Movement"""
+        result = run_multi_series_indicator(
+            {"high": high, "low": low},
+            length,
+            lambda: ta.dm(
+                high=high,
+                low=low,
+                length=length,
+                mamode=mamode,
+                talib=talib,
+                drift=drift,
+                offset=offset,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(high, 2),
+        )
+
+        if isinstance(result, tuple):
+            return result
+
+        return result.iloc[:, 0], result.iloc[:, 1]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def er(
+        close: pd.Series,
+        length: int = 10,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Efficiency Ratio"""
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.er(
+                close=close, length=length, drift=drift, offset=offset
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def lrsi(
+        close: pd.Series,
+        length: int = 14,
+        gamma: float = 0.5,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Laguerre RSI"""
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.lrsi(
+                close=close, length=length, gamma=gamma, offset=offset
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def po(
+        close: pd.Series,
+        length: int = 14,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Projection Oscillator"""
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.po(close=close, length=length, offset=offset),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def trixh(
+        close: pd.Series,
+        length: int = 18,
+        signal: int = 9,
+        scalar: float = 100.0,
+        drift: int = 1,
+        offset: int = 0,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """TRIX Histogram"""
+        result = run_series_indicator(
+            close,
+            length,
+            lambda: ta.trixh(
+                close=close,
+                length=length,
+                signal=signal,
+                scalar=scalar,
+                drift=drift,
+                offset=offset,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+        )
+
+        if isinstance(result, tuple):
+            return result
+
+        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def vwmacd(
+        close: pd.Series,
+        volume: pd.Series,
+        fast: int = 12,
+        slow: int = 26,
+        signal: int = 9,
+        offset: int = 0,
+    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+        """Volume Weighted MACD"""
+        result = run_multi_series_indicator(
+            {"close": close, "volume": volume},
+            max(fast, slow, signal),
+            lambda: ta.vwmacd(
+                close=close,
+                volume=volume,
+                fast=fast,
+                slow=slow,
+                signal=signal,
+                offset=offset,
+            ),
+            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+        )
+
+        if isinstance(result, tuple):
+            return result
+
+        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -458,6 +604,20 @@ class MomentumIndicators:
             return rsi_result if rsi_result is not None else create_nan_series_like(data)
 
         return run_series_indicator(data, length, compute)
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def cti(
+        close: pd.Series,
+        length: int = 12,
+        offset: int = 0,
+    ) -> pd.Series:
+        """Correlation Trend Indicator"""
+        return run_series_indicator(
+            close,
+            length,
+            lambda: ta.cti(close=close, length=length, offset=offset),
+        )
 
     @staticmethod
     def squeeze_pro(

@@ -79,7 +79,8 @@ class BaseRepository(Generic[T]):
             logger.info(f"一括挿入開始: {len(records)}件のデータを処理")
 
             # データベースの種類を検出
-            db_type = self.db.bind.engine.dialect.name.lower()
+            bind = self.db.get_bind()
+            db_type = bind.dialect.name.lower()
 
             if db_type == "sqlite":
                 # SQLiteの場合はINSERT OR IGNOREを使用
@@ -120,7 +121,8 @@ class BaseRepository(Generic[T]):
             return 0
 
         # INSERT OR IGNORE文を構築
-        table_name = self.model_class.__tablename__
+        model_class = cast(Any, self.model_class)
+        table_name = model_class.__tablename__
         columns = list(records[0].keys())
 
         # プレースホルダを生成
@@ -146,7 +148,7 @@ class BaseRepository(Generic[T]):
         """
         PostgreSQL用のon_conflict_do_nothing一括挿入
         """
-        from sqlalchemy import insert
+        from sqlalchemy.dialects.postgresql import insert
 
         try:
             stmt = insert(self.model_class).on_conflict_do_nothing(

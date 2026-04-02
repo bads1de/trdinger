@@ -3,9 +3,10 @@ BacktestResultRepositoryのテストモジュール
 
 バックテスト結果リポジトリの機能をテストします。
 """
+# pyright: reportAttributeAccessIssue=none
 
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -170,13 +171,13 @@ class TestSaveBacktestResult:
     ) -> None:
         """バックテスト結果が正常に保存される"""
         mock_backtest_result_class.return_value = sample_backtest_model
-        sample_backtest_model.id = 1
+        setattr(sample_backtest_model, "id", 1)
 
         result = repository.save_backtest_result(sample_backtest_data)
 
-        repository.db.add.assert_called_once()
-        repository.db.commit.assert_called_once()
-        repository.db.refresh.assert_called_once()
+        cast(MagicMock, repository.db.add).assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_called_once()
+        cast(MagicMock, repository.db.refresh).assert_called_once()
         assert result["id"] == 1
 
     def test_save_backtest_result_with_iso_dates(
@@ -309,8 +310,8 @@ class TestDeleteBacktestResult:
         result = repository.delete_backtest_result(1)
 
         assert result is True
-        repository.db.delete.assert_called_once()
-        repository.db.commit.assert_called_once()
+        cast(MagicMock, repository.db.delete).assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_called_once()
 
     def test_delete_backtest_result_not_found(
         self, repository: BacktestResultRepository
@@ -323,7 +324,7 @@ class TestDeleteBacktestResult:
         result = repository.delete_backtest_result(999)
 
         assert result is False
-        repository.db.delete.assert_not_called()
+        cast(MagicMock, repository.db.delete).assert_not_called()
 
 
 class TestDeleteAllBacktestResults:
@@ -340,7 +341,7 @@ class TestDeleteAllBacktestResults:
         count = repository.delete_all_backtest_results()
 
         assert count == 5
-        repository.db.commit.assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_called_once()
 
 
 class TestCountBacktestResults:

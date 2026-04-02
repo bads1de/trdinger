@@ -98,7 +98,7 @@ def validate_extended_data(df: pd.DataFrame) -> bool:
             # Pandas Series比較を安全に行う - boolに変換してから評価
             has_invalid = bool(invalid_mask.any())
             if has_invalid:
-                invalid_values = funding_rates[invalid_mask].head(5).tolist()
+                invalid_values = list(funding_rates[invalid_mask][:5])
                 raise ValueError(
                     f"funding_rate values must be between -1 and 1. "
                     f"Found {invalid_mask.sum()} invalid values: {invalid_values}"

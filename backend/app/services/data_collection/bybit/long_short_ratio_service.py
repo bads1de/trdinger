@@ -64,7 +64,7 @@ class BybitLongShortRatioService(BybitService):
         try:
             response = await self._handle_ccxt_errors(
                 "Bybit V5 Market Account Ratio",
-                self.exchange.publicGetV5MarketAccountRatio,
+                self.exchange.publicGetV5MarketAccountRatio,  # type: ignore[reportAttributeAccessIssue]
                 params=params,
             )
         except Exception as e:
@@ -185,8 +185,8 @@ class BybitLongShortRatioService(BybitService):
         Returns:
             保存件数
         """
+        total_saved = 0
         try:
-            total_saved = 0
             # デフォルトで2020-10-01 (API制限の古さ)
             if not start_date:
                 start_ts = 1601510400000  # 2020-10-01 UTC

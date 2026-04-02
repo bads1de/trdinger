@@ -8,7 +8,7 @@ dtype最適化のための複数のトランスフォーマーを組み合わせ
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         if self.method == "isolation_forest":
             self.detector_ = IsolationForest(
-                contamination=self.contamination, random_state=42
+                contamination=cast(Any, self.contamination), random_state=42
             )
             self.detector_.fit(X)
         return self
@@ -186,7 +186,7 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
                             result[col] = result[col].fillna(constant_value)
                         else:
                             # Normal imputation for columns with some valid values
-                            col_data = result[col].values.reshape(-1, 1)
+                            col_data = np.asarray(result[col].values).reshape(-1, 1)
                             imputed = self.imputer_.fit_transform(col_data)
                             result[col] = imputed.flatten()
 
@@ -325,7 +325,7 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
 
 
 def create_preprocessing_pipeline(
-    outlier_method: str = "isolation_forest",
+    outlier_method: Optional[str] = "isolation_forest",
     outlier_contamination: float = 0.1,
     numeric_strategy: str = "median",
     categorical_strategy: str = "most_frequent",
@@ -389,7 +389,7 @@ def create_preprocessing_pipeline(
     preprocessor = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
 
     # Main pipeline
-    steps = [("preprocessor", preprocessor)]
+    steps: List[Tuple[str, Any]] = [("preprocessor", preprocessor)]
 
     # Optional dtype optimization
     if optimize_dtypes:
@@ -420,7 +420,7 @@ def create_basic_preprocessing_pipeline(
     # Simple imputation pipeline
     imputer = SimpleImputer(strategy=impute_strategy)
 
-    steps = [("imputer", imputer)]
+    steps: List[Tuple[str, Any]] = [("imputer", imputer)]
 
     if encode_categorical:
         steps.append(("encoder", CategoricalEncoderTransformer(encoding_type="label")))
@@ -453,8 +453,9 @@ def get_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     try:
         if hasattr(pipeline, "get_feature_names_out"):
             feature_names_out = pipeline.get_feature_names_out()
-            info["n_features_out"] = len(feature_names_out)
-            info["feature_names_out"] = feature_names_out.tolist()
+            if feature_names_out is not None:
+                info["n_features_out"] = len(feature_names_out)
+                info["feature_names_out"] = feature_names_out.tolist()
     except Exception:
         info["feature_names_out"] = None
 

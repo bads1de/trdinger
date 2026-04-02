@@ -475,7 +475,7 @@ class OptimizationService:
             "Volume_CV",
         ]
         meta_feature_cols = [
-            c for c in X_meta.columns if any(k in c for k in micro_keywords)
+            c for c in X_meta.columns if any(k in c for k in micro_keywords)  # type: ignore[reportAttributeAccessIssue]
         ]
 
         X_meta_specialized = X_meta[meta_feature_cols].copy()

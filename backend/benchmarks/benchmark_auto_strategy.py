@@ -13,7 +13,7 @@ import time
 import tracemalloc
 from io import StringIO
 from typing import Any, Dict, List
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
@@ -107,27 +107,29 @@ def create_mock_ohlcv_data(n_bars: int = 1000) -> pd.DataFrame:
 
 def create_mock_strategy_gene():
     """モック戦略遺伝子を生成"""
+    from app.services.auto_strategy.config.constants import TPSLMethod
     from app.services.auto_strategy.genes import (
         Condition,
+        ConditionGroup,
         IndicatorGene,
         StrategyGene,
         TPSLGene,
     )
 
     indicators = [
-        IndicatorGene(type="SMA", period=20, source="Close"),
-        IndicatorGene(type="EMA", period=50, source="Close"),
-        IndicatorGene(type="RSI", period=14, source="Close"),
+        IndicatorGene(type="SMA", parameters={"period": 20, "source": "Close"}),
+        IndicatorGene(type="EMA", parameters={"period": 50, "source": "Close"}),
+        IndicatorGene(type="RSI", parameters={"period": 14, "source": "Close"}),
     ]
 
-    long_conditions = [
+    long_conditions: List[Condition | ConditionGroup] = [
         Condition(
             left_operand="sma_20", operator=">", right_operand="ema_50"
         ),
         Condition(left_operand="rsi_14", operator="<", right_operand=30),
     ]
 
-    short_conditions = [
+    short_conditions: List[Condition | ConditionGroup] = [
         Condition(
             left_operand="sma_20", operator="<", right_operand="ema_50"
         ),
@@ -135,7 +137,10 @@ def create_mock_strategy_gene():
     ]
 
     tpsl_gene = TPSLGene(
-        method="atr", sl_multiplier=2.0, tp_multiplier=3.0, atr_period=14
+        method=TPSLMethod.VOLATILITY_BASED,
+        atr_multiplier_sl=2.0,
+        atr_multiplier_tp=3.0,
+        atr_period=14,
     )
 
     return StrategyGene(
@@ -206,7 +211,7 @@ def benchmark_individual_evaluator():
     """個体評価器のベンチマーク"""
     logger.info("\n=== 個体評価器ベンチマーク ===")
 
-    from unittest.mock import AsyncMock, MagicMock, patch
+    from unittest.mock import MagicMock
 
     from app.services.auto_strategy.config.ga import GAConfig
     from app.services.auto_strategy.core.evaluation.individual_evaluator import (
@@ -277,10 +282,6 @@ def benchmark_parallel_evaluator():
     """並列評価器のベンチマーク"""
     logger.info("\n=== 並列評価器ベンチマーク ===")
 
-    from concurrent.futures import ProcessPoolExecutor
-    from unittest.mock import MagicMock
-
-    from app.services.auto_strategy.config.ga import GAConfig
     from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
         ParallelEvaluator,
     )

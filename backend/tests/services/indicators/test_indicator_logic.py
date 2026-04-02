@@ -1,9 +1,8 @@
 """Unified low-level indicator behavior tests."""
 
-from unittest.mock import patch
-
 import numpy as np
 import pandas as pd
+import pandas_ta_classic as ta
 import pytest
 
 from app.services.indicators.technical_indicators.momentum import MomentumIndicators
@@ -36,14 +35,14 @@ class TestOverlapIndicatorsLogic:
         with pytest.raises(ValueError):
             OverlapIndicators.wma(None, None)
 
-    def test_complex_moving_averages(self, sample_df):
+    def test_complex_moving_averages(self, sample_df, monkeypatch):
         close = sample_df["close"]
         volume = sample_df["volume"]
 
         assert isinstance(OverlapIndicators.zlma(close, 10), pd.Series)
-        with patch("pandas_ta_classic.zlma", return_value=None):
-            fallback = OverlapIndicators.zlma(close, 10)
-            assert np.isnan(fallback).all()
+        monkeypatch.setattr(ta, "zlma", lambda *args, **kwargs: None)
+        fallback = OverlapIndicators.zlma(close, 10)
+        assert np.isnan(fallback).all()
 
         assert isinstance(OverlapIndicators.alma(close), pd.Series)
         with pytest.raises(ValueError):
@@ -112,6 +111,27 @@ class TestMomentumIndicatorsLogic:
         assert result.dropna().between(0, 100).all()
         assert result.iloc[:13].isna().all()
 
+    def test_dm_matches_pandas_ta(self, sample_df):
+        high = sample_df["high"]
+        low = sample_df["low"]
+
+        dmp, dmn = MomentumIndicators.dm(high, low, length=14)
+        expected = ta.dm(high=high, low=low, length=14)
+
+        pd.testing.assert_series_equal(dmp, expected.iloc[:, 0], check_freq=False)
+        pd.testing.assert_series_equal(dmn, expected.iloc[:, 1], check_freq=False)
+
+    @pytest.mark.parametrize("method_name", ["cti", "er", "lrsi", "po"])
+    def test_single_line_momentum_wrappers_match_pandas_ta(
+        self, sample_df, method_name
+    ):
+        close = sample_df["close"]
+
+        result = getattr(MomentumIndicators, method_name)(close)
+        expected = getattr(ta, method_name)(close=close)
+
+        pd.testing.assert_series_equal(result, expected, check_freq=False)
+
     def test_stoch_outputs(self, sample_df):
         k, d = MomentumIndicators.stoch(
             sample_df["high"], sample_df["low"], sample_df["close"], k=14, d=3
@@ -127,6 +147,40 @@ class TestMomentumIndicatorsLogic:
 
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_df)
+
+    def test_trixh_and_vwmacd_match_pandas_ta(self, sample_df):
+        close = sample_df["close"]
+        volume = sample_df["volume"]
+
+        trix_line, trix_signal, trix_hist = MomentumIndicators.trixh(
+            close, length=18, signal=9
+        )
+        expected_trix = ta.trixh(close=close, length=18, signal=9)
+        pd.testing.assert_series_equal(
+            trix_line, expected_trix.iloc[:, 0], check_freq=False
+        )
+        pd.testing.assert_series_equal(
+            trix_signal, expected_trix.iloc[:, 1], check_freq=False
+        )
+        pd.testing.assert_series_equal(
+            trix_hist, expected_trix.iloc[:, 2], check_freq=False
+        )
+
+        vwmacd_line, vwmacd_hist, vwmacd_signal = MomentumIndicators.vwmacd(
+            close, volume, fast=12, slow=26, signal=9
+        )
+        expected_vwmacd = ta.vwmacd(
+            close=close, volume=volume, fast=12, slow=26, signal=9
+        )
+        pd.testing.assert_series_equal(
+            vwmacd_line, expected_vwmacd.iloc[:, 0], check_freq=False
+        )
+        pd.testing.assert_series_equal(
+            vwmacd_hist, expected_vwmacd.iloc[:, 1], check_freq=False
+        )
+        pd.testing.assert_series_equal(
+            vwmacd_signal, expected_vwmacd.iloc[:, 2], check_freq=False
+        )
 
     def test_error_on_invalid_params(self, sample_df):
         with pytest.raises(ValueError):

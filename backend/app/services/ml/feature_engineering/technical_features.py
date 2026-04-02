@@ -83,7 +83,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
         # Fractional Differencing
         try:
-            log_close = np.log(df["close"])
+            log_close = pd.Series(np.log(df["close"]), index=df.index)
             new_features["FracDiff_04"] = AdvancedFeatures.frac_diff_ffd(
                 log_close, d=0.4
             ).fillna(0.0)
@@ -262,15 +262,17 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 "Choppiness_Index_14": TrendIndicators.chop(
                     high=df["high"], low=df["low"], close=df["close"], length=14
                 ).fillna(50.0),
-                "Amihud_Illiquidity": np.log(
-                    rets.abs() / (df["volume"] * df["close"] + 1e-9) + 1e-9
+                "Amihud_Illiquidity": pd.Series(
+                    np.log(rets.abs() / (df["volume"] * df["close"] + 1e-9) + 1e-9),
+                    index=df.index,
                 ).fillna(0.0),
                 "Efficiency_Ratio": (
                     df["close"].diff(10).abs()
                     / (df["close"].diff().abs().rolling(window=10).sum() + 1e-9)
                 ).fillna(0.0),
-                "Market_Impact": np.log(
-                    (df["high"] - df["low"]) / (df["volume"] + 1e-9) + 1e-9
+                "Market_Impact": pd.Series(
+                    np.log((df["high"] - df["low"]) / (df["volume"] + 1e-9) + 1e-9),
+                    index=df.index,
                 ).fillna(0.0),
             }
 

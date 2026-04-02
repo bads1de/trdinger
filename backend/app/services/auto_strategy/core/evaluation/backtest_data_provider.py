@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import pandas as pd
 
@@ -64,8 +64,8 @@ class BacktestDataProvider:
         data = self.backtest_service.data_service.get_data_for_backtest(
             symbol=symbol,
             timeframe=timeframe,
-            start_date=pd.to_datetime(start_date),
-            end_date=pd.to_datetime(end_date),
+            start_date=pd.to_datetime(start_date),  # type: ignore[reportArgumentType]
+            end_date=pd.to_datetime(end_date),  # type: ignore[reportArgumentType]
         )
         with self._lock:
             if key in self._data_cache:
@@ -99,8 +99,8 @@ class BacktestDataProvider:
             data = self.backtest_service.data_service.get_data_for_backtest(
                 symbol=symbol,
                 timeframe="1m",
-                start_date=pd.to_datetime(start_date),
-                end_date=pd.to_datetime(end_date),
+                start_date=pd.to_datetime(cast(Any, start_date)),
+                end_date=pd.to_datetime(cast(Any, end_date)),
             )
             if not data.empty:
                 with self._lock:

@@ -123,7 +123,7 @@ class OIFRInteractionFeatureCalculator:
         result["OI_Momentum_FR_Confirmed"] = oi_momentum * fr_direction
 
         # === 8. Funding Rate Regime ===
-        fr_abs = np.abs(fr_value)
+        fr_abs = pd.Series(np.abs(fr_value), index=fr_value.index)
         # rolling.quantile を使用してベクトル化
         fr_q75 = fr_abs.rolling(50).quantile(0.75)
         result["FR_Extreme_Regime"] = (fr_abs > fr_q75).astype(float).fillna(0)

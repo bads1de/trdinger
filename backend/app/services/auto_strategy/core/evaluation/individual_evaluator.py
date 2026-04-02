@@ -18,6 +18,7 @@ from typing import (
 
 from cachetools import LRUCache  # type: ignore[import-untyped]
 import pandas as pd
+import pandas_ta_classic as ta  # type: ignore
 from pydantic import ValidationError
 
 from app.services.backtest.config.backtest_config import BacktestRunConfig
@@ -510,7 +511,7 @@ class IndividualEvaluator:
             # 1. 実行用設定の構築
             run_config = self._prepare_run_config(gene, prepared_backtest_config, config)
             if not run_config:
-                return ScenarioEvaluation(
+                return ScenarioEvaluation(  # type: ignore[call-arg]
                     name=scenario_name,
                     fitness=tuple(0.0 for _ in config.objectives),
                     passed=False,
@@ -567,7 +568,7 @@ class IndividualEvaluator:
                     prepared_backtest_config["_evaluation_start"]
                 )
 
-            return ScenarioEvaluation(
+            return ScenarioEvaluation(  # type: ignore[call-arg]
                 name=scenario_name,
                 fitness=tuple(float(value) for value in fitness),
                 passed=self._is_backtest_result_passing(result, config),
@@ -579,7 +580,7 @@ class IndividualEvaluator:
             logger.error(f"単一評価実行エラー: {e}")
             scenario_metadata = metadata.copy() if metadata else {}
             scenario_metadata["error"] = str(e)
-            return ScenarioEvaluation(
+            return ScenarioEvaluation(  # type: ignore[call-arg]
                 name=scenario_name,
                 fitness=tuple(0.0 for _ in config.objectives),
                 passed=False,
@@ -697,7 +698,7 @@ class IndividualEvaluator:
 
     @staticmethod
     def _extract_lookback_from_parameters(parameters: Dict[str, Any]) -> int:
-        """インジケーターパラメータから lookback 長を推定する。"""
+        """インディケーターパラメータから lookback 長を推定する。"""
         if not isinstance(parameters, dict):
             return 0
 
@@ -789,7 +790,7 @@ class IndividualEvaluator:
         )
         equity_values = pd.to_numeric(
             trimmed_equity_curve["Equity"], errors="coerce"
-        ).fillna(float(backtest_result.get("initial_capital", 0.0))).to_numpy()
+        ).fillna(float(backtest_result.get("initial_capital", 0.0))).to_numpy()  # type: ignore[reportAttributeAccessIssue]
 
         trimmed_trades = self._slice_trades_for_window(
             getattr(raw_stats, "_trades", None),
@@ -890,8 +891,8 @@ class IndividualEvaluator:
             entry_bars = pd.to_numeric(trades_df["EntryBar"], errors="coerce")
             exit_bars = pd.to_numeric(trades_df["ExitBar"], errors="coerce")
             mask = (
-                entry_bars.notna()
-                & exit_bars.notna()
+                entry_bars.notna()  # type: ignore[reportAttributeAccessIssue]
+                & exit_bars.notna()  # type: ignore[reportAttributeAccessIssue]
                 & (entry_bars >= start_pos)
                 & (exit_bars < end_pos)
             )
@@ -899,11 +900,11 @@ class IndividualEvaluator:
             if trades_df.empty:
                 return trades_df
             trades_df["EntryBar"] = (
-                pd.to_numeric(trades_df["EntryBar"], errors="coerce").astype(int)
+                pd.to_numeric(trades_df["EntryBar"], errors="coerce").astype(int)  # type: ignore[reportAttributeAccessIssue]
                 - start_pos
             )
             trades_df["ExitBar"] = (
-                pd.to_numeric(trades_df["ExitBar"], errors="coerce").astype(int)
+                pd.to_numeric(trades_df["ExitBar"], errors="coerce").astype(int)  # type: ignore[reportAttributeAccessIssue]
                 - start_pos
             )
         return trades_df
@@ -915,7 +916,7 @@ class IndividualEvaluator:
         ohlc_data: pd.DataFrame,
     ) -> Any:
         """評価窓だけを対象に backtesting.py の統計を再計算する。"""
-        from backtesting._stats import compute_stats
+        from backtesting._stats import compute_stats  # type: ignore
 
         return compute_stats(
             trades=trades_df,
@@ -946,7 +947,7 @@ class IndividualEvaluator:
     def _get_evaluation_context(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Dict[str, Any]:
-        """評価計算に 필요한追加コンテキストを取得（サブクラスでオーバーライド）"""
+        """評価計算に必要な追加コンテキストを取得（サブクラスでオーバーライド）"""
         return {}
 
     # --- EvaluationStrategy への委譲メソッド（バックワード互換性・テスト用） ---

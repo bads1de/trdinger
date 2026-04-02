@@ -241,7 +241,7 @@ class EnsembleTrainer(BaseMLTrainer):
                     primary_proba=primary_proba_series,
                     base_model_probs_df=base_model_probs_df,
                 )
-                return filtered_predictions.values  # Seriesをnp.ndarrayに変換
+                return filtered_predictions.to_numpy()  # Seriesをnp.ndarrayに変換
             else:
                 # メタラベリングが有効でない場合は、予測確率をそのまま返す
                 return predictions_proba

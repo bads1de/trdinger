@@ -286,6 +286,6 @@ def chaos_fractal_dimension(
 
     ctf_series = pd.Series(result, index=close.index, name="CHAOS_FRACTAL_DIM")
     signal = ctf_series.rolling(window=signal_length, min_periods=1).mean()
-    signal.name = "CTFD_SIGNAL"
+    signal.name = "CTFD_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
     return ctf_series, signal

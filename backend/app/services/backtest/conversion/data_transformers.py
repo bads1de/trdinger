@@ -67,7 +67,7 @@ class TradeHistoryTransformer:
                 (
                     "duration",
                     "Duration",
-                    lambda s: pd.to_numeric(s, errors="coerce").fillna(0).astype(int),
+                    lambda s: pd.to_numeric(s, errors="coerce").fillna(0).astype(int),  # type: ignore[reportAttributeAccessIssue]
                 ),
             ]
 
@@ -127,10 +127,10 @@ class EquityCurveTransformer:
                 df = df.iloc[::step]
 
             df["timestamp"] = [self._safe_timestamp_conversion(t) for t in df.index]
-            df["equity"] = pd.to_numeric(df["Equity"], errors="coerce").fillna(0.0)
+            df["equity"] = pd.to_numeric(df["Equity"], errors="coerce").fillna(0.0)  # type: ignore[reportAttributeAccessIssue]
             df["drawdown"] = pd.to_numeric(
                 df.get("DrawdownPct", 0), errors="coerce"
-            ).fillna(0.0)
+            ).fillna(0.0)  # type: ignore[reportAttributeAccessIssue]
 
             result_cols = ["timestamp", "equity", "drawdown"]
             return df[result_cols].to_dict("records")
