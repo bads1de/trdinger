@@ -7,8 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from .base_gene import BaseGene
 from ..config.constants import PositionSizingMethod
+from .base_gene import BaseGene
 
 
 @dataclass(slots=True)

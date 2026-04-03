@@ -105,28 +105,36 @@ class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService)
         try:
             if fetch_all:
                 # 履歴データの一括収集
-                saved_count = await self.bybit_service.collect_historical_long_short_ratio_data(
-                    symbol=symbol,
-                    period=period,
-                    repository=repo,
+                saved_count = (
+                    await self.bybit_service.collect_historical_long_short_ratio_data(
+                        symbol=symbol,
+                        period=period,
+                        repository=repo,
+                    )
                 )
             else:
                 # 差分更新
-                result = await self.bybit_service.fetch_incremental_long_short_ratio_data(
-                    symbol=symbol,
-                    period=period,
-                    repository=repo,
+                result = (
+                    await self.bybit_service.fetch_incremental_long_short_ratio_data(
+                        symbol=symbol,
+                        period=period,
+                        repository=repo,
+                    )
                 )
                 saved_count = result.get("saved_count", 0)
 
-            logger.info(f"{symbol} ({period}) のLS比率データ収集完了: {saved_count}件保存")
-            
+            logger.info(
+                f"{symbol} ({period}) のLS比率データ収集完了: {saved_count}件保存"
+            )
+
             return self._create_success_response(
                 "データ収集完了", data={"count": saved_count}
             )
 
         except Exception as e:
-            logger.error(f"{symbol} ({period}) のLS比率データ収集中にエラーが発生しました: {e}")
+            logger.error(
+                f"{symbol} ({period}) のLS比率データ収集中にエラーが発生しました: {e}"
+            )
             return self._create_error_response(
                 f"データ収集中にエラーが発生しました: {str(e)}"
             )
@@ -152,7 +160,7 @@ class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService)
         """
         logger.info(f"{len(symbols)}シンボル ({period}) の一括データ収集を開始します")
         total_count = 0
-        
+
         for symbol in symbols:
             try:
                 result = await self.collect_long_short_ratio_data(
@@ -161,18 +169,15 @@ class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService)
                     fetch_all=fetch_all,
                     db_session=db_session,
                 )
-                
+
                 if result.get("success") and result.get("data"):
                     total_count += result["data"].get("count", 0)
-                    
+
             except Exception as e:
                 logger.error(f"{symbol}のデータ収集中にエラーが発生しました: {e}")
-        
+
         logger.info(f"一括データ収集完了。合計{total_count}件のデータを保存しました")
 
         return self._create_success_response(
             "一括データ収集完了", data={"total_count": total_count}
         )
-
-
-

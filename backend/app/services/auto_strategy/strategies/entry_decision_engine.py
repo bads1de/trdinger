@@ -32,7 +32,9 @@ class EntryDecisionEngine:
         if self.strategy._check_entry_conditions(-1.0):
             return -1.0
 
-        stateful_dir = self.strategy.stateful_conditions_evaluator.get_stateful_entry_direction()
+        stateful_dir = (
+            self.strategy.stateful_conditions_evaluator.get_stateful_entry_direction()
+        )
         return 0.0 if stateful_dir is None else stateful_dir
 
     def execute_entry(self, direction: float) -> bool:

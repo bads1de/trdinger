@@ -5,11 +5,13 @@ import logging
 from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.core.evaluation.individual_evaluator import (
+    IndividualEvaluator,
+)
 from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
     HybridPredictor,
     RuntimeModelPredictorAdapter,
 )
-from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 from app.services.backtest.services.backtest_service import BacktestService
 from app.services.ml.common.exceptions import MLPredictionError, MLTrainingError
 from app.services.ml.models.model_manager import model_manager
@@ -154,14 +156,22 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                         "volatility_gate_enabled"
                     ] = True
                 else:
-                    run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = False
+                    run_config["strategy_config"]["parameters"][
+                        "volatility_gate_enabled"
+                    ] = False
             except Exception:
-                run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = False
+                run_config["strategy_config"]["parameters"][
+                    "volatility_gate_enabled"
+                ] = False
         elif gate_enabled and self.predictor and self.predictor.is_trained():
             run_config["strategy_config"]["parameters"]["ml_predictor"] = self.predictor
-            run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = True
+            run_config["strategy_config"]["parameters"][
+                "volatility_gate_enabled"
+            ] = True
         elif gate_enabled:
-            run_config["strategy_config"]["parameters"]["volatility_gate_enabled"] = False
+            run_config["strategy_config"]["parameters"][
+                "volatility_gate_enabled"
+            ] = False
 
     def _create_feature_adapter(
         self,

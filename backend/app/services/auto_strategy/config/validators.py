@@ -4,8 +4,8 @@
 設定クラスの検証ロジックを分離・集約します。
 """
 
-from datetime import datetime
 import logging
+from datetime import datetime
 from typing import List, Tuple
 
 from .base import BaseConfig
@@ -155,9 +155,13 @@ class ConfigValidator:
                 f"プライマリメトリクス '{config.primary_metric}' がフィットネス重みに含まれていません"
             )
         if "prediction_score" in config.fitness_weights:
-            errors.append("prediction_score はボラ回帰化に伴い fitness_weights ではサポートされません")
+            errors.append(
+                "prediction_score はボラ回帰化に伴い fitness_weights ではサポートされません"
+            )
         if "prediction_score" in getattr(config, "objectives", []):
-            errors.append("prediction_score はボラ回帰化に伴い objectives ではサポートされません")
+            errors.append(
+                "prediction_score はボラ回帰化に伴い objectives ではサポートされません"
+            )
 
         # 指標設定
         check_range(config.max_indicators, 1, 10, "最大指標数")
@@ -215,7 +219,9 @@ class ConfigValidator:
                 not isinstance(config.two_stage_min_pass_rate, (int, float))
                 or not 0.0 <= float(config.two_stage_min_pass_rate) <= 1.0
             ):
-                errors.append("二段階選抜 pass rate は0.0-1.0の範囲である必要があります")
+                errors.append(
+                    "二段階選抜 pass rate は0.0-1.0の範囲である必要があります"
+                )
 
         robustness_slippage = getattr(config, "robustness_stress_slippage", []) or []
         validation_symbols = getattr(config, "robustness_validation_symbols", None)
@@ -228,7 +234,9 @@ class ConfigValidator:
         else:
             for window in regime_windows:
                 if not isinstance(window, dict):
-                    errors.append("robustness の regime window は辞書である必要があります")
+                    errors.append(
+                        "robustness の regime window は辞書である必要があります"
+                    )
                     break
 
                 name = window.get("name")
@@ -243,12 +251,12 @@ class ConfigValidator:
                     )
                     break
                 try:
-                    parsed_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                    parsed_start = datetime.fromisoformat(
+                        start_date.replace("Z", "+00:00")
+                    )
                     parsed_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
                 except ValueError:
-                    errors.append(
-                        "robustness の regime window の日付形式が不正です"
-                    )
+                    errors.append("robustness の regime window の日付形式が不正です")
                     break
                 if parsed_start >= parsed_end:
                     errors.append(
@@ -261,7 +269,9 @@ class ConfigValidator:
         else:
             for slippage in robustness_slippage:
                 if not isinstance(slippage, (int, float)) or float(slippage) < 0.0:
-                    errors.append("robustness の slippage は0以上の数値である必要があります")
+                    errors.append(
+                        "robustness の slippage は0以上の数値である必要があります"
+                    )
                     break
 
         commission_multipliers = (

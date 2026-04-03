@@ -8,12 +8,12 @@ import numpy as np
 import pandas as pd
 from numba import njit, prange
 
-from ._window_helpers import _window_sum
 from ...data_validation import (
     create_nan_series_bundle,
     handle_pandas_ta_errors,
     validate_series_params,
 )
+from ._window_helpers import _window_sum
 
 
 @njit(cache=True)
@@ -140,6 +140,7 @@ def prime_oscillator(
 
     primes = _get_prime_sequence(length)
     from typing import cast
+
     if not primes:
         return cast(Tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2))
 

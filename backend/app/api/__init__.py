@@ -12,6 +12,3 @@ FastAPIを使用したWeb APIエンドポイントを提供します。
 - ml_management: 機械学習モデルの管理
 - data_reset: データのリセット機能
 """
-
-
-

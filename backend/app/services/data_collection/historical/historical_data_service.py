@@ -446,4 +446,3 @@ class HistoricalDataService:
         )
 
         return results
-

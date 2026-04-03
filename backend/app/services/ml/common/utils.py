@@ -5,8 +5,8 @@ ML共通ユーティリティ
 ML処理で頻繁に使用される共通ロジックを提供します。
 """
 
-import hashlib
 import glob
+import hashlib
 import logging
 import os
 from typing import Any, Dict, List, Optional, cast
@@ -62,7 +62,7 @@ def generate_cache_key(
                 data_hash = pd.util.hash_pandas_object(obj, index=True).values.tobytes()  # type: ignore[reportAttributeAccessIssue]
                 # 2. カラム名のハッシュ（カラム名が変われば結果も変わる可能性があるため）
                 col_hash = str(list(obj.columns)).encode()
-                
+
                 combined = data_hash + col_hash
                 return hashlib.md5(combined).hexdigest()[:8]
             return hashlib.md5(str(obj).encode()).hexdigest()[:8]

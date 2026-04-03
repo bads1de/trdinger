@@ -19,9 +19,9 @@ from app.utils.error_handler import api_safe_execute, ensure_db_initialized
 from database.connection import get_db
 
 router = APIRouter(
-    prefix="/api/data-collection", 
+    prefix="/api/data-collection",
     tags=["data-collection"],
-    dependencies=[Depends(ensure_db_initialized)]
+    dependencies=[Depends(ensure_db_initialized)],
 )
 
 
@@ -142,5 +142,3 @@ async def collect_historical_oi_data(
     return await orchestration_service.start_historical_oi_collection(
         symbol, interval, background_tasks, db
     )
-
-

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Type
 
 import numpy as np
 import pandas as pd
+
 from app.services.ml.common.exceptions import MLPredictionError
 from app.services.ml.common.utils import prepare_data_for_prediction
 from app.services.ml.models.model_manager import ModelManager

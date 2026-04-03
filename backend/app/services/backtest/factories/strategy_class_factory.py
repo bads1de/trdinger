@@ -96,6 +96,3 @@ class StrategyClassFactory:
         else:
             # 通常の戦略の場合、parametersを返す
             return strategy_config.get("parameters", {})
-
-
-

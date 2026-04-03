@@ -20,11 +20,12 @@ from sklearn.metrics import (
     confusion_matrix,
     log_loss,
     matthews_corrcoef,
+    mean_absolute_error,
+    mean_squared_error,
     multilabel_confusion_matrix,
     precision_recall_fscore_support,
     roc_auc_score,
 )
-from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from app.utils.error_handler import safe_operation
 
@@ -224,7 +225,7 @@ class MetricsCalculator:
                         if np.sum(y_true == i) > 0
                     ]
                     metrics["pr_auc"] = np.mean(np.asarray(pr_aucs)) if pr_aucs else 0.0
-    
+
             metrics["log_loss"] = log_loss(y_true, y_proba)
             if n_classes == 2:
                 metrics["brier_score"] = brier_score_loss(y_true, y_pos)

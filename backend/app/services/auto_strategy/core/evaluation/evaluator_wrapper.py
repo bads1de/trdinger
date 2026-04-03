@@ -8,6 +8,7 @@ import logging
 from typing import Any
 
 from app.services.auto_strategy.config.ga import GAConfig
+
 from .individual_evaluator import IndividualEvaluator
 
 logger = logging.getLogger(__name__)

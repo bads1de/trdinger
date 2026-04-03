@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional, Tuple, cast
 import pandas as pd
 
 from app.config.constants import SUPPORTED_TIMEFRAMES
+
 from ..common.utils import calculate_volatility_atr, calculate_volatility_std
 from .trend_scanning import TrendScanning
 from .triple_barrier import TripleBarrier

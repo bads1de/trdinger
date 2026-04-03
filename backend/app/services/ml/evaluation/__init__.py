@@ -7,8 +7,8 @@ ML Evaluation パッケージ
 from .metrics import (
     MetricsCalculator,
     MetricsConfig,
-    metrics_collector,
     get_default_metrics,
+    metrics_collector,
 )
 
 __all__ = [

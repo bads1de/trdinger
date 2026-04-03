@@ -25,23 +25,41 @@ def evaluate_meta_labeling(
 ) -> Dict[str, Any]:
     """メタラベリング用の評価指標を計算"""
     y_t = y_true.values if hasattr(y_true, "values") else y_true
-    res = metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba) or {}
+    res = (
+        metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba)
+        or {}
+    )
 
     # 必須キーのデフォルト値を保証
-    for key in ["precision", "recall", "f1_score", "accuracy", "specificity", 
-                "true_positives", "true_negatives", "false_positives", "false_negatives"]:
+    for key in [
+        "precision",
+        "recall",
+        "f1_score",
+        "accuracy",
+        "specificity",
+        "true_positives",
+        "true_negatives",
+        "false_positives",
+        "false_negatives",
+    ]:
         if key not in res:
             res[key] = 0.0 if "positives" not in key and "negatives" not in key else 0
 
     p = res.get("precision", 0.0)
-    res.update({
-        "win_rate": p,
-        "signal_adoption_rate": float(np.sum(np.asarray(y_pred))) / len(y_pred) if len(y_pred) > 0 else 0.0,
-        "expected_value": (p * 1.0) + ((1 - p) * -1.0),
-        "total_samples": len(y_t),
-        "positive_samples": int(np.sum(np.asarray(y_t))),
-        "negative_samples": int(len(y_t) - np.sum(np.asarray(y_t)))
-    })
+    res.update(
+        {
+            "win_rate": p,
+            "signal_adoption_rate": (
+                float(np.sum(np.asarray(y_pred))) / len(y_pred)
+                if len(y_pred) > 0
+                else 0.0
+            ),
+            "expected_value": (p * 1.0) + ((1 - p) * -1.0),
+            "total_samples": len(y_t),
+            "positive_samples": int(np.sum(np.asarray(y_t))),
+            "negative_samples": int(len(y_t) - np.sum(np.asarray(y_t))),
+        }
+    )
 
     return res
 
@@ -133,13 +151,22 @@ def find_optimal_threshold(
     if metric == "precision":
         best_idx = np.argmax(valid_precisions)
     elif metric == "f1":
-        f1_scores = 2 * (valid_precisions * valid_recalls) / (valid_precisions + valid_recalls + 1e-10)
+        f1_scores = (
+            2
+            * (valid_precisions * valid_recalls)
+            / (valid_precisions + valid_recalls + 1e-10)
+        )
         best_idx = np.argmax(f1_scores)
     else:
         raise ValueError(f"Unknown metric: {metric}")
 
     optimal_threshold = valid_thresholds[best_idx]
-    metrics = evaluate_meta_labeling(y_true, (proba_positive >= optimal_threshold).astype(int), y_pred_proba, threshold=optimal_threshold)
+    metrics = evaluate_meta_labeling(
+        y_true,
+        (proba_positive >= optimal_threshold).astype(int),
+        y_pred_proba,
+        threshold=optimal_threshold,
+    )
 
     return {
         "optimal_threshold": float(optimal_threshold),

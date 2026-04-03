@@ -53,9 +53,11 @@ class HybridFeatureAdapter:
         self._preprocess_handler = preprocess_handler
         self._preprocess_trainer = None
         self._wavelet_transformer: Optional["WaveletFeatureTransformer"] = None
-        
+
         # 設定のハッシュ化（キャッシュキー用）
-        self._config_hash = self._compute_config_hash(wavelet_config, use_derived_features)
+        self._config_hash = self._compute_config_hash(
+            wavelet_config, use_derived_features
+        )
 
         if isinstance(wavelet_config, dict) and wavelet_config.get("enabled", False):
             try:
@@ -73,6 +75,7 @@ class HybridFeatureAdapter:
         """DataFrame の内容からキャッシュ用ハッシュを生成する。"""
         try:
             from pandas.util import hash_pandas_object
+
             return int(hash_pandas_object(df, index=True).sum())  # type: ignore[call-arg]
         except Exception:
             return None
@@ -144,7 +147,9 @@ class HybridFeatureAdapter:
             # 2. イベントラベル特徴量（ラベル由来の列は除外して統合）
             if label_data is not None and not label_data.empty:
                 safe_columns = [
-                    col for col in label_data.columns if not str(col).lower().startswith("label_")
+                    col
+                    for col in label_data.columns
+                    if not str(col).lower().startswith("label_")
                 ]
                 safe_label_data = label_data.loc[:, safe_columns].copy()
                 if "market_regime" not in safe_label_data.columns:
@@ -192,24 +197,24 @@ class HybridFeatureAdapter:
 
             # 4. 拡張特徴量（Wavelet / 派生） - キャッシュ対応
             derived_features = self._get_cached_derived_features(ohlcv_data)
-            
+
             if derived_features is None:
                 # キャッシュミス：計算を実行
                 temp_df = ohlcv_data.copy()
-                
+
                 if self._wavelet_transformer:
                     temp_df = self._wavelet_transformer.append_features(temp_df)
 
                 if self._use_derived_features:
                     temp_df = self._augment_with_derived_features(temp_df)
-                
+
                 # 新しく追加されたカラムのみを抽出
                 new_cols = temp_df.columns.difference(ohlcv_data.columns)
                 derived_features = temp_df[new_cols]
-                
+
                 # キャッシュ保存
                 self._cache_derived_features(ohlcv_data, derived_features)  # type: ignore[arg-type]
-            
+
             # 派生特徴量を結合
             if not derived_features.empty:
                 features_df = pd.concat([features_df, derived_features], axis=1)
@@ -253,7 +258,9 @@ class HybridFeatureAdapter:
             "long_condition_count": long_c,
             "short_condition_count": short_c,
             "has_long_short_separation": int(bool(gene.has_long_short_separation())),
-            "avg_indicator_period": np.mean(numeric_periods) if numeric_periods else 0.0,
+            "avg_indicator_period": (
+                np.mean(numeric_periods) if numeric_periods else 0.0
+            ),
         }
 
         # 指標の有無

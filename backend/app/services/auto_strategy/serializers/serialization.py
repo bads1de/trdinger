@@ -16,7 +16,13 @@ from app.utils.serialization import dataclass_to_dict
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
 if TYPE_CHECKING:
-    from ..genes import Condition, EntryGene, IndicatorGene, PositionSizingGene, TPSLGene
+    from ..genes import (
+        Condition,
+        EntryGene,
+        IndicatorGene,
+        PositionSizingGene,
+        TPSLGene,
+    )
 
 logger = logging.getLogger(__name__)
 

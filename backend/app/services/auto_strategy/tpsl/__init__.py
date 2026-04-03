@@ -17,8 +17,3 @@ __all__ = [
     "TPSLMethod",
     "TPSLResult",
 ]
-
-
-
-
-

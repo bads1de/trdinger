@@ -189,4 +189,3 @@ async def stop_experiment(
             )
 
     return await ErrorHandler.safe_execute_async(_stop_experiment)
-

@@ -72,7 +72,6 @@ class ToolRegistry:
         """
         return list(self._tools.keys())
 
-
     def clear(self) -> None:
         """登録をクリア（テスト用）"""
         self._tools.clear()

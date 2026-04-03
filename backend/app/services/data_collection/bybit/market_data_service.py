@@ -35,7 +35,7 @@ class BybitMarketDataService(BybitService):
         timeframe: str = "1h",
         limit: int = 100,
         since: Optional[int] = None,
-        params: Dict[str, Any] = {},
+        params: Optional[Dict[str, Any]] = None,
     ) -> List[List]:
         """
         OHLCVデータを取得します
@@ -56,6 +56,8 @@ class BybitMarketDataService(BybitService):
             ccxt.ExchangeError: 取引所エラーの場合
         """
         # パラメータの検証
+        if params is None:
+            params = {}
         self._validate_parameters(symbol, limit=limit)
         self._validate_timeframe(timeframe)
 
@@ -164,6 +166,3 @@ class BybitMarketDataService(BybitService):
                 raise ValueError(
                     f"ローソク足データ[{i}]に負の出来高が含まれています: {candle}"
                 )
-
-
-

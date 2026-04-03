@@ -18,9 +18,9 @@ from app.utils.error_handler import api_safe_execute, ensure_db_initialized
 from database.connection import get_db
 
 router = APIRouter(
-    prefix="/api/funding-rates", 
+    prefix="/api/funding-rates",
     tags=["funding-rates"],
-    dependencies=[Depends(ensure_db_initialized)]
+    dependencies=[Depends(ensure_db_initialized)],
 )
 
 
@@ -140,5 +140,3 @@ async def bulk_collect_funding_rates(
     return await orchestration_service.collect_bulk_funding_rate_data(
         symbols=symbols, db_session=db
     )
-
-

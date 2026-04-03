@@ -40,14 +40,19 @@ class BaseResourceManager(ABC):
 
         lvl = level or self._cleanup_level
         mem_before = self._get_memory_usage()
-        stats = {"level": lvl.value, "memory_before": mem_before, "errors": [], "cleaned": []}
+        stats = {
+            "level": lvl.value,
+            "memory_before": mem_before,
+            "errors": [],
+            "cleaned": [],
+        }
 
         # クリーンアップフェーズの定義
         phases = [
             ("_cleanup_temporary_files", "temporary_files"),
             ("_cleanup_cache", "cache"),
             ("_cleanup_models", "models"),
-            ("_cleanup_other_resources", "other_resources")
+            ("_cleanup_other_resources", "other_resources"),
         ]
 
         for method_name, name in phases:
@@ -63,7 +68,9 @@ class BaseResourceManager(ABC):
             stats["objects_collected"] = self._force_garbage_collection()
 
         mem_after = self._get_memory_usage()
-        stats.update({"memory_after": mem_after, "memory_freed": mem_before - mem_after})
+        stats.update(
+            {"memory_after": mem_after, "memory_freed": mem_before - mem_after}
+        )
         self._is_cleaned_up = True
 
         logger.info(f"Cleanup done: {stats['memory_freed']:.2f}MB freed")
@@ -96,7 +103,5 @@ class BaseResourceManager(ABC):
     def _get_memory_usage(self) -> float:
         """現在のメモリ使用量を取得（MB単位）"""
         from app.utils.error_handler import get_memory_usage_mb
+
         return get_memory_usage_mb()
-
-
-

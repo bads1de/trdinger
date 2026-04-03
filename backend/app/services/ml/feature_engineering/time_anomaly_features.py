@@ -53,7 +53,9 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
                 temp_df = temp_df.set_index("timestamp")
                 df = temp_df
             else:
-                logger.warning("DatetimeIndexが見つかりません。時間特徴量を計算できません。")
+                logger.warning(
+                    "DatetimeIndexが見つかりません。時間特徴量を計算できません。"
+                )
                 return df
 
         index: pd.DatetimeIndex = pd.DatetimeIndex(df.index)
@@ -83,13 +85,13 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
         # 3. カレンダーアノマリー
         # 週末フラグ (土日)
         new_features["time_is_weekend"] = (index.dayofweek >= 5).astype(int)  # type: ignore[reportAttributeAccessIssue]
-        
+
         # 月末フラグ (最後の3日間)
         # カレンダー上の最後の3日間をフラグ化
         new_features["time_is_month_end"] = (
             index.day >= (index.days_in_month - 2)  # type: ignore[reportAttributeAccessIssue]
         ).astype(int)
-        
+
         # 週初め・週末の特定の動き (月曜の窓埋め、金曜の手仕舞い)
         new_features["time_is_monday"] = (index.dayofweek == 0).astype(int)  # type: ignore[reportAttributeAccessIssue]
         new_features["time_is_friday"] = (index.dayofweek == 4).astype(int)  # type: ignore[reportAttributeAccessIssue]
@@ -105,18 +107,28 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
             # ただし、生の出来高はスケールが大きすぎるため、移動平均との比率などを使うのがベター
             # ここでは単純な積算を行い、後段のスケーリングに任せる
             vol = df["volume"]
-            new_features["time_interaction_vol_asia"] = vol * new_features["time_session_asia"]
-            new_features["time_interaction_vol_europe"] = vol * new_features["time_session_europe"]
-            new_features["time_interaction_vol_us"] = vol * new_features["time_session_us"]
+            new_features["time_interaction_vol_asia"] = (
+                vol * new_features["time_session_asia"]
+            )
+            new_features["time_interaction_vol_europe"] = (
+                vol * new_features["time_session_europe"]
+            )
+            new_features["time_interaction_vol_us"] = (
+                vol * new_features["time_session_us"]
+            )
 
         # ボラティリティとの相互作用 (US時間のボラティリティは重要)
         if "close" in df.columns:
             # 簡易ボラティリティ (24時間の標準偏差)
             returns = df["close"].pct_change()
             volatility = returns.rolling(window=24).std().fillna(0)
-            
-            new_features["time_interaction_volatility_us"] = volatility * new_features["time_session_us"]
-            new_features["time_interaction_volatility_overlap"] = volatility * new_features["time_session_overlap"]
+
+            new_features["time_interaction_volatility_us"] = (
+                volatility * new_features["time_session_us"]
+            )
+            new_features["time_interaction_volatility_overlap"] = (
+                volatility * new_features["time_session_overlap"]
+            )
 
         # 6. 適応的ボラティリティ・クラスタリング (Adaptive Volatility)
         # 「普段のこの時間はどうなのか？」との比較
@@ -125,7 +137,7 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
             returns = df["close"].pct_change()
             # 現在のボラティリティ (1h)
             current_vol = returns.rolling(window=3).std().fillna(0)
-            
+
             # 過去の同時刻のボラティリティ平均 (簡易的に24hラグの移動平均で代用)
             # 本来は groupby(hour) だが、未来のデータを使わないよう rolling で実装
             # 24h, 48h, 72h... 前のボラティリティの平均
@@ -136,23 +148,27 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
                 window=24, min_periods=1
             ).mean()
             historical_vol = historical_vol.fillna(fallback_historical_vol).fillna(0)
-            
+
             # 相対ボラティリティ比 (Relative Volatility Ratio)
             # 1.0 > : 普段より動いている（異常検知）
-            new_features["time_adaptive_vol_ratio"] = current_vol / (historical_vol + 1e-9)
+            new_features["time_adaptive_vol_ratio"] = current_vol / (
+                historical_vol + 1e-9
+            )
 
         # 7. 市場微細構造プロキシ (Microstructure Proxy)
         # Amihudの非流動性指標 (Illiquidity Ratio): |Return| / Volume
         # 時間帯ごとの「板の薄さ」を捉える
         if "close" in df.columns and "volume" in df.columns:
             abs_return = df["close"].pct_change().abs()
-            volume = df["volume"].replace(0, 1) # 0除算回避
-            
+            volume = df["volume"].replace(0, 1)  # 0除算回避
+
             amihud_illiquidity = abs_return / volume
-            
+
             # これも対数変換等が必要だが、ここでは相対値として扱う
             # セッションごとの流動性リスクを表す
-            new_features["time_micro_illiquidity"] = amihud_illiquidity * 1000000 # スケール調整
+            new_features["time_micro_illiquidity"] = (
+                amihud_illiquidity * 1000000
+            )  # スケール調整
 
         # 8. イベント経過時間 (Time Since Session Start)
         # 開始直後か、終了間際かを連続値で表現

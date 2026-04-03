@@ -23,7 +23,9 @@ def _window_mean(values: np.ndarray, start: int, end: int) -> float:
 
 
 @njit(cache=True)
-def _window_mean_and_std(values: np.ndarray, start: int, end: int) -> tuple[float, float]:
+def _window_mean_and_std(
+    values: np.ndarray, start: int, end: int
+) -> tuple[float, float]:
     length = end - start
     if length <= 0:
         return 0.0, 0.0

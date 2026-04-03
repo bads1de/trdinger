@@ -2,30 +2,30 @@
 
 from __future__ import annotations
 
-from .frama import frama
-from .quantum_flow import quantum_flow
-from .harmonic_resonance import harmonic_resonance
-from .chaos_fractal_dimension import chaos_fractal_dimension
-from .prime_oscillator import prime_oscillator
-from .fibonacci_cycle import fibonacci_cycle
 from .adaptive_entropy import adaptive_entropy
+from .chaos_fractal_dimension import chaos_fractal_dimension
 from .connors_rsi import connors_rsi
 from .damiani_volatmeter import damiani_volatmeter
 from .demarker import demarker
-from .kairi_relative_index import kairi_relative_index
-from .entropy_volatility_index import entropy_volatility_index
-from .trend_intensity_index import trend_intensity_index
-from .gri import gri
-from .rmi import rmi
-from .polarized_fractal_efficiency import pfe
-from .market_meanness_index import mmi
 from .ehlers_cyber_cycle import ehlers_cyber_cycle
 from .ehlers_instantaneous_trendline import ehlers_instantaneous_trendline
-from .smoothed_adaptive_momentum import smoothed_adaptive_momentum
-from .vortex_rsi import vortex_rsi
-from .trend_trigger_factor import ttf
-from .random_walk_index import rwi
+from .entropy_volatility_index import entropy_volatility_index
+from .fibonacci_cycle import fibonacci_cycle
+from .frama import frama
+from .gri import gri
+from .harmonic_resonance import harmonic_resonance
 from .hurst_exponent import hurst_exponent
+from .kairi_relative_index import kairi_relative_index
+from .market_meanness_index import mmi
+from .polarized_fractal_efficiency import pfe
+from .prime_oscillator import prime_oscillator
+from .quantum_flow import quantum_flow
+from .random_walk_index import rwi
+from .rmi import rmi
+from .smoothed_adaptive_momentum import smoothed_adaptive_momentum
+from .trend_intensity_index import trend_intensity_index
+from .trend_trigger_factor import ttf
+from .vortex_rsi import vortex_rsi
 
 
 class OriginalIndicators:

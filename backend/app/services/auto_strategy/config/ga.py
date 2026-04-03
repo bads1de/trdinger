@@ -112,7 +112,9 @@ class GAConfig(BaseConfig):
     fitness_sharing: Dict[str, Any] = field(
         default_factory=lambda: GA_DEFAULT_FITNESS_SHARING.copy()
     )
-    enable_fitness_sharing: bool = bool(GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"])
+    enable_fitness_sharing: bool = bool(
+        GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
+    )
     sharing_radius: float = GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
     sharing_alpha: float = GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
     sampling_threshold: int = int(GA_DEFAULT_FITNESS_SHARING["sampling_threshold"])
@@ -152,8 +154,8 @@ class GAConfig(BaseConfig):
 
     # PurgedKFold設定（過学習対策）
     enable_purged_kfold: bool = False  # PurgedKFoldを有効にするフラグ
-    purged_kfold_splits: int = 5       # 分割数
-    purged_kfold_embargo: float = 0.01 # エンバーゴ率
+    purged_kfold_splits: int = 5  # 分割数
+    purged_kfold_embargo: float = 0.01  # エンバーゴ率
 
     # MLフィルター設定
     volatility_gate_enabled: bool = False
@@ -226,9 +228,7 @@ class GAConfig(BaseConfig):
     robustness_validation_symbols: Optional[List[str]] = None
     robustness_regime_windows: List[Dict[str, str]] = field(default_factory=list)
     robustness_stress_slippage: List[float] = field(default_factory=list)
-    robustness_stress_commission_multipliers: List[float] = field(
-        default_factory=list
-    )
+    robustness_stress_commission_multipliers: List[float] = field(default_factory=list)
     robustness_aggregate_method: str = "robust"
 
     # 階層的GA設定（サブGA）
@@ -338,10 +338,18 @@ class GAConfig(BaseConfig):
 
         # ネスト辞書からのサブ設定復元
         working = dict(data)
-        if "mutation_config" in working and isinstance(working["mutation_config"], dict):
-            working["mutation_config"] = MutationConfig.from_dict(working["mutation_config"])
-        if "evaluation_config" in working and isinstance(working["evaluation_config"], dict):
-            working["evaluation_config"] = EvaluationConfig.from_dict(working["evaluation_config"])
+        if "mutation_config" in working and isinstance(
+            working["mutation_config"], dict
+        ):
+            working["mutation_config"] = MutationConfig.from_dict(
+                working["mutation_config"]
+            )
+        if "evaluation_config" in working and isinstance(
+            working["evaluation_config"], dict
+        ):
+            working["evaluation_config"] = EvaluationConfig.from_dict(
+                working["evaluation_config"]
+            )
         if "hybrid_config" in working and isinstance(working["hybrid_config"], dict):
             working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
         if "tuning_config" in working and isinstance(working["tuning_config"], dict):
@@ -379,9 +387,7 @@ class GAConfig(BaseConfig):
                     robustness_config.validation_symbols
                 )
             if "robustness_regime_windows" not in provided_keys:
-                working["robustness_regime_windows"] = (
-                    robustness_config.regime_windows
-                )
+                working["robustness_regime_windows"] = robustness_config.regime_windows
             if "robustness_stress_slippage" not in provided_keys:
                 working["robustness_stress_slippage"] = (
                     robustness_config.stress_slippage

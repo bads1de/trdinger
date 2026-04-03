@@ -347,7 +347,7 @@ class VolumeIndicators:
                     volume=volume.astype(int),
                     length=length,
                 )
-            
+
             if res is None:
                 return pd.Series(np.nan, index=close.index, dtype=float)
             return cast(pd.Series, res)
@@ -487,9 +487,7 @@ class VolumeIndicators:
                     _h = getattr(idx, "hour")
                     _m = getattr(idx, "minute")
                     _s = getattr(idx, "second")
-                    time_indices = (
-                        _h * 3600 + _m * 60 + _s
-                    ).values.astype(np.int32)
+                    time_indices = (_h * 3600 + _m * 60 + _s).values.astype(np.int32)
                     vol_arr = volume.values.astype(np.float64)
 
                     res_arr = _njit_rvol_loop(vol_arr, time_indices, window)
@@ -655,6 +653,7 @@ class VolumeIndicators:
         Returns:
             Volume Profile の DataFrame（Price Level と Volume の列）
         """
+
         def _calculate_vp() -> pd.DataFrame | None:
             result = ta.vp(close=close, volume=volume, bins=bins, width=width)
             return result

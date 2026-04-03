@@ -90,6 +90,3 @@ class BybitOpenInterestService(BybitService):
             fetch_all=fetch_all,
             intervalTime=interval,
         )
-
-
-

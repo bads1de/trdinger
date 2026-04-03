@@ -360,12 +360,13 @@ class OptimizationService:
         force_col_wise: bool = True,
     ) -> tuple[float, int]:
         """FracDiff フィルタ、特徴量選択、学習、評価を 1 箇所にまとめる"""
+        from lightgbm import LGBMClassifier
+        from sklearn.metrics import balanced_accuracy_score as sklearn_metric
+
         from app.services.ml.feature_engineering.feature_engineering_service import (
             FeatureEngineeringService,
         )
         from app.services.ml.feature_selection.feature_selector import FeatureSelector
-        from lightgbm import LGBMClassifier
-        from sklearn.metrics import balanced_accuracy_score as sklearn_metric
 
         X_train_filtered = FeatureEngineeringService.filter_superset_for_d(
             X_train, d_value
@@ -418,12 +419,13 @@ class OptimizationService:
         ...
         """
         import numpy as np
+        from lightgbm import LGBMClassifier
         from sklearn.model_selection import TimeSeriesSplit, cross_val_score
+
         from app.services.ml.feature_engineering.feature_engineering_service import (
             FeatureEngineeringService,
         )
         from app.services.ml.feature_selection.feature_selector import FeatureSelector
-        from lightgbm import LGBMClassifier
 
         logger.info("🚀 メタモデル最適化 (OOF) を開始")
 

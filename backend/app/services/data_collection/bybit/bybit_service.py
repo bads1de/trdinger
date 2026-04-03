@@ -780,6 +780,3 @@ class BybitService(ABC):
         return await self._execute_with_db_session(
             func=save_with_db, repository=repository
         )
-
-
-

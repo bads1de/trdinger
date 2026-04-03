@@ -50,7 +50,11 @@ def get_two_stage_pool_size(candidate_count: int, elite_count: int, config: Any)
     if candidate_count <= 0 or elite_count <= 0:
         return 0
     configured_pool_size = _safe_int(
-        getattr(config, "two_stage_candidate_pool_size", elite_count + _DEFAULT_RERANK_MARGIN)
+        getattr(
+            config,
+            "two_stage_candidate_pool_size",
+            elite_count + _DEFAULT_RERANK_MARGIN,
+        )
     )
     if configured_pool_size <= 0:
         configured_pool_size = elite_count + _DEFAULT_RERANK_MARGIN

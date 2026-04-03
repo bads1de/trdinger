@@ -74,6 +74,3 @@ async def get_ohlcv_data(
     return await ErrorHandler.safe_execute_async(
         _get_ohlcv, message="OHLCVデータ取得エラー"
     )
-
-
-

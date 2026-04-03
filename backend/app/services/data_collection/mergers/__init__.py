@@ -5,7 +5,7 @@
 """
 
 from .fr_merger import FRMerger
-from .oi_merger import OIMerger
 from .lsr_merger import LSRMerger
+from .oi_merger import OIMerger
 
 __all__ = ["OIMerger", "FRMerger", "LSRMerger"]

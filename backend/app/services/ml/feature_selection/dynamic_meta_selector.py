@@ -1,12 +1,13 @@
 import logging
+from typing import Dict, List, Optional, Union
+
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Optional, Union
+from lightgbm import LGBMClassifier
+from scipy.cluster.hierarchy import fcluster, linkage
+from scipy.spatial.distance import squareform
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectorMixin
-from scipy.cluster.hierarchy import linkage, fcluster
-from scipy.spatial.distance import squareform
-from lightgbm import LGBMClassifier
 
 logger = logging.getLogger(__name__)
 
@@ -173,10 +174,10 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         self.selected_features_ = final_candidates
 
         # support_mask_ の作成
-        feature_names: List[str] = self.feature_names_in_ if self.feature_names_in_ is not None else []
-        self.support_mask_ = np.array(
-            [f in final_candidates for f in feature_names]
+        feature_names: List[str] = (
+            self.feature_names_in_ if self.feature_names_in_ is not None else []
         )
+        self.support_mask_ = np.array([f in final_candidates for f in feature_names])
 
         logger.info(
             f"DynamicMetaSelector complete: Selected {len(final_candidates)} features."

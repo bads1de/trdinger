@@ -5,9 +5,9 @@ DEAPライブラリを使用したGA実装。
 """
 
 import logging
-from math import isfinite
-import time
 import threading
+import time
+from math import isfinite
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 if TYPE_CHECKING:
@@ -16,32 +16,34 @@ if TYPE_CHECKING:
 import numpy as np
 from deap import tools
 
+from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
+from app.services.auto_strategy.genes import StrategyGene
 from app.services.backtest.services.backtest_service import BacktestService
 
-from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
-from app.services.auto_strategy.genes import StrategyGene
+from ..evaluation.evaluation_report import EvaluationReport as EvaluationReportType
+from ..evaluation.individual_evaluator import IndividualEvaluator
+from ..evaluation.parallel_evaluator import ParallelEvaluator
+from ..evaluation.report_persistence import build_report_summary
+from ..fitness.fitness_sharing import FitnessSharing
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner, EvolutionStoppedError
-from .report_selection import (
-    build_report_rank_key_from_primary_fitness,
-    extract_primary_fitness,
-    get_two_stage_rank,
-    get_two_stage_score,
-    get_two_stage_best_individual,
-    is_evaluation_report,
-)
-from ..evaluation.report_persistence import build_report_summary
-from ..evaluation.evaluation_report import EvaluationReport as EvaluationReportType
-from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import (
     _gene_kwargs,
     create_deap_mutate_wrapper,
     crossover_strategy_genes,
     mutate_strategy_gene,
 )
-from ..evaluation.individual_evaluator import IndividualEvaluator
-from ..evaluation.parallel_evaluator import ParallelEvaluator
+from .report_selection import (
+    build_report_rank_key_from_primary_fitness,
+    extract_primary_fitness,
+    get_two_stage_best_individual,
+    get_two_stage_rank,
+    get_two_stage_score,
+    is_evaluation_report,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +223,9 @@ class GeneticAlgorithmEngine:
                             seed = seeds[i % len(seeds)]
                             population[i] = individual_class(**_gene_kwargs(seed))
                     else:
-                        logger.warning("個体クラスが未初期化のため、シード戦略の注入をスキップしました")
+                        logger.warning(
+                            "個体クラスが未初期化のため、シード戦略の注入をスキップしました"
+                        )
                     logger.info(
                         f"シード戦略を {num_to_inject} 個注入しました "
                         f"(注入率: {config.seed_injection_rate * 100:.1f}%)"
@@ -447,9 +451,7 @@ class GeneticAlgorithmEngine:
             population, config, halloffame
         )
 
-        best_fitness_value = self._extract_result_best_fitness(
-            best_individual, config
-        )
+        best_fitness_value = self._extract_result_best_fitness(best_individual, config)
         best_evaluation_summary = self._build_individual_evaluation_summary(
             best_individual, config
         )
@@ -495,11 +497,14 @@ class GeneticAlgorithmEngine:
             persisted_population = ranked_population[:100]
             result["all_strategies"] = persisted_population
             result["fitness_scores"] = [
-                extract_primary_fitness(individual) for individual in persisted_population
+                extract_primary_fitness(individual)
+                for individual in persisted_population
             ]
-            result["evaluation_summaries"] = self._collect_population_evaluation_summaries(
-                persisted_population,
-                config,
+            result["evaluation_summaries"] = (
+                self._collect_population_evaluation_summaries(
+                    persisted_population,
+                    config,
+                )
             )
 
         # 多目的最適化の場合、パレート最適解を追加
@@ -592,9 +597,7 @@ class GeneticAlgorithmEngine:
         """停止要求がある場合は EvolutionStoppedError を送出します。"""
         if self._stop_event.is_set():
             if context:
-                raise EvolutionStoppedError(
-                    f"停止要求により中断されました: {context}"
-                )
+                raise EvolutionStoppedError(f"停止要求により中断されました: {context}")
             raise EvolutionStoppedError("停止要求により中断されました")
 
     def _create_strategy_individual(self):
@@ -741,6 +744,7 @@ class GeneticAlgorithmEngine:
 
     def _rank_population_for_persistence(self, population: List[Any]) -> List[Any]:
         """保存順序用に個体群を安定ソートする。"""
+
         def sort_key(individual: Any) -> Tuple[int, int, float]:
             rank = get_two_stage_rank(individual)
             if rank is not None:
@@ -789,10 +793,10 @@ class GeneticAlgorithmEngine:
         refreshed_summary = self._build_individual_evaluation_summary(
             best_gene,
             config,
-            force_robustness=bool(
-                getattr(config, "enable_two_stage_selection", False)
+            force_robustness=bool(getattr(config, "enable_two_stage_selection", False)),
+            primary_fitness=self._extract_primary_fitness_from_result(
+                refreshed_fitness
             ),
-            primary_fitness=self._extract_primary_fitness_from_result(refreshed_fitness),
         )
         return refreshed_fitness, refreshed_summary or fallback_summary
 
@@ -853,7 +857,9 @@ class GeneticAlgorithmEngine:
             try:
                 tuned_candidate = tuner.tune(candidate)
             except Exception as exc:
-                logger.warning("[Tuning] 候補 %s のチューニングに失敗: %s", candidate_rank, exc)
+                logger.warning(
+                    "[Tuning] 候補 %s のチューニングに失敗: %s", candidate_rank, exc
+                )
                 tuned_candidate = candidate
             tuned_candidate.metadata.setdefault("tuning_candidate_rank", candidate_rank)
             tuned_candidates.append(tuned_candidate)
@@ -869,7 +875,9 @@ class GeneticAlgorithmEngine:
         if not tuned_candidates:
             return None
 
-        best_tuple: Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]] = None
+        best_tuple: Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]] = (
+            None
+        )
         best_key = None
 
         for candidate_rank, candidate in enumerate(tuned_candidates):
@@ -944,7 +952,9 @@ class GeneticAlgorithmEngine:
         if not tuned_candidates:
             return None
 
-        best_tuple: Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]] = None
+        best_tuple: Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]] = (
+            None
+        )
         best_fitness: Optional[float] = None
 
         for candidate in tuned_candidates:

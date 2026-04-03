@@ -20,12 +20,6 @@ from .data_conversion import (
     OpenInterestDataConverter,
     parse_timestamp_safe,
 )
-from .serialization import (
-    dataclass_from_dict,
-    dataclass_from_json,
-    dataclass_to_dict,
-    dataclass_to_json,
-)
 from .error_handler import (
     DataError,
     ErrorHandler,
@@ -38,6 +32,12 @@ from .error_handler import (
     safe_operation,
 )
 from .response import api_response, error_response
+from .serialization import (
+    dataclass_from_dict,
+    dataclass_from_json,
+    dataclass_to_dict,
+    dataclass_to_json,
+)
 
 __all__ = [
     # レスポンスユーティリティ
@@ -66,6 +66,3 @@ __all__ = [
     "dataclass_from_dict",
     "dataclass_from_json",
 ]
-
-
-

@@ -5,7 +5,6 @@ GA実行、進捗管理、結果保存、戦略テストを統合的に管理し
 """
 
 import logging
-
 from typing import Any, Dict, List, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
@@ -49,7 +48,12 @@ class AutoStrategyService:
         # データベースセッションファクトリ
         self.db_session_factory = SessionLocal
 
-        if backtest_service and persistence_service and experiment_manager and experiment_application_service:
+        if (
+            backtest_service
+            and persistence_service
+            and experiment_manager
+            and experiment_application_service
+        ):
             # DI モード: 全依存が注入された場合
             self.backtest_service = backtest_service
             self.persistence_service = persistence_service

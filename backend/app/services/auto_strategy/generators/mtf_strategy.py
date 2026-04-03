@@ -5,13 +5,13 @@
 高勝率なMTFロジックを生成します。
 """
 
+import copy
 import logging
 import random
-import copy
 from typing import Any, List, Tuple, Union
 
-from ..genes import Condition, ConditionGroup, IndicatorGene
 from ..config.constants import IndicatorType
+from ..genes import Condition, ConditionGroup, IndicatorGene
 
 logger = logging.getLogger(__name__)
 

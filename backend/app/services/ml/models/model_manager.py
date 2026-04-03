@@ -336,7 +336,10 @@ class ModelManager:
                 for model_path in all_model_files:
                     model_info = self.load_metadata_only(model_path)
                     metadata = (model_info or {}).get("metadata", {})
-                    if all(metadata.get(key) == value for key, value in metadata_filters.items()):
+                    if all(
+                        metadata.get(key) == value
+                        for key, value in metadata_filters.items()
+                    ):
                         filtered_files.append(model_path)
                 all_model_files = filtered_files
 

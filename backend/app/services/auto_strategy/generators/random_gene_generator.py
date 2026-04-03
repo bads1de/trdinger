@@ -24,7 +24,6 @@ from ..genes import (
 )
 from ..genes.tool import ToolGene
 from ..tools import tool_registry
-
 from .condition_generator import ConditionGenerator
 
 logger = logging.getLogger(__name__)
@@ -125,7 +124,10 @@ class RandomGeneGenerator:
 
         n_indicators = random.randint(self.min_indicators, self.max_indicators)
         if len(self._indicator_cache) >= n_indicators:
-            return [ind.clone() for ind in random.sample(self._indicator_cache, n_indicators)]
+            return [
+                ind.clone()
+                for ind in random.sample(self._indicator_cache, n_indicators)
+            ]
         return generate_random_indicators(self.config)
 
     def _get_cached_tpsl(self) -> TPSLGene:

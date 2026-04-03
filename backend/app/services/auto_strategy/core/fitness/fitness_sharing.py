@@ -113,7 +113,9 @@ class FitnessSharing:
                     # 高速化: キャッシュがあれば使用
                     if hasattr(individual, "_feature_vector"):
                         vector = individual._feature_vector
-                        genes.append(individual) # geneとしてindividual自身を使用（近似）
+                        genes.append(
+                            individual
+                        )  # geneとしてindividual自身を使用（近似）
                         vectors.append(vector)
                         valid_indices.append(i)
                         continue
@@ -123,18 +125,18 @@ class FitnessSharing:
                         gene = individual
                     else:
                         gene = self.gene_serializer.from_list(individual, StrategyGene)
-                    
+
                     if gene is not None:
                         genes.append(gene)
                         vector = self._vectorize_gene(gene)  # type: ignore[arg-type]
                         vectors.append(vector)
                         valid_indices.append(i)
-                        
+
                         # キャッシュ保存
                         try:
                             individual._feature_vector = vector  # type: ignore[attr-defined]
                         except AttributeError:
-                            pass # 属性設定できないオブジェクトの場合はスキップ
+                            pass  # 属性設定できないオブジェクトの場合はスキップ
                     else:
                         genes.append(None)
                 except Exception as e:
@@ -147,7 +149,9 @@ class FitnessSharing:
             vectors_array = np.array(vectors)
 
             # ベクトル次元数チェックとパディング（次元不一致対策）
-            max_dim = max(v.shape[0] for v in vectors_array if isinstance(v, np.ndarray))
+            max_dim = max(
+                v.shape[0] for v in vectors_array if isinstance(v, np.ndarray)
+            )
             vectors_padded: list[np.ndarray[Any, Any]] = []
             for v in vectors_array:
                 if v.shape[0] < max_dim:
@@ -158,7 +162,9 @@ class FitnessSharing:
             vectors_array = np.array(vectors_padded)
 
             # 最適化されたニッチカウント計算
-            niche_counts_vectorized = self.compute_niche_counts_vectorized(vectors_array)
+            niche_counts_vectorized = self.compute_niche_counts_vectorized(
+                vectors_array
+            )
 
             # 全個体用のニッチカウント配列を作成（デフォルト1.0）
             niche_counts = [1.0] * len(population)

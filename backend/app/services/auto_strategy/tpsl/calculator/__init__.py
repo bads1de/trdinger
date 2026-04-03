@@ -20,8 +20,3 @@ __all__ = [
     "StatisticalCalculator",
     "AdaptiveCalculator",
 ]
-
-
-
-
-

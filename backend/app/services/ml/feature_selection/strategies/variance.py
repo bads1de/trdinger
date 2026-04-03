@@ -26,6 +26,10 @@ class VarianceStrategy(BaseSelectionStrategy):
         mask = cast(np.ndarray, selector.get_support())
         return mask, {
             "method": "variance",
-            "variances": cast(np.ndarray, selector.variances_).tolist() if selector.variances_ is not None else [],
+            "variances": (
+                cast(np.ndarray, selector.variances_).tolist()
+                if selector.variances_ is not None
+                else []
+            ),
             "threshold": config.variance_threshold,
         }

@@ -8,8 +8,8 @@ from sklearn.utils.class_weight import compute_sample_weight
 
 from app.utils.error_handler import ModelError
 
-from ..evaluation.metrics import metrics_collector
 from ..common.utils import get_feature_importance_unified, predict_class_from_proba
+from ..evaluation.metrics import metrics_collector
 
 logger = logging.getLogger(__name__)
 
@@ -77,9 +77,16 @@ class BaseGradientBoostingModel(ABC):
             if eval_set and isinstance(eval_set, list) and len(eval_set) > 0:
                 X_val, y_val = eval_set[0]
             elif early_stop:
-                logger.info(f"Early Stopping有効(rounds={early_stop}): データを分割します")
+                logger.info(
+                    f"Early Stopping有効(rounds={early_stop}): データを分割します"
+                )
                 idx = int(len(X) * 0.8)
-                X_train, X_val, y_train, y_val = X.iloc[:idx], X.iloc[idx:], y.iloc[:idx], y.iloc[idx:]
+                X_train, X_val, y_train, y_val = (
+                    X.iloc[:idx],
+                    X.iloc[idx:],
+                    y.iloc[:idx],
+                    y.iloc[idx:],
+                )
 
             self._train_model_impl(
                 cast(pd.DataFrame, X_train),
@@ -182,8 +189,10 @@ class BaseGradientBoostingModel(ABC):
                         else (y_pred_proba > 0.5).astype(int)
                     )
 
-                    detailed_metrics = metrics_collector.calculate_comprehensive_metrics(
-                        y_test, y_pred_class, y_pred_proba
+                    detailed_metrics = (
+                        metrics_collector.calculate_comprehensive_metrics(
+                            y_test, y_pred_class, y_pred_proba
+                        )
                     )
                     logger.info(
                         f"{self.ALGORITHM_NAME}モデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
@@ -337,5 +346,3 @@ class BaseGradientBoostingModel(ABC):
             "volatility_regression",
             "regression",
         }
-
-

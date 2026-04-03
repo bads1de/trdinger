@@ -85,9 +85,7 @@ class MomentumIndicators:
     @staticmethod
     def rsi(data: pd.Series, period: int = 14) -> pd.Series:
         """相対力指数"""
-        return run_series_indicator(
-            data, period, lambda: ta.rsi(data, window=period)
-        )
+        return run_series_indicator(data, period, lambda: ta.rsi(data, window=period))
 
     @staticmethod
     def macd(
@@ -213,9 +211,7 @@ class MomentumIndicators:
         return run_series_indicator(
             close,
             length,
-            lambda: ta.er(
-                close=close, length=length, drift=drift, offset=offset
-            ),
+            lambda: ta.er(close=close, length=length, drift=drift, offset=offset),
         )
 
     @staticmethod
@@ -230,9 +226,7 @@ class MomentumIndicators:
         return run_series_indicator(
             close,
             length,
-            lambda: ta.lrsi(
-                close=close, length=length, gamma=gamma, offset=offset
-            ),
+            lambda: ta.lrsi(close=close, length=length, gamma=gamma, offset=offset),
         )
 
     @staticmethod
@@ -587,6 +581,7 @@ class MomentumIndicators:
     @staticmethod
     def qqe(data: pd.Series, length: int = 14) -> pd.Series:
         """Qualitative Quantitative Estimation"""
+
         def compute() -> pd.Series:
             result = ta.qqe(data, length=length)
 
@@ -601,7 +596,9 @@ class MomentumIndicators:
             rsi_result = ta.rsi(data, length=length)
             if isinstance(rsi_result, pd.DataFrame):
                 return rsi_result.iloc[:, 0]
-            return rsi_result if rsi_result is not None else create_nan_series_like(data)
+            return (
+                rsi_result if rsi_result is not None else create_nan_series_like(data)
+            )
 
         return run_series_indicator(data, length, compute)
 
@@ -900,7 +897,8 @@ class MomentumIndicators:
             data,
             length,
             lambda: normalize_non_finite(
-                data.diff(length).abs() / data.diff(1).abs().rolling(window=length).sum(),
+                data.diff(length).abs()
+                / data.diff(1).abs().rolling(window=length).sum(),
                 fill_value=0.0,
             ),
         )
@@ -919,7 +917,9 @@ class MomentumIndicators:
         result = run_multi_series_indicator(
             {"open_": open_, "high": high, "low": low, "close": close},
             length,
-            lambda: ta.brar(open_=open_, high=high, low=low, close=close, length=length),
+            lambda: ta.brar(
+                open_=open_, high=high, low=low, close=close, length=length
+            ),
             fallback_factory=lambda: create_nan_series_bundle(close, 2),
         )
 
@@ -1001,7 +1001,9 @@ class MomentumIndicators:
         result = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
-            lambda: ta.kdj(high=high, low=low, close=close, length=length, signal=signal),
+            lambda: ta.kdj(
+                high=high, low=low, close=close, length=length, signal=signal
+            ),
             fallback_factory=lambda: create_nan_series_bundle(close, 3),
         )
 
@@ -1071,7 +1073,9 @@ class MomentumIndicators:
         result = run_series_indicator(
             close,
             slow,
-            lambda: ta.smi(close=close, fast=fast, slow=slow, signal=signal, scalar=scalar),
+            lambda: ta.smi(
+                close=close, fast=fast, slow=slow, signal=signal, scalar=scalar
+            ),
             fallback_factory=lambda: create_nan_series_bundle(close, 3),
         )
 

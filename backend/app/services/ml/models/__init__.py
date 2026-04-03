@@ -14,10 +14,10 @@ MLモデルラッパーモジュール
 - feature_columns: List[str] プロパティ
 """
 
+from ..common.registry import algorithm_registry
 from .catboost import CatBoostModel
 from .lightgbm import LightGBMModel
 from .xgboost import XGBoostModel
-from ..common.registry import algorithm_registry
 
 __all__ = [
     "LightGBMModel",
@@ -46,6 +46,3 @@ def get_available_models():
             available.append(model)
 
     return available
-
-
-

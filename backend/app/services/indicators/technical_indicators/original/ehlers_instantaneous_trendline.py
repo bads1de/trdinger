@@ -25,12 +25,7 @@ def _njit_instantaneous_trendline_loop(
     # it[2] = (price[0] + price[1] + price[2]) / 3
     it[2] = (prices[0] + prices[1] + prices[2]) / 3.0
     # it[3] = (price[0] + 2*price[1] + 2*price[2] + price[3]) / 6
-    it[3] = (
-        prices[3]
-        + 2.0 * prices[2]
-        + 2.0 * prices[1]
-        + prices[0]
-    ) / 6.0
+    it[3] = (prices[3] + 2.0 * prices[2] + 2.0 * prices[1] + prices[0]) / 6.0
 
     for i in range(4, n):
         # IT[i] = (alpha - alpha^2/4)*price[i] + (alpha^2/2)*price[i-1]

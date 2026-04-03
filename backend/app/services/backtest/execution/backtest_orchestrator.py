@@ -12,7 +12,6 @@ import pandas as pd
 from pydantic import ValidationError
 
 from ..config.backtest_config import BacktestRunConfig, BacktestRunConfigValidationError
-from ..services.backtest_data_service import BacktestDataService
 from ..conversion.backtest_result_converter import (
     BacktestResultConversionError,
     BacktestResultConverter,
@@ -21,6 +20,7 @@ from ..factories.strategy_class_factory import (
     StrategyClassCreationError,
     StrategyClassFactory,
 )
+from ..services.backtest_data_service import BacktestDataService
 from .backtest_executor import BacktestExecutionError, BacktestExecutor
 
 logger = logging.getLogger(__name__)
@@ -149,5 +149,3 @@ class BacktestOrchestrator:
     def get_supported_strategies(self) -> Dict[str, Any]:
         """サポートされている戦略一覧を取得"""
         return self._executor.get_supported_strategies()
-
-

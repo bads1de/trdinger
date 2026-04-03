@@ -63,8 +63,3 @@ class ToolGene:
             enabled=self.enabled,
             params=self.params.copy(),
         )
-
-
-
-
-

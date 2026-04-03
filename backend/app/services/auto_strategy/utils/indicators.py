@@ -10,7 +10,6 @@ from typing import Dict, List
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config.indicator_config import indicator_registry
 
-
 # =============================================================================
 # 指標リスト取得関連
 # =============================================================================

@@ -15,7 +15,6 @@ from app.api.dependencies import (
 from app.services.data_collection.bybit.long_short_ratio_service import (
     BybitLongShortRatioService,
 )
-
 from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 
 logger = logging.getLogger(__name__)
@@ -95,6 +94,3 @@ async def collect_long_short_ratio_data(
         "message": f"データ収集タスクを開始しました (mode: {mode})",
         "symbol": symbol,
     }
-
-
-

@@ -10,10 +10,10 @@ import re
 from copy import deepcopy
 from typing import Any, Dict, Optional
 
-from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.auto_strategy.core.evaluation.report_persistence import (
     attach_backtest_evaluation_summary,
 )
+from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.backtest.services.backtest_service import BacktestService
 
 from ..config import GAConfig

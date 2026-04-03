@@ -9,20 +9,19 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 import logging
 from typing import Any, List, Optional, Tuple, Union, cast
 
-
 import pandas as pd
 from backtesting import Strategy
 
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
-from ..genes.entry import EntryGene
-from ..genes.conditions import StateTracker
 from ..genes import (
     Condition,
     ConditionGroup,
     IndicatorGene,
-    TPSLMethod,
     TPSLGene,
+    TPSLMethod,
 )
+from ..genes.conditions import StateTracker
+from ..genes.entry import EntryGene
 from ..positions.entry_executor import EntryExecutor
 from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.position_sizing_service import PositionSizingService
@@ -157,9 +156,7 @@ class UniversalStrategy(Strategy):
         # ベースタイムフレーム（パラメータから取得、デフォルトは1h）
         self.base_timeframe = params.get("timeframe", "1h")
         self.evaluation_start = params.get("evaluation_start")
-        self._evaluation_start = self._normalize_evaluation_start(
-            self.evaluation_start
-        )
+        self._evaluation_start = self._normalize_evaluation_start(self.evaluation_start)
 
         # 1分足データの取得（1分足シミュレーション用）
         self._minute_data = params.get("minute_data")
@@ -464,7 +461,9 @@ class UniversalStrategy(Strategy):
                             self._precomputed_atr = cast(pd.Series, atr_series).values
                             logger.debug("ATR事前計算完了")
                         else:
-                            logger.warning("ATR事前計算失敗: ta.atr が None を返しました")
+                            logger.warning(
+                                "ATR事前計算失敗: ta.atr が None を返しました"
+                            )
 
                     except ImportError:
                         # pandas-taがない場合などはフォールバック
@@ -499,9 +498,7 @@ class UniversalStrategy(Strategy):
                                 low = self.data.df["Low"]
                                 close = self.data.df["Close"]
                                 # pandas-taのATR計算
-                                atr_result = ta.atr(
-                                    high, low, close, length=atr_period
-                                )
+                                atr_result = ta.atr(high, low, close, length=atr_period)
                                 if atr_result is not None:
                                     self._precomputed_tpsl_atr[atr_period] = cast(
                                         pd.Series, atr_result
@@ -662,7 +659,7 @@ class UniversalStrategy(Strategy):
             return False
 
         # ツールレジストリをインポート
-        from ..tools import tool_registry, ToolContext
+        from ..tools import ToolContext, tool_registry
 
         try:
             # 現在のバーのタイムスタンプを取得

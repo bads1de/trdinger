@@ -170,9 +170,15 @@ class MultiTimeframeFeatureCalculator:
 
     def _resample_to_timeframe(self, df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         """1時間足データを指定時間足にリサンプル"""
-        resampled = df.resample(timeframe).agg({
-            "open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"
-        })
+        resampled = df.resample(timeframe).agg(
+            {
+                "open": "first",
+                "high": "max",
+                "low": "min",
+                "close": "last",
+                "volume": "sum",
+            }
+        )
         return resampled.ffill()
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
@@ -185,6 +191,3 @@ class MultiTimeframeFeatureCalculator:
         rsi = 100 - (100 / (1 + rs))
 
         return rsi
-
-
-

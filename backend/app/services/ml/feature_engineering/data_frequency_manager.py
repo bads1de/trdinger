@@ -138,17 +138,21 @@ class DataFrequencyManager:
                 if ohlcv_timeframe in ["4h", "1d"]:
                     # ダウンサンプリング
                     # 区間平均は区間完了後にしか分からないため、1本遅らせる
-                    resampled_fr = fr_work.resample(
-                        resample_timeframe, label="left"
-                    ).mean().shift(1)
+                    resampled_fr = (
+                        fr_work.resample(resample_timeframe, label="left")
+                        .mean()
+                        .shift(1)
+                    )
                 else:
                     # アップサンプリングまたは同等
                     resampled_fr = fr_work.resample(resample_timeframe).ffill()
 
                 # OHLCVのインデックスに合わせる
-                aligned_fr_data = resampled_fr.reindex(
-                    target_index, method="ffill"
-                ).fillna(0).reset_index()
+                aligned_fr_data = (
+                    resampled_fr.reindex(target_index, method="ffill")
+                    .fillna(0)
+                    .reset_index()
+                )
 
             # 建玉残高データの処理
             aligned_oi_data = None
@@ -163,15 +167,19 @@ class DataFrequencyManager:
                 # リサンプリング
                 if ohlcv_timeframe in ["4h", "1d"]:
                     # 区間平均は区間完了後にしか分からないため、1本遅らせる
-                    resampled_oi = oi_work.resample(
-                        resample_timeframe, label="left"
-                    ).mean().shift(1)
+                    resampled_oi = (
+                        oi_work.resample(resample_timeframe, label="left")
+                        .mean()
+                        .shift(1)
+                    )
                 else:
                     resampled_oi = oi_work.resample(resample_timeframe).ffill()
 
-                aligned_oi_data = resampled_oi.reindex(
-                    target_index, method="ffill"
-                ).fillna(0).reset_index()
+                aligned_oi_data = (
+                    resampled_oi.reindex(target_index, method="ffill")
+                    .fillna(0)
+                    .reset_index()
+                )
 
             return aligned_fr_data, aligned_oi_data
 

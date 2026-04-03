@@ -43,15 +43,9 @@ def build_lightgbm_parameter_space(prefix: str = "") -> Dict[str, ParameterSpace
     return {
         f"{prefix}num_leaves": ParameterSpace(type="integer", low=10, high=100),
         f"{prefix}learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
-        f"{prefix}feature_fraction": ParameterSpace(
-            type="real", low=0.5, high=1.0
-        ),
-        f"{prefix}bagging_fraction": ParameterSpace(
-            type="real", low=0.5, high=1.0
-        ),
-        f"{prefix}min_data_in_leaf": ParameterSpace(
-            type="integer", low=5, high=50
-        ),
+        f"{prefix}feature_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
+        f"{prefix}bagging_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
+        f"{prefix}min_data_in_leaf": ParameterSpace(type="integer", low=5, high=50),
         f"{prefix}max_depth": ParameterSpace(type="integer", low=3, high=15),
     }
 
@@ -199,9 +193,16 @@ class OptunaOptimizer:
                         f"Bounds (low, high) required for {cfg.type} parameter: {name}"
                     )
                 if cfg.type == "real":
-                    params[name] = trial.suggest_float(name, cfg.low, cfg.high, step=cfg.step)
+                    params[name] = trial.suggest_float(
+                        name, cfg.low, cfg.high, step=cfg.step
+                    )
                 else:
-                    params[name] = trial.suggest_int(name, int(cfg.low), int(cfg.high), step=int(cfg.step) if cfg.step else 1)
+                    params[name] = trial.suggest_int(
+                        name,
+                        int(cfg.low),
+                        int(cfg.high),
+                        step=int(cfg.step) if cfg.step else 1,
+                    )
             elif cfg.type == "categorical":
                 if not cfg.categories:
                     raise AssertionError(

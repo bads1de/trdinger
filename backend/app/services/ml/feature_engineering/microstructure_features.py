@@ -1,6 +1,7 @@
+from typing import Optional
+
 import numpy as np
 import pandas as pd
-from typing import Optional
 
 from .base_feature_calculator import sanitize_numeric_dataframe
 
@@ -12,8 +13,8 @@ class MicrostructureFeatureCalculator:
     """
 
     def calculate_features(
-        self, 
-        ohlcv: pd.DataFrame, 
+        self,
+        ohlcv: pd.DataFrame,
         fr_df: Optional[pd.DataFrame] = None,
         oi_df: Optional[pd.DataFrame] = None,
         ls_df: Optional[pd.DataFrame] = None,
@@ -21,7 +22,9 @@ class MicrostructureFeatureCalculator:
         df = pd.DataFrame(index=ohlcv.index)
 
         # 1. 流動性・マーケットインパクト
-        df["Amihud_Illiquidity_20h"] = self.calculate_amihud_illiquidity(ohlcv, window=20)
+        df["Amihud_Illiquidity_20h"] = self.calculate_amihud_illiquidity(
+            ohlcv, window=20
+        )
         df["Kyles_Lambda_20h"] = self.calculate_kyles_lambda(ohlcv, window=20)
 
         # 2. 統計的異常度
@@ -35,7 +38,11 @@ class MicrostructureFeatureCalculator:
             fr_aligned = sanitize_numeric_dataframe(
                 fr_df.reindex(ohlcv.index), fill_value=0.0, forward_fill=True
             )
-            col = "funding_rate" if "funding_rate" in fr_aligned.columns else fr_aligned.columns[0]
+            col = (
+                "funding_rate"
+                if "funding_rate" in fr_aligned.columns
+                else fr_aligned.columns[0]
+            )
             fr = fr_aligned[col]
             mean_fr = fr.rolling(168).mean()
             std_fr = fr.rolling(168).std()
@@ -49,7 +56,11 @@ class MicrostructureFeatureCalculator:
             ls_aligned = sanitize_numeric_dataframe(
                 ls_df.reindex(ohlcv.index), fill_value=0.0, forward_fill=True
             )
-            ls_col = "long_short_ratio" if "long_short_ratio" in ls_aligned.columns else ls_aligned.columns[0]
+            ls_col = (
+                "long_short_ratio"
+                if "long_short_ratio" in ls_aligned.columns
+                else ls_aligned.columns[0]
+            )
             ls = ls_aligned[ls_col]
 
             # A. Sentiment Elasticity
@@ -62,7 +73,7 @@ class MicrostructureFeatureCalculator:
 
             # C. LS Price Incongruence
             df["LS_Price_Incongruence"] = ohlcv["close"].pct_change(4) * ls.diff(4) * -1
-            
+
             # D. LS FR Stress Index
             if "FR_Extremity_Zscore" in df.columns:
                 ls_mean = ls.rolling(168).mean()
@@ -75,10 +86,14 @@ class MicrostructureFeatureCalculator:
 
         return df
 
-    def calculate_amihud_illiquidity(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
+    def calculate_amihud_illiquidity(
+        self, df: pd.DataFrame, window: int = 20
+    ) -> pd.Series:
         returns = df["close"].pct_change().abs()
         dollar_volume = df["volume"] * df["close"]
-        return (returns / (dollar_volume + 1e-9)).rolling(window=window).mean().fillna(0)
+        return (
+            (returns / (dollar_volume + 1e-9)).rolling(window=window).mean().fillna(0)
+        )
 
     def calculate_kyles_lambda(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
         returns = df["close"].pct_change()

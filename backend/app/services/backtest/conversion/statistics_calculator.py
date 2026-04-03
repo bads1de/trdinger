@@ -178,15 +178,23 @@ class BacktestStatisticsCalculator:
         total_trades: int,
     ) -> None:
         """個別の取引データから指標を計算してstatisticsを更新"""
-        pnl_series = pd.to_numeric(trades_df[pnl_col], errors="coerce").fillna(0.0)  # pyright: ignore[reportAttributeAccessIssue]
+        pnl_series = pd.to_numeric(trades_df[pnl_col], errors="coerce").fillna(
+            0.0
+        )  # pyright: ignore[reportAttributeAccessIssue]
 
         wins_mask = pnl_series > 0  # pyright: ignore[reportOperatorIssue]
         losses_mask = pnl_series < 0  # pyright: ignore[reportOperatorIssue]
 
         win_count = int(wins_mask.sum())  # pyright: ignore[reportAttributeAccessIssue]
-        loss_count = int(losses_mask.sum())  # pyright: ignore[reportAttributeAccessIssue]
-        winning_pnl = float(pnl_series[wins_mask].sum())  # pyright: ignore[reportAttributeAccessIssue]
-        losing_pnl = float(pnl_series[losses_mask].sum())  # pyright: ignore[reportAttributeAccessIssue]
+        loss_count = int(
+            losses_mask.sum()
+        )  # pyright: ignore[reportAttributeAccessIssue]
+        winning_pnl = float(
+            pnl_series[wins_mask].sum()
+        )  # pyright: ignore[reportAttributeAccessIssue]
+        losing_pnl = float(
+            pnl_series[losses_mask].sum()
+        )  # pyright: ignore[reportAttributeAccessIssue]
 
         calculated_win_rate = (
             float(win_count) / float(total_trades) * 100.0 if total_trades > 0 else 0.0

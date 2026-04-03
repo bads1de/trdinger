@@ -151,9 +151,7 @@ def run_series_indicator(
     fallback_factory: Optional[Callable[[], Any]] = None,
 ) -> Any:
     """単一 Series 入力の指標計算を検証付きで実行する。"""
-    validation = validate_series_params(
-        data, length, min_data_length=min_data_length
-    )
+    validation = validate_series_params(data, length, min_data_length=min_data_length)
     return _run_indicator_with_validation(
         validation,
         result_factory,

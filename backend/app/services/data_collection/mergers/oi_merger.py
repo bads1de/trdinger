@@ -89,6 +89,3 @@ class OIMerger:
         df = pd.DataFrame(data)
         df.index = pd.DatetimeIndex([r.data_timestamp for r in oi_data])
         return df
-
-
-

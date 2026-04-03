@@ -235,6 +235,7 @@ class ErrorHandler:
             message: エラーメッセージ
             status_code: エラー時のHTTPステータスコード
         """
+
         def decorator(func: Callable[..., Awaitable[Any]]):
             @functools.wraps(func)
             async def wrapper(*args, **kwargs):
@@ -246,11 +247,15 @@ class ErrorHandler:
                 except Exception as e:
                     logger.error(f"API例外処理: {message} - {e}", exc_info=True)
                     raise HTTPException(status_code=status_code, detail=message)
+
             return wrapper
+
         return decorator
 
     @staticmethod
-    def handle_timeout(func: Callable[..., T], timeout: int, *args: Any, **kwargs: Any) -> T:
+    def handle_timeout(
+        func: Callable[..., T], timeout: int, *args: Any, **kwargs: Any
+    ) -> T:
         """
         タイムアウト付きで関数を実行する（Windows/Unix両対応）
 
@@ -476,11 +481,11 @@ safe_execute = ErrorHandler.safe_execute
 api_safe_execute = ErrorHandler.api_safe_execute
 safe_ml_operation = safe_operation
 ml_operation_context = operation_context
- 
+
 # API用 DB初期化確認ヘルパー
 DEFAULT_DB_INIT_ERROR_MESSAGE = "データベースの初期化に失敗しました"
- 
- 
+
+
 def ensure_db_initialized(
     error_message: str = DEFAULT_DB_INIT_ERROR_MESSAGE,
 ) -> None:
@@ -512,6 +517,3 @@ def timeout_decorator(timeout_seconds: int = 30):
         return wrapper
 
     return decorator
-
-
-

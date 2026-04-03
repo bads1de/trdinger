@@ -16,6 +16,3 @@ __all__ = [
     "EnsembleTrainer",
     "StackingEnsemble",
 ]
-
-
-

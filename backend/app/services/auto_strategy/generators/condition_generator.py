@@ -2,7 +2,7 @@ import logging
 import random
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from app.services.indicators.config import indicator_registry, IndicatorScaleType
+from app.services.indicators.config import IndicatorScaleType, indicator_registry
 from app.utils.error_handler import safe_operation
 
 from ..config.constants import (

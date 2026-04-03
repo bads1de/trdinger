@@ -9,11 +9,11 @@ import importlib as _importlib
 import sys as _sys
 
 from .config import (
+    SUPPORTED_STRATEGIES,
     BacktestConfig,
     BacktestRunConfig,
     BacktestRunConfigValidationError,
     StrategyConfig,
-    SUPPORTED_STRATEGIES,
 )
 from .services import BacktestDataService, BacktestService
 

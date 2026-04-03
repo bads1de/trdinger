@@ -103,6 +103,3 @@ class BaseDataCollectionOrchestrationService:
         if symbol.endswith("/USD"):
             return f"{symbol}:USD"
         return f"{symbol}:USDT"
-
-
-

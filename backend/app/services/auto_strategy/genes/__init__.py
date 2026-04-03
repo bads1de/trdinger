@@ -4,16 +4,20 @@
 戦略遺伝子、GA設定、フィットネス評価などのモデルを定義します。
 """
 
+from ..config.constants import EntryType, PositionSizingMethod, TPSLMethod
 from .conditions import (
     Condition,
     ConditionGroup,
     EntryDirection,
-    StateTracker,
     StatefulCondition,
+    StateTracker,
 )
 from .entry import EntryGene, create_random_entry_gene
-from ..config.constants import EntryType, PositionSizingMethod, TPSLMethod
-from .indicator import IndicatorGene, generate_random_indicators, create_random_indicator_gene
+from .indicator import (
+    IndicatorGene,
+    create_random_indicator_gene,
+    generate_random_indicators,
+)
 from .position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,

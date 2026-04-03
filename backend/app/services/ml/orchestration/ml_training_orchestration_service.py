@@ -7,6 +7,7 @@ MLモデルのトレーニングフローを制御し、
 """
 
 import logging
+import os
 import threading
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple, Union
@@ -14,6 +15,8 @@ from typing import Any, Dict, Optional, Tuple, Union
 import pandas as pd
 from sqlalchemy.orm import Session
 
+from app.services.ml.common.config import ml_config_manager
+from app.services.ml.models.model_manager import model_manager
 from app.services.ml.optimization.optimization_service import (
     OptimizationService,
     OptimizationSettings,
@@ -27,17 +30,15 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
-from app.services.ml.common.config import ml_config_manager
-from app.services.ml.models.model_manager import model_manager
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.config import get_default_ensemble_config, get_default_single_model_config
 from ..ensemble.ensemble_trainer import EnsembleTrainer
 from ..trainers.volatility_regression_trainer import VolatilityRegressionTrainer
-import os
 
 logger = logging.getLogger(__name__)
 
 # --- モデル情報取得ユーティリティ (旧orchestration_utilsより統合) ---
+
 
 def load_model_metadata_safely(model_path: str) -> Optional[Dict[str, Any]]:
     """モデルファイルからメタデータを安全に読み込む"""
@@ -51,7 +52,9 @@ def load_model_metadata_safely(model_path: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def get_latest_model_with_info(model_name_pattern: str = "*") -> Optional[Dict[str, Any]]:
+def get_latest_model_with_info(
+    model_name_pattern: str = "*",
+) -> Optional[Dict[str, Any]]:
     """最新モデルの情報とメトリクスを取得"""
     try:
         latest_model = model_manager.get_latest_model(
@@ -69,28 +72,45 @@ def get_latest_model_with_info(model_name_pattern: str = "*") -> Optional[Dict[s
             return None
 
         metadata = model_data["metadata"]
-        metrics = model_manager.extract_model_performance_metrics(latest_model, metadata=metadata)
+        metrics = model_manager.extract_model_performance_metrics(
+            latest_model, metadata=metadata
+        )
         file_info = {
             "size_mb": os.path.getsize(latest_model) / (1024 * 1024),
             "modified_at": datetime.fromtimestamp(os.path.getmtime(latest_model)),
         }
-        return {"path": latest_model, "metadata": metadata, "metrics": metrics, "file_info": file_info}
+        return {
+            "path": latest_model,
+            "metadata": metadata,
+            "metrics": metrics,
+            "file_info": file_info,
+        }
     except Exception as e:
         logger.warning(f"最新モデル情報取得エラー: {e}")
         return None
 
 
-def get_model_info_with_defaults(model_info: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def get_model_info_with_defaults(
+    model_info: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """モデル情報にデフォルト値を適用"""
     from ..evaluation.metrics import get_default_metrics
+
     if not model_info:
         return {
-            **get_default_metrics(), "model_type": "No Model",
-            "feature_count": 0, "training_samples": 0,
-            "last_updated": "未学習", "file_size_mb": 0.0
+            **get_default_metrics(),
+            "model_type": "No Model",
+            "feature_count": 0,
+            "training_samples": 0,
+            "last_updated": "未学習",
+            "file_size_mb": 0.0,
         }
 
-    m, meta, f = model_info.get("metrics", get_default_metrics()), model_info["metadata"], model_info["file_info"]
+    m, meta, f = (
+        model_info.get("metrics", get_default_metrics()),
+        model_info["metadata"],
+        model_info["file_info"],
+    )
     return {
         **m,
         "model_type": meta.get("model_type", "Unknown"),
@@ -223,7 +243,9 @@ class MLTrainingService(BaseResourceManager):
 
             try:
                 # バックグラウンドタスクを追加
-                background_tasks.add_task(self._train_in_background, config, training_id)
+                background_tasks.add_task(
+                    self._train_in_background, config, training_id
+                )
             except Exception:
                 # タスク登録に失敗した場合は状態を元に戻す
                 with training_status_lock:
@@ -245,9 +267,7 @@ class MLTrainingService(BaseResourceManager):
             return api_response(
                 success=True,
                 message="MLトレーニングを開始しました",
-                data={
-                    "training_id": training_id
-                },
+                data={"training_id": training_id},
             )
         except Exception as e:
             logger.error(f"MLトレーニング開始エラー: {e}")
@@ -272,15 +292,19 @@ class MLTrainingService(BaseResourceManager):
         if config.prediction_horizon < 1:
             raise ValueError("prediction_horizon は 1 以上である必要があります")
         if config.cross_validation_folds < 1:
-            raise ValueError(
-                "cross_validation_folds は 1 以上である必要があります"
-            )
+            raise ValueError("cross_validation_folds は 1 以上である必要があります")
         if config.task_type != "volatility_regression":
-            raise ValueError("現在サポートしている task_type は volatility_regression のみです")
+            raise ValueError(
+                "現在サポートしている task_type は volatility_regression のみです"
+            )
         if config.target_kind != "log_realized_vol":
-            raise ValueError("現在サポートしている target_kind は log_realized_vol のみです")
+            raise ValueError(
+                "現在サポートしている target_kind は log_realized_vol のみです"
+            )
         if config.ensemble_config and getattr(config.ensemble_config, "enabled", False):
-            raise ValueError("volatility_regression では ensemble_config はサポートしていません")
+            raise ValueError(
+                "volatility_regression では ensemble_config はサポートしていません"
+            )
 
     async def get_training_status(self) -> Dict[str, Any]:
         """トレーニング状態を取得"""
@@ -394,8 +418,8 @@ class MLTrainingService(BaseResourceManager):
                     )
 
                     # トレーナー設定の決定
-                    trainer_type, ensemble_cfg, single_cfg = self._determine_trainer_config(
-                        config
+                    trainer_type, ensemble_cfg, single_cfg = (
+                        self._determine_trainer_config(config)
                     )
 
                     # 自分自身のインスタンスまたは新しいインスタンスで学習実行
@@ -543,8 +567,13 @@ class MLTrainingService(BaseResourceManager):
             return
 
         with training_status_lock:
-            if not training_status["is_training"] and training_status["status"] == "stopped":
-                logger.info("トレーニング停止済みのため完了状態への更新をスキップします")
+            if (
+                not training_status["is_training"]
+                and training_status["status"] == "stopped"
+            ):
+                logger.info(
+                    "トレーニング停止済みのため完了状態への更新をスキップします"
+                )
                 return
 
             training_status.update(
@@ -585,7 +614,9 @@ class MLTrainingService(BaseResourceManager):
             "threshold_down",
             "threshold_method",
         }
-        used_deprecated_fields = sorted(explicit_fields.intersection(deprecated_threshold_fields))
+        used_deprecated_fields = sorted(
+            explicit_fields.intersection(deprecated_threshold_fields)
+        )
         if used_deprecated_fields:
             logger.warning(
                 "旧方向予測キーは非推奨のため無視します: %s",
@@ -640,7 +671,9 @@ class MLTrainingService(BaseResourceManager):
         if optimization_settings and optimization_settings.enabled:
             task_type = kwargs.get("task_type", self.trainer.config.training.task_type)
             if task_type == "volatility_regression":
-                raise ValueError("volatility_regression では optimization_settings をサポートしていません")
+                raise ValueError(
+                    "volatility_regression では optimization_settings をサポートしていません"
+                )
             logger.info("ハイパーパラメータ最適化を開始")
             try:
                 opt_result = self.optimization_service.optimize_parameters(
@@ -675,8 +708,6 @@ class MLTrainingService(BaseResourceManager):
             if opt_result:
                 result["optimization_result"] = opt_result
         return result
-
-
 
     def generate_forecast(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """ボラティリティ予測を生成"""

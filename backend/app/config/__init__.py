@@ -32,6 +32,7 @@ _UNIFIED_CONFIG_EXPORTS = {
     "unified_config",
 }
 
+
 def __getattr__(name: str) -> Any:
     if name in _UNIFIED_CONFIG_EXPORTS:
         module = import_module(".unified_config", __name__)
@@ -46,6 +47,7 @@ def __dir__() -> list[str]:
             *_UNIFIED_CONFIG_EXPORTS,
         }
     )
+
 
 __all__ = [
     # 共通定数

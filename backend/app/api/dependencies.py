@@ -15,7 +15,6 @@ from app.services.auto_strategy import AutoStrategyService
 from app.services.auto_strategy.services.generated_strategy_service import (
     GeneratedStrategyService,
 )
-
 from app.services.data_collection.bybit.long_short_ratio_service import (
     BybitLongShortRatioService,
 )
@@ -86,6 +85,7 @@ def get_generated_strategy_service_with_db(
 
 def get_bybit_open_interest_service():
     """BybitOpenInterestService を取得する。"""
+
     def factory():
         from app.services.data_collection.bybit.open_interest_service import (
             BybitOpenInterestService,
@@ -98,6 +98,7 @@ def get_bybit_open_interest_service():
 
 def get_bybit_funding_rate_service():
     """BybitFundingRateService を取得する。"""
+
     def factory():
         from app.services.data_collection.bybit.funding_rate_service import (
             BybitFundingRateService,
@@ -116,6 +117,7 @@ def get_data_collection_orchestration_service():
     """
     DataCollectionOrchestrationService のインスタンスを取得（依存性注入用）
     """
+
     def factory():
         from app.services.data_collection.orchestration.data_collection_orchestration_service import (
             DataCollectionOrchestrationService,
@@ -130,6 +132,7 @@ def get_data_management_orchestration_service():
     """
     DataManagementOrchestrationService のインスタンスを取得（依存性注入用）
     """
+
     def factory():
         from app.services.data_collection.orchestration.data_management_orchestration_service import (
             DataManagementOrchestrationService,
@@ -146,6 +149,7 @@ def get_open_interest_orchestration_service(
     """
     OpenInterestOrchestrationService のインスタンスを取得（依存性注入用）
     """
+
     def factory():
         from app.services.data_collection.orchestration.open_interest_orchestration_service import (
             OpenInterestOrchestrationService,
@@ -160,6 +164,7 @@ def get_ml_training_service():
     """
     MLTrainingService のインスタンスを取得（依存性注入用）
     """
+
     def factory():
         from app.services.ml.orchestration.ml_training_orchestration_service import (
             MLTrainingService,
@@ -174,6 +179,7 @@ def get_backtest_orchestration_service():
     """
     BacktestOrchestrationService のインスタンスを取得（依存性注入用）
     """
+
     def factory():
         from app.services.backtest.orchestration.backtest_orchestration_service import (
             BacktestOrchestrationService,
@@ -190,6 +196,7 @@ def get_funding_rate_orchestration_service(
     """
     FundingRateOrchestrationService のインスタンスを取得（依存性注入用）
     """
+
     def factory():
         from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
             FundingRateOrchestrationService,
@@ -204,6 +211,7 @@ def get_ml_management_orchestration_service():
     """
     MLManagementOrchestrationService のインスタンスを取得（依存性注入用）
     """
+
     def factory():
         from app.services.ml.orchestration.ml_management_orchestration_service import (
             MLManagementOrchestrationService,

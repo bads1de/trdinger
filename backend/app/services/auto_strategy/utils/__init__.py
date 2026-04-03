@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     )
     from .normalization import NormalizationUtils, create_default_strategy_gene
 
+
 def __getattr__(name: str):
     """遅延インポートで循環インポートを回避"""
     if name in ("OperandGroup", "OperandGroupingSystem", "operand_grouping_system"):

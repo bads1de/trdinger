@@ -11,10 +11,10 @@ import numpy as np
 import pandas as pd
 
 from ....utils.error_handler import ModelError
-from ..trainers.base_ml_trainer import BaseMLTrainer
-from ..evaluation.metrics import metrics_collector
 from ..common.registry import algorithm_registry
 from ..common.utils import predict_class_from_proba, validate_training_inputs
+from ..evaluation.metrics import metrics_collector
+from ..trainers.base_ml_trainer import BaseMLTrainer
 from .meta_labeling import MetaLabelingService
 from .stacking import StackingEnsemble
 
@@ -46,7 +46,9 @@ class EnsembleTrainer(BaseMLTrainer):
         self.ensemble_config = ensemble_config
         self.ensemble_method = ensemble_config.get("method", "stacking")
         self.ensemble_model: Optional[StackingEnsemble] = None
-        self.meta_labeling_service: Optional[MetaLabelingService] = None  # メタラベリング サービスを追加
+        self.meta_labeling_service: Optional[MetaLabelingService] = (
+            None  # メタラベリング サービスを追加
+        )
         self.strict_error_mode = ensemble_config.get(
             "strict_error_mode", True
         )  # エラー時に例外を発生させるか
@@ -81,9 +83,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 logger.error(f"アンサンブル確率予測エラー: {e}")
                 raise ModelError(f"アンサンブル確率予測に失敗しました: {e}")
 
-            logger.warning(
-                f"確率予測に失敗したためゼロ配列でフォールバックします: {e}"
-            )
+            logger.warning(f"確率予測に失敗したためゼロ配列でフォールバックします: {e}")
             return np.zeros((len(features_df), 2))
 
     def _extract_optimized_parameters(
@@ -510,7 +510,9 @@ class EnsembleTrainer(BaseMLTrainer):
             self.ensemble_model = self._model
 
             # メタデータから設定を復元
-            metadata = self.current_model_metadata or getattr(self, "metadata", {}) or {}
+            metadata = (
+                self.current_model_metadata or getattr(self, "metadata", {}) or {}
+            )
             self.metadata = metadata
             self.ensemble_config = metadata.get("ensemble_config", {})
             self.ensemble_method = metadata.get("ensemble_method", "stacking")
@@ -519,8 +521,9 @@ class EnsembleTrainer(BaseMLTrainer):
             meta_model_path = metadata.get("meta_model_path")
             if meta_model_path:
                 try:
-                    from ..models.model_manager import model_manager
                     import os
+
+                    from ..models.model_manager import model_manager
 
                     meta_data = None
 

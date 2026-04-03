@@ -37,7 +37,9 @@ class SignalGenerator:
     def _validate_df(self, df: pd.DataFrame, window: int) -> bool:
         """データの最小数チェック"""
         if len(df) < window:
-            logger.warning(f"データ数（{len(df)}）が不足（{window}必要）ため空の結果を返します")
+            logger.warning(
+                f"データ数（{len(df)}）が不足（{window}必要）ため空の結果を返します"
+            )
             return False
         return True
 
@@ -58,10 +60,11 @@ class SignalGenerator:
 
         up, dn = sma + (dev * std), sma - (dev * std)
         up_mask, dn_mask = prices > up, prices < dn
-        
+
         # 新規ブレイクアウトのみ
-        mask = (up_mask & ~up_mask.shift(1, fill_value=False)) | \
-               (dn_mask & ~dn_mask.shift(1, fill_value=False))
+        mask = (up_mask & ~up_mask.shift(1, fill_value=False)) | (
+            dn_mask & ~dn_mask.shift(1, fill_value=False)
+        )
 
         return cast(pd.DatetimeIndex, df.index[mask])
 
@@ -95,7 +98,9 @@ class SignalGenerator:
 
         v: pd.Series = df[volume_column]
         avg_v = cast(pd.Series, v.rolling(window).mean()).shift(1)
-        return cast(pd.DatetimeIndex, df.index[(v >= avg_v * multiplier) & avg_v.notna()])
+        return cast(
+            pd.DatetimeIndex, df.index[(v >= avg_v * multiplier) & avg_v.notna()]
+        )
 
     def get_combined_events(
         self,
@@ -116,7 +121,9 @@ class SignalGenerator:
         if use_donchian:
             events.append(self.get_donchian_breakout_events(df, donchian_window))
         if use_volume:
-            events.append(self.get_volume_spike_events(df, volume_window, volume_multiplier))
+            events.append(
+                self.get_volume_spike_events(df, volume_window, volume_multiplier)
+            )
 
         if not events:
             return pd.DatetimeIndex([])
@@ -125,6 +132,3 @@ class SignalGenerator:
         for e in events[1:]:
             combined = combined.union(e)
         return cast(pd.DatetimeIndex, combined.sort_values())
-
-
-

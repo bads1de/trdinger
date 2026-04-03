@@ -33,26 +33,25 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     ) -> pd.DataFrame:
         """暗号通貨特化特徴量を生成"""
         logger.info("暗号通貨特化特徴量を計算中...")
-        
+
         # 必須カラムチェック
         if not self.validate_input_data(df, ["open", "high", "low", "close", "volume"]):
             return df
 
         result_df = df.copy()
         # 価格レベル特徴量 (24h)
-        result_df["price_vs_low_24h"] = df["close"] / df["low"].rolling(24).min().fillna(df["low"])
-        
+        result_df["price_vs_low_24h"] = df["close"] / df["low"].rolling(
+            24
+        ).min().fillna(df["low"])
+
         # クリーニング (inf除外)
         result_df = sanitize_numeric_dataframe(
             result_df, fill_value=None, forward_fill=False
         )
-        
+
         logger.info("暗号通貨特化特徴量を追加: 1個")
         return result_df
 
 
 # 後方互換性のためのクラス別名
 CryptoFeatures = CryptoFeatureCalculator
-
-
-

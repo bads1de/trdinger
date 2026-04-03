@@ -32,12 +32,17 @@ class TreeBasedStrategy(BaseSelectionStrategy):
         config: FeatureSelectionConfig,
     ) -> Tuple[np.ndarray, Dict[str, Any]]:
         from typing import cast
-        model = cast(Any, self.estimator or get_task_appropriate_estimator(
-            y,
-            n_estimators=100,
-            random_state=config.random_state,
-            n_jobs=config.n_jobs,
-        ))
+
+        model = cast(
+            Any,
+            self.estimator
+            or get_task_appropriate_estimator(
+                y,
+                n_estimators=100,
+                random_state=config.random_state,
+                n_jobs=config.n_jobs,
+            ),
+        )
         model.fit(X, y)
 
         selector = SelectFromModel(

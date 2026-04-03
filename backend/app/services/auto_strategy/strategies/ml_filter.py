@@ -86,7 +86,9 @@ class MLFilter:
             return True
 
         if not self._has_predictor_contract(self.strategy.ml_predictor):
-            logger.warning("ML予測器が predictor 契約を満たしていないためフェイルセーフします")
+            logger.warning(
+                "ML予測器が predictor 契約を満たしていないためフェイルセーフします"
+            )
             return True
 
         # ML予測器が学習済みでない場合はエントリーを許可

@@ -16,11 +16,11 @@ import logging
 import uuid
 from typing import Any, List, Optional
 
+from ..config.constants import TPSLMethod
 from ..genes.conditions import Condition, ConditionGroup
 from ..genes.indicator import IndicatorGene
 from ..genes.strategy import StrategyGene
 from ..genes.tpsl import TPSLGene
-from ..config.constants import TPSLMethod
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +50,7 @@ class SeedStrategyFactory:
     ) -> str:
         """実行時の登録規約に合わせた指標参照名を生成"""
         base_name = (
-            f"{indicator.type}_{indicator.id[:8]}"
-            if indicator.id
-            else indicator.type
+            f"{indicator.type}_{indicator.id[:8]}" if indicator.id else indicator.type
         )
         if output_index is None:
             return base_name

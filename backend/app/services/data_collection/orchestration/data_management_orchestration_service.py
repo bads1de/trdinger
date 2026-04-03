@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Optional
 
 from sqlalchemy.orm import Session
 
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.utils.response import api_response, error_response
 from database.connection import SessionLocal
 from database.models import (
@@ -22,7 +23,6 @@ from database.models import (
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
-from app.config.constants import DEFAULT_MARKET_SYMBOL
 
 logger = logging.getLogger(__name__)
 

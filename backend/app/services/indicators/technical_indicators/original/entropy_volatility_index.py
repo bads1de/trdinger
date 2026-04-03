@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from numba import njit, prange
 
-from ._window_helpers import _window_mean_and_std
 from ...data_validation import handle_pandas_ta_errors, validate_series_params
+from ._window_helpers import _window_mean_and_std
 
 
 @njit(parallel=True, cache=True)
@@ -73,6 +73,7 @@ def entropy_volatility_index(
         )
 
     from typing import cast
+
     returns = cast(pd.Series, np.log(close / close.shift(1))).to_numpy()
     returns[0] = 0.0
     evi = _njit_entropy_volatility_loop(returns, length, m_val, r_val)

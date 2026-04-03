@@ -8,10 +8,10 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.auto_strategy.core.evaluation.report_persistence import (
     attach_evaluation_summary,
 )
+from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
 from database.repositories.generated_strategy_repository import (
@@ -145,9 +145,7 @@ class ExperimentPersistenceService:
             fitness_values=fitness_values,
         )
 
-        logger.info(
-            f"最良戦略を保存しました (ID: {best_strategy_record.id})"
-        )
+        logger.info(f"最良戦略を保存しました (ID: {best_strategy_record.id})")
 
     def _save_other_strategies(
         self,
@@ -268,10 +266,14 @@ class ExperimentPersistenceService:
                     "experiment_name": exp.name,
                     "status": exp.status,
                     "created_at": (
-                        exp.created_at.isoformat() if exp.created_at is not None else None
+                        exp.created_at.isoformat()
+                        if exp.created_at is not None
+                        else None
                     ),
                     "completed_at": (
-                        exp.completed_at.isoformat() if exp.completed_at is not None else None
+                        exp.completed_at.isoformat()
+                        if exp.completed_at is not None
+                        else None
                     ),
                 }
                 for exp in experiments

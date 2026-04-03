@@ -128,7 +128,9 @@ class FundingRateFeatureCalculator:
             res["fr_price_corr"] = 0.0
 
         res["fr_extreme"] = np.where(res["fr_bps"].abs() > 10.0, 1, 0)
-        res["fr_direction"] = pd.Series(np.sign(res["fr_dev"].diff()), index=res.index).fillna(0)
+        res["fr_direction"] = pd.Series(
+            np.sign(res["fr_dev"].diff()), index=res.index
+        ).fillna(0)
 
         # 不要なカラムを削除して返す
         if "funding_rate" in res.columns:

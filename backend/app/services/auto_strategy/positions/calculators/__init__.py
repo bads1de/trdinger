@@ -19,8 +19,3 @@ __all__ = [
     "HalfOptimalFCalculator",
     "VolatilityBasedCalculator",
 ]
-
-
-
-
-

@@ -13,11 +13,11 @@ Auto Strategy Config モジュール
 - validators.py: ConfigValidator バリデーション
 """
 
-# 基底クラス（軽量、依存なし）
-from .base import BaseConfig
-
 # auto_strategy_settings.py は軽量（pydanticのみ）
 from .auto_strategy_settings import AutoStrategyConfig
+
+# 基底クラス（軽量、依存なし）
+from .base import BaseConfig
 
 # サブ設定クラス
 from .sub_configs import (

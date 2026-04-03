@@ -38,7 +38,9 @@ class CusumSignalGenerator:
         shifted = prices.shift(1)
         log_returns: pd.Series = pd.Series(
             np.log(prices.values / shifted.values), index=prices.index  # type: ignore[arg-type]
-        ).fillna(0)  # 最初は0
+        ).fillna(
+            0
+        )  # 最初は0
 
         # 閾値の準備
         if threshold is not None:
@@ -94,6 +96,3 @@ class CusumSignalGenerator:
             index=close.index,
         )
         return log_returns.ewm(span=span).std()
-
-
-

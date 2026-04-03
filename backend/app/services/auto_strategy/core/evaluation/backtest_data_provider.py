@@ -151,9 +151,7 @@ class BacktestDataProvider:
                 ):
                     self._data_cache[cache_key] = prefetch_data
                     self._prefetch_cache.pop(cache_key, None)
-                    logger.debug(
-                        f"OHLCVデータ: プリフェッチヒット (key={cache_key})"
-                    )
+                    logger.debug(f"OHLCVデータ: プリフェッチヒット (key={cache_key})")
                     return prefetch_data
 
         data_service = getattr(self.backtest_service, "data_service", None)

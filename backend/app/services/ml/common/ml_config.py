@@ -8,10 +8,11 @@ ML関連設定クラス
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
-from app.config.constants import DEFAULT_ENSEMBLE_ALGORITHMS, SUPPORTED_TIMEFRAMES
-from app.utils.serialization import dataclass_to_dict
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.config.constants import DEFAULT_ENSEMBLE_ALGORITHMS, SUPPORTED_TIMEFRAMES
+from app.utils.serialization import dataclass_to_dict
 
 
 class EnsembleConfig(BaseSettings):

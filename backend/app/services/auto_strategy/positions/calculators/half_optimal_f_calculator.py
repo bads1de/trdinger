@@ -7,9 +7,9 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from ...config.constants import AUTO_STRATEGY_DEFAULTS
 from app.utils.error_handler import safe_operation
 
+from ...config.constants import AUTO_STRATEGY_DEFAULTS
 from .base_calculator import BaseCalculator
 
 logger = logging.getLogger(__name__)

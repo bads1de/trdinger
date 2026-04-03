@@ -19,9 +19,9 @@ from app.utils.error_handler import api_safe_execute, ensure_db_initialized
 from database.connection import get_db
 
 router = APIRouter(
-    prefix="/api/open-interest", 
+    prefix="/api/open-interest",
     tags=["open-interest"],
-    dependencies=[Depends(ensure_db_initialized)]
+    dependencies=[Depends(ensure_db_initialized)],
 )
 
 
@@ -117,5 +117,3 @@ async def bulk_collect_open_interest(
     return await orchestration_service.collect_bulk_open_interest_data(
         symbols=symbols, db_session=db
     )
-
-

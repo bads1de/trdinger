@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config.constants import SUPPORTED_TIMEFRAMES
 
-
 VALID_TIMEFRAMES = SUPPORTED_TIMEFRAMES
 
 
@@ -21,7 +20,6 @@ class BacktestRunConfigValidationError(Exception):
     def __init__(self, message: str, errors: Optional[List[str]] = None):
         super().__init__(message)
         self.errors = errors or []
-
 
 
 class GeneratedGAParameters(BaseModel):
@@ -67,9 +65,7 @@ class BacktestRunConfig(BaseModel):
     start_date: datetime
     end_date: datetime
     initial_capital: float = Field(..., gt=0)
-    commission_rate: float = Field(
-        default=0.001, ge=0, le=1
-    )
+    commission_rate: float = Field(default=0.001, ge=0, le=1)
     slippage: float = Field(0.0, ge=0)
     leverage: float = Field(1.0, ge=1.0)
     strategy_config: StrategyConfig
@@ -117,4 +113,3 @@ class BacktestRunConfig(BaseModel):
             )
 
         return self
-

@@ -16,7 +16,6 @@
 import logging
 from typing import Any, Dict, Optional
 
-
 import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import PolynomialFeatures
@@ -382,7 +381,9 @@ def optimize_comprehensive_pipeline(
         scaling=True,
         scaling_method=scaling_method,
         polynomial_features=False,  # Disable by default for optimization
-        target_column=str(y.name) if hasattr(y, "name") and y.name is not None else None,
+        target_column=(
+            str(y.name) if hasattr(y, "name") and y.name is not None else None
+        ),
     )
 
     logger.info(

@@ -51,7 +51,9 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
         **training_params,
     ) -> Dict[str, Any]:
         self._model = self._build_model()
-        eval_set = [(X_test, y_test)] if X_test is not None and len(X_test) > 0 else None
+        eval_set = (
+            [(X_test, y_test)] if X_test is not None and len(X_test) > 0 else None
+        )
         self._model.fit(
             X_train,
             y_train,

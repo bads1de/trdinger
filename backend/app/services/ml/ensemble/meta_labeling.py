@@ -1,12 +1,10 @@
 import logging
 from typing import Any, Dict, List, Optional, Tuple, cast
 
-
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +265,9 @@ class MetaLabelingService:
 
             # 各フォールド内での特徴量選択（リーク防止のため推奨されるが計算コスト高。ここではフラグに従う）
             if self.use_feature_selection:
-                from ..feature_selection.dynamic_meta_selector import DynamicMetaSelector
+                from ..feature_selection.dynamic_meta_selector import (
+                    DynamicMetaSelector,
+                )
 
                 fold_selector = DynamicMetaSelector(**self.feature_selection_params)
                 X_tr = fold_selector.fit_transform(X_tr, y_tr)
@@ -297,8 +297,12 @@ class MetaLabelingService:
         primary_pred = (primary_proba_test >= threshold).astype(int)
 
         # メトリクス計算
-        m_met = metrics_collector.calculate_comprehensive_metrics(y_test, final_pred.values)
-        p_met = metrics_collector.calculate_comprehensive_metrics(y_test, primary_pred.values)
+        m_met = metrics_collector.calculate_comprehensive_metrics(
+            y_test, final_pred.values
+        )
+        p_met = metrics_collector.calculate_comprehensive_metrics(
+            y_test, primary_pred.values
+        )
 
         return {
             "meta_accuracy": m_met["accuracy"],

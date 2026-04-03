@@ -55,8 +55,12 @@ def build_optimized_dtype_map(
             optimize_all_numeric and pd.api.types.is_float_dtype(col_series)
         ):
             optimized = pd.to_numeric(col_series, downcast="float")
-            if optimized.dtype != col_series.dtype:  # pyright: ignore[reportAttributeAccessIssue]
-                dtypes[col] = str(optimized.dtype)  # pyright: ignore[reportAttributeAccessIssue]
+            if (
+                optimized.dtype != col_series.dtype
+            ):  # pyright: ignore[reportAttributeAccessIssue]
+                dtypes[col] = str(
+                    optimized.dtype
+                )  # pyright: ignore[reportAttributeAccessIssue]
             continue
 
         if col_series.dtype == "int64" or (
@@ -152,6 +156,3 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
             X = pd.DataFrame(X)
 
         return apply_optimized_dtypes(X, self.dtypes_)
-
-
-

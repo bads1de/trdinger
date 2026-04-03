@@ -123,7 +123,9 @@ class MLTrainingRequest(BaseModel):
         default=0.67,
         description="high-vol gate を開くための学習分位点",
     )
-    threshold_up: float = Field(default=0.02, description="旧方向予測互換キー（未使用）")
+    threshold_up: float = Field(
+        default=0.02, description="旧方向予測互換キー（未使用）"
+    )
     threshold_down: float = Field(
         default=-0.02, description="旧方向予測互換キー（未使用）"
     )
@@ -195,9 +197,7 @@ class MLStatusResponse(BaseModel):
 async def start_ml_training(
     config: MLTrainingRequest,
     background_tasks: BackgroundTasks,
-    ml_service: MLTrainingService = Depends(
-        get_ml_training_service
-    ),
+    ml_service: MLTrainingService = Depends(get_ml_training_service),
     db: Session = Depends(get_db),
 ):
     """
@@ -237,9 +237,7 @@ async def start_ml_training(
 
 @router.get("/training/status", response_model=MLStatusResponse)
 async def get_ml_training_status(
-    ml_service: MLTrainingService = Depends(
-        get_ml_training_service
-    ),
+    ml_service: MLTrainingService = Depends(get_ml_training_service),
 ):
     """
     MLトレーニングの状態を取得
@@ -250,9 +248,7 @@ async def get_ml_training_status(
 
 @router.get("/model-info")
 async def get_ml_model_info(
-    ml_service: MLTrainingService = Depends(
-        get_ml_training_service
-    ),
+    ml_service: MLTrainingService = Depends(get_ml_training_service),
 ):
     """
     現在のMLモデル情報を取得
@@ -266,9 +262,7 @@ async def get_ml_model_info(
 
 @router.post("/stop")
 async def stop_ml_training(
-    ml_service: MLTrainingService = Depends(
-        get_ml_training_service
-    ),
+    ml_service: MLTrainingService = Depends(get_ml_training_service),
 ):
     """
     MLトレーニングを停止
@@ -278,5 +272,3 @@ async def stop_ml_training(
         return await ml_service.stop_training()
 
     return await ErrorHandler.safe_execute_async(_stop_training)
-
-

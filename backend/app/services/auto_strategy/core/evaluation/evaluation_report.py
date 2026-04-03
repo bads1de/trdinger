@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-
 _MINIMIZE_OBJECTIVES = frozenset(
     {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
 )
@@ -68,7 +67,9 @@ class EvaluationReport:
             return None
 
         values = [
-            float(scenario.fitness[0]) for scenario in self.scenarios if scenario.fitness
+            float(scenario.fitness[0])
+            for scenario in self.scenarios
+            if scenario.fitness
         ]
         if not values:
             return None
@@ -181,9 +182,7 @@ class EvaluationReport:
         if aggregate_method == "robust":
             center_value = float(median(values))
             worst_value = (
-                max(values)
-                if objective in _MINIMIZE_OBJECTIVES
-                else min(values)
+                max(values) if objective in _MINIMIZE_OBJECTIVES else min(values)
             )
             return float(
                 center_value * (1.0 - _ROBUST_WORST_CASE_WEIGHT)
@@ -242,7 +241,9 @@ class EvaluationReport:
             "aggregate_method": self.aggregate_method,
             "pass_rate": self.pass_rate,
             "scenario_count": len(self.scenarios),
-            "truncated_scenario_count": max(0, len(self.scenarios) - len(scenario_slice)),
+            "truncated_scenario_count": max(
+                0, len(self.scenarios) - len(scenario_slice)
+            ),
             "primary_objective": self.primary_objective,
             "primary_aggregated_fitness": self.primary_aggregated_fitness,
             "primary_worst_case_fitness": self.primary_worst_case_fitness,

@@ -57,15 +57,25 @@ class LightGBMModel(BaseGradientBoostingModel):
         is_regression = self._is_regression_task()
         is_multi = num_classes > 2 and not is_regression
         params = {
-            "objective": "regression" if is_regression else ("multiclass" if is_multi else "binary"),
+            "objective": (
+                "regression"
+                if is_regression
+                else ("multiclass" if is_multi else "binary")
+            ),
             "num_class": None if is_regression else (num_classes if is_multi else None),
-            "metric": "rmse" if is_regression else ("multi_logloss" if is_multi else "binary_logloss"),
-            "boosting_type": "gbdt", "verbose": -1, "random_state": self.random_state,
+            "metric": (
+                "rmse"
+                if is_regression
+                else ("multi_logloss" if is_multi else "binary_logloss")
+            ),
+            "boosting_type": "gbdt",
+            "verbose": -1,
+            "random_state": self.random_state,
             "num_leaves": kwargs.get("num_leaves", 31),
             "learning_rate": kwargs.get("learning_rate", self.learning_rate),
             "feature_fraction": kwargs.get("feature_fraction", 0.9),
             "bagging_fraction": kwargs.get("bagging_fraction", 0.8),
-            "bagging_freq": kwargs.get("bagging_freq", 5)
+            "bagging_freq": kwargs.get("bagging_freq", 5),
         }
         params.update(kwargs)
         return params
@@ -136,5 +146,3 @@ class LightGBMModel(BaseGradientBoostingModel):
             np.ndarray,
             self.model.predict(data, num_iteration=self.model.best_iteration),
         )
-
-

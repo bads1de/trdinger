@@ -11,12 +11,12 @@ from typing import List
 import numpy as np
 import pandas as pd
 
-from .dtype_optimizer import DtypeOptimizer
 from .data_validator import (
     validate_data_integrity,
     validate_extended_data,
     validate_ohlcv_data,
 )
+from .dtype_optimizer import DtypeOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -226,6 +226,3 @@ class DataProcessor:
 
 # グローバルインスタンス（後方互換性維持）
 data_processor = DataProcessor()
-
-
-

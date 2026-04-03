@@ -10,9 +10,8 @@ from typing import Any, Dict, List, Union
 import numpy as np
 import pandas as pd
 
-from app.utils.error_handler import safe_operation
-
 from app.services.auto_strategy.genes import Condition, ConditionGroup
+from app.utils.error_handler import safe_operation
 
 logger = logging.getLogger(__name__)
 

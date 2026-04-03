@@ -103,9 +103,7 @@ class TradeHistoryTransformer:
 class EquityCurveTransformer:
     """エクイティカーブ変換専門クラス"""
 
-    def transform(
-        self, stats: Any, max_points: int = 1000
-    ) -> List[Dict[str, Any]]:
+    def transform(self, stats: Any, max_points: int = 1000) -> List[Dict[str, Any]]:
         """
         エクイティカーブを辞書リストに変換
 
@@ -130,7 +128,9 @@ class EquityCurveTransformer:
             df["equity"] = pd.to_numeric(df["Equity"], errors="coerce").fillna(0.0)  # type: ignore[reportAttributeAccessIssue]
             df["drawdown"] = pd.to_numeric(
                 df.get("DrawdownPct", 0), errors="coerce"
-            ).fillna(0.0)  # type: ignore[reportAttributeAccessIssue]
+            ).fillna(
+                0.0
+            )  # type: ignore[reportAttributeAccessIssue]
 
             result_cols = ["timestamp", "equity", "drawdown"]
             return df[result_cols].to_dict("records")

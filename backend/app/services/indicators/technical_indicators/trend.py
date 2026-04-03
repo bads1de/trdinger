@@ -26,13 +26,13 @@ pandas-ta の trend カテゴリに対応。
 - SMA (Simple Moving Average)
 """
 
-from numba import njit
 import logging
 from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
 import pandas_ta_classic as ta  # type: ignore
+from numba import njit
 
 from ..data_validation import (
     create_nan_series_bundle,
@@ -138,6 +138,7 @@ class TrendIndicators:
         pandas_taのデフォルト実装はデータの全長に依存して初期化されるため、
         未来データのリークを防ぐためにカスタム実装を使用します。
         """
+
         def compute() -> pd.Series:
             n = len(high)
             if n < 2:
@@ -216,7 +217,9 @@ class TrendIndicators:
                 drift=drift,
                 offset=offset,
             ),
-            fallback_factory=lambda: cast(Tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)),
+            fallback_factory=lambda: cast(
+                Tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+            ),
         )
         if isinstance(result, tuple):
             return cast(Tuple[pd.Series, pd.Series], result)
@@ -235,8 +238,12 @@ class TrendIndicators:
         mamode: str = "rma",
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """ADX: returns (adx, dmp, dmn)"""
+
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], create_nan_series_bundle(high, 3))
+            return cast(
+                Tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(high, 3),
+            )
 
         result = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
@@ -278,8 +285,12 @@ class TrendIndicators:
         scalar: float = 100.0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
+
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], create_nan_series_bundle(high, 3))
+            return cast(
+                Tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(high, 3),
+            )
 
         result = run_multi_series_indicator(
             {"high": high, "low": low},
@@ -370,7 +381,9 @@ class TrendIndicators:
             {"high": high, "low": low, "close": close},
             p,
             lambda: ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q),
-            fallback_factory=lambda: cast(Tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)),
+            fallback_factory=lambda: cast(
+                Tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+            ),
         )
 
         if isinstance(result, tuple):

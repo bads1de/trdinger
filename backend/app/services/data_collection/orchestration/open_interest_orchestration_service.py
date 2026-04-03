@@ -249,6 +249,3 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                     "error": str(e),
                 },
             )
-
-
-

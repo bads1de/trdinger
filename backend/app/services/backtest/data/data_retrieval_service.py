@@ -70,7 +70,8 @@ class DataRetrievalService:
             if data is None:
                 if raise_on_empty:
                     logger.error(
-                        empty_error_message or f"{context}のデータが見つかりませんでした"
+                        empty_error_message
+                        or f"{context}のデータが見つかりませんでした"
                     )
                     raise DataRetrievalError(
                         empty_error_message
@@ -78,7 +79,9 @@ class DataRetrievalService:
                     )
                 return default_return
             if raise_on_empty and not data:
-                logger.error(empty_error_message or f"{context}のデータが見つかりませんでした")
+                logger.error(
+                    empty_error_message or f"{context}のデータが見つかりませんでした"
+                )
                 raise DataRetrievalError(
                     empty_error_message or f"{context}のデータが見つかりませんでした"
                 )
@@ -189,6 +192,3 @@ class DataRetrievalService:
         )
         logger.debug(f"Funding Rateデータ取得完了: {len(data)}件")
         return data
-
-
-

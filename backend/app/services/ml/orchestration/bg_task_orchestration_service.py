@@ -167,6 +167,7 @@ class BackgroundTaskManager:
             メモリ使用量（MB）
         """
         from app.utils.error_handler import get_memory_usage_mb
+
         return get_memory_usage_mb()
 
 

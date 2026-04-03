@@ -36,9 +36,13 @@ class AdvancedRollingStatsCalculator:
 
         # 高度なボラティリティ推定量
         log_hl = pd.Series(np.log(df["high"] / df["low"]), index=df.index)
-        park_vol = pd.Series(np.sqrt((1.0 / (4.0 * np.log(2.0))) * log_hl**2), index=df.index)
+        park_vol = pd.Series(
+            np.sqrt((1.0 / (4.0 * np.log(2.0))) * log_hl**2), index=df.index
+        )
         log_co = pd.Series(np.log(df["close"] / df["open"]), index=df.index)
-        gk_vol = pd.Series(np.sqrt(0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2), index=df.index)
+        gk_vol = pd.Series(
+            np.sqrt(0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2), index=df.index
+        )
 
         for w in self.windows:
             # 価格統計
@@ -52,26 +56,41 @@ class AdvancedRollingStatsCalculator:
 
             # ボラティリティ統計
             hl_r = (df["high"] - df["low"]) / df["close"]
-            res[f"HL_Ratio_Mean_{w}"], res[f"HL_Ratio_Std_{w}"] = hl_r.rolling(w).mean(), hl_r.rolling(w).std()
+            res[f"HL_Ratio_Mean_{w}"], res[f"HL_Ratio_Std_{w}"] = (
+                hl_r.rolling(w).mean(),
+                hl_r.rolling(w).std(),
+            )
             res[f"Parkinson_Vol_{w}"] = park_vol.rolling(w).mean()
             res[f"Garman_Klass_Vol_{w}"] = gk_vol.rolling(w).mean()
             res[f"Yang_Zhang_Vol_{w}"] = self._yang_zhang_volatility(df, w)
 
             # 価格位置 & テールリスク
             c_pos = (df["close"] - df["low"]) / (df["high"] - df["low"] + 1e-9)
-            res[f"Close_Position_Mean_{w}"], res[f"Close_Position_Std_{w}"] = c_pos.rolling(w).mean(), c_pos.rolling(w).std()
+            res[f"Close_Position_Mean_{w}"], res[f"Close_Position_Std_{w}"] = (
+                c_pos.rolling(w).mean(),
+                c_pos.rolling(w).std(),
+            )
             res[f"Abs_Returns_Mean_{w}"] = rets.abs().rolling(w).mean()
-            res[f"Return_Asymmetry_{w}"] = rets.clip(lower=0).rolling(w).mean() - rets.clip(upper=0).abs().rolling(w).mean()
-            
+            res[f"Return_Asymmetry_{w}"] = (
+                rets.clip(lower=0).rolling(w).mean()
+                - rets.clip(upper=0).abs().rolling(w).mean()
+            )
+
             r_std = rets.rolling(w).std()
-            res[f"Extreme_Returns_Freq_{w}"] = (rets.abs() > 2 * r_std).astype(float).rolling(w).mean()
+            res[f"Extreme_Returns_Freq_{w}"] = (
+                (rets.abs() > 2 * r_std).astype(float).rolling(w).mean()
+            )
 
         for w in [10, 20]:
             res[f"Price_Volume_Corr_{w}"] = rets.rolling(w).corr(vol.pct_change())
-            res[f"Volume_Weighted_Returns_Skew_{w}"] = self._volume_weighted_skew(rets, vol, w)
+            res[f"Volume_Weighted_Returns_Skew_{w}"] = self._volume_weighted_skew(
+                rets, vol, w
+            )
 
         # ハースト指数 (長期記憶性) - 計算コストが高いため期間固定
-        res["Hurst_Exponent_100"] = AdvancedFeatures.hurst_exponent(df["close"], window=100)
+        res["Hurst_Exponent_100"] = AdvancedFeatures.hurst_exponent(
+            df["close"], window=100
+        )
 
         return res.fillna(0)
 
@@ -93,7 +112,9 @@ class AdvancedRollingStatsCalculator:
 
         # Weight k
         k = 0.34 / (1.34 + (window + 1) / (window - 1))
-        return ((sigma_oj_sq + k * sigma_oc_sq + (1 - k) * sigma_rs_sq) ** 0.5).fillna(0)
+        return ((sigma_oj_sq + k * sigma_oc_sq + (1 - k) * sigma_rs_sq) ** 0.5).fillna(
+            0
+        )
 
     def _volume_weighted_skew(
         self, returns: pd.Series, volume: pd.Series, window: int
@@ -104,12 +125,12 @@ class AdvancedRollingStatsCalculator:
         # 加重平均
         v_sum = volume.rolling(window).sum()
         m = (returns * volume).rolling(window).sum() / v_sum
-        
+
         # 加重分散
         # sum(w_i * (x_i - m)^2) = sum(w_i * x_i^2) - m^2
         v_var = (returns**2 * volume).rolling(window).sum() / v_sum - m**2
         v_std = np.sqrt(v_var.clip(lower=0))
-        
+
         # 加重歪度
         # sum(w_i * (x_i - m)^3) = sum(w_i * x_i^3) - 3m*sum(w_i * x_i^2) + 2m^3
         v_skew = (
@@ -117,8 +138,5 @@ class AdvancedRollingStatsCalculator:
             - 3 * m * (returns**2 * volume).rolling(window).sum() / v_sum
             + 2 * m**3
         ) / (v_std**3 + 1e-9)
-        
+
         return v_skew.fillna(0)
-
-
-

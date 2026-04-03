@@ -36,7 +36,7 @@ class RiskRewardCalculator(BaseTPSLCalculator):
         else:
             sl_pct = kwargs.get("stop_loss_pct", kwargs.get("base_stop_loss", 0.03))
             rr_ratio = kwargs.get("target_ratio", kwargs.get("risk_reward_ratio", 2.0))
-            
+
         # 安全策: sl_pctが0またはNoneの場合の強制フォールバック
         if not sl_pct or sl_pct <= 0:
             sl_pct = 0.03

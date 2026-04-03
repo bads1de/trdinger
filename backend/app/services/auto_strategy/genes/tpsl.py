@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional
 
 from app.utils.serialization import dataclass_to_dict
 
-from .base_gene import BaseGene
 from ..config.constants import TPSLMethod
+from .base_gene import BaseGene
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +173,7 @@ class TPSLGene(BaseGene):
     def mutate(self, mutation_rate: float = 0.1) -> "TPSLGene":
         """TP/SL遺伝子の突然変異"""
         import random
+
         from .genetic_utils import GeneticUtils
 
         # ジェネリック突然変異を実行（直接呼び出し）
@@ -234,9 +235,7 @@ class TPSLGene(BaseGene):
         # 辞書の各キーにたいして比率の平均を取る
         p1: "TPSLGene" = parent1  # type: ignore[assignment]
         p2: "TPSLGene" = parent2  # type: ignore[assignment]
-        all_keys = set(p1.method_weights.keys()) | set(
-            p2.method_weights.keys()
-        )
+        all_keys = set(p1.method_weights.keys()) | set(p2.method_weights.keys())
         for key in all_keys:
             if key in p1.method_weights and key in p2.method_weights:
                 # 両方にある場合、平均を取る

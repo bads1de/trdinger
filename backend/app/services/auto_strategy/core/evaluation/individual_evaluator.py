@@ -16,21 +16,19 @@ from typing import (
     Tuple,
 )
 
-from cachetools import LRUCache  # type: ignore[import-untyped]
 import pandas as pd
 import pandas_ta_classic as ta  # type: ignore
+from cachetools import LRUCache  # type: ignore[import-untyped]
 from pydantic import ValidationError
 
+from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.genes import StrategyGene
+from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.backtest.config.backtest_config import BacktestRunConfig
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
 from app.services.backtest.services.backtest_service import BacktestService
-
-from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.genes import StrategyGene
-from app.services.auto_strategy.serializers.serialization import GeneSerializer
-
 
 from ..fitness.fitness_calculator import FitnessCalculator
 from .backtest_data_provider import BacktestDataProvider
@@ -509,7 +507,9 @@ class IndividualEvaluator:
             )
 
             # 1. 実行用設定の構築
-            run_config = self._prepare_run_config(gene, prepared_backtest_config, config)
+            run_config = self._prepare_run_config(
+                gene, prepared_backtest_config, config
+            )
             if not run_config:
                 return ScenarioEvaluation(  # type: ignore[call-arg]
                     name=scenario_name,
@@ -661,7 +661,9 @@ class IndividualEvaluator:
             lookback = self._extract_lookback_from_parameters(
                 getattr(indicator, "parameters", {}) or {}
             )
-            indicator_timeframe = getattr(indicator, "timeframe", None) or base_timeframe
+            indicator_timeframe = (
+                getattr(indicator, "timeframe", None) or base_timeframe
+            )
             timeframe_scale = max(
                 1, ceil(self._timeframe_to_minutes(indicator_timeframe) / base_minutes)
             )
@@ -761,9 +763,7 @@ class IndividualEvaluator:
         market_df = market_data.copy()
         market_df = market_df.sort_index()
 
-        start_ts = self._normalize_timestamp_to_index(
-            evaluation_start, market_df.index
-        )
+        start_ts = self._normalize_timestamp_to_index(evaluation_start, market_df.index)
         end_ts = self._normalize_timestamp_to_index(evaluation_end, market_df.index)
 
         start_pos = int(market_df.index.searchsorted(start_ts, side="left"))
@@ -788,9 +788,11 @@ class IndividualEvaluator:
             end_pos,
             backtest_result.get("initial_capital", 0.0),
         )
-        equity_values = pd.to_numeric(
-            trimmed_equity_curve["Equity"], errors="coerce"
-        ).fillna(float(backtest_result.get("initial_capital", 0.0))).to_numpy()  # type: ignore[reportAttributeAccessIssue]
+        equity_values = (
+            pd.to_numeric(trimmed_equity_curve["Equity"], errors="coerce")
+            .fillna(float(backtest_result.get("initial_capital", 0.0)))
+            .to_numpy()
+        )  # type: ignore[reportAttributeAccessIssue]
 
         trimmed_trades = self._slice_trades_for_window(
             getattr(raw_stats, "_trades", None),
@@ -822,9 +824,7 @@ class IndividualEvaluator:
         return adjusted_result
 
     @staticmethod
-    def _normalize_timestamp_to_index(
-        value: Any, index: pd.Index
-    ) -> pd.Timestamp:
+    def _normalize_timestamp_to_index(value: Any, index: pd.Index) -> pd.Timestamp:
         """インデックスのタイムゾーンに合わせて Timestamp を正規化する。"""
         timestamp = pd.Timestamp(value)
         index_tz = getattr(index, "tz", None)
@@ -859,7 +859,9 @@ class IndividualEvaluator:
     ) -> pd.DataFrame:
         """評価窓に対応するエクイティカーブを切り出す。"""
         if not isinstance(raw_equity_curve, pd.DataFrame) or raw_equity_curve.empty:
-            return pd.DataFrame({"Equity": [initial_capital] * len(target_index)}, index=target_index)
+            return pd.DataFrame(
+                {"Equity": [initial_capital] * len(target_index)}, index=target_index
+            )
 
         if len(raw_equity_curve) >= end_pos:
             trimmed = raw_equity_curve.iloc[start_pos:end_pos].copy()

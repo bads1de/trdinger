@@ -7,10 +7,11 @@ GAエンジンの構築とコンポーネントの初期化を担当します。
 import logging
 from typing import TYPE_CHECKING
 
-
-from app.services.backtest.services.backtest_service import BacktestService
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
+from app.services.backtest.services.backtest_service import BacktestService
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +91,8 @@ class GeneticAlgorithmEngineFactory:
         Returns:
             (predictor, adapter) のタプル
         """
-        from ..hybrid.hybrid_predictor import HybridPredictor
         from ..hybrid.hybrid_feature_adapter import HybridFeatureAdapter
+        from ..hybrid.hybrid_predictor import HybridPredictor
 
         logger.info("🔬 ハイブリッドGA+MLモードのコンポーネントを準備中")
 
@@ -109,9 +110,13 @@ class GeneticAlgorithmEngineFactory:
             if predictor.load_latest_models():
                 logger.info("ハイブリッド予測器に最新モデルをロードしました")
             else:
-                logger.info("ロード可能な最新モデルが見つからないため中立予測で継続します")
+                logger.info(
+                    "ロード可能な最新モデルが見つからないため中立予測で継続します"
+                )
         except Exception as exc:
-            logger.warning(f"最新モデルのロードに失敗したため中立予測で継続します: {exc}")
+            logger.warning(
+                f"最新モデルのロードに失敗したため中立予測で継続します: {exc}"
+            )
 
         # 特徴量アダプタの初期化
         adapter = HybridFeatureAdapter()

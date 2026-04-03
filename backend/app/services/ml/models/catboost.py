@@ -97,8 +97,11 @@ class CatBoostModel(BaseGradientBoostingModel):
         params = {
             "iterations": kwargs.get("iterations", self.iterations),
             "learning_rate": kwargs.get("learning_rate", self.learning_rate),
-            "depth": kwargs.get("depth", 6), "l2_leaf_reg": kwargs.get("l2_leaf_reg", 3.0),
-            "random_seed": self.random_state, "verbose": 0, "allow_writing_files": False
+            "depth": kwargs.get("depth", 6),
+            "l2_leaf_reg": kwargs.get("l2_leaf_reg", 3.0),
+            "random_seed": self.random_state,
+            "verbose": 0,
+            "allow_writing_files": False,
         }
         # class_weight関連の追加
         for k in ["auto_class_weights", "class_weights"]:
@@ -106,7 +109,12 @@ class CatBoostModel(BaseGradientBoostingModel):
                 params[k] = kwargs[k]
 
         # 残りのパラメータをマージ
-        exclude = {"class_weight", "early_stopping_rounds", "num_boost_round", *params.keys()}
+        exclude = {
+            "class_weight",
+            "early_stopping_rounds",
+            "num_boost_round",
+            *params.keys(),
+        }
         params.update({k: v for k, v in kwargs.items() if k not in exclude})
         return params
 
@@ -122,7 +130,7 @@ class CatBoostModel(BaseGradientBoostingModel):
         CatBoost固有の学習プロセスを実行します。
         """
         X_train, y_train = train_data
-        
+
         # eval_setの準備
         eval_set = None
         if valid_data is not None:
@@ -169,6 +177,3 @@ class CatBoostModel(BaseGradientBoostingModel):
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
         return self.model.predict_proba(data)
-
-
-

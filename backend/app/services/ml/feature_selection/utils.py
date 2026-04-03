@@ -25,7 +25,9 @@ except ImportError:
 def is_regression_target(y: np.ndarray) -> bool:
     """ターゲットが回帰タスクかどうかを判定"""
     unique_values = np.unique(y)
-    return len(unique_values) > 20 or not np.all(unique_values == unique_values.astype(int))
+    return len(unique_values) > 20 or not np.all(
+        unique_values == unique_values.astype(int)
+    )
 
 
 def get_default_estimator(

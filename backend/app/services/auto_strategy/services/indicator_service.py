@@ -167,8 +167,10 @@ class IndicatorCalculator:
                 # これにより未来予知（Look-ahead bias）を防止する
                 if raw_result is not None:
                     base_index = strategy_instance.data.df.index
-                    
-                    def _align_to_base(series: Union[pd.Series, np.ndarray]) -> pd.Series:
+
+                    def _align_to_base(
+                        series: Union[pd.Series, np.ndarray],
+                    ) -> pd.Series:
                         # NumPy配列の場合はSeriesに変換
                         if isinstance(series, np.ndarray):
                             # mtf_dfのインデックスを使用（長さが一致することを前提）
@@ -188,12 +190,16 @@ class IndicatorCalculator:
                         # 上位足の時点で1つシフト（未来予知防止）
                         # 確定した足の値のみを使用するため
                         shifted = series.shift(1)
-                        
+
                         # タイムゾーン情報を合わせる（必要な場合）
-                        if isinstance(shifted.index, pd.DatetimeIndex) and isinstance(base_index, pd.DatetimeIndex):
+                        if isinstance(shifted.index, pd.DatetimeIndex) and isinstance(
+                            base_index, pd.DatetimeIndex
+                        ):
                             if shifted.index.tz != base_index.tz:
                                 try:
-                                    shifted.index = shifted.index.tz_convert(base_index.tz)
+                                    shifted.index = shifted.index.tz_convert(
+                                        base_index.tz
+                                    )
                                 except Exception as e:
                                     logger.warning(f"タイムゾーン変換失敗: {e}")
 

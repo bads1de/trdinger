@@ -30,7 +30,10 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
     for i, indicator in enumerate(mutated.indicators):
         if random.random() < mutation_rate:
             for param_name, param_value in indicator.parameters.items():
-                if isinstance(param_value, (int, float)) and random.random() < mutation_rate:
+                if (
+                    isinstance(param_value, (int, float))
+                    and random.random() < mutation_rate
+                ):
                     if (
                         param_name == "period"
                         and hasattr(config, "parameter_ranges")
@@ -49,8 +52,7 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
                         )
                     else:
                         mutated.indicators[i].parameters[param_name] = (
-                            param_value
-                            * random.uniform(min_multiplier, max_multiplier)
+                            param_value * random.uniform(min_multiplier, max_multiplier)
                         )
 
     if random.random() < mutation_rate * config.indicator_add_delete_probability:
@@ -252,9 +254,7 @@ def adaptive_mutate_strategy_gene(
 
     except Exception as e:
         logger.error(f"適応的戦略遺伝子突然変異エラー: {e}")
-        return mutate_strategy_gene(
-            gene, config, mutation_rate=base_mutation_rate
-        )
+        return mutate_strategy_gene(gene, config, mutation_rate=base_mutation_rate)
 
 
 def crossover_tpsl_genes(
@@ -270,7 +270,9 @@ def crossover_position_sizing_genes(
     parent2_ps: Optional[PositionSizingGene],
 ) -> Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]:
     """ポジションサイジング遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(parent1_ps, parent2_ps, PositionSizingGene)
+    return GeneticUtils.crossover_optional_gene(
+        parent1_ps, parent2_ps, PositionSizingGene
+    )
 
 
 def crossover_entry_genes(

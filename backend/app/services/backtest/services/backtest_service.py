@@ -15,9 +15,9 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
-from .backtest_data_service import BacktestDataService
 from ..execution.backtest_executor import BacktestExecutionError
 from ..execution.backtest_orchestrator import BacktestOrchestrator
+from .backtest_data_service import BacktestDataService
 
 logger = logging.getLogger(__name__)
 

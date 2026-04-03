@@ -37,25 +37,44 @@ def create_ml_pipeline(
     **kwargs: Any,
 ) -> Pipeline:
     """MLパイプラインを作成（分類・回帰共通）"""
-    from sklearn.feature_selection import f_classif, f_regression, mutual_info_classif, mutual_info_regression
+    from sklearn.feature_selection import (
+        f_classif,
+        f_regression,
+        mutual_info_classif,
+        mutual_info_regression,
+    )
 
     logger.info(f"{'分類' if is_classification else '回帰'}パイプラインを作成中...")
 
-    steps: list[tuple[str, Any]] = [("preprocessing", create_preprocessing_pipeline(**(preprocessing_params or {})))]
+    steps: list[tuple[str, Any]] = [
+        ("preprocessing", create_preprocessing_pipeline(**(preprocessing_params or {})))
+    ]
 
     # 特徴量選択
     if feature_selection and n_features is not None and n_features > 0:
         selectors = {
-            "f_regression": f_regression, "f_classif": f_classif,
-            "mutual_info": mutual_info_classif if is_classification else mutual_info_regression
+            "f_regression": f_regression,
+            "f_classif": f_classif,
+            "mutual_info": (
+                mutual_info_classif if is_classification else mutual_info_regression
+            ),
         }
         if selection_method not in selectors:
             raise ValueError(f"サポートされていない選択方法: {selection_method}")
-        steps.append(("feature_selection", SelectKBest(score_func=selectors[selection_method], k=n_features)))
+        steps.append(
+            (
+                "feature_selection",
+                SelectKBest(score_func=selectors[selection_method], k=n_features),
+            )
+        )
 
     # スケーリング
     if scaling:
-        scalers = {"standard": StandardScaler(), "robust": RobustScaler(), "minmax": MinMaxScaler()}
+        scalers = {
+            "standard": StandardScaler(),
+            "robust": RobustScaler(),
+            "minmax": MinMaxScaler(),
+        }
         if scaling_method not in scalers:
             raise ValueError(f"サポートされていないスケーリング方法: {scaling_method}")
         steps.append(("scaler", scalers[scaling_method]))
@@ -160,6 +179,3 @@ def optimize_ml_pipeline(
 
     logger.info(f"Optimized pipeline created with max {max_features} features")
     return pipeline
-
-
-

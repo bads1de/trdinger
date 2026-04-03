@@ -27,10 +27,14 @@ from .data_validation import create_nan_result, validate_data_length_with_fallba
 # pandas-ta および pandas, numpy 内部で発生する警告を抑制
 # SettingWithCopyWarning の抑制
 try:
-    from pandas.errors import SettingWithCopyWarning  # type: ignore[reportAttributeAccessIssue]
+    from pandas.errors import (
+        SettingWithCopyWarning,  # type: ignore[reportAttributeAccessIssue]
+    )
 except ImportError:
     try:
-        from pandas.core.common import SettingWithCopyWarning  # type: ignore[reportAttributeAccessIssue]
+        from pandas.core.common import (
+            SettingWithCopyWarning,  # type: ignore[reportAttributeAccessIssue]
+        )
     except ImportError:
         SettingWithCopyWarning = UserWarning
 
@@ -255,7 +259,11 @@ class TechnicalIndicatorService:
                     min_length_func = config["min_length"]
                     if callable(min_length_func):
                         min_length = min_length_func({param_name: value})
-                        if isinstance(value, (int, float)) and isinstance(min_length, (int, float)) and value < min_length:
+                        if (
+                            isinstance(value, (int, float))
+                            and isinstance(min_length, (int, float))
+                            and value < min_length
+                        ):
                             logger.debug(
                                 f"パラメータ {param_name}={value} が最小値 {min_length} 未満のため調整"
                             )
@@ -381,7 +389,9 @@ class TechnicalIndicatorService:
                                 if col in c or col.lower() in c.lower()
                             ]
                             if matching_cols:
-                                selected_cols.append(result[matching_cols[0]].to_numpy())
+                                selected_cols.append(
+                                    result[matching_cols[0]].to_numpy()
+                                )
                             else:
                                 selected_cols.append(np.full(len(result), np.nan))
                     return tuple(selected_cols)
@@ -527,9 +537,7 @@ class TechnicalIndicatorService:
         if result is None:
             input_ref = all_args.get("data", all_args.get("close"))
             fallback_input = input_ref if input_ref is not None else pd.DataFrame()
-            return self._create_nan_result(
-                fallback_input, {"function": indicator_type}
-            )
+            return self._create_nan_result(fallback_input, {"function": indicator_type})
 
         # 結果の後処理
         if isinstance(result, pd.Series):
@@ -545,7 +553,9 @@ class TechnicalIndicatorService:
                     arr.to_numpy()
                     if isinstance(arr, pd.Series)
                     else (
-                        arr.to_numpy() if isinstance(arr, pd.DataFrame) else np.asarray(arr)
+                        arr.to_numpy()
+                        if isinstance(arr, pd.DataFrame)
+                        else np.asarray(arr)
                     )
                 )
                 for arr in result

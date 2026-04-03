@@ -15,10 +15,10 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-from ..common.exceptions import MLFeatureError
 from app.services.ml.common.utils import generate_cache_key, optimize_dtypes
 
 from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
+from ..common.exceptions import MLFeatureError
 from .advanced_rolling_stats import AdvancedRollingStatsCalculator
 from .base_feature_calculator import sanitize_numeric_dataframe
 from .complexity_features import ComplexityFeatureCalculator
@@ -108,9 +108,7 @@ class FeatureEngineeringService:
             if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
                 if "timestamp" in ohlcv_data.columns:
                     ohlcv_data = ohlcv_data.copy()
-                    timestamp = pd.to_datetime(
-                        ohlcv_data["timestamp"], errors="coerce"
-                    )
+                    timestamp = pd.to_datetime(ohlcv_data["timestamp"], errors="coerce")
                     if timestamp.isna().any():
                         raise MLFeatureError(
                             "timestampカラムに無効な日時が含まれています"

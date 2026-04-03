@@ -75,9 +75,7 @@ def dataclass_to_dict(obj: Any) -> Dict[str, Any]:
 def dataclass_to_json(obj: Any, *, indent: int = 2) -> str:
     """dataclass インスタンスを JSON 文字列に変換する。"""
     try:
-        return json.dumps(
-            dataclass_to_dict(obj), ensure_ascii=False, indent=indent
-        )
+        return json.dumps(dataclass_to_dict(obj), ensure_ascii=False, indent=indent)
     except Exception as e:
         logger.error(f"JSON変換エラー ({type(obj).__name__}): {e}", exc_info=True)
         return "{}"

@@ -18,10 +18,10 @@ from app.utils.response import api_response
 
 from ..evaluation.metrics import get_default_metrics
 from .ml_training_orchestration_service import (
-    ml_training_service,
     get_latest_model_with_info,
-    load_model_metadata_safely,
     get_model_info_with_defaults,
+    load_model_metadata_safely,
+    ml_training_service,
 )
 
 logger = logging.getLogger(__name__)

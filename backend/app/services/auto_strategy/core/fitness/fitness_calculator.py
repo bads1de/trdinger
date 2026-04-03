@@ -5,16 +5,20 @@
 適応度（Fitness）値を計算します。
 """
 
-import logging
 import hashlib
 import json
+import logging
 import math
 from typing import Any, Dict, Tuple
 
 import numpy as np
 
 from app.services.auto_strategy.config.ga import GAConfig
-from ..evaluation.evaluation_metrics import calculate_trade_frequency_penalty, calculate_ulcer_index
+
+from ..evaluation.evaluation_metrics import (
+    calculate_trade_frequency_penalty,
+    calculate_ulcer_index,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -241,9 +245,7 @@ class FitnessCalculator:
             logger.error(f"フィットネス計算エラー: {e}", exc_info=True)
             return config.constraint_violation_penalty
 
-    def _calculate_balance_score_fast(
-        self, backtest_result: Dict[str, Any]
-    ) -> float:
+    def _calculate_balance_score_fast(self, backtest_result: Dict[str, Any]) -> float:
         """ロング・ショートバランススコア計算（最適化版）。"""
         trade_history = backtest_result.get("trade_history")
         if not trade_history:
@@ -302,7 +304,10 @@ class FitnessCalculator:
     def _calculate_balance_score_numpy(self, trade_history: list) -> float:
         """大規模データ向けの NumPy 版計算。"""
         trades_array = np.array(
-            [(trade.get("size", 0.0), trade.get("pnl", 0.0)) for trade in trade_history],
+            [
+                (trade.get("size", 0.0), trade.get("pnl", 0.0))
+                for trade in trade_history
+            ],
             dtype=np.float64,
         )
 
@@ -345,9 +350,7 @@ class FitnessCalculator:
         balance_score = float(0.6 * trade_balance + 0.4 * profit_balance)
         return max(0.0, min(1.0, balance_score))
 
-    def calculate_long_short_balance(
-        self, backtest_result: Dict[str, Any]
-    ) -> float:
+    def calculate_long_short_balance(self, backtest_result: Dict[str, Any]) -> float:
         """
         ロング・ショートバランススコアを計算
 

@@ -11,8 +11,8 @@ from typing import Any, Dict, Optional
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.config.unified_config import unified_config
 from app.config.constants import DEFAULT_MARKET_SYMBOL
+from app.config.unified_config import unified_config
 from app.utils.error_handler import safe_operation
 from app.utils.response import api_response
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -204,7 +204,10 @@ class DataCollectionOrchestrationService:
 
             for timeframe in timeframes:
                 background_tasks.add_task(
-                    self._collect_historical_background, DEFAULT_MARKET_SYMBOL, timeframe, db
+                    self._collect_historical_background,
+                    DEFAULT_MARKET_SYMBOL,
+                    timeframe,
+                    db,
                 )
 
             return api_response(

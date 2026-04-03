@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple, cast
 
 import pandas as pd
+
 from app.services.auto_strategy.config.ga import GAConfig
 
 from .evaluation_report import EvaluationReport, ScenarioEvaluation

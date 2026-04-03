@@ -221,8 +221,13 @@ class AdvancedFeatures:
         出来高が薄い中での価格急変動（真空地帯）を検知。
         大きな値は、薄商いの中での急騰・急落（ダマシの可能性大）を示す。
         """
+
         def _calculate_void_oscillator() -> pd.Series:
-            ret = cast(pd.Series, np.log(close / close.shift(1))).fillna(0.0).astype(float)
+            ret = (
+                cast(pd.Series, np.log(close / close.shift(1)))
+                .fillna(0.0)
+                .astype(float)
+            )
             z_ret = AdvancedFeatures.z_score(ret, window)
             vol_threshold = volume.rolling(window=window).quantile(
                 volume_threshold_quantile
@@ -277,6 +282,7 @@ class AdvancedFeatures:
         上ヒゲと下ヒゲのバランス（売り圧力 vs 買い圧力）を評価する。
         値が大きいほど売り圧力（上ヒゲ）が強い。
         """
+
         def _calculate_triplet_imbalance() -> pd.Series:
             upper_shadow = high - close
             lower_shadow = close - low
@@ -303,6 +309,7 @@ class AdvancedFeatures:
         Returns:
             Fakeout Score (1.0 = 強いダマシシグナル, 0.0 = 正常)
         """
+
         def _calculate_volume_divergence_fakeout() -> pd.Series:
             rolling_max = close.rolling(window=window).max().shift(1)
             vol_ma = volume.rolling(window=window).mean()
@@ -363,7 +370,9 @@ class AdvancedFeatures:
             close,
             window,
             lambda: pd.Series(
-                _njit_sample_entropy_loop(close.values.astype(np.float64), window, m, r),
+                _njit_sample_entropy_loop(
+                    close.values.astype(np.float64), window, m, r
+                ),
                 index=close.index,
             ).fillna(0.0),
         )
@@ -397,6 +406,7 @@ class AdvancedFeatures:
         出来高の不均衡から「情報に基づいた取引」の確率を推定。
         高いほど需給が偏っており、急変動の前兆となる。
         """
+
         def _calculate_vpin() -> pd.Series:
             delta_p = close.diff().fillna(0)
             vol_std = delta_p.rolling(window=window).std() + 1e-9
@@ -428,6 +438,7 @@ class AdvancedFeatures:
         分数微分（固定ウィンドウFFD）。
         np.convolveを用いた高速なベクトル化実装。
         """
+
         def _calculate_frac_diff_ffd() -> pd.Series:
             if abs(d) < 1e-9:
                 return series.copy()
@@ -471,6 +482,7 @@ class AdvancedFeatures:
         """
         清算カスケードスコア
         """
+
         def _calculate_liquidation_cascade_score() -> pd.Series:
             result = -1 * np.sign(close.diff()) * open_interest.diff() * volume
             return pd.Series(result, index=close.index).fillna(0.0)
@@ -493,9 +505,12 @@ class AdvancedFeatures:
         """
         ショートスクイーズ確率指数
         """
+
         def _calculate_squeeze_probability() -> pd.Series:
             neg_fr_factor = pd.Series(
-                np.where(funding_rate < 0, funding_rate.abs(), 0.0), index=close.index, dtype=float
+                np.where(funding_rate < 0, funding_rate.abs(), 0.0),
+                index=close.index,
+                dtype=float,
             )
             delta_oi_factor = open_interest.diff().clip(lower=0.0).astype(float)
             price_location = (close - low.rolling(window=lookback).min()).astype(float)
@@ -522,6 +537,7 @@ class AdvancedFeatures:
         """
         トレンド品質（VWAP/OIダイバージェンスの代替指標）
         """
+
         def _calculate_trend_quality() -> pd.Series:
             result = close.diff().rolling(window=window).corr(open_interest.diff())
             if isinstance(result, pd.DataFrame):
@@ -563,6 +579,7 @@ class AdvancedFeatures:
         2: 弱気トレンド (Price↓, OI↑) - 新規売り
         3: ロング清算 (Price↓, OI↓) - 買い決済（反発予兆）
         """
+
         def _calculate_regime_quadrant() -> pd.Series:
             delta_p = close.diff().fillna(0.0).astype(float)
             delta_oi = open_interest.diff().fillna(0.0).astype(float)
@@ -629,7 +646,8 @@ class AdvancedFeatures:
         return run_multi_series_indicator(
             {"close": close, "open_interest": open_interest},
             None,
-            lambda: np.sign(close.diff().fillna(0.0).astype(float)) * open_interest.diff().fillna(0.0).astype(float),
+            lambda: np.sign(close.diff().fillna(0.0).astype(float))
+            * open_interest.diff().fillna(0.0).astype(float),
         )
 
     @staticmethod

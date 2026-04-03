@@ -50,7 +50,9 @@ class XGBoostModel(BaseGradientBoostingModel):
             X = self._coerce_feature_frame(X, self.feature_columns)
 
         self.feature_names = X.columns.tolist()
-        return xgb.DMatrix(X, label=y, feature_names=self.feature_names, weight=sample_weight)
+        return xgb.DMatrix(
+            X, label=y, feature_names=self.feature_names, weight=sample_weight
+        )
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """
@@ -63,8 +65,14 @@ class XGBoostModel(BaseGradientBoostingModel):
                 if is_regression
                 else ("multi:softprob" if num_classes > 2 else "binary:logistic")
             ),
-            "num_class": None if is_regression else (num_classes if num_classes > 2 else None),
-            "eval_metric": "rmse" if is_regression else ("mlogloss" if num_classes > 2 else "logloss"),
+            "num_class": (
+                None if is_regression else (num_classes if num_classes > 2 else None)
+            ),
+            "eval_metric": (
+                "rmse"
+                if is_regression
+                else ("mlogloss" if num_classes > 2 else "logloss")
+            ),
             "max_depth": kwargs.get("max_depth", self.max_depth),
             "learning_rate": kwargs.get("learning_rate", self.learning_rate),
             "subsample": kwargs.get("subsample", 0.8),
@@ -125,5 +133,3 @@ class XGBoostModel(BaseGradientBoostingModel):
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
         return self.model.predict(data)
-
-

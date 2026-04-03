@@ -11,7 +11,8 @@ import logging
 import random
 from typing import Any, List, Tuple, Union
 
-from app.services.indicators.config import indicator_registry, IndicatorScaleType
+from app.services.indicators.config import IndicatorScaleType, indicator_registry
+
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
 
@@ -100,7 +101,10 @@ class ComplexConditionsStrategy:
         elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
             th_long = 0
             th_short = 0
-        elif scale_type in (IndicatorScaleType.PRICE_RATIO, IndicatorScaleType.PRICE_ABSOLUTE):
+        elif scale_type in (
+            IndicatorScaleType.PRICE_RATIO,
+            IndicatorScaleType.PRICE_ABSOLUTE,
+        ):
             # 価格スケールの場合は閾値ではなく、Close自体と比較させる
             th_long = "close"
             th_short = "close"
@@ -119,8 +123,8 @@ class ComplexConditionsStrategy:
         ]
         # Momentumの比較対象が "close" の場合は、Momentum > Close (または < Close) になる
         # もしMomentumがRSI(0-100)なら、RSI > 60 となる
-        
-        # operatorの決定: 
+
+        # operatorの決定:
         # オシレーターなら > th_long
         # もし th_long が "close" なら、Momentum > Close (トレンドフォローならこれで良いか？)
         # SUPERTREND > Close は上昇トレンドを示すのでOK

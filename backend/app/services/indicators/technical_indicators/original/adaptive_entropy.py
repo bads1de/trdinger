@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 from numba import njit, prange
 
-from ._window_helpers import _window_min_max
 from ...data_validation import handle_pandas_ta_errors, validate_series_params
+from ._window_helpers import _window_min_max
 
 
 @njit(parallel=True, cache=True)

@@ -13,19 +13,19 @@ from typing import Any, Callable, List, Optional
 import numpy as np
 from deap import tools
 
+from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import _invalidate_individual_cache, _set_fitness_values
 from .report_selection import (
     build_report_rank_key,
     extract_primary_fitness,
     get_individual_identity,
-    merge_reranked_elites,
     get_two_stage_elite_count,
     get_two_stage_pool_size,
     is_evaluation_report,
+    merge_reranked_elites,
     set_two_stage_metadata,
 )
-from ..evaluation.parallel_evaluator import ParallelEvaluator
 
 logger = logging.getLogger(__name__)
 
