@@ -45,6 +45,7 @@ class TestConfigValidator:
             "win_rate": 0.1,
         }
         config.primary_metric = "total_return"
+        config.objectives = ["weighted_score"]
         config.max_indicators = 5
         config.parameter_ranges = {"param1": [0, 10]}
         config.log_level = "INFO"
@@ -57,6 +58,7 @@ class TestConfigValidator:
         config.robustness_stress_commission_multipliers = [1.5]
         config.robustness_aggregate_method = "robust"
         config.robustness_validation_symbols = None
+        config.robustness_regime_windows = []
 
         return config
 

@@ -9,6 +9,65 @@ logger = logging.getLogger(__name__)
 
 
 @jit(nopython=True)
+def _compute_window_t_value(
+    sum_y: float,
+    sum_yy: float,
+    sum_xy: float,
+    n_val: float,
+    sum_x: float,
+    sum_xx: float,
+    denominator: float,
+) -> float:
+    """単一ウィンドウの t 値を計算する。"""
+    ss_y = sum_yy - (sum_y * sum_y) / n_val
+    if ss_y < 1e-12:
+        slope = 0.0
+        sum_res_sq = 0.0
+    else:
+        slope = (n_val * sum_xy - sum_x * sum_y) / denominator
+        intercept = (sum_y - slope * sum_x) / n_val
+        sum_res_sq = max(0.0, sum_yy - intercept * sum_y - slope * sum_xy)
+
+    sigma_eps_sq = sum_res_sq / (n_val - 2)
+    sigma_eps = np.sqrt(max(0.0, sigma_eps_sq))
+
+    ss_x = sum_xx - (sum_x * sum_x) / n_val
+    t_val = 0.0
+    if abs(slope) < 1e-11 or sum_res_sq < 1e-11:
+        if abs(slope) < 1e-14:
+            t_val = 0.0
+        else:
+            t_val = 100.0 if slope > 0 else -100.0
+    elif ss_x > 1e-12 and sigma_eps > 1e-12:
+        se_slope = sigma_eps / np.sqrt(ss_x)
+        t_val = slope / se_slope
+        if t_val > 100.0:
+            t_val = 100.0
+        if t_val < -100.0:
+            t_val = -100.0
+    elif abs(slope) > 1e-12:
+        t_val = 100.0 if slope > 0 else -100.0
+    else:
+        t_val = 0.0
+
+    return t_val
+
+
+@jit(nopython=True)
+def _label_from_t_value(
+    t_val: float, min_t_value: float, return_t_value_as_label: bool
+) -> float:
+    """t 値からラベルを決定する。"""
+    if return_t_value_as_label:
+        return t_val
+    if t_val > min_t_value:
+        return 1.0
+    if t_val < -min_t_value:
+        return -1.0
+    return 0.0
+
+
+@jit(nopython=True)
 def _trend_scanning_loop_numba(
     close_vals: np.ndarray,
     t0_indices: np.ndarray,
@@ -75,45 +134,18 @@ def _trend_scanning_loop_numba(
             if abs(denominator) < 1e-12:
                 continue
 
-            # 区間の偏差平方和 (ss_y) で価格が一定かチェック
-            ss_y = sum_yy - (sum_y * sum_y) / n_val
-            if ss_y < 1e-12:
-                slope = 0.0
-                intercept = sum_y / n_val
-                sum_res_sq = 0.0
-            else:
-                # 回帰係数
-                slope = (n_val * sum_xy - sum_x * sum_y) / denominator
-                intercept = (sum_y - slope * sum_x) / n_val
-                # 残差平方和 (RSS)
-                sum_res_sq = max(0.0, sum_yy - intercept * sum_y - slope * sum_xy)
-
             if n_val <= 2:
                 continue
 
-            sigma_eps_sq = sum_res_sq / (n_val - 2)
-            sigma_eps = np.sqrt(max(0.0, sigma_eps_sq))
-
-            ss_x = sum_xx - (sum_x * sum_x) / n_val
-
-            t_val = 0.0
-            # 傾きがほぼ0、または残差がほぼ0（完全一致）の場合はガード
-            if abs(slope) < 1e-11 or sum_res_sq < 1e-11:
-                if abs(slope) < 1e-14:
-                    t_val = 0.0
-                else:
-                    t_val = 100.0 if slope > 0 else -100.0
-            elif ss_x > 1e-12 and sigma_eps > 1e-12:
-                se_slope = sigma_eps / np.sqrt(ss_x)
-                t_val = slope / se_slope
-                if t_val > 100.0:
-                    t_val = 100.0
-                if t_val < -100.0:
-                    t_val = -100.0
-            elif abs(slope) > 1e-12:
-                t_val = 100.0 if slope > 0 else -100.0
-            else:
-                t_val = 0.0
+            t_val = _compute_window_t_value(
+                sum_y,
+                sum_yy,
+                sum_xy,
+                n_val,
+                sum_x,
+                sum_xx,
+                denominator,
+            )
 
             abs_t = abs(t_val)
             if abs_t > max_abs_t:
@@ -126,15 +158,9 @@ def _trend_scanning_loop_numba(
             out_t_vals[i] = best_t_val
             out_t1_idxs[i] = t0_idx + int(best_L)
 
-            if return_t_value_as_label:
-                out_bins[i] = best_t_val
-            else:
-                if best_t_val > min_t_value:
-                    out_bins[i] = 1.0
-                elif best_t_val < -min_t_value:
-                    out_bins[i] = -1.0
-                else:
-                    out_bins[i] = 0.0
+            out_bins[i] = _label_from_t_value(
+                best_t_val, min_t_value, return_t_value_as_label
+            )
 
     return out_t_vals, out_bins, out_t1_idxs
 

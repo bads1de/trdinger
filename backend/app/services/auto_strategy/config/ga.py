@@ -7,9 +7,10 @@ GAConfig は GA エンジンのランタイム設定用 dataclass です。
 両者の基本パラメータのデフォルト値は ga_constants.GA_DEFAULT_CONFIG を共有しています。
 """
 
+import copy
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, List, Optional, Set, cast
 
 from app.utils.serialization import dataclass_to_dict
 
@@ -271,6 +272,134 @@ class GAConfig(BaseConfig):
         """
         return dataclass_to_dict(self)
 
+    @staticmethod
+    def _from_dict_defaults() -> Dict[str, Any]:
+        """from_dict 用のデフォルト値を生成する。"""
+        return copy.deepcopy(
+            {
+                "population_size": GA_DEFAULT_CONFIG["population_size"],
+                "generations": GA_DEFAULT_CONFIG["generations"],
+                "crossover_rate": GA_DEFAULT_CONFIG["crossover_rate"],
+                "mutation_rate": GA_DEFAULT_CONFIG["mutation_rate"],
+                "elite_size": GA_DEFAULT_CONFIG.get("elite_size", 10),
+                "primary_metric": "sharpe_ratio",
+                "fitness_weights": DEFAULT_FITNESS_WEIGHTS,
+                "fitness_constraints": DEFAULT_FITNESS_CONSTRAINTS,
+                "max_indicators": GA_DEFAULT_CONFIG["max_indicators"],
+                "parameter_ranges": GA_PARAMETER_RANGES,
+                "threshold_ranges": GA_THRESHOLD_RANGES,
+                "min_indicators": 1,
+                "min_conditions": 1,
+                "max_conditions": 3,
+                "zero_trades_penalty": GA_DEFAULT_CONFIG["zero_trades_penalty"],
+                "constraint_violation_penalty": GA_DEFAULT_CONFIG[
+                    "constraint_violation_penalty"
+                ],
+                "enable_fitness_sharing": GA_DEFAULT_FITNESS_SHARING[
+                    "enable_fitness_sharing"
+                ],
+                "sharing_radius": GA_DEFAULT_FITNESS_SHARING["sharing_radius"],
+                "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
+                "sampling_threshold": GA_DEFAULT_FITNESS_SHARING["sampling_threshold"],
+                "sampling_ratio": GA_DEFAULT_FITNESS_SHARING["sampling_ratio"],
+                "enable_multi_objective": False,
+                "objectives": DEFAULT_GA_OBJECTIVES,
+                "objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS,
+                "enable_two_stage_selection": True,
+                "two_stage_elite_count": 3,
+                "two_stage_candidate_pool_size": 5,
+                "two_stage_min_pass_rate": 0.5,
+                "volatility_gate_enabled": False,
+                "volatility_model_path": None,
+                "gate_quantile": 0.67,
+                "robustness_validation_symbols": None,
+                "robustness_regime_windows": [],
+                "robustness_stress_slippage": [],
+                "robustness_stress_commission_multipliers": [],
+                "robustness_aggregate_method": "robust",
+            }
+        )
+
+    @staticmethod
+    def _restore_nested_configs(working: Dict[str, Any]) -> None:
+        """ネストされた設定辞書をサブ設定クラスへ復元する。"""
+        if "mutation_config" in working and isinstance(
+            working["mutation_config"], dict
+        ):
+            working["mutation_config"] = MutationConfig.from_dict(
+                working["mutation_config"]
+            )
+        if "evaluation_config" in working and isinstance(
+            working["evaluation_config"], dict
+        ):
+            working["evaluation_config"] = EvaluationConfig.from_dict(
+                working["evaluation_config"]
+            )
+        if "hybrid_config" in working and isinstance(
+            working["hybrid_config"], dict
+        ):
+            working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
+        if "tuning_config" in working and isinstance(
+            working["tuning_config"], dict
+        ):
+            working["tuning_config"] = TuningConfig.from_dict(working["tuning_config"])
+        if "two_stage_selection_config" in working and isinstance(
+            working["two_stage_selection_config"], dict
+        ):
+            working["two_stage_selection_config"] = TwoStageSelectionConfig.from_dict(
+                working["two_stage_selection_config"]
+            )
+        if "robustness_config" in working and isinstance(
+            working["robustness_config"], dict
+        ):
+            working["robustness_config"] = RobustnessConfig.from_dict(
+                working["robustness_config"]
+            )
+
+    @staticmethod
+    def _apply_two_stage_overrides(
+        working: Dict[str, Any], provided_keys: Set[str]
+    ) -> None:
+        """two-stage 設定のネスト値をフラットフィールドへ反映する。"""
+        two_stage_config = working.get("two_stage_selection_config")
+        if not isinstance(two_stage_config, TwoStageSelectionConfig):
+            return
+
+        if "enable_two_stage_selection" not in provided_keys:
+            working["enable_two_stage_selection"] = two_stage_config.enabled
+        if "two_stage_elite_count" not in provided_keys:
+            working["two_stage_elite_count"] = two_stage_config.elite_count
+        if "two_stage_candidate_pool_size" not in provided_keys:
+            working["two_stage_candidate_pool_size"] = (
+                two_stage_config.candidate_pool_size
+            )
+        if "two_stage_min_pass_rate" not in provided_keys:
+            working["two_stage_min_pass_rate"] = two_stage_config.min_pass_rate
+
+    @staticmethod
+    def _apply_robustness_overrides(
+        working: Dict[str, Any], provided_keys: Set[str]
+    ) -> None:
+        """robustness 設定のネスト値をフラットフィールドへ反映する。"""
+        robustness_config = working.get("robustness_config")
+        if not isinstance(robustness_config, RobustnessConfig):
+            return
+
+        if "robustness_validation_symbols" not in provided_keys:
+            working["robustness_validation_symbols"] = (
+                robustness_config.validation_symbols
+            )
+        if "robustness_regime_windows" not in provided_keys:
+            working["robustness_regime_windows"] = robustness_config.regime_windows
+        if "robustness_stress_slippage" not in provided_keys:
+            working["robustness_stress_slippage"] = robustness_config.stress_slippage
+        if "robustness_stress_commission_multipliers" not in provided_keys:
+            working["robustness_stress_commission_multipliers"] = (
+                robustness_config.stress_commission_multipliers
+            )
+        if "robustness_aggregate_method" not in provided_keys:
+            working["robustness_aggregate_method"] = robustness_config.aggregate_method
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
         """
@@ -286,120 +415,15 @@ class GAConfig(BaseConfig):
             初期化されたGAConfigインスタンス
         """
         provided_keys = {key for key, value in data.items() if value is not None}
-
-        # デフォルト値を設定
-        defaults = {
-            "population_size": GA_DEFAULT_CONFIG["population_size"],
-            "generations": GA_DEFAULT_CONFIG["generations"],
-            "crossover_rate": GA_DEFAULT_CONFIG["crossover_rate"],
-            "mutation_rate": GA_DEFAULT_CONFIG["mutation_rate"],
-            "elite_size": GA_DEFAULT_CONFIG.get("elite_size", 10),
-            "primary_metric": "sharpe_ratio",
-            "fitness_weights": DEFAULT_FITNESS_WEIGHTS,
-            "fitness_constraints": DEFAULT_FITNESS_CONSTRAINTS,
-            "max_indicators": GA_DEFAULT_CONFIG["max_indicators"],
-            "parameter_ranges": GA_PARAMETER_RANGES,
-            "threshold_ranges": GA_THRESHOLD_RANGES,
-            "min_indicators": 1,
-            "min_conditions": 1,
-            "max_conditions": 3,
-            "zero_trades_penalty": GA_DEFAULT_CONFIG["zero_trades_penalty"],
-            "constraint_violation_penalty": GA_DEFAULT_CONFIG[
-                "constraint_violation_penalty"
-            ],
-            "enable_fitness_sharing": GA_DEFAULT_FITNESS_SHARING[
-                "enable_fitness_sharing"
-            ],
-            "sharing_radius": GA_DEFAULT_FITNESS_SHARING["sharing_radius"],
-            "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
-            "sampling_threshold": GA_DEFAULT_FITNESS_SHARING["sampling_threshold"],
-            "sampling_ratio": GA_DEFAULT_FITNESS_SHARING["sampling_ratio"],
-            "enable_multi_objective": False,
-            "objectives": DEFAULT_GA_OBJECTIVES,
-            "objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS,
-            "enable_two_stage_selection": True,
-            "two_stage_elite_count": 3,
-            "two_stage_candidate_pool_size": 5,
-            "two_stage_min_pass_rate": 0.5,
-            "volatility_gate_enabled": False,
-            "volatility_model_path": None,
-            "gate_quantile": 0.67,
-            "robustness_validation_symbols": None,
-            "robustness_regime_windows": [],
-            "robustness_stress_slippage": [],
-            "robustness_stress_commission_multipliers": [],
-            "robustness_aggregate_method": "robust",
-        }
-
-        # デフォルト値をマージ
+        working = copy.deepcopy(data)
+        defaults = cls._from_dict_defaults()
         for key, default_value in defaults.items():
-            if key not in data or data[key] is None:
-                data[key] = default_value
+            if key not in working or working[key] is None:
+                working[key] = default_value
 
-        # ネスト辞書からのサブ設定復元
-        working = dict(data)
-        if "mutation_config" in working and isinstance(
-            working["mutation_config"], dict
-        ):
-            working["mutation_config"] = MutationConfig.from_dict(
-                working["mutation_config"]
-            )
-        if "evaluation_config" in working and isinstance(
-            working["evaluation_config"], dict
-        ):
-            working["evaluation_config"] = EvaluationConfig.from_dict(
-                working["evaluation_config"]
-            )
-        if "hybrid_config" in working and isinstance(working["hybrid_config"], dict):
-            working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
-        if "tuning_config" in working and isinstance(working["tuning_config"], dict):
-            working["tuning_config"] = TuningConfig.from_dict(working["tuning_config"])
-        if "two_stage_selection_config" in working and isinstance(
-            working["two_stage_selection_config"], dict
-        ):
-            working["two_stage_selection_config"] = TwoStageSelectionConfig.from_dict(
-                working["two_stage_selection_config"]
-            )
-        if "robustness_config" in working and isinstance(
-            working["robustness_config"], dict
-        ):
-            working["robustness_config"] = RobustnessConfig.from_dict(
-                working["robustness_config"]
-            )
-
-        two_stage_config = working.get("two_stage_selection_config")
-        if isinstance(two_stage_config, TwoStageSelectionConfig):
-            if "enable_two_stage_selection" not in provided_keys:
-                working["enable_two_stage_selection"] = two_stage_config.enabled
-            if "two_stage_elite_count" not in provided_keys:
-                working["two_stage_elite_count"] = two_stage_config.elite_count
-            if "two_stage_candidate_pool_size" not in provided_keys:
-                working["two_stage_candidate_pool_size"] = (
-                    two_stage_config.candidate_pool_size
-                )
-            if "two_stage_min_pass_rate" not in provided_keys:
-                working["two_stage_min_pass_rate"] = two_stage_config.min_pass_rate
-
-        robustness_config = working.get("robustness_config")
-        if isinstance(robustness_config, RobustnessConfig):
-            if "robustness_validation_symbols" not in provided_keys:
-                working["robustness_validation_symbols"] = (
-                    robustness_config.validation_symbols
-                )
-            if "robustness_regime_windows" not in provided_keys:
-                working["robustness_regime_windows"] = robustness_config.regime_windows
-            if "robustness_stress_slippage" not in provided_keys:
-                working["robustness_stress_slippage"] = (
-                    robustness_config.stress_slippage
-                )
-            if "robustness_stress_commission_multipliers" not in provided_keys:
-                working["robustness_stress_commission_multipliers"] = (
-                    robustness_config.stress_commission_multipliers
-                )
-            if "robustness_aggregate_method" not in provided_keys:
-                working["robustness_aggregate_method"] = (
-                    robustness_config.aggregate_method
-                )
+        cls._restore_nested_configs(working)
+        cls._apply_two_stage_overrides(working, provided_keys)
+        cls._apply_robustness_overrides(working, provided_keys)
 
         # BaseConfigのfrom_dict処理を使用
         return cast(GAConfig, super().from_dict(working))

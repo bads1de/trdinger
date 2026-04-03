@@ -144,6 +144,12 @@ Pipfile.lock
 .dmypy.json
 dmypy.json
 
+# ruff
+.ruff_cache/
+
+# ruff
+.ruff_cache/
+
 
 # Ignore ML models
 backend/models/ml_indicators/*.joblib

@@ -4,6 +4,7 @@
 UnifiedConfig, GAConfigなどの設定クラスをテストする。
 """
 
+import copy
 import os
 from unittest.mock import patch
 
@@ -526,6 +527,84 @@ class TestGAConfigRuntime:
         assert is_valid is False
         assert any("並列プロセス数は32以下である必要があります" in e for e in errors)
 
+    def test_validate_two_stage_selection_constraints(self):
+        """二段階選抜の制約を検証"""
+        config = GAConfigRuntime(
+            population_size=10,
+            enable_two_stage_selection=True,
+            two_stage_elite_count=10,
+            two_stage_candidate_pool_size=2,
+            two_stage_min_pass_rate=1.5,
+        )
+        is_valid, errors = ConfigValidator.validate(config)
+        assert is_valid is False
+        assert any("二段階選抜エリート数は個体数未満である必要があります" in e for e in errors)
+        assert any(
+            "二段階選抜候補数は二段階選抜エリート数以上である必要があります"
+            in e
+            for e in errors
+        )
+        assert any("二段階選抜 pass rate は0.0-1.0の範囲である必要があります" in e for e in errors)
+
+    @pytest.mark.parametrize(
+        ("regime_window", "expected_message"),
+        [
+            (
+                {
+                    "name": "regime_a",
+                    "start_date": "2024-02-01 00:00:00",
+                    "end_date": "2024-01-01 00:00:00",
+                },
+                "start_date < end_date",
+            ),
+            (
+                {
+                    "name": "regime_a",
+                    "start_date": "invalid-date",
+                    "end_date": "2024-01-01 00:00:00",
+                },
+                "日付形式が不正",
+            ),
+        ],
+    )
+    def test_validate_robustness_regime_windows(
+        self, regime_window, expected_message
+    ):
+        """robustness の regime window を検証"""
+        config = GAConfigRuntime(robustness_regime_windows=[regime_window])
+        is_valid, errors = ConfigValidator.validate(config)
+        assert is_valid is False
+        assert any(expected_message in e for e in errors)
+
+    def test_validate_robustness_related_fields(self):
+        """robustness 関連のその他の制約を検証"""
+        config = GAConfigRuntime(
+            robustness_validation_symbols="BTC/USDT",
+            robustness_stress_slippage=[-0.01],
+            robustness_stress_commission_multipliers=[0.0],
+            robustness_aggregate_method="invalid",
+        )
+        is_valid, errors = ConfigValidator.validate(config)
+        assert is_valid is False
+        assert any(
+            "robustness_validation_symbols はリストである必要があります" in e
+            for e in errors
+        )
+        assert any(
+            "robustness の slippage は0以上の数値である必要があります" in e
+            for e in errors
+        )
+        assert any(
+            "robustness の commission multiplier は正の数値である必要があります"
+            in e
+            for e in errors
+        )
+        assert any(
+            "robustness_aggregate_method は {'robust', 'mean'} のいずれかである必要があります"
+            in e
+            for e in errors
+        )
+
     def test_to_dict_conversion(self, basic_ga_config):
         """辞書変換テスト"""
         data = basic_ga_config.to_dict()
@@ -550,6 +629,66 @@ class TestGAConfigRuntime:
         assert config.generations == 30
         assert config.crossover_rate == 0.9
         assert config.mutation_rate == 0.1
+
+    def test_from_dict_does_not_mutate_input_data(self):
+        """from_dict が入力データを破壊しないことを確認"""
+        data = {
+            "two_stage_selection_config": {
+                "enabled": False,
+                "elite_count": 7,
+                "candidate_pool_size": 9,
+                "min_pass_rate": 0.75,
+            },
+            "robustness_config": {
+                "validation_symbols": ["BTC/USDT"],
+                "regime_windows": [
+                    {
+                        "name": "regime_a",
+                        "start_date": "2024-01-01 00:00:00",
+                        "end_date": "2024-01-02 00:00:00",
+                    }
+                ],
+                "stress_slippage": [0.001],
+                "stress_commission_multipliers": [1.5],
+                "aggregate_method": "mean",
+            },
+        }
+        original = copy.deepcopy(data)
+
+        config = GAConfigRuntime.from_dict(data)
+
+        config.robustness_validation_symbols.append("ETH/USDT")
+        config.robustness_regime_windows[0]["name"] = "regime_b"
+
+        assert data == original
+        assert config.enable_two_stage_selection is False
+        assert config.two_stage_elite_count == 7
+        assert config.two_stage_candidate_pool_size == 9
+        assert config.two_stage_min_pass_rate == 0.75
+        assert config.robustness_validation_symbols == ["BTC/USDT", "ETH/USDT"]
+        assert config.robustness_regime_windows[0]["name"] == "regime_b"
+        assert config.robustness_aggregate_method == "mean"
+
+    def test_from_dict_creates_independent_mutable_defaults(self):
+        """from_dict のデフォルト可変値がインスタンス間で共有されないことを確認"""
+        first = GAConfigRuntime.from_dict({})
+        second = GAConfigRuntime.from_dict({})
+
+        first.fitness_weights["total_return"] = 0.99
+        first.objectives.append("extra_objective")
+        first.parameter_ranges["period"][0] = 999
+        first.robustness_regime_windows.append(
+            {
+                "name": "regime_b",
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-01-02 00:00:00",
+            }
+        )
+
+        assert second.fitness_weights["total_return"] != 0.99
+        assert "extra_objective" not in second.objectives
+        assert second.parameter_ranges["period"][0] == 5
+        assert second.robustness_regime_windows == []
 
     def test_fitness_weights_validation(self):
         """フィットネス重みの検証テスト"""
