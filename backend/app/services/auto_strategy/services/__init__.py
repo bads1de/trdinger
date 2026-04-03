@@ -5,18 +5,36 @@ Auto Strategy Services モジュール
 managers/, persistence/ の機能を統合しています。
 """
 
-from ..positions.position_sizing_service import PositionSizingService
-from ..tpsl.tpsl_service import TPSLService
-from .auto_strategy_service import AutoStrategyService
+from __future__ import annotations
 
-# managers からの統合
-from .experiment_application_service import ExperimentApplicationService
-from .experiment_backtest_service import ExperimentBacktestService
-from .experiment_engine_registry import ExperimentEngineRegistry
-from .experiment_manager import ExperimentManager
+from importlib import import_module
+from typing import Any
 
-# persistence からの統合
-from .experiment_persistence_service import ExperimentPersistenceService
+_ATTRIBUTE_EXPORTS = {
+    "AutoStrategyService": ".auto_strategy_service",
+    "ExperimentApplicationService": ".experiment_application_service",
+    "ExperimentBacktestService": ".experiment_backtest_service",
+    "ExperimentEngineRegistry": ".experiment_engine_registry",
+    "ExperimentManager": ".experiment_manager",
+    "ExperimentPersistenceService": ".experiment_persistence_service",
+    "PositionSizingService": "..positions.position_sizing_service",
+    "TPSLService": "..tpsl.tpsl_service",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module_path = _ATTRIBUTE_EXPORTS.get(name)
+    if module_path is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    module = import_module(module_path, __name__)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted({*globals().keys(), *_ATTRIBUTE_EXPORTS})
 
 __all__ = [
     "AutoStrategyService",

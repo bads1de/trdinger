@@ -501,6 +501,7 @@ class BybitService(ABC):
         repository_class: Any,
         get_timestamp_method_name: str,
         symbol: str,
+        repository: Optional[Any] = None,
         **kwargs,
     ) -> Optional[int]:
         """
@@ -510,14 +511,15 @@ class BybitService(ABC):
             repository_class: リポジトリクラス
             get_timestamp_method_name: タイムスタンプ取得メソッド名
             symbol: シンボル
+            repository: 既存のリポジトリインスタンス（テスト用）
             **kwargs: タイムスタンプ取得メソッドに渡す追加引数
 
         Returns:
             最新のタイムスタンプ（ミリ秒）
         """
 
-        async def get_timestamp(db, **_):
-            repo = repository_class(db)
+        async def get_timestamp(db, repository: Optional[Any] = None, **_):
+            repo = repository or repository_class(db)
             get_timestamp_method = getattr(repo, get_timestamp_method_name)
             latest_datetime = get_timestamp_method(symbol, **kwargs)
             if latest_datetime:
@@ -526,11 +528,14 @@ class BybitService(ABC):
 
         try:
             return await self._execute_with_db_session(
-                func=get_timestamp, repository=None
+                func=get_timestamp, repository=repository
             )
         except Exception as e:
-            logger.error(f"最新タイムスタンプの取得中にエラーが発生しました: {e}")
-            return None
+            logger.error(
+                f"最新タイムスタンプの取得中にエラーが発生しました: {e}",
+                exc_info=True,
+            )
+            raise DataError(f"最新タイムスタンプの取得に失敗しました: {e}") from e
 
     async def fetch_incremental_data(
         self,
@@ -556,6 +561,7 @@ class BybitService(ABC):
             repository_class=config.repository_class,
             get_timestamp_method_name=config.get_timestamp_method_name,
             symbol=symbol,
+            repository=repository,
         )
 
         # 履歴取得メソッドを取得
@@ -664,6 +670,7 @@ class BybitService(ABC):
                 repository_class=config.repository_class,
                 get_timestamp_method_name=config.get_timestamp_method_name,
                 symbol=symbol,
+                repository=repository,
             )
 
             fetch_history_method = getattr(

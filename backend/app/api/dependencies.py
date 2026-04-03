@@ -80,7 +80,7 @@ def get_generated_strategy_service_with_db(
     Returns:
         GeneratedStrategyServiceインスタンス
     """
-    return GeneratedStrategyService(db)
+    return _create_service(lambda: GeneratedStrategyService(db), "GeneratedStrategyService")
 
 
 def get_bybit_open_interest_service():

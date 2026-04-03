@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import Float, cast, desc
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from database.models import GeneratedStrategy
 
@@ -22,6 +22,12 @@ class GeneratedStrategyRepository(BaseRepository):
 
     def __init__(self, db: Session):
         super().__init__(db, GeneratedStrategy)
+
+    def _query_with_backtest_result(self):
+        """backtest_result を eager load 済みのクエリを返す。"""
+        return self.db.query(GeneratedStrategy).join(
+            GeneratedStrategy.backtest_result
+        ).options(selectinload(GeneratedStrategy.backtest_result))
 
     def save_strategy(
         self,
@@ -198,9 +204,7 @@ class GeneratedStrategyRepository(BaseRepository):
             context="バックテスト結果付き戦略取得", is_api_call=False, default_return=[]
         )
         def _get_strategies_with_backtest_results():
-            query = self.db.query(GeneratedStrategy).join(
-                GeneratedStrategy.backtest_result
-            )
+            query = self._query_with_backtest_result()
             query = query.filter(
                 GeneratedStrategy.fitness_score.isnot(None),
                 GeneratedStrategy.fitness_score > 0.0,
@@ -233,9 +237,7 @@ class GeneratedStrategyRepository(BaseRepository):
             context="フィルタリング戦略取得", is_api_call=False, default_return=(0, [])
         )
         def _get_filtered_and_sorted_strategies():
-            query = self.db.query(GeneratedStrategy).join(
-                GeneratedStrategy.backtest_result
-            )
+            query = self._query_with_backtest_result()
 
             # フィルタリング
             if experiment_id is not None:
@@ -363,6 +365,5 @@ class GeneratedStrategyRepository(BaseRepository):
             return count
 
         return _unlink_backtest_result()
-
 
 

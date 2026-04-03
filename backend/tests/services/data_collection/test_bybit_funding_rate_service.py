@@ -363,6 +363,38 @@ class TestFetchIncrementalData:
                 assert result["success"] is True
                 assert result["saved_count"] == 1
 
+    async def test_fetch_incremental_with_custom_repository_skips_get_db(
+        self, service, mock_repository, mock_config
+    ):
+        """カスタムリポジトリ指定時は最新タイムスタンプ取得でも get_db に依存しない"""
+        mock_data = [{"timestamp": 1609459200000, "fundingRate": 0.0001}]
+
+        mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
+            return_value=[{"id": 1}]
+        )
+        mock_repository.get_latest_funding_timestamp.return_value = None
+        mock_repository.insert_funding_rate_data = MagicMock(return_value=1)
+
+        with patch("asyncio.get_event_loop") as mock_loop:
+            mock_executor = AsyncMock(return_value=mock_data)
+            mock_loop.return_value.run_in_executor = mock_executor
+
+            with patch(
+                "app.services.data_collection.bybit.bybit_service.get_db"
+            ) as mock_get_db:
+                mock_get_db.side_effect = AssertionError("get_db should not be used")
+                service.exchange.fetch_funding_rate_history.return_value = mock_data
+
+                result = await service.fetch_incremental_funding_rate_data(
+                    "BTC/USDT:USDT", mock_repository
+                )
+
+        assert result["success"] is True
+        assert result["saved_count"] == 1
+        mock_repository.get_latest_funding_timestamp.assert_called_once_with(
+            "BTC/USDT:USDT"
+        )
+
 
 @pytest.mark.asyncio
 class TestFetchAndSaveData:
@@ -489,7 +521,6 @@ class TestDatabaseSave:
             funding_history, "BTC/USDT:USDT"
         )
         mock_repository.insert_funding_rate_data.assert_called_once()
-
 
 
 

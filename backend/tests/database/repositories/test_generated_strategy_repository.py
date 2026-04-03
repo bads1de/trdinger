@@ -233,7 +233,13 @@ class TestGetStrategiesWithBacktestResults:
     ) -> None:
         """バックテスト結果付き戦略が取得できる"""
         mock_query = MagicMock()
-        mock_query.join.return_value.filter.return_value.offset.return_value.limit.return_value.all.return_value = [
+        mock_joined_query = MagicMock()
+        mock_options_query = MagicMock()
+        mock_filtered_query = MagicMock()
+        mock_query.join.return_value = mock_joined_query
+        mock_joined_query.options.return_value = mock_options_query
+        mock_options_query.filter.return_value = mock_filtered_query
+        mock_filtered_query.offset.return_value.limit.return_value.all.return_value = [
             sample_strategy_model
         ]
         repository.db.query.return_value = mock_query
@@ -241,6 +247,43 @@ class TestGetStrategiesWithBacktestResults:
         results = repository.get_strategies_with_backtest_results(limit=10)
 
         assert len(results) == 1
+
+
+class TestGetFilteredAndSortedStrategies:
+    """get_filtered_and_sorted_strategies メソッドのテスト"""
+
+    def test_get_filtered_and_sorted_strategies_uses_eager_loading(
+        self,
+        repository: GeneratedStrategyRepository,
+        sample_strategy_model: GeneratedStrategy,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """backtest_result を eager load して N+1 を防ぐ"""
+        loader = object()
+        monkeypatch.setattr(
+            "database.repositories.generated_strategy_repository.selectinload",
+            lambda *args, **kwargs: loader,
+        )
+
+        base_query = MagicMock()
+        joined_query = MagicMock()
+        options_query = MagicMock()
+        ordered_query = MagicMock()
+
+        repository.db.query.return_value = base_query
+        base_query.join.return_value = joined_query
+        joined_query.options.return_value = options_query
+        options_query.order_by.return_value = ordered_query
+        ordered_query.count.return_value = 1
+        ordered_query.offset.return_value.limit.return_value.all.return_value = [
+            sample_strategy_model
+        ]
+
+        total_count, strategies = repository.get_filtered_and_sorted_strategies()
+
+        joined_query.options.assert_called_once_with(loader)
+        assert total_count == 1
+        assert strategies == [sample_strategy_model]
 
 
 class TestUnlinkBacktestResult:
@@ -322,7 +365,5 @@ class TestErrorHandling:
                 gene_data={"id": "test"},
                 generation=10,
             )
-
-
 
 

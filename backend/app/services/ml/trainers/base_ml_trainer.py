@@ -194,12 +194,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             # 元のX, yを返す必要がある場合は、選択後の特徴量を持つ全データを再構築
             # （レポート出力用など）
-            try:
-                X_final = pd.concat([X_tr, X_te]).sort_index()
-                y_final = pd.concat([y_tr, y_te]).sort_index()
-            except Exception:
-                X_final = X_tr
-                y_final = y_tr
+            X_final, y_final = self._recombine_split_data(X_tr, X_te, y_tr, y_te)
 
             return self._format_training_result(res, X_final, y_final)
 
@@ -395,6 +390,26 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         y_test = y.iloc[train_size:].copy()
 
         return X_train, X_test, y_train, y_test
+
+    def _recombine_split_data(
+        self,
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        y_train: pd.Series,
+        y_test: pd.Series,
+    ) -> Tuple[pd.DataFrame, pd.Series]:
+        """学習・テスト分割後のデータをレポート用に再結合する。"""
+        try:
+            X_final = pd.concat([X_train, X_test]).sort_index()
+            y_final = pd.concat([y_train, y_test]).sort_index()
+            return X_final, y_final
+        except Exception as exc:
+            logger.warning(
+                "学習結果の全データ再構築に失敗したため学習データのみ返します: %s",
+                exc,
+                exc_info=True,
+            )
+            return X_train, y_train
 
     def _time_series_cross_validate(
         self, X: pd.DataFrame, y: pd.Series, **training_params

@@ -96,6 +96,18 @@ class TestGetGeneratedStrategyServiceWithDb:
         assert result is mock_service
         mock_service_cls.assert_called_once_with(mock_db)
 
+    @patch("app.api.dependencies.GeneratedStrategyService")
+    def test_error_raises_http_exception(self, mock_service_cls):
+        """生成戦略サービスの初期化失敗時にHTTPExceptionが発生すること"""
+        mock_db = MagicMock()
+        mock_service_cls.side_effect = RuntimeError("Init failed")
+
+        with pytest.raises(HTTPException) as exc_info:
+            get_generated_strategy_service_with_db(mock_db)
+
+        assert exc_info.value.status_code == 503
+        assert "GeneratedStrategyService" in exc_info.value.detail
+
 
 class TestGetLongShortRatioRepository:
     """get_long_short_ratio_repository関数のテスト"""

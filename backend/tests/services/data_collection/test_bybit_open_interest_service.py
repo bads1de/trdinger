@@ -387,6 +387,34 @@ class TestFetchAndSaveData:
             assert result["success"] is True
             assert result["saved_count"] == 1
 
+    async def test_fetch_and_save_with_fetch_all_and_custom_repository_skips_get_db(
+        self, service, mock_repository, mock_config
+    ):
+        """fetch_all=True でもカスタムリポジトリ指定時は get_db に依存しない"""
+        mock_data = [{"timestamp": 1609459200000, "openInterest": 100000.0}]
+
+        mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
+            return_value=[{"id": 1}]
+        )
+        mock_repository.get_latest_open_interest_timestamp.return_value = None
+        mock_repository.insert_open_interest_data = MagicMock(return_value=1)
+
+        with patch.object(service, "_fetch_paginated_data", return_value=mock_data):
+            with patch(
+                "app.services.data_collection.bybit.bybit_service.get_db"
+            ) as mock_get_db:
+                mock_get_db.side_effect = AssertionError("get_db should not be used")
+
+                result = await service.fetch_and_save_open_interest_data(
+                    "BTC/USDT:USDT", repository=mock_repository, fetch_all=True
+                )
+
+        assert result["success"] is True
+        assert result["saved_count"] == 1
+        mock_repository.get_latest_open_interest_timestamp.assert_called_once_with(
+            "BTC/USDT:USDT"
+        )
+
     async def test_fetch_and_save_with_fetch_all(self, service, mock_config):
         """fetch_all=Trueでの全期間データ取得を確認"""
         mock_data = [
@@ -561,7 +589,6 @@ class TestEdgeCases:
             )
 
             assert result == expected_data
-
 
 
 

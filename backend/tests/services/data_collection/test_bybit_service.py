@@ -452,12 +452,35 @@ class TestDatabaseSessionManagement:
         ) as mock_get_db:
             mock_get_db.side_effect = Exception("Database error")
 
+            with pytest.raises(DataError, match="最新タイムスタンプの取得に失敗"):
+                await service._get_latest_timestamp_from_db(
+                    mock_repo_class, "get_latest_timestamp", "BTC/USDT:USDT"
+                )
+
+    async def test_get_latest_timestamp_from_db_with_custom_repository(
+        self, service
+    ):
+        """リポジトリ注入時は get_db を使わず最新タイムスタンプを取得する"""
+        mock_repo_class = MagicMock()
+        mock_repository = MagicMock()
+        test_datetime = datetime(2023, 1, 1, 0, 0, 0)
+        mock_repository.get_latest_timestamp.return_value = test_datetime
+
+        with patch(
+            "app.services.data_collection.bybit.bybit_service.get_db"
+        ) as mock_get_db:
+            mock_get_db.side_effect = AssertionError("get_db should not be used")
+
             result = await service._get_latest_timestamp_from_db(
-                mock_repo_class, "get_latest_timestamp", "BTC/USDT:USDT"
+                mock_repo_class,
+                "get_latest_timestamp",
+                "BTC/USDT:USDT",
+                repository=mock_repository,
             )
 
-            assert result is None
-
-
+        expected_timestamp = int(test_datetime.timestamp() * 1000)
+        assert result == expected_timestamp
+        mock_repo_class.assert_not_called()
+        mock_repository.get_latest_timestamp.assert_called_once_with("BTC/USDT:USDT")
 
 

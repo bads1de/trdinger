@@ -341,6 +341,48 @@ class TestBaseMLTrainer:
         assert result["success"] is True
         assert result["model_path"] == "/path/to/model"
 
+    def test_train_model_logs_warning_when_result_recombine_fails(
+        self, trainer, sample_data, caplog
+    ):
+        """学習後の全量再構築に失敗しても警告を残して学習結果を返す"""
+        X_all = pd.DataFrame(
+            np.arange(150 * 4, dtype=float).reshape(150, 4),
+            columns=["feat1", "feat2", "feat3", "feat4"],
+            index=sample_data.index,
+        )
+        y = pd.Series(np.random.randn(150), index=sample_data.index)
+
+        X_tr = X_all.iloc[:120].copy()
+        X_te = X_all.iloc[120:].copy()
+        y_tr = y.iloc[:120].copy()
+        y_te = y.iloc[120:].copy()
+
+        with patch.object(trainer, "_calculate_features", return_value=X_all):
+            with patch.object(trainer, "_prepare_training_data", return_value=(X_all, y)):
+                with patch.object(
+                    trainer,
+                    "_split_data",
+                    return_value=(X_tr, X_te, y_tr, y_te),
+                ):
+                    with patch.object(
+                        trainer,
+                        "_train_model_impl",
+                        return_value={"accuracy": 0.8},
+                    ):
+                        with patch(
+                            "app.services.ml.trainers.base_ml_trainer.pd.concat",
+                            side_effect=TypeError("concat failed"),
+                        ):
+                            with caplog.at_level("WARNING"):
+                                result = trainer.train_model(
+                                    sample_data,
+                                    save_model=False,
+                                )
+
+        assert result["success"] is True
+        assert result["total_samples"] == len(X_tr)
+        assert "学習結果の全データ再構築に失敗" in caplog.text
+
     def test_cleanup_resources(self, trainer):
         """リソースクリーンアップのテスト"""
         trainer.is_trained = True
