@@ -19,15 +19,13 @@ from .gri import gri
 from .rmi import rmi
 from .polarized_fractal_efficiency import pfe
 from .market_meanness_index import mmi
-from .schaff_trend_cycle import schaff_trend_cycle
 from .ehlers_cyber_cycle import ehlers_cyber_cycle
 from .ehlers_instantaneous_trendline import ehlers_instantaneous_trendline
-from .coppock_curve import coppock_curve
-from .qstick import qstick
 from .smoothed_adaptive_momentum import smoothed_adaptive_momentum
 from .vortex_rsi import vortex_rsi
 from .trend_trigger_factor import ttf
 from .random_walk_index import rwi
+from .hurst_exponent import hurst_exponent
 
 
 class OriginalIndicators:
@@ -50,15 +48,13 @@ class OriginalIndicators:
     rmi = staticmethod(rmi)
     pfe = staticmethod(pfe)
     mmi = staticmethod(mmi)
-    schaff_trend_cycle = staticmethod(schaff_trend_cycle)
     ehlers_cyber_cycle = staticmethod(ehlers_cyber_cycle)
     ehlers_instantaneous_trendline = staticmethod(ehlers_instantaneous_trendline)
-    coppock_curve = staticmethod(coppock_curve)
-    qstick = staticmethod(qstick)
     smoothed_adaptive_momentum = staticmethod(smoothed_adaptive_momentum)
     vortex_rsi = staticmethod(vortex_rsi)
     ttf = staticmethod(ttf)
     rwi = staticmethod(rwi)
+    hurst_exponent = staticmethod(hurst_exponent)
 
 
 __all__ = ["OriginalIndicators"]
