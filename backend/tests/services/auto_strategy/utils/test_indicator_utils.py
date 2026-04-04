@@ -35,6 +35,8 @@ class TestIndicatorUtils:
         all_inds = get_all_indicators()
         assert "RSI" in all_inds
         assert "SMA" in all_inds
+        assert "EXP_MA" not in all_inds
+        assert "SIMPLE_MA" not in all_inds
 
     @patch("app.services.auto_strategy.utils.indicators.TechnicalIndicatorService")
     def test_get_all_indicator_ids(self, MockService):

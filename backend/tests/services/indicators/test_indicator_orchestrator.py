@@ -222,6 +222,7 @@ class TestTechnicalIndicatorService:
 
         # SMAが含まれていることを確認
         assert "SMA" in result
+        assert "SIMPLE_MA" not in result
 
         # SMA設定が正しい形式であることを確認
         sma_config = result["SMA"]

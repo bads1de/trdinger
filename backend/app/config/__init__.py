@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 # 共通定数
 from .constants import (  # noqa: F401
@@ -22,6 +22,18 @@ from .constants import (  # noqa: F401
     SUPPORTED_TIMEFRAMES,
 )
 
+if TYPE_CHECKING:
+    # 型チェッカー/IDE には公開名を明示しつつ、
+    # 実行時は __getattr__ による遅延 import を維持する。
+    from .unified_config import (
+        AppConfig,
+        DataCollectionConfig,
+        DatabaseConfig,
+        LoggingConfig,
+        MarketConfig,
+        UnifiedConfig,
+    )
+
 _UNIFIED_CONFIG_EXPORTS = {
     "AppConfig",
     "DatabaseConfig",
@@ -29,7 +41,6 @@ _UNIFIED_CONFIG_EXPORTS = {
     "MarketConfig",
     "DataCollectionConfig",
     "UnifiedConfig",
-    "unified_config",
 }
 
 
@@ -60,7 +71,6 @@ __all__ = [
     "MAX_DATA_LIMIT",
     "MIN_DATA_LIMIT",
     # 統一設定システム
-    "unified_config",
     "UnifiedConfig",
     # アプリケーション基本設定
     "AppConfig",

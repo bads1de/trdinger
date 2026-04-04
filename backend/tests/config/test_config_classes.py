@@ -43,6 +43,16 @@ class TestUnifiedConfig:
         assert isinstance(unified_config, UnifiedConfig)
         assert unified_config.app.app_name == "Trdinger Trading API"
 
+    def test_package_level_exports(self):
+        """app.config はクラスを公開し、シングルトンはサブモジュールから取得すること"""
+        import app.config as config_package
+        from app.config.unified_config import unified_config
+
+        assert config_package.UnifiedConfig is UnifiedConfig
+        assert "UnifiedConfig" in config_package.__all__
+        assert "unified_config" not in config_package.__all__
+        assert isinstance(unified_config, UnifiedConfig)
+
     def test_hierarchical_config_access(self):
         """階層的設定へのアクセステスト"""
         config = UnifiedConfig()

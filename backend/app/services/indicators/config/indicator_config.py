@@ -377,56 +377,64 @@ class IndicatorConfigRegistry:
 
     def __init__(self):
         self._configs: Dict[str, IndicatorConfig] = {}
+        self._aliases: Dict[str, IndicatorConfig] = {}
         self._initialized: bool = False
         self._auto_initialize_on_access: bool = True
 
+    @staticmethod
+    def _normalize_key(name: str) -> str:
+        """検索・登録用のキーを正規化する。"""
+        return name.upper()
+
+    def _ensure_ready(self) -> None:
+        """グローバルレジストリの遅延初期化を吸収する。"""
+        if (
+            self is indicator_registry
+            and not self._initialized
+            and self._auto_initialize_on_access
+        ):
+            self.ensure_initialized()
+
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
-        self._configs[config.indicator_name] = config
-        # エイリアスも登録
+        primary_key = self._normalize_key(config.indicator_name)
+        self._configs[primary_key] = config
+
+        # 同一主指標の再登録時に古い alias が残らないようにする
+        self._aliases = {
+            alias_key: alias_config
+            for alias_key, alias_config in self._aliases.items()
+            if self._normalize_key(alias_config.indicator_name) != primary_key
+        }
+
+        # エイリアスは lookup 専用マップに登録
         if config.aliases:
             for alias in config.aliases:
-                self._configs[alias] = config
+                alias_key = self._normalize_key(alias)
+                if alias_key != primary_key:
+                    self._aliases[alias_key] = config
 
     def reset(self) -> None:
         """レジストリをクリア（テスト用）"""
         self._configs.clear()
+        self._aliases.clear()
         self._initialized = False
         self._auto_initialize_on_access = False
 
     def get_indicator_config(self, indicator_name: str) -> Optional[IndicatorConfig]:
         """設定を取得"""
-        if (
-            self is indicator_registry
-            and not self._initialized
-            and self._auto_initialize_on_access
-        ):
-            self.ensure_initialized()
-
-        return self._configs.get(indicator_name.upper()) or self._configs.get(
-            indicator_name
-        )
+        self._ensure_ready()
+        normalized_name = self._normalize_key(indicator_name)
+        return self._configs.get(normalized_name) or self._aliases.get(normalized_name)
 
     def list_indicators(self) -> List[str]:
         """登録されているインジケーター名のリストを取得"""
-        if (
-            self is indicator_registry
-            and not self._initialized
-            and self._auto_initialize_on_access
-        ):
-            self.ensure_initialized()
-
+        self._ensure_ready()
         return list(self._configs.keys())
 
     def get_all_indicators(self) -> Dict[str, IndicatorConfig]:
         """登録済みインジケーターの辞書を取得"""
-        if (
-            self is indicator_registry
-            and not self._initialized
-            and self._auto_initialize_on_access
-        ):
-            self.ensure_initialized()
-
+        self._ensure_ready()
         return dict(self._configs)
 
     def generate_parameters_for_indicator(

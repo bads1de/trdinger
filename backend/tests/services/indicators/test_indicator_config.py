@@ -203,7 +203,9 @@ class TestIndicatorConfigRegistry:
         assert registry.get_indicator_config("RSI") == config
         assert registry.get_indicator_config("rsi") == config
         assert "RSI" in registry.list_indicators()
-        assert "rsi" in registry.list_indicators()
+        assert "rsi" not in registry.list_indicators()
+        assert "RSI" in registry.get_all_indicators()
+        assert "rsi" not in registry.get_all_indicators()
 
     def test_reset(self):
         """リセットテスト"""
