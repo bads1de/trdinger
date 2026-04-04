@@ -3,6 +3,12 @@ from typing import Any, Dict, Mapping, Optional
 
 
 def now_iso() -> str:
+    """
+    現在時刻をISO8601形式の文字列で返します。
+
+    Returns:
+        str: ISO8601形式の現在時刻
+    """
     return datetime.now().isoformat()
 
 
@@ -98,7 +104,24 @@ def result_response(
     status: Optional[str] = None,
     status_code: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """成功/失敗どちらのレスポンスもまとめて返す。"""
+    """
+    成功/失敗どちらのレスポンスもまとめて生成する統一関数
+
+    successがTrueの場合はapi_response、Falseの場合はerror_responseを内部的に呼び出します。
+
+    Args:
+        success: 成功フラグ（True/False）
+        message: レスポンスメッセージ
+        data: 返却データ（成功時）
+        error_code: エラーコード（失敗時）
+        details: エラー詳細情報（失敗時）
+        context: エラーコンテキスト（失敗時）
+        status: ステータス文字列
+        status_code: HTTPステータスコード
+
+    Returns:
+        構築された統一レスポンス辞書
+    """
     if success:
         return api_response(
             success=True,

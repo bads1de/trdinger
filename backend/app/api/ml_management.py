@@ -122,9 +122,18 @@ async def get_feature_importance(
     """
     特徴量重要度を取得
 
+    現在読み込まれているMLモデルの特徴量重要度を取得します。
+    予測に最も影響を与えている特徴量を上位N件で返します。
+
     Args:
-        top_n: 上位N件の特徴量を取得
+        top_n: 上位N件の特徴量を取得（デフォルト: 10）
         ml_service: ML管理サービス（依存性注入）
+
+    Returns:
+        特徴量名と重要度スコアのリスト
+
+    Raises:
+        HTTPException: モデルが読み込まれていない場合
     """
 
     async def _get_feature_importance():
@@ -144,8 +153,18 @@ async def load_model(
     """
     指定されたモデルを読み込み
 
+    指定されたモデルファイルをメモリに読み込み、予測に使用できる状態にします。
+    既に読み込まれているモデルがある場合は置き換えられます。
+
     Args:
-        model_name: 読み込むモデル名
+        model_name: 読み込むモデル名（ファイル名）
+        ml_service: ML管理サービス（依存性注入）
+
+    Returns:
+        読み込み結果を含むJSONレスポンス
+
+    Raises:
+        HTTPException: モデルファイルが存在しない場合や読み込みに失敗した場合
     """
 
     async def _load_model():
@@ -163,6 +182,18 @@ async def get_current_model(
 ):
     """
     現在読み込まれているモデル情報を取得
+
+    現在メモリに読み込まれているモデルの詳細情報（モデル名、
+    トレーニング日時、パフォーマンス指標、ハイパーパラメータなど）を返します。
+
+    Args:
+        ml_service: ML管理サービス（依存性注入）
+
+    Returns:
+        現在のモデル情報を含むJSONレスポンス
+
+    Raises:
+        HTTPException: モデルが読み込まれていない場合
     """
 
     async def _get_current_model():
@@ -209,9 +240,18 @@ async def update_ml_config(
     """
     ML設定を更新
 
+    実行時のML関連設定を動的に更新します。
+    変更は即時に反映され、次回のトレーニングから適用されます。
+
     Args:
-        config_data: 更新する設定データ
+        config_data: 更新する設定データ（キーと値のペア）
         ml_service: ML管理サービス（依存性注入）
+
+    Returns:
+        更新結果と更新後の設定を含むJSONレスポンス
+
+    Raises:
+        HTTPException: 設定キーが無効な場合や値の形式が不正な場合
     """
 
     async def _update_ml_config():
@@ -237,8 +277,13 @@ async def reset_ml_config(
     """
     ML設定をデフォルト値にリセット
 
+    すべてのML関連設定をシステムデフォルト値に戻します。
+
     Args:
         ml_service: ML管理サービス（依存性注入）
+
+    Returns:
+        リセット結果とデフォルト設定を含むJSONレスポンス
     """
 
     async def _reset_ml_config():
@@ -264,8 +309,14 @@ async def cleanup_old_models(
     """
     古いモデルファイルをクリーンアップ
 
+    ディスクに保存されている古いモデルファイルを自動的に削除します。
+    最新のN件のモデルは保持され、それ以前のモデルが削除されます。
+
     Args:
         ml_service: ML管理サービス（依存性注入）
+
+    Returns:
+        削除されたモデル数とクリーンアップ結果を含むJSONレスポンス
     """
 
     async def _cleanup_old_models():

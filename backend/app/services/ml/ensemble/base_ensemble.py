@@ -49,7 +49,7 @@ class BaseEnsemble(ABC):
             config: アンサンブル設定
         """
         self.config = config
-        self.base_models: List[Any] = []
+        self.base_models: List[str] = []
         self.meta_model: Optional[Any] = None
         self.is_fitted = False
         self.feature_columns: Optional[List[str]] = None

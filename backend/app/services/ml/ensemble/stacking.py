@@ -79,28 +79,22 @@ class StackingEnsemble(BaseEnsemble):
         )
 
     @property
-    def base_models(
-        self,
-    ) -> List[str]:  # pyright: ignore[reportIncompatibleVariableOverride]
+    def base_models(self) -> List[str]:
         """後方互換性のためのプロパティ"""
         return self._base_model_types
 
     @base_models.setter
-    def base_models(
-        self, value: List[str]
-    ) -> None:  # pyright: ignore[reportIncompatibleVariableOverride]
+    def base_models(self, value: List[str]) -> None:
         """後方互換性のためのセッター"""
         self._base_model_types = value
 
     @property
-    def meta_model(self) -> str:  # pyright: ignore[reportIncompatibleVariableOverride]
+    def meta_model(self) -> str:
         """後方互換性のためのプロパティ"""
         return self._meta_model_type
 
     @meta_model.setter
-    def meta_model(
-        self, value: str
-    ) -> None:  # pyright: ignore[reportIncompatibleVariableOverride]
+    def meta_model(self, value: str) -> None:
         """後方互換性のためのセッター"""
         self._meta_model_type = value
 
