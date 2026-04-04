@@ -1,4 +1,34 @@
-"""独自テクニカル指標の互換パッケージ."""
+"""
+独自テクニカル指標パッケージ
+
+カスタムテクニカル指標の実装を提供します。
+
+主なコンポーネント:
+- adaptive_entropy.py: アダプティブエントロピー
+- chaos_fractal_dimension.py: カオスフラクタル次元
+- connors_rsi.py: コナーズRSI
+- damiani_volatmeter.py: ダミアーニ・ボラティルメーター
+- demarker.py: デマーカー
+- ehlers_cyber_cycle.py: エラーズ・サイバーサイクル
+- ehlers_instantaneous_trendline.py: エラーズ・インスタントトレンドライン
+- entropy_volatility_index.py: エントロピーボラティリティインデックス
+- fibonacci_cycle.py: フィボナッチサイクル
+- frama.py: FRAMA
+- gri.py: GRI
+- harmonic_resonance.py: ハーモニックレゾナンス
+- hurst_exponent.py: ハースト指数
+- kairi_relative_index.py: KAIRI相対指数
+- market_meanness_index.py: マーケットミーアンネスインデックス
+- polarized_fractal_efficiency.py: 偏光フラクタル効率
+- prime_oscillator.py: プライムオシレーター
+- quantum_flow.py: クオンタムフロー
+- random_walk_index.py: ランダムウォークインデックス
+- rmi.py: RMI
+- smoothed_adaptive_momentum.py: スムーズドアダプティブモメンタム
+- trend_intensity_index.py: トレンドインテンシティインデックス
+- trend_trigger_factor.py: トレンドトリガーファクター
+- vortex_rsi.py: ボルテックスRSI
+"""
 
 from __future__ import annotations
 

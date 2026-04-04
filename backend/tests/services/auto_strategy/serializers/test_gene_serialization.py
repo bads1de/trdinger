@@ -50,6 +50,25 @@ class TestDelegation:
             assert result is restored_gene
             mock_from_dict.assert_called_once_with(expected_dict, cls)
 
+    def test_from_list_returns_strategy_gene_for_list_like_individual(self, serializer):
+        """DEAP個体風のlistからStrategyGeneを復元できること"""
+        gene = StrategyGene(
+            id="list-like",
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+            metadata={},
+        )
+
+        class MockIndividual(list):
+            def __init__(self, item):
+                super().__init__([item])
+
+        individual = MockIndividual(gene)
+
+        restored = serializer.from_list(individual, StrategyGene)
+
+        assert isinstance(restored, StrategyGene)
+        assert restored is gene
+
 
 class TestGeneSerializerCacheIntegration:
     """キャッシュ統合のテスト"""

@@ -8,10 +8,10 @@ import logging
 import threading
 import time
 from math import isfinite
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 
-if TYPE_CHECKING:
-    from ..evaluation.evaluation_report import EvaluationReport
+
+from ..evaluation.evaluation_report import EvaluationReport
 
 import numpy as np
 from deap import tools
@@ -23,7 +23,6 @@ from app.services.auto_strategy.generators.random_gene_generator import (
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.backtest.services.backtest_service import BacktestService
 
-from ..evaluation.evaluation_report import EvaluationReport as EvaluationReportType
 from ..evaluation.individual_evaluator import IndividualEvaluator
 from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..evaluation.report_persistence import build_report_summary
@@ -747,7 +746,7 @@ class GeneticAlgorithmEngine:
 
         def sort_key(individual: Any) -> Tuple[int, int, float]:
             """ソート用のキーを生成する。
-            
+
             2段階評価のランクがあればそれを最優先し、なければ後回しにする。
             同じランク内では、プライマリフィットネスの降順でソートする。
             """

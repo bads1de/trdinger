@@ -49,8 +49,8 @@ class BaseEnsemble(ABC):
             config: アンサンブル設定
         """
         self.config = config
-        self.base_models: List[Any] = []
-        self.meta_model: Optional[Any] = None
+        self._base_models_list: List[str] = []
+        self._meta_model_ref: Optional[Any] = None
         self.is_fitted = False
         self.feature_columns: Optional[List[str]] = None
         self.scaler: Optional[Any] = None
@@ -248,7 +248,7 @@ class BaseEnsemble(ABC):
         # ベースモデルから特徴量重要度を集約
         all_importances: Dict[str, List[float]] = {}
 
-        for i, model in enumerate(self.base_models):
+        for i, model_name in enumerate(self._base_models_list):
             try:
                 # 統一関数を使用して重要度を取得
                 model_importance = get_feature_importance_unified(
@@ -380,7 +380,7 @@ class BaseEnsemble(ABC):
                     warnings.simplefilter("ignore", InconsistentVersionWarning)
                     data = joblib.load(f_list[-1])
                 if isinstance(data, dict) and "model" in data:
-                    self.base_models, self.config, self.is_fitted = (
+                    self._base_models_list, self.config, self.is_fitted = (
                         [data["model"]],
                         data.get("config", {}),
                         data.get("is_fitted", False),

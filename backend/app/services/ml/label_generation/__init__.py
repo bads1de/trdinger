@@ -35,6 +35,5 @@ __all__ = [
     "get_common_presets",
     "apply_preset_by_name",
     "SignalGenerator",
-    "LabelGenerationService",
     "LabelCache",
 ]

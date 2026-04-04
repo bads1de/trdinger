@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.feature_selection import SelectorMixin
+from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted
 
 from .config import FeatureSelectionConfig, SelectionMethod
 from .strategies import (
@@ -128,7 +130,8 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
 
         return self
 
-    def _get_support_mask(self) -> np.ndarray:
+    def _get_support_mask(self) -> np.ndarray:  # type: ignore[override]
+        check_is_fitted(self, "support_")
         return self.support_
 
     def transform(

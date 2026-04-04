@@ -31,7 +31,7 @@ from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
-from ..common.config import get_default_ensemble_config, get_default_single_model_config
+from ..common.config import get_default_single_model_config
 from ..ensemble.ensemble_trainer import EnsembleTrainer
 from ..trainers.volatility_regression_trainer import VolatilityRegressionTrainer
 

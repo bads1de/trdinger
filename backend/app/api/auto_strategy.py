@@ -106,7 +106,18 @@ async def generate_strategy(
     GA戦略生成を開始
 
     遺伝的アルゴリズムを使用して取引戦略を自動生成します。
-    バックグラウンドで実行され、進捗は別のエンドポイントで確認できます。
+    バックグラウンドで実行され、進捗は `/experiments` エンドポイントで確認できます。
+
+    Args:
+        request: GA戦略生成リクエスト設定（実験ID、実験名、バックテスト設定、GA設定）
+        background_tasks: FastAPIバックグラウンドタスクマネージャー
+        auto_strategy_service: 自動戦略生成サービス（依存性注入）
+
+    Returns:
+        GAGenerationResponse: 戦略生成開始結果（実験IDを含む）
+
+    Raises:
+        HTTPException: 設定が無効な場合やサービスエラーが発生した場合
     """
 
     async def _generate_strategy():
@@ -151,7 +162,14 @@ async def list_experiments(
     """
     実験一覧を取得
 
-    実行中・完了済みの全実験の一覧を取得します。
+    実行中・完了済みの全GA実験の一覧を取得します。
+    各実験の状態、進捗率、開始・終了時刻などの情報が含まれます。
+
+    Args:
+        auto_strategy_service: 自動戦略生成サービス（依存性注入）
+
+    Returns:
+        ListExperimentsResponse: 実験一覧情報
     """
 
     async def _list_experiments():
@@ -174,7 +192,18 @@ async def stop_experiment(
     """
     実験を停止
 
-    実行中の実験を停止します。
+    実行中のGA実験を安全に停止します。
+    停止時点までの最良の戦略は保存されます。
+
+    Args:
+        experiment_id: 停止対象の実験ID
+        auto_strategy_service: 自動戦略生成サービス（依存性注入）
+
+    Returns:
+        StopExperimentResponse: 停止処理結果
+
+    Raises:
+        HTTPException: 実験IDが存在しない場合や既に完了している場合
     """
 
     async def _stop_experiment():

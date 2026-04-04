@@ -5,7 +5,7 @@ GA実験の実行と管理を担当します。
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
 
@@ -15,8 +15,7 @@ from .experiment_backtest_service import ExperimentBacktestService
 from .experiment_engine_registry import ExperimentEngineRegistry
 from .experiment_persistence_service import ExperimentPersistenceService
 
-if TYPE_CHECKING:
-    from ..core.engine.ga_engine import GeneticAlgorithmEngine
+from ..core.engine.ga_engine import GeneticAlgorithmEngine
 
 logger = logging.getLogger(__name__)
 

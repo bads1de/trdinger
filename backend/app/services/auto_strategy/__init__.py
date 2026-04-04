@@ -6,7 +6,23 @@
 
 from __future__ import annotations
 
-from typing import Any
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .config import GAConfig
+    from .genes import StrategyGene
+    from .services.auto_strategy_service import AutoStrategyService
+    from .positions.position_sizing_service import PositionSizingService
+    from .tpsl import TPSLService
+
+_ATTRIBUTE_EXPORTS = {
+    "AutoStrategyService": ".services.auto_strategy_service",
+    "StrategyGene": ".genes",
+    "GAConfig": ".config",
+    "TPSLService": ".tpsl",
+    "PositionSizingService": ".positions.position_sizing_service",
+}
 
 __all__ = [
     "AutoStrategyService",
@@ -18,24 +34,15 @@ __all__ = [
 
 
 def __getattr__(name: str) -> Any:
-    if name == "AutoStrategyService":
-        from .services.auto_strategy_service import AutoStrategyService
+    module_path = _ATTRIBUTE_EXPORTS.get(name)
+    if module_path is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-        return AutoStrategyService
-    if name == "StrategyGene":
-        from .genes import StrategyGene
+    module = import_module(module_path, __name__)
+    value = getattr(module, name)
+    globals()[name] = value
+    return value
 
-        return StrategyGene
-    if name == "GAConfig":
-        from .config import GAConfig
 
-        return GAConfig
-    if name == "TPSLService":
-        from .tpsl import TPSLService
-
-        return TPSLService
-    if name == "PositionSizingService":
-        from .positions import PositionSizingService
-
-        return PositionSizingService
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+def __dir__() -> list[str]:
+    return sorted({*globals().keys(), *_ATTRIBUTE_EXPORTS})

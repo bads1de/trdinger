@@ -61,16 +61,19 @@ async def get_backtest_results(
     """
     バックテスト結果一覧を取得
 
+    データベースに保存されたバックテスト結果の一覧を取得します。
+    取引ペアや戦略名でフィルタリングし、ページネーションでデータを取得できます。
+
     Args:
-        limit: 取得件数
-        offset: オフセット
-        symbol: 取引ペアフィルター
+        limit: 取得件数（1-100）
+        offset: ページネーションオフセット
+        symbol: 取引ペアフィルター（例: BTC/USDT:USDT）
         strategy_name: 戦略名フィルター
         db: データベースセッション
         orchestration_service: バックテストオーケストレーションサービス（依存性注入）
 
     Returns:
-        バックテスト結果一覧
+        BacktestResultsResponse: バックテスト結果一覧と合計件数
     """
 
     async def _get_results():

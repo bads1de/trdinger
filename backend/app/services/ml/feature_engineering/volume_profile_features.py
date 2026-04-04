@@ -175,7 +175,6 @@ class VolumeProfileFeatureCalculator:
         low_arr = df["low"].values.astype(np.float64)
         close_arr = df["close"].values.astype(np.float64)
         volume_arr = df["volume"].values.astype(np.float64)
-        n = len(df)
 
         if lookback_periods is None:
             lookback_periods = [self.lookback_period, 100, 200]

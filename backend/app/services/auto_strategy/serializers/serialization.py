@@ -9,20 +9,21 @@ import copy
 import hashlib
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from app.utils.serialization import dataclass_to_dict
 
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
-if TYPE_CHECKING:
-    from ..genes import (
-        Condition,
-        EntryGene,
-        IndicatorGene,
-        PositionSizingGene,
-        TPSLGene,
-    )
+
+from ..genes import (
+    Condition,
+    EntryGene,
+    IndicatorGene,
+    PositionSizingGene,
+    StrategyGene,
+    TPSLGene,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -431,7 +432,9 @@ class GeneSerializer(DictConverter):
         super().__init__(cache_size=cache_size)
         self.dict_converter = self
 
-    def from_list(self, individual_list: list, strategy_gene_class: Any):
+    def from_list(
+        self, individual_list: list, strategy_gene_class: Any
+    ) -> Optional[StrategyGene]:
         """
         リスト形式（DEAP個体）から戦略遺伝子を復元します。
 
@@ -457,7 +460,7 @@ class GeneSerializer(DictConverter):
 
         # 3. 属性アクセスを試行（DEAP個体はStrategyGeneを継承している場合がある）
         if hasattr(individual_list, "indicators"):
-            return individual_list
+            return cast(StrategyGene, individual_list)
 
         return None
 

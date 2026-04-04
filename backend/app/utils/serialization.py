@@ -17,11 +17,6 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-# ---------------------------------------------------------------------------
-# to_dict
-# ---------------------------------------------------------------------------
-
-
 def _convert_value(value: Any) -> Any:
     """単一値を JSON シリアライズ可能な型に再帰変換する。"""
     if isinstance(value, Enum):
@@ -65,11 +60,6 @@ def dataclass_to_dict(obj: Any) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"辞書変換エラー ({type(obj).__name__}): {e}", exc_info=True)
         return {}
-
-
-# ---------------------------------------------------------------------------
-# to_json / from_json
-# ---------------------------------------------------------------------------
 
 
 def dataclass_to_json(obj: Any, *, indent: int = 2) -> str:

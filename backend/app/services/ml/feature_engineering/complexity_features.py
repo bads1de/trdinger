@@ -6,7 +6,7 @@ Sample Entropy, Fractal Dimension, VPIN Approximation など、
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import pandas as pd
 

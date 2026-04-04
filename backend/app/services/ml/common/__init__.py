@@ -78,6 +78,7 @@ __all__ = [
     "calculate_volatility_atr",
     "calculate_historical_volatility",
     "calculate_realized_volatility",
+    # 遅延インポート（configモジュール）
     "MLConfigManager",
     "ml_config_manager",
     "get_default_ensemble_config",

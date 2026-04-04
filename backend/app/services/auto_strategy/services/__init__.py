@@ -8,7 +8,17 @@ managers/, persistence/ の機能を統合しています。
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .auto_strategy_service import AutoStrategyService
+    from .experiment_application_service import ExperimentApplicationService
+    from .experiment_backtest_service import ExperimentBacktestService
+    from .experiment_engine_registry import ExperimentEngineRegistry
+    from .experiment_manager import ExperimentManager
+    from .experiment_persistence_service import ExperimentPersistenceService
+    from ..positions.position_sizing_service import PositionSizingService
+    from ..tpsl.tpsl_service import TPSLService
 
 _ATTRIBUTE_EXPORTS = {
     "AutoStrategyService": ".auto_strategy_service",

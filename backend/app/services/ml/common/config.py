@@ -16,9 +16,6 @@ from .ml_config import MLConfig
 logger = logging.getLogger(__name__)
 
 
-# --- デフォルト設定 ---
-
-
 def get_default_ensemble_config() -> Dict[str, Any]:
     """デフォルトのアンサンブル設定を取得"""
     return {
@@ -37,9 +34,6 @@ def get_default_ensemble_config() -> Dict[str, Any]:
 def get_default_single_model_config() -> Dict[str, Any]:
     """デフォルトの単一モデル設定を取得"""
     return {"model_type": "lightgbm"}
-
-
-# --- 設定マネージャー ---
 
 
 class MLConfigManager:

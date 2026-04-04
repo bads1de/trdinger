@@ -42,7 +42,6 @@ def __getattr__(name: str):
 __all__ = [
     "BaseConfig",
     "AutoStrategyConfig",
-    "GAConfig",
     "MutationConfig",
     "EvaluationConfig",
     "HybridConfig",

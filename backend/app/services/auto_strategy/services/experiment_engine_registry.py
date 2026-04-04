@@ -3,10 +3,8 @@
 """
 
 import threading
-from typing import TYPE_CHECKING, Dict, Optional
-
-if TYPE_CHECKING:
-    from ..core.engine.ga_engine import GeneticAlgorithmEngine
+from typing import Dict, Optional
+from ..core.engine.ga_engine import GeneticAlgorithmEngine
 
 
 class ExperimentEngineRegistry:

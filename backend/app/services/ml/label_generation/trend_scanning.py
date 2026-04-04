@@ -138,9 +138,9 @@ def _trend_scanning_loop_numba(
                 continue
 
             t_val = _compute_window_t_value(
-                sum_y,
-                sum_yy,
-                sum_xy,
+                float(sum_y),
+                float(sum_yy),
+                float(sum_xy),
                 n_val,
                 sum_x,
                 sum_xx,

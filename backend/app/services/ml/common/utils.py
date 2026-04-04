@@ -17,9 +17,6 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 
-# --- データ操作・検証 ---
-
-
 def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     """
     DataFrame のデータ型を最適化してメモリ消費量を劇的に削減
