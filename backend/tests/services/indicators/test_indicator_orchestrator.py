@@ -4,6 +4,7 @@ IndicatorServiceのテストモジュール
 TechnicalIndicatorServiceの機能をテストする。
 """
 
+import inspect
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -13,10 +14,16 @@ import pytest
 from app.services.indicators.indicator_orchestrator import (
     TechnicalIndicatorService,
 )
+import app.services.indicators.indicator_orchestrator as indicator_orchestrator
 
 
 class TestTechnicalIndicatorService:
     """TechnicalIndicatorServiceクラスのテスト"""
+
+    def test_does_not_reference_pandas_core_common(self):
+        """内部APIの pandas.core.common を参照しないことを確認する"""
+        source = inspect.getsource(indicator_orchestrator)
+        assert "pandas.core.common" not in source
 
     def test_initialization(self, indicator_service):
         """初期化テスト"""

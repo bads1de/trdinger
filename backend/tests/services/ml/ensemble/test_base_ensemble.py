@@ -70,6 +70,23 @@ class TestBaseEnsemble:
             assert importance["f1"] == 20.0
             assert importance["f2"] == 30.0
 
+    def test_get_feature_importance_uses_fitted_models(self, ensemble):
+        """学習済みベースモデルから重要度を集約するテスト"""
+        ensemble.is_fitted = True
+        ensemble.feature_columns = ["f1", "f2"]
+
+        m1 = MagicMock()
+        m2 = MagicMock()
+        ensemble._fitted_base_models = {"m1": m1, "m2": m2}
+
+        with patch(
+            "app.services.ml.ensemble.base_ensemble.get_feature_importance_unified",
+            side_effect=[{"f1": 10.0, "f2": 20.0}, {"f1": 30.0, "f2": 40.0}],
+        ):
+            importance = ensemble.get_feature_importance()
+            assert importance["f1"] == 20.0
+            assert importance["f2"] == 30.0
+
     def test_save_models_legacy_fallback(self, ensemble):
         """従来形式（レガシー）での保存フォールバック (mock path)"""
         # 実ファイルパスを使わず、文字列のみを指定

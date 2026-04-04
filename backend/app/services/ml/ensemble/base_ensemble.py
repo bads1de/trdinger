@@ -49,7 +49,8 @@ class BaseEnsemble(ABC):
             config: アンサンブル設定
         """
         self.config = config
-        self._base_models_list: List[str] = []
+        # 後方互換のため、名前だけでなく実体モデルも保持できるよう Any にしておく
+        self._base_models_list: List[Any] = []
         self._meta_model_ref: Optional[Any] = None
         self.is_fitted = False
         self.feature_columns: Optional[List[str]] = None
@@ -100,6 +101,16 @@ class BaseEnsemble(ABC):
         Returns:
             予測確率の配列
         """
+
+    @property
+    def base_models(self) -> List[Any]:
+        """後方互換性のためのプロパティ"""
+        return self._base_models_list
+
+    @base_models.setter
+    def base_models(self, value: List[Any]) -> None:
+        """後方互換性のためのセッター"""
+        self._base_models_list = value
 
     def _create_base_model(
         self, model_type: str, model_params: Optional[Dict[str, Any]] = None
@@ -248,7 +259,15 @@ class BaseEnsemble(ABC):
         # ベースモデルから特徴量重要度を集約
         all_importances: Dict[str, List[float]] = {}
 
-        for i, model_name in enumerate(self._base_models_list):
+        if self._fitted_base_models:
+            candidate_models = list(self._fitted_base_models.values())
+        else:
+            candidate_models = list(self._base_models_list)
+
+        for i, model in enumerate(candidate_models):
+            if model is None:
+                logger.warning(f"モデル{i}: モデル本体がありません")
+                continue
             try:
                 # 統一関数を使用して重要度を取得
                 model_importance = get_feature_importance_unified(

@@ -12,17 +12,12 @@
 
 import logging
 from functools import wraps
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, Mapping, Optional, Tuple, cast
 
 import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
-
-
-# =============================================================================
-# カスタム例外
-# =============================================================================
 
 
 class PandasTAError(Exception):
@@ -221,11 +216,6 @@ def create_nan_series_map(
     }
 
 
-# =============================================================================
-# データ長検証
-# =============================================================================
-
-
 def get_param_value(params: Dict[str, Any], keys: list, default: Any) -> Any:
     """パラメータ名がlengthまたはwindowの場合の値取得をサポート"""
     for key in keys:
@@ -315,11 +305,6 @@ def validate_data_length_with_fallback(
     return False, min_required
 
 
-# =============================================================================
-# NaN結果生成
-# =============================================================================
-
-
 def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
     """
     データ長不足時のNaN結果生成
@@ -344,17 +329,12 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
     return _create_nan_array(data_length, len(return_cols))
 
 
-# =============================================================================
-# 入力値バリデーション
-# =============================================================================
-
-
-def validate_input(data: pd.Series, period: int) -> None:
+def validate_input(data: object, period: int) -> None:
     """
     入力データの基本検証（pandas.Series専用）
 
     Args:
-        data: 検証対象のデータ（pandas.Series）
+        data: 検証対象のデータ（pandas.Series を想定するが、検証前は任意のオブジェクトを受ける）
         period: 期間パラメータ
 
     Raises:
@@ -368,19 +348,23 @@ def validate_input(data: pd.Series, period: int) -> None:
             f"入力データはpandas.Seriesである必要があります。実際の型: {type(data)}"
         )
 
-    if len(data) == 0:
+    series = cast(pd.Series, data)
+
+    if len(series) == 0:
         raise PandasTAError("入力データが空です")
 
     if period <= 0:
         raise PandasTAError(f"期間は正の整数である必要があります: {period}")
 
-    if len(data) < period:
-        raise PandasTAError(f"データ長({len(data)})が期間({period})より短いです")
+    if len(series) < period:
+        raise PandasTAError(
+            f"データ長({len(series)})が期間({period})より短いです"
+        )
 
     # NaNや無限大の値をチェック (pandas.Series専用)
-    if bool(data.isna().any()):
+    if bool(series.isna().any()):
         logger.warning("入力データにNaN値が含まれています")
-    if np.isinf(data).any():
+    if np.isinf(series).any():
         raise PandasTAError("入力データに無限大の値が含まれています")
 
 

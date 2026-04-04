@@ -111,6 +111,14 @@ class TestFeatureSelectorBasics:
         assert isinstance(X_selected, pd.DataFrame)
         assert X_selected.shape[1] < X.shape[1]
 
+    def test_fit_transform_requires_y(self, sample_data):
+        """fit_transform は教師あり選択のため y が必須"""
+        X, _ = sample_data
+        selector = FeatureSelector(method="variance")
+
+        with pytest.raises(ValueError, match="requires y"):
+            selector.fit_transform(X)
+
     def test_feature_names_out(self, sample_data):
         """特徴量名の取得"""
         X, y = sample_data

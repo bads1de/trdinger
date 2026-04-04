@@ -13,7 +13,11 @@ MLトレーナーモジュール
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .base_ml_trainer import BaseMLTrainer
+    from .volatility_regression_trainer import VolatilityRegressionTrainer
 
 _ATTRIBUTE_EXPORTS = {
     "BaseMLTrainer": ".base_ml_trainer",

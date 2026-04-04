@@ -7,7 +7,18 @@ MLトレーニングの管理と自動化機能を提供します。
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .bg_task_orchestration_service import (
+        BackgroundTaskManager,
+        background_task_manager,
+    )
+    from .ml_management_orchestration_service import MLManagementOrchestrationService
+    from .ml_training_orchestration_service import (
+        MLTrainingService,
+        ml_training_service,
+    )
 
 _ATTRIBUTE_EXPORTS = {
     "BackgroundTaskManager": ".bg_task_orchestration_service",

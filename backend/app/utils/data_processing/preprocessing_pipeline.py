@@ -13,7 +13,6 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 import numpy as np
 import pandas as pd
 
-# パイプラインのための簡略化されたトランスフォーマー
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import IsolationForest
 from sklearn.impute import SimpleImputer
@@ -30,7 +29,6 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
         self.method = method
         self.contamination = contamination
         self.detector_ = None
-        # Ignore extra kwargs to maintain compatibility
 
     def fit(self, X, y=None):
         if self.method == "isolation_forest":

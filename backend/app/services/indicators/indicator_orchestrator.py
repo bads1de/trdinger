@@ -31,12 +31,7 @@ try:
         SettingWithCopyWarning,  # type: ignore[reportAttributeAccessIssue]
     )
 except ImportError:
-    try:
-        from pandas.core.common import (
-            SettingWithCopyWarning,  # type: ignore[reportAttributeAccessIssue]
-        )
-    except ImportError:
-        SettingWithCopyWarning = UserWarning
+    SettingWithCopyWarning = UserWarning
 
 warnings.filterwarnings("ignore", category=SettingWithCopyWarning)
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="numpy")
