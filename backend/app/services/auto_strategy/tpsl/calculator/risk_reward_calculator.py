@@ -19,6 +19,7 @@ class RiskRewardCalculator(BaseTPSLCalculator):
     """
 
     def __init__(self):
+        """初期化"""
         super().__init__("risk_reward_ratio")
 
     def _do_calculate(
@@ -29,6 +30,22 @@ class RiskRewardCalculator(BaseTPSLCalculator):
         position_direction: float,
         **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
+        """
+        リスクリワード比方式によるTP/SL計算の実装
+
+        基準となるストップロス割合（SL）と目標とするリスクリワード比（RR）から
+        テイクプロフィット割合（TP）を計算します。
+
+        Args:
+            current_price: 現在価格
+            tpsl_gene: TP/SL遺伝子
+            market_data: 市場データ
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
+            **kwargs: 追加引数（stop_loss_pct, risk_reward_ratio）
+
+        Returns:
+            (SL割合, TP割合, 信頼度スコア, 実行詳細データ)のタプル
+        """
         # 1. パラメータ取得
         if tpsl_gene:
             sl_pct = tpsl_gene.base_stop_loss or tpsl_gene.stop_loss_pct or 0.03

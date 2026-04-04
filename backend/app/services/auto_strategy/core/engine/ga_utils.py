@@ -77,6 +77,11 @@ def create_deap_mutate_wrapper(individual_class, population, config):
     """
 
     def mutate_wrapper(individual):
+        """適応的突然変異を実行するラッパー。
+        
+        集団の状態に基づいて突然変異率を調整し、突然変異を実行する。
+        DEAPの要件に合わせて、突然変異後の個体をタプルでラップして返す。
+        """
         # 適応的突然変異を使用
         if population is not None:
             # individual自体がStrategyGeneのインスタンス

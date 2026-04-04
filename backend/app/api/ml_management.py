@@ -38,6 +38,7 @@ async def get_models(
     """
 
     async def _get_models():
+        """学習済みモデルの一覧を取得するためのメインロジックを実行します。"""
         return await ml_service.get_formatted_models()
 
     return await ErrorHandler.safe_execute_async(_get_models)
@@ -57,6 +58,7 @@ async def delete_all_models(
     """
 
     async def _delete_all_models():
+        """すべてのモデルを削除するためのメインロジックを実行します。"""
         return await ml_service.delete_all_models()
 
     return await ErrorHandler.safe_execute_async(_delete_all_models)
@@ -81,6 +83,7 @@ async def delete_model(
     )
 
     async def _delete_model():
+        """指定されたモデルを削除するためのメインロジックを実行します。"""
         return await ml_service.delete_model(model_id)
 
     return await ErrorHandler.safe_execute_async(_delete_model)
@@ -103,6 +106,7 @@ async def get_ml_status(
     """
 
     async def _get_ml_status():
+        """MLモデルの現在の状態を取得するためのメインロジックを実行します。"""
         return await ml_service.get_ml_status()
 
     return await ErrorHandler.safe_execute_async(_get_ml_status)
@@ -124,6 +128,7 @@ async def get_feature_importance(
     """
 
     async def _get_feature_importance():
+        """特徴量重要度を取得するためのメインロジックを実行します。"""
         return await ml_service.get_feature_importance(top_n)
 
     return await ErrorHandler.safe_execute_async(_get_feature_importance)
@@ -144,6 +149,7 @@ async def load_model(
     """
 
     async def _load_model():
+        """指定されたモデルを読み込むためのメインロジックを実行します。"""
         return await ml_service.load_model(model_name)
 
     return await ErrorHandler.safe_execute_async(_load_model)
@@ -160,6 +166,7 @@ async def get_current_model(
     """
 
     async def _get_current_model():
+        """現在読み込まれているモデル情報を取得するためのメインロジックを実行します。"""
         return await ml_service.get_current_model_info()
 
     return await ErrorHandler.safe_execute_async(_get_current_model)
@@ -186,6 +193,7 @@ async def get_ml_config(
     """
 
     async def _get_ml_config():
+        """ML設定を取得するためのメインロジックを実行します。"""
         return ml_service.get_ml_config_dict()
 
     return await ErrorHandler.safe_execute_async(_get_ml_config)
@@ -207,6 +215,7 @@ async def update_ml_config(
     """
 
     async def _update_ml_config():
+        """ML設定を更新するためのメインロジックを実行します。"""
         logger.info(f"ML設定更新要求: {config_data}")
         result = await ml_service.update_ml_config(config_data)
 
@@ -233,6 +242,7 @@ async def reset_ml_config(
     """
 
     async def _reset_ml_config():
+        """ML設定をデフォルト値にリセットするためのメインロジックを実行します。"""
         logger.info("ML設定リセット要求")
         result = await ml_service.reset_ml_config()
 
@@ -259,6 +269,7 @@ async def cleanup_old_models(
     """
 
     async def _cleanup_old_models():
+        """古いモデルファイルをクリーンアップするためのメインロジックを実行します。"""
         return await ml_service.cleanup_old_models()
 
     return await ErrorHandler.safe_execute_async(_cleanup_old_models)

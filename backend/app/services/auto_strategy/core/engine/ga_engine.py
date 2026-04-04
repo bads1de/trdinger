@@ -746,6 +746,11 @@ class GeneticAlgorithmEngine:
         """保存順序用に個体群を安定ソートする。"""
 
         def sort_key(individual: Any) -> Tuple[int, int, float]:
+            """ソート用のキーを生成する。
+            
+            2段階評価のランクがあればそれを最優先し、なければ後回しにする。
+            同じランク内では、プライマリフィットネスの降順でソートする。
+            """
             rank = get_two_stage_rank(individual)
             if rank is not None:
                 return (0, rank, -extract_primary_fitness(individual))

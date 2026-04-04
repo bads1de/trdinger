@@ -42,7 +42,15 @@ class MutationConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "MutationConfig":
-        """辞書からインスタンスを生成。未知のキーは無視。"""
+        """
+        辞書からMutationConfigインスタンスを生成
+
+        Args:
+            data: 設定値を含む辞書。未知のキーは無視されます。
+
+        Returns:
+            初期化されたMutationConfigインスタンス
+        """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)
@@ -64,6 +72,15 @@ class EvaluationConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "EvaluationConfig":
+        """
+        辞書からEvaluationConfigインスタンスを生成
+
+        Args:
+            data: 設定値を含む辞書。未知のキーは無視されます。
+
+        Returns:
+            初期化されたEvaluationConfigインスタンス
+        """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)
@@ -84,6 +101,15 @@ class HybridConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "HybridConfig":
+        """
+        辞書からHybridConfigインスタンスを生成
+
+        Args:
+            data: 設定値を含む辞書。未知のキーは無視されます。
+
+        Returns:
+            初期化されたHybridConfigインスタンス
+        """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)
@@ -103,6 +129,15 @@ class TuningConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "TuningConfig":
+        """
+        辞書からTuningConfigインスタンスを生成
+
+        Args:
+            data: 設定値を含む辞書。未知のキーは無視されます。
+
+        Returns:
+            初期化されたTuningConfigインスタンス
+        """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)
@@ -119,6 +154,15 @@ class TwoStageSelectionConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "TwoStageSelectionConfig":
+        """
+        辞書からTwoStageSelectionConfigインスタンスを生成
+
+        Args:
+            data: 設定値を含む辞書。未知のキーは無視されます。
+
+        Returns:
+            初期化されたTwoStageSelectionConfigインスタンス
+        """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)
@@ -136,6 +180,15 @@ class RobustnessConfig:
 
     @classmethod
     def from_dict(cls, data: dict) -> "RobustnessConfig":
+        """
+        辞書からRobustnessConfigインスタンスを生成
+
+        Args:
+            data: 設定値を含む辞書。未知のキーは無視されます。
+
+        Returns:
+            初期化されたRobustnessConfigインスタンス
+        """
         known = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in data.items() if k in known}
         return cls(**filtered)

@@ -26,10 +26,22 @@ class USLunchFilter(BaseTool):
 
     @property
     def name(self) -> str:
+        """
+        ツール名
+
+        Returns:
+            ツール名
+        """
         return "us_lunch_filter"
 
     @property
     def description(self) -> str:
+        """
+        ツールの説明
+
+        Returns:
+            ツールの説明
+        """
         return "米国ランチタイム（12:00-13:00 EST）の流動性低下を回避します"
 
     def _is_dst(self, timestamp: pd.Timestamp) -> bool:

@@ -41,7 +41,6 @@ def benchmark_evolution_runner():
     logger.info("=== EvolutionRunnerベンチマーク ===")
 
     from app.services.auto_strategy.core.engine.evolution_runner import EvolutionRunner
-    from app.services.auto_strategy.config.ga import GAConfig
     from deap import tools
 
     config = create_mock_config()
@@ -164,7 +163,9 @@ def benchmark_fitness_sharing():
     elapsed = time.perf_counter() - start_time
 
     logger.info(f"\n=== 結果 ({n_iterations}回実行) ===")
-    logger.info(f"フィットネスシェアリング: {elapsed:.4f}秒 ({elapsed/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"フィットネスシェアリング: {elapsed:.4f}秒 ({elapsed/n_iterations*1000:.3f}ms/回)"
+    )
 
     return {
         "fitness_sharing_ms": elapsed / n_iterations * 1000,
@@ -182,6 +183,7 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"EvolutionRunnerベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     try:
@@ -189,12 +191,13 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"FitnessSharingベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     logger.info("\n=== 全ベンチマーク完了 ===")
 
     # サマリー
-    logger.info(f"\n=== サマリー ===")
+    logger.info("\n=== サマリー ===")
     if "evolution_runner" in all_results:
         result = all_results["evolution_runner"]
         logger.info(f"選択演算子: {result['select_ms']:.3f}ms/回")
@@ -202,7 +205,9 @@ def run_all_benchmarks():
         logger.info(f"突然変異演算子: {result['mutation_ms']:.3f}ms/回")
     if "fitness_sharing" in all_results:
         result = all_results["fitness_sharing"]
-        logger.info(f"フィットネスシェアリング: {result['fitness_sharing_ms']:.3f}ms/回")
+        logger.info(
+            f"フィットネスシェアリング: {result['fitness_sharing_ms']:.3f}ms/回"
+        )
 
     return all_results
 

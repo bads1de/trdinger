@@ -87,6 +87,7 @@ def get_bybit_open_interest_service():
     """BybitOpenInterestService を取得する。"""
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.data_collection.bybit.open_interest_service import (
             BybitOpenInterestService,
         )
@@ -100,6 +101,7 @@ def get_bybit_funding_rate_service():
     """BybitFundingRateService を取得する。"""
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.data_collection.bybit.funding_rate_service import (
             BybitFundingRateService,
         )
@@ -119,6 +121,7 @@ def get_data_collection_orchestration_service():
     """
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.data_collection.orchestration.data_collection_orchestration_service import (
             DataCollectionOrchestrationService,
         )
@@ -134,6 +137,7 @@ def get_data_management_orchestration_service():
     """
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.data_collection.orchestration.data_management_orchestration_service import (
             DataManagementOrchestrationService,
         )
@@ -151,6 +155,7 @@ def get_open_interest_orchestration_service(
     """
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.data_collection.orchestration.open_interest_orchestration_service import (
             OpenInterestOrchestrationService,
         )
@@ -166,6 +171,7 @@ def get_ml_training_service():
     """
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.ml.orchestration.ml_training_orchestration_service import (
             MLTrainingService,
         )
@@ -181,6 +187,7 @@ def get_backtest_orchestration_service():
     """
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.backtest.orchestration.backtest_orchestration_service import (
             BacktestOrchestrationService,
         )
@@ -198,6 +205,7 @@ def get_funding_rate_orchestration_service(
     """
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
             FundingRateOrchestrationService,
         )
@@ -213,6 +221,7 @@ def get_ml_management_orchestration_service():
     """
 
     def factory():
+        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
         from app.services.ml.orchestration.ml_management_orchestration_service import (
             MLManagementOrchestrationService,
         )

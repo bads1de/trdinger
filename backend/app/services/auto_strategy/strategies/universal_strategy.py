@@ -60,6 +60,7 @@ class UniversalStrategy(Strategy):
 
     @property
     def _sl_price(self) -> float | None:
+        """ストップロス価格を取得する。"""
         return self.runtime_state.sl_price
 
     @_sl_price.setter
@@ -68,6 +69,7 @@ class UniversalStrategy(Strategy):
 
     @property
     def _tp_price(self) -> float | None:
+        """テイクプロフィット価格を取得する。"""
         return self.runtime_state.tp_price
 
     @_tp_price.setter
@@ -76,6 +78,7 @@ class UniversalStrategy(Strategy):
 
     @property
     def _entry_price(self) -> float | None:
+        """エントリー価格を取得する。"""
         return self.runtime_state.entry_price
 
     @_entry_price.setter
@@ -84,6 +87,7 @@ class UniversalStrategy(Strategy):
 
     @property
     def _position_direction(self) -> float:
+        """ポジション方向を取得する。"""
         return self.runtime_state.position_direction
 
     @_position_direction.setter
@@ -92,6 +96,7 @@ class UniversalStrategy(Strategy):
 
     @property
     def _tp_reached(self) -> bool:
+        """TP到達フラグを取得する。"""
         return self.runtime_state.tp_reached
 
     @_tp_reached.setter
@@ -100,6 +105,7 @@ class UniversalStrategy(Strategy):
 
     @property
     def _trailing_tp_sl(self) -> float | None:
+        """トレーリングTP/SL価格を取得する。"""
         return self.runtime_state.trailing_tp_sl
 
     @_trailing_tp_sl.setter

@@ -583,6 +583,9 @@ class MomentumIndicators:
         """Qualitative Quantitative Estimation"""
 
         def compute() -> pd.Series:
+            """
+            QQE の計算ロジック。
+            """
             result = ta.qqe(data, length=length)
 
             if isinstance(result, pd.DataFrame):
@@ -853,6 +856,9 @@ class MomentumIndicators:
         min_length = length * 2
 
         def compute() -> pd.Series:
+            """
+            Bias インジケーターの計算ロジック。
+            """
             try:
                 result = ta.bias(
                     close=data,

@@ -24,6 +24,7 @@ class AdaptiveCalculator(BaseTPSLCalculator):
     """
 
     def __init__(self):
+        """初期化"""
         super().__init__("adaptive")
         self.calculators = {
             "fixed_percentage": FixedPercentageCalculator(),
@@ -40,6 +41,22 @@ class AdaptiveCalculator(BaseTPSLCalculator):
         position_direction: float,
         **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
+        """
+        適応的アルゴリズムによるTP/SL計算の実装
+
+        市場状況（ボラティリティ、トレンドなど）に基づいて、最適な計算方式を
+        動的に選択して計算を行います。
+
+        Args:
+            current_price: 現在価格
+            tpsl_gene: TP/SL遺伝子
+            market_data: 市場データ
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
+            **kwargs: 追加引数
+
+        Returns:
+            (SL割合, TP割合, 信頼度スコア, 実行詳細データ)のタプル
+        """
         # 1. 最適な計算方式を選択
         best_method = self._select_best_method(market_data, tpsl_gene)
 

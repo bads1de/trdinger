@@ -17,7 +17,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 # GAエンジンのログだけINFOで出力
-logging.getLogger("app.services.auto_strategy.core.ga_engine").setLevel(logging.INFO)
+logging.getLogger("app.services.auto_strategy.core.engine.ga_engine").setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore")
 def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> Dict[str, Any]:
     """単一のGA実行"""
     from app.services.auto_strategy.config.ga import GAConfig
-    from app.services.auto_strategy.core.ga_engine import GeneticAlgorithmEngine
+    from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
     from app.services.auto_strategy.generators.random_gene_generator import (
         RandomGeneGenerator,
     )

@@ -105,6 +105,7 @@ class LegacyStrategyRuntimeStateAdapter:
 
     @property
     def trailing_tp_sl(self) -> float | None:
+        """トレーリングTP/SLの価格を取得する。"""
         return getattr(self._strategy, "_trailing_tp_sl", None)
 
     @trailing_tp_sl.setter
@@ -119,6 +120,7 @@ class LegacyStrategyRuntimeStateAdapter:
         tp_price: float | None,
         direction: float,
     ) -> None:
+        """新規ポジションの状態を反映する。"""
         self.entry_price = entry_price
         self.sl_price = sl_price
         self.tp_price = tp_price
@@ -127,6 +129,7 @@ class LegacyStrategyRuntimeStateAdapter:
         self.trailing_tp_sl = None
 
     def reset_position(self) -> None:
+        """ポジション決済後に状態を初期化する。"""
         self.sl_price = None
         self.tp_price = None
         self.entry_price = None

@@ -22,10 +22,22 @@ class MondayReversalFilter(BaseTool):
 
     @property
     def name(self) -> str:
+        """
+        ツール名
+
+        Returns:
+            ツール名
+        """
         return "monday_reversal_filter"
 
     @property
     def description(self) -> str:
+        """
+        ツールの説明
+
+        Returns:
+            ツールの説明
+        """
         return "月曜日前半の調整局面（Reversal）を回避します"
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

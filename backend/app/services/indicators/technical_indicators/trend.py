@@ -56,6 +56,9 @@ class TrendIndicators:
     @staticmethod
     @njit(cache=True)
     def _sar_loop(high_arr, low_arr, af, max_af):
+        """
+        パラボリック SAR を計算する Numba 加速ループ。
+        """
         n = len(high_arr)
         sar = np.zeros(n)
 
@@ -140,6 +143,9 @@ class TrendIndicators:
         """
 
         def compute() -> pd.Series:
+            """
+            パラボリック SAR の計算ロジック。
+            """
             n = len(high)
             if n < 2:
                 return create_nan_series_like(high)

@@ -39,6 +39,23 @@ async def get_open_interest_data(
 ):
     """
     オープンインタレストデータを取得します
+
+    データベースに保存されたオープンインタレスト（建玉残高）データを取得します。
+    期間指定または件数制限でデータをフィルタリングできます。
+
+    Args:
+        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+        start_date: 取得開始日時（ISO形式）
+        end_date: 取得終了日時（ISO形式）
+        limit: 取得件数制限（1-1000）
+        orchestration_service: オープンインタレストサービス（依存性注入）
+        db: データベースセッション
+
+    Returns:
+        オープンインタレストデータを含むJSONレスポンス
+
+    Raises:
+        HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
     return await orchestration_service.get_open_interest_data(
         symbol=symbol,

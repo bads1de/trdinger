@@ -11,9 +11,6 @@ from typing import Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-# デバッグログ設定 (開発用)
-DEBUG_MODE = False
-
 
 class OperandGroup(Enum):
     """オペランドのスケールグループ"""
@@ -140,9 +137,6 @@ class OperandGroupingSystem:
         Returns:
             属するOperandGroup。不明な場合はデフォルトでPRICE_BASEDを返します。
         """
-        if DEBUG_MODE:
-            logger.debug("get_operand_group called for operand='%s'", operand)
-
         # 1. 直接マップまたは完全一致チェック
         if operand in self._group_mappings:
             return self._group_mappings[operand]
@@ -168,25 +162,10 @@ class OperandGroupingSystem:
         Returns:
             互換性スコア（0.0-1.0）
         """
-        if DEBUG_MODE:
-            logger.debug(
-                "get_compatibility_score called for %s vs %s", operand1, operand2
-            )
-
         group1 = self.get_operand_group(operand1)
         group2 = self.get_operand_group(operand2)
 
         score = self._compatibility_matrix.get((group1, group2), 0.1)
-
-        if DEBUG_MODE:
-            logger.debug(
-                "Compatibility score for %s (%s) vs %s (%s) = %.2f",
-                operand1,
-                group1.value,
-                operand2,
-                group2.value,
-                score,
-            )
 
         return score
 

@@ -57,6 +57,7 @@ def benchmark_evaluation_strategy():
     from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
         EvaluationStrategy,
     )
+
     OptimizedEvaluationStrategy = EvaluationStrategy
 
     # モックエvaluator
@@ -117,11 +118,17 @@ def benchmark_evaluation_strategy():
 
     # 結果表示
     logger.info(f"\n=== 結果 ({n_iterations}回実行) ===")
-    logger.info(f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)")
-    logger.info(f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)"
+    )
+    logger.info(
+        f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)"
+    )
 
     speedup = original_time / optimized_time
-    logger.info(f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)")
+    logger.info(
+        f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)"
+    )
 
     return {
         "original_time": original_time,
@@ -139,6 +146,7 @@ def benchmark_data_provider():
     from app.services.auto_strategy.core.evaluation.backtest_data_provider import (
         BacktestDataProvider,
     )
+
     OptimizedBacktestDataProvider = BacktestDataProvider
 
     # モックバックテストサービス
@@ -222,14 +230,20 @@ def benchmark_data_provider():
 
     # 結果表示
     logger.info(f"\n=== 結果 ({n_iterations}回実行) ===")
-    logger.info(f"オリジナル版: {original_time_first:.4f}秒 ({original_time_first/n_iterations*1000:.3f}ms/回)")
-    logger.info(f"最適化版（初回）: {optimized_time_first:.4f}秒 ({optimized_time_first/n_iterations*1000:.3f}ms/回)")
-    logger.info(f"最適化版（2回目）: {optimized_time_second:.4f}秒 ({optimized_time_second/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"オリジナル版: {original_time_first:.4f}秒 ({original_time_first/n_iterations*1000:.3f}ms/回)"
+    )
+    logger.info(
+        f"最適化版（初回）: {optimized_time_first:.4f}秒 ({optimized_time_first/n_iterations*1000:.3f}ms/回)"
+    )
+    logger.info(
+        f"最適化版（2回目）: {optimized_time_second:.4f}秒 ({optimized_time_second/n_iterations*1000:.3f}ms/回)"
+    )
 
     speedup_first = original_time_first / optimized_time_first
     speedup_second = original_time_first / optimized_time_second
 
-    logger.info(f"\n=== 高速化率 ===")
+    logger.info("\n=== 高速化率 ===")
     logger.info(f"最適化版（初回）: {speedup_first:.2f}倍")
     logger.info(f"最適化版（2回目）: {speedup_second:.2f}倍")
 
@@ -253,6 +267,7 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"評価ストラテジーベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     try:
@@ -260,17 +275,24 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"データプロバイダーベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     logger.info("\n=== 全ベンチマーク完了 ===")
 
     # サマリー
-    logger.info(f"\n=== サマリー ===")
+    logger.info("\n=== サマリー ===")
     if "evaluation_strategy" in all_results:
-        logger.info(f"評価ストラテジー: {all_results['evaluation_strategy']['speedup']:.2f}倍高速化")
+        logger.info(
+            f"評価ストラテジー: {all_results['evaluation_strategy']['speedup']:.2f}倍高速化"
+        )
     if "data_provider" in all_results:
-        logger.info(f"データプロバイダー（初回）: {all_results['data_provider']['speedup_first']:.2f}倍高速化")
-        logger.info(f"データプロバイダー（2回目）: {all_results['data_provider']['speedup_second']:.2f}倍高速化")
+        logger.info(
+            f"データプロバイダー（初回）: {all_results['data_provider']['speedup_first']:.2f}倍高速化"
+        )
+        logger.info(
+            f"データプロバイダー（2回目）: {all_results['data_provider']['speedup_second']:.2f}倍高速化"
+        )
 
     return all_results
 

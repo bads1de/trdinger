@@ -19,6 +19,7 @@ class StatisticalCalculator(BaseTPSLCalculator):
     """
 
     def __init__(self):
+        """初期化"""
         super().__init__("statistical")
 
     def _do_calculate(
@@ -29,6 +30,22 @@ class StatisticalCalculator(BaseTPSLCalculator):
         position_direction: float,
         **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
+        """
+        統計的分析方式によるTP/SL計算の実装
+
+        過去の価格データの統計的分布に基づいて、最適なTP/SLレベルを計算します。
+        一般的に、ボラティリティの標準偏差（σ）を用いた信頼区間に基づきます。
+
+        Args:
+            current_price: 現在価格
+            tpsl_gene: TP/SL遺伝子
+            market_data: 市場データ
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
+            **kwargs: 追加引数（lookback_period, confidence_threshold）
+
+        Returns:
+            (SL割合, TP割合, 信頼度スコア, 実行詳細データ)のタプル
+        """
         # 1. パラメータ取得
         if tpsl_gene:
             lookback_period = tpsl_gene.lookback_period or 150

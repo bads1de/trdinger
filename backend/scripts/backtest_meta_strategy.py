@@ -33,9 +33,9 @@ class EmaCrossStrategy(Strategy):
         self.ema2 = self.I(pd.Series(self.data.Close).ewm(span=self.n2).mean)
 
     def next(self):
-        if crossover(self.ema1, self.ema2):
+        if crossover(list(self.ema1), list(self.ema2)):
             self.buy()
-        elif crossover(self.ema2, self.ema1):
+        elif crossover(list(self.ema2), list(self.ema1)):
             self.position.close()
 
 
@@ -46,8 +46,8 @@ class MetaEmaCrossStrategy(Strategy):
     n2 = 20
 
     # 外部から注入されるパラメータ
-    meta_model = None
-    features = None
+    meta_model = None  # type: ignore
+    features = None  # type: ignore
     threshold = 0.2  # 最適化結果
     scaling_factor = 3.0  # 最適化結果
 
@@ -71,10 +71,10 @@ class MetaEmaCrossStrategy(Strategy):
         signal_type = None
 
         # ゴールデンクロス (Buy)
-        if crossover(self.ema1, self.ema2):
+        if crossover(list(self.ema1), list(self.ema2)):
             signal_type = "buy"
         # デッドクロス (Sell)
-        elif crossover(self.ema2, self.ema1):
+        elif crossover(list(self.ema2), list(self.ema1)):
             signal_type = "sell"
 
         if signal_type:
@@ -121,7 +121,7 @@ class MetaEmaCrossStrategy(Strategy):
                 "_prob_min",
                 "_prob_max",
             ]
-            base_model_names_from_oof = self.meta_model.base_model_names
+            base_model_names_from_oof = getattr(self.meta_model, 'base_model_names', []) or []
 
             # meta_model.model (RandomForestClassifier) の feature_names_in_ を取得
             rf_feature_names = list(self.meta_model.model.feature_names_in_)
@@ -133,7 +133,7 @@ class MetaEmaCrossStrategy(Strategy):
                     rf_feat.endswith(suffix) for suffix in meta_service_added_suffixes
                 ):
                     is_added = True
-                if rf_feat in base_model_names_from_oof:
+                if base_model_names_from_oof and rf_feat in base_model_names_from_oof:
                     is_added = True
 
                 if not is_added:
@@ -148,9 +148,11 @@ class MetaEmaCrossStrategy(Strategy):
             )
 
             # Dummy Base Model Probs
-            dummy_base_model_probs_data = {
-                col: [1.0] for col in base_model_names_from_oof
-            }
+            dummy_base_model_probs_data = {}
+            if base_model_names_from_oof:
+                dummy_base_model_probs_data = {
+                    col: [1.0] for col in base_model_names_from_oof
+                }
             base_model_probs_df = pd.DataFrame(
                 dummy_base_model_probs_data, index=feature_row_for_X.index
             )
@@ -235,8 +237,8 @@ def run_backtest():
     # 2. メタ戦略のバックテスト
     logger.info("\n=== Running Meta Strategy (EMA Cross + ML Filter [Long/Short]) ===")
 
-    MetaEmaCrossStrategy.features = features[meta_feature_names].copy()
-    MetaEmaCrossStrategy.meta_model = meta_model
+    MetaEmaCrossStrategy.features = features[meta_feature_names].copy()  # type: ignore
+    MetaEmaCrossStrategy.meta_model = meta_model  # type: ignore
     MetaEmaCrossStrategy.threshold = 0.2  # 最適化値
     MetaEmaCrossStrategy.scaling_factor = 3.0  # 最適化値
 

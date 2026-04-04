@@ -84,6 +84,7 @@ async def get_strategies(
     """
 
     async def _get_strategies():
+        """生成された戦略の一覧を取得するためのメインロジックを実行します。"""
         result = strategy_service.get_strategies(
             limit=limit,
             offset=offset,

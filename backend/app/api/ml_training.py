@@ -218,6 +218,7 @@ async def start_ml_training(
     """
 
     async def _start_training():
+        """MLトレーニングを開始するためのメインロジックを実行します。"""
         result = ensure_response_dict(
             await ml_service.start_training(
                 config=config, background_tasks=background_tasks, db=db
@@ -241,6 +242,15 @@ async def get_ml_training_status(
 ):
     """
     MLトレーニングの状態を取得
+
+    現在実行中または直近のMLトレーニングの進捗状況、ステータス、
+    開始・終了時刻、エラー情報などを返します。
+
+    Args:
+        ml_service: MLトレーニングサービス（依存性注入）
+
+    Returns:
+        MLStatusResponse: トレーニング状態情報
     """
     status = await ml_service.get_training_status()
     return MLStatusResponse(**status)
@@ -252,9 +262,19 @@ async def get_ml_model_info(
 ):
     """
     現在のMLモデル情報を取得
+
+    最新のトレーニング済みMLモデルの詳細情報（モデルタイプ、パフォーマンス指標、
+    特徴量重要度、ハイパーパラメータなど）を返します。
+
+    Args:
+        ml_service: MLトレーニングサービス（依存性注入）
+
+    Returns:
+        MLモデルの詳細情報を含むJSONレスポンス
     """
 
     async def _get_model_info():
+        """現在のMLモデル情報を取得するためのメインロジックを実行します。"""
         return await ml_service.get_model_info()
 
     return await ErrorHandler.safe_execute_async(_get_model_info)
@@ -266,9 +286,19 @@ async def stop_ml_training(
 ):
     """
     MLトレーニングを停止
+
+    現在実行中のMLトレーニングプロセスを安全に停止します。
+    停止処理中は現在のエポックまでの結果が保存されます。
+
+    Args:
+        ml_service: MLトレーニングサービス（依存性注入）
+
+    Returns:
+        停止処理結果を含むJSONレスポンス
     """
 
     async def _stop_training():
+        """MLトレーニングを停止するためのメインロジックを実行します。"""
         return await ml_service.stop_training()
 
     return await ErrorHandler.safe_execute_async(_stop_training)

@@ -23,10 +23,22 @@ class LondonFixFilter(BaseTool):
 
     @property
     def name(self) -> str:
+        """
+        ツール名
+
+        Returns:
+            ツール名
+        """
         return "london_fix_filter"
 
     @property
     def description(self) -> str:
+        """
+        ツールの説明
+
+        Returns:
+            ツールの説明
+        """
         return "ロンドンフィックス（16:00 LDN）前後の乱高下を回避します"
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

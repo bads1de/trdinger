@@ -77,6 +77,7 @@ def benchmark_fitness_calculators():
     from app.services.auto_strategy.core.fitness.fitness_calculator import (
         FitnessCalculator,
     )
+
     OptimizedFitnessCalculator = FitnessCalculator
 
     # 計算器の初期化
@@ -109,17 +110,23 @@ def benchmark_fitness_calculators():
 
     # 結果表示
     logger.info(f"\n=== 結果 ({n_iterations}回実行) ===")
-    logger.info(f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)")
-    logger.info(f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)"
+    )
+    logger.info(
+        f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)"
+    )
 
     speedup = original_time / optimized_time
-    logger.info(f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)")
+    logger.info(
+        f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)"
+    )
 
     # 結果の一致性確認
     original_result = original_calculator.calculate_fitness(backtest_result, config)
     optimized_result = optimized_calculator.calculate_fitness(backtest_result, config)
 
-    logger.info(f"\n=== 結果の一致性 ===")
+    logger.info("\n=== 結果の一致性 ===")
     logger.info(f"オリジナル: {original_result:.6f}")
     logger.info(f"最適化版:   {optimized_result:.6f}")
     logger.info(f"差分:       {abs(original_result - optimized_result):.10f}")
@@ -140,6 +147,7 @@ def benchmark_multi_objective_fitness():
     from app.services.auto_strategy.core.fitness.fitness_calculator import (
         FitnessCalculator,
     )
+
     OptimizedFitnessCalculator = FitnessCalculator
 
     # 計算器の初期化
@@ -150,7 +158,13 @@ def benchmark_multi_objective_fitness():
     backtest_result = create_mock_backtest_result(100)
     config = create_mock_ga_config()
     config.enable_multi_objective = True
-    config.objectives = ["total_return", "sharpe_ratio", "max_drawdown", "win_rate", "balance_score"]
+    config.objectives = [
+        "total_return",
+        "sharpe_ratio",
+        "max_drawdown",
+        "win_rate",
+        "balance_score",
+    ]
 
     # ウームアップ
     for _ in range(10):
@@ -174,17 +188,27 @@ def benchmark_multi_objective_fitness():
 
     # 結果表示
     logger.info(f"\n=== 結果 ({n_iterations}回実行) ===")
-    logger.info(f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)")
-    logger.info(f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)"
+    )
+    logger.info(
+        f"最適化版:    {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)"
+    )
 
     speedup = original_time / optimized_time
-    logger.info(f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)")
+    logger.info(
+        f"高速化率: {speedup:.2f}倍 ({(1 - optimized_time/original_time) * 100:.1f}%削減)"
+    )
 
     # 結果の一致性確認
-    original_result = original_calculator.calculate_multi_objective_fitness(backtest_result, config)
-    optimized_result = optimized_calculator.calculate_multi_objective_fitness(backtest_result, config)
+    original_result = original_calculator.calculate_multi_objective_fitness(
+        backtest_result, config
+    )
+    optimized_result = optimized_calculator.calculate_multi_objective_fitness(
+        backtest_result, config
+    )
 
-    logger.info(f"\n=== 結果の一致性 ===")
+    logger.info("\n=== 結果の一致性 ===")
     logger.info(f"オリジナル: {original_result}")
     logger.info(f"最適化版:   {optimized_result}")
 
@@ -202,6 +226,7 @@ def benchmark_with_different_trade_counts():
     from app.services.auto_strategy.core.fitness.fitness_calculator import (
         FitnessCalculator,
     )
+
     OptimizedFitnessCalculator = FitnessCalculator
 
     original_calculator = FitnessCalculator()
@@ -241,8 +266,12 @@ def benchmark_with_different_trade_counts():
         }
 
         logger.info(f"\nトレード数 {n_trades}:")
-        logger.info(f"  オリジナル: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)")
-        logger.info(f"  最適化版:   {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)")
+        logger.info(
+            f"  オリジナル: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)"
+        )
+        logger.info(
+            f"  最適化版:   {optimized_time:.4f}秒 ({optimized_time/n_iterations*1000:.3f}ms/回)"
+        )
         logger.info(f"  高速化率:   {speedup:.2f}倍")
 
     return results
@@ -273,8 +302,10 @@ def run_all_benchmarks():
 
     # サマリー表示
     if "single_objective" in all_results:
-        logger.info(f"\n=== サマリー ===")
-        logger.info(f"単一目的: {all_results['single_objective']['speedup']:.2f}倍高速化")
+        logger.info("\n=== サマリー ===")
+        logger.info(
+            f"単一目的: {all_results['single_objective']['speedup']:.2f}倍高速化"
+        )
     if "multi_objective" in all_results:
         logger.info(f"多目的: {all_results['multi_objective']['speedup']:.2f}倍高速化")
 

@@ -43,6 +43,16 @@ logger = logging.getLogger(__name__)
 
 @njit(parallel=True, cache=True)
 def _njit_hurst_loop(data: np.ndarray, win: int) -> np.ndarray:
+    """
+    ハースト指数を計算する Numba 加速ループ。
+
+    Args:
+        data: 入力データ
+        win: ウィンドウサイズ
+
+    Returns:
+        np.ndarray: 計算されたハースト指数の配列
+    """
     n = len(data)
     res = np.full(n, 0.5)
     for i in prange(win - 1, n):
@@ -91,6 +101,17 @@ def _njit_hurst_loop(data: np.ndarray, win: int) -> np.ndarray:
 
 @njit(cache=True)
 def _njit_count_matches(data: np.ndarray, m_len: int, threshold: float) -> int:
+    """
+    サンプル・エントロピー計算のためのパターン一致数をカウントする Numba 加速関数。
+
+    Args:
+        data: 入力データ
+        m_len: パターンの長さ
+        threshold: 一致判定の閾値
+
+    Returns:
+        int: 一致したパターン数
+    """
     n = len(data)
     count = 0
     for i in range(n - m_len):
@@ -109,6 +130,18 @@ def _njit_count_matches(data: np.ndarray, m_len: int, threshold: float) -> int:
 def _njit_sample_entropy_loop(
     data: np.ndarray, win: int, m_val: int, r_val: float
 ) -> np.ndarray:
+    """
+    サンプル・エントロピーを計算する Numba 加速ループ。
+
+    Args:
+        data: 入力データ
+        win: ウィンドウサイズ
+        m_val: パターンの長さ
+        r_val: 閾値係数
+
+    Returns:
+        np.ndarray: 計算されたサンプル・エントロピーの配列
+    """
     n = len(data)
     res = np.zeros(n)
     for i in prange(win - 1, n):
@@ -143,6 +176,16 @@ def _njit_sample_entropy_loop(
 
 @njit(parallel=True, cache=True)
 def _njit_katz_loop(data: np.ndarray, win: int) -> np.ndarray:
+    """
+    Katz フラクタル次元を計算する Numba 加速ループ。
+
+    Args:
+        data: 入力データ
+        win: ウィンドウサイズ
+
+    Returns:
+        np.ndarray: 計算されたフラクタル次元の配列
+    """
     n_obs = len(data)
     res = np.full(n_obs, 1.0)
     for i in prange(win - 1, n_obs):
@@ -170,6 +213,7 @@ def _njit_katz_loop(data: np.ndarray, win: int) -> np.ndarray:
                 fd = 2.0
             res[i] = fd
     return res
+
 
 
 class AdvancedFeatures:
@@ -223,6 +267,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_void_oscillator() -> pd.Series:
+            """
+            Void Oscillator の計算ロジック。
+            """
             ret = (
                 cast(pd.Series, np.log(close / close.shift(1)))
                 .fillna(0.0)
@@ -284,6 +331,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_triplet_imbalance() -> pd.Series:
+            """
+            Triplet Imbalance の計算ロジック。
+            """
             upper_shadow = high - close
             lower_shadow = close - low
             imbalance = upper_shadow / (lower_shadow + 1e-9)
@@ -311,6 +361,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_volume_divergence_fakeout() -> pd.Series:
+            """
+            Volume Divergence Fakeout の計算ロジック。
+            """
             rolling_max = close.rolling(window=window).max().shift(1)
             vol_ma = volume.rolling(window=window).mean()
 
@@ -408,6 +461,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_vpin() -> pd.Series:
+            """
+            VPIN 近似の計算ロジック。
+            """
             delta_p = close.diff().fillna(0)
             vol_std = delta_p.rolling(window=window).std() + 1e-9
             z_score = delta_p / vol_std
@@ -440,6 +496,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_frac_diff_ffd() -> pd.Series:
+            """
+            分数微分 (FFD) の計算ロジック。
+            """
             if abs(d) < 1e-9:
                 return series.copy()
 
@@ -484,6 +543,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_liquidation_cascade_score() -> pd.Series:
+            """
+            清算カスケードスコアの計算ロジック。
+            """
             result = -1 * np.sign(close.diff()) * open_interest.diff() * volume
             return pd.Series(result, index=close.index).fillna(0.0)
 
@@ -507,6 +569,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_squeeze_probability() -> pd.Series:
+            """
+            スクイーズ確率の計算ロジック。
+            """
             neg_fr_factor = pd.Series(
                 np.where(funding_rate < 0, funding_rate.abs(), 0.0),
                 index=close.index,
@@ -539,6 +604,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_trend_quality() -> pd.Series:
+            """
+            トレンド品質の計算ロジック。
+            """
             result = close.diff().rolling(window=window).corr(open_interest.diff())
             if isinstance(result, pd.DataFrame):
                 return result.iloc[:, 0].fillna(0.0)  # type: ignore
@@ -581,6 +649,9 @@ class AdvancedFeatures:
         """
 
         def _calculate_regime_quadrant() -> pd.Series:
+            """
+            価格とOIの変化に基づく4象限レジーム分析の計算ロジック。
+            """
             delta_p = close.diff().fillna(0.0).astype(float)
             delta_oi = open_interest.diff().fillna(0.0).astype(float)
 

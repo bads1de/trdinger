@@ -37,6 +37,7 @@ async def reset_all_data(
     """
 
     async def _reset_all_data():
+        """全てのデータをリセットするためのメインロジックを実行します。"""
         return await orchestration_service.reset_all_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -59,6 +60,7 @@ async def reset_ohlcv_data(
     """
 
     async def _reset_ohlcv_data():
+        """OHLCVデータをリセットするためのメインロジックを実行します。"""
         return await orchestration_service.reset_ohlcv_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -81,6 +83,7 @@ async def reset_funding_rate_data(
     """
 
     async def _reset_funding_rate_data():
+        """ファンディングレートデータをリセットするためのメインロジックを実行します。"""
         return await orchestration_service.reset_funding_rate_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -104,6 +107,7 @@ async def reset_open_interest_data(
     """
 
     async def _reset_open_interest():
+        """オープンインタレストデータをリセットするためのメインロジックを実行します。"""
         return await orchestration_service.reset_open_interest_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(
@@ -131,6 +135,7 @@ async def reset_data_by_symbol(
     """
 
     async def _reset_by_symbol():
+        """シンボル別データをリセットするためのメインロジックを実行します。"""
         return await orchestration_service.reset_data_by_symbol(
             symbol=symbol, db_session=db
         )
@@ -155,6 +160,7 @@ async def get_data_status(
     """
 
     async def _get_status():
+        """データステータスを取得するためのメインロジックを実行します。"""
         return await orchestration_service.get_data_status(db_session=db)
 
     return await ErrorHandler.safe_execute_async(

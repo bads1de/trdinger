@@ -115,7 +115,12 @@ def prepare_model_data(symbol, timeframe, limit, labeling_method):
 
     # 2. 1分足統計 (Intraday)
     print("[*] Processing 1m intraday statistics...")
-    agg_1m = fe_service.aggregate_intraday_features(ohlcv_1m)
+    if ohlcv_1m is not None and not ohlcv_1m.empty:
+        agg_1m = fe_service.aggregate_intraday_features(ohlcv_1m)
+    else:
+        print("[!] Warning: No 1m OHLCV data found. Skipping intraday features.")
+        # X_rawのインデックスに合わせて空のDataFrameを作成
+        agg_1m = pd.DataFrame(index=X_raw.index)
 
     # 3. 統合
     X_full = X_raw.join(agg_1m, how="left").ffill().fillna(0)
@@ -178,7 +183,6 @@ def prepare_model_data(symbol, timeframe, limit, labeling_method):
 
     # 自動特徴量選択
     print("[*] Running Strict Feature Selection (Elite 30-50 Strategy)...")
-    from app.services.ml.feature_selection.feature_selector import FeatureSelector
 
     selector = FeatureSelector(
         method="staged",
@@ -193,6 +197,10 @@ def prepare_model_data(symbol, timeframe, limit, labeling_method):
     )
 
     X_elite = selector.fit_transform(X_model_all, y_model_all)
+    if not isinstance(X_elite, pd.DataFrame):
+        # ndarrayが返された場合はDataFrameに変換して型を安定させる
+        X_elite = pd.DataFrame(X_elite, columns=selector.get_feature_names_out(), index=X_model_all.index)
+    
     elite_cols = X_elite.columns.tolist()
 
     print(f"[*] Total valid signals: {len(X_model_all)}")
@@ -206,8 +214,8 @@ def prepare_model_data(symbol, timeframe, limit, labeling_method):
         "y_model_all": y_model_all,
         "w_model_all": w_model_all,
         "elite_cols": elite_cols,
-        "X_model_all": X_model_all, # Needed for debug or info
-        "ohlcv_df": ohlcv_df # Needed for visualization if any
+        "X_model_all": X_model_all,  # Needed for debug or info
+        "ohlcv_df": ohlcv_df,  # Needed for visualization if any
     }
 
 
@@ -259,7 +267,7 @@ def run_analysis_pipeline(
         # --- Training Data ---
         X_train, y_train = X_elite.iloc[train_idx], y_model_all.iloc[train_idx]
         X_test, y_test = X_elite.iloc[test_idx], y_model_all.iloc[test_idx]
-        
+
         w_train = w_model_all.iloc[train_idx] if w_model_all is not None else None
 
         # 1. Train Primary Model
@@ -267,17 +275,17 @@ def run_analysis_pipeline(
 
         # Predictions
         primary_proba_train = pd.Series(
-            model.predict_proba(X_train)[:, 1], index=X_train.index
+            np.asarray(model.predict_proba(X_train))[:, 1], index=X_train.index
         )
         primary_proba_test = pd.Series(
-            model.predict_proba(X_test)[:, 1], index=X_test.index
+            np.asarray(model.predict_proba(X_test))[:, 1], index=X_test.index
         )
 
         # Primary Metrics
         y_pred = (primary_proba_test >= 0.5).astype(int)
 
         p_acc = balanced_accuracy_score(y_test, y_pred)
-        p_prec = precision_score(y_test, y_pred, zero_division=0)
+        p_prec = precision_score(y_test, y_pred, zero_division=0)  # type: ignore[arg-type]
 
         n_primary_trades = int(y_pred.sum())
         y_test_np = y_test.values.astype(int)
@@ -321,7 +329,7 @@ def run_analysis_pipeline(
             )
 
             m_acc = balanced_accuracy_score(y_test, meta_pred)
-            m_prec = precision_score(y_test, meta_pred, zero_division=0)
+            m_prec = precision_score(y_test, meta_pred, zero_division=0)  # type: ignore[arg-type]
 
             n_meta_trades = int(meta_pred.sum())
             meta_pred_np = (
@@ -395,7 +403,7 @@ def run_analysis_pipeline(
 
 def run_training_mode(symbol, timeframe, limit, labeling_method):
     print(f"\n{'='*60}\n TRAINING MODE: Train & Save Model\n{'='*60}")
-    
+
     # 1. データ準備
     data = prepare_model_data(symbol, timeframe, limit, labeling_method)
     if data is None:
@@ -417,12 +425,12 @@ def run_training_mode(symbol, timeframe, limit, labeling_method):
         random_state=42,
         verbosity=-1,
     )
-    
+
     model.fit(X_elite, y_model_all, sample_weight=w_model_all)
-    
+
     # 3. 保存
     print("[*] Saving Model via ModelManager...")
-    
+
     metadata = {
         "symbol": symbol,
         "timeframe": timeframe,
@@ -432,25 +440,25 @@ def run_training_mode(symbol, timeframe, limit, labeling_method):
         "training_samples": len(X_elite),
         # 簡易的なスコア（トレーニングデータに対するスコア）
         # ※本来はCVスコアなどを記録すべきだが、ここでは簡易化
-        "train_accuracy": float(model.score(X_elite, y_model_all)),
-        "description": "Trained via verify_feature_reduction.py"
+        "train_accuracy": float(model.score(X_elite, y_model_all)),  # type: ignore[attr-defined]
+        "description": "Trained via verify_feature_reduction.py",
     }
-    
+
     # スケーラーはここでは明示的に使用していない（LightGBM生）のでNone
     # 必要ならPipelineにして保存するか、StandardScalerを適用するように変更する必要があるが
     # 現状のverifyロジックに従う
-    
+
     try:
         model_path = model_manager.save_model(
             model=model,
             model_name=f"verify_{labeling_method}",
             metadata=metadata,
-            scaler=None, # LightGBM handles scaling? No, but trees are invariant. 
-                         # If features were scaled in preparation, we need that scaler.
-                         # In fetch_all_data/FeatureEngineeringService, scaling might happen.
-                         # FeatureEngineeringService usually returns raw-ish features (pct_change etc).
-                         # We are not explicitly scaling X_elite here.
-            feature_columns=elite_cols
+            scaler=None,  # LightGBM handles scaling? No, but trees are invariant.
+            # If features were scaled in preparation, we need that scaler.
+            # In fetch_all_data/FeatureEngineeringService, scaling might happen.
+            # FeatureEngineeringService usually returns raw-ish features (pct_change etc).
+            # We are not explicitly scaling X_elite here.
+            feature_columns=elite_cols,
         )
         print(f"✅ Model saved successfully at: {model_path}")
     except Exception as e:
@@ -475,6 +483,11 @@ def run_compare_mode(symbol, timeframe, limit):
     res_tb = run_analysis_pipeline(
         symbol, timeframe, limit, "triple_barrier", save_json=False
     )
+
+    # データの整合性チェック
+    if res_ts is None or res_tb is None:
+        print("Error: Comparison failed due to missing data in one or both pipelines.")
+        return
 
     print(f"\n{'='*60}")
     print(f" FINAL COMPARISON: {symbol} ({timeframe})")

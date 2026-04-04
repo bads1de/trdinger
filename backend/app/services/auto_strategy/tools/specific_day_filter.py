@@ -21,10 +21,22 @@ class SpecificDayFilter(BaseTool):
 
     @property
     def name(self) -> str:
+        """
+        ツール名
+
+        Returns:
+            ツール名
+        """
         return "specific_day_filter"
 
     @property
     def description(self) -> str:
+        """
+        ツールの説明
+
+        Returns:
+            ツールの説明
+        """
         return "特定の曜日を指定してエントリーを回避します"
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

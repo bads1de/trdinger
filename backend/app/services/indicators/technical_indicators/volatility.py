@@ -42,6 +42,19 @@ from ..data_validation import (
 
 @njit(parallel=True, cache=True)
 def _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length):
+    """
+    Yang-Zhang ボラティリティを計算する Numba 加速ループ。
+
+    Args:
+        open_arr: 始値の配列
+        high_arr: 高値の配列
+        low_arr: 安値の配列
+        close_arr: 終値の配列
+        length: 計算期間
+
+    Returns:
+        Yang-Zhang ボラティリティの配列
+    """
     n = len(open_arr)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < length + 1:
@@ -97,6 +110,17 @@ logger = logging.getLogger(__name__)
 
 @njit(parallel=True, cache=True)
 def _njit_parkinson_loop(high_arr, low_arr, length):
+    """
+    Parkinson ボラティリティを計算する Numba 加速ループ。
+
+    Args:
+        high_arr: 高値の配列
+        low_arr: 安値の配列
+        length: 計算期間
+
+    Returns:
+        Parkinson ボラティリティの配列
+    """
     n = len(high_arr)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < length:
@@ -120,6 +144,19 @@ def _njit_parkinson_loop(high_arr, low_arr, length):
 
 @njit(parallel=True, cache=True)
 def _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length):
+    """
+    Garman-Klass ボラティリティを計算する Numba 加速ループ。
+
+    Args:
+        open_arr: 始値の配列
+        high_arr: 高値の配列
+        low_arr: 安値の配列
+        close_arr: 終値の配列
+        length: 計算期間
+
+    Returns:
+        Garman-Klass ボラティリティの配列
+    """
     n = len(open_arr)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < length:
@@ -162,6 +199,7 @@ class VolatilityIndicators:
         """平均真の値幅"""
 
         def compute():
+            """ATR を計算するヘルパー関数"""
             result = ta.atr(high=high, low=low, close=close, length=length)
             if result is None:
                 logger.error("ATR: Calculation returned None - returning NaN series")
@@ -244,6 +282,7 @@ class VolatilityIndicators:
         """Keltner Channels: returns (upper, middle, lower)"""
 
         def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+            """計算失敗時に NaN の Series を返すヘルパー関数"""
             return cast(
                 Tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(close, 3),

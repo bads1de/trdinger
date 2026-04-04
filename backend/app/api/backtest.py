@@ -74,6 +74,7 @@ async def get_backtest_results(
     """
 
     async def _get_results():
+        """バックテスト結果一覧を取得するためのメインロジックを実行します。"""
         # orchestration_service returns api_response with data field: {"results": [...], "total": N}
         resp = await orchestration_service.get_backtest_results(
             db=db,
@@ -108,6 +109,7 @@ async def delete_all_backtest_results(
     """
 
     async def _delete_all_results():
+        """すべてのバックテスト結果を削除するためのメインロジックを実行します。"""
         return await orchestration_service.delete_all_backtest_results(db=db)
 
     return await ErrorHandler.safe_execute_async(_delete_all_results)
@@ -134,6 +136,7 @@ async def get_backtest_result_by_id(
     """
 
     async def _get_by_id():
+        """ID指定でバックテスト結果を取得するためのメインロジックを実行します。"""
         result = ensure_response_dict(
             await orchestration_service.get_backtest_result_by_id(
                 db=db, result_id=result_id
@@ -179,6 +182,7 @@ async def delete_backtest_result(
     """
 
     async def _delete_result():
+        """バックテスト結果を削除するためのメインロジックを実行します。"""
         result = await orchestration_service.delete_backtest_result(
             db=db, result_id=result_id
         )
@@ -212,6 +216,7 @@ async def get_supported_strategies(
     """
 
     async def _get_strategies():
+        """サポートされている戦略一覧を取得するためのメインロジックを実行します。"""
         return await orchestration_service.get_supported_strategies()
 
     return await ErrorHandler.safe_execute_async(_get_strategies)

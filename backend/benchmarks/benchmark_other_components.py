@@ -8,7 +8,6 @@ import logging
 import os
 import sys
 import time
-from typing import Any, Dict
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -115,9 +114,7 @@ def benchmark_condition_evaluation():
     strategy = MockStrategy(data)
 
     # 単一条件評価
-    condition = Condition(
-        left_operand="sma_20", operator=">", right_operand="ema_50"
-    )
+    condition = Condition(left_operand="sma_20", operator=">", right_operand="ema_50")
 
     # ウームアップ
     for _ in range(100):
@@ -140,8 +137,10 @@ def benchmark_condition_evaluation():
         evaluator.evaluate_single_condition_vectorized(condition, strategy)
     elapsed_vectorized = time.perf_counter() - start_time
 
-    logger.info(f"\n=== ベクトル化評価 (100回実行) ===")
-    logger.info(f"実行時間: {elapsed_vectorized:.4f}秒 ({elapsed_vectorized/100*1000:.3f}ms/回)")
+    logger.info("\n=== ベクトル化評価 (100回実行) ===")
+    logger.info(
+        f"実行時間: {elapsed_vectorized:.4f}秒 ({elapsed_vectorized/100*1000:.3f}ms/回)"
+    )
 
     return {
         "elapsed": elapsed,
@@ -182,7 +181,9 @@ def benchmark_crossover_mutation():
     elapsed_crossover = time.perf_counter() - start_time
 
     logger.info(f"\n=== 交叉 ({n_iterations}回実行) ===")
-    logger.info(f"実行時間: {elapsed_crossover:.4f}秒 ({elapsed_crossover/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"実行時間: {elapsed_crossover:.4f}秒 ({elapsed_crossover/n_iterations*1000:.3f}ms/回)"
+    )
 
     # 突然変異ベンチマーク
     start_time = time.perf_counter()
@@ -191,7 +192,9 @@ def benchmark_crossover_mutation():
     elapsed_mutation = time.perf_counter() - start_time
 
     logger.info(f"\n=== 突然変異 ({n_iterations}回実行) ===")
-    logger.info(f"実行時間: {elapsed_mutation:.4f}秒 ({elapsed_mutation/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"実行時間: {elapsed_mutation:.4f}秒 ({elapsed_mutation/n_iterations*1000:.3f}ms/回)"
+    )
 
     return {
         "crossover_ms": elapsed_crossover / n_iterations * 1000,
@@ -262,6 +265,7 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"遺伝子生成ベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     try:
@@ -269,6 +273,7 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"条件評価ベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     try:
@@ -276,6 +281,7 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"交叉・突然変異ベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     try:
@@ -283,21 +289,32 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"データプロバイダーベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     logger.info("\n=== 全ベンチマーク完了 ===")
 
     # サマリー
-    logger.info(f"\n=== サマリー ===")
+    logger.info("\n=== サマリー ===")
     if "gene_generation" in all_results:
-        logger.info(f"遺伝子生成: {all_results['gene_generation']['ms_per_iteration']:.3f}ms/回")
+        logger.info(
+            f"遺伝子生成: {all_results['gene_generation']['ms_per_iteration']:.3f}ms/回"
+        )
     if "condition_evaluation" in all_results:
-        logger.info(f"条件評価: {all_results['condition_evaluation']['ms_per_iteration']:.3f}ms/回")
+        logger.info(
+            f"条件評価: {all_results['condition_evaluation']['ms_per_iteration']:.3f}ms/回"
+        )
     if "crossover_mutation" in all_results:
-        logger.info(f"交叉: {all_results['crossover_mutation']['crossover_ms']:.3f}ms/回")
-        logger.info(f"突然変異: {all_results['crossover_mutation']['mutation_ms']:.3f}ms/回")
+        logger.info(
+            f"交叉: {all_results['crossover_mutation']['crossover_ms']:.3f}ms/回"
+        )
+        logger.info(
+            f"突然変異: {all_results['crossover_mutation']['mutation_ms']:.3f}ms/回"
+        )
     if "data_provider" in all_results:
-        logger.info(f"データプロバイダー: {all_results['data_provider']['ms_per_iteration']:.3f}ms/回")
+        logger.info(
+            f"データプロバイダー: {all_results['data_provider']['ms_per_iteration']:.3f}ms/回"
+        )
 
     return all_results
 

@@ -359,6 +359,9 @@ class OverlapIndicators:
         )
 
         def nan_result() -> Dict[str, pd.Series]:
+            """
+            一目均衡表の計算に失敗した場合、またはデータ不足の場合に NaN の結果を返します。
+            """
             return create_nan_series_map(
                 high,
                 [

@@ -79,6 +79,7 @@ class TPSLService:
             default_return=self._calculate_fallback(current_price, position_direction),
         )
         def _calculate_tpsl_prices():
+            """TP/SL価格計算の内部実行関数"""
             # TP/SL遺伝子が利用可能な場合（GA最適化対象）
             if tpsl_gene and hasattr(tpsl_gene, "enabled") and tpsl_gene.enabled:
                 return self._calculate_from_gene(
@@ -103,7 +104,18 @@ class TPSLService:
         market_data: Optional[Dict[str, Any]],
         position_direction: float,
     ) -> Tuple[Optional[float], Optional[float]]:
-        """TP/SL遺伝子からTP/SL価格を計算（リファクタリング済み）"""
+        """
+        TP/SL遺伝子からTP/SL価格を計算（リファクタリング済み）
+
+        Args:
+            current_price: 現在価格
+            tpsl_gene: TP/SL遺伝子
+            market_data: 市場データ
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
+
+        Returns:
+            (SL価格, TP価格)のタプル
+        """
         from app.utils.error_handler import safe_operation
 
         @safe_operation(
@@ -112,6 +124,7 @@ class TPSLService:
             default_return=self._calculate_fallback(current_price, position_direction),
         )
         def _calculate_from_gene():
+            """遺伝子ベースのTP/SL価格計算の内部実行関数"""
             # Calculatorマッピングから適切なCalculatorを取得
             calculator = self.calculators.get(tpsl_gene.method)
 
@@ -184,6 +197,7 @@ class TPSLService:
             ),
         )
         def _calculate_basic_tpsl_prices():
+            """基本的なTP/SL価格計算の内部実行関数"""
             # 高度なTP/SL計算方式が使用されているかチェック
             if self._is_advanced_tpsl_used(risk_management):
                 return self._calculate_advanced_tpsl_prices(

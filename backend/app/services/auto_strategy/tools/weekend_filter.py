@@ -21,10 +21,22 @@ class WeekendFilter(BaseTool):
 
     @property
     def name(self) -> str:
+        """
+        ツール名
+
+        Returns:
+            ツール名
+        """
         return "weekend_filter"
 
     @property
     def description(self) -> str:
+        """
+        ツールの説明
+
+        Returns:
+            ツールの説明
+        """
         return "土曜日・日曜日のエントリーをスキップします"
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

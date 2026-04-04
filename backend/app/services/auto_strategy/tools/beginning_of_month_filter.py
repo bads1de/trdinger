@@ -21,10 +21,22 @@ class BeginningOfMonthFilter(BaseTool):
 
     @property
     def name(self) -> str:
+        """
+        ツール名
+
+        Returns:
+            ツール名
+        """
         return "beginning_of_month_filter"
 
     @property
     def description(self) -> str:
+        """
+        ツールの説明
+
+        Returns:
+            ツールの説明
+        """
         return "月初の特異な需給バランスによる乱高下を回避します"
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

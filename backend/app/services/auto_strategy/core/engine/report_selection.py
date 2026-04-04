@@ -206,6 +206,10 @@ def is_evaluation_report(report: Any) -> bool:
 
 
 def _safe_int(value: Any) -> int:
+    """値を安全に整数に変換する。
+    
+    変換できない場合は0を返す。
+    """
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -213,10 +217,18 @@ def _safe_int(value: Any) -> int:
 
 
 def _to_selection_space(value: float, is_minimize: bool) -> float:
+    """値を選択空間の値に変換する（最大化問題に統一）。
+    
+    最小化問題の場合は符号を反転させる。
+    """
     return -value if is_minimize else value
 
 
 def _get_two_stage_metadata_target(individual: Any) -> Any:
+    """2段階評価のメタデータを取得する対象を抽出する。
+    
+    個体にfitness属性があればそれを返し、なければ個体自身を返す。
+    """
     fitness = getattr(individual, "fitness", None)
     return fitness if fitness is not None else individual
 

@@ -98,7 +98,11 @@ def benchmark_integrated_fitness():
         short_entry_conditions=[
             Condition(left_operand="sma_20", operator="<", right_operand="ema_50")
         ],
-            tpsl_gene=TPSLGene(method=TPSLMethod.VOLATILITY_BASED, atr_multiplier_sl=2.0, atr_multiplier_tp=3.0),
+        tpsl_gene=TPSLGene(
+            method=TPSLMethod.VOLATILITY_BASED,
+            atr_multiplier_sl=2.0,
+            atr_multiplier_tp=3.0,
+        ),
     )
 
     # ウームアップ
@@ -118,11 +122,11 @@ def benchmark_integrated_fitness():
 
     # キャッシュ統計
     cache_info = evaluator.get_cache_info()
-    logger.info(f"\n=== キャッシュ統計 ===")
+    logger.info("\n=== キャッシュ統計 ===")
     logger.info(f"ヒット数: {cache_info['cache_hits']}")
     logger.info(f"ミス数: {cache_info['cache_misses']}")
-    total = cache_info['cache_hits'] + cache_info['cache_misses']
-    hit_rate = cache_info['cache_hits'] / total if total > 0 else 0
+    total = cache_info["cache_hits"] + cache_info["cache_misses"]
+    hit_rate = cache_info["cache_hits"] / total if total > 0 else 0
     logger.info(f"ヒット率: {hit_rate*100:.1f}%")
 
     return {
@@ -156,7 +160,9 @@ def benchmark_with_different_trade_counts():
     for n_trades in trade_counts:
         # モックバックテストサービス
         mock_backtest_service = MagicMock()
-        mock_backtest_service.run_backtest.return_value = create_mock_backtest_result(n_trades)
+        mock_backtest_service.run_backtest.return_value = create_mock_backtest_result(
+            n_trades
+        )
 
         evaluator = IndividualEvaluator(mock_backtest_service, max_cache_size=100)
         config = GAConfig()
@@ -180,7 +186,11 @@ def benchmark_with_different_trade_counts():
             short_entry_conditions=[
                 Condition(left_operand="sma_20", operator="<", right_operand="close")
             ],
-        tpsl_gene=TPSLGene(method=TPSLMethod.VOLATILITY_BASED, atr_multiplier_sl=2.0, atr_multiplier_tp=3.0),
+            tpsl_gene=TPSLGene(
+                method=TPSLMethod.VOLATILITY_BASED,
+                atr_multiplier_sl=2.0,
+                atr_multiplier_tp=3.0,
+            ),
         )
 
         # ウームアップ
@@ -199,7 +209,9 @@ def benchmark_with_different_trade_counts():
         }
 
         logger.info(f"\nトレード数 {n_trades}:")
-        logger.info(f"  実行時間: {elapsed:.4f}秒 ({elapsed/n_iterations*1000:.3f}ms/回)")
+        logger.info(
+            f"  実行時間: {elapsed:.4f}秒 ({elapsed/n_iterations*1000:.3f}ms/回)"
+        )
 
     return results
 
@@ -215,6 +227,7 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"統合フィットネスベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     try:
@@ -222,6 +235,7 @@ def run_all_benchmarks():
     except Exception as e:
         logger.error(f"トレード数別ベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
 
     logger.info("\n=== 全ベンチマーク完了 ===")
@@ -229,7 +243,7 @@ def run_all_benchmarks():
     # サマリー
     if "integrated_fitness" in all_results:
         result = all_results["integrated_fitness"]
-        logger.info(f"\n=== サマリー ===")
+        logger.info("\n=== サマリー ===")
         logger.info(f"フィットネス計算: {result['ms_per_iteration']:.3f}ms/回")
         logger.info(f"キャッシュヒット率: {result['cache_hit_rate']*100:.1f}%")
 

@@ -19,6 +19,7 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
     """
 
     def __init__(self):
+        """初期化"""
         super().__init__("fixed_percentage")
 
     def _do_calculate(
@@ -29,6 +30,22 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
         position_direction: float,
         **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
+        """
+        固定パーセンテージ方式によるTP/SL計算の実装
+
+        遺伝子または引数で指定された固定の割合（%）を使用して
+        TP/SLレベルを計算します。
+
+        Args:
+            current_price: 現在価格
+            tpsl_gene: TP/SL遺伝子
+            market_data: 市場データ
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
+            **kwargs: 追加引数（stop_loss_pct, take_profit_pct）
+
+        Returns:
+            (SL割合, TP割合, 信頼度スコア, 実行詳細データ)のタプル
+        """
         # 1. パラメータ取得
         if tpsl_gene:
             sl_pct = tpsl_gene.stop_loss_pct

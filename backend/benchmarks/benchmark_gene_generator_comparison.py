@@ -33,6 +33,7 @@ def benchmark_gene_generators():
     from app.services.auto_strategy.generators.random_gene_generator import (
         RandomGeneGenerator,
     )
+
     OptimizedGeneGenerator = RandomGeneGenerator
 
     config = create_mock_config()
@@ -71,16 +72,26 @@ def benchmark_gene_generators():
 
     # 結果表示
     logger.info(f"\n=== 結果 ({n_iterations}回実行) ===")
-    logger.info(f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)")
-    logger.info(f"最適化版（初回）: {optimized_time_first:.4f}秒 ({optimized_time_first/n_iterations*1000:.3f}ms/回)")
-    logger.info(f"最適化版（2回目）: {optimized_time_second:.4f}秒 ({optimized_time_second/n_iterations*1000:.3f}ms/回)")
+    logger.info(
+        f"オリジナル版: {original_time:.4f}秒 ({original_time/n_iterations*1000:.3f}ms/回)"
+    )
+    logger.info(
+        f"最適化版（初回）: {optimized_time_first:.4f}秒 ({optimized_time_first/n_iterations*1000:.3f}ms/回)"
+    )
+    logger.info(
+        f"最適化版（2回目）: {optimized_time_second:.4f}秒 ({optimized_time_second/n_iterations*1000:.3f}ms/回)"
+    )
 
     speedup_first = original_time / optimized_time_first
     speedup_second = original_time / optimized_time_second
 
-    logger.info(f"\n=== 高速化率 ===")
-    logger.info(f"最適化版（初回）: {speedup_first:.2f}倍 ({(1 - optimized_time_first/original_time) * 100:.1f}%削減)")
-    logger.info(f"最適化版（2回目）: {speedup_second:.2f}倍 ({(1 - optimized_time_second/original_time) * 100:.1f}%削減)")
+    logger.info("\n=== 高速化率 ===")
+    logger.info(
+        f"最適化版（初回）: {speedup_first:.2f}倍 ({(1 - optimized_time_first/original_time) * 100:.1f}%削減)"
+    )
+    logger.info(
+        f"最適化版（2回目）: {speedup_second:.2f}倍 ({(1 - optimized_time_second/original_time) * 100:.1f}%削減)"
+    )
 
     return {
         "original_time": original_time,
@@ -104,6 +115,7 @@ def run_benchmark():
     except Exception as e:
         logger.error(f"ベンチマークエラー: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 

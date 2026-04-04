@@ -33,6 +33,23 @@ async def get_long_short_ratio_data(
 ):
     """
     ロング/ショート比率データを取得
+
+    データベースに保存されたロング/ショート比率データを取得します。
+    期間指定または件数制限でデータをフィルタリングできます。
+
+    Args:
+        symbol: 取引ペア（例: BTC/USDT:USDT）
+        period: データ期間（5min, 15min, 30min, 1h, 4h, 1d）
+        limit: 取得件数（1-1000）
+        start_date: 取得開始日時（ISO形式）
+        end_date: 取得終了日時（ISO形式）
+        repository: ロング/ショート比率リポジトリ（依存性注入）
+
+    Returns:
+        ロング/ショート比率データのリスト
+
+    Raises:
+        HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
     try:
         start_dt = datetime.fromisoformat(start_date) if start_date else None
@@ -68,6 +85,21 @@ async def collect_long_short_ratio_data(
 ):
     """
     ロング/ショート比率データの収集を実行（バックグラウンド）
+
+    Bybit取引所からロング/ショート比率データを取得し、データベースに保存します。
+    差分収集（最新データのみ）または履歴収集（全期間）のモードを選択できます。
+    バックグラウンドタスクで実行されるため、即時に応答が返されます。
+
+    Args:
+        background_tasks: FastAPIバックグラウンドタスクマネージャー
+        symbol: 取引ペア（例: BTC/USDT:USDT）
+        period: データ期間（5min, 15min, 30min, 1h, 4h, 1d）
+        mode: 収集モード（incremental: 差分収集、historical: 履歴収集）
+        service: Bybitロング/ショート比率サービス（依存性注入）
+        repository: ロング/ショート比率リポジトリ（依存性注入）
+
+    Returns:
+        収集開始通知を含むJSONレスポンス
     """
 
     async def _collect_task():

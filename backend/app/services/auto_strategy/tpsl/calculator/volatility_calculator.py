@@ -19,6 +19,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
     """
 
     def __init__(self):
+        """初期化"""
         super().__init__("volatility_based")
 
     def _do_calculate(
@@ -29,6 +30,22 @@ class VolatilityCalculator(BaseTPSLCalculator):
         position_direction: float,
         **kwargs,
     ) -> Tuple[float, float, float, Dict[str, Any]]:
+        """
+        ボラティリティ方式（ATR）によるTP/SL計算の実装
+
+        市場のボラティリティ（ATR: Average True Range）に基づいて、
+        値動きの大きさに応じたTP/SLレベルを動的に計算します。
+
+        Args:
+            current_price: 現在価格
+            tpsl_gene: TP/SL遺伝子
+            market_data: 市場データ
+            position_direction: ポジション方向（1.0=ロング, -1.0=ショート）
+            **kwargs: 追加引数（atr_period, atr_multiplier_sl, atr_multiplier_tp）
+
+        Returns:
+            (SL割合, TP割合, 信頼度スコア, 実行詳細データ)のタプル
+        """
         # 1. パラメータ取得
         if tpsl_gene:
             atr_period = tpsl_gene.atr_period or 21

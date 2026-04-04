@@ -22,10 +22,22 @@ class EndOfMonthFilter(BaseTool):
 
     @property
     def name(self) -> str:
+        """
+        ツール名
+
+        Returns:
+            ツール名
+        """
         return "end_of_month_filter"
 
     @property
     def description(self) -> str:
+        """
+        ツールの説明
+
+        Returns:
+            ツールの説明
+        """
         return "月末のリバランスによる不規則な動きを回避します"
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

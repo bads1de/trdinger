@@ -12,8 +12,8 @@ import sys
 import time
 import tracemalloc
 from io import StringIO
-from typing import Any, Dict, List
-from unittest.mock import Mock
+from typing import Dict, List
+
 
 import numpy as np
 import pandas as pd
@@ -123,16 +123,12 @@ def create_mock_strategy_gene():
     ]
 
     long_conditions: List[Condition | ConditionGroup] = [
-        Condition(
-            left_operand="sma_20", operator=">", right_operand="ema_50"
-        ),
+        Condition(left_operand="sma_20", operator=">", right_operand="ema_50"),
         Condition(left_operand="rsi_14", operator="<", right_operand=30),
     ]
 
     short_conditions: List[Condition | ConditionGroup] = [
-        Condition(
-            left_operand="sma_20", operator="<", right_operand="ema_50"
-        ),
+        Condition(left_operand="sma_20", operator="<", right_operand="ema_50"),
         Condition(left_operand="rsi_14", operator=">", right_operand=70),
     ]
 
@@ -184,9 +180,7 @@ def benchmark_condition_evaluator():
     strategy = MockStrategy(data)
 
     # 単一条件評価のベンチマーク
-    condition = Condition(
-        left_operand="sma_20", operator=">", right_operand="ema_50"
-    )
+    condition = Condition(left_operand="sma_20", operator=">", right_operand="ema_50")
 
     runner = BenchmarkRunner()
 
@@ -393,9 +387,7 @@ def benchmark_fitness_calculator():
 
     def calculate_multi_objective():
         for _ in range(1000):
-            calculator.calculate_multi_objective_fitness(
-                backtest_result, config_multi
-            )
+            calculator.calculate_multi_objective_fitness(backtest_result, config_multi)
 
     runner.measure_time("多目的フィットネス計算_1000回", calculate_multi_objective)
 

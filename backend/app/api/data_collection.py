@@ -39,7 +39,25 @@ async def collect_historical_data(
     ),
 ) -> Dict:
     """
-    履歴データを包括的に収集
+    履歴OHLCVデータを包括的に収集
+
+    指定されたシンボルと時間軸の履歴OHLCVデータを取引所から取得し、データベースに保存します。
+    バックグラウンドタスクで実行されるため、即時に応答が返されます。
+
+    Args:
+        background_tasks: FastAPIバックグラウンドタスクマネージャー
+        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+        timeframe: 時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）
+        force_update: 既存データを上書き更新するかどうか
+        start_date: 収集開始日（YYYY-MM-DD形式）
+        db: データベースセッション
+        orchestration_service: データ収集オーケストレーションサービス（依存性注入）
+
+    Returns:
+        収集開始結果を含むJSONレスポンス
+
+    Raises:
+        HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
     return await orchestration_service.start_historical_data_collection(
         symbol, timeframe, background_tasks, db, force_update, start_date
@@ -56,7 +74,21 @@ async def update_bulk_incremental_data(
     ),
 ) -> Dict:
     """
-    一括差分データを更新（OHLCV、FR、OI）
+    一括差分データを更新（OHLCV、ファンディングレート、オープンインタレスト）
+
+    最新のデータから現在までの差分データを一括で更新します。
+    既存のデータベースにある最終レコード以降のデータのみを取得して追加します。
+
+    Args:
+        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+        db: データベースセッション
+        orchestration_service: データ収集オーケストレーションサービス（依存性注入）
+
+    Returns:
+        更新結果を含むJSONレスポンス
+
+    Raises:
+        HTTPException: データベースエラーが発生した場合
     """
     return await orchestration_service.execute_bulk_incremental_update(symbol, db)
 
@@ -73,7 +105,23 @@ async def collect_bulk_historical_data(
     ),
 ) -> Dict:
     """
-    全ての取引ペアと全ての時間軸でOHLCVデータを一括収集
+    全ての時間軸でOHLCVデータを一括収集
+
+    デフォルトシンボル（BTC/USDT:USDT）の全時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）の
+    履歴OHLCVデータを一括で取得します。バックグラウンドタスクで実行されます。
+
+    Args:
+        background_tasks: FastAPIバックグラウンドタスクマネージャー
+        force_update: 既存データを上書き更新するかどうか
+        start_date: 収集開始日（YYYY-MM-DD形式、デフォルト: 2020-03-25）
+        db: データベースセッション
+        orchestration_service: データ収集オーケストレーションサービス（依存性注入）
+
+    Returns:
+        収集開始結果を含むJSONレスポンス
+
+    Raises:
+        HTTPException: データベースエラーが発生した場合
     """
     return await orchestration_service.start_bulk_historical_data_collection(
         background_tasks, db, force_update, start_date
@@ -93,7 +141,24 @@ async def get_collection_status(
     ),
 ) -> Dict:
     """
-    データ収集状況を確認
+    指定されたシンボル・時間軸のデータ収集状況を確認
+
+    データベース内のデータ範囲、最新・最古のデータ日時、データ件数などの
+    状況情報を返します。auto_fetchがtrueの場合は不足データの自動収集を開始します。
+
+    Args:
+        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+        timeframe: 時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）
+        background_tasks: FastAPIバックグラウンドタスクマネージャー
+        auto_fetch: 不足データがある場合に自動で収集を開始するかどうか
+        db: データベースセッション
+        orchestration_service: データ収集オーケストレーションサービス（依存性注入）
+
+    Returns:
+        データ収集状況を含むJSONレスポンス
+
+    Raises:
+        HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
     return await orchestration_service.get_collection_status(
         symbol=symbol,
@@ -116,7 +181,23 @@ async def collect_all_data_bulk(
     ),
 ) -> Dict:
     """
-    全データ（OHLCV・Funding Rate・Open Interest）を一括収集
+    全データ（OHLCV・ファンディングレート・オープンインタレスト）を一括収集
+
+    デフォルトシンボルの全種類の市場データ（OHLCV、ファンディングレート、オープンインタレスト）
+    を一括で収集します。バックグラウンドタスクで実行されます。
+
+    Args:
+        background_tasks: FastAPIバックグラウンドタスクマネージャー
+        force_update: 既存データを上書き更新するかどうか
+        start_date: 収集開始日（YYYY-MM-DD形式）
+        db: データベースセッション
+        orchestration_service: データ収集オーケストレーションサービス（依存性注入）
+
+    Returns:
+        収集開始結果を含むJSONレスポンス
+
+    Raises:
+        HTTPException: データベースエラーが発生した場合
     """
     # 全データ一括収集サービスにも上書きオプションを追加する必要があるため、
     # 一旦はbulk-historicalを使用する
@@ -137,7 +218,24 @@ async def collect_historical_oi_data(
     ),
 ) -> Dict:
     """
-    OI（Open Interest）履歴データを収集
+    OI（オープンインタレスト）履歴データを収集
+
+    指定されたシンボルと間隔のオープンインタレスト（建玉残高）履歴データを
+    取引所から取得し、データベースに保存します。
+    バックグラウンドタスクで実行されます。
+
+    Args:
+        background_tasks: FastAPIバックグラウンドタスクマネージャー
+        symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+        interval: データ間隔（5min, 15min, 30min, 1h, 4h, 1d）
+        db: データベースセッション
+        orchestration_service: データ収集オーケストレーションサービス（依存性注入）
+
+    Returns:
+        収集開始結果を含むJSONレスポンス
+
+    Raises:
+        HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
     return await orchestration_service.start_historical_oi_collection(
         symbol, interval, background_tasks, db

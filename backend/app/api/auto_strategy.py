@@ -81,11 +81,13 @@ class GAResultResponse(BaseModel):
 
 
 class StopExperimentResponse(BaseModel):
+    """実験停止レスポンス"""
     success: bool
     message: str
 
 
 class ListExperimentsResponse(BaseModel):
+    """実験一覧レスポンス"""
     experiments: List[Dict[str, Any]]
 
 
@@ -108,6 +110,7 @@ async def generate_strategy(
     """
 
     async def _generate_strategy():
+        """戦略生成のメインロジックを実行します。"""
         try:
             logger.info("=== GA戦略生成API呼び出し開始 ===")
             logger.info(f"実験名: {request.experiment_name}")
@@ -152,6 +155,7 @@ async def list_experiments(
     """
 
     async def _list_experiments():
+        """実験一覧を取得します。"""
         experiments = auto_strategy_service.list_experiments()
         return ListExperimentsResponse(experiments=experiments)
 
@@ -174,6 +178,7 @@ async def stop_experiment(
     """
 
     async def _stop_experiment():
+        """指定された実験を停止します。"""
         try:
             result = auto_strategy_service.stop_experiment(experiment_id)
             return StopExperimentResponse(

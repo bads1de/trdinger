@@ -231,7 +231,7 @@ def benchmark_cache_effectiveness():
         time_with_cache_first = time.perf_counter() - start_time
 
         stats = evaluator_with_cache.get_statistics()
-        logger.info(f"\nキャッシュあり（初回）:")
+        logger.info("\nキャッシュあり（初回）:")
         logger.info(f"  時間: {time_with_cache_first:.4f}秒")
         logger.info(f"  成功率: {stats['success_rate']*100:.1f}%")
     finally:
@@ -246,7 +246,7 @@ def benchmark_cache_effectiveness():
         time_with_cache_second = time.perf_counter() - start_time
 
         stats = evaluator_with_cache.get_statistics()
-        logger.info(f"\nキャッシュあり（2回目）:")
+        logger.info("\nキャッシュあり（2回目）:")
         logger.info(f"  時間: {time_with_cache_second:.4f}秒")
         logger.info(f"  成功率: {stats['success_rate']*100:.1f}%")
     finally:
@@ -260,7 +260,7 @@ def benchmark_cache_effectiveness():
             evaluator_without_cache.evaluate_population(population)
         time_without_cache = time.perf_counter() - start_time
 
-        logger.info(f"\nキャッシュなし:")
+        logger.info("\nキャッシュなし:")
         logger.info(f"  時間: {time_without_cache:.4f}秒")
     finally:
         evaluator_without_cache.shutdown()
@@ -269,7 +269,7 @@ def benchmark_cache_effectiveness():
     speedup_first = time_without_cache / time_with_cache_first
     speedup_second = time_without_cache / time_with_cache_second
 
-    logger.info(f"\n=== 比較 ===")
+    logger.info("\n=== 比較 ===")
     logger.info(f"キャッシュあり（初回） vs なし: {speedup_first:.2f}倍")
     logger.info(f"キャッシュあり（2回目） vs なし: {speedup_second:.2f}倍")
 
@@ -307,7 +307,7 @@ def run_all_benchmarks():
 
     # サマリー表示
     if "basic" in all_results:
-        logger.info(f"\n=== サマリー ===")
+        logger.info("\n=== サマリー ===")
         logger.info(f"基本: {all_results['basic']['speedup']:.2f}倍高速化")
 
     return all_results

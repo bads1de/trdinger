@@ -251,6 +251,13 @@ class GAConfig(BaseConfig):
     robustness_config: Optional[RobustnessConfig] = None
 
     def __post_init__(self) -> None:
+        """
+        インスタンス初期化後の後処理
+
+        MLフィルター関連の設定値の整合性を確保します。
+        volatility_gate_enabled と ml_filter_enabled の同期、
+        およびモデルパスの相互補完を行います。
+        """
         self.volatility_gate_enabled = bool(
             self.volatility_gate_enabled or self.ml_filter_enabled
         )
