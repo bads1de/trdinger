@@ -104,3 +104,42 @@ class TestRunConfigBuilder:
             result["strategy_config"]["parameters"]["evaluation_start"]
             == "2024-01-02 00:00:00"
         )
+
+    def test_build_run_config_injects_early_termination_settings(self):
+        builder = RunConfigBuilder()
+        gene = Mock()
+        gene.id = "gene-early-stop"
+
+        ga_config = Mock()
+        ga_config.volatility_gate_enabled = False
+        ga_config.volatility_model_path = None
+        ga_config.ml_filter_enabled = False
+        ga_config.ml_model_path = None
+        ga_config.enable_early_termination = True
+        ga_config.early_termination_max_drawdown = 0.15
+        ga_config.early_termination_min_trades = 20
+        ga_config.early_termination_min_trade_check_progress = 0.4
+        ga_config.early_termination_trade_pace_tolerance = 0.5
+        ga_config.early_termination_min_expectancy = -0.01
+        ga_config.early_termination_expectancy_min_trades = 5
+        ga_config.early_termination_expectancy_progress = 0.6
+
+        result = builder.build_run_config(
+            gene,
+            {
+                "symbol": "BTC/USDT:USDT",
+                "timeframe": "1h",
+            },
+            ga_config,
+        )
+
+        assert result is not None
+        params = result["strategy_config"]["parameters"]
+        assert params["enable_early_termination"] is True
+        assert params["early_termination_max_drawdown"] == 0.15
+        assert params["early_termination_min_trades"] == 20
+        assert params["early_termination_min_trade_check_progress"] == 0.4
+        assert params["early_termination_trade_pace_tolerance"] == 0.5
+        assert params["early_termination_min_expectancy"] == -0.01
+        assert params["early_termination_expectancy_min_trades"] == 5
+        assert params["early_termination_expectancy_progress"] == 0.6

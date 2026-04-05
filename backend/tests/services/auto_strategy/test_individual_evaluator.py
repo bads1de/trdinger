@@ -6,8 +6,14 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
+    build_coarse_ga_config,
+)
 from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
+from app.services.backtest.execution.backtest_executor import (
+    BacktestEarlyTerminationError,
+)
 
 
 class TestIndividualEvaluator:
@@ -74,6 +80,35 @@ class TestIndividualEvaluator:
         config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
         self.evaluator.set_backtest_config(config)
         assert self.evaluator._fixed_backtest_config == config
+
+    def test_evaluate_individual_force_refresh_updates_cached_result(self):
+        gene = self._create_mock_gene()
+        coarse_report = Mock()
+        coarse_report.aggregated_fitness = (0.1,)
+        coarse_report.metadata = {"evaluation_fidelity": "coarse"}
+        full_report = Mock()
+        full_report.aggregated_fitness = (0.9,)
+        full_report.metadata = {"evaluation_fidelity": "full"}
+
+        self.evaluator._evaluation_strategy.execute_report = Mock(
+            side_effect=[coarse_report, full_report]
+        )
+
+        ga_config = GAConfig()
+
+        first = self.evaluator.evaluate_individual(gene, ga_config)
+        refreshed = self.evaluator.evaluate_individual(
+            gene,
+            ga_config,
+            force_refresh=True,
+        )
+
+        assert first == (0.1,)
+        assert refreshed == (0.9,)
+        assert self.evaluator._evaluation_strategy.execute_report.call_count == 2
+        assert self.evaluator.get_cached_evaluation_report(gene).metadata[
+            "evaluation_fidelity"
+        ] == "full"
 
     def test_prepare_backtest_config_for_evaluation_adds_warmup_window(self):
         gene = StrategyGene(
@@ -158,6 +193,88 @@ class TestIndividualEvaluator:
             == "2024-01-10 00:00:00"
         )
         assert fitness == (0.42,)
+
+    def test_perform_single_evaluation_uses_recent_tail_window_for_coarse_fidelity(self):
+        mock_individual = StrategyGene(
+            id="coarse-gene",
+            indicators=[],
+            long_entry_conditions=[],
+            short_entry_conditions=[],
+        )
+        market_data = pd.DataFrame(
+            {
+                "open": [100.0, 101.0],
+                "high": [101.0, 102.0],
+                "low": [99.0, 100.0],
+                "close": [100.5, 101.5],
+                "volume": [10.0, 11.0],
+            },
+            index=pd.date_range("2024-01-08 00:00:00", periods=2, freq="D"),
+        )
+
+        self.evaluator._get_cached_data = Mock(return_value=market_data)
+        self.evaluator._get_cached_minute_data = Mock(return_value=None)
+        self.evaluator._calculate_multi_objective_fitness = Mock(return_value=(0.42,))
+        self.mock_backtest_service.run_backtest.return_value = {
+            "performance_metrics": {"total_trades": 1},
+            "trade_history": [],
+            "equity_curve": [],
+        }
+
+        full_config = GAConfig(
+            enable_multi_fidelity_evaluation=True,
+            multi_fidelity_window_ratio=0.3,
+        )
+        full_config.objectives = ["weighted_score"]
+        coarse_config = build_coarse_ga_config(full_config)
+
+        self.evaluator._perform_single_evaluation(
+            mock_individual,
+            {
+                "symbol": "BTC/USDT:USDT",
+                "timeframe": "1d",
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-01-11 00:00:00",
+                "initial_capital": 10000.0,
+                "commission_rate": 0.001,
+                "strategy_name": "CoarseTest",
+            },
+            coarse_config,
+        )
+
+        run_config = self.mock_backtest_service.run_backtest.call_args.kwargs["config"]
+        assert run_config["start_date"] == "2024-01-08 00:00:00"
+        assert run_config["end_date"] == "2024-01-11 00:00:00"
+
+    def test_perform_single_evaluation_report_returns_penalty_on_early_termination(self):
+        gene = self._create_mock_gene()
+        self.evaluator._get_cached_data = Mock(return_value=Mock())
+        self.evaluator._get_cached_minute_data = Mock(return_value=None)
+        self.mock_backtest_service.run_backtest.side_effect = BacktestEarlyTerminationError(
+            "trade_pace"
+        )
+
+        config = GAConfig()
+        config.objectives = ["weighted_score"]
+
+        scenario = self.evaluator._perform_single_evaluation_report(
+            gene,
+            {
+                "symbol": "BTC/USDT:USDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-01-02 00:00:00",
+                "initial_capital": 10000.0,
+                "commission_rate": 0.001,
+                "strategy_name": "EarlyStopTest",
+            },
+            config,
+        )
+
+        assert scenario.passed is False
+        assert scenario.metadata["early_terminated"] is True
+        assert scenario.metadata["termination_reason"] == "trade_pace"
+        assert scenario.fitness == (-float("inf"),)
 
     def test_apply_evaluation_window_to_result_recomputes_trimmed_window(self):
         market_data = pd.DataFrame(

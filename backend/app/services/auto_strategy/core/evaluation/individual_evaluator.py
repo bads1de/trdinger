@@ -23,10 +23,14 @@ from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.backtest.config.backtest_config import BacktestRunConfig
+from app.services.backtest.execution.backtest_executor import (
+    BacktestEarlyTerminationError,
+)
 from app.services.backtest.services.backtest_service import BacktestService
 
 from ..fitness.fitness_calculator import FitnessCalculator
 from .backtest_data_provider import BacktestDataProvider
+from .evaluation_fidelity import adjust_backtest_config_for_fidelity, is_coarse_fidelity
 from .evaluation_report import EvaluationReport, ScenarioEvaluation
 from .evaluation_strategies import EvaluationStrategy
 from .evaluation_window_service import EvaluationWindowService
@@ -278,7 +282,12 @@ class IndividualEvaluator(EvaluationWindowService):
 
         self._initialize_components()
 
-    def evaluate(self, individual: Any, config: GAConfig) -> Tuple[float, ...]:
+    def evaluate(
+        self,
+        individual: Any,
+        config: GAConfig,
+        force_refresh: bool = False,
+    ) -> Tuple[float, ...]:
         """
         個体を評価し、適応度（Fitness）のタプルを返す
 
@@ -293,10 +302,17 @@ class IndividualEvaluator(EvaluationWindowService):
         Returns:
             複数の目的関数に対応した評価値のタプル
         """
-        return self.evaluate_individual(individual, config)
+        return self.evaluate_individual(
+            individual,
+            config,
+            force_refresh=force_refresh,
+        )
 
     def evaluate_individual(
-        self, individual: Any, config: GAConfig
+        self,
+        individual: Any,
+        config: GAConfig,
+        force_refresh: bool = False,
     ) -> Tuple[float, ...]:
         """
         個体を評価し、適応度（Fitness）のタプルを返す（実体）
@@ -308,7 +324,7 @@ class IndividualEvaluator(EvaluationWindowService):
             cache_key = self._build_cache_key(gene)
 
             # ロックフリー読み取り: キャッシュヒット時はロック不要
-            cached = self._result_cache.get(cache_key)
+            cached = None if force_refresh else self._result_cache.get(cache_key)
             if cached is not None:
                 self._cache_hits += 1
                 self._last_evaluation_report = self._report_cache.get(cache_key)
@@ -325,6 +341,10 @@ class IndividualEvaluator(EvaluationWindowService):
             # 評価実行（戦略ルーティングに委譲）
             report = self._evaluation_strategy.execute_report(
                 gene, base_backtest_config, config
+            )
+            report.metadata.setdefault(
+                "evaluation_fidelity",
+                "coarse" if is_coarse_fidelity(config) else "full",
             )
             fitness = report.aggregated_fitness
             self._last_evaluation_report = report
@@ -498,8 +518,12 @@ class IndividualEvaluator(EvaluationWindowService):
             単一シナリオの評価結果
         """
         try:
+            fidelity_backtest_config = adjust_backtest_config_for_fidelity(
+                backtest_config,
+                config,
+            )
             prepared_backtest_config = self._prepare_backtest_config_for_evaluation(
-                gene, backtest_config
+                gene, fidelity_backtest_config
             )
 
             # 1. 実行用設定の構築
@@ -522,7 +546,11 @@ class IndividualEvaluator(EvaluationWindowService):
                 run_config["_include_raw_stats"] = True
 
             # モデル外のオブジェクトを注入
-            self._inject_external_objects(run_config, backtest_config, config)
+            self._inject_external_objects(
+                run_config,
+                prepared_backtest_config,
+                config,
+            )
 
             # 3. バックテスト実行
             result = self.backtest_service.run_backtest(
@@ -544,7 +572,9 @@ class IndividualEvaluator(EvaluationWindowService):
 
             # 4. 追加のコンテキスト情報（ML予測シグナルなど）を取得
             evaluation_context = self._get_evaluation_context(
-                gene, backtest_config, config
+                gene,
+                fidelity_backtest_config,
+                config,
             )
 
             # 5. フィットネス計算（フィットネス計算機に委譲）
@@ -555,8 +585,8 @@ class IndividualEvaluator(EvaluationWindowService):
             scenario_metadata = metadata.copy() if metadata else {}
             scenario_metadata.update(
                 {
-                    "start_date": str(backtest_config.get("start_date")),
-                    "end_date": str(backtest_config.get("end_date")),
+                    "start_date": str(fidelity_backtest_config.get("start_date")),
+                    "end_date": str(fidelity_backtest_config.get("end_date")),
                 }
             )
             if prepared_backtest_config.get("_evaluation_start") is not None:
@@ -572,6 +602,20 @@ class IndividualEvaluator(EvaluationWindowService):
                 performance_metrics=performance_metrics,
             )
 
+        except BacktestEarlyTerminationError as e:
+            logger.info("単一評価を早期終了しました: %s", e)
+            scenario_metadata = metadata.copy() if metadata else {}
+            scenario_metadata["early_terminated"] = True
+            scenario_metadata["termination_reason"] = getattr(
+                e, "reason", str(e)
+            )
+            return ScenarioEvaluation(  # type: ignore[call-arg]
+                name=scenario_name,
+                fitness=self._fitness_calculator.get_penalty_values(config),
+                passed=False,
+                metadata=scenario_metadata,
+                performance_metrics={"early_terminated": True},
+            )
         except Exception as e:
             logger.error(f"単一評価実行エラー: {e}")
             scenario_metadata = metadata.copy() if metadata else {}

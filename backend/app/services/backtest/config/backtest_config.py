@@ -32,7 +32,16 @@ class GeneratedGAParameters(BaseModel):
     ml_model_path: Optional[str] = None
     ml_predictor: Optional[Any] = None  # MLモデルインスタンス
     ml_filter_threshold: float = 0.1
+    evaluation_start: Optional[Any] = None
     minute_data: Optional[Any] = None  # DataFrameなどはPydanticで検証しにくいためAny
+    enable_early_termination: bool = False
+    early_termination_max_drawdown: Optional[float] = None
+    early_termination_min_trades: Optional[int] = None
+    early_termination_min_trade_check_progress: float = 0.5
+    early_termination_trade_pace_tolerance: float = 0.5
+    early_termination_min_expectancy: Optional[float] = None
+    early_termination_expectancy_min_trades: int = 5
+    early_termination_expectancy_progress: float = 0.6
 
 
 class StrategyConfig(BaseModel):

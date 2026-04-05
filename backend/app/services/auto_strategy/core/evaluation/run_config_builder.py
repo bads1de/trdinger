@@ -33,6 +33,38 @@ class RunConfigBuilder:
                 "volatility_model_path": ml_gate_settings.model_path,
                 "ml_filter_enabled": ml_gate_settings.enabled,
                 "ml_model_path": ml_gate_settings.model_path,
+                "enable_early_termination": bool(
+                    getattr(config, "enable_early_termination", False)
+                ),
+                "early_termination_max_drawdown": getattr(
+                    config, "early_termination_max_drawdown", None
+                ),
+                "early_termination_min_trades": getattr(
+                    config, "early_termination_min_trades", None
+                ),
+                "early_termination_min_trade_check_progress": getattr(
+                    config,
+                    "early_termination_min_trade_check_progress",
+                    0.5,
+                ),
+                "early_termination_trade_pace_tolerance": getattr(
+                    config,
+                    "early_termination_trade_pace_tolerance",
+                    0.5,
+                ),
+                "early_termination_min_expectancy": getattr(
+                    config, "early_termination_min_expectancy", None
+                ),
+                "early_termination_expectancy_min_trades": getattr(
+                    config,
+                    "early_termination_expectancy_min_trades",
+                    5,
+                ),
+                "early_termination_expectancy_progress": getattr(
+                    config,
+                    "early_termination_expectancy_progress",
+                    0.6,
+                ),
             }
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:

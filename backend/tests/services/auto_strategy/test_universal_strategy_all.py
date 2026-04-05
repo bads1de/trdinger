@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
+from app.services.auto_strategy.strategies.universal_strategy import (
+    StrategyEarlyTermination,
+)
 from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
 from app.services.auto_strategy.genes import (
     StrategyGene,
@@ -153,6 +156,92 @@ class TestUniversalStrategyAll:
         assert strategy.runtime_state.tp_reached is True
         assert strategy.runtime_state.trailing_tp_sl == 108.0
         assert strategy.runtime_state.sl_price == 97.0
+
+    def test_should_terminate_early_on_drawdown(
+        self, mock_broker, mock_data, valid_gene
+    ):
+        strategy = UniversalStrategy(
+            mock_broker,
+            mock_data,
+            {
+                "strategy_gene": valid_gene,
+                "enable_early_termination": True,
+                "early_termination_max_drawdown": 0.1,
+            },
+        )
+        strategy._starting_equity = 10000.0
+        strategy._max_equity_seen = 10000.0
+        strategy._total_bars = 10
+        strategy._current_bar_index = 5
+
+        with patch.object(
+            UniversalStrategy,
+            "equity",
+            new_callable=PropertyMock,
+            return_value=8800.0,
+        ):
+            assert strategy._should_terminate_early() == "max_drawdown"
+
+    def test_should_terminate_early_on_trade_pace(
+        self, mock_broker, mock_data, valid_gene
+    ):
+        strategy = UniversalStrategy(
+            mock_broker,
+            mock_data,
+            {
+                "strategy_gene": valid_gene,
+                "enable_early_termination": True,
+                "early_termination_min_trades": 10,
+                "early_termination_min_trade_check_progress": 0.5,
+                "early_termination_trade_pace_tolerance": 0.5,
+            },
+        )
+        strategy._total_bars = 10
+        strategy._current_bar_index = 7
+
+        with patch.object(
+            UniversalStrategy,
+            "closed_trades",
+            new_callable=PropertyMock,
+            return_value=[MagicMock(), MagicMock()],
+        ):
+            assert strategy._should_terminate_early() == "trade_pace"
+
+    def test_get_progress_ratio_uses_evaluation_window_when_warmup_exists(
+        self, mock_broker, mock_data_large, valid_gene
+    ):
+        full_index = mock_data_large.df.index
+        evaluation_start = str(full_index[80])
+        strategy = UniversalStrategy(
+            mock_broker,
+            mock_data_large,
+            {
+                "strategy_gene": valid_gene,
+                "evaluation_start": evaluation_start,
+            },
+        )
+
+        strategy.data.index = full_index[:81]
+        strategy._current_bar_index = 81
+
+        assert strategy._get_progress_ratio() == pytest.approx(1 / 20)
+
+    def test_check_early_termination_raises_exception(
+        self, mock_broker, mock_data, valid_gene
+    ):
+        strategy = UniversalStrategy(
+            mock_broker,
+            mock_data,
+            {
+                "strategy_gene": valid_gene,
+                "enable_early_termination": True,
+                "early_termination_max_drawdown": 0.1,
+            },
+        )
+
+        with patch.object(strategy, "_should_terminate_early", return_value="max_drawdown"):
+            with pytest.raises(StrategyEarlyTermination):
+                strategy._check_early_termination()
 
     # ---------------------------------------------------------------------------
     # TPSL & データスライス テスト

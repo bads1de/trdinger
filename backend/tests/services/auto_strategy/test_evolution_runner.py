@@ -166,6 +166,56 @@ class TestEvolutionRunner:
             assert ind.fitness.valid
             assert ind.fitness.values == (2.0,)
 
+    def test_evaluate_population_multi_fidelity_promotes_top_candidates(
+        self, mock_toolbox, dummy_population
+    ):
+        """multi-fidelity 有効時は粗評価後に上位候補だけフル評価する。"""
+        for index, ind in enumerate(dummy_population):
+            ind.id = f"ind-{index}"
+            ind.fitness.valid = False
+
+        coarse_scores = {
+            "ind-0": (0.2,),
+            "ind-1": (0.8,),
+            "ind-2": (0.6,),
+            "ind-3": (0.1,),
+        }
+        full_scores = {
+            "ind-1": (0.35,),
+            "ind-2": (1.1,),
+        }
+        mock_evaluator = Mock()
+
+        def _evaluate(individual, config, force_refresh=False):
+            if force_refresh:
+                return full_scores[individual.id]
+            return coarse_scores[individual.id]
+
+        mock_evaluator.evaluate.side_effect = _evaluate
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=None,
+            individual_evaluator=mock_evaluator,
+        )
+        config = SimpleNamespace(
+            enable_multi_fidelity_evaluation=True,
+            multi_fidelity_candidate_ratio=0.5,
+            multi_fidelity_min_candidates=1,
+        )
+
+        runner._evaluate_population(dummy_population, config)
+
+        assert mock_evaluator.evaluate.call_count == 6
+        assert mock_evaluator.evaluate.call_args_list[-2:] == [
+            call(dummy_population[1], config, force_refresh=True),
+            call(dummy_population[2], config, force_refresh=True),
+        ]
+        assert dummy_population[0].fitness.values == (0.2,)
+        assert dummy_population[1].fitness.values == (0.35,)
+        assert dummy_population[2].fitness.values == (1.1,)
+        assert dummy_population[3].fitness.values == (0.1,)
+
     def test_evaluate_invalid_individuals_mixed(self, mock_toolbox, dummy_population):
         """Test evaluation of only invalid individuals."""
         runner = EvolutionRunner(toolbox=mock_toolbox, stats=None)
@@ -265,6 +315,5 @@ class TestEvolutionRunner:
         mock_toolbox.mate.assert_not_called()
         mock_toolbox.mutate.assert_not_called()
         mock_toolbox.select.assert_not_called()
-
 
 

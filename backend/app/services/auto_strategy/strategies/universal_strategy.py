@@ -7,6 +7,7 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
+from math import ceil
 from typing import Any, List, Optional, Tuple, Union, cast
 
 import pandas as pd
@@ -39,6 +40,14 @@ from .stateful_conditions import StatefulConditionsEvaluator
 logger = logging.getLogger(__name__)
 
 
+class StrategyEarlyTermination(RuntimeError):
+    """戦略が早期打ち切り条件に達したことを示す例外。"""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason
+
+
 class UniversalStrategy(Strategy):
     """
     GA生成汎用戦略クラス
@@ -58,6 +67,14 @@ class UniversalStrategy(Strategy):
     volatility_gate_enabled = False
     volatility_model_path = None
     ml_filter_threshold = 0.5  # 旧互換の非推奨パラメータ。現行 gate 判定では未使用。
+    enable_early_termination = False
+    early_termination_max_drawdown = None
+    early_termination_min_trades = None
+    early_termination_min_trade_check_progress = 0.5
+    early_termination_trade_pace_tolerance = 0.5
+    early_termination_min_expectancy = None
+    early_termination_expectancy_min_trades = 5
+    early_termination_expectancy_progress = 0.6
 
     @property
     def _sl_price(self) -> float | None:
@@ -164,9 +181,41 @@ class UniversalStrategy(Strategy):
         self.base_timeframe = params.get("timeframe", "1h")
         self.evaluation_start = params.get("evaluation_start")
         self._evaluation_start = self._normalize_evaluation_start(self.evaluation_start)
+        self.enable_early_termination = bool(
+            params.get("enable_early_termination", False)
+        )
+        self.early_termination_max_drawdown = params.get(
+            "early_termination_max_drawdown"
+        )
+        self.early_termination_min_trades = params.get(
+            "early_termination_min_trades"
+        )
+        self.early_termination_min_trade_check_progress = float(
+            params.get("early_termination_min_trade_check_progress", 0.5) or 0.5
+        )
+        self.early_termination_trade_pace_tolerance = float(
+            params.get("early_termination_trade_pace_tolerance", 0.5) or 0.5
+        )
+        self.early_termination_min_expectancy = params.get(
+            "early_termination_min_expectancy"
+        )
+        self.early_termination_expectancy_min_trades = int(
+            params.get("early_termination_expectancy_min_trades", 5) or 5
+        )
+        self.early_termination_expectancy_progress = float(
+            params.get("early_termination_expectancy_progress", 0.6) or 0.6
+        )
 
         # 1分足データの取得（1分足シミュレーション用）
         self._minute_data = params.get("minute_data")
+        self._total_bars = max(1, len(data)) if hasattr(data, "__len__") else 1
+        (
+            self._evaluation_index,
+            self._evaluation_start_index,
+            self._evaluation_total_bars,
+        ) = self._initialize_evaluation_progress_bounds(data)
+        self._starting_equity = self._get_current_equity(default=100000.0)
+        self._max_equity_seen = self._starting_equity
 
         # MTFデータプロバイダーの初期化（MTF指標が存在する場合のみ）
         self.mtf_data_provider = None
@@ -286,6 +335,171 @@ class UniversalStrategy(Strategy):
             evaluation_start = self._evaluation_start
 
         return current_time >= evaluation_start
+
+    def _initialize_evaluation_progress_bounds(
+        self,
+        data: Any,
+    ) -> tuple[Optional[pd.DatetimeIndex], int, int]:
+        """評価進捗計算に使う評価窓の境界を初期化する。"""
+        raw_index = getattr(data, "index", None)
+        if raw_index is None or len(raw_index) == 0:
+            return None, 0, self._total_bars
+
+        try:
+            full_index = pd.DatetimeIndex(raw_index)
+        except Exception:
+            return None, 0, self._total_bars
+
+        start_index = 0
+        if self._evaluation_start is not None:
+            evaluation_start = self._align_timestamp_to_index_tz(
+                self._evaluation_start,
+                full_index,
+            )
+            start_index = int(full_index.searchsorted(evaluation_start, side="left"))
+
+        total_bars = max(1, len(full_index) - start_index)
+        return full_index, start_index, total_bars
+
+    @staticmethod
+    def _align_timestamp_to_index_tz(
+        value: pd.Timestamp,
+        index: pd.DatetimeIndex,
+    ) -> pd.Timestamp:
+        """DatetimeIndex に合わせて Timestamp の timezone をそろえる。"""
+        if len(index) == 0:
+            return value
+
+        first_index_value = pd.Timestamp(index[0])
+        if first_index_value.tzinfo is not None and value.tzinfo is None:
+            return value.tz_localize(first_index_value.tzinfo)
+        if first_index_value.tzinfo is None and value.tzinfo is not None:
+            return value.tz_localize(None)
+        if first_index_value.tzinfo != value.tzinfo:
+            return value.tz_convert(first_index_value.tzinfo)
+        return value
+
+    def _get_current_equity(self, default: float = 0.0) -> float:
+        """現在資産を安全に取得する。"""
+        try:
+            return float(getattr(self, "equity", default) or default)
+        except Exception:
+            return float(default)
+
+    def _get_progress_ratio(self) -> float:
+        """現在までの評価進捗を返す。"""
+        evaluation_index = getattr(self, "_evaluation_index", None)
+        if isinstance(evaluation_index, pd.DatetimeIndex) and len(evaluation_index) > 0:
+            current_index = getattr(self.data, "index", None)
+            if current_index is not None and len(current_index) > 0:
+                try:
+                    current_time = self._align_timestamp_to_index_tz(
+                        pd.Timestamp(current_index[-1]),
+                        evaluation_index,
+                    )
+                    current_position = int(
+                        evaluation_index.searchsorted(current_time, side="right")
+                    )
+                    evaluation_start_index = int(
+                        getattr(self, "_evaluation_start_index", 0) or 0
+                    )
+                    evaluation_total_bars = max(
+                        1,
+                        int(getattr(self, "_evaluation_total_bars", 1) or 1),
+                    )
+                    evaluated_bars = max(0, current_position - evaluation_start_index)
+                    return min(1.0, evaluated_bars / evaluation_total_bars)
+                except Exception:
+                    logger.debug("評価窓ベースの進捗計算に失敗したためフォールバックします")
+
+        total_bars = max(1, int(getattr(self, "_total_bars", 1) or 1))
+        current_bar = max(0, int(getattr(self, "_current_bar_index", 0) or 0))
+        return min(1.0, current_bar / total_bars)
+
+    def _calculate_closed_trade_expectancy(self) -> Optional[float]:
+        """クローズ済みトレードの平均期待値を返す。"""
+        try:
+            trades = list(getattr(self, "closed_trades", []) or [])
+        except Exception:
+            return None
+
+        if not trades:
+            return None
+
+        values = []
+        for trade in trades:
+            for attr_name in ("pl_pct", "pl", "pnl", "return_pct"):
+                value = getattr(trade, attr_name, None)
+                if value is None:
+                    continue
+                try:
+                    values.append(float(value))
+                    break
+                except Exception:
+                    continue
+
+        if not values:
+            return None
+
+        return float(sum(values) / len(values))
+
+    def _should_terminate_early(self) -> Optional[str]:
+        """早期打ち切りすべき理由を返す。"""
+        if not self.enable_early_termination:
+            return None
+
+        current_equity = self._get_current_equity(default=self._starting_equity)
+        self._max_equity_seen = max(self._max_equity_seen, current_equity)
+
+        if self.early_termination_max_drawdown is not None and self._max_equity_seen > 0:
+            drawdown = max(
+                0.0,
+                (self._max_equity_seen - current_equity) / self._max_equity_seen,
+            )
+            if drawdown >= float(self.early_termination_max_drawdown):
+                return "max_drawdown"
+
+        progress = self._get_progress_ratio()
+
+        min_trades = self.early_termination_min_trades
+        if (
+            min_trades is not None
+            and progress >= self.early_termination_min_trade_check_progress
+        ):
+            closed_trade_count = len(getattr(self, "closed_trades", []) or [])
+            required_trade_count = max(
+                1,
+                int(
+                    ceil(
+                        float(min_trades)
+                        * progress
+                        * self.early_termination_trade_pace_tolerance
+                    )
+                ),
+            )
+            if closed_trade_count < required_trade_count:
+                return "trade_pace"
+
+        if (
+            self.early_termination_min_expectancy is not None
+            and progress >= self.early_termination_expectancy_progress
+        ):
+            closed_trade_count = len(getattr(self, "closed_trades", []) or [])
+            if closed_trade_count >= self.early_termination_expectancy_min_trades:
+                expectancy = self._calculate_closed_trade_expectancy()
+                if (
+                    expectancy is not None
+                    and expectancy < float(self.early_termination_min_expectancy)
+                ):
+                    return "expectancy"
+
+        return None
+
+    def _check_early_termination(self) -> None:
+        """早期打ち切り条件を満たした場合に例外を送出する。"""
+        reason = self._should_terminate_early()
+        if reason:
+            raise StrategyEarlyTermination(reason)
 
     def _check_entry_conditions(self, direction: float) -> bool:
         """指定された方向のエントリー条件をチェック"""
@@ -592,7 +806,9 @@ class UniversalStrategy(Strategy):
             self.stateful_conditions_evaluator.process_stateful_triggers()
 
             # 2. 既存ポジションの悲観的決済チェック
-            if self.position_exit_engine.handle_open_position():
+            handled_open_position = self.position_exit_engine.handle_open_position()
+            self._check_early_termination()
+            if handled_open_position:
                 return
 
             # 3. 新規エントリー判定（ノーポジション時）
@@ -602,6 +818,8 @@ class UniversalStrategy(Strategy):
                     return
                 self.entry_decision_engine.execute_entry(direction)
 
+        except StrategyEarlyTermination:
+            raise
         except Exception as e:
             logger.error(f"戦略実行エラー: {e}")
 

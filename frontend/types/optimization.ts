@@ -172,6 +172,35 @@ export interface GAConfig {
     max_evaluation_workers?: number | null;
     /** 個体あたりの評価タイムアウト秒数 */
     evaluation_timeout?: number;
+
+    // 高速化設定
+    /** multi-fidelity 評価を有効化するか */
+    enable_multi_fidelity_evaluation?: boolean;
+    /** coarse 評価で使う期間比率 */
+    multi_fidelity_window_ratio?: number;
+    /** coarse 評価で使う OOS 比率 */
+    multi_fidelity_oos_ratio?: number;
+    /** full 評価へ昇格する候補比率 */
+    multi_fidelity_candidate_ratio?: number;
+    /** full 評価へ昇格する最小候補数 */
+    multi_fidelity_min_candidates?: number;
+
+    /** 早期打ち切りを有効化するか */
+    enable_early_termination?: boolean;
+    /** 許容最大 DD */
+    early_termination_max_drawdown?: number | null;
+    /** 目標最小トレード数 */
+    early_termination_min_trades?: number | null;
+    /** トレード数不足を判定し始める進捗 */
+    early_termination_min_trade_check_progress?: number;
+    /** トレードペース不足の許容係数 */
+    early_termination_trade_pace_tolerance?: number;
+    /** 許容最小期待値 */
+    early_termination_min_expectancy?: number | null;
+    /** 期待値判定に必要な最小トレード数 */
+    early_termination_expectancy_min_trades?: number;
+    /** 期待値不足を判定し始める進捗 */
+    early_termination_expectancy_progress?: number;
   };
 }
 

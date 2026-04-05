@@ -12,6 +12,10 @@ import pandas as pd
 from backtesting import Backtest, Strategy
 from backtesting.lib import FractionalBacktest
 
+from app.services.auto_strategy.strategies.universal_strategy import (
+    StrategyEarlyTermination,
+)
+
 from ..services.backtest_data_service import BacktestDataService
 
 logger = logging.getLogger(__name__)
@@ -19,6 +23,14 @@ logger = logging.getLogger(__name__)
 
 class BacktestExecutionError(Exception):
     """バックテスト実行エラー"""
+
+
+class BacktestEarlyTerminationError(BacktestExecutionError):
+    """戦略が意図的に早期打ち切りされたことを示す例外。"""
+
+    def __init__(self, reason: str):
+        super().__init__(f"バックテストが早期終了しました: {reason}")
+        self.reason = reason
 
 
 class BacktestExecutor:
@@ -99,7 +111,8 @@ class BacktestExecutor:
             stats = self._run_backtest(bt, strategy_parameters)
 
             return stats
-
+        except BacktestEarlyTerminationError:
+            raise
         except Exception as e:
             logger.error(f"バックテスト実行エラー: {e}")
             raise BacktestExecutionError(f"バックテストの実行に失敗しました: {e}")
@@ -181,7 +194,8 @@ class BacktestExecutor:
                 stats = bt.run(**strategy_parameters)
 
             return stats
-
+        except StrategyEarlyTermination as e:
+            raise BacktestEarlyTerminationError(e.reason) from e
         except Exception as e:
             raise BacktestExecutionError(
                 f"バックテスト実行中にエラーが発生しました: {e}"

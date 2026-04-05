@@ -142,6 +142,19 @@ class GAConfig(BaseConfig):
     enable_parallel_evaluation: bool = True
     max_evaluation_workers: Optional[int] = None  # Noneの場合はCPUコア数×2
     evaluation_timeout: float = 300.0  # 個体あたりのタイムアウト秒数
+    enable_multi_fidelity_evaluation: bool = False
+    multi_fidelity_window_ratio: float = 0.3
+    multi_fidelity_oos_ratio: float = 0.2
+    multi_fidelity_candidate_ratio: float = 0.25
+    multi_fidelity_min_candidates: int = 3
+    enable_early_termination: bool = False
+    early_termination_max_drawdown: Optional[float] = None
+    early_termination_min_trades: Optional[int] = None
+    early_termination_min_trade_check_progress: float = 0.5
+    early_termination_trade_pace_tolerance: float = 0.5
+    early_termination_min_expectancy: Optional[float] = None
+    early_termination_expectancy_min_trades: int = 5
+    early_termination_expectancy_progress: float = 0.6
 
     # ハイブリッドGA+ML設定
     hybrid_mode: bool = False
@@ -308,6 +321,19 @@ class GAConfig(BaseConfig):
                 "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
                 "sampling_threshold": GA_DEFAULT_FITNESS_SHARING["sampling_threshold"],
                 "sampling_ratio": GA_DEFAULT_FITNESS_SHARING["sampling_ratio"],
+                "enable_multi_fidelity_evaluation": False,
+                "multi_fidelity_window_ratio": 0.3,
+                "multi_fidelity_oos_ratio": 0.2,
+                "multi_fidelity_candidate_ratio": 0.25,
+                "multi_fidelity_min_candidates": 3,
+                "enable_early_termination": False,
+                "early_termination_max_drawdown": None,
+                "early_termination_min_trades": None,
+                "early_termination_min_trade_check_progress": 0.5,
+                "early_termination_trade_pace_tolerance": 0.5,
+                "early_termination_min_expectancy": None,
+                "early_termination_expectancy_min_trades": 5,
+                "early_termination_expectancy_progress": 0.6,
                 "enable_multi_objective": False,
                 "objectives": DEFAULT_GA_OBJECTIVES,
                 "objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS,

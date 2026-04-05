@@ -50,6 +50,19 @@ class TestConfigValidator:
         config.parameter_ranges = {"param1": [0, 10]}
         config.log_level = "INFO"
         config.parallel_processes = 4
+        config.enable_multi_fidelity_evaluation = False
+        config.multi_fidelity_window_ratio = 0.3
+        config.multi_fidelity_oos_ratio = 0.2
+        config.multi_fidelity_candidate_ratio = 0.25
+        config.multi_fidelity_min_candidates = 3
+        config.enable_early_termination = False
+        config.early_termination_max_drawdown = None
+        config.early_termination_min_trades = None
+        config.early_termination_min_trade_check_progress = 0.5
+        config.early_termination_trade_pace_tolerance = 0.5
+        config.early_termination_min_expectancy = None
+        config.early_termination_expectancy_min_trades = 5
+        config.early_termination_expectancy_progress = 0.6
         config.enable_two_stage_selection = True
         config.two_stage_elite_count = 3
         config.two_stage_candidate_pool_size = 5
@@ -178,6 +191,36 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any("並列プロセス数は32以下" in e for e in errors)
+
+    def test_validate_ga_config_multi_fidelity(self, ga_config):
+        ga_config.enable_multi_fidelity_evaluation = True
+        ga_config.multi_fidelity_window_ratio = 0.0
+
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("multi_fidelity_window_ratio" in e for e in errors)
+
+        ga_config.multi_fidelity_window_ratio = 0.3
+        ga_config.multi_fidelity_candidate_ratio = 0.0
+
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("multi_fidelity_candidate_ratio" in e for e in errors)
+
+    def test_validate_ga_config_early_termination(self, ga_config):
+        ga_config.enable_early_termination = True
+        ga_config.early_termination_max_drawdown = 1.5
+
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("early_termination_max_drawdown" in e for e in errors)
+
+        ga_config.early_termination_max_drawdown = 0.3
+        ga_config.early_termination_expectancy_min_trades = 0
+
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("early_termination_expectancy_min_trades" in e for e in errors)
 
     def test_validate_ga_config_two_stage_selection(self, ga_config):
         ga_config.two_stage_elite_count = 0

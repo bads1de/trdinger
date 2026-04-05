@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 
 from ..evaluation.evaluation_report import EvaluationReport
+from ..evaluation.evaluation_fidelity import build_coarse_ga_config, is_multi_fidelity_enabled
 
 import numpy as np
 from deap import tools
@@ -336,8 +337,13 @@ class GeneticAlgorithmEngine:
         worker_initargs = ()
 
         try:
+            worker_config = (
+                build_coarse_ga_config(config)
+                if is_multi_fidelity_enabled(config)
+                else config
+            )
             worker_initargs = self.individual_evaluator.build_parallel_worker_initargs(
-                config
+                worker_config
             )
             if not worker_initargs:
                 logger.warning(
@@ -449,6 +455,17 @@ class GeneticAlgorithmEngine:
         best_individual, best_gene, best_strategies = self._extract_best_individuals(
             population, config, halloffame
         )
+
+        if best_individual is not None and is_multi_fidelity_enabled(config):
+            try:
+                refreshed = self._evaluate_individual_with_full_fidelity(
+                    best_individual,
+                    config,
+                )
+                if getattr(best_individual, "fitness", None) is not None:
+                    best_individual.fitness.values = tuple(refreshed)
+            except Exception as exc:
+                logger.warning("最終候補の full 評価に失敗しました: %s", exc)
 
         best_fitness_value = self._extract_result_best_fitness(best_individual, config)
         best_evaluation_summary = self._build_individual_evaluation_summary(
@@ -786,7 +803,7 @@ class GeneticAlgorithmEngine:
 
         refreshed_fitness = fallback_fitness
         try:
-            evaluated = self.individual_evaluator.evaluate(best_gene, config)
+            evaluated = self._evaluate_individual_with_full_fidelity(best_gene, config)
             if config.enable_multi_objective:
                 refreshed_fitness = tuple(evaluated)
             elif isinstance(evaluated, (tuple, list)) and evaluated:
@@ -886,7 +903,10 @@ class GeneticAlgorithmEngine:
 
         for candidate_rank, candidate in enumerate(tuned_candidates):
             try:
-                fitness_result = self.individual_evaluator.evaluate(candidate, config)
+                fitness_result = self._evaluate_individual_with_full_fidelity(
+                    candidate,
+                    config,
+                )
             except Exception as exc:
                 logger.warning(
                     "[Tuning] 候補 %s の再評価に失敗: %s",
@@ -963,7 +983,10 @@ class GeneticAlgorithmEngine:
 
         for candidate in tuned_candidates:
             try:
-                fitness_result = self.individual_evaluator.evaluate(candidate, config)
+                fitness_result = self._evaluate_individual_with_full_fidelity(
+                    candidate,
+                    config,
+                )
             except Exception as exc:
                 logger.warning("[Tuning] 候補の再評価に失敗: %s", exc)
                 continue
@@ -1029,6 +1052,21 @@ class GeneticAlgorithmEngine:
         if report is None and callable(get_cached_evaluation_report):
             report = get_cached_evaluation_report(individual)
 
+        if (
+            report is not None
+            and is_evaluation_report(report)
+            and report.metadata.get("evaluation_fidelity") == "coarse"
+        ):
+            report = None
+
+        if report is None and is_multi_fidelity_enabled(config):
+            try:
+                self._evaluate_individual_with_full_fidelity(individual, config)
+            except Exception as exc:
+                logger.debug("summary 用 full 評価に失敗しました: %s", exc)
+            if callable(get_cached_evaluation_report):
+                report = get_cached_evaluation_report(individual)
+
         if not is_evaluation_report(report):
             return None
 
@@ -1056,6 +1094,20 @@ class GeneticAlgorithmEngine:
             selection_score=selection_score,
             fitness_score=numeric_fitness,
         )
+
+    def _evaluate_individual_with_full_fidelity(
+        self,
+        individual: Any,
+        config: GAConfig,
+    ) -> Tuple[float, ...]:
+        """必要に応じて full fidelity で個体を再評価する。"""
+        if is_multi_fidelity_enabled(config):
+            return self.individual_evaluator.evaluate(
+                individual,
+                config,
+                force_refresh=True,
+            )
+        return self.individual_evaluator.evaluate(individual, config)
 
     @staticmethod
     def _extract_primary_fitness_from_result(result: Any) -> float:

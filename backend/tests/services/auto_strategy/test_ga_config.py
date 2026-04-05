@@ -47,6 +47,10 @@ class TestGAConfig:
         assert config.robustness_stress_slippage == []
         assert config.robustness_stress_commission_multipliers == []
         assert config.robustness_aggregate_method == "robust"
+        assert config.enable_multi_fidelity_evaluation is False
+        assert config.multi_fidelity_window_ratio == 0.3
+        assert config.enable_early_termination is False
+        assert config.early_termination_expectancy_min_trades == 5
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
         """二段階選抜/robustness 設定がシリアライズされることを確認"""
@@ -72,6 +76,40 @@ class TestGAConfig:
         ]
         assert restored.robustness_stress_slippage == [0.0003, 0.0006]
         assert restored.robustness_stress_commission_multipliers == [1.5, 2.0]
+
+    def test_multi_fidelity_and_early_termination_serialize_deserialize(self):
+        """高速化設定がシリアライズされることを確認"""
+        original = GAConfig(
+            enable_multi_fidelity_evaluation=True,
+            multi_fidelity_window_ratio=0.4,
+            multi_fidelity_oos_ratio=0.15,
+            multi_fidelity_candidate_ratio=0.3,
+            multi_fidelity_min_candidates=4,
+            enable_early_termination=True,
+            early_termination_max_drawdown=0.2,
+            early_termination_min_trades=12,
+            early_termination_min_trade_check_progress=0.45,
+            early_termination_trade_pace_tolerance=0.6,
+            early_termination_min_expectancy=-0.02,
+            early_termination_expectancy_min_trades=6,
+            early_termination_expectancy_progress=0.7,
+        )
+
+        restored = GAConfig(**original.to_dict())
+
+        assert restored.enable_multi_fidelity_evaluation is True
+        assert restored.multi_fidelity_window_ratio == 0.4
+        assert restored.multi_fidelity_oos_ratio == 0.15
+        assert restored.multi_fidelity_candidate_ratio == 0.3
+        assert restored.multi_fidelity_min_candidates == 4
+        assert restored.enable_early_termination is True
+        assert restored.early_termination_max_drawdown == 0.2
+        assert restored.early_termination_min_trades == 12
+        assert restored.early_termination_min_trade_check_progress == 0.45
+        assert restored.early_termination_trade_pace_tolerance == 0.6
+        assert restored.early_termination_min_expectancy == -0.02
+        assert restored.early_termination_expectancy_min_trades == 6
+        assert restored.early_termination_expectancy_progress == 0.7
 
     def test_from_dict_expands_nested_two_stage_and_robustness_config(self):
         """ネスト設定からフラット設定へ復元されることを確認"""

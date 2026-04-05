@@ -41,13 +41,23 @@ class TestStrategyClassFactory:
             assert "オートストラテジーの生成に失敗" in str(excinfo.value)
 
     def test_get_strategy_parameters_auto(self, factory):
-        config = {"strategy_gene": {"id": "test"}}
+        config = {
+            "strategy_gene": {"id": "test"},
+            "parameters": {
+                "minute_data": {"rows": 10},
+                "enable_early_termination": True,
+            },
+        }
         mock_gene = MagicMock()
         
         with patch.object(factory._auto_strategy_loader, 'load_strategy_gene', return_value=mock_gene):
             params = factory.get_strategy_parameters(config)
             
-            assert params == {"strategy_gene": mock_gene}
+            assert params == {
+                "strategy_gene": mock_gene,
+                "minute_data": {"rows": 10},
+                "enable_early_termination": True,
+            }
 
     def test_get_strategy_parameters_normal(self, factory):
         config = {"strategy_type": "normal", "parameters": {"p1": 1}}

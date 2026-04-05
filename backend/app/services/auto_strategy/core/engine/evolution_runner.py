@@ -14,6 +14,11 @@ import numpy as np
 from deap import tools
 
 from ..evaluation.parallel_evaluator import ParallelEvaluator
+from ..evaluation.evaluation_fidelity import (
+    build_coarse_ga_config,
+    get_multi_fidelity_candidate_limit,
+    is_multi_fidelity_enabled,
+)
 from ..fitness.fitness_sharing import FitnessSharing
 from .ga_utils import _invalidate_individual_cache, _set_fitness_values
 from .report_selection import (
@@ -101,7 +106,7 @@ class EvolutionRunner:
         )
 
         # 初期適応度評価
-        population = self._evaluate_population(population)
+        population = self._evaluate_population(population, config)
         self._update_dynamic_objective_scalars(population, config)
 
         # Hall of Fame / Pareto Front 初回更新
@@ -140,7 +145,7 @@ class EvolutionRunner:
 
                 # 未評価個体の評価（並列評価対応）
                 invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-                self._evaluate_invalid_individuals(invalid_ind)
+                self._evaluate_invalid_individuals(invalid_ind, config)
 
                 if should_stop and should_stop():
                     raise EvolutionStoppedError(
@@ -150,6 +155,10 @@ class EvolutionRunner:
                 # 次世代の選択 (mu+lambda)
                 # toolbox.select は DEAPSetup で NSGA-II などが登録されている
                 candidate_population = offspring + population
+                self._promote_top_candidates_with_full_fidelity(
+                    candidate_population,
+                    config,
+                )
                 population[:] = self._apply_two_stage_selection(
                     candidate_population,
                     len(population),
@@ -224,7 +233,11 @@ class EvolutionRunner:
         self._crossover_cache.clear()
         self._mutation_cache.clear()
 
-    def _evaluate_population(self, population: List[Any]) -> List[Any]:
+    def _evaluate_population(
+        self,
+        population: List[Any],
+        config: Optional[Any] = None,
+    ) -> List[Any]:
         """
         個体群の適応度評価（並列評価対応）
 
@@ -238,18 +251,25 @@ class EvolutionRunner:
         Returns:
             評価値（fitness.values）が設定された個体群
         """
-        if self.parallel_evaluator:
-            # 並列評価
-            fitnesses = self.parallel_evaluator.evaluate_population(population)
+        if is_multi_fidelity_enabled(config):
+            coarse_config = build_coarse_ga_config(config)
+            fitnesses = self._evaluate_individuals_with_config(population, coarse_config)
             _set_fitness_values(population, fitnesses)
-        else:
-            # シーケンシャル評価（フォールバック）
-            fitnesses = list(self.toolbox.map(self.toolbox.evaluate, population))
-            _set_fitness_values(population, fitnesses)
+            self._mark_evaluation_fidelity(population, "coarse")
+            self._promote_top_candidates_with_full_fidelity(population, config)
+            return population
+
+        fitnesses = self._evaluate_individuals_with_config(population, config)
+        _set_fitness_values(population, fitnesses)
+        self._mark_evaluation_fidelity(population, "full")
 
         return population
 
-    def _evaluate_invalid_individuals(self, invalid_ind: List[Any]) -> None:
+    def _evaluate_invalid_individuals(
+        self,
+        invalid_ind: List[Any],
+        config: Optional[Any] = None,
+    ) -> None:
         """
         適応度が無効な個体のみを評価（並列評価対応）
 
@@ -259,14 +279,76 @@ class EvolutionRunner:
         if not invalid_ind:
             return
 
+        if is_multi_fidelity_enabled(config):
+            coarse_config = build_coarse_ga_config(config)
+            fitnesses = self._evaluate_individuals_with_config(invalid_ind, coarse_config)
+            _set_fitness_values(invalid_ind, fitnesses)
+            self._mark_evaluation_fidelity(invalid_ind, "coarse")
+            return
+
+        fitnesses = self._evaluate_individuals_with_config(invalid_ind, config)
+        _set_fitness_values(invalid_ind, fitnesses)
+        self._mark_evaluation_fidelity(invalid_ind, "full")
+
+    def _evaluate_individuals_with_config(
+        self,
+        individuals: List[Any],
+        config: Optional[Any],
+    ) -> List[tuple[float, ...]]:
+        """設定に応じて個体列を評価する。"""
+        if not individuals:
+            return []
+
         if self.parallel_evaluator:
-            # 並列評価
-            fitnesses = self.parallel_evaluator.evaluate_population(invalid_ind)
-            _set_fitness_values(invalid_ind, fitnesses)
-        else:
-            # シーケンシャル評価（フォールバック）
-            fitnesses = self.toolbox.map(self.toolbox.evaluate, invalid_ind)
-            _set_fitness_values(invalid_ind, fitnesses)
+            return list(self.parallel_evaluator.evaluate_population(individuals))
+
+        if self.individual_evaluator is not None and config is not None:
+            return [
+                self.individual_evaluator.evaluate(individual, config)
+                for individual in individuals
+            ]
+
+        return list(self.toolbox.map(self.toolbox.evaluate, individuals))
+
+    def _promote_top_candidates_with_full_fidelity(
+        self,
+        candidate_population: List[Any],
+        config: Optional[Any],
+    ) -> None:
+        """粗評価上位だけ full fidelity で再評価する。"""
+        if (
+            not candidate_population
+            or not is_multi_fidelity_enabled(config)
+            or self.individual_evaluator is None
+        ):
+            return
+
+        limit = get_multi_fidelity_candidate_limit(len(candidate_population), config)
+        if limit <= 0:
+            return
+
+        for candidate in self._select_top_candidates(candidate_population, limit):
+            if getattr(candidate, "_evaluation_fidelity", None) == "full":
+                continue
+            fitness = self.individual_evaluator.evaluate(
+                candidate,
+                config,
+                force_refresh=True,
+            )
+            candidate.fitness.values = fitness
+            setattr(candidate, "_evaluation_fidelity", "full")
+
+    def _mark_evaluation_fidelity(
+        self,
+        individuals: List[Any],
+        fidelity: str,
+    ) -> None:
+        """個体へ現在の評価粒度を付与する。"""
+        for individual in individuals:
+            try:
+                setattr(individual, "_evaluation_fidelity", fidelity)
+            except Exception:
+                logger.debug("評価粒度メタデータの設定をスキップしました")
 
     def _update_dynamic_objective_scalars(
         self, population: List[Any], config: Any

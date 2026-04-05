@@ -2,7 +2,14 @@ import pytest
 from unittest.mock import MagicMock, patch
 import pandas as pd
 from datetime import datetime
-from app.services.backtest.execution.backtest_executor import BacktestExecutor, BacktestExecutionError
+from app.services.backtest.execution.backtest_executor import (
+    BacktestEarlyTerminationError,
+    BacktestExecutor,
+    BacktestExecutionError,
+)
+from app.services.auto_strategy.strategies.universal_strategy import (
+    StrategyEarlyTermination,
+)
 
 class TestBacktestExecutor:
     @pytest.fixture
@@ -92,6 +99,15 @@ class TestBacktestExecutor:
         
         assert result == mock_stats
         mock_bt.run.assert_called_once_with(p1=10)
+
+    def test_run_backtest_raises_early_termination_error(self, executor):
+        mock_bt = MagicMock()
+        mock_bt.run.side_effect = StrategyEarlyTermination("drawdown_limit")
+
+        with pytest.raises(BacktestEarlyTerminationError) as excinfo:
+            executor._run_backtest(mock_bt, {})
+
+        assert "drawdown_limit" in str(excinfo.value)
 
     def test_execute_backtest_full_flow(self, executor, data_service, sample_data):
         mock_strategy = MagicMock()

@@ -407,3 +407,50 @@ class TestGeneticAlgorithmEngine:
         run_kwargs = mock_runner_instance.run_evolution.call_args.kwargs
         assert "should_stop" in run_kwargs
         assert callable(run_kwargs["should_stop"])
+
+    @patch("app.services.auto_strategy.core.engine.ga_engine.ParallelEvaluator")
+    def test_create_parallel_evaluator_uses_coarse_config_for_multi_fidelity(
+        self,
+        mock_parallel_evaluator_cls,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """multi-fidelity 有効時は並列ワーカーへ coarse 設定を渡す。"""
+        from app.services.auto_strategy.config.ga import GAConfig
+
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+        config = GAConfig(
+            enable_parallel_evaluation=True,
+            enable_multi_fidelity_evaluation=True,
+            enable_walk_forward=True,
+            enable_purged_kfold=True,
+            oos_split_ratio=0.0,
+            multi_fidelity_oos_ratio=0.2,
+        )
+        shared_data = {"main_data": pd.DataFrame({"close": [1, 2]})}
+        captured_configs = []
+
+        def _build_initargs(init_config):
+            captured_configs.append(init_config)
+            return (
+                {"symbol": "BTC/USDT", "timeframe": "1h"},
+                init_config,
+                shared_data,
+            )
+
+        engine.individual_evaluator.build_parallel_worker_initargs = Mock(
+            side_effect=_build_initargs
+        )
+
+        engine._create_parallel_evaluator(config)
+
+        assert len(captured_configs) == 1
+        worker_config = captured_configs[0]
+        assert worker_config is not config
+        assert worker_config.enable_walk_forward is False
+        assert worker_config.enable_purged_kfold is False
+        assert worker_config.oos_split_ratio == 0.2
+        assert getattr(worker_config, "_evaluation_fidelity", "full") == "coarse"

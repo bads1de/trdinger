@@ -35,9 +35,61 @@ class BacktestDataProvider:
         """共有ワーカーデータが現在の要求期間と一致する場合のみ返す。"""
         if not isinstance(worker_payload, dict):
             return None
-        if worker_payload.get("key") != expected_key:
+        worker_key = worker_payload.get("key")
+        worker_data = worker_payload.get("data")
+        if worker_key == expected_key:
+            return worker_data
+        if not BacktestDataProvider._is_compatible_worker_key(worker_key, expected_key):
             return None
-        return worker_payload.get("data")
+        if not isinstance(worker_data, pd.DataFrame) or worker_data.empty:
+            return None
+
+        try:
+            worker_index = pd.DatetimeIndex(worker_data.index)
+            expected_start = pd.Timestamp(expected_key[-2])
+            expected_end = pd.Timestamp(expected_key[-1])
+            if len(worker_index) > 0:
+                first_index_value = pd.Timestamp(worker_index[0])
+                if first_index_value.tzinfo is not None and expected_start.tzinfo is None:
+                    expected_start = expected_start.tz_localize(first_index_value.tzinfo)
+                    expected_end = expected_end.tz_localize(first_index_value.tzinfo)
+                elif (
+                    first_index_value.tzinfo is None
+                    and expected_start.tzinfo is not None
+                ):
+                    expected_start = expected_start.tz_localize(None)
+                    expected_end = expected_end.tz_localize(None)
+                elif first_index_value.tzinfo != expected_start.tzinfo:
+                    expected_start = expected_start.tz_convert(first_index_value.tzinfo)
+                    expected_end = expected_end.tz_convert(first_index_value.tzinfo)
+        except Exception:
+            return None
+
+        sliced = worker_data.loc[
+            (worker_data.index >= expected_start) & (worker_data.index <= expected_end)
+        ]
+        return sliced if not sliced.empty else None
+
+    @staticmethod
+    def _is_compatible_worker_key(
+        worker_key: Any,
+        expected_key: tuple[Any, ...],
+    ) -> bool:
+        """共有データが要求期間を内包しているかを返す。"""
+        if not isinstance(worker_key, tuple) or len(worker_key) != len(expected_key):
+            return False
+        if len(expected_key) < 4 or worker_key[:-2] != expected_key[:-2]:
+            return False
+
+        try:
+            worker_start = pd.Timestamp(worker_key[-2])
+            worker_end = pd.Timestamp(worker_key[-1])
+            expected_start = pd.Timestamp(expected_key[-2])
+            expected_end = pd.Timestamp(expected_key[-1])
+        except Exception:
+            return False
+
+        return worker_start <= expected_start <= expected_end <= worker_end
 
     def get_cached_backtest_data(self, backtest_config: Dict[str, Any]) -> Any:
         """メイン時間軸のバックテストデータをキャッシュ付きで取得する。"""
@@ -52,6 +104,8 @@ class BacktestDataProvider:
 
             worker_data = self._extract_worker_data(get_worker_data("main_data"), key)
             if worker_data is not None:
+                with self._lock:
+                    self._data_cache[key] = worker_data
                 return worker_data
         except ImportError:
             pass
@@ -86,6 +140,8 @@ class BacktestDataProvider:
 
             worker_data = self._extract_worker_data(get_worker_data("minute_data"), key)
             if worker_data is not None:
+                with self._lock:
+                    self._data_cache[key] = worker_data
                 return worker_data
         except ImportError:
             pass

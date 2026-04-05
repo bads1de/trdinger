@@ -148,6 +148,8 @@ class ConfigValidator:
         errors.extend(ConfigValidator._validate_ga_fitness_settings(config))
         errors.extend(ConfigValidator._validate_ga_parameter_settings(config))
         errors.extend(ConfigValidator._validate_ga_execution_settings(config))
+        errors.extend(ConfigValidator._validate_ga_multi_fidelity_settings(config))
+        errors.extend(ConfigValidator._validate_ga_early_termination_settings(config))
         errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
         errors.extend(ConfigValidator._validate_ga_robustness_settings(config))
         return errors
@@ -381,6 +383,95 @@ class ConfigValidator:
                 errors.append("並列プロセス数は正の整数である必要があります")
             elif config.parallel_processes > 32:
                 errors.append("並列プロセス数は32以下である必要があります")
+        return errors
+
+    @staticmethod
+    def _validate_ga_multi_fidelity_settings(config: GAConfig) -> List[str]:
+        """multi-fidelity 評価設定の検証"""
+        errors = []
+        if not getattr(config, "enable_multi_fidelity_evaluation", False):
+            return errors
+
+        if (
+            not isinstance(config.multi_fidelity_window_ratio, (int, float))
+            or not 0.0 < float(config.multi_fidelity_window_ratio) <= 1.0
+        ):
+            errors.append(
+                "multi_fidelity_window_ratio は0より大きく1.0以下である必要があります"
+            )
+
+        if (
+            not isinstance(config.multi_fidelity_oos_ratio, (int, float))
+            or not 0.0 < float(config.multi_fidelity_oos_ratio) < 1.0
+        ):
+            errors.append(
+                "multi_fidelity_oos_ratio は0より大きく1.0未満である必要があります"
+            )
+
+        if (
+            not isinstance(config.multi_fidelity_candidate_ratio, (int, float))
+            or not 0.0 < float(config.multi_fidelity_candidate_ratio) <= 1.0
+        ):
+            errors.append(
+                "multi_fidelity_candidate_ratio は0より大きく1.0以下である必要があります"
+            )
+
+        if (
+            not isinstance(config.multi_fidelity_min_candidates, (int, float))
+            or int(config.multi_fidelity_min_candidates) <= 0
+        ):
+            errors.append(
+                "multi_fidelity_min_candidates は正の整数である必要があります"
+            )
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_early_termination_settings(config: GAConfig) -> List[str]:
+        """早期打ち切り設定の検証"""
+        errors = []
+        if not getattr(config, "enable_early_termination", False):
+            return errors
+
+        max_drawdown = getattr(config, "early_termination_max_drawdown", None)
+        if max_drawdown is not None and (
+            not isinstance(max_drawdown, (int, float))
+            or not 0.0 < float(max_drawdown) <= 1.0
+        ):
+            errors.append(
+                "early_termination_max_drawdown は0より大きく1.0以下である必要があります"
+            )
+
+        min_trades = getattr(config, "early_termination_min_trades", None)
+        if min_trades is not None and (
+            not isinstance(min_trades, (int, float)) or int(min_trades) <= 0
+        ):
+            errors.append("early_termination_min_trades は正の整数である必要があります")
+
+        expectancy = getattr(config, "early_termination_min_expectancy", None)
+        if expectancy is not None and not isinstance(expectancy, (int, float)):
+            errors.append("early_termination_min_expectancy は数値である必要があります")
+
+        expectancy_min_trades = getattr(
+            config, "early_termination_expectancy_min_trades", 0
+        )
+        if (
+            not isinstance(expectancy_min_trades, (int, float))
+            or int(expectancy_min_trades) <= 0
+        ):
+            errors.append(
+                "early_termination_expectancy_min_trades は正の整数である必要があります"
+            )
+
+        for field_name in (
+            "early_termination_min_trade_check_progress",
+            "early_termination_trade_pace_tolerance",
+            "early_termination_expectancy_progress",
+        ):
+            value = getattr(config, field_name, None)
+            if not isinstance(value, (int, float)) or not 0.0 < float(value) <= 1.0:
+                errors.append(f"{field_name} は0より大きく1.0以下である必要があります")
+
         return errors
 
     @staticmethod

@@ -24,6 +24,7 @@ interface InputFieldProps {
   className?: string;
   disabled?: boolean;
   description?: string;
+  allowEmptyNumber?: boolean;
 }
 
 export const InputField: React.FC<InputFieldProps> = ({
@@ -40,6 +41,7 @@ export const InputField: React.FC<InputFieldProps> = ({
   className = "",
   disabled = false,
   description,
+  allowEmptyNumber = false,
 }) => (
   <div>
     <div className="flex items-center justify-between mb-2">
@@ -69,9 +71,17 @@ export const InputField: React.FC<InputFieldProps> = ({
     </div>
     <Input 
       type={type}
-      value={value}
+      value={
+        allowEmptyNumber && type === "number" && (value === null || value === undefined)
+          ? ""
+          : value
+      }
       onChange={(e) => {
         if (type === "number") {
+          if (allowEmptyNumber && e.target.value === "") {
+            onChange(null);
+            return;
+          }
           onChange(Number(e.target.value));
         } else {
           onChange(e.target.value);

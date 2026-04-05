@@ -103,6 +103,38 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           initialGAConfig.enable_parallel_evaluation ?? true,
         max_evaluation_workers: initialGAConfig.max_evaluation_workers ?? 4,
         evaluation_timeout: initialGAConfig.evaluation_timeout ?? 300,
+        enable_multi_fidelity_evaluation:
+          initialGAConfig.enable_multi_fidelity_evaluation ?? false,
+        multi_fidelity_window_ratio:
+          initialGAConfig.multi_fidelity_window_ratio ?? 0.3,
+        multi_fidelity_oos_ratio:
+          initialGAConfig.multi_fidelity_oos_ratio ?? 0.2,
+        multi_fidelity_candidate_ratio:
+          initialGAConfig.multi_fidelity_candidate_ratio ?? 0.25,
+        multi_fidelity_min_candidates:
+          initialGAConfig.multi_fidelity_min_candidates ?? 3,
+        enable_early_termination:
+          initialGAConfig.enable_early_termination ?? false,
+        early_termination_max_drawdown:
+          initialGAConfig.early_termination_max_drawdown === undefined
+            ? null
+            : initialGAConfig.early_termination_max_drawdown,
+        early_termination_min_trades:
+          initialGAConfig.early_termination_min_trades === undefined
+            ? null
+            : initialGAConfig.early_termination_min_trades,
+        early_termination_min_trade_check_progress:
+          initialGAConfig.early_termination_min_trade_check_progress ?? 0.5,
+        early_termination_trade_pace_tolerance:
+          initialGAConfig.early_termination_trade_pace_tolerance ?? 0.5,
+        early_termination_min_expectancy:
+          initialGAConfig.early_termination_min_expectancy === undefined
+            ? null
+            : initialGAConfig.early_termination_min_expectancy,
+        early_termination_expectancy_min_trades:
+          initialGAConfig.early_termination_expectancy_min_trades ?? 5,
+        early_termination_expectancy_progress:
+          initialGAConfig.early_termination_expectancy_progress ?? 0.6,
 
         // 制限設定
         min_indicators: initialGAConfig.min_indicators,
@@ -589,6 +621,218 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 💡
                 並列評価は大規模な個体群（50以上）で効果的です。ワーカー数を増やすとメモリ使用量も増加します。
               </p>
+            </>
+          )}
+        </div>
+
+        <div className="p-4 bg-emerald-900/30 border border-emerald-500/30 rounded-lg space-y-3">
+          <h4 className="text-sm font-medium text-emerald-200">🚀 高速化</h4>
+
+          <label className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={config.ga_config.enable_multi_fidelity_evaluation ?? false}
+              onChange={(e) =>
+                handleGAConfigChange({
+                  enable_multi_fidelity_evaluation: e.target.checked,
+                })
+              }
+              className="rounded border-emerald-500 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="text-sm text-emerald-200">
+              multi-fidelity 評価
+            </span>
+          </label>
+
+          {config.ga_config.enable_multi_fidelity_evaluation && (
+            <>
+              <InputField
+                label="coarse 期間比率"
+                type="number"
+                value={config.ga_config.multi_fidelity_window_ratio ?? 0.3}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    multi_fidelity_window_ratio: value,
+                  })
+                }
+                min={0.05}
+                max={1}
+                step={0.05}
+                description="最初の粗評価で使う直近データの割合"
+              />
+              <InputField
+                label="coarse OOS 比率"
+                type="number"
+                value={config.ga_config.multi_fidelity_oos_ratio ?? 0.2}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    multi_fidelity_oos_ratio: value,
+                  })
+                }
+                min={0.05}
+                max={0.9}
+                step={0.05}
+                description="粗評価時だけ使う OOS 分割比率"
+              />
+              <InputField
+                label="full 評価候補比率"
+                type="number"
+                value={config.ga_config.multi_fidelity_candidate_ratio ?? 0.25}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    multi_fidelity_candidate_ratio: value,
+                  })
+                }
+                min={0.05}
+                max={1}
+                step={0.05}
+                description="coarse 後に full 評価へ昇格させる候補の割合"
+              />
+              <InputField
+                label="full 評価最小候補数"
+                type="number"
+                value={config.ga_config.multi_fidelity_min_candidates ?? 3}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    multi_fidelity_min_candidates: value,
+                  })
+                }
+                min={1}
+                max={20}
+                step={1}
+                description="候補比率が小さくても最低限 full 評価する件数"
+              />
+            </>
+          )}
+
+          <label className="flex items-center space-x-2 pt-2">
+            <input
+              type="checkbox"
+              checked={config.ga_config.enable_early_termination ?? false}
+              onChange={(e) =>
+                handleGAConfigChange({
+                  enable_early_termination: e.target.checked,
+                })
+              }
+              className="rounded border-emerald-500 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span className="text-sm text-emerald-200">
+              早期打ち切り
+            </span>
+          </label>
+
+          {config.ga_config.enable_early_termination && (
+            <>
+              <InputField
+                label="最大DD打ち切り"
+                type="number"
+                value={config.ga_config.early_termination_max_drawdown}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    early_termination_max_drawdown: value,
+                  })
+                }
+                allowEmptyNumber
+                min={0.01}
+                max={1}
+                step={0.01}
+                description="この DD を超えたら即終了"
+              />
+              <InputField
+                label="最低トレード数"
+                type="number"
+                value={config.ga_config.early_termination_min_trades}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    early_termination_min_trades: value,
+                  })
+                }
+                allowEmptyNumber
+                min={1}
+                max={1000}
+                step={1}
+                description="このペースを大きく下回る候補を早めに落とします"
+              />
+              <InputField
+                label="トレード数判定開始進捗"
+                type="number"
+                value={
+                  config.ga_config
+                    .early_termination_min_trade_check_progress ?? 0.5
+                }
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    early_termination_min_trade_check_progress: value,
+                  })
+                }
+                min={0.05}
+                max={1}
+                step={0.05}
+                description="この進捗以降でトレード数不足を見始めます"
+              />
+              <InputField
+                label="トレードペース許容係数"
+                type="number"
+                value={
+                  config.ga_config.early_termination_trade_pace_tolerance ?? 0.5
+                }
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    early_termination_trade_pace_tolerance: value,
+                  })
+                }
+                min={0.1}
+                max={1}
+                step={0.05}
+                description="目標ペースに対してどこまで不足を許すか"
+              />
+              <InputField
+                label="最低期待値"
+                type="number"
+                value={config.ga_config.early_termination_min_expectancy}
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    early_termination_min_expectancy: value,
+                  })
+                }
+                allowEmptyNumber
+                min={-1}
+                max={1}
+                step={0.01}
+                description="期待値がこの値を下回る候補を打ち切ります"
+              />
+              <InputField
+                label="期待値判定最小トレード数"
+                type="number"
+                value={
+                  config.ga_config.early_termination_expectancy_min_trades ?? 5
+                }
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    early_termination_expectancy_min_trades: value,
+                  })
+                }
+                min={1}
+                max={100}
+                step={1}
+                description="期待値判定に必要なクローズ済みトレード数"
+              />
+              <InputField
+                label="期待値判定開始進捗"
+                type="number"
+                value={
+                  config.ga_config.early_termination_expectancy_progress ?? 0.6
+                }
+                onChange={(value) =>
+                  handleGAConfigChange({
+                    early_termination_expectancy_progress: value,
+                  })
+                }
+                min={0.05}
+                max={1}
+                step={0.05}
+                description="この進捗以降で期待値不足を見始めます"
+              />
             </>
           )}
         </div>

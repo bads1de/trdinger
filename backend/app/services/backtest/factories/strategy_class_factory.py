@@ -89,7 +89,9 @@ class StrategyClassFactory:
                 strategy_gene = self._auto_strategy_loader.load_strategy_gene(
                     strategy_config
                 )
-                return {"strategy_gene": strategy_gene}
+                parameters = dict(strategy_config.get("parameters", {}) or {})
+                parameters["strategy_gene"] = strategy_gene
+                return parameters
             except Exception as e:
                 logger.error(f"戦略パラメータ取得エラー: {e}")
                 return {}

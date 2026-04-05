@@ -13,13 +13,19 @@ jest.mock("@/components/backtest/BaseBacktestConfigForm", () => ({
 }));
 
 jest.mock("@/components/common/InputField", () => ({
-  InputField: ({ label, value, onChange }: any) => (
+  InputField: ({ label, value, onChange, allowEmptyNumber, type }: any) => (
     <div data-testid="input-field">
       <label>{label}</label>
       <input
         data-testid={`input-${label}`}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value) || e.target.value)}
+        value={value ?? ""}
+        onChange={(e) => {
+          if (allowEmptyNumber && type === "number" && e.target.value === "") {
+            onChange(null);
+            return;
+          }
+          onChange(Number(e.target.value) || e.target.value);
+        }}
       />
     </div>
   ),
@@ -184,5 +190,62 @@ describe("GAConfigForm", () => {
     fireEvent.click(cancelBtn);
 
     expect(mockOnClose).toHaveBeenCalled();
+  });
+
+  it("nullable な早期打ち切り閾値を既存設定のまま送信できること", () => {
+    render(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={{
+          ga_config: {
+            enable_early_termination: true,
+            early_termination_max_drawdown: null,
+            early_termination_min_trades: null,
+            early_termination_min_expectancy: null,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("submit-button"));
+
+    expect(mockOnSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ga_config: expect.objectContaining({
+          early_termination_max_drawdown: null,
+          early_termination_min_trades: null,
+          early_termination_min_expectancy: null,
+        }),
+      }),
+    );
+  });
+
+  it("nullable な早期打ち切り閾値を空入力で null に戻せること", () => {
+    render(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={{
+          ga_config: {
+            enable_early_termination: true,
+            early_termination_max_drawdown: 0.2,
+          },
+        }}
+      />,
+    );
+
+    fireEvent.change(screen.getByTestId("input-最大DD打ち切り"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByTestId("submit-button"));
+
+    expect(mockOnSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ga_config: expect.objectContaining({
+          early_termination_max_drawdown: null,
+        }),
+      }),
+    );
   });
 });
