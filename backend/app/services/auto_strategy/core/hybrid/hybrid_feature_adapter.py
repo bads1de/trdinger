@@ -51,7 +51,6 @@ class HybridFeatureAdapter:
         """
         self._use_derived_features = use_derived_features
         self._preprocess_handler = preprocess_handler
-        self._preprocess_trainer = None
         self._wavelet_transformer: Optional["WaveletFeatureTransformer"] = None
 
         # 設定のハッシュ化（キャッシュキー用）
@@ -87,7 +86,10 @@ class HybridFeatureAdapter:
             return None
 
         key = (data_hash, self._config_hash)
-        return self._derived_cache.get(key)
+        cached = self._derived_cache.get(key)
+        if cached is None:
+            return None
+        return cached.copy(deep=True)
 
     def _cache_derived_features(self, df: pd.DataFrame, features: pd.DataFrame):
         """派生特徴量をキャッシュに保存"""
@@ -96,7 +98,7 @@ class HybridFeatureAdapter:
             return
 
         key = (data_hash, self._config_hash)
-        self._derived_cache[key] = features
+        self._derived_cache[key] = features.copy(deep=True)
 
     @staticmethod
     def _sanitize_feature_frame(features_df: pd.DataFrame) -> pd.DataFrame:
@@ -305,7 +307,7 @@ class HybridFeatureAdapter:
         return self._sanitize_feature_frame(features_df)
 
     def _apply_preprocessing(self, features_df: pd.DataFrame) -> pd.DataFrame:
-        """BaseMLTrainerの前処理ロジックを活用してスケーリングを行う"""
+        """明示注入された前処理ロジックを適用する。"""
 
         preprocess_callable = self._get_preprocess_callable()
         if preprocess_callable is None:
@@ -325,25 +327,8 @@ class HybridFeatureAdapter:
     ) -> Optional[
         Callable[[pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]]
     ]:
-        """BaseMLTrainer由来の前処理関数を取得"""
-
-        if self._preprocess_handler is not None:
-            return self._preprocess_handler
-
-        try:
-            from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
-
-            if self._preprocess_trainer is None:
-                self._preprocess_trainer = BaseMLTrainer(  # type: ignore[abstract]
-                    trainer_config={"type": "single", "model_type": "lightgbm"},
-                )
-
-            if self._preprocess_trainer is not None:
-                return self._preprocess_trainer._preprocess_data  # type: ignore[return-value]
-            return None
-        except Exception as exc:
-            logger.warning(f"BaseMLTrainer初期化に失敗しました: {exc}")
-            return None
+        """明示注入された前処理関数のみを返す。"""
+        return self._preprocess_handler
 
     def _augment_with_derived_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
         """派生特徴量（ローリング統計量、リターン等）を生成"""

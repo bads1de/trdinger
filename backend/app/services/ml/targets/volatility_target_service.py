@@ -60,7 +60,8 @@ class VolatilityTargetService:
 
         aligned_features = features_df.copy()
         aligned_features = aligned_features.replace([np.inf, -np.inf], np.nan)
-        aligned_features = aligned_features.ffill().bfill()
+        # 先頭の欠損を未来値で埋めるとリークになるため、過去方向のみで補完する。
+        aligned_features = aligned_features.ffill()
 
         common_index = aligned_features.index.intersection(future_log_rv.index)
         aligned_features = aligned_features.loc[common_index]

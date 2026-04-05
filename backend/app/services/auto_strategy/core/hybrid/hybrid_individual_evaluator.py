@@ -5,6 +5,9 @@ import logging
 from typing import Any, Dict, Optional, Type
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ml_filter_settings import (
+    resolve_ml_gate_settings,
+)
 from app.services.auto_strategy.core.evaluation.individual_evaluator import (
     IndividualEvaluator,
 )
@@ -133,13 +136,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         super()._inject_external_objects(run_config, backtest_config, config)
 
         # MLフィルター設定
-        gate_enabled = bool(
-            getattr(config, "volatility_gate_enabled", False)
-            or getattr(config, "ml_filter_enabled", False)
-        )
-        model_path = getattr(config, "volatility_model_path", None) or getattr(
-            config, "ml_model_path", None
-        )
+        ml_gate_settings = resolve_ml_gate_settings(config)
+        gate_enabled = ml_gate_settings.enabled
+        model_path = ml_gate_settings.model_path
 
         if gate_enabled and model_path:
             try:
@@ -153,23 +152,32 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                     run_config["strategy_config"]["parameters"][
                         "volatility_gate_enabled"
                     ] = True
+                    run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = (
+                        True
+                    )
                 else:
                     run_config["strategy_config"]["parameters"][
                         "volatility_gate_enabled"
                     ] = False
+                    run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = (
+                        False
+                    )
             except Exception:
                 run_config["strategy_config"]["parameters"][
                     "volatility_gate_enabled"
                 ] = False
+                run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
         elif gate_enabled and self.predictor and self.predictor.is_trained():
             run_config["strategy_config"]["parameters"]["ml_predictor"] = self.predictor
             run_config["strategy_config"]["parameters"][
                 "volatility_gate_enabled"
             ] = True
+            run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = True
         elif gate_enabled:
             run_config["strategy_config"]["parameters"][
                 "volatility_gate_enabled"
             ] = False
+            run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
 
     def _create_feature_adapter(
         self,

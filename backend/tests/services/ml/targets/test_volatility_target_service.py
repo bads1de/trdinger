@@ -39,3 +39,25 @@ def test_prepare_targets_excludes_tail_without_forward_window():
 
     assert X.index.max() < index[-1]
     assert len(X) == len(y)
+
+
+def test_prepare_targets_drops_initial_missing_features_without_backfill():
+    index = pd.date_range("2024-01-01", periods=5, freq="h")
+    features = pd.DataFrame(
+        {
+            "f1": [np.nan, 1.0, 2.0, 3.0, 4.0],
+            "f2": [10.0, 11.0, 12.0, 13.0, 14.0],
+        },
+        index=index,
+    )
+    ohlcv = pd.DataFrame(
+        {"close": [100.0, 101.0, 102.0, 103.0, 104.0]},
+        index=index,
+    )
+
+    service = VolatilityTargetService()
+    X, y = service.prepare_targets(features, ohlcv, prediction_horizon=1)
+
+    assert index[0] not in X.index
+    assert index[0] not in y.index
+    assert X.index.equals(y.index)

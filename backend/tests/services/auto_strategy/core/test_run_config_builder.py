@@ -33,6 +33,36 @@ class TestRunConfigBuilder:
             result["strategy_config"]["parameters"]["volatility_model_path"]
             == "/tmp/model.pkl"
         )
+        assert result["strategy_config"]["parameters"]["ml_filter_enabled"] is True
+        assert (
+            result["strategy_config"]["parameters"]["ml_model_path"]
+            == "/tmp/model.pkl"
+        )
+
+    def test_build_run_config_normalizes_legacy_ml_filter_aliases(self):
+        builder = RunConfigBuilder()
+        gene = Mock()
+        gene.id = "gene-123456789"
+
+        ga_config = Mock()
+        ga_config.volatility_gate_enabled = False
+        ga_config.volatility_model_path = None
+        ga_config.ml_filter_enabled = True
+        ga_config.ml_model_path = "/tmp/legacy-model.pkl"
+
+        backtest_config = {
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+        }
+
+        result = builder.build_run_config(gene, backtest_config, ga_config)
+
+        assert result is not None
+        params = result["strategy_config"]["parameters"]
+        assert params["volatility_gate_enabled"] is True
+        assert params["ml_filter_enabled"] is True
+        assert params["volatility_model_path"] == "/tmp/legacy-model.pkl"
+        assert params["ml_model_path"] == "/tmp/legacy-model.pkl"
 
     def test_inject_external_objects_adds_minute_data_only_when_present(self):
         builder = RunConfigBuilder()

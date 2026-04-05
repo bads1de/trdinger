@@ -12,6 +12,7 @@ from typing import Any, List, Optional, Tuple, Union, cast
 import pandas as pd
 from backtesting import Strategy
 
+from ..config.ml_filter_settings import resolve_ml_gate_settings
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import (
     Condition,
@@ -190,15 +191,10 @@ class UniversalStrategy(Strategy):
         # === ML フィルター設定 ===
         # HybridPredictor インスタンス（オプション）
         self.ml_predictor = params.get("ml_predictor")
-        self.volatility_gate_enabled = params.get(
-            "volatility_gate_enabled",
-            params.get("ml_filter_enabled", False),
-        )
-        self.volatility_model_path = params.get(
-            "volatility_model_path",
-            params.get("ml_model_path"),
-        )
-        self.ml_filter_enabled = self.volatility_gate_enabled
+        ml_gate_settings = resolve_ml_gate_settings(params)
+        self.volatility_gate_enabled = ml_gate_settings.enabled
+        self.volatility_model_path = ml_gate_settings.model_path
+        self.ml_filter_enabled = ml_gate_settings.enabled
         if "ml_filter_threshold" in params:
             logger.warning(
                 "ml_filter_threshold は非推奨のため無視されます。volatility gate は学習済み cut-off で判定します"

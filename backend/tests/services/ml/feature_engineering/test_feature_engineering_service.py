@@ -128,6 +128,35 @@ class TestFeatureEngineeringServicePerformance:
         with pytest.raises(MLFeatureError, match="DatetimeIndexまたはtimestamp"):
             service.calculate_advanced_features(df)
 
+    def test_calculate_advanced_features_cache_isolated_from_mutation(
+        self, sample_ohlcv_data
+    ):
+        """キャッシュ済み特徴量が外部の in-place 変更で壊れないことを確認"""
+        from app.services.ml.feature_engineering.feature_engineering_service import (
+            FeatureEngineeringService,
+        )
+
+        service = FeatureEngineeringService()
+
+        first_result = service.calculate_advanced_features(sample_ohlcv_data)
+        first_index = first_result.index[0]
+        original_close = first_result.loc[first_index, "close"]
+
+        # 返却された DataFrame を変更しても、キャッシュには影響しないこと
+        first_result.loc[first_index, "close"] = original_close + 999.0
+
+        second_result = service.calculate_advanced_features(sample_ohlcv_data)
+        assert second_result.loc[first_index, "close"] == original_close
+
+        # キャッシュから返ってきた DataFrame を変更しても、次回取得結果は壊れないこと
+        second_result.loc[first_index, "close"] = original_close - 999.0
+        third_result = service.calculate_advanced_features(sample_ohlcv_data)
+        assert third_result.loc[first_index, "close"] == original_close
+
+        cached_entry = next(iter(service.feature_cache.values()))
+        cached_df = cached_entry["data"]
+        assert cached_df.loc[first_index, "close"] == original_close
+
 
 class TestFeatureEngineeringServiceQuality:
     """特徴量の品質（シグナル捕捉能力）を検証するテスト"""

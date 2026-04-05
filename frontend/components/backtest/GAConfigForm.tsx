@@ -90,9 +90,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         max_indicators: initialGAConfig.max_indicators ?? 5,
         fitness_weights: defaultFitnessWeights,
         fitness_constraints: defaultFitnessConstraints,
-        enable_multi_objective: initialGAConfig.enable_multi_objective ?? true,
-        objectives: initialGAConfig.objectives ?? ["win_rate", "max_drawdown"],
-        objective_weights: initialGAConfig.objective_weights ?? [1.0, -1.0],
+        enable_multi_objective: initialGAConfig.enable_multi_objective ?? false,
+        objectives: initialGAConfig.objectives ?? ["total_return"],
+        objective_weights: initialGAConfig.objective_weights ?? [1.0],
         dynamic_objective_reweighting:
           initialGAConfig.dynamic_objective_reweighting ?? false,
         hybrid_mode: initialGAConfig.hybrid_mode ?? false,

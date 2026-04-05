@@ -244,6 +244,28 @@ class TestIndividualEvaluator:
         assert trades_df["EntryBar"].tolist() == [0]
         assert adjusted["performance_metrics"]["total_return"] == 10.0
 
+    def test_slice_equity_curve_for_window_uses_initial_capital_for_leading_gaps(self):
+        target_index = pd.date_range("2024-01-01 00:00:00", periods=4, freq="D")
+        raw_equity_curve = pd.DataFrame(
+            {
+                "Equity": [10100.0, 10200.0, 10300.0],
+                "DrawdownPct": [0.1, 0.2, 0.3],
+            },
+            index=target_index[1:],
+        )
+
+        trimmed = self.evaluator._slice_equity_curve_for_window(
+            raw_equity_curve,
+            target_index,
+            0,
+            len(target_index),
+            10000.0,
+        )
+
+        assert trimmed.loc[target_index[0], "Equity"] == 10000.0
+        assert trimmed["Equity"].isna().sum() == 0
+        assert trimmed.index.equals(target_index)
+
     def test_build_parallel_worker_initargs(self):
         """並列ワーカー初期化引数の構築テスト"""
         backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}

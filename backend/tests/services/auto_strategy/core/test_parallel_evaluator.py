@@ -95,6 +95,35 @@ class TestParallelEvaluator:
         assert result[1] == (0.0,)  # エラー時はデフォルト値
         assert result[2] == (1.0,)
 
+    def test_evaluate_population_times_out_per_individual(self):
+        """個体ごとの timeout を超えたタスクは default_fitness になること"""
+        individuals = [MagicMock() for _ in range(5)]
+        delays = [0.12, 0.01, 0.01, 0.01, 0.01]
+
+        for i, (ind, delay) in enumerate(zip(individuals, delays)):
+            ind.id = f"ind_{i}"
+            ind.delay = delay
+            ind.fitness_value = (float(i),)
+
+        def timed_evaluate(ind):
+            time.sleep(ind.delay)
+            return ind.fitness_value
+
+        evaluator = ParallelEvaluator(
+            evaluate_func=timed_evaluate,
+            max_workers=len(individuals),
+            timeout_per_individual=0.05,
+        )
+
+        result = evaluator.evaluate_population(individuals, default_fitness=(-1.0,))
+
+        assert result[0] == (-1.0,)
+        assert result[1:] == [(1.0,), (2.0,), (3.0,), (4.0,)]
+
+        stats = evaluator.get_statistics()
+        assert stats["timeout_evaluations"] == 1
+        assert stats["successful_evaluations"] == 4
+
     def test_evaluate_parallel_faster_than_sequential(self):
         """並列評価がシーケンシャル評価より速いこと"""
         individuals = [MagicMock() for _ in range(4)]
@@ -190,17 +219,16 @@ class TestParallelEvaluator:
 
         # モックのsubmitはFutureを返す必要がある
         mock_future = MagicMock()
-        # as_completedで返されるようにする
-
         mock_executor_instance.submit.return_value = mock_future
+        mock_future.result.return_value = (1.0,)
 
         with patch(
             "app.services.auto_strategy.core.evaluation.parallel_evaluator.ProcessPoolExecutor",
             return_value=mock_executor_instance,
         ) as mock_executor_cls:
             with patch(
-                "app.services.auto_strategy.core.evaluation.parallel_evaluator.as_completed",
-                return_value=[mock_future],
+                "app.services.auto_strategy.core.evaluation.parallel_evaluator.wait",
+                return_value=({mock_future}, set()),
             ):
                 initializer_mock = MagicMock()
                 init_args = ("arg1", 123)

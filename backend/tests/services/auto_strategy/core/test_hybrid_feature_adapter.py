@@ -2,10 +2,10 @@
 HybridFeatureAdapter Tests
 """
 
-import pytest
-import pandas as pd
 import numpy as np
-from unittest.mock import Mock, patch
+import pandas as pd
+import pytest
+from unittest.mock import Mock
 
 from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
     HybridFeatureAdapter,
@@ -168,14 +168,45 @@ class TestHybridFeatureAdapter:
         cached = adapter._get_cached_derived_features(sample_ohlcv)
         assert cached is None
 
-    @patch("app.services.ml.trainers.base_ml_trainer.BaseMLTrainer")
-    def test_apply_preprocessing_with_trainer(self, MockTrainer, adapter, sample_ohlcv):
-        """BaseMLTrainerを使用した前処理"""
-        mock_trainer = MockTrainer.return_value
-        # Mock _preprocess_data to return transformed df
-        mock_trainer._preprocess_data.return_value = (sample_ohlcv, sample_ohlcv)
+    def test_cached_derived_features_are_isolated_from_mutation(
+        self, adapter, sample_ohlcv
+    ):
+        """キャッシュ済み派生特徴量が外部変更で壊れないことを確認"""
+        features = pd.DataFrame(
+            {"derived": np.arange(len(sample_ohlcv), dtype=float)},
+            index=sample_ohlcv.index,
+        )
+
+        adapter._cache_derived_features(sample_ohlcv, features)
+
+        # 元の DataFrame を変更しても、キャッシュは影響を受けないこと
+        features.iloc[0, 0] = -123.0
+
+        cached_first = adapter._get_cached_derived_features(sample_ohlcv)
+        assert cached_first is not None
+        original_value = cached_first.iloc[0, 0]
+        assert original_value != -123.0
+
+        # 返却されたキャッシュを変更しても、次回取得結果は壊れないこと
+        cached_first.iloc[0, 0] = -456.0
+        cached_second = adapter._get_cached_derived_features(sample_ohlcv)
+        assert cached_second is not None
+        assert cached_second.iloc[0, 0] == original_value
+
+    def test_get_preprocess_callable_without_handler_returns_none(self, adapter):
+        """前処理ハンドラ未指定時は暗黙依存を持たない"""
+        assert adapter._get_preprocess_callable() is None
+
+    def test_apply_preprocessing_with_injected_handler(self, sample_ohlcv):
+        """明示注入された前処理ハンドラを使用する"""
+
+        handler = Mock(return_value=(sample_ohlcv, sample_ohlcv))
+        adapter = HybridFeatureAdapter(
+            wavelet_config={"enabled": False},
+            preprocess_handler=handler,
+        )
 
         processed = adapter._apply_preprocessing(sample_ohlcv)
-        # Verify adapter instantiates BaseMLTrainer lazily
-        assert adapter._preprocess_trainer is not None
-        assert isinstance(processed, pd.DataFrame)
+
+        handler.assert_called_once()
+        pd.testing.assert_frame_equal(processed, sample_ohlcv)

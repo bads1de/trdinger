@@ -9,7 +9,7 @@ GAConfig は GA エンジンのランタイム設定用 dataclass です。
 
 import copy
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any, Dict, List, Optional, Set, cast
 
 from app.utils.serialization import dataclass_to_dict
@@ -25,6 +25,7 @@ from .constants import (
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
 )
+from .ml_filter_settings import normalize_ml_gate_fields
 from .sub_configs import (
     EvaluationConfig,
     HybridConfig,
@@ -258,15 +259,13 @@ class GAConfig(BaseConfig):
         volatility_gate_enabled と ml_filter_enabled の同期、
         およびモデルパスの相互補完を行います。
         """
-        self.volatility_gate_enabled = bool(
-            self.volatility_gate_enabled or self.ml_filter_enabled
+        normalized = normalize_ml_gate_fields(self)
+        self.volatility_gate_enabled = bool(normalized["volatility_gate_enabled"])
+        self.ml_filter_enabled = bool(normalized["ml_filter_enabled"])
+        self.volatility_model_path = cast(
+            Optional[str], normalized["volatility_model_path"]
         )
-        self.ml_filter_enabled = self.volatility_gate_enabled
-
-        if self.volatility_model_path is None and self.ml_model_path is not None:
-            self.volatility_model_path = self.ml_model_path
-        if self.ml_model_path is None and self.volatility_model_path is not None:
-            self.ml_model_path = self.volatility_model_path
+        self.ml_model_path = cast(Optional[str], normalized["ml_model_path"])
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -421,6 +420,13 @@ class GAConfig(BaseConfig):
         Returns:
             初期化されたGAConfigインスタンス
         """
+        field_names = {field_info.name for field_info in fields(cls)}
+        unknown_keys = sorted(key for key in data.keys() if key not in field_names)
+        if unknown_keys:
+            raise ValueError(
+                f"未対応の設定キーがあります: {', '.join(unknown_keys)}"
+            )
+
         provided_keys = {key for key, value in data.items() if value is not None}
         working = copy.deepcopy(data)
         defaults = cls._from_dict_defaults()

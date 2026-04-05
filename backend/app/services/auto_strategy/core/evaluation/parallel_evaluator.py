@@ -8,14 +8,14 @@ CPU バウンドな計算を効率化します。
 
 import logging
 import os
+import time
 from concurrent.futures import (
+    FIRST_COMPLETED,
     ProcessPoolExecutor,
     ThreadPoolExecutor,
+    wait,
 )
 from concurrent.futures import TimeoutError as FuturesTimeoutError
-from concurrent.futures import (
-    as_completed,
-)
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -214,27 +214,37 @@ class ParallelEvaluator:
             評価結果リスト
         """
         future_to_index = {}
+        future_started_at: Dict[Any, float] = {}
 
         for i, ind in enumerate(population):
             future = executor.submit(self.evaluate_func, ind)
             future_to_index[future] = i
+            future_started_at[future] = time.monotonic()
 
-        total_timeout = self.timeout_per_individual * len(population)
+        pending = set(future_to_index)
+        timed_out_futures = False
+        poll_timeout = self._get_poll_timeout()
 
-        try:
-            for future in as_completed(future_to_index, timeout=total_timeout):
+        while pending:
+            done, not_done = wait(
+                pending,
+                timeout=poll_timeout,
+                return_when=FIRST_COMPLETED,
+            )
+
+            for future in done:
+                pending.discard(future)
                 index = future_to_index[future]
                 self._total_evaluations += 1
 
                 try:
-                    fitness = future.result(timeout=self.timeout_per_individual)
+                    fitness = future.result()
                     results[index] = fitness
                     self._successful_evaluations += 1
                 except FuturesTimeoutError:
-                    logger.warning(f"個体評価タイムアウト: index={index}")
+                    self._record_timeout(index)
                     results[index] = default_fitness
-                    self._timeout_evaluations += 1
-                    self._error_categories["timeout"] += 1
+                    timed_out_futures = True
                 except Exception as e:
                     category = self._categorize_error(e, index)
                     logger.warning(
@@ -243,28 +253,70 @@ class ParallelEvaluator:
                     )
                     results[index] = default_fitness
                     self._failed_evaluations += 1
-        except FuturesTimeoutError:
-            logger.warning("全体タイムアウト: 処理を中断し、Executorを強制停止します")
 
-            # タイムアウト時の処理:
-            # ProcessPoolExecutorの場合、タスクをキャンセルしてもプロセスは終了しないため、
-            # Executorごとシャットダウンしてゾンビプロセスを防ぐ。
-            # wait=False にすることで、実行中のタスクを待たずに即座に停止指示を送る。
+            expired_futures = self._collect_expired_futures(
+                not_done,
+                future_started_at,
+            )
+            for future in expired_futures:
+                pending.discard(future)
+                index = future_to_index[future]
+                results[index] = default_fitness
+                self._record_timeout(index)
+                timed_out_futures = True
+                future.cancel()
+
+        if timed_out_futures:
+            logger.warning(
+                "個体評価タイムアウトを検知したため、Executorを再生成します"
+            )
             executor.shutdown(wait=False)
-
-            # もし永続的なExecutorを使用していた場合、次回再生成させるためにNoneにする
             if self._executor == executor:
                 self._executor = None
 
-            timeout_count = sum(1 for r in results if r is None)
-            self._timeout_evaluations += timeout_count
-            self._error_categories["timeout"] += timeout_count
-
-            # 未完了のタスクをキャンセル（shutdown済みだが念のため）
-            for future in future_to_index:
-                future.cancel()
-
         return results
+
+    def _get_poll_timeout(self) -> float:
+        """完了待機ループのポーリング間隔を返す。"""
+        timeout = float(self.timeout_per_individual)
+        if timeout <= 0:
+            return 0.01
+        return min(max(timeout / 10.0, 0.01), 0.5)
+
+    def _collect_expired_futures(
+        self,
+        futures,
+        future_started_at: Dict[Any, float],
+    ) -> List[Any]:
+        """個体ごとの timeout を超過した Future を抽出する。"""
+        now = time.monotonic()
+        expired_futures = []
+
+        for future in futures:
+            started_at = future_started_at.get(future)
+            if started_at is None:
+                continue
+            if now - started_at >= self.timeout_per_individual:
+                expired_futures.append(future)
+
+        return expired_futures
+
+    def _record_timeout(self, index: int) -> None:
+        """タイムアウト統計と履歴を更新する。"""
+        logger.warning(f"個体評価タイムアウト: index={index}")
+        self._total_evaluations += 1
+        self._timeout_evaluations += 1
+        self._error_categories["timeout"] += 1
+
+        error_info = {
+            "index": index,
+            "category": "timeout",
+            "error_type": "TimeoutError",
+            "message": "individual evaluation timed out",
+        }
+        if len(self._recent_errors) >= self._max_error_history:
+            self._recent_errors.pop(0)
+        self._recent_errors.append(error_info)
 
     def _categorize_error(self, error: Exception, index: int) -> str:
         """

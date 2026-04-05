@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.auto_strategy.config import GAConfig
 
 
@@ -97,6 +99,16 @@ class TestGAConfig:
         assert restored.robustness_stress_slippage == [0.0004]
         assert restored.robustness_stress_commission_multipliers == [1.5]
         assert restored.robustness_aggregate_method == "mean"
+
+    def test_from_dict_rejects_unknown_keys(self):
+        """未知のキーは早期にエラーにすることを確認"""
+        with pytest.raises(ValueError, match="未対応の設定キー"):
+            GAConfig.from_dict(
+                {
+                    "population_size": 100,
+                    "unknown_field": 1,
+                }
+            )
 
     def test_mutation_settings_defaults(self):
         """突然変異関連のデフォルト設定が正しいことを確認"""

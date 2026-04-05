@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import GAConfigForm from "@/components/backtest/GAConfigForm";
 
@@ -101,6 +101,22 @@ describe("GAConfigForm", () => {
       "input-最大ワーカー数",
     ) as HTMLInputElement;
     expect(workerInput.value).toBe("4");
+  });
+
+  it("多目的最適化の初期値が backend と一致すること", () => {
+    render(<GAConfigForm onSubmit={mockOnSubmit} onClose={mockOnClose} />);
+
+    fireEvent.click(screen.getByTestId("submit-button"));
+
+    expect(mockOnSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ga_config: expect.objectContaining({
+          enable_multi_objective: false,
+          objectives: ["total_return"],
+          objective_weights: [1.0],
+        }),
+      }),
+    );
   });
 
   it("基本設定の変更が反映されること（モック経由のため間接的検証）", () => {

@@ -59,14 +59,24 @@ class BaseConfig(ABC):
         try:
             # まずデフォルトインスタンスを作成
             instance = cls()
+            field_names = {field_info.name for field_info in fields(cls)}
+            unknown_keys = []
 
             # データで更新
             for key, value in data.items():
-                if hasattr(instance, key):
+                if key in field_names:
                     try:
                         setattr(instance, key, value)
                     except Exception as e:
                         logger.warning(f"Field設定エラー: {key} = {value}, {e}")
+                else:
+                    unknown_keys.append(key)
+
+            if unknown_keys:
+                logger.warning(
+                    "未対応の設定キーを無視しました: %s",
+                    ", ".join(sorted(set(unknown_keys))),
+                )
 
             return instance
         except Exception as e:

@@ -7,6 +7,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
+from app.services.auto_strategy.config.ml_filter_settings import (
+    resolve_ml_gate_settings,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,21 +26,13 @@ class RunConfigBuilder:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
             config_dict = backtest_config.copy()
-            volatility_gate_enabled = bool(
-                getattr(config, "volatility_gate_enabled", False)
-                or getattr(config, "ml_filter_enabled", False)
-            )
-            volatility_model_path = getattr(
-                config,
-                "volatility_model_path",
-                None,
-            ) or getattr(config, "ml_model_path", None)
+            ml_gate_settings = resolve_ml_gate_settings(config)
             strategy_parameters = {
                 "strategy_gene": gene,
-                "volatility_gate_enabled": volatility_gate_enabled,
-                "volatility_model_path": volatility_model_path,
-                "ml_filter_enabled": volatility_gate_enabled,
-                "ml_model_path": volatility_model_path,
+                "volatility_gate_enabled": ml_gate_settings.enabled,
+                "volatility_model_path": ml_gate_settings.model_path,
+                "ml_filter_enabled": ml_gate_settings.enabled,
+                "ml_model_path": ml_gate_settings.model_path,
             }
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:

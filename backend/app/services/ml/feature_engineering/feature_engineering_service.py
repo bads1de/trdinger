@@ -553,7 +553,7 @@ class FeatureEngineeringService:
             entry = self.feature_cache[key]
             if (datetime.now() - entry["timestamp"]).total_seconds() < self.cache_ttl:
                 logger.debug("特徴量キャッシュヒット")
-                return entry["data"]
+                return entry["data"].copy(deep=True)
             else:
                 del self.feature_cache[key]
         return None
@@ -568,4 +568,7 @@ class FeatureEngineeringService:
             )
             del self.feature_cache[oldest_key]
 
-        self.feature_cache[key] = {"data": data, "timestamp": datetime.now()}
+        self.feature_cache[key] = {
+            "data": data.copy(deep=True),
+            "timestamp": datetime.now(),
+        }
