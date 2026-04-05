@@ -13,6 +13,7 @@ class TestGAConfig:
         assert config.generations > 0
         assert config.crossover_rate > 0
         assert config.mutation_rate > 0
+        assert config.indicator_universe_mode == "curated"
 
     def test_custom_values(self):
         """カスタム値を設定できることを確認"""
@@ -26,14 +27,20 @@ class TestGAConfig:
 
     def test_serialize_deserialize(self):
         """シリアライズとデシリアライズが正しく動作することを確認"""
-        original = GAConfig(population_size=150, generations=75)
+        original = GAConfig(
+            population_size=150,
+            generations=75,
+            indicator_universe_mode="experimental_all",
+        )
         data = original.to_dict()
         assert data["population_size"] == 150
         assert data["generations"] == 75
+        assert data["indicator_universe_mode"] == "experimental_all"
 
         restored = GAConfig(**data)
         assert restored.population_size == 150
         assert restored.generations == 75
+        assert restored.indicator_universe_mode == "experimental_all"
 
     def test_two_stage_and_robustness_defaults(self):
         """二段階選抜と robustness のデフォルト設定を確認"""

@@ -62,10 +62,24 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
             and random.random() < config.indicator_add_vs_delete_probability
         ):
             from .indicator import generate_random_indicators
+            from .validator import GeneValidator
 
+            validator = GeneValidator()
             new_indicators = generate_random_indicators(config)
-            if new_indicators:
-                mutated.indicators.append(random.choice(new_indicators))
+            allowed_indicators = {indicator.type for indicator in new_indicators}
+            valid_new_indicators = [
+                indicator
+                for indicator in new_indicators
+                if validator.validate_indicator_gene_for_generation(
+                    indicator,
+                    indicator_universe_mode=getattr(
+                        config, "indicator_universe_mode", "curated"
+                    ),
+                    allowed_indicators=allowed_indicators,
+                )
+            ]
+            if valid_new_indicators:
+                mutated.indicators.append(random.choice(valid_new_indicators))
         elif len(mutated.indicators) > config.min_indicators and random.random() < (
             1 - config.indicator_add_vs_delete_probability
         ):

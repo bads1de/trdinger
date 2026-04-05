@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Set, cast
 
 from app.utils.serialization import dataclass_to_dict
 
+from ..indicator_universe import normalize_indicator_universe_mode
 from .base import BaseConfig
 from .constants import (
     DEFAULT_FITNESS_CONSTRAINTS,
@@ -187,6 +188,7 @@ class GAConfig(BaseConfig):
     numeric_threshold_probability: float = 0.8
     min_compatibility_score: float = 0.8
     strict_compatibility_score: float = 0.9
+    indicator_universe_mode: str = "curated"
 
     # TPSL関連設定拡張
     tpsl_method_constraints: Optional[List[str]] = None
@@ -279,6 +281,9 @@ class GAConfig(BaseConfig):
             Optional[str], normalized["volatility_model_path"]
         )
         self.ml_model_path = cast(Optional[str], normalized["ml_model_path"])
+        self.indicator_universe_mode = normalize_indicator_universe_mode(
+            self.indicator_universe_mode
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -349,6 +354,7 @@ class GAConfig(BaseConfig):
                 "robustness_stress_slippage": [],
                 "robustness_stress_commission_multipliers": [],
                 "robustness_aggregate_method": "robust",
+                "indicator_universe_mode": "curated",
             }
         )
 
@@ -367,13 +373,9 @@ class GAConfig(BaseConfig):
             working["evaluation_config"] = EvaluationConfig.from_dict(
                 working["evaluation_config"]
             )
-        if "hybrid_config" in working and isinstance(
-            working["hybrid_config"], dict
-        ):
+        if "hybrid_config" in working and isinstance(working["hybrid_config"], dict):
             working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
-        if "tuning_config" in working and isinstance(
-            working["tuning_config"], dict
-        ):
+        if "tuning_config" in working and isinstance(working["tuning_config"], dict):
             working["tuning_config"] = TuningConfig.from_dict(working["tuning_config"])
         if "two_stage_selection_config" in working and isinstance(
             working["two_stage_selection_config"], dict
@@ -449,9 +451,7 @@ class GAConfig(BaseConfig):
         field_names = {field_info.name for field_info in fields(cls)}
         unknown_keys = sorted(key for key in data.keys() if key not in field_names)
         if unknown_keys:
-            raise ValueError(
-                f"未対応の設定キーがあります: {', '.join(unknown_keys)}"
-            )
+            raise ValueError(f"未対応の設定キーがあります: {', '.join(unknown_keys)}")
 
         provided_keys = {key for key, value in data.items() if value is not None}
         working = copy.deepcopy(data)

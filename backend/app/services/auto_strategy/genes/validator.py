@@ -89,6 +89,32 @@ class GeneValidator:
         return True
 
     @safe_operation(
+        context="生成用指標遺伝子バリデーション",
+        is_api_call=False,
+        default_return=False,
+    )
+    def validate_indicator_gene_for_generation(
+        self,
+        indicator_gene,
+        indicator_universe_mode: Any = "curated",
+        allowed_indicators: Any = None,
+    ) -> bool:
+        """GA 生成・変異で使う指標遺伝子をユニバース込みで検証する。"""
+        if not self.validate_indicator_gene(indicator_gene):
+            return False
+
+        if allowed_indicators is not None:
+            try:
+                normalized_allowed = {str(name).upper() for name in allowed_indicators}
+            except TypeError:
+                return False
+            return str(indicator_gene.type).upper() in normalized_allowed
+
+        from ..indicator_universe import is_indicator_in_universe
+
+        return is_indicator_in_universe(indicator_gene.type, indicator_universe_mode)
+
+    @safe_operation(
         context="条件バリデーション",
         is_api_call=False,
         default_return=(False, "バリデーションエラー"),

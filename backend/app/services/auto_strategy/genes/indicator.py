@@ -10,9 +10,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
+
+from ..indicator_universe import get_indicator_universe_names
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +133,7 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
         指標遺伝子のリスト
     """
     # 利用可能な指標のリストを取得
-    indicator_service = TechnicalIndicatorService()
-    available_indicators = list(indicator_service.get_supported_indicators().keys())
+    available_indicators = list(get_indicator_universe_names(config))
 
     if not available_indicators:
         return [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
@@ -170,6 +170,12 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
     from app.config.constants import SUPPORTED_TIMEFRAMES
 
     available_timeframes = config.available_timeframes or SUPPORTED_TIMEFRAMES
+    indicator_universe_mode = getattr(config, "indicator_universe_mode", "curated")
+    allowed_indicators = set(available_indicators)
+
+    from .validator import GeneValidator
+
+    validator = GeneValidator()
 
     def get_random_timeframe():
         if not config.enable_multi_timeframe:
@@ -179,7 +185,9 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
         return random.choice(available_timeframes)
 
     # 各指標を生成
-    for _ in range(num_indicators):
+    attempts = 0
+    max_attempts = max(10, num_indicators * 5)
+    while len(indicators) < num_indicators and attempts < max_attempts:
         # 70%の確率でトレンド系指標を選択（リストがあれば）
         if trend_indicators and random.random() < 0.7:
             indicator_type = random.choice(trend_indicators)
@@ -188,7 +196,18 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
 
         timeframe = get_random_timeframe()
         indicator_gene = create_random_indicator_gene(indicator_type, config, timeframe)
-        indicators.append(indicator_gene)
+        if validator.validate_indicator_gene_for_generation(
+            indicator_gene,
+            indicator_universe_mode=indicator_universe_mode,
+            allowed_indicators=allowed_indicators,
+        ):
+            indicators.append(indicator_gene)
+        attempts += 1
+
+    if not indicators:
+        indicators.append(
+            IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+        )
 
     # 指標構成の底上げ（MAクロス戦略など）
     indicators = _enhance_with_ma_cross(indicators, available_indicators, config)

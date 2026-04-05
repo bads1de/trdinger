@@ -107,3 +107,13 @@ class TestMTFStrategy:
 
         rsi = next(i for i in mtf_indicators if i.type == "RSI")
         assert rsi.timeframe == higher_tf
+
+    def test_assign_timeframes_preserves_indicator_id(self, strategy):
+        """MTF複製時にIDへtimeframeを埋め込まないこと"""
+        indicators = [
+            IndicatorGene(type="SMA", parameters={"period": 20}, id="smaid123456")
+        ]
+
+        mtf_indicators = strategy._create_mtf_indicators(indicators, "4h")
+
+        assert mtf_indicators[0].id == "smaid123456"

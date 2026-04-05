@@ -8,6 +8,7 @@ from enum import Enum
 
 from app.config.constants import (  # noqa: F401
     DEFAULT_MARKET_SYMBOL,
+    SUPPORTED_TIMEFRAMES,
 )
 
 # === GA基本設定 ===

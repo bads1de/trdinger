@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from app.services.auto_strategy.genes import IndicatorGene
 from app.services.auto_strategy.genes.validator import GeneValidator
 
 
@@ -97,6 +98,43 @@ class TestGeneValidator:
         result = validator.validate_indicator_gene(gene)
         assert result is True  # UIは有効な複合指標なのでTrueになるべき
         assert gene.type == "UI"  # 修正されていない
+
+    def test_validate_indicator_gene_for_generation_respects_curated_universe(
+        self, validator
+    ):
+        """生成専用バリデーションでは curated 外の指標を拒否する"""
+        gene = IndicatorGene(type="LEVERAGE_RATIO", parameters={}, enabled=True)
+
+        assert validator.validate_indicator_gene(gene) is True
+        assert (
+            validator.validate_indicator_gene_for_generation(
+                gene, indicator_universe_mode="curated"
+            )
+            is False
+        )
+
+    def test_validate_indicator_gene_for_generation_uses_precomputed_universe(
+        self, validator
+    ):
+        """解決済みユニバースがあれば再解決せずに判定できる"""
+        gene = IndicatorGene(type="SMA", parameters={}, enabled=True)
+
+        assert (
+            validator.validate_indicator_gene_for_generation(
+                gene,
+                indicator_universe_mode="curated",
+                allowed_indicators={"SMA", "EMA"},
+            )
+            is True
+        )
+        assert (
+            validator.validate_indicator_gene_for_generation(
+                gene,
+                indicator_universe_mode="experimental_all",
+                allowed_indicators={"EMA", "RSI"},
+            )
+            is False
+        )
 
     def test_validate_condition_valid(self, validator, valid_condition):
         """有効な条件の検証"""

@@ -227,8 +227,12 @@ class DynamicIndicatorDiscovery:
 
                 # モジュール内の全クラスをチェック
                 for name, obj in inspect.getmembers(module, inspect.isclass):
-                    # 名前の末尾が Indicators で、かつ Indicators 自体ではないクラス
-                    if name.endswith("Indicators") and name != "Indicators":
+                    # 指標クラスを検出:
+                    # - 末尾が Indicators
+                    # - 高度特徴量クラス AdvancedFeatures
+                    if (
+                        name.endswith("Indicators") and name != "Indicators"
+                    ) or name == "AdvancedFeatures":
                         if module_name == "original":
                             original_modules.append(obj)
                         else:
@@ -313,6 +317,29 @@ class DynamicIndicatorDiscovery:
         elif name_upper == "PFE":
             config.scale_type = IndicatorScaleType.MOMENTUM_ZERO_CENTERED
             config.thresholds = config._get_default_thresholds()
+        elif name_upper in {
+            "CRYPTO_LEVERAGE_INDEX",
+            "LIQUIDATION_CASCADE_SCORE",
+            "TREND_QUALITY",
+            "OI_WEIGHTED_FUNDING_RATE",
+            "OI_PRICE_CONFIRMATION",
+        }:
+            config.scale_type = IndicatorScaleType.MOMENTUM_ZERO_CENTERED
+            config.thresholds = config._get_default_thresholds()
+        elif name_upper == "SQUEEZE_PROBABILITY":
+            config.scale_type = IndicatorScaleType.FUNDING_RATE
+            config.thresholds = {
+                "aggressive": {"long_gt": 0.0, "short_lt": 0.001},
+                "normal": {"long_gt": 0.0, "short_lt": 0.01},
+                "conservative": {"long_gt": 0.0, "short_lt": 0.05},
+            }
+        elif name_upper == "WHALE_DIVERGENCE":
+            config.scale_type = IndicatorScaleType.PRICE_RATIO
+            config.thresholds = {
+                "aggressive": {"long_gt": 1.02, "short_lt": 0.98},
+                "normal": {"long_gt": 1.05, "short_lt": 0.95},
+                "conservative": {"long_gt": 1.1, "short_lt": 0.9},
+            }
 
         # 3. 特殊なパラメータ制約の付与
         if name_upper == "FRAMA":

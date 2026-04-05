@@ -21,6 +21,7 @@ from ..genes.conditions import Condition, ConditionGroup
 from ..genes.indicator import IndicatorGene
 from ..genes.strategy import StrategyGene
 from ..genes.tpsl import TPSLGene
+from ..utils.indicator_references import build_indicator_reference_name
 
 logger = logging.getLogger(__name__)
 
@@ -49,12 +50,7 @@ class SeedStrategyFactory:
         indicator: IndicatorGene, output_index: Optional[int] = None
     ) -> str:
         """実行時の登録規約に合わせた指標参照名を生成"""
-        base_name = (
-            f"{indicator.type}_{indicator.id[:8]}" if indicator.id else indicator.type
-        )
-        if output_index is None:
-            return base_name
-        return f"{base_name}_{output_index}"
+        return build_indicator_reference_name(indicator, output_index)
 
     @classmethod
     def _indicator_ref(

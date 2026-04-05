@@ -122,8 +122,6 @@ class MTFStrategy:
         for ind in indicators:
             new_ind = copy.deepcopy(ind)
             new_ind.timeframe = timeframe
-            if new_ind.id:
-                new_ind.id = f"{new_ind.id}_{timeframe}"
             res.append(new_ind)
         return res
 

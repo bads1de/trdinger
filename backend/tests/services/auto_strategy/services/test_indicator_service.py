@@ -29,13 +29,18 @@ class TestIndicatorCalculator:
         """基本的な指標計算の委譲テスト"""
         # データの準備
         mock_data = Mock()
-        mock_data.df = pd.DataFrame({
-            "Open": [1, 2, 3], "High": [2, 3, 4], "Low": [0, 1, 2],
-            "Close": [1.5, 2.5, 3.5], "Volume": [100, 200, 300]
-        })
-        
+        mock_data.df = pd.DataFrame(
+            {
+                "Open": [1, 2, 3],
+                "High": [2, 3, 4],
+                "Low": [0, 1, 2],
+                "Close": [1.5, 2.5, 3.5],
+                "Volume": [100, 200, 300],
+            }
+        )
+
         result = calculator.calculate_indicator(mock_data, "SMA", {"period": 20})
-        
+
         assert isinstance(result, pd.Series)
         mock_indicator_service.calculate_indicator.assert_called_once()
 
@@ -43,26 +48,31 @@ class TestIndicatorCalculator:
         """戦略インスタンスへの指標登録テスト"""
         # 遺伝子の準備
         gene = IndicatorGene(type="SMA", parameters={"period": 10}, id="test_id_123")
-        
+
         # 戦略インスタンスのモック
         mock_strategy = Mock()
         mock_strategy.indicators = {}
         # データの準備（空だとエラーになるため）
         mock_strategy.data = Mock()
-        mock_strategy.data.df = pd.DataFrame({
-            "Open": [1, 2, 3], "High": [2, 3, 4], "Low": [0, 1, 2],
-            "Close": [1.5, 2.5, 3.5], "Volume": [100, 200, 300]
-        })
-        
+        mock_strategy.data.df = pd.DataFrame(
+            {
+                "Open": [1, 2, 3],
+                "High": [2, 3, 4],
+                "Low": [0, 1, 2],
+                "Close": [1.5, 2.5, 3.5],
+                "Volume": [100, 200, 300],
+            }
+        )
+
         calculator.init_indicator(gene, mock_strategy)
-        
+
         # 名前形式: Type_id[:8]
         expected_name_base = "SMA_"
-        
+
         # indicators辞書に登録されているはず
         keys = list(mock_strategy.indicators.keys())
         assert any(expected_name_base in k for k in keys)
-        
+
         # インスタンス属性としてもアクセスできるはず
         found_attr = False
         for k in keys:
@@ -75,23 +85,56 @@ class TestIndicatorCalculator:
         """複数出力がある指標（MACD等）の登録テスト"""
         # タプルを返すようにモックを設定
         mock_indicator_service.calculate_indicator.return_value = (
-            pd.Series([1, 2]), pd.Series([3, 4]), pd.Series([5, 6])
+            pd.Series([1, 2]),
+            pd.Series([3, 4]),
+            pd.Series([5, 6]),
         )
-        
+
         gene = IndicatorGene(type="MACD", id="macd_id")
         mock_strategy = Mock()
         mock_strategy.indicators = {}
         mock_strategy.data = Mock()
-        mock_strategy.data.df = pd.DataFrame({
-            "Open": [1, 2], "High": [2, 3], "Low": [0, 1],
-            "Close": [1.5, 2.5], "Volume": [100, 200]
-        })
-        
+        mock_strategy.data.df = pd.DataFrame(
+            {
+                "Open": [1, 2],
+                "High": [2, 3],
+                "Low": [0, 1],
+                "Close": [1.5, 2.5],
+                "Volume": [100, 200],
+            }
+        )
+
         calculator.init_indicator(gene, mock_strategy)
-        
+
         # 各出力（_0, _1, _2）が登録されているか確認
         expected_base = "MACD_macd_id_"
         keys = list(mock_strategy.indicators.keys())
         assert any(f"{expected_base}0" in k for k in keys)
         assert any(f"{expected_base}1" in k for k in keys)
         assert any(f"{expected_base}2" in k for k in keys)
+
+    def test_init_indicator_uses_mtf_runtime_reference_name(self, calculator):
+        """MTF指標はタイムフレーム込みの参照名で登録されること"""
+        gene = IndicatorGene(
+            type="SMA",
+            parameters={"period": 10},
+            timeframe="4h",
+            id="testid123456",
+        )
+
+        mock_strategy = Mock()
+        mock_strategy.indicators = {}
+        mock_strategy.data = Mock()
+        mock_strategy.data.df = pd.DataFrame(
+            {
+                "Open": [1, 2, 3],
+                "High": [2, 3, 4],
+                "Low": [0, 1, 2],
+                "Close": [1.5, 2.5, 3.5],
+                "Volume": [100, 200, 300],
+            }
+        )
+
+        calculator.init_indicator(gene, mock_strategy)
+
+        assert "SMA_4h_testid12" in mock_strategy.indicators

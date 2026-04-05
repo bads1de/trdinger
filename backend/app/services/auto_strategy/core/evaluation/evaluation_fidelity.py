@@ -19,9 +19,28 @@ def is_coarse_fidelity(config: Any) -> bool:
     return str(getattr(config, "_evaluation_fidelity", "full")) == "coarse"
 
 
+def _coerce_bool(value: Any) -> bool:
+    """Mock などの曖昧な値を安全に bool へ寄せる。"""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
+def _coerce_float(value: Any, default: float) -> float:
+    """float 変換できない値は既定値へフォールバックする。"""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
 def is_multi_fidelity_enabled(config: Any) -> bool:
     """multi-fidelity を有効とみなす条件を返す。"""
-    return bool(getattr(config, "enable_multi_fidelity_evaluation", False))
+    return _coerce_bool(getattr(config, "enable_multi_fidelity_evaluation", False))
 
 
 def build_coarse_ga_config(config: GAConfig) -> GAConfig:
@@ -29,9 +48,11 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
     coarse = deepcopy(config)
     coarse.enable_walk_forward = False
     coarse.enable_purged_kfold = False
-    if float(getattr(coarse, "oos_split_ratio", 0.0) or 0.0) <= 0.0:
-        coarse.oos_split_ratio = float(
-            getattr(coarse, "multi_fidelity_oos_ratio", 0.2) or 0.2
+    oos_split_ratio = _coerce_float(getattr(coarse, "oos_split_ratio", 0.0), 0.0)
+    if oos_split_ratio <= 0.0:
+        coarse.oos_split_ratio = _coerce_float(
+            getattr(coarse, "multi_fidelity_oos_ratio", 0.2),
+            0.2,
         )
     setattr(coarse, "_evaluation_fidelity", "coarse")
     return coarse
@@ -60,7 +81,10 @@ def adjust_backtest_config_for_fidelity(
     if start_ts >= end_ts:
         return adjusted
 
-    window_ratio = float(getattr(config, "multi_fidelity_window_ratio", 0.3) or 0.3)
+    window_ratio = _coerce_float(
+        getattr(config, "multi_fidelity_window_ratio", 0.3),
+        0.3,
+    )
     total_duration = end_ts - start_ts
     coarse_duration = total_duration * window_ratio
     if coarse_duration <= timedelta(0):
@@ -77,8 +101,11 @@ def get_multi_fidelity_candidate_limit(population_size: int, config: Any) -> int
     if population_size <= 0:
         return 0
 
-    ratio = float(getattr(config, "multi_fidelity_candidate_ratio", 0.25) or 0.25)
-    min_candidates = int(getattr(config, "multi_fidelity_min_candidates", 3) or 3)
+    ratio = _coerce_float(getattr(config, "multi_fidelity_candidate_ratio", 0.25), 0.25)
+    try:
+        min_candidates = int(getattr(config, "multi_fidelity_min_candidates", 3) or 3)
+    except (TypeError, ValueError):
+        min_candidates = 3
     return min(population_size, max(min_candidates, int(ceil(population_size * ratio))))
 
 

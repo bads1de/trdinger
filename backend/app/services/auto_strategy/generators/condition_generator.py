@@ -9,6 +9,7 @@ from ..config.constants import (
     IndicatorType,
 )
 from ..genes import Condition, ConditionGroup, IndicatorGene
+from ..utils.indicator_references import build_indicator_reference_name
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
 
@@ -200,13 +201,10 @@ class ConditionGenerator:
 
     def _get_indicator_name(self, indicator: IndicatorGene) -> str:
         """IndicatorCalculatorと一致する一意な指標名を取得"""
-        if indicator.id:
-            return f"{indicator.type}_{indicator.id[:8]}"
-        return indicator.type
+        return build_indicator_reference_name(indicator)
 
     def _get_band_names(self, indicator: IndicatorGene) -> Tuple[str, str]:
         """バンド指標のUpper/Lower名を取得"""
-        base = self._get_indicator_name(indicator)
         cfg = indicator_registry.get_indicator_config(indicator.type)
         up_idx, low_idx = 2, 0  # デフォルト [lower, mid, upper]
 
@@ -218,7 +216,10 @@ class ConditionGenerator:
                 if any(k in c for k in ["lower", "bottom", "low"]):
                     low_idx = i
 
-        return f"{base}_{up_idx}", f"{base}_{low_idx}"
+        return (
+            build_indicator_reference_name(indicator, up_idx),
+            build_indicator_reference_name(indicator, low_idx),
+        )
 
     def _is_price_scale(self, indicator: IndicatorGene) -> bool:
         """価格スケールの指標かどうか"""
@@ -281,11 +282,15 @@ class ConditionGenerator:
             if profile in thresholds and thresholds[profile]:
                 profile_config = thresholds[profile]
                 if side == "long":
-                    val = profile_config.get("long_gt") or profile_config.get("long_lt")
+                    if "long_gt" in profile_config:
+                        val = profile_config["long_gt"]
+                    elif "long_lt" in profile_config:
+                        val = profile_config["long_lt"]
                 elif side == "short":
-                    val = profile_config.get("short_lt") or profile_config.get(
-                        "short_gt"
-                    )
+                    if "short_lt" in profile_config:
+                        val = profile_config["short_lt"]
+                    elif "short_gt" in profile_config:
+                        val = profile_config["short_gt"]
 
             if val is not None:
                 threshold = val
@@ -307,9 +312,12 @@ class ConditionGenerator:
                 elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
                     # 0中心なら0でOK
                     threshold = 0.0
-                elif scale_type == IndicatorScaleType.PRICE_RATIO:
-                    # 比率なら1.0
-                    threshold = 1.0
+                elif scale_type in (
+                    IndicatorScaleType.FUNDING_RATE,
+                    IndicatorScaleType.OPEN_INTEREST,
+                ):
+                    # OI/FR 派生はゼロ基準の閾値を使う
+                    threshold = 0.0
                 elif scale_type == IndicatorScaleType.VOLUME:
                     # 出来高
                     threshold = "SMA"

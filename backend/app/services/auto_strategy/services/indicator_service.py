@@ -14,6 +14,7 @@ import pandas as pd
 from app.services.indicators import TechnicalIndicatorService
 
 from ..genes import IndicatorGene
+from ..utils.indicator_references import build_indicator_reference_name
 from .mtf_data_provider import MultiTimeframeDataProvider
 
 logger = logging.getLogger(__name__)
@@ -139,7 +140,6 @@ class IndicatorCalculator:
         )
         def _init_indicator():
             indicator_timeframe = getattr(indicator_gene, "timeframe", None)
-            timeframe_suffix = f"_{indicator_timeframe}" if indicator_timeframe else ""
 
             # logger.warning(
             #     f"指標初期化開始: {indicator_gene.type}, "
@@ -220,16 +220,6 @@ class IndicatorCalculator:
                 )
 
             if result is not None:
-                # MTF指標名のベースを決定（タイムフレームサフィックス付き）
-                indicator_id_suffix = (
-                    f"_{indicator_gene.id[:8]}"
-                    if hasattr(indicator_gene, "id") and indicator_gene.id
-                    else ""
-                )
-                base_indicator_name = (
-                    f"{indicator_gene.type}{timeframe_suffix}{indicator_id_suffix}"
-                )
-
                 # indicators辞書を確実に作成
                 if not hasattr(strategy_instance, "indicators"):
                     strategy_instance.indicators = {}
@@ -247,10 +237,13 @@ class IndicatorCalculator:
                 if isinstance(result, tuple):
                     # 複数の出力がある指標（MACD等）
                     for i, output in enumerate(result):
-                        _register(f"{base_indicator_name}_{i}", output)
+                        _register(
+                            build_indicator_reference_name(indicator_gene, i),
+                            output,
+                        )
                 else:
                     # 単一出力の指標
-                    _register(base_indicator_name, result)
+                    _register(build_indicator_reference_name(indicator_gene), result)
 
                 # logger.debug(f"指標登録完了: {base_indicator_name}")
             else:
