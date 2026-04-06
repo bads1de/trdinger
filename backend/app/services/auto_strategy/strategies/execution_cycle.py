@@ -22,7 +22,7 @@ class StrategyExecutionCycle:
 
         self.process_bar_setup()
 
-        handled_open_position = self.strategy.position_exit_engine.handle_open_position()
+        handled_open_position = self.strategy.position_manager.handle_open_position()
         self.strategy._check_early_termination()
         if handled_open_position:
             return

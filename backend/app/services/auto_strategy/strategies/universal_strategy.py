@@ -36,7 +36,6 @@ from .early_termination import (
 from .execution_cycle import StrategyExecutionCycle
 from .ml_filter import MLFilter
 from .order_manager import OrderManager
-from .position_exit_engine import PositionExitEngine
 from .position_manager import PositionManager
 from .runtime_state import StrategyRuntimeState
 from .stateful_conditions import StatefulConditionsEvaluator
@@ -149,7 +148,6 @@ class UniversalStrategy(Strategy):
 
         # ヘルパークラスの初期化
         self.position_manager = PositionManager(self)
-        self.position_exit_engine = PositionExitEngine(self)
         self.stateful_conditions_evaluator = StatefulConditionsEvaluator(self)
         self.early_termination_controller = StrategyEarlyTerminationController(self)
         self.ml_filter = MLFilter(self)

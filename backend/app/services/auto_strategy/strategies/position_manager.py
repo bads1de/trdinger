@@ -34,6 +34,19 @@ class PositionManager:
         """strategy に紐づく実行時状態を返す。"""
         return resolve_runtime_state(self.strategy)
 
+    def handle_open_position(self) -> bool:
+        """
+        既存ポジションの決済処理を実行する。
+
+        SL/TP がどちらも無い場合や、そもそもポジションが無い場合は
+        何もしない。
+        """
+        if not self.strategy.position:
+            return False
+        if not self._has_exit_levels():
+            return False
+        return self.check_pessimistic_exit()
+
     def check_pessimistic_exit(self) -> bool:
         """
         悲観的約定ロジックによるSL/TP判定
@@ -46,7 +59,7 @@ class PositionManager:
             False: 決済が実行されなかった場合
         """
         state = self.state
-        if state.sl_price is None:
+        if not self._has_exit_levels():
             return False
 
         current_low = self.strategy.data.Low[-1]
@@ -65,7 +78,7 @@ class PositionManager:
                 return False
 
             # 1. SL判定 [最優先]: Low <= SL価格
-            if current_low <= state.sl_price:
+            if state.sl_price is not None and current_low <= state.sl_price:
                 self.strategy.position.close()
                 self.reset_position_state()
                 return True
@@ -97,7 +110,7 @@ class PositionManager:
                 return False
 
             # 1. SL判定 [最優先]: High >= SL価格 (ショートはSLが上側)
-            if current_high >= state.sl_price:
+            if state.sl_price is not None and current_high >= state.sl_price:
                 self.strategy.position.close()
                 self.reset_position_state()
                 return True
@@ -121,6 +134,11 @@ class PositionManager:
         self.update_trailing_stop()
 
         return False
+
+    def _has_exit_levels(self) -> bool:
+        """SL/TP のいずれかが設定されているかを判定する。"""
+        state = self.state
+        return state.sl_price is not None or state.tp_price is not None
 
     def reset_position_state(self) -> None:
         """ポジション決済後に内部状態をリセット"""
