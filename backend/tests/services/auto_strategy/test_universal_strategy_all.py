@@ -105,6 +105,19 @@ class TestUniversalStrategyAll:
                 strategy.next()
                 strategy.buy.assert_called_once()
 
+    def test_next_delegates_to_execution_cycle(
+        self, mock_broker, mock_data, valid_gene
+    ):
+        strategy = UniversalStrategy(
+            mock_broker, mock_data, {"strategy_gene": valid_gene}
+        )
+        strategy.execution_cycle.run_current_bar = MagicMock()
+
+        strategy.next()
+
+        assert strategy._current_bar_index == 1
+        strategy.execution_cycle.run_current_bar.assert_called_once_with()
+
     def test_next_skips_entry_before_evaluation_start(
         self, mock_broker, mock_data, valid_gene
     ):

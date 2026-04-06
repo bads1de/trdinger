@@ -194,10 +194,12 @@ class TestMLFilterIntegration:
                 strategy, "_ml_allows_entry", return_value=False
             ) as mock_ml_check:
                 with patch.object(
-                    strategy, "_check_entry_conditions", side_effect=lambda d: d == 1.0
+                    strategy.entry_decision_engine,
+                    "check_entry_conditions",
+                    side_effect=lambda d: d == 1.0,
                 ):
                     with patch.object(
-                        strategy, "_tools_block_entry", return_value=False
+                        strategy.entry_decision_engine, "tools_block_entry", return_value=False
                     ):
                         with patch.object(
                             strategy.order_manager, "check_pending_order_fills", return_value=None
@@ -259,10 +261,12 @@ class TestMLFilterIntegration:
                 strategy, "_ml_allows_entry", return_value=True
             ) as mock_ml_check:
                 with patch.object(
-                    strategy, "_check_entry_conditions", side_effect=lambda d: d == 1.0
+                    strategy.entry_decision_engine,
+                    "check_entry_conditions",
+                    side_effect=lambda d: d == 1.0,
                 ):
                     with patch.object(
-                        strategy, "_tools_block_entry", return_value=False
+                        strategy.entry_decision_engine, "tools_block_entry", return_value=False
                     ):
                         with patch.object(
                             strategy.order_manager, "check_pending_order_fills", return_value=None
@@ -279,29 +283,29 @@ class TestMLFilterIntegration:
                                         strategy,
                                         "_get_stateful_entry_direction",
                                         return_value=None,
-                                    ):
-                                        with patch.object(
-                                            strategy,
-                                            "_calculate_position_size",
-                                            return_value=0.01,
                                         ):
                                             with patch.object(
-                                                strategy,
-                                                "_calculate_effective_tpsl_prices",
-                                                return_value=(None, None),
+                                                strategy.entry_decision_engine,
+                                                "calculate_position_size",
+                                                return_value=0.01,
                                             ):
                                                 with patch.object(
-                                                    strategy,
-                                                    "_get_effective_entry_gene",
-                                                    return_value=None,
+                                                    strategy.entry_decision_engine,
+                                                    "calculate_effective_tpsl_prices",
+                                                    return_value=(None, None),
                                                 ):
                                                     with patch.object(
-                                                        type(strategy),
-                                                        "position",
-                                                        new_callable=PropertyMock,
+                                                        strategy,
+                                                        "_get_effective_entry_gene",
                                                         return_value=None,
                                                     ):
-                                                        strategy.next()
+                                                        with patch.object(
+                                                            type(strategy),
+                                                            "position",
+                                                            new_callable=PropertyMock,
+                                                            return_value=None,
+                                                        ):
+                                                            strategy.next()
 
             # MLフィルターがチェックされたことを確認
             mock_ml_check.assert_called_once_with(1.0)
