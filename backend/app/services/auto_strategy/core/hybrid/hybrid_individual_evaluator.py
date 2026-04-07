@@ -18,8 +18,8 @@ from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
     HybridPredictor,
     RuntimeModelPredictorAdapter,
 )
-from app.services.backtest.config.builders import ensure_backtest_defaults
 from app.services.backtest.services.backtest_service import BacktestService
+from app.services.backtest.shared import normalize_ohlcv_columns
 from app.services.ml.models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
@@ -70,8 +70,32 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             準備された実行設定辞書
         """
-        ensured_config = self._ensure_backtest_defaults(backtest_config, config)
-        return super()._prepare_run_config(gene, ensured_config, config)
+        defaults: Dict[str, Any] = {
+            "symbol": (
+                getattr(config, "target_symbol", None)
+                or getattr(config, "base_symbol", None)
+                or "BTCUSDT"
+            ),
+            "timeframe": (
+                getattr(config, "target_timeframe", None)
+                or getattr(config, "timeframe", None)
+                or "1h"
+            ),
+        }
+
+        fallback_start = getattr(config, "fallback_start_date", None)
+        fallback_end = getattr(config, "fallback_end_date", None)
+        if fallback_start:
+            defaults["start_date"] = fallback_start
+        if fallback_end:
+            defaults["end_date"] = fallback_end
+
+        return self._run_config_builder.build_run_config(
+            gene,
+            backtest_config,
+            config,
+            defaults=defaults,
+        )
 
     def _get_evaluation_context(
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
@@ -90,40 +114,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             予測シグナルを含むコンテキスト辞書
         """
         return {}
-
-    def _calculate_fitness(
-        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
-    ) -> float:
-        """
-        フィットネス計算（ML予測スコア統合版）
-
-        Args:
-            backtest_result: バックテスト結果
-            config: GA設定
-            **kwargs: 追加のコンテキスト情報（prediction_signalsを含む）
-
-        Returns:
-            フィットネス値
-        """
-        return super()._calculate_fitness(backtest_result, config, **kwargs)
-
-    def _calculate_multi_objective_fitness(
-        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
-    ) -> tuple:
-        """
-        多目的最適化用フィットネス計算（ML予測スコア統合版）
-
-        Args:
-            backtest_result: バックテスト結果
-            config: GA設定
-            **kwargs: 追加のコンテキスト情報（prediction_signalsを含む）
-
-        Returns:
-            各目的の評価値のタプル
-        """
-        return super()._calculate_multi_objective_fitness(
-            backtest_result, config, **kwargs
-        )
 
     def _inject_external_objects(
         self,
@@ -146,38 +136,23 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                     model_manager.load_model(model_path)
                 )
                 if ml_filter_model.is_trained():
-                    run_config["strategy_config"]["parameters"][
-                        "ml_predictor"
-                    ] = ml_filter_model
-                    run_config["strategy_config"]["parameters"][
-                        "volatility_gate_enabled"
-                    ] = True
-                    run_config["strategy_config"]["parameters"][
-                        "ml_filter_enabled"
-                    ] = True
+                    self._set_ml_gate_state(
+                        run_config,
+                        enabled=True,
+                        predictor=ml_filter_model,
+                    )
                 else:
-                    run_config["strategy_config"]["parameters"][
-                        "volatility_gate_enabled"
-                    ] = False
-                    run_config["strategy_config"]["parameters"][
-                        "ml_filter_enabled"
-                    ] = False
+                    self._set_ml_gate_state(run_config, enabled=False)
             except Exception:
-                run_config["strategy_config"]["parameters"][
-                    "volatility_gate_enabled"
-                ] = False
-                run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
+                self._set_ml_gate_state(run_config, enabled=False)
         elif gate_enabled and self.predictor and self.predictor.is_trained():
-            run_config["strategy_config"]["parameters"]["ml_predictor"] = self.predictor
-            run_config["strategy_config"]["parameters"][
-                "volatility_gate_enabled"
-            ] = True
-            run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = True
+            self._set_ml_gate_state(
+                run_config,
+                enabled=True,
+                predictor=self.predictor,
+            )
         elif gate_enabled:
-            run_config["strategy_config"]["parameters"][
-                "volatility_gate_enabled"
-            ] = False
-            run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = False
+            self._set_ml_gate_state(run_config, enabled=False)
 
     def _create_feature_adapter(
         self,
@@ -195,34 +170,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter"
         )
         return getattr(module, "HybridFeatureAdapter")
-
-    def _ensure_backtest_defaults(
-        self,
-        backtest_config: Dict[str, Any],
-        ga_config: GAConfig,
-    ) -> Dict[str, Any]:
-        """バックテスト設定に欠損している基本情報を補完"""
-        defaults: Dict[str, Any] = {
-            "symbol": (
-                getattr(ga_config, "target_symbol", None)
-                or getattr(ga_config, "base_symbol", None)
-                or "BTCUSDT"
-            ),
-            "timeframe": (
-                getattr(ga_config, "target_timeframe", None)
-                or getattr(ga_config, "timeframe", None)
-                or "1h"
-            ),
-        }
-
-        fallback_start = getattr(ga_config, "fallback_start_date", None)
-        fallback_end = getattr(ga_config, "fallback_end_date", None)
-        if fallback_start:
-            defaults["start_date"] = fallback_start
-        if fallback_end:
-            defaults["end_date"] = fallback_end
-
-        return ensure_backtest_defaults(backtest_config, defaults)
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""
@@ -249,9 +196,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         if ohlcv_data is None:
             return None
 
-        normalized = ohlcv_data.copy()
-        normalized.columns = [str(column).lower() for column in normalized.columns]
-        return normalized
+        return normalize_ohlcv_columns(ohlcv_data, lowercase=True)
 
     def clear_caches(self) -> None:
         """ハイブリッド評価用のキャッシュをクリアする。"""
@@ -265,3 +210,20 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             "feature_cache_size": len(self._feature_cache),
             "cache_limit": self._cache_size,
         }
+
+    @staticmethod
+    def _set_ml_gate_state(
+        run_config: Dict[str, Any],
+        *,
+        enabled: bool,
+        predictor: Optional[Any] = None,
+    ) -> None:
+        """MLゲート関連フラグをまとめて更新する。"""
+        parameters = run_config["strategy_config"]["parameters"]
+        parameters["volatility_gate_enabled"] = enabled
+        parameters["ml_filter_enabled"] = enabled
+
+        if predictor is not None:
+            parameters["ml_predictor"] = predictor
+        else:
+            parameters.pop("ml_predictor", None)

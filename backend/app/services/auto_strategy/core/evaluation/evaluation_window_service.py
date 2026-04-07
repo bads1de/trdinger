@@ -12,6 +12,7 @@ import pandas as pd
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
+from app.services.backtest.shared import normalize_ohlcv_columns
 
 logger = logging.getLogger(__name__)
 
@@ -290,14 +291,7 @@ class EvaluationWindowService:
     @staticmethod
     def _normalize_ohlc_data_for_stats(market_data: pd.DataFrame) -> pd.DataFrame:
         """backtesting.py が期待する大文字 OHLCV カラムへ正規化する。"""
-        normalized = market_data.copy()
-        normalized.columns = [
-            column.capitalize() if isinstance(column, str) else column
-            for column in normalized.columns
-        ]
-        if "Volume" not in normalized.columns:
-            normalized["Volume"] = 0.0
-        return normalized
+        return normalize_ohlcv_columns(market_data, ensure_volume=True)
 
     def slice_equity_curve_for_window(
         self,

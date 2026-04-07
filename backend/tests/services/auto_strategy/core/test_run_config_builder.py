@@ -64,6 +64,37 @@ class TestRunConfigBuilder:
         assert params["volatility_model_path"] == "/tmp/legacy-model.pkl"
         assert params["ml_model_path"] == "/tmp/legacy-model.pkl"
 
+    def test_build_run_config_applies_defaults(self):
+        builder = RunConfigBuilder()
+        gene = Mock()
+        gene.id = "gene-123456789"
+
+        ga_config = Mock()
+        ga_config.volatility_gate_enabled = False
+        ga_config.volatility_model_path = None
+        ga_config.ml_filter_enabled = False
+        ga_config.ml_model_path = None
+
+        defaults = {
+            "symbol": "ETH/USDT:USDT",
+            "timeframe": "4h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-31",
+        }
+
+        result = builder.build_run_config(
+            gene,
+            {},
+            ga_config,
+            defaults=defaults,
+        )
+
+        assert result is not None
+        assert result["symbol"] == "ETH/USDT:USDT"
+        assert result["timeframe"] == "4h"
+        assert result["start_date"] == "2024-01-01"
+        assert result["end_date"] == "2024-01-31"
+
     def test_inject_external_objects_adds_minute_data_only_when_present(self):
         builder = RunConfigBuilder()
         run_config = {

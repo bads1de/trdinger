@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from app.services.auto_strategy.core import objective_registry
 from app.services.auto_strategy.core.engine.report_selection import (
     build_report_rank_key_from_primary_fitness,
     get_two_stage_best_individual,
@@ -30,6 +31,38 @@ def test_build_report_rank_key_from_primary_fitness_uses_report_values():
     )
 
     assert key == (0.0, 0.5, 0.4, 0.575)
+
+
+def test_build_report_rank_key_from_primary_fitness_uses_objective_registry(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        objective_registry,
+        "is_minimize_objective",
+        lambda objective: objective == "custom_loss",
+    )
+
+    report = EvaluationReport.aggregate(
+        mode="robustness",
+        objectives=["custom_loss"],
+        scenarios=[
+            ScenarioEvaluation(name="base", fitness=(0.1,), passed=True),
+            ScenarioEvaluation(name="stress", fitness=(0.5,), passed=False),
+            ScenarioEvaluation(name="alt", fitness=(0.2,), passed=True),
+        ],
+        aggregate_method="robust",
+    )
+
+    key = build_report_rank_key_from_primary_fitness(
+        0.7,
+        report,
+        min_pass_rate=0.5,
+    )
+
+    assert key[0] == 1.0
+    assert key[1] == 2 / 3
+    assert key[2] == -0.5
+    assert round(key[3], 6) == -0.29
 
 
 class _SlottedIndividual:

@@ -11,6 +11,7 @@ import pandas as pd
 
 from app.services.backtest.shared import (
     resolve_stats_object,
+    resolve_trade_pnl_column,
     safe_float_conversion as _safe_float_conversion,
     safe_int_conversion as _safe_int_conversion,
 )
@@ -35,11 +36,10 @@ class BacktestStatisticsCalculator:
             actual_stats = resolve_stats_object(stats, warning_logger=logger)
             statistics: Dict[str, Any] = {}
 
-            is_series = isinstance(actual_stats, pd.Series)
-            if is_series:
-                statistics = self._extract_metrics_from_series(actual_stats)
-            elif hasattr(actual_stats, "keys") and hasattr(actual_stats, "get"):
-                statistics = self._extract_metrics_from_dict(actual_stats)
+            if isinstance(actual_stats, pd.Series) or (
+                hasattr(actual_stats, "keys") and hasattr(actual_stats, "get")
+            ):
+                statistics = self._extract_metrics(actual_stats)
 
             statistics = self._enrich_metrics_from_trades(statistics, actual_stats)
             statistics = self._enrich_metrics_from_equity(statistics, actual_stats)
@@ -49,18 +49,6 @@ class BacktestStatisticsCalculator:
         except Exception as e:
             logger.error(f"統計情報の抽出中にエラー: {e}")
             return {}
-
-    def _resolve_stats_object(self, stats: Any) -> Any:
-        """statsオブジェクトの実体を取得（callableなら呼び出す）"""
-        return resolve_stats_object(stats, warning_logger=logger)
-
-    def _extract_metrics_from_series(self, stats: Any) -> Dict[str, Any]:
-        """pandas.Seriesから基本統計情報を抽出"""
-        return self._extract_metrics(stats)
-
-    def _extract_metrics_from_dict(self, stats: Any) -> Dict[str, Any]:
-        """辞書ライクなオブジェクトから基本統計情報を抽出"""
-        return self._extract_metrics(stats)
 
     def _extract_metrics(self, stats: Any) -> Dict[str, Any]:
         """Series/Dict 共通の統計指標を抽出"""
@@ -140,11 +128,7 @@ class BacktestStatisticsCalculator:
                 if inferred_trades > 0:
                     statistics["total_trades"] = int(inferred_trades)
 
-                    pnl_col = None
-                    for col in ["PnL", "Pnl", "Profit", "ProfitLoss"]:
-                        if col in trades_df.columns:
-                            pnl_col = col
-                            break
+                    pnl_col = resolve_trade_pnl_column(trades_df)
 
                     if pnl_col is not None:
                         self._calculate_trade_metrics(

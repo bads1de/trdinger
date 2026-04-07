@@ -315,5 +315,3 @@ class TestEvolutionRunner:
         mock_toolbox.mate.assert_not_called()
         mock_toolbox.mutate.assert_not_called()
         mock_toolbox.select.assert_not_called()
-
-

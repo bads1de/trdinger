@@ -56,6 +56,25 @@ class TestTradeHistoryTransformer:
         assert result[0]["entry_price"] == 100.0
         assert result[0]["pnl"] == 2.0
 
+    def test_pnl_alias_columns_are_supported(self, transformer):
+        trades = pd.DataFrame({
+            "EntryTime": [datetime(2024, 1, 1)],
+            "ExitTime": [datetime(2024, 1, 1, 1)],
+            "EntryPrice": [100.0],
+            "ExitPrice": [102.0],
+            "Size": [1.0],
+            "Pnl": [2.5],
+            "ReturnPct": [0.025],
+            "Duration": [1],
+        })
+        stats = MagicMock()
+        stats._trades = trades
+
+        result = transformer.transform(stats)
+
+        assert len(result) == 1
+        assert result[0]["pnl"] == 2.5
+
     def test_missing_columns_fill_defaults(self, transformer):
         trades = pd.DataFrame({"EntryPrice": [100.0]})
         stats = MagicMock()

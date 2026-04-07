@@ -10,9 +10,8 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-_MINIMIZE_OBJECTIVES = frozenset(
-    {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
-)
+from .. import objective_registry
+
 _ROBUST_WORST_CASE_WEIGHT = 0.3
 
 
@@ -74,7 +73,7 @@ class EvaluationReport:
         if not values:
             return None
 
-        if self.objectives[0] in _MINIMIZE_OBJECTIVES:
+        if objective_registry.is_minimize_objective(self.objectives[0]):
             return float(max(values))
         return float(min(values))
 
@@ -182,7 +181,9 @@ class EvaluationReport:
         if aggregate_method == "robust":
             center_value = float(median(values))
             worst_value = (
-                max(values) if objective in _MINIMIZE_OBJECTIVES else min(values)
+                max(values)
+                if objective_registry.is_minimize_objective(objective)
+                else min(values)
             )
             return float(
                 center_value * (1.0 - _ROBUST_WORST_CASE_WEIGHT)

@@ -89,6 +89,46 @@ class TestBacktestExecutor:
             assert kwargs["commission"] == 0.0
             assert kwargs["margin"] == 1.0
 
+    def test_create_backtest_instance_preserves_non_ohlcv_columns(self, executor):
+        """OHLCV以外の列は正規化で壊さないことを確認する。"""
+        data = pd.DataFrame(
+            {
+                "open": [100.0, 101.0],
+                "high": [102.0, 103.0],
+                "low": [99.0, 100.0],
+                "close": [101.0, 102.0],
+                "volume": [10.0, 20.0],
+                "open_interest": [500.0, 510.0],
+                "funding_rate": [0.01, 0.02],
+                "StrategyName": ["s1", "s2"],
+            }
+        )
+        mock_strategy = MagicMock()
+
+        with patch("app.services.backtest.execution.backtest_executor.FractionalBacktest") as MockBT:
+            executor._create_backtest_instance(
+                data,
+                mock_strategy,
+                10000,
+                0.0,
+                0.0,
+                1.0,
+                "BTC",
+            )
+
+        passed_data = MockBT.call_args.args[0]
+        assert "Open" in passed_data.columns
+        assert "High" in passed_data.columns
+        assert "Low" in passed_data.columns
+        assert "Close" in passed_data.columns
+        assert "Volume" in passed_data.columns
+        assert "open_interest" in passed_data.columns
+        assert "funding_rate" in passed_data.columns
+        assert "StrategyName" in passed_data.columns
+        assert "Open_interest" not in passed_data.columns
+        assert "Funding_rate" not in passed_data.columns
+        assert "Strategy_name" not in passed_data.columns
+
     def test_run_backtest(self, executor):
         mock_bt = MagicMock()
         mock_stats = MagicMock()

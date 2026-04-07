@@ -14,6 +14,7 @@ from backtesting import Backtest, Strategy
 from backtesting.lib import FractionalBacktest
 
 from ..config.constants import SUPPORTED_STRATEGIES
+from ..shared import normalize_ohlcv_columns
 from app.services.auto_strategy.strategies.universal_strategy import (
     StrategyEarlyTermination,
 )
@@ -156,11 +157,8 @@ class BacktestExecutor:
     ) -> Backtest:
         """バックテストインスタンスを作成"""
         try:
-            # backtesting.pyライブラリが大文字のカラム名を期待するため変換
-            # 最適化: 既にOpenカラムがあればコピーと変換をスキップ
-            if "Open" not in data.columns:
-                data = data.copy()
-                data.columns = data.columns.str.capitalize()
+            # backtesting.py が期待する OHLCV 列だけを正規化する。
+            data = normalize_ohlcv_columns(data, ensure_volume=True)
 
             # スリッページを簡易的に手数料に加算（backtesting.pyの標準機能でサポートが薄いため）
             effective_commission = commission_rate + slippage

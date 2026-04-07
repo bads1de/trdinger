@@ -9,12 +9,13 @@ import hashlib
 import json
 import logging
 import math
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Mapping, Tuple
 
 import numpy as np
 
 from app.services.auto_strategy.config.ga import GAConfig
 
+from .. import objective_registry
 from ..evaluation.evaluation_metrics import (
     calculate_trade_frequency_penalty,
     calculate_ulcer_index,
@@ -30,9 +31,6 @@ class FitnessCalculator:
     IndividualEvaluator から委譲を受け、パフォーマンスメトリクスの抽出、
     単一目的・多目的フィットネスの計算、ロング・ショートバランス評価を行います。
     """
-
-    # 最小化目的（ペナルティ値は最大化）と最大化目的（ペナルティ値は最小化）の分類
-    _MINIMIZE_OBJECTIVES = {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
 
     def __init__(self) -> None:
         # メトリクスキャッシュ（同一 backtest_result の再計算を避ける）
@@ -80,7 +78,7 @@ class FitnessCalculator:
         """
         penalty_values = []
         for obj in config.objectives:
-            if obj in self._MINIMIZE_OBJECTIVES:
+            if objective_registry.is_minimize_objective(obj):
                 penalty_values.append(float("inf"))
             else:
                 penalty_values.append(-float("inf"))
@@ -166,6 +164,41 @@ class FitnessCalculator:
 
         return metrics
 
+    def meets_constraints(
+        self, metrics: Mapping[str, Any], config: "GAConfig"
+    ) -> bool:
+        """単一目的評価で使う制約判定をまとめて返す。"""
+        try:
+            constraints = getattr(config, "fitness_constraints", {}) or {}
+
+            total_trades = int(metrics.get("total_trades", 0) or 0)
+            if total_trades <= 0:
+                return False
+
+            min_trades_req = int(constraints.get("min_trades", 0) or 0)
+            if total_trades < min_trades_req:
+                return False
+
+            max_drawdown_limit = constraints.get("max_drawdown_limit", None)
+            max_drawdown = float(metrics.get("max_drawdown", 0.0) or 0.0)
+            if isinstance(max_drawdown_limit, (float, int)) and max_drawdown > float(
+                max_drawdown_limit
+            ):
+                return False
+
+            total_return = float(metrics.get("total_return", 0.0) or 0.0)
+            if total_return < 0.0:
+                return False
+
+            sharpe_ratio = float(metrics.get("sharpe_ratio", 0.0) or 0.0)
+            min_sharpe_ratio = float(constraints.get("min_sharpe_ratio", 0.0) or 0.0)
+            if sharpe_ratio < min_sharpe_ratio:
+                return False
+
+            return True
+        except (KeyError, TypeError, ValueError):
+            return False
+
     def calculate_fitness(
         self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
     ) -> float:
@@ -194,19 +227,7 @@ class FitnessCalculator:
                 logger.warning("取引回数が0のため、低いフィットネス値を設定")
                 return config.zero_trades_penalty
 
-            min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
-            if total_trades < min_trades_req:
-                return config.constraint_violation_penalty
-
-            max_dd_limit = config.fitness_constraints.get("max_drawdown_limit", None)
-            if isinstance(max_dd_limit, (float, int)) and max_drawdown > float(
-                max_dd_limit
-            ):
-                return config.constraint_violation_penalty
-
-            if total_return < 0 or sharpe_ratio < config.fitness_constraints.get(
-                "min_sharpe_ratio", 0
-            ):
+            if not self.meets_constraints(metrics, config):
                 return config.constraint_violation_penalty
 
             balance_score = self.calculate_long_short_balance(backtest_result)

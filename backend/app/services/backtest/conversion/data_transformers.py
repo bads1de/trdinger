@@ -11,7 +11,10 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from app.services.backtest.shared import safe_timestamp_conversion
+from app.services.backtest.shared import (
+    resolve_trade_pnl_column,
+    safe_timestamp_conversion,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +40,13 @@ class TradeHistoryTransformer:
                 return []
 
             df = trades_df.copy()
+            pnl_source_col = resolve_trade_pnl_column(df)
 
             def _convert_timestamps(series: Any) -> list[Optional[datetime]]:
-                return [safe_timestamp_conversion(value) for value in pd.to_datetime(series, errors="coerce")]
+                return [
+                    safe_timestamp_conversion(value)
+                    for value in pd.to_datetime(series, errors="coerce")
+                ]
 
             conversions = [
                 (
@@ -63,7 +70,6 @@ class TradeHistoryTransformer:
                     lambda s: pd.to_numeric(s, errors="coerce"),
                 ),
                 ("size", "Size", lambda s: pd.to_numeric(s, errors="coerce")),
-                ("pnl", "PnL", lambda s: pd.to_numeric(s, errors="coerce")),
                 (
                     "return_pct",
                     "ReturnPct",
@@ -84,6 +90,14 @@ class TradeHistoryTransformer:
                         df[target_col] = None if "time" in target_col else 0.0
                 else:
                     df[target_col] = None if "time" in target_col else 0.0
+
+            if pnl_source_col is not None:
+                try:
+                    df["pnl"] = pd.to_numeric(df[pnl_source_col], errors="coerce")
+                except Exception:
+                    df["pnl"] = 0.0
+            else:
+                df["pnl"] = 0.0
 
             num_cols = ["entry_price", "exit_price", "size", "pnl", "return_pct"]
             for col in num_cols:

@@ -13,6 +13,7 @@ from typing import Any, Callable, List, Optional
 import numpy as np
 from deap import tools
 
+from .. import objective_registry
 from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
@@ -391,7 +392,7 @@ class EvolutionRunner:
                 continue
 
             average_value = float(np.mean(values))
-            if objective in {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}:
+            if objective_registry.is_dynamic_scalar_objective(objective):
                 scalars[objective] = min(2.0, 1.0 + max(average_value, 0.0))
             else:
                 scalars[objective] = 1.0

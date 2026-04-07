@@ -633,31 +633,7 @@ class IndividualEvaluator(EvaluationWindowService):
         """バックテスト結果が基本制約を満たすか判定する。"""
         try:
             metrics = self._extract_performance_metrics(backtest_result)
-            constraints = getattr(config, "fitness_constraints", {}) or {}
-
-            total_trades = int(metrics.get("total_trades", 0) or 0)
-            if total_trades <= 0:
-                return False
-
-            min_trades = int(constraints.get("min_trades", 0) or 0)
-            if total_trades < min_trades:
-                return False
-
-            total_return = float(metrics.get("total_return", 0.0) or 0.0)
-            if total_return < 0.0:
-                return False
-
-            max_drawdown_limit = constraints.get("max_drawdown_limit")
-            max_drawdown = float(metrics.get("max_drawdown", 0.0) or 0.0)
-            if max_drawdown_limit is not None and max_drawdown > max_drawdown_limit:
-                return False
-
-            min_sharpe_ratio = float(constraints.get("min_sharpe_ratio", 0.0) or 0.0)
-            sharpe_ratio = float(metrics.get("sharpe_ratio", 0.0) or 0.0)
-            if sharpe_ratio < min_sharpe_ratio:
-                return False
-
-            return True
+            return self._fitness_calculator.meets_constraints(metrics, config)
         except Exception:
             return False
 

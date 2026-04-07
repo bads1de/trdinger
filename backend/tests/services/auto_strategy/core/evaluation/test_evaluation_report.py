@@ -1,3 +1,4 @@
+from app.services.auto_strategy.core import objective_registry
 from app.services.auto_strategy.core.evaluation.evaluation_report import (
     EvaluationReport,
     ScenarioEvaluation,
@@ -34,6 +35,27 @@ class TestEvaluationReport:
 
         assert round(report.aggregated_fitness[0], 6) == 0.29
         assert report.pass_rate == 2 / 3
+
+    def test_aggregate_robust_uses_objective_registry(self, monkeypatch):
+        monkeypatch.setattr(
+            objective_registry,
+            "is_minimize_objective",
+            lambda objective: objective == "custom_loss",
+        )
+
+        report = EvaluationReport.aggregate(
+            mode="purged_kfold",
+            objectives=["custom_loss"],
+            scenarios=[
+                ScenarioEvaluation(name="fold_1", fitness=(0.1,), passed=True),
+                ScenarioEvaluation(name="fold_2", fitness=(0.2,), passed=True),
+                ScenarioEvaluation(name="fold_3", fitness=(0.5,), passed=False),
+            ],
+            aggregate_method="robust",
+        )
+
+        assert round(report.aggregated_fitness[0], 6) == 0.29
+        assert report.primary_worst_case_fitness == 0.5
 
     def test_aggregate_weighted_uses_weights(self):
         report = EvaluationReport.aggregate(

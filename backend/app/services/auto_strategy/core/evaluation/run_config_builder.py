@@ -5,7 +5,7 @@ IndividualEvaluator 用のバックテスト実行設定ビルダー。
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional
 
 from app.services.auto_strategy.config.ml_filter_settings import (
     resolve_ml_gate_settings,
@@ -23,6 +23,7 @@ class RunConfigBuilder:
         gene: Any,
         backtest_config: Dict[str, Any],
         config: Any,
+        defaults: Optional[Mapping[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
@@ -77,6 +78,7 @@ class RunConfigBuilder:
                     "strategy_type": "GENERATED_GA",
                     "parameters": strategy_parameters,
                 },
+                defaults=defaults,
             )
             config_dict["_skip_validation"] = True
             return config_dict

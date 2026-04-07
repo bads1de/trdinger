@@ -20,9 +20,17 @@ import app.services.auto_strategy.core.evaluation.evaluation_worker as ew_module
 class TestInitializeWorkerProcess:
     """initialize_worker_process関数のテスト"""
 
+    @patch(
+        "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
+    )
     @patch("app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService")
     @patch("app.services.auto_strategy.core.evaluation.evaluation_worker.IndividualEvaluator")
-    def test_initialize_success(self, mock_evaluator_cls, mock_backtest_service_cls):
+    def test_initialize_success(
+        self,
+        mock_evaluator_cls,
+        mock_backtest_service_cls,
+        mock_initialize_worker_context,
+    ):
         """ワーカープロセスが正常に初期化されること"""
         mock_backtest_service = MagicMock()
         mock_backtest_service_cls.return_value = mock_backtest_service
@@ -32,34 +40,51 @@ class TestInitializeWorkerProcess:
         
         backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "4h"}
         ga_config = MagicMock()
-        
+
         initialize_worker_process(backtest_config, ga_config)
-        
+
         mock_backtest_service_cls.assert_called_once()
         mock_evaluator_cls.assert_called_once_with(mock_backtest_service)
         mock_evaluator.set_backtest_config.assert_called_once_with(backtest_config)
+        mock_initialize_worker_context.assert_not_called()
 
+    @patch(
+        "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
+    )
     @patch("app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService")
     @patch("app.services.auto_strategy.core.evaluation.evaluation_worker.IndividualEvaluator")
-    def test_initialize_with_shared_data(self, mock_evaluator_cls, mock_backtest_service_cls):
+    def test_initialize_with_shared_data(
+        self,
+        mock_evaluator_cls,
+        mock_backtest_service_cls,
+        mock_initialize_worker,
+    ):
         """共有データ付きで初期化されること"""
         mock_backtest_service = MagicMock()
         mock_backtest_service_cls.return_value = mock_backtest_service
         
         mock_evaluator = MagicMock()
         mock_evaluator_cls.return_value = mock_evaluator
-        
+
         backtest_config = {"symbol": "BTC/USDT:USDT"}
         ga_config = MagicMock()
         shared_data = {"ohlcv": MagicMock()}
-        
-        with patch("app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker") as mock_init_worker:
-            initialize_worker_process(backtest_config, ga_config, shared_data)
-            mock_init_worker.assert_called_once_with(shared_data)
 
+        initialize_worker_process(backtest_config, ga_config, shared_data)
+
+        mock_initialize_worker.assert_called_once_with(shared_data)
+
+    @patch(
+        "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
+    )
     @patch("app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService")
     @patch("app.services.auto_strategy.core.evaluation.evaluation_worker.IndividualEvaluator")
-    def test_initialize_without_shared_data(self, mock_evaluator_cls, mock_backtest_service_cls):
+    def test_initialize_without_shared_data(
+        self,
+        mock_evaluator_cls,
+        mock_backtest_service_cls,
+        mock_initialize_worker,
+    ):
         """共有データなしで初期化されること"""
         mock_backtest_service = MagicMock()
         mock_backtest_service_cls.return_value = mock_backtest_service
@@ -69,10 +94,11 @@ class TestInitializeWorkerProcess:
         
         backtest_config = {"symbol": "BTC/USDT:USDT"}
         ga_config = MagicMock()
-        
+
         initialize_worker_process(backtest_config, ga_config, shared_data=None)
-        
+
         mock_evaluator.set_backtest_config.assert_called_once_with(backtest_config)
+        mock_initialize_worker.assert_not_called()
 
     @patch("app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService")
     def test_initialize_error_propagates(self, mock_backtest_service_cls):

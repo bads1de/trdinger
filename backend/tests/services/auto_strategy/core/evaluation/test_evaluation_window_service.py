@@ -126,6 +126,32 @@ class TestEvaluationWindowService:
         assert trades_df["EntryBar"].tolist() == [0]
         assert adjusted["performance_metrics"]["total_return"] == 10.0
 
+    def test_normalize_ohlc_data_for_stats_preserves_non_ohlcv_columns(self):
+        market_data = pd.DataFrame(
+            {
+                "open": [100.0, 101.0],
+                "high": [102.0, 103.0],
+                "low": [99.0, 100.0],
+                "close": [101.0, 102.0],
+                "open_interest": [500.0, 510.0],
+                "MarketRegime": [1, 2],
+            },
+            index=pd.date_range("2024-01-01 00:00:00", periods=2, freq="D"),
+        )
+
+        normalized = self.service.normalize_ohlc_data_for_stats(market_data)
+
+        assert "Open" in normalized.columns
+        assert "High" in normalized.columns
+        assert "Low" in normalized.columns
+        assert "Close" in normalized.columns
+        assert "Volume" in normalized.columns
+        assert "open_interest" in normalized.columns
+        assert "MarketRegime" in normalized.columns
+        assert "Open_interest" not in normalized.columns
+        assert "Marketregime" not in normalized.columns
+        assert normalized["Volume"].tolist() == [0.0, 0.0]
+
     def test_slice_equity_curve_for_window_uses_initial_capital_for_leading_gaps(self):
         target_index = pd.date_range("2024-01-01 00:00:00", periods=4, freq="D")
         raw_equity_curve = pd.DataFrame(

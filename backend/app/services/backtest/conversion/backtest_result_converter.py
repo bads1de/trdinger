@@ -72,7 +72,7 @@ class BacktestResultConverter:
         """
         try:
             # statsオブジェクトの実体を取得
-            actual_stats = self._resolve_stats_object(stats)
+            actual_stats = resolve_stats_object(stats, warning_logger=logger)
 
             result = {
                 "strategy_name": strategy_name,
@@ -98,10 +98,6 @@ class BacktestResultConverter:
         except Exception as e:
             logger.error(f"バックテスト結果変換エラー: {e}")
             raise BacktestResultConversionError(f"結果の変換に失敗しました: {e}")
-
-    def _resolve_stats_object(self, stats: Any) -> Any:
-        """statsオブジェクトの実体を取得（callableなら呼び出す）"""
-        return resolve_stats_object(stats, warning_logger=logger)
 
     def _normalize_date(self, date_value: Any) -> datetime:
         """日付値を正規化"""

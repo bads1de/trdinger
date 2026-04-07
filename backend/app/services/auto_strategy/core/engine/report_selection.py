@@ -8,14 +8,12 @@ from __future__ import annotations
 
 from typing import Any, Optional, Sequence, Tuple
 
+from .. import objective_registry
 from ..evaluation.evaluation_report import EvaluationReport
 
 TWO_STAGE_RANK_ATTR = "_two_stage_selection_rank"
 TWO_STAGE_SCORE_ATTR = "_two_stage_selection_score"
 _DEFAULT_RERANK_MARGIN = 2
-_MINIMIZE_OBJECTIVES = frozenset(
-    {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
-)
 
 
 def get_two_stage_elite_count(config: Any, population_size: int) -> int:
@@ -88,13 +86,15 @@ def build_report_rank_key_from_primary_fitness(
         return (0.0, 0.0, base_fitness, base_fitness)
 
     objective = report.objectives[0] if report.objectives else ""
-    is_minimize = objective in _MINIMIZE_OBJECTIVES
     scenario_values = [
-        _to_selection_space(float(scenario.fitness[0]), is_minimize)
+        objective_registry.to_selection_space(float(scenario.fitness[0]), objective)
         for scenario in report.scenarios
         if scenario.fitness
     ]
-    aggregated = _to_selection_space(float(report.aggregated_fitness[0]), is_minimize)
+    aggregated = objective_registry.to_selection_space(
+        float(report.aggregated_fitness[0]),
+        objective,
+    )
     worst_case = min(scenario_values) if scenario_values else aggregated
     pass_rate = float(report.pass_rate)
     pass_gate = 1.0 if pass_rate >= float(min_pass_rate) else 0.0
@@ -214,16 +214,6 @@ def _safe_int(value: Any) -> int:
         return int(value)
     except (TypeError, ValueError):
         return 0
-
-
-def _to_selection_space(value: float, is_minimize: bool) -> float:
-    """値を選択空間の値に変換する（最大化問題に統一）。
-    
-    最小化問題の場合は符号を反転させる。
-    """
-    return -value if is_minimize else value
-
-
 def _get_two_stage_metadata_target(individual: Any) -> Any:
     """2段階評価のメタデータを取得する対象を抽出する。
     

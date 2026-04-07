@@ -23,7 +23,7 @@ class TestHybridIndividualEvaluator:
         assert evaluator.predictor is None
         assert evaluator.feature_adapter is not None
 
-    def test_ensure_backtest_defaults_uses_ga_fallback_values(self, evaluator):
+    def test_prepare_run_config_uses_ga_fallback_values(self, evaluator):
         ga_config = Mock(
             target_symbol="ETHUSDT",
             target_timeframe="4h",
@@ -31,45 +31,15 @@ class TestHybridIndividualEvaluator:
             fallback_end_date="2024-01-31",
         )
 
-        result = evaluator._ensure_backtest_defaults({}, ga_config)
+        gene = Mock()
+        gene.id = "gene-123456789"
+
+        result = evaluator._prepare_run_config(gene, {}, ga_config)
 
         assert result["symbol"] == "ETHUSDT"
         assert result["timeframe"] == "4h"
         assert result["start_date"] == "2024-01-01"
         assert result["end_date"] == "2024-01-31"
-
-    def test_calculate_fitness_delegates_to_base(self, evaluator):
-        backtest_result = {
-            "performance_metrics": {
-                "total_trades": 10,
-                "sharpe_ratio": 1.2,
-            }
-        }
-        config = Mock()
-
-        with patch.object(
-            evaluator.__class__.__bases__[0], "_calculate_fitness", return_value=0.5
-        ) as mock_base:
-            result = evaluator._calculate_fitness(backtest_result, config)
-
-        mock_base.assert_called_once()
-        assert result == 0.5
-
-    def test_calculate_multi_objective_fitness_delegates_to_base(self, evaluator):
-        backtest_result = {"performance_metrics": {"total_trades": 10}}
-        config = Mock()
-
-        with patch.object(
-            evaluator.__class__.__bases__[0],
-            "_calculate_multi_objective_fitness",
-            return_value=(0.3, 0.4),
-        ) as mock_base:
-            result = evaluator._calculate_multi_objective_fitness(
-                backtest_result, config
-            )
-
-        mock_base.assert_called_once()
-        assert result == (0.3, 0.4)
 
     def test_inject_external_objects_loads_runtime_predictor(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
@@ -122,3 +92,40 @@ class TestHybridIndividualEvaluator:
 
         params = run_config["strategy_config"]["parameters"]
         assert params["volatility_gate_enabled"] is False
+
+    def test_fetch_ohlcv_data_preserves_non_ohlcv_columns(self, evaluator):
+        backtest_config = {
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-02",
+        }
+
+        raw_df = pd.DataFrame(
+            {
+                "Open": [100.0],
+                "High": [101.0],
+                "Low": [99.0],
+                "Close": [100.5],
+                "Volume": [10.0],
+                "MarketRegime": [1],
+                "StrategyName": ["demo"],
+            }
+        )
+
+        with patch.object(
+            evaluator,
+            "_get_cached_ohlcv_data",
+            return_value=raw_df,
+        ):
+            result = evaluator._fetch_ohlcv_data(backtest_config, Mock())
+
+        assert "open" in result.columns
+        assert "high" in result.columns
+        assert "low" in result.columns
+        assert "close" in result.columns
+        assert "volume" in result.columns
+        assert "MarketRegime" in result.columns
+        assert "StrategyName" in result.columns
+        assert "Marketregime" not in result.columns
+        assert "Strategyname" not in result.columns

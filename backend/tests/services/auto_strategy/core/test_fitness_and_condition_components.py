@@ -5,6 +5,7 @@
 import copy
 import os
 import sys
+from types import SimpleNamespace
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
@@ -14,6 +15,7 @@ import pytest
 from unittest.mock import MagicMock, Mock
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.core import objective_registry
 from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.core.fitness.fitness_calculator import FitnessCalculator
 from app.services.auto_strategy.genes import Condition, ConditionGroup
@@ -177,6 +179,21 @@ class TestFitnessCalculator:
         assert "win_rate" in metrics, "win_rateが含まれるべき"
         assert metrics["total_trades"] == 100, "取引回数は100であるべき"
 
+    def test_meets_constraints_uses_shared_rules(self, ga_config, mock_backtest_result):
+        """制約判定が共有ルールで行われることを確認するテスト"""
+        ga_config.fitness_constraints = {
+            "min_trades": 50,
+            "max_drawdown_limit": 0.15,
+            "min_sharpe_ratio": 1.0,
+        }
+
+        metrics = self.calculator.extract_performance_metrics(mock_backtest_result)
+
+        assert self.calculator.meets_constraints(metrics, ga_config) is True
+
+        ga_config.fitness_constraints["min_trades"] = 101
+        assert self.calculator.meets_constraints(metrics, ga_config) is False
+
     def test_calculate_multi_objective_fitness(self, ga_config, mock_backtest_result):
         """多目的フィットネス計算テスト"""
         ga_config.enable_multi_objective = True
@@ -188,6 +205,21 @@ class TestFitnessCalculator:
 
         assert isinstance(fitness, tuple), "多目的フィットネスはtupleであるべき"
         assert len(fitness) == len(ga_config.objectives), "目的関数の数と一致すべき"
+
+    def test_get_penalty_values_uses_objective_registry(self, monkeypatch):
+        """ペナルティ値の方向判定が registry 経由で行われることを確認する。"""
+        monkeypatch.setattr(
+            objective_registry,
+            "is_minimize_objective",
+            lambda objective: objective == "custom_loss",
+        )
+
+        config = SimpleNamespace(objectives=["custom_loss", "total_return"])
+
+        assert self.calculator.get_penalty_values(config) == (
+            float("inf"),
+            -float("inf"),
+        )
 
     def test_calculate_long_short_balance(self, mock_backtest_result):
         """ロング・ショートバランス計算テスト"""

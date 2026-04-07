@@ -641,6 +641,41 @@ class TestIndividualEvaluator:
         fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
         assert fitness == 0.0  # シャープレシオが最低要件を満たしていない
 
+    def test_is_backtest_result_passing_delegates_to_shared_constraint_checker(self):
+        """制約判定が共有ロジックへ委譲されることを確認するテスト"""
+        backtest_result = {
+            "performance_metrics": {
+                "total_return": 0.1,
+                "sharpe_ratio": 0.2,
+                "max_drawdown": 0.1,
+                "win_rate": 0.6,
+                "total_trades": 5,
+            },
+            "equity_curve": [],
+            "trade_history": [],
+        }
+
+        ga_config = GAConfig()
+        ga_config.fitness_constraints = {
+            "min_sharpe_ratio": 0.5,
+            "min_trades": 3,
+            "max_drawdown_limit": 0.15,
+        }
+
+        with patch.object(
+            self.evaluator._fitness_calculator,
+            "meets_constraints",
+            return_value=True,
+        ) as mock_meets_constraints:
+            result = self.evaluator._is_backtest_result_passing(
+                backtest_result, ga_config
+            )
+
+        assert result is True
+        mock_meets_constraints.assert_called_once()
+        passed_metrics = mock_meets_constraints.call_args.args[0]
+        assert passed_metrics["total_trades"] == 5
+
     def test_calculate_long_short_balance(self):
         """ロング・ショートバランス計算のテスト"""
         # ロングとショートがバランスしている取引履歴
