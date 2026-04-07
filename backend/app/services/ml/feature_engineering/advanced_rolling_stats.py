@@ -11,6 +11,11 @@ import numpy as np
 import pandas as pd
 
 from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
+from .volatility_estimators import (
+    garman_klass_volatility,
+    parkinson_volatility,
+    yang_zhang_volatility,
+)
 
 
 class AdvancedRollingStatsCalculator:
@@ -34,16 +39,6 @@ class AdvancedRollingStatsCalculator:
         log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
         vol = df["volume"]
 
-        # 高度なボラティリティ推定量
-        log_hl = pd.Series(np.log(df["high"] / df["low"]), index=df.index)
-        park_vol = pd.Series(
-            np.sqrt((1.0 / (4.0 * np.log(2.0))) * log_hl**2), index=df.index
-        )
-        log_co = pd.Series(np.log(df["close"] / df["open"]), index=df.index)
-        gk_vol = pd.Series(
-            np.sqrt(0.5 * log_hl**2 - (2 * np.log(2) - 1) * log_co**2), index=df.index
-        )
-
         for w in self.windows:
             # 価格統計
             res[f"Returns_Skewness_{w}"] = rets.rolling(w).skew()
@@ -60,9 +55,15 @@ class AdvancedRollingStatsCalculator:
                 hl_r.rolling(w).mean(),
                 hl_r.rolling(w).std(),
             )
-            res[f"Parkinson_Vol_{w}"] = park_vol.rolling(w).mean()
-            res[f"Garman_Klass_Vol_{w}"] = gk_vol.rolling(w).mean()
-            res[f"Yang_Zhang_Vol_{w}"] = self._yang_zhang_volatility(df, w)
+            res[f"Parkinson_Vol_{w}"] = parkinson_volatility(
+                df["high"], df["low"], window=w
+            )
+            res[f"Garman_Klass_Vol_{w}"] = garman_klass_volatility(
+                df["open"], df["high"], df["low"], df["close"], window=w
+            )
+            res[f"Yang_Zhang_Vol_{w}"] = yang_zhang_volatility(
+                df["open"], df["high"], df["low"], df["close"], window=w
+            )
 
             # 価格位置 & テールリスク
             c_pos = (df["close"] - df["low"]) / (df["high"] - df["low"] + 1e-9)
@@ -93,28 +94,6 @@ class AdvancedRollingStatsCalculator:
         )
 
         return res.fillna(0)
-
-    def _yang_zhang_volatility(self, df: pd.DataFrame, window: int) -> pd.Series:
-        """Yang-Zhang Volatility Estimator"""
-        # 対数価格
-        l_o = pd.Series(np.log(pd.to_numeric(df["open"])), index=df.index)
-        l_h = pd.Series(np.log(pd.to_numeric(df["high"])), index=df.index)
-        l_l = pd.Series(np.log(pd.to_numeric(df["low"])), index=df.index)
-        l_c = pd.Series(np.log(pd.to_numeric(df["close"])), index=df.index)
-
-        # 1. Overnight Jump & 2. Open-to-Close
-        sigma_oj_sq = (l_o - l_c.shift(1)).rolling(window).var()
-        sigma_oc_sq = (l_c - l_o).rolling(window).var()
-
-        # 3. Rogers-Satchell
-        rs_term = (l_h - l_c) * (l_h - l_o) + (l_l - l_c) * (l_l - l_o)
-        sigma_rs_sq = rs_term.rolling(window).mean()
-
-        # Weight k
-        k = 0.34 / (1.34 + (window + 1) / (window - 1))
-        return ((sigma_oj_sq + k * sigma_oc_sq + (1 - k) * sigma_rs_sq) ** 0.5).fillna(
-            0
-        )
 
     def _volume_weighted_skew(
         self, returns: pd.Series, volume: pd.Series, window: int

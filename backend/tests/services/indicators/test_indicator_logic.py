@@ -5,13 +5,13 @@ import pandas as pd
 import pandas_ta_classic as ta
 import pytest
 
-from app.services.indicators.technical_indicators.momentum import MomentumIndicators
-from app.services.indicators.technical_indicators.overlap import OverlapIndicators
-from app.services.indicators.technical_indicators.trend import TrendIndicators
-from app.services.indicators.technical_indicators.volatility import (
+from app.services.indicators.technical_indicators.pandas_ta import (
+    MomentumIndicators,
+    OverlapIndicators,
+    TrendIndicators,
     VolatilityIndicators,
+    VolumeIndicators,
 )
-from app.services.indicators.technical_indicators.volume import VolumeIndicators
 
 
 class TestOverlapIndicatorsLogic:

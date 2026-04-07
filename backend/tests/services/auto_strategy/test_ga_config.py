@@ -1,6 +1,10 @@
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.sub_configs import (
+    EarlyTerminationSettings,
+    EvaluationConfig,
+)
 
 
 class TestGAConfig:
@@ -154,6 +158,33 @@ class TestGAConfig:
                     "unknown_field": 1,
                 }
             )
+
+    def test_early_termination_sync_does_not_mutate_evaluation_config(self):
+        """GAConfig の早期終了設定は evaluation_config へは自動同期しない。"""
+        config = GAConfig(
+            early_termination_settings=EarlyTerminationSettings(
+                enabled=True,
+                max_drawdown=0.2,
+                min_trades=12,
+                min_trade_check_progress=0.45,
+                trade_pace_tolerance=0.6,
+                min_expectancy=-0.02,
+                expectancy_min_trades=6,
+                expectancy_progress=0.7,
+            ),
+            evaluation_config=EvaluationConfig(
+                early_termination_settings=EarlyTerminationSettings(
+                    enabled=False,
+                    max_drawdown=0.9,
+                )
+            ),
+        )
+
+        assert config.enable_early_termination is True
+        assert config.early_termination_max_drawdown == 0.2
+        assert config.evaluation_config is not None
+        assert config.evaluation_config.early_termination_settings.enabled is False
+        assert config.evaluation_config.early_termination_settings.max_drawdown == 0.9
 
     def test_mutation_settings_defaults(self):
         """突然変異関連のデフォルト設定が正しいことを確認"""

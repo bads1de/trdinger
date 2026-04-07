@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.indicators.technical_indicators.overlap import OverlapIndicators
+from app.services.indicators.technical_indicators.pandas_ta import OverlapIndicators
 
 
 class TestIchimokuIndicators:

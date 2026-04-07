@@ -191,15 +191,6 @@ def resolve_early_termination_settings(source: Any) -> EarlyTerminationSettings:
     return EarlyTerminationSettings.from_legacy_source(source)
 
 
-def normalize_early_termination_fields(source: Any) -> dict[str, Any]:
-    """正規化済み設定を legacy フィールドの辞書へ変換する。"""
-    if isinstance(source, EarlyTerminationSettings):
-        settings = source
-    else:
-        settings = resolve_early_termination_settings(source)
-    return settings.to_strategy_params()
-
-
 @dataclass
 class MutationConfig:
     """突然変異関連設定。"""

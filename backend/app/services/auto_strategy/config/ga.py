@@ -35,7 +35,6 @@ from .sub_configs import (
     RobustnessConfig,
     TuningConfig,
     TwoStageSelectionConfig,
-    normalize_early_termination_fields,
     resolve_early_termination_settings,
 )
 
@@ -293,9 +292,7 @@ class GAConfig(BaseConfig):
         self.ml_model_path = cast(Optional[str], normalized["ml_model_path"])
         early_termination_settings = resolve_early_termination_settings(self)
         self.early_termination_settings = early_termination_settings
-        early_termination_fields = normalize_early_termination_fields(
-            early_termination_settings
-        )
+        early_termination_fields = early_termination_settings.to_strategy_params()
         self.enable_early_termination = bool(
             early_termination_fields["enable_early_termination"]
         )
@@ -320,10 +317,6 @@ class GAConfig(BaseConfig):
         self.early_termination_expectancy_progress = float(
             early_termination_fields["early_termination_expectancy_progress"]
         )
-        if self.evaluation_config is not None:
-            self.evaluation_config.early_termination_settings = copy.deepcopy(
-                early_termination_settings
-            )
         self.indicator_universe_mode = normalize_indicator_universe_mode(
             self.indicator_universe_mode
         )
@@ -458,8 +451,6 @@ class GAConfig(BaseConfig):
 
         # BaseConfigのfrom_dict処理を使用
         instance = cast(GAConfig, super().from_dict(working))
-        if "early_termination_settings" not in provided_keys:
-            instance.early_termination_settings = None
         instance._sync_runtime_fields()
         return instance
 

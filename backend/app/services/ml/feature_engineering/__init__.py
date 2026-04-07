@@ -16,6 +16,7 @@ Feature Engineering パッケージ
 - microstructure_features.py: 市場マイクロストラクチャー特徴量
 - multi_timeframe_features.py: 複数時間軸特徴量
 - advanced_rolling_stats.py: 高度な移動統計
+- volatility_estimators.py: 共通ボラティリティ推定量
 - complexity_features.py: 複雑度特徴量
 - time_anomaly_features.py: 時間異常特徴量
 - data_frequency_manager.py: データ頻度管理

@@ -14,9 +14,6 @@ pandas-ta の volatility カテゴリに対応。
 - Ulcer Index
 - RVI (Relative Volatility Index)
 - True Range
-- Yang-Zhang Volatility
-- Parkinson Volatility
-- Garman-Klass Volatility
 - Mass Index
 - Aberration
 - HWC (Holt-Winter Channel)
@@ -27,157 +24,17 @@ pandas-ta の volatility カテゴリに対応。
 import logging
 from typing import Tuple, cast
 
-import numpy as np
 import pandas as pd
-import pandas_ta_classic as ta  # type: ignore
-from numba import njit, prange
+import pandas_ta_classic as ta
 
-from ..data_validation import (
+from ...data_validation import (
     create_nan_series_bundle,
     handle_pandas_ta_errors,
     run_multi_series_indicator,
     run_series_indicator,
 )
 
-
-@njit(parallel=True, cache=True)
-def _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length):
-    """
-    Yang-Zhang ボラティリティを計算する Numba 加速ループ。
-
-    Args:
-        open_arr: 始値の配列
-        high_arr: 高値の配列
-        low_arr: 安値の配列
-        close_arr: 終値の配列
-        length: 計算期間
-
-    Returns:
-        Yang-Zhang ボラティリティの配列
-    """
-    n = len(open_arr)
-    result = np.full(n, np.nan, dtype=np.float64)
-    if n < length + 1:
-        return result
-
-    # Standard Yang-Zhang uses rolling variance of log returns
-    # We can pre-calculate the log returns
-    log_oc = np.zeros(n)
-    log_co = np.zeros(n)
-    rs_term = np.zeros(n)
-
-    for i in prange(1, n):
-        log_oc[i] = np.log(open_arr[i] / close_arr[i - 1])
-        log_co[i] = np.log(close_arr[i] / open_arr[i])
-        rs_term[i] = (
-            np.log(high_arr[i] / close_arr[i]) * np.log(high_arr[i] / open_arr[i])
-        ) + (np.log(low_arr[i] / close_arr[i]) * np.log(low_arr[i] / open_arr[i]))
-
-    k = 0.34 / (1.34 + (length + 1) / (length - 1))
-
-    # Rolling calculations
-    for i in prange(length, n):
-        # Rolling variance (unbiased) of log_oc and log_co
-        # Rolling mean of rs_term
-        s_oc1, s_oc2 = 0.0, 0.0
-        s_co1, s_co2 = 0.0, 0.0
-        s_rs = 0.0
-
-        for j in range(i - length + 1, i + 1):
-            v_oc = log_oc[j]
-            v_co = log_co[j]
-            s_oc1 += v_oc
-            s_oc2 += v_oc * v_oc
-            s_co1 += v_co
-            s_co2 += v_co * v_co
-            s_rs += rs_term[j]
-
-        v_oc_final = (s_oc2 - (s_oc1 * s_oc1) / length) / (length - 1)
-        v_co_final = (s_co2 - (s_co1 * s_co1) / length) / (length - 1)
-        m_rs = s_rs / length
-
-        yz_variance = v_oc_final + k * v_co_final + (1.0 - k) * m_rs
-        if yz_variance > 0:
-            result[i] = np.sqrt(yz_variance)
-        else:
-            result[i] = 0.0
-
-    return result
-
-
 logger = logging.getLogger(__name__)
-
-
-@njit(parallel=True, cache=True)
-def _njit_parkinson_loop(high_arr, low_arr, length):
-    """
-    Parkinson ボラティリティを計算する Numba 加速ループ。
-
-    Args:
-        high_arr: 高値の配列
-        low_arr: 安値の配列
-        length: 計算期間
-
-    Returns:
-        Parkinson ボラティリティの配列
-    """
-    n = len(high_arr)
-    result = np.full(n, np.nan, dtype=np.float64)
-    if n < length:
-        return result
-
-    const = 1.0 / (4.0 * np.log(2.0))
-    log_hl_sq = np.zeros(n)
-    for i in prange(n):
-        if low_arr[i] > 0:
-            log_hl_sq[i] = np.log(high_arr[i] / low_arr[i]) ** 2
-
-    for i in prange(length - 1, n):
-        s = 0.0
-        for j in range(i - length + 1, i + 1):
-            s += log_hl_sq[j]
-
-        result[i] = np.sqrt(const * (s / length))
-
-    return result
-
-
-@njit(parallel=True, cache=True)
-def _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length):
-    """
-    Garman-Klass ボラティリティを計算する Numba 加速ループ。
-
-    Args:
-        open_arr: 始値の配列
-        high_arr: 高値の配列
-        low_arr: 安値の配列
-        close_arr: 終値の配列
-        length: 計算期間
-
-    Returns:
-        Garman-Klass ボラティリティの配列
-    """
-    n = len(open_arr)
-    result = np.full(n, np.nan, dtype=np.float64)
-    if n < length:
-        return result
-
-    const = 2.0 * np.log(2.0) - 1.0
-    inst_var = np.zeros(n)
-    for i in prange(n):
-        if low_arr[i] > 0 and open_arr[i] > 0:
-            v1 = 0.5 * (np.log(high_arr[i] / low_arr[i]) ** 2)
-            v2 = const * (np.log(close_arr[i] / open_arr[i]) ** 2)
-            val = v1 - v2
-            inst_var[i] = val if val > 0 else 0.0
-
-    for i in prange(length - 1, n):
-        s = 0.0
-        for j in range(i - length + 1, i + 1):
-            s += inst_var[j]
-        result[i] = np.sqrt(s / length)
-
-    return result
 
 
 class VolatilityIndicators:
@@ -457,87 +314,6 @@ class VolatilityIndicators:
             {"high": high, "low": low, "close": close},
             None,
             lambda: ta.true_range(high=high, low=low, close=close, drift=drift),
-        )
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def yang_zhang(
-        open_: pd.Series,
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        length: int = 20,
-    ) -> pd.Series:
-        """
-        Yang-Zhang Volatility Estimator - Numba Optimized Version
-        """
-        result = run_multi_series_indicator(
-            {"open_": open_, "high": high, "low": low, "close": close},
-            length,
-            lambda: pd.Series(
-                _njit_yang_zhang_loop(
-                    open_.values.astype(np.float64),
-                    high.values.astype(np.float64),
-                    low.values.astype(np.float64),
-                    close.values.astype(np.float64),
-                    length,
-                ),
-                index=close.index,
-                name=f"YZVOL_{length}",
-            ),
-        )
-        return result
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def parkinson(
-        high: pd.Series,
-        low: pd.Series,
-        length: int = 20,
-    ) -> pd.Series:
-        """
-        Parkinson Volatility Estimator - Numba Optimized Version
-        """
-        return run_multi_series_indicator(
-            {"high": high, "low": low},
-            length,
-            lambda: pd.Series(
-                _njit_parkinson_loop(
-                    high.values.astype(np.float64),
-                    low.values.astype(np.float64),
-                    length,
-                ),
-                index=high.index,
-                name=f"PARKVOL_{length}",
-            ),
-        )
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def garman_klass(
-        open_: pd.Series,
-        high: pd.Series,
-        low: pd.Series,
-        close: pd.Series,
-        length: int = 20,
-    ) -> pd.Series:
-        """
-        Garman-Klass Volatility Estimator - Numba Optimized Version
-        """
-        return run_multi_series_indicator(
-            {"open_": open_, "high": high, "low": low, "close": close},
-            length,
-            lambda: pd.Series(
-                _njit_garman_klass_loop(
-                    open_.values.astype(np.float64),
-                    high.values.astype(np.float64),
-                    low.values.astype(np.float64),
-                    close.values.astype(np.float64),
-                    length,
-                ),
-                index=close.index,
-                name=f"GKVOL_{length}",
-            ),
         )
 
     @staticmethod

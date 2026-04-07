@@ -216,6 +216,100 @@ def create_nan_series_map(
     }
 
 
+def nan_result_for(
+    data: Any,
+    count: int,
+    *,
+    to_numpy: bool = False,
+    fallback_factory: Optional[Callable[[], Any]] = None,
+) -> tuple[Any, ...]:
+    """入力に応じて NaN の tuple 結果を生成する。"""
+    try:
+        if isinstance(data, tuple):
+            if to_numpy:
+                return tuple(np.asarray(item) for item in data)
+            return data
+
+        if isinstance(data, dict):
+            reference = next(iter(data.values()))
+        elif isinstance(data, pd.DataFrame):
+            if data.empty:
+                raise ValueError("dataframe is empty")
+            reference = data.iloc[:, 0]
+        elif isinstance(data, pd.Series):
+            reference = data
+        else:
+            raise TypeError(f"Unsupported data type: {type(data)}")
+
+        result = create_nan_series_bundle(reference, count)
+        if to_numpy:
+            return tuple(series.to_numpy() for series in result)
+        return result
+    except Exception:
+        if fallback_factory is not None:
+            return fallback_factory()
+        raise
+
+
+def extract_tuple_result(
+    result: Any,
+    count: int,
+    *,
+    by_index: bool = False,
+    column_names: Optional[list[str]] = None,
+    to_numpy: bool = False,
+    fallback_factory: Optional[Callable[[], Any]] = None,
+) -> tuple[Any, ...]:
+    """DataFrame や tuple の結果を tuple に正規化する。"""
+    try:
+        if isinstance(result, tuple):
+            if to_numpy:
+                return tuple(np.asarray(item) for item in result)
+            return result
+
+        if isinstance(result, pd.DataFrame):
+            if column_names is not None:
+                missing = [name for name in column_names if name not in result.columns]
+                if missing:
+                    raise KeyError(f"Missing columns: {missing}")
+                selected_columns = list(column_names)
+            else:
+                if count <= 0:
+                    raise ValueError("count must be positive")
+                if by_index:
+                    if len(result.columns) < count:
+                        raise IndexError(
+                            f"DataFrame has {len(result.columns)} columns but count={count}"
+                        )
+                    selected_columns = list(result.columns[:count])
+                elif len(result.columns) >= count:
+                    selected_columns = list(result.columns[:count])
+                else:
+                    raise IndexError(
+                        f"DataFrame has {len(result.columns)} columns but count={count}"
+                    )
+
+            extracted = tuple(result[col] for col in selected_columns)
+            if to_numpy:
+                return tuple(series.to_numpy() for series in extracted)
+            return extracted
+
+        if isinstance(result, pd.Series):
+            extracted = (result,)
+            if to_numpy:
+                return (result.to_numpy(),)
+            return extracted
+
+        if fallback_factory is not None:
+            return fallback_factory()
+
+        raise TypeError(f"Unsupported result type: {type(result)}")
+    except Exception:
+        if fallback_factory is not None:
+            return fallback_factory()
+        raise
+
+
 def get_param_value(params: Dict[str, Any], keys: list, default: Any) -> Any:
     """パラメータ名がlengthまたはwindowの場合の値取得をサポート"""
     for key in keys:

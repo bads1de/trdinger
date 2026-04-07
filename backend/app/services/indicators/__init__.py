@@ -14,11 +14,11 @@ from .data_validation import (
     validate_series_params,
 )
 from .indicator_orchestrator import TechnicalIndicatorService
-from .technical_indicators.momentum import MomentumIndicators
-from .technical_indicators.original import OriginalIndicators
-from .technical_indicators.trend import TrendIndicators
-from .technical_indicators.volatility import VolatilityIndicators
-from .technical_indicators.volume import VolumeIndicators
+from .technical_indicators import MomentumIndicators
+from .technical_indicators import OriginalIndicators
+from .technical_indicators import TrendIndicators
+from .technical_indicators import VolatilityIndicators
+from .technical_indicators import VolumeIndicators
 
 # 公開API
 __all__ = [

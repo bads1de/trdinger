@@ -13,9 +13,12 @@ import numpy as np
 import pandas as pd
 
 from ....utils.error_handler import safe_ml_operation
-from ...indicators.technical_indicators.momentum import MomentumIndicators
-from ...indicators.technical_indicators.trend import TrendIndicators
+from ...indicators.technical_indicators.pandas_ta import (
+    MomentumIndicators,
+    TrendIndicators,
+)
 from .base_feature_calculator import BaseFeatureCalculator
+from .volatility_estimators import parkinson_volatility
 
 logger = logging.getLogger(__name__)
 
@@ -78,9 +81,8 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
         """ボラティリティ特徴量を計算"""
-        hl_ratio = pd.Series(np.log(df["high"] / df["low"]), index=df.index)
-        df["Parkinson_Vol_20"] = (
-            hl_ratio.rolling(20).var() * (1 / (4 * np.log(2)))
+        df["Parkinson_Vol_20"] = parkinson_volatility(
+            df["high"], df["low"], window=20
         ).fillna(0.0)
         return df
 

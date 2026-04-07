@@ -58,7 +58,7 @@ import numpy as np
 import pandas as pd
 import pandas_ta_classic as ta
 
-from ..data_validation import (
+from ...data_validation import (
     create_nan_series_bundle,
     create_nan_series_like,
     handle_pandas_ta_errors,
@@ -574,7 +574,7 @@ class MomentumIndicators:
     ) -> pd.Series:
         """変化率"""
         length = period
-        # dataが提供されない場合はcloseを使用
+
         if data is None and close is not None:
             data = close
         elif data is None:
@@ -998,7 +998,7 @@ class MomentumIndicators:
         mamode: str = "cma",
     ) -> pd.Series:
         """Inertia"""
-        # Inertia requires RVI params if high/low provided, otherwise just close/length check
+
         return run_series_indicator(
             close,
             length,

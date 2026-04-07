@@ -365,7 +365,9 @@ class TestIndicatorCalculation:
 
     def test_sma_calculation_accuracy(self):
         """SMA計算の正確性テスト"""
-        from app.services.indicators.technical_indicators.overlap import OverlapIndicators
+        from app.services.indicators.technical_indicators.pandas_ta import (
+            OverlapIndicators,
+        )
 
         prices = pd.Series([100.0, 102.0, 101.0, 103.0, 105.0])
         sma = OverlapIndicators.sma(prices, length=3)
@@ -375,7 +377,9 @@ class TestIndicatorCalculation:
 
     def test_ema_calculation_accuracy(self):
         """EMA計算の正確性テスト"""
-        from app.services.indicators.technical_indicators.overlap import OverlapIndicators
+        from app.services.indicators.technical_indicators.pandas_ta import (
+            OverlapIndicators,
+        )
 
         prices = pd.Series([100.0, 102.0, 101.0, 103.0, 105.0])
         ema = OverlapIndicators.ema(prices, length=3)
@@ -386,7 +390,9 @@ class TestIndicatorCalculation:
 
     def test_rsi_calculation_accuracy(self):
         """RSI計算の正確性テスト"""
-        from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+        from app.services.indicators.technical_indicators.pandas_ta import (
+            MomentumIndicators,
+        )
 
         # 全て上昇
         prices = pd.Series([100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0])
@@ -398,8 +404,10 @@ class TestIndicatorCalculation:
 
     def test_bollinger_bands_calculation(self):
         """ボリンジャーバンド計算テスト"""
-        from app.services.indicators.technical_indicators.volatility import VolatilityIndicators
-        from app.services.indicators.technical_indicators.overlap import OverlapIndicators
+        from app.services.indicators.technical_indicators.pandas_ta import (
+            OverlapIndicators,
+            VolatilityIndicators,
+        )
 
         prices = pd.Series([100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0, 108.0, 107.0, 109.0])
         upper, middle, lower = VolatilityIndicators.bbands(prices, length=5, std=2.0)
@@ -415,7 +423,9 @@ class TestIndicatorCalculation:
 
     def test_atr_calculation(self):
         """ATR計算テスト"""
-        from app.services.indicators.technical_indicators.volatility import VolatilityIndicators
+        from app.services.indicators.technical_indicators.pandas_ta import (
+            VolatilityIndicators,
+        )
 
         # より多くのデータを使用
         data = pd.DataFrame({
@@ -437,8 +447,10 @@ class TestIndicatorCalculation:
 
     def test_macd_calculation(self):
         """MACD計算テスト"""
-        from app.services.indicators.technical_indicators.momentum import MomentumIndicators
-        from app.services.indicators.technical_indicators.overlap import OverlapIndicators
+        from app.services.indicators.technical_indicators.pandas_ta import (
+            MomentumIndicators,
+            OverlapIndicators,
+        )
 
         prices = pd.Series([100.0 + i + np.random.randn() * 2 for i in range(50)])
         macd_line, signal, histogram = MomentumIndicators.macd(prices, fast=12, slow=26, signal=9)
@@ -457,7 +469,9 @@ class TestIndicatorCalculation:
 
     def test_stochastic_calculation(self):
         """ストキャスティクス計算テスト"""
-        from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+        from app.services.indicators.technical_indicators.pandas_ta import (
+            MomentumIndicators,
+        )
 
         data = pd.DataFrame({
             "high": [float(i) for i in range(100, 125)],

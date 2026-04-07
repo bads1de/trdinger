@@ -1,9 +1,7 @@
-import pytest
 import pandas as pd
 import numpy as np
 from app.services.indicators.technical_indicators.advanced_features import AdvancedFeatures
-from app.services.indicators.technical_indicators.volatility import VolatilityIndicators
-from app.services.indicators.technical_indicators.volume import VolumeIndicators
+from app.services.indicators.technical_indicators.pandas_ta import VolumeIndicators
 
 def test_frac_diff_ffd(sample_df):
     close = sample_df["close"]
@@ -45,24 +43,6 @@ def test_trend_quality(sample_df):
         sample_df["open_interest"]
     )
     assert isinstance(tq, pd.Series)
-
-def test_parkinson_volatility(sample_df):
-    vol = VolatilityIndicators.parkinson(
-        sample_df["high"],
-        sample_df["low"]
-    )
-    assert isinstance(vol, pd.Series)
-    assert not vol.isna().all()
-
-def test_garman_klass_volatility(sample_df):
-    vol = VolatilityIndicators.garman_klass(
-        sample_df["open"],
-        sample_df["high"],
-        sample_df["low"],
-        sample_df["close"]
-    )
-    assert isinstance(vol, pd.Series)
-    assert not vol.isna().all()
 
 def test_vwap_z_score(sample_df):
     z = VolumeIndicators.vwap_z_score(
@@ -144,7 +124,4 @@ def test_whale_divergence_fill_value():
     assert isinstance(divergence, pd.Series)
     assert divergence.iloc[0] == 2.0
     assert divergence.iloc[1] == 1.0
-
-
-
 

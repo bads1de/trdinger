@@ -6,7 +6,7 @@ pandas標準機能を活用し、冗長なカスタム実装を削除。
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from app.utils.datetime_utils import parse_timestamp_safe as _parse_timestamp_safe

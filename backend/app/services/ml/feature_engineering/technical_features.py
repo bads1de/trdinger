@@ -14,11 +14,18 @@ import pandas as pd
 
 from ....utils.error_handler import safe_ml_operation
 from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
-from ...indicators.technical_indicators.momentum import MomentumIndicators
-from ...indicators.technical_indicators.trend import TrendIndicators
-from ...indicators.technical_indicators.volatility import VolatilityIndicators
-from ...indicators.technical_indicators.volume import VolumeIndicators
+from ...indicators.technical_indicators.pandas_ta import (
+    MomentumIndicators,
+    TrendIndicators,
+    VolatilityIndicators,
+    VolumeIndicators,
+)
 from .base_feature_calculator import BaseFeatureCalculator
+from .volatility_estimators import (
+    garman_klass_volatility,
+    parkinson_volatility,
+    yang_zhang_volatility,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -128,25 +135,23 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             # Yang-Zhang, Parkinson, Garman-Klass
             if "open" in df.columns:
-                features["Yang_Zhang_Vol_20"] = VolatilityIndicators.yang_zhang(
+                features["Yang_Zhang_Vol_20"] = yang_zhang_volatility(
                     open_=df["open"],
                     high=df["high"],
                     low=df["low"],
                     close=df["close"],
-                    length=vol_p,
+                    window=vol_p,
                 ).fillna(0.0)
-                features[f"Garman_Klass_Vol_{vol_p}"] = (
-                    VolatilityIndicators.garman_klass(
-                        open_=df["open"],
-                        high=df["high"],
-                        low=df["low"],
-                        close=df["close"],
-                        length=vol_p,
-                    ).fillna(0.0)
-                )
+                features[f"Garman_Klass_Vol_{vol_p}"] = garman_klass_volatility(
+                    open_=df["open"],
+                    high=df["high"],
+                    low=df["low"],
+                    close=df["close"],
+                    window=vol_p,
+                ).fillna(0.0)
 
-            features[f"Parkinson_Vol_{vol_p}"] = VolatilityIndicators.parkinson(
-                high=df["high"], low=df["low"], length=vol_p
+            features[f"Parkinson_Vol_{vol_p}"] = parkinson_volatility(
+                high=df["high"], low=df["low"], window=vol_p
             ).fillna(0.0)
 
             return features

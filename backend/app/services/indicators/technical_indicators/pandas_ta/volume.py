@@ -36,7 +36,7 @@ import pandas as pd
 import pandas_ta_classic as ta
 from numba import njit
 
-from ..data_validation import (
+from ...data_validation import (
     create_nan_series_bundle,
     handle_pandas_ta_errors,
     normalize_non_finite,

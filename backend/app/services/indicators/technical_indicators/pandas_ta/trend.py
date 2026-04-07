@@ -34,7 +34,7 @@ import pandas as pd
 import pandas_ta_classic as ta  # type: ignore
 from numba import njit
 
-from ..data_validation import (
+from ...data_validation import (
     create_nan_series_bundle,
     create_nan_series_like,
     handle_pandas_ta_errors,

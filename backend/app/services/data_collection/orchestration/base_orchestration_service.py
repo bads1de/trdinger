@@ -5,7 +5,6 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.datetime_utils import parse_datetime_optional
 from app.utils.response import api_response, error_response
 from database.connection import get_db
 
@@ -20,21 +19,26 @@ class BaseDataCollectionOrchestrationService:
 
     def _parse_datetime(self, date_str: Optional[str]) -> Optional[datetime]:
         """
-        文字列の日付をdatetimeオブジェクトに変換する
+        文字列の日付をdatetimeオブジェクトに変換する。
 
         Args:
-            date_str: 日付文字列（ISO形式、例: "2023-01-01T00:00:00"）
+            date_str: 日付文字列（ISO 8601 形式、例: "2023-01-01T00:00:00"）
 
         Returns:
             datetimeオブジェクト、またはNone
         """
         if not date_str:
             return None
-        parsed = parse_datetime_optional(date_str)
-        if parsed is None:
+
+        normalized = date_str.strip()
+        if not normalized:
+            return None
+
+        try:
+            return datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+        except ValueError:
             logger.error(f"日付文字列のパースに失敗しました: {date_str}")
             return None
-        return parsed
 
     @contextmanager
     def _get_db_session(self, db_session: Optional[Session] = None):

@@ -16,6 +16,8 @@ INDICATORS_DIR = (
     / "technical_indicators"
 )
 
+PANDAS_TA_DIR = INDICATORS_DIR / "pandas_ta"
+
 CLASS_MODULES = [
     ("momentum.py", "MomentumIndicators", set()),
     ("volatility.py", "VolatilityIndicators", set()),
@@ -65,7 +67,8 @@ def test_public_indicator_methods_use_shared_error_decorator(
     class_name: str,
     exempt_methods: set[str],
 ):
-    source = (INDICATORS_DIR / filename).read_text(encoding="utf-8")
+    module_dir = PANDAS_TA_DIR if filename != "advanced_features.py" else INDICATORS_DIR
+    source = (module_dir / filename).read_text(encoding="utf-8")
 
     for method_name, decorators in _public_methods_with_decorators(source, class_name):
         if method_name in exempt_methods:

@@ -217,9 +217,19 @@ class DynamicIndicatorDiscovery:
         from .. import technical_indicators
 
         # technical_indicators パッケージ内の全モジュールをスキャン
+        # pandas_ta サブパッケージへ移した互換ラッパーは除外する。
+        skipped_wrapper_modules = {
+            "momentum",
+            "overlap",
+            "trend",
+            "volatility",
+            "volume",
+        }
         for loader, module_name, is_pkg in pkgutil.iter_modules(
             technical_indicators.__path__
         ):
+            if module_name in skipped_wrapper_modules:
+                continue
             try:
                 # 相対インポートでモジュールをロード
                 full_module_name = f"..technical_indicators.{module_name}"

@@ -119,6 +119,9 @@ def test_advanced_technical_indicators(sample_ohlcv_data):
         "AD",
         "ADOSC",
         "NATR",
+        "Yang_Zhang_Vol_20",
+        "Garman_Klass_Vol_20",
+        "Parkinson_Vol_20",
     ]
 
     for feature in expected_features:

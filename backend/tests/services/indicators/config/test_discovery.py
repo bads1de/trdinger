@@ -199,8 +199,8 @@ class TestDiscoverAll:
         """custom trend 系の同名指標が pandas_ta より優先されること"""
         configs = DynamicIndicatorDiscovery.discover_all()
         expected_modules = {
-            "AROON": "app.services.indicators.technical_indicators.trend",
-            "VORTEX": "app.services.indicators.technical_indicators.trend",
+            "AROON": "app.services.indicators.technical_indicators.pandas_ta.trend",
+            "VORTEX": "app.services.indicators.technical_indicators.pandas_ta.trend",
         }
 
         for indicator_name, expected_module in expected_modules.items():

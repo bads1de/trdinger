@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.indicators.technical_indicators.momentum import MomentumIndicators
+from app.services.indicators.technical_indicators.pandas_ta import MomentumIndicators
 
 
 class TestStochasticRSI:
@@ -156,7 +156,6 @@ class TestStochasticRSI:
             d_std = valid_d.std()
             # D線の標準偏差がK線より小さいまたは同程度であることを確認
             assert d_std <= k_std * 1.2  # 20%の許容範囲
-
 
 
 
