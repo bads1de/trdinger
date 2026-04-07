@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -13,6 +13,37 @@ from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
 logger = logging.getLogger(__name__)
+
+
+def _collect_gene_vectors(
+    population: List[Any],
+    gene_serializer: GeneSerializer,
+    vectorize_gene: Callable[[StrategyGene], np.ndarray],
+    on_error: Optional[Callable[[Exception], None]] = None,
+) -> tuple[list[np.ndarray], list[int]]:
+    """
+    個体群から有効な遺伝子ベクトルを収集する。
+
+    遺伝子復元とベクトル化の共通処理を集約し、呼び出し側は
+    キャッシュや後続処理に専念できるようにする。
+    """
+    vectors: list[np.ndarray] = []
+    valid_indices: list[int] = []
+
+    for i, individual in enumerate(population):
+        try:
+            gene = gene_serializer.from_list(individual, StrategyGene)
+            if gene is None:
+                continue
+
+            vector = vectorize_gene(gene)
+            vectors.append(vector)
+            valid_indices.append(i)
+        except Exception as e:
+            if on_error is not None:
+                on_error(e)
+
+    return vectors, valid_indices
 
 
 def silhouette_based_sharing(
@@ -27,23 +58,19 @@ def silhouette_based_sharing(
         if len(population) <= 1:
             return population
 
-        vectors = []
-        valid_indices = []
-        for i, individual in enumerate(population):
-            try:
-                gene = gene_serializer.from_list(individual, StrategyGene)
-                if gene is not None:
-                    vector = vectorize_gene(gene)
-                    vectors.append(vector)
-                    valid_indices.append(i)
-            except Exception:
-                continue
+        vectors, valid_indices = _collect_gene_vectors(
+            population,
+            gene_serializer=gene_serializer,
+            vectorize_gene=vectorize_gene,
+        )
 
-        if len(vectors) <= 1:
+        if len(vectors) < 3:
             return population
 
         vectors_array = np.array(vectors)
-        n_clusters = min(len(vectors_array), 3)
+        n_clusters = min(len(vectors_array) - 1, 3)
+        if n_clusters < 2:
+            return population
 
         kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
         labels = kmeans.fit_predict(vectors_array)

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
+from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.services.generated_strategy_service import (
     GeneratedStrategyService,
 )
@@ -167,6 +168,27 @@ class TestGeneratedStrategyService:
         gene_data = {"indicators": []}
         name = service._extract_strategy_name(gene_data)
         assert name == "GA生成戦略"
+
+    def test_extract_parameters_includes_split_sub_genes(self, service):
+        gene_data = {
+            "indicators": [],
+            "risk_management": {},
+            "long_entry_conditions": [],
+            "short_entry_conditions": [],
+            "tpsl_gene": {"name": "shared"},
+            "long_tpsl_gene": {"name": "long"},
+            "short_tpsl_gene": {"name": "short"},
+            "position_sizing_gene": {"name": "position"},
+            "entry_gene": {"name": "entry"},
+            "long_entry_gene": {"name": "long_entry"},
+            "short_entry_gene": {"name": "short_entry"},
+        }
+
+        parameters = service._extract_parameters(gene_data)
+
+        assert set(StrategyGene.sub_gene_field_names()).issubset(parameters.keys())
+        assert parameters["tpsl_gene"] == {"name": "shared"}
+        assert parameters["short_entry_gene"] == {"name": "short_entry"}
 
     def test_generate_strategy_description_empty(self, service):
         # インジケータがない場合の説明文

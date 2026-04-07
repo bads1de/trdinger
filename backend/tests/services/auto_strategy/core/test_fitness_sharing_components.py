@@ -12,6 +12,7 @@ from app.services.auto_strategy.core.fitness.fitness_sharing_niche import (
 from app.services.auto_strategy.core.fitness.fitness_sharing_similarity import (
     calculate_similarity,
 )
+from app.services.auto_strategy.core.fitness import fitness_sharing_silhouette
 from app.services.auto_strategy.core.fitness.fitness_sharing_vectorizer import (
     vectorize_gene,
 )
@@ -128,6 +129,112 @@ class TestFitnessSharingComponents:
         identical_gene = copy.deepcopy(gene)
 
         assert calculate_similarity(gene, identical_gene) == pytest.approx(1.0)
+
+    def test_silhouette_based_sharing_returns_early_for_two_individuals(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        called = {"kmeans": False}
+
+        class FakeKMeans:
+            def __init__(self, n_clusters: int, random_state: int, n_init: Any):
+                called["kmeans"] = True
+
+            def fit_predict(self, vectors: np.ndarray) -> np.ndarray:
+                return np.array([0, 1])
+
+        monkeypatch.setattr(fitness_sharing_silhouette, "KMeans", FakeKMeans)
+        monkeypatch.setattr(
+            fitness_sharing_silhouette,
+            "silhouette_samples",
+            lambda vectors, labels: np.array([0.1, 0.2]),
+        )
+
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+        population = [
+            StrategyGene(
+                id="gene1",
+                indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            ),
+            StrategyGene(
+                id="gene2",
+                indicators=[IndicatorGene(type="EMA", parameters={"period": 20})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            ),
+        ]
+
+        result = sharing.silhouette_based_sharing(population)
+
+        assert result == population
+        assert called["kmeans"] is False
+
+    def test_silhouette_based_sharing_caps_clusters_for_three_individuals(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: dict[str, int] = {}
+
+        class FakeKMeans:
+            def __init__(self, n_clusters: int, random_state: int, n_init: Any):
+                captured["n_clusters"] = n_clusters
+
+            def fit_predict(self, vectors: np.ndarray) -> np.ndarray:
+                return np.array([0, 0, 1])
+
+        monkeypatch.setattr(fitness_sharing_silhouette, "KMeans", FakeKMeans)
+        monkeypatch.setattr(
+            fitness_sharing_silhouette,
+            "silhouette_samples",
+            lambda vectors, labels: np.array([0.1, 0.2, 0.3]),
+        )
+
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+        population = [
+            StrategyGene(
+                id="gene1",
+                indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            ),
+            StrategyGene(
+                id="gene2",
+                indicators=[IndicatorGene(type="EMA", parameters={"period": 20})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            ),
+            StrategyGene(
+                id="gene3",
+                indicators=[IndicatorGene(type="RSI", parameters={"period": 14})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            ),
+        ]
+
+        result = sharing.silhouette_based_sharing(population)
+
+        assert result == population
+        assert captured["n_clusters"] == 2
 
     def test_apply_fitness_sharing_does_not_attach_feature_vector(
         self, monkeypatch: pytest.MonkeyPatch

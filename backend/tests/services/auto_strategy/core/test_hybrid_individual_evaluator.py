@@ -93,6 +93,26 @@ class TestHybridIndividualEvaluator:
         params = run_config["strategy_config"]["parameters"]
         assert params["volatility_gate_enabled"] is False
 
+    def test_inject_external_objects_falls_back_to_runtime_predictor(self, evaluator):
+        from app.services.auto_strategy.config.ga import GAConfig
+
+        runtime_predictor = Mock()
+        runtime_predictor.is_trained.return_value = True
+        evaluator.predictor = runtime_predictor
+
+        run_config = {"strategy_config": {"parameters": {}}}
+        config = GAConfig(
+            volatility_gate_enabled=True,
+            volatility_model_path=None,
+        )
+
+        evaluator._inject_external_objects(run_config, {}, config)
+
+        params = run_config["strategy_config"]["parameters"]
+        assert params["volatility_gate_enabled"] is True
+        assert params["ml_filter_enabled"] is True
+        assert params["ml_predictor"] is runtime_predictor
+
     def test_fetch_ohlcv_data_preserves_non_ohlcv_columns(self, evaluator):
         backtest_config = {
             "symbol": "BTC/USDT:USDT",

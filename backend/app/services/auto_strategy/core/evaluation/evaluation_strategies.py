@@ -7,7 +7,7 @@ OOS (Out-of-Sample) 検証、Walk-Forward 分析などの
 
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import TYPE_CHECKING, Any, Dict, List, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 import pandas as pd
 
@@ -136,6 +136,27 @@ class EvaluationStrategy:
     def _get_objectives(self, config: GAConfig) -> list[str]:
         objectives = getattr(config, "objectives", None)
         return list(objectives) if objectives else ["weighted_score"]
+
+    @staticmethod
+    def _resolve_backtest_date_range(
+        base_backtest_config: Dict[str, Any],
+    ) -> Optional[Tuple[pd.Timestamp, pd.Timestamp]]:
+        """バックテスト期間を検証して Timestamp のペアを返す。"""
+        start_val = base_backtest_config.get("start_date")
+        end_val = base_backtest_config.get("end_date")
+        if start_val is None or end_val is None:
+            return None
+
+        start_date = pd.to_datetime(start_val)
+        end_date = pd.to_datetime(end_val)
+        if not isinstance(start_date, pd.Timestamp) or not isinstance(
+            end_date, pd.Timestamp
+        ):
+            return None
+        if start_date >= end_date:
+            return None
+
+        return start_date, end_date
 
     def _build_robustness_scenarios(
         self,
@@ -411,19 +432,10 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """Out-of-Sample (OOS) 検証を含む評価を実行する。"""
         try:
-            start_val = base_backtest_config.get("start_date")
-            end_val = base_backtest_config.get("end_date")
-
-            if start_val is None or end_val is None:
+            date_range = self._resolve_backtest_date_range(base_backtest_config)
+            if date_range is None:
                 return self._evaluate_single_report(gene, base_backtest_config, config)
-
-            start_date = pd.to_datetime(start_val)
-            end_date = pd.to_datetime(end_val)
-
-            if not isinstance(start_date, pd.Timestamp) or not isinstance(
-                end_date, pd.Timestamp
-            ):
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+            start_date, end_date = date_range
 
             cache_key = f"{start_date}_{end_date}_{oos_ratio}"
             if cache_key in self._date_cache:
@@ -506,21 +518,11 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """Walk-Forward Analysis による評価を並列実行する。"""
         try:
-            start_val = base_backtest_config.get("start_date")
-            end_val = base_backtest_config.get("end_date")
-
-            if start_val is None or end_val is None:
-                logger.warning("WFA: 期間が不明なため通常評価にフォールバック")
+            date_range = self._resolve_backtest_date_range(base_backtest_config)
+            if date_range is None:
+                logger.warning("WFA: 期間が不明または無効なため通常評価にフォールバック")
                 return self._evaluate_single_report(gene, base_backtest_config, config)
-
-            start_date = pd.to_datetime(start_val)
-            end_date = pd.to_datetime(end_val)
-
-            if not isinstance(start_date, pd.Timestamp) or not isinstance(
-                end_date, pd.Timestamp
-            ):
-                logger.warning("WFA: 期間の解析に失敗したため通常評価にフォールバック")
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+            start_date, end_date = date_range
 
             n_folds = getattr(config, "wfa_n_folds", 5)
             train_ratio = getattr(config, "wfa_train_ratio", 0.7)
@@ -665,21 +667,13 @@ class EvaluationStrategy:
             n_splits = getattr(config, "purged_kfold_splits", 5)
             embargo_pct = getattr(config, "purged_kfold_embargo", 0.01)
 
-            start_val = base_backtest_config.get("start_date")
-            end_val = base_backtest_config.get("end_date")
-
-            if start_val is None or end_val is None:
-                logger.warning("PurgedKFold: 期間が不明なため通常評価にフォールバック")
+            date_range = self._resolve_backtest_date_range(base_backtest_config)
+            if date_range is None:
+                logger.warning(
+                    "PurgedKFold: 期間が不明または無効なため通常評価にフォールバック"
+                )
                 return self._evaluate_single_report(gene, base_backtest_config, config)
-
-            start_date = pd.to_datetime(start_val)
-            end_date = pd.to_datetime(end_val)
-
-            if not isinstance(start_date, pd.Timestamp) or not isinstance(
-                end_date, pd.Timestamp
-            ):
-                logger.warning("PurgedKFold: 期間の解析に失敗")
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+            start_date, end_date = date_range
 
             fold_configs = self._precompute_purged_kfold_configs(
                 start_date,

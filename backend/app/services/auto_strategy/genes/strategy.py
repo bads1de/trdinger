@@ -119,6 +119,36 @@ class StrategyGene:
         """uniform crossover 対象となるフィールド名を返す。"""
         return tuple(name for name in cls.clone_field_names() if name != "metadata")
 
+    @classmethod
+    def sub_gene_field_names(cls) -> Tuple[str, ...]:
+        """StrategyGene が保持するサブ遺伝子のフィールド名を返す。"""
+        return (
+            "tpsl_gene",
+            "long_tpsl_gene",
+            "short_tpsl_gene",
+            "position_sizing_gene",
+            "entry_gene",
+            "long_entry_gene",
+            "short_entry_gene",
+        )
+
+    @classmethod
+    def sub_gene_class_map(cls) -> Dict[str, Any]:
+        """サブ遺伝子フィールドと対応クラスの対応表を返す。"""
+        from .entry import EntryGene
+        from .position_sizing import PositionSizingGene
+        from .tpsl import TPSLGene
+
+        return {
+            "tpsl_gene": TPSLGene,
+            "long_tpsl_gene": TPSLGene,
+            "short_tpsl_gene": TPSLGene,
+            "position_sizing_gene": PositionSizingGene,
+            "entry_gene": EntryGene,
+            "long_entry_gene": EntryGene,
+            "short_entry_gene": EntryGene,
+        }
+
     def clone(self, keep_id: bool = False) -> "StrategyGene":
         """軽量コピーを作成。"""
         from .genetic_utils import GeneticUtils

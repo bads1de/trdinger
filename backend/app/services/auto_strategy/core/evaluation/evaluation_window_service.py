@@ -14,6 +14,8 @@ from app.services.backtest.conversion.backtest_result_converter import (
 )
 from app.services.backtest.shared import normalize_ohlcv_columns
 
+from .time_alignment import align_timestamp_to_index
+
 logger = logging.getLogger(__name__)
 
 
@@ -272,16 +274,7 @@ class EvaluationWindowService:
     @staticmethod
     def _normalize_timestamp_to_index(value: Any, index: pd.Index) -> pd.Timestamp:
         """インデックスのタイムゾーンに合わせて Timestamp を正規化する。"""
-        timestamp = pd.Timestamp(value)
-        index_tz = getattr(index, "tz", None)
-
-        if index_tz is None and timestamp.tzinfo is not None:
-            return timestamp.tz_localize(None)
-        if index_tz is not None and timestamp.tzinfo is None:
-            return timestamp.tz_localize(index_tz)
-        if index_tz is not None and timestamp.tzinfo != index_tz:
-            return timestamp.tz_convert(index_tz)
-        return timestamp
+        return align_timestamp_to_index(value, index)
 
     @staticmethod
     def normalize_ohlc_data_for_stats(market_data: pd.DataFrame) -> pd.DataFrame:

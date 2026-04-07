@@ -125,34 +125,12 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         # 基底クラスの処理（1分足データ注入）
         super()._inject_external_objects(run_config, backtest_config, config)
 
-        # MLフィルター設定
-        ml_gate_settings = resolve_ml_gate_settings(config)
-        gate_enabled = ml_gate_settings.enabled
-        model_path = ml_gate_settings.model_path
-
-        if gate_enabled and model_path:
-            try:
-                ml_filter_model = RuntimeModelPredictorAdapter(
-                    model_manager.load_model(model_path)
-                )
-                if ml_filter_model.is_trained():
-                    self._set_ml_gate_state(
-                        run_config,
-                        enabled=True,
-                        predictor=ml_filter_model,
-                    )
-                else:
-                    self._set_ml_gate_state(run_config, enabled=False)
-            except Exception:
-                self._set_ml_gate_state(run_config, enabled=False)
-        elif gate_enabled and self.predictor and self.predictor.is_trained():
-            self._set_ml_gate_state(
-                run_config,
-                enabled=True,
-                predictor=self.predictor,
-            )
-        elif gate_enabled:
-            self._set_ml_gate_state(run_config, enabled=False)
+        enabled, predictor = self._resolve_ml_gate_runtime_state(config)
+        self._set_ml_gate_state(
+            run_config,
+            enabled=enabled,
+            predictor=predictor,
+        )
 
     def _create_feature_adapter(
         self,
@@ -227,3 +205,27 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             parameters["ml_predictor"] = predictor
         else:
             parameters.pop("ml_predictor", None)
+
+    def _resolve_ml_gate_runtime_state(
+        self, config: GAConfig
+    ) -> tuple[bool, Optional[Any]]:
+        """ML gate の実行時状態を解決する。"""
+        ml_gate_settings = resolve_ml_gate_settings(config)
+        if not ml_gate_settings.enabled:
+            return False, None
+
+        model_path = ml_gate_settings.model_path
+        if model_path:
+            try:
+                ml_filter_model = RuntimeModelPredictorAdapter(
+                    model_manager.load_model(model_path)
+                )
+                if ml_filter_model.is_trained():
+                    return True, ml_filter_model
+            except Exception:
+                return False, None
+
+        if self.predictor and self.predictor.is_trained():
+            return True, self.predictor
+
+        return False, None

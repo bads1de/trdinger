@@ -100,9 +100,22 @@ class RandomGeneGenerator:
         for _ in range(10):
             self._position_sizing_cache.append(
                 create_random_position_sizing_gene(self.config)
-            )
+                )
 
         self._tool_genes_template = self._generate_tool_genes_template()
+
+    @staticmethod
+    def _clone_or_create_gene(
+        cache: List[Any],
+        creator: Any,
+        *,
+        postprocess: Optional[Any] = None,
+    ) -> Any:
+        """キャッシュから clone し、無ければ creator で生成する。"""
+        gene = random.choice(cache).clone() if cache else creator()
+        if postprocess is not None:
+            postprocess(gene)
+        return gene
 
     def _generate_tool_genes_template(self) -> List[ToolGene]:
         """ツール遺伝子テンプレートを生成する。"""
@@ -135,33 +148,35 @@ class RandomGeneGenerator:
         if not self._tpsl_cache:
             self._initialize_caches()
 
-        if self._tpsl_cache:
-            gene = random.choice(self._tpsl_cache).clone()
-        else:
-            gene = create_random_tpsl_gene(self.config)
-        gene.enabled = True
-        return gene
+        return self._clone_or_create_gene(
+            self._tpsl_cache,
+            lambda: create_random_tpsl_gene(self.config),
+            postprocess=lambda gene: setattr(gene, "enabled", True),
+        )
 
     def _get_cached_position_sizing(self) -> PositionSizingGene:
         """キャッシュからポジションサイジング遺伝子を取得する。"""
         if not self._position_sizing_cache:
             self._initialize_caches()
 
-        if self._position_sizing_cache:
-            return random.choice(self._position_sizing_cache).clone()
-        return create_random_position_sizing_gene(self.config)
+        return self._clone_or_create_gene(
+            self._position_sizing_cache,
+            lambda: create_random_position_sizing_gene(self.config),
+        )
 
     def _get_cached_tool_genes(self) -> List[ToolGene]:
         """キャッシュからツール遺伝子を取得する。"""
         if self._tool_genes_template is None:
             self._initialize_caches()
 
-        tool_genes: List[ToolGene] = []
-        for tool in self._tool_genes_template or []:
-            cloned = tool.clone()
-            cloned.enabled = random.random() < 0.5
-            tool_genes.append(cloned)
-        return tool_genes
+        return [self._clone_tool_gene_template(tool) for tool in self._tool_genes_template or []]
+
+    @staticmethod
+    def _clone_tool_gene_template(tool: ToolGene) -> ToolGene:
+        """ツール遺伝子テンプレートを clone し、enabled を再抽選する。"""
+        cloned = tool.clone()
+        cloned.enabled = random.random() < 0.5
+        return cloned
 
     @safe_operation(
         context="ランダム戦略遺伝子生成",
@@ -264,33 +279,3 @@ class RandomGeneGenerator:
             "position_sizing_cache_size": len(self._position_sizing_cache),
             "tool_genes_template_size": len(self._tool_genes_template or []),
         }
-
-    def _generate_tool_genes(self) -> List[ToolGene]:
-        """
-        ツール遺伝子のリストをランダムに生成
-
-        登録されたすべてのツール（週末フィルター等）に対して、
-        ランダムに有効/無効を決定し、デフォルトパラメータを持つToolGeneを生成します。
-
-        Returns:
-            生成されたToolGeneのリスト
-        """
-        tool_genes = []
-
-        # すべての登録済みツールを取得
-        for tool in tool_registry.get_all():
-            # 50%の確率で有効化
-            enabled = random.random() < 0.5
-
-            # デフォルトパラメータを取得
-            params = tool.get_default_params()
-
-            tool_genes.append(
-                ToolGene(
-                    tool_name=tool.name,
-                    enabled=enabled,
-                    params=params,
-                )
-            )
-
-        return tool_genes

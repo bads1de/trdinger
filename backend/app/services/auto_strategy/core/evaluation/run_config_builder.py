@@ -8,7 +8,7 @@ import logging
 from typing import Any, Dict, Mapping, Optional
 
 from app.services.auto_strategy.config.ml_filter_settings import (
-    resolve_ml_gate_settings,
+    normalize_ml_gate_fields,
 )
 from app.services.auto_strategy.config.sub_configs import (
     resolve_early_termination_settings,
@@ -30,15 +30,11 @@ class RunConfigBuilder:
     ) -> Optional[Dict[str, Any]]:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
-            ml_gate_settings = resolve_ml_gate_settings(config)
             early_termination_settings = resolve_early_termination_settings(config)
             strategy_parameters = {
                 "strategy_gene": gene,
-                "volatility_gate_enabled": ml_gate_settings.enabled,
-                "volatility_model_path": ml_gate_settings.model_path,
-                "ml_filter_enabled": ml_gate_settings.enabled,
-                "ml_model_path": ml_gate_settings.model_path,
             }
+            strategy_parameters.update(normalize_ml_gate_fields(config))
             strategy_parameters.update(
                 early_termination_settings.to_strategy_params()
             )

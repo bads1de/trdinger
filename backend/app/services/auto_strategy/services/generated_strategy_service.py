@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.services.auto_strategy.core.evaluation.report_persistence import (
     extract_evaluation_summary,
 )
+from app.services.auto_strategy.genes import StrategyGene
 from database.models import BacktestResult, GeneratedStrategy
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
@@ -207,16 +208,15 @@ class GeneratedStrategyService:
 
     def _extract_parameters(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
         """パラメータを抽出"""
-        return {
+        parameters = {
             "indicators": gene_data.get("indicators", []),
             "risk_management": gene_data.get("risk_management", {}),
             "long_entry_conditions": gene_data.get("long_entry_conditions", {}),
             "short_entry_conditions": gene_data.get("short_entry_conditions", {}),
-            "tpsl_gene": gene_data.get("tpsl_gene", None),
-            "long_tpsl_gene": gene_data.get("long_tpsl_gene", None),
-            "short_tpsl_gene": gene_data.get("short_tpsl_gene", None),
-            "position_sizing_gene": gene_data.get("position_sizing_gene", None),
         }
+        for field_name in StrategyGene.sub_gene_field_names():
+            parameters[field_name] = gene_data.get(field_name)
+        return parameters
 
     def _extract_evaluation_summary(
         self, gene_data: Dict[str, Any]

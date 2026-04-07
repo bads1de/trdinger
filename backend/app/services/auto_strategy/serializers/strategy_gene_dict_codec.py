@@ -4,7 +4,7 @@ StrategyGene の dict encode/decode helper。
 
 import logging
 import uuid
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +14,28 @@ class StrategyGeneDictCodec:
 
     def __init__(self, converter: Any) -> None:
         self.converter = converter
+
+    @staticmethod
+    def _get_sub_gene_field_names(strategy_gene_class: Any) -> Tuple[str, ...]:
+        """StrategyGene 系クラスのサブ遺伝子フィールド名を取得する。"""
+        getter = getattr(strategy_gene_class, "sub_gene_field_names", None)
+        if callable(getter):
+            return tuple(getter())
+
+        from ..genes import StrategyGene
+
+        return StrategyGene.sub_gene_field_names()
+
+    @staticmethod
+    def _get_sub_gene_class_map(strategy_gene_class: Any) -> Dict[str, Any]:
+        """StrategyGene 系クラスのサブ遺伝子クラス対応表を取得する。"""
+        getter = getattr(strategy_gene_class, "sub_gene_class_map", None)
+        if callable(getter):
+            return dict(getter())
+
+        from ..genes import StrategyGene
+
+        return StrategyGene.sub_gene_class_map()
 
     def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換。"""
@@ -47,15 +69,7 @@ class StrategyGeneDictCodec:
                 "metadata": strategy_gene.metadata,
             }
 
-            sub_gene_fields = [
-                "tpsl_gene",
-                "long_tpsl_gene",
-                "short_tpsl_gene",
-                "position_sizing_gene",
-                "entry_gene",
-                "long_entry_gene",
-                "short_entry_gene",
-            ]
+            sub_gene_fields = self._get_sub_gene_field_names(type(strategy_gene))
             for field in sub_gene_fields:
                 gene_obj = getattr(strategy_gene, field, None)
                 result[field] = gene_obj.to_dict() if gene_obj else None
@@ -120,21 +134,14 @@ class StrategyGeneDictCodec:
                 for c in data.get("short_entry_conditions", [])
             ]
 
-            from ..genes import EntryGene, PositionSizingGene, TPSLGene
             from ..genes.tool import ToolGene
 
             sub_genes = {}
-            mapping = {
-                "tpsl_gene": TPSLGene,
-                "long_tpsl_gene": TPSLGene,
-                "short_tpsl_gene": TPSLGene,
-                "position_sizing_gene": PositionSizingGene,
-                "entry_gene": EntryGene,
-                "long_entry_gene": EntryGene,
-                "short_entry_gene": EntryGene,
-            }
-
-            for field, cls in mapping.items():
+            mapping = self._get_sub_gene_class_map(strategy_gene_class)
+            for field in self._get_sub_gene_field_names(strategy_gene_class):
+                cls = mapping.get(field)
+                if cls is None:
+                    continue
                 gene_data = data.get(field)
                 sub_genes[field] = cls.from_dict(gene_data) if gene_data else None  # type: ignore[attr-defined]
 

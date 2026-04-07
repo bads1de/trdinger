@@ -7,20 +7,17 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import Any, List, Optional, Tuple, Union, cast
+from typing import Any, Optional, Tuple, cast
 
 import pandas as pd
 from backtesting import Strategy
 
-from ..config.ml_filter_settings import resolve_ml_gate_settings
+from ..config.ml_filter_settings import normalize_ml_gate_fields
 from ..config.sub_configs import resolve_early_termination_settings
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import (
-    Condition,
-    ConditionGroup,
     IndicatorGene,
     TPSLGene,
-    TPSLMethod,
 )
 from ..genes.conditions import StateTracker
 from ..genes.entry import EntryGene
@@ -44,6 +41,7 @@ from .strategy_initializer import StrategyInitializer
 
 logger = logging.getLogger(__name__)
 
+
 class UniversalStrategy(Strategy):
     """
     GA生成汎用戦略クラス
@@ -62,6 +60,8 @@ class UniversalStrategy(Strategy):
     ml_predictor = None  # MLフィルター用予測器
     volatility_gate_enabled = False
     volatility_model_path = None
+    ml_filter_enabled = False
+    ml_model_path = None
     ml_filter_threshold = 0.5  # 旧互換の非推奨パラメータ。現行 gate 判定では未使用。
     enable_early_termination = False
     early_termination_settings = None
@@ -185,7 +185,9 @@ class UniversalStrategy(Strategy):
             self.early_termination_settings = resolved_early_termination_settings
         else:
             self.early_termination_settings = None
-        early_termination_params = resolved_early_termination_settings.to_strategy_params()
+        early_termination_params = (
+            resolved_early_termination_settings.to_strategy_params()
+        )
         self.enable_early_termination = bool(
             early_termination_params["enable_early_termination"]
         )
@@ -245,10 +247,11 @@ class UniversalStrategy(Strategy):
         # === ML フィルター設定 ===
         # HybridPredictor インスタンス（オプション）
         self.ml_predictor = params.get("ml_predictor")
-        ml_gate_settings = resolve_ml_gate_settings(params)
-        self.volatility_gate_enabled = ml_gate_settings.enabled
-        self.volatility_model_path = ml_gate_settings.model_path
-        self.ml_filter_enabled = ml_gate_settings.enabled
+        ml_gate_fields = normalize_ml_gate_fields(params)
+        self.volatility_gate_enabled = bool(ml_gate_fields["volatility_gate_enabled"])
+        self.volatility_model_path = ml_gate_fields["volatility_model_path"]
+        self.ml_filter_enabled = bool(ml_gate_fields["ml_filter_enabled"])
+        self.ml_model_path = ml_gate_fields["ml_model_path"]
         if "ml_filter_threshold" in params:
             logger.warning(
                 "ml_filter_threshold は非推奨のため無視されます。volatility gate は学習済み cut-off で判定します"

@@ -9,6 +9,8 @@ from typing import Any, Dict, cast
 
 import pandas as pd
 
+from .time_alignment import align_timestamp_to_index
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,19 +51,8 @@ class BacktestDataProvider:
             expected_start = pd.Timestamp(expected_key[-2])
             expected_end = pd.Timestamp(expected_key[-1])
             if len(worker_index) > 0:
-                first_index_value = pd.Timestamp(worker_index[0])
-                if first_index_value.tzinfo is not None and expected_start.tzinfo is None:
-                    expected_start = expected_start.tz_localize(first_index_value.tzinfo)
-                    expected_end = expected_end.tz_localize(first_index_value.tzinfo)
-                elif (
-                    first_index_value.tzinfo is None
-                    and expected_start.tzinfo is not None
-                ):
-                    expected_start = expected_start.tz_localize(None)
-                    expected_end = expected_end.tz_localize(None)
-                elif first_index_value.tzinfo != expected_start.tzinfo:
-                    expected_start = expected_start.tz_convert(first_index_value.tzinfo)
-                    expected_end = expected_end.tz_convert(first_index_value.tzinfo)
+                expected_start = align_timestamp_to_index(expected_start, worker_index)
+                expected_end = align_timestamp_to_index(expected_end, worker_index)
         except Exception:
             return None
 

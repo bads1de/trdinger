@@ -31,6 +31,7 @@ from .fitness_sharing_similarity import (
     check_none_similarity as _check_none_similarity,
 )
 from .fitness_sharing_silhouette import (
+    _collect_gene_vectors,
     silhouette_based_sharing as _silhouette_based_sharing,
 )
 from .fitness_sharing_vectorizer import (
@@ -117,27 +118,20 @@ class FitnessSharing:
             if len(population) <= 1:
                 return population
 
-            vectors: list[np.ndarray] = []
-            valid_indices: list[int] = []
+            def resolve_vector(gene: StrategyGene) -> np.ndarray:
+                cache_key = self._get_feature_vector_cache_key(gene)
+                vector = self._feature_vector_cache.get(cache_key)
+                if vector is None:
+                    vector = self._vectorize_gene(gene)
+                    self._feature_vector_cache[cache_key] = vector
+                return vector
 
-            for i, individual in enumerate(population):
-                try:
-                    if isinstance(individual, StrategyGene):
-                        gene = individual
-                    else:
-                        gene = self.gene_serializer.from_list(individual, StrategyGene)
-
-                    if gene is not None:
-                        cache_key = self._get_feature_vector_cache_key(gene)
-                        vector = self._feature_vector_cache.get(cache_key)
-                        if vector is None:
-                            vector = self._vectorize_gene(gene)
-                            self._feature_vector_cache[cache_key] = vector
-
-                        vectors.append(vector)
-                        valid_indices.append(i)
-                except Exception as e:
-                    logger.warning(f"個体の処理に失敗: {e}")
+            vectors, valid_indices = _collect_gene_vectors(
+                population,
+                gene_serializer=self.gene_serializer,
+                vectorize_gene=resolve_vector,
+                on_error=lambda e: logger.warning(f"個体の処理に失敗: {e}"),
+            )
 
             if len(vectors) < 2:
                 return population

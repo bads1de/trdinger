@@ -97,6 +97,42 @@ class TestEvaluationStrategy:
         assert [scenario.name for scenario in report.scenarios] == ["is", "oos"]
         assert report.aggregated_fitness == (0.55,)
 
+    def test_resolve_backtest_date_range_rejects_missing_or_invalid_ranges(self):
+        assert self.strategy._resolve_backtest_date_range({}) is None
+        assert (
+            self.strategy._resolve_backtest_date_range(
+                {
+                    "start_date": "2024-01-02 00:00:00",
+                    "end_date": "2024-01-01 00:00:00",
+                }
+            )
+            is None
+        )
+
+    def test_execute_report_falls_back_to_single_when_date_range_missing(self):
+        single_report = Mock()
+        self.strategy._evaluate_single_report = Mock(return_value=single_report)
+
+        config = SimpleNamespace(
+            enable_purged_kfold=False,
+            enable_walk_forward=False,
+            oos_split_ratio=0.2,
+            oos_fitness_weight=0.75,
+            objectives=["weighted_score"],
+            fitness_constraints={},
+        )
+
+        report = self.strategy.execute_report(
+            object(),
+            {
+                "end_date": "2024-01-11 00:00:00",
+            },
+            config,
+        )
+
+        assert report is single_report
+        self.strategy._evaluate_single_report.assert_called_once()
+
     def test_precompute_purged_kfold_configs_does_not_add_internal_keys(self):
         configs = self.strategy._precompute_purged_kfold_configs(
             start_date=pd.Timestamp("2024-01-01 00:00:00"),

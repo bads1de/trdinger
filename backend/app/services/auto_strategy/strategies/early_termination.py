@@ -14,6 +14,10 @@ import pandas as pd
 from app.services.auto_strategy.config.sub_configs import (
     resolve_early_termination_settings,
 )
+from app.services.auto_strategy.core.evaluation.time_alignment import (
+    align_timestamp_to_index,
+    align_timestamp_to_reference,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +57,10 @@ class StrategyEarlyTerminationController:
             return True
 
         current_time = pd.Timestamp(self.strategy.data.index[-1])
-        if current_time.tzinfo is not None and evaluation_start_raw.tzinfo is None:
-            evaluation_start = evaluation_start_raw.tz_localize(current_time.tzinfo)
-        elif current_time.tzinfo is None and evaluation_start_raw.tzinfo is not None:
-            evaluation_start = evaluation_start_raw.tz_localize(None)
-        elif current_time.tzinfo != evaluation_start_raw.tzinfo:
-            evaluation_start = evaluation_start_raw.tz_convert(current_time.tzinfo)
-        else:
-            evaluation_start = evaluation_start_raw
+        evaluation_start = align_timestamp_to_reference(
+            evaluation_start_raw,
+            current_time,
+        )
 
         return current_time >= evaluation_start
 
@@ -82,10 +82,7 @@ class StrategyEarlyTerminationController:
         start_index = 0
         evaluation_start = getattr(self.strategy, "_evaluation_start", None)
         if evaluation_start is not None:
-            aligned_start = self.align_timestamp_to_index_tz(
-                evaluation_start,
-                full_index,
-            )
+            aligned_start = align_timestamp_to_index(evaluation_start, full_index)
             start_index = int(full_index.searchsorted(aligned_start, side="left"))
 
         evaluation_total_bars = max(1, len(full_index) - start_index)
@@ -97,17 +94,7 @@ class StrategyEarlyTerminationController:
         index: pd.DatetimeIndex,
     ) -> pd.Timestamp:
         """DatetimeIndex に合わせて Timestamp の timezone をそろえる。"""
-        if len(index) == 0:
-            return value
-
-        first_index_value = pd.Timestamp(index[0])
-        if first_index_value.tzinfo is not None and value.tzinfo is None:
-            return value.tz_localize(first_index_value.tzinfo)
-        if first_index_value.tzinfo is None and value.tzinfo is not None:
-            return value.tz_localize(None)
-        if first_index_value.tzinfo != value.tzinfo:
-            return value.tz_convert(first_index_value.tzinfo)
-        return value
+        return align_timestamp_to_index(value, index)
 
     def get_current_equity(self, default: float = 0.0) -> float:
         """現在資産を安全に取得する。"""

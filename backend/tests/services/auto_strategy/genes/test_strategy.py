@@ -195,3 +195,21 @@ class TestStrategyGene:
         assert cloned.short_entry_gene is not gene.short_entry_gene
         assert cloned.tool_genes[0] is not gene.tool_genes[0]
         assert cloned.metadata is not gene.metadata
+
+    def test_sub_gene_helpers_are_consistent(self):
+        field_names = StrategyGene.sub_gene_field_names()
+        class_map = StrategyGene.sub_gene_class_map()
+
+        assert field_names == (
+            "tpsl_gene",
+            "long_tpsl_gene",
+            "short_tpsl_gene",
+            "position_sizing_gene",
+            "entry_gene",
+            "long_entry_gene",
+            "short_entry_gene",
+        )
+        assert set(class_map) == set(field_names)
+        assert class_map["tpsl_gene"] is TPSLGene
+        assert class_map["position_sizing_gene"] is PositionSizingGene
+        assert class_map["entry_gene"] is EntryGene

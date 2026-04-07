@@ -47,6 +47,19 @@ class TestStrategyEarlyTerminationController:
 
         assert controller.get_progress_ratio() == pytest.approx(0.5)
 
+    def test_is_evaluation_bar_aligns_timezone_mismatch(self):
+        strategy = self._build_strategy()
+        controller = StrategyEarlyTerminationController(strategy)
+        strategy.data.index = pd.date_range(
+            "2024-01-01 00:00:00",
+            periods=1,
+            freq="h",
+            tz="UTC",
+        )
+        strategy._evaluation_start = pd.Timestamp("2024-01-01 01:00:00")
+
+        assert controller.is_evaluation_bar() is False
+
     def test_should_terminate_early_on_drawdown(self):
         strategy = self._build_strategy()
         controller = StrategyEarlyTerminationController(strategy)
