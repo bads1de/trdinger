@@ -449,6 +449,11 @@ def handle_pandas_ta_errors(func):
 
             # tupleの場合（MACD等）
             elif isinstance(result, tuple):
+                if len(result) > 0 and all(
+                    hasattr(arr, "__len__") and len(arr) == 0 for arr in result
+                ):
+                    return result
+
                 for i, arr in enumerate(result):
                     if arr is None or (hasattr(arr, "__len__") and len(arr) == 0):
                         raise PandasTAError(f"{func.__name__}: 結果[{i}]が無効です")

@@ -83,11 +83,13 @@ class MomentumIndicators:
     """
 
     @staticmethod
+    @handle_pandas_ta_errors
     def rsi(data: pd.Series, period: int = 14) -> pd.Series:
         """相対力指数"""
         return run_series_indicator(data, period, lambda: ta.rsi(data, window=period))
 
     @staticmethod
+    @handle_pandas_ta_errors
     def macd(
         data: pd.Series,
         fast: int = 12,
@@ -112,6 +114,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ppo(
         data: pd.Series,
         fast: int = 12,
@@ -136,6 +139,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def trix(
         data: pd.Series,
         length: int = 15,
@@ -348,6 +352,7 @@ class MomentumIndicators:
         return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
+    @handle_pandas_ta_errors
     def stochrsi(
         data: pd.Series,
         rsi_length: int = 14,
@@ -450,6 +455,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def cmo(
         data: pd.Series,
         length: int = 14,
@@ -497,6 +503,7 @@ class MomentumIndicators:
         return series
 
     @staticmethod
+    @handle_pandas_ta_errors
     def fisher(
         high: pd.Series,
         low: pd.Series,
@@ -520,6 +527,7 @@ class MomentumIndicators:
         return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
+    @handle_pandas_ta_errors
     def kst(
         data: pd.Series,
         roc1: int = 10,
@@ -558,6 +566,7 @@ class MomentumIndicators:
         return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
+    @handle_pandas_ta_errors
     def roc(
         data: pd.Series | None = None,
         period: int = 10,
@@ -574,11 +583,13 @@ class MomentumIndicators:
         return run_series_indicator(data, length, lambda: ta.roc(data, window=length))
 
     @staticmethod
+    @handle_pandas_ta_errors
     def mom(data: pd.Series, length: int = 10) -> pd.Series:
         """モメンタム"""
         return run_series_indicator(data, length, lambda: ta.mom(data, length=length))
 
     @staticmethod
+    @handle_pandas_ta_errors
     def qqe(data: pd.Series, length: int = 14) -> pd.Series:
         """Qualitative Quantitative Estimation"""
 
@@ -620,6 +631,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def squeeze_pro(
         high: pd.Series,
         low: pd.Series,
@@ -655,6 +667,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def apo(
         data: pd.Series,
         fast: int = 12,
@@ -674,6 +687,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def tsi(
         data: pd.Series,
         fast: int = 13,
@@ -709,6 +723,7 @@ class MomentumIndicators:
         return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
+    @handle_pandas_ta_errors
     def pgo(
         high: pd.Series,
         low: pd.Series,
@@ -753,6 +768,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def squeeze(
         high: pd.Series,
         low: pd.Series,
@@ -784,6 +800,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def uo(
         high: pd.Series,
         low: pd.Series,
@@ -802,6 +819,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ao(high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34) -> pd.Series:
         """Awesome Oscillator"""
         return run_multi_series_indicator(
@@ -811,6 +829,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def bop(
         open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
     ) -> pd.Series:
@@ -822,6 +841,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def cg(data: pd.Series, length: int = 10) -> pd.Series:
         """Center of Gravity"""
         return run_series_indicator(
@@ -832,6 +852,7 @@ class MomentumIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def coppock(
         close: pd.Series, length: int = 11, fast: int = 14, slow: int = 10
     ) -> pd.Series:

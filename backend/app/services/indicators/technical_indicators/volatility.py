@@ -541,6 +541,7 @@ class VolatilityIndicators:
         )
 
     @staticmethod
+    @handle_pandas_ta_errors
     def massi(
         high: pd.Series,
         low: pd.Series,

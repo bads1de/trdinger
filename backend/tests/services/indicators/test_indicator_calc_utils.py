@@ -84,6 +84,18 @@ class TestIndicatorUtils:
         with pytest.raises(PandasTAError, match=r"mock_func: 結果\[1\]が無効です"):
             mock_func()
 
+    def test_handle_pandas_ta_errors_empty_tuple_allowed(self):
+        @handle_pandas_ta_errors
+        def mock_func():
+            return (pd.Series([], dtype=float), pd.Series([], dtype=float))
+
+        result = mock_func()
+
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert len(result[0]) == 0
+        assert len(result[1]) == 0
+
     def test_handle_pandas_ta_errors_general_exception(self):
         @handle_pandas_ta_errors
         def mock_func():

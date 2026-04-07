@@ -329,6 +329,7 @@ class OverlapIndicators:
                 return create_nan_series_bundle(high, 3)  # type: ignore[return-value]
 
     @staticmethod
+    @handle_pandas_ta_errors
     def ichimoku(
         high: pd.Series,
         low: pd.Series,
