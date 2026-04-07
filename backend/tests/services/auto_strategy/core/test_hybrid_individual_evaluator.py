@@ -149,3 +149,33 @@ class TestHybridIndividualEvaluator:
         assert "StrategyName" in result.columns
         assert "Marketregime" not in result.columns
         assert "Strategyname" not in result.columns
+
+    def test_build_robustness_cache_key_normalizes_regime_windows(self, evaluator):
+        from app.services.auto_strategy.config.ga import GAConfig
+
+        gene = Mock()
+        evaluator._build_cache_key = Mock(return_value="gene-key")
+
+        spaced_config = GAConfig(
+            robustness_regime_windows=[
+                {
+                    "name": " bear ",
+                    "start_date": " 2024-07-01 00:00:00 ",
+                    "end_date": " 2024-08-01 00:00:00 ",
+                }
+            ]
+        )
+        trimmed_config = GAConfig(
+            robustness_regime_windows=[
+                {
+                    "name": "bear",
+                    "start_date": "2024-07-01 00:00:00",
+                    "end_date": "2024-08-01 00:00:00",
+                }
+            ]
+        )
+
+        spaced_key = evaluator._build_robustness_cache_key(gene, spaced_config)
+        trimmed_key = evaluator._build_robustness_cache_key(gene, trimmed_config)
+
+        assert spaced_key == trimmed_key

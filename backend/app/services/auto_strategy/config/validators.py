@@ -5,11 +5,11 @@
 """
 
 import logging
-from datetime import datetime
 from typing import Any, List, Tuple
 
 from .base import BaseConfig
 from .ga import GAConfig
+from .robustness_windows import validate_robustness_regime_window
 from .sub_configs import resolve_early_termination_settings
 
 logger = logging.getLogger(__name__)
@@ -553,29 +553,7 @@ class ConfigValidator:
         Returns:
             エラーメッセージのリスト
         """
-        if not isinstance(window, dict):
-            return ["robustness の regime window は辞書である必要があります"]
-
-        name = window.get("name")
-        start_date = window.get("start_date")
-        end_date = window.get("end_date")
-        if not name or not isinstance(name, str):
-            return ["robustness の regime window は name が必要です"]
-        if not isinstance(start_date, str) or not isinstance(end_date, str):
-            return ["robustness の regime window は start_date/end_date が必要です"]
-
-        try:
-            parsed_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-            parsed_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-        except ValueError:
-            return ["robustness の regime window の日付形式が不正です"]
-
-        if parsed_start >= parsed_end:
-            return [
-                "robustness の regime window は start_date < end_date である必要があります"
-            ]
-
-        return []
+        return validate_robustness_regime_window(window)
 
     @staticmethod
     def _validate_robustness_regime_windows(config: GAConfig) -> List[str]:

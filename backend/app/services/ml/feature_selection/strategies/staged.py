@@ -11,14 +11,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from ..config import FeatureSelectionConfig, SelectionMethod
+from ..strategy_registry import build_staged_strategy_map
 from .base import BaseSelectionStrategy
-from .lasso import LassoStrategy
-from .permutation import PermutationStrategy
-from .rfecv import RFECVStrategy
-from .shadow import ShadowFeatureStrategy
-from .tree_based import TreeBasedStrategy
-from .univariate import UnivariateStrategy
-from .variance import VarianceStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -37,17 +31,7 @@ class StagedStrategy(BaseSelectionStrategy):
         self.strategy_map = strategies or self._default_strategies()
 
     def _default_strategies(self) -> Dict[SelectionMethod, BaseSelectionStrategy]:
-        return {
-            SelectionMethod.VARIANCE: VarianceStrategy(),
-            SelectionMethod.UNIVARIATE_F: UnivariateStrategy("f_classif"),
-            SelectionMethod.UNIVARIATE_CHI2: UnivariateStrategy("chi2"),
-            SelectionMethod.MUTUAL_INFO: UnivariateStrategy("mutual_info"),
-            SelectionMethod.RFECV: RFECVStrategy(),
-            SelectionMethod.LASSO: LassoStrategy(),
-            SelectionMethod.RANDOM_FOREST: TreeBasedStrategy(),
-            SelectionMethod.PERMUTATION: PermutationStrategy(),
-            SelectionMethod.SHADOW: ShadowFeatureStrategy(),
-        }
+        return build_staged_strategy_map()
 
     def select(
         self,

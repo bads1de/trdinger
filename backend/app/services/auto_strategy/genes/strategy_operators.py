@@ -18,9 +18,58 @@ from .position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,
 )
+from .strategy import StrategyGene
 from .tpsl import TPSLGene, create_random_tpsl_gene
 
 logger = logging.getLogger(__name__)
+
+
+_SUB_GENE_MUTATION_RULES = {
+    TPSLGene: (
+        create_random_tpsl_gene,
+        "tpsl_gene_creation_probability_multiplier",
+    ),
+    PositionSizingGene: (
+        create_random_position_sizing_gene,
+        "position_sizing_gene_creation_probability_multiplier",
+    ),
+}
+
+
+def _get_creation_probability_multiplier(config: Any, attr_name: str) -> float:
+    """突然変異で使用する生成確率倍率を安全に取得する。"""
+    try:
+        return float(getattr(config, attr_name, 0.0) or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
+    """
+    StrategyGene の定義を基準に、突然変異対象のサブ遺伝子を列挙する。
+
+    entry_gene 系は現時点で生成倍率設定がないため、既存挙動を維持して
+    列挙対象外にする。
+    """
+    class_map = StrategyGene.sub_gene_class_map()
+    specs: list[tuple[str, Any, float]] = []
+
+    for field_name in StrategyGene.sub_gene_field_names():
+        gene_class = class_map.get(field_name)
+        rule = _SUB_GENE_MUTATION_RULES.get(gene_class)
+        if rule is None:
+            continue
+
+        creator_func, creation_prob_attr = rule
+        specs.append(
+            (
+                field_name,
+                creator_func,
+                _get_creation_probability_multiplier(config, creation_prob_attr),
+            )
+        )
+
+    return specs
 
 
 def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
@@ -164,30 +213,9 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
                         max_risk_multiplier,
                     )
 
-        gene_fields = [
-            (
-                "tpsl_gene",
-                create_random_tpsl_gene,
-                config.tpsl_gene_creation_probability_multiplier,
-            ),
-            (
-                "long_tpsl_gene",
-                create_random_tpsl_gene,
-                config.tpsl_gene_creation_probability_multiplier,
-            ),
-            (
-                "short_tpsl_gene",
-                create_random_tpsl_gene,
-                config.tpsl_gene_creation_probability_multiplier,
-            ),
-            (
-                "position_sizing_gene",
-                create_random_position_sizing_gene,
-                config.position_sizing_gene_creation_probability_multiplier,
-            ),
-        ]
-
-        for field_name, creator_func, creation_prob_mult in gene_fields:
+        for field_name, creator_func, creation_prob_mult in _iter_mutable_sub_gene_specs(
+            config
+        ):
             sub_gene = getattr(mutated, field_name)
             if sub_gene:
                 if random.random() < mutation_rate:

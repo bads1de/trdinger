@@ -12,6 +12,7 @@ from typing import Any, Dict
 import pandas as pd
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.utils.datetime_utils import parse_datetime_range_optional
 
 
 def is_coarse_fidelity(config: Any) -> bool:
@@ -72,14 +73,13 @@ def adjust_backtest_config_for_fidelity(
     if not start_date or not end_date:
         return adjusted
 
-    try:
-        start_ts = pd.Timestamp(start_date)
-        end_ts = pd.Timestamp(end_date)
-    except Exception:
+    parsed_range = parse_datetime_range_optional(start_date, end_date)
+    if parsed_range is None:
         return adjusted
 
-    if start_ts >= end_ts:
-        return adjusted
+    start_dt, end_dt = parsed_range
+    start_ts = pd.Timestamp(start_dt)
+    end_ts = pd.Timestamp(end_dt)
 
     window_ratio = _coerce_float(
         getattr(config, "multi_fidelity_window_ratio", 0.3),

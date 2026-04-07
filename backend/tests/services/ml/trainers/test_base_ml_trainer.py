@@ -268,6 +268,29 @@ class TestBaseMLTrainer:
         assert "cv_scores" in result
         assert len(result["cv_scores"]) == 1
 
+    def test_split_data_prefers_train_test_split_over_validation_split(
+        self, trainer, sample_data
+    ):
+        """明示された train_test_split を優先して分割することを確認"""
+        X = pd.DataFrame(
+            np.random.randn(20, 3),
+            columns=["feat1", "feat2", "feat3"],
+            index=sample_data.index[:20],
+        )
+        y = pd.Series(np.random.randn(20), index=sample_data.index[:20])
+
+        X_train, X_test, y_train, y_test = trainer._split_data(
+            X,
+            y,
+            train_test_split=0.75,
+            validation_split=0.2,
+        )
+
+        assert len(X_train) == 15
+        assert len(X_test) == 5
+        assert len(y_train) == 15
+        assert len(y_test) == 5
+
     def test_train_model_runs_cv_before_feature_selection(self, trainer, sample_data):
         """CVが特徴量選択より先に実行され、学習データだけを使うことを確認"""
         X_all = pd.DataFrame(

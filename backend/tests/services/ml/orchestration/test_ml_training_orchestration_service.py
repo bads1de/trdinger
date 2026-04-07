@@ -110,6 +110,13 @@ def test_build_training_params_includes_timeframe(service, training_config):
     assert params["test_size"] == pytest.approx(0.2)
 
 
+def test_validate_training_config_accepts_z_suffix_dates(service, training_config):
+    training_config.start_date = "2024-01-01T00:00:00Z"
+    training_config.end_date = "2024-01-15T00:00:00Z"
+
+    service._validate_training_config(training_config)
+
+
 def test_get_latest_model_with_info_filters_to_volatility_regression():
     with patch.object(
         orchestration_module.model_manager,

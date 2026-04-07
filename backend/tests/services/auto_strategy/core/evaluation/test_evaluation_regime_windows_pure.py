@@ -41,9 +41,9 @@ def test_execute_robustness_report_adds_regime_windows():
         robustness_stress_commission_multipliers=[],
         robustness_regime_windows=[
             {
-                "name": "bear",
-                "start_date": "2024-07-01 00:00:00",
-                "end_date": "2024-08-01 00:00:00",
+                "name": " bear ",
+                "start_date": " 2024-07-01 00:00:00 ",
+                "end_date": " 2024-08-01 00:00:00 ",
             }
         ],
         robustness_aggregate_method="robust",

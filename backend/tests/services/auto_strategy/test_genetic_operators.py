@@ -58,6 +58,24 @@ class TestGeneticOperators:
         assert isinstance(mutated, StrategyGene)
         assert mutated.id != sample_strategy_gene.id
 
+    def test_mutate_strategy_gene_sub_gene_specs_follow_strategy_definition(
+        self, ga_config
+    ):
+        """突然変異対象のサブ遺伝子列挙が StrategyGene 定義に追従することを確認"""
+        from app.services.auto_strategy.genes.strategy_operators import (
+            _iter_mutable_sub_gene_specs,
+        )
+
+        field_names = [field_name for field_name, _, _ in _iter_mutable_sub_gene_specs(ga_config)]
+
+        assert field_names == [
+            "tpsl_gene",
+            "long_tpsl_gene",
+            "short_tpsl_gene",
+            "position_sizing_gene",
+        ]
+        assert "entry_gene" not in field_names
+
     def test_adaptive_mutate(self, sample_strategy_gene, ga_config):
         """適応的突然変異率調整のテスト"""
 

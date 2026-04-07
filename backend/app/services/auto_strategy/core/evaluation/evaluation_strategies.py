@@ -12,6 +12,10 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 import pandas as pd
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.robustness_windows import (
+    normalize_robustness_regime_windows,
+)
+from app.utils.datetime_utils import parse_datetime_range_optional
 
 from .evaluation_report import EvaluationReport, ScenarioEvaluation
 
@@ -144,18 +148,12 @@ class EvaluationStrategy:
         """バックテスト期間を検証して Timestamp のペアを返す。"""
         start_val = base_backtest_config.get("start_date")
         end_val = base_backtest_config.get("end_date")
-        if start_val is None or end_val is None:
+        parsed_range = parse_datetime_range_optional(start_val, end_val)
+        if parsed_range is None:
             return None
 
-        start_date = pd.to_datetime(start_val)
-        end_date = pd.to_datetime(end_val)
-        if not isinstance(start_date, pd.Timestamp) or not isinstance(
-            end_date, pd.Timestamp
-        ):
-            return None
-        if start_date >= end_date:
-            return None
-
+        start_date = pd.Timestamp(parsed_range[0])
+        end_date = pd.Timestamp(parsed_range[1])
         return start_date, end_date
 
     def _build_robustness_scenarios(
@@ -225,28 +223,23 @@ class EvaluationStrategy:
                 },
             )
 
-        for regime_window in getattr(config, "robustness_regime_windows", []) or []:
-            if not isinstance(regime_window, dict):
-                continue
-            regime_name = str(regime_window.get("name", "") or "").strip()
-            regime_start = str(regime_window.get("start_date", "") or "").strip()
-            regime_end = str(regime_window.get("end_date", "") or "").strip()
-            if not regime_name or not regime_start or not regime_end:
-                continue
+        for regime_window in normalize_robustness_regime_windows(
+            getattr(config, "robustness_regime_windows", [])
+        ):
             scenario_config = base_backtest_config.copy()
-            scenario_config["start_date"] = regime_start
-            scenario_config["end_date"] = regime_end
+            scenario_config["start_date"] = regime_window.start_date
+            scenario_config["end_date"] = regime_window.end_date
             add_scenario(
-                f"regime_{regime_name}",
+                f"regime_{regime_window.name}",
                 scenario_config,
                 {
                     "scenario_kind": "regime",
-                    "regime_name": regime_name,
+                    "regime_name": regime_window.name,
                     "symbol": base_symbol,
                     "slippage": base_slippage,
                     "commission_rate": base_commission,
-                    "start_date": regime_start,
-                    "end_date": regime_end,
+                    "start_date": regime_window.start_date,
+                    "end_date": regime_window.end_date,
                 },
             )
 

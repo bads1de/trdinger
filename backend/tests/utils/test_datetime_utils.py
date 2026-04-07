@@ -6,6 +6,7 @@ from app.utils.datetime_utils import (
     current_datetime_like,
     normalize_datetimes_for_comparison,
     parse_datetime_optional,
+    parse_datetime_range_optional,
     parse_datetime_value,
     parse_timestamp_safe,
 )
@@ -27,6 +28,19 @@ class TestDatetimeUtils:
         assert parse_datetime_optional("") is None
         assert parse_datetime_optional("invalid-date") is None
         assert parse_datetime_optional(pd.NaT) is None
+
+    def test_parse_datetime_range_optional_supports_valid_ranges(self):
+        start, end = parse_datetime_range_optional(
+            "2024-01-01T00:00:00Z",
+            "2024-01-02 00:00:00",
+        )
+
+        assert start == datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)
+        assert end == datetime(2024, 1, 2, 0, 0, tzinfo=timezone.utc)
+
+    def test_parse_datetime_range_optional_rejects_invalid_ranges(self):
+        assert parse_datetime_range_optional("invalid-date", "2024-01-02") is None
+        assert parse_datetime_range_optional("2024-01-03", "2024-01-02") is None
 
     def test_parse_timestamp_safe_supports_milliseconds_and_invalid_values(self):
         expected = datetime(2024, 1, 1, 0, 0, tzinfo=timezone.utc)

@@ -21,6 +21,7 @@ from sklearn.feature_selection import SelectorMixin
 from sklearn.utils.validation import check_is_fitted
 
 from .config import FeatureSelectionConfig, SelectionMethod
+from .strategy_registry import default_staged_methods, get_selection_strategy
 from .strategies import (
     BaseSelectionStrategy,
     LassoStrategy,
@@ -204,11 +205,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             n_jobs=self.n_jobs,
             shadow_iterations=self.shadow_iterations,
             staged_methods=staged_methods
-            or [
-                SelectionMethod.VARIANCE,
-                SelectionMethod.MUTUAL_INFO,
-                SelectionMethod.RFECV,
-            ],
+            or default_staged_methods(),
         )
 
     def _remove_correlated_features(
@@ -267,25 +264,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             if isinstance(self.method, SelectionMethod)
             else SelectionMethod(self.method)
         )
-
-        strategy_map = {
-            SelectionMethod.VARIANCE: VarianceStrategy(),
-            SelectionMethod.UNIVARIATE_F: UnivariateStrategy("f_classif"),
-            SelectionMethod.UNIVARIATE_CHI2: UnivariateStrategy("chi2"),
-            SelectionMethod.MUTUAL_INFO: UnivariateStrategy("mutual_info"),
-            SelectionMethod.RFE: RFECVStrategy(),
-            SelectionMethod.RFECV: RFECVStrategy(),
-            SelectionMethod.LASSO: LassoStrategy(),
-            SelectionMethod.RANDOM_FOREST: TreeBasedStrategy(),
-            SelectionMethod.PERMUTATION: PermutationStrategy(),
-            SelectionMethod.SHADOW: ShadowFeatureStrategy(),
-            SelectionMethod.STAGED: StagedStrategy(),
-        }
-
-        if method not in strategy_map:
-            raise ValueError(f"Unknown selection method: {method}")
-
-        return strategy_map[method]
+        return get_selection_strategy(method)
 
 
 def create_feature_selector(

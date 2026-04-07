@@ -20,6 +20,9 @@ from cachetools import LRUCache  # type: ignore[import-untyped]
 from pydantic import ValidationError
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.robustness_windows import (
+    normalize_robustness_regime_windows,
+)
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.backtest.config.backtest_config import BacktestRunConfig
@@ -412,13 +415,10 @@ class IndividualEvaluator(EvaluationWindowService):
             float(getattr(config, "two_stage_min_pass_rate", 0.0) or 0.0),
             tuple(getattr(config, "robustness_validation_symbols", None) or ()),
             tuple(
-                (
-                    str(window.get("name", "")),
-                    str(window.get("start_date", "")),
-                    str(window.get("end_date", "")),
+                window.signature
+                for window in normalize_robustness_regime_windows(
+                    getattr(config, "robustness_regime_windows", [])
                 )
-                for window in (getattr(config, "robustness_regime_windows", []) or [])
-                if isinstance(window, dict)
             ),
             tuple(getattr(config, "robustness_stress_slippage", ()) or ()),
             tuple(

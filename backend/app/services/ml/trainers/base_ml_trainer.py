@@ -22,6 +22,7 @@ from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.config import ml_config_manager
 from ..common.exceptions import MLModelError
 from ..common.registry import ModelMetadata
+from ..common.training_utils import resolve_holdout_test_size
 from ..common.utils import (
     get_feature_importance_unified,
     prepare_data_for_prediction,
@@ -376,8 +377,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """データを分割（常に時系列分割）"""
-        test_size = training_params.get(
-            "test_size", training_params.get("validation_split", 0.2)
+        test_size = resolve_holdout_test_size(
+            test_size=training_params.get("test_size"),
+            train_test_split=training_params.get("train_test_split"),
+            validation_split=training_params.get("validation_split"),
         )
 
         logger.info("🕒 時系列分割を使用")

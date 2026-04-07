@@ -31,6 +31,15 @@ class SelectionMethod(Enum):
     SHADOW = "shadow"  # Boruta風シャドウ特徴量ベース
     STAGED = "staged"  # 段階的フィルタリング
 
+    @classmethod
+    def default_staged_methods(cls) -> List["SelectionMethod"]:
+        """Staged 選択のデフォルト段階を返す。"""
+        return [
+            cls.VARIANCE,
+            cls.MUTUAL_INFO,
+            cls.RFECV,
+        ]
+
 
 @dataclass
 class FeatureSelectionConfig:
@@ -70,9 +79,5 @@ class FeatureSelectionConfig:
 
     # --- Staged選択の段階 ---
     staged_methods: List[SelectionMethod] = field(
-        default_factory=lambda: [
-            SelectionMethod.VARIANCE,
-            SelectionMethod.MUTUAL_INFO,
-            SelectionMethod.RFECV,
-        ]
+        default_factory=SelectionMethod.default_staged_methods
     )

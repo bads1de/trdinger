@@ -258,3 +258,25 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any("robustness_aggregate_method" in e for e in errors)
+
+    def test_validate_robustness_window_supports_z_suffix(self):
+        errors = ConfigValidator._validate_robustness_window(
+            {
+                "name": "regime_z",
+                "start_date": "2024-01-01T00:00:00Z",
+                "end_date": "2024-01-02T00:00:00Z",
+            }
+        )
+
+        assert errors == []
+
+    def test_validate_robustness_window_supports_mixed_timezone_boundaries(self):
+        errors = ConfigValidator._validate_robustness_window(
+            {
+                "name": "regime_mixed",
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-01-02T00:00:00Z",
+            }
+        )
+
+        assert errors == []

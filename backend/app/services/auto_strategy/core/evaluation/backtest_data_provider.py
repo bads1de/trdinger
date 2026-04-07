@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, cast
+from typing import Any, Dict, Optional, cast
 
 import pandas as pd
+
+from app.utils.datetime_utils import parse_datetime_range_optional
 
 from .time_alignment import align_timestamp_to_index
 
@@ -33,6 +35,20 @@ class BacktestDataProvider:
         self._prefetch_cache: Dict[tuple, Any] = {}
 
     @staticmethod
+    def _parse_key_date_range(
+        key: tuple[Any, ...],
+    ) -> Optional[tuple[pd.Timestamp, pd.Timestamp]]:
+        """キャッシュキー末尾の日時範囲を pandas.Timestamp に正規化する。"""
+        if len(key) < 2:
+            return None
+
+        parsed_range = parse_datetime_range_optional(key[-2], key[-1])
+        if parsed_range is None:
+            return None
+
+        return pd.Timestamp(parsed_range[0]), pd.Timestamp(parsed_range[1])
+
+    @staticmethod
     def _extract_worker_data(worker_payload: Any, expected_key: tuple[Any, ...]) -> Any:
         """共有ワーカーデータが現在の要求期間と一致する場合のみ返す。"""
         if not isinstance(worker_payload, dict):
@@ -48,10 +64,15 @@ class BacktestDataProvider:
 
         try:
             worker_index = pd.DatetimeIndex(worker_data.index)
-            expected_start = pd.Timestamp(expected_key[-2])
-            expected_end = pd.Timestamp(expected_key[-1])
+            expected_range = BacktestDataProvider._parse_key_date_range(expected_key)
+            if expected_range is None:
+                return None
+
+            expected_start, expected_end = expected_range
             if len(worker_index) > 0:
-                expected_start = align_timestamp_to_index(expected_start, worker_index)
+                expected_start = align_timestamp_to_index(
+                    expected_start, worker_index
+                )
                 expected_end = align_timestamp_to_index(expected_end, worker_index)
         except Exception:
             return None
@@ -72,14 +93,13 @@ class BacktestDataProvider:
         if len(expected_key) < 4 or worker_key[:-2] != expected_key[:-2]:
             return False
 
-        try:
-            worker_start = pd.Timestamp(worker_key[-2])
-            worker_end = pd.Timestamp(worker_key[-1])
-            expected_start = pd.Timestamp(expected_key[-2])
-            expected_end = pd.Timestamp(expected_key[-1])
-        except Exception:
+        worker_range = BacktestDataProvider._parse_key_date_range(worker_key)
+        expected_range = BacktestDataProvider._parse_key_date_range(expected_key)
+        if worker_range is None or expected_range is None:
             return False
 
+        worker_start, worker_end = worker_range
+        expected_start, expected_end = expected_range
         return worker_start <= expected_start <= expected_end <= worker_end
 
     def get_cached_backtest_data(self, backtest_config: Dict[str, Any]) -> Any:

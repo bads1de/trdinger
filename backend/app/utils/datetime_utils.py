@@ -52,6 +52,27 @@ def parse_datetime_optional(value: Any) -> Optional[datetime]:
         return None
 
 
+def parse_datetime_range_optional(
+    start_date: Any,
+    end_date: Any,
+) -> Optional[Tuple[datetime, datetime]]:
+    """開始・終了日時をまとめて変換し、比較可能な形で返す。"""
+    parsed_start = parse_datetime_optional(start_date)
+    parsed_end = parse_datetime_optional(end_date)
+
+    if parsed_start is None or parsed_end is None:
+        return None
+
+    normalized_start, normalized_end = normalize_datetimes_for_comparison(
+        parsed_start,
+        parsed_end,
+    )
+    if normalized_start >= normalized_end:
+        return None
+
+    return normalized_start, normalized_end
+
+
 def parse_timestamp_safe(value: Any) -> Optional[datetime]:
     """ミリ秒 timestamp や日時表現を安全に datetime へ変換する。"""
     if value is None or _is_missing_value(value):

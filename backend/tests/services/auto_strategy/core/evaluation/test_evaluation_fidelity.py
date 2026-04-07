@@ -2,6 +2,8 @@
 multi-fidelity 評価ヘルパーのユニットテスト
 """
 
+from datetime import datetime
+
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
     adjust_backtest_config_for_fidelity,
@@ -43,6 +45,26 @@ def test_adjust_backtest_config_for_fidelity_uses_recent_tail_window():
 
     assert adjusted["end_date"] == "2024-01-11 00:00:00"
     assert adjusted["start_date"] == "2024-01-08 00:00:00"
+
+
+def test_adjust_backtest_config_for_fidelity_accepts_mixed_timezone_inputs():
+    config = GAConfig(
+        enable_multi_fidelity_evaluation=True,
+        multi_fidelity_window_ratio=0.3,
+    )
+    coarse = build_coarse_ga_config(config)
+    backtest_config = {
+        "start_date": "2024-01-01T00:00:00",
+        "end_date": "2024-01-11T00:00:00Z",
+    }
+
+    adjusted = adjust_backtest_config_for_fidelity(backtest_config, coarse)
+
+    assert adjusted["start_date"].endswith("+00:00")
+    assert adjusted["end_date"].endswith("+00:00")
+    assert datetime.fromisoformat(adjusted["start_date"]) < datetime.fromisoformat(
+        adjusted["end_date"]
+    )
 
 
 def test_get_multi_fidelity_candidate_limit_respects_ratio_and_minimum():

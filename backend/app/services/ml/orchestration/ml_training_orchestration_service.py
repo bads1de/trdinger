@@ -25,6 +25,7 @@ from app.services.ml.orchestration.bg_task_orchestration_service import (
     background_task_manager,
 )
 from app.utils.error_handler import safe_ml_operation
+from app.utils.datetime_utils import parse_datetime_range_optional
 from app.utils.response import api_response, ensure_response_dict
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -32,6 +33,7 @@ from database.repositories.open_interest_repository import OpenInterestRepositor
 
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.config import get_default_single_model_config
+from ..common.training_utils import resolve_holdout_test_size
 from ..ensemble.ensemble_trainer import EnsembleTrainer
 from ..trainers.volatility_regression_trainer import VolatilityRegressionTrainer
 
@@ -275,10 +277,11 @@ class MLTrainingService(BaseResourceManager):
 
     def _validate_training_config(self, config) -> None:
         """トレーニング設定の検証"""
-        start_date = datetime.fromisoformat(config.start_date)
-        end_date = datetime.fromisoformat(config.end_date)
-        if start_date >= end_date:
+        date_range = parse_datetime_range_optional(config.start_date, config.end_date)
+        if date_range is None:
             raise ValueError("開始日は終了日より前である必要があります")
+
+        start_date, end_date = date_range
         if (end_date - start_date).days < 7:
             raise ValueError("トレーニング期間は最低7日間必要です")
         if not 0 < config.train_test_split < 1:
@@ -410,11 +413,17 @@ class MLTrainingService(BaseResourceManager):
                                 "message": "データを読み込み中...",
                             }
                         )
+                    date_range = parse_datetime_range_optional(
+                        config.start_date, config.end_date
+                    )
+                    if date_range is None:
+                        raise ValueError("開始日は終了日より前である必要があります")
+
                     training_data = data_service.get_ml_training_data(
                         symbol=config.symbol,
                         timeframe=config.timeframe,
-                        start_date=datetime.fromisoformat(config.start_date),
-                        end_date=datetime.fromisoformat(config.end_date),
+                        start_date=date_range[0],
+                        end_date=date_range[1],
                     )
 
                     # トレーナー設定の決定
@@ -587,24 +596,12 @@ class MLTrainingService(BaseResourceManager):
                 }
             )
 
-    def _resolve_test_size(self, config: Any) -> float:
-        """ホールドアウト分割比率を決定する"""
-        default_train_split = 0.8
-        default_validation_split = 0.2
-
-        train_test_split = getattr(config, "train_test_split", default_train_split)
-        validation_split = getattr(config, "validation_split", default_validation_split)
-
-        # 既存の train_test_split を優先し、未変更なら validation_split を使う
-        if train_test_split != default_train_split:
-            return 1 - train_test_split
-        if validation_split != default_validation_split:
-            return validation_split
-        return 1 - train_test_split
-
     def _build_training_params(self, config: Any) -> Dict[str, Any]:
         """APIリクエスト設定を学習用パラメータに変換する"""
-        test_size = self._resolve_test_size(config)
+        test_size = resolve_holdout_test_size(
+            train_test_split=getattr(config, "train_test_split", None),
+            validation_split=getattr(config, "validation_split", None),
+        )
         cross_validation_folds = config.cross_validation_folds
         gate_quantile = getattr(config, "gate_quantile", 0.67)
         legacy_quantile = getattr(config, "quantile_threshold", None)
