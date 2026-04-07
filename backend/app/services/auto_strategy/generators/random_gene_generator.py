@@ -158,13 +158,9 @@ class RandomGeneGenerator:
 
         tool_genes: List[ToolGene] = []
         for tool in self._tool_genes_template or []:
-            tool_genes.append(
-                ToolGene(
-                    tool_name=tool.tool_name,
-                    enabled=random.random() < 0.5,
-                    params=tool.params.copy(),
-                )
-            )
+            cloned = tool.clone()
+            cloned.enabled = random.random() < 0.5
+            tool_genes.append(cloned)
         return tool_genes
 
     @safe_operation(

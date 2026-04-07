@@ -17,6 +17,7 @@ from app.services.auto_strategy.genes import (
 )
 from app.services.auto_strategy.genes.conditions import Condition, StatefulCondition
 from app.services.auto_strategy.config.constants import PositionSizingMethod
+from app.services.auto_strategy.config.sub_configs import EarlyTerminationSettings
 
 
 class TestUniversalStrategyAll:
@@ -219,6 +220,35 @@ class TestUniversalStrategyAll:
             return_value=[MagicMock(), MagicMock()],
         ):
             assert strategy._should_terminate_early() == "trade_pace"
+
+    def test_should_terminate_early_prefers_nested_settings(
+        self, mock_broker, mock_data, valid_gene
+    ):
+        strategy = UniversalStrategy(
+            mock_broker,
+            mock_data,
+            {
+                "strategy_gene": valid_gene,
+                "enable_early_termination": False,
+                "early_termination_max_drawdown": 0.9,
+                "early_termination_settings": EarlyTerminationSettings(
+                    enabled=True,
+                    max_drawdown=0.1,
+                ),
+            },
+        )
+        strategy._starting_equity = 10000.0
+        strategy._max_equity_seen = 10000.0
+        strategy._total_bars = 10
+        strategy._current_bar_index = 5
+
+        with patch.object(
+            UniversalStrategy,
+            "equity",
+            new_callable=PropertyMock,
+            return_value=8800.0,
+        ):
+            assert strategy._should_terminate_early() == "max_drawdown"
 
     def test_get_progress_ratio_uses_evaluation_window_when_warmup_exists(
         self, mock_broker, mock_data_large, valid_gene

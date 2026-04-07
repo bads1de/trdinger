@@ -6,10 +6,24 @@
 
 import random
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional
 
 import pandas as pd
+
+
+@dataclass(frozen=True, slots=True)
+class ToolDefinition:
+    """
+    ツールの宣言的メタデータ
+
+    name / description / default_params をまとめて定義します。
+    """
+
+    name: str
+    description: str = ""
+    default_params: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -40,8 +54,23 @@ class BaseTool(ABC):
     すべてのツールはこのクラスを継承し、共通インターフェースを実装します。
     """
 
+    tool_definition: ClassVar[Optional[ToolDefinition]] = None
+
+    @classmethod
+    def _get_tool_definition(cls) -> ToolDefinition:
+        definition = cls.tool_definition
+        if definition is None:
+            raise NotImplementedError(
+                f"{cls.__name__} must define tool_definition"
+            )
+        return definition
+
     @property
-    @abstractmethod
+    def definition(self) -> ToolDefinition:
+        """ツール定義を取得する。"""
+        return self.__class__._get_tool_definition()
+
+    @property
     def name(self) -> str:
         """
         ツールの一意な識別名
@@ -49,7 +78,7 @@ class BaseTool(ABC):
         Returns:
             ツール名（例: 'weekend_filter'）
         """
-        pass
+        return self.definition.name
 
     @property
     def description(self) -> str:
@@ -59,7 +88,7 @@ class BaseTool(ABC):
         Returns:
             人間が読める説明文
         """
-        return ""
+        return self.definition.description
 
     @abstractmethod
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
@@ -76,7 +105,6 @@ class BaseTool(ABC):
         """
         pass
 
-    @abstractmethod
     def get_default_params(self) -> Dict[str, Any]:
         """
         デフォルトパラメータを取得
@@ -84,7 +112,7 @@ class BaseTool(ABC):
         Returns:
             パラメータ辞書
         """
-        pass
+        return deepcopy(self.definition.default_params)
 
     def validate_params(self, params: Dict[str, Any]) -> bool:
         """
@@ -102,7 +130,8 @@ class BaseTool(ABC):
         """
         パラメータを突然変異させる（GAで使用）
 
-        デフォルト実装では、20%の確率で enabled を反転させます。
+        デフォルト実装では、深いコピーを作成したうえで、
+        20%の確率で enabled を反転させます。
         サブクラスで固有パラメータの変異を追加する場合は、
         super().mutate_params(params) を呼んでから固有の変異を適用してください。
 
@@ -112,7 +141,7 @@ class BaseTool(ABC):
         Returns:
             変異後のパラメータ
         """
-        new_params = params.copy()
+        new_params = deepcopy(params)
 
         # 20%の確率で有効/無効を反転
         if random.random() < 0.2:

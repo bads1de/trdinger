@@ -8,7 +8,7 @@
 import random
 from typing import Any, Dict
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 
 
@@ -19,25 +19,11 @@ class BeginningOfMonthFilter(BaseTool):
     毎月1日から指定された日数間のエントリーをスキップします。
     """
 
-    @property
-    def name(self) -> str:
-        """
-        ツール名
-
-        Returns:
-            ツール名
-        """
-        return "beginning_of_month_filter"
-
-    @property
-    def description(self) -> str:
-        """
-        ツールの説明
-
-        Returns:
-            ツールの説明
-        """
-        return "月初の特異な需給バランスによる乱高下を回避します"
+    tool_definition = ToolDefinition(
+        name="beginning_of_month_filter",
+        description="月初の特異な需給バランスによる乱高下を回避します",
+        default_params={"enabled": True, "days_from_start": 2},
+    )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         """
@@ -64,15 +50,6 @@ class BeginningOfMonthFilter(BaseTool):
         # day == 2 <= 2 -> True
         # day == 3 <= 2 -> False
         return day <= days_from_start
-
-    def get_default_params(self) -> Dict[str, Any]:
-        """
-        デフォルトパラメータ
-
-        Returns:
-            enabled=True, days_from_start=2 (1日と2日)
-        """
-        return {"enabled": True, "days_from_start": 2}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """

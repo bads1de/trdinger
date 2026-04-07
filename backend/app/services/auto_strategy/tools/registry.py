@@ -5,9 +5,10 @@
 """
 
 import logging
+from copy import deepcopy
 from typing import Dict, List, Optional
 
-from .base import BaseTool
+from .base import BaseTool, ToolDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,15 @@ class ToolRegistry:
             ツールのリスト
         """
         return list(self._tools.values())
+
+    def get_definitions(self) -> List[ToolDefinition]:
+        """
+        すべての登録済みツール定義を取得
+
+        Returns:
+            ツール定義のリスト
+        """
+        return [deepcopy(tool.definition) for tool in self._tools.values()]
 
     def get_names(self) -> List[str]:
         """

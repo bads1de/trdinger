@@ -21,6 +21,7 @@ from .base import BaseConfig
 
 # サブ設定クラス
 from .sub_configs import (
+    EarlyTerminationSettings,
     EvaluationConfig,
     HybridConfig,
     MutationConfig,
@@ -42,6 +43,7 @@ def __getattr__(name: str):
 __all__ = [
     "BaseConfig",
     "AutoStrategyConfig",
+    "EarlyTerminationSettings",
     "MutationConfig",
     "EvaluationConfig",
     "HybridConfig",

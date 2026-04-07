@@ -8,7 +8,7 @@
 import random
 from typing import Any, Dict
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 
 
@@ -20,25 +20,11 @@ class MondayReversalFilter(BaseTool):
     デフォルトでは月曜日の最初の12時間（UTC 00:00 - 12:00）を回避します。
     """
 
-    @property
-    def name(self) -> str:
-        """
-        ツール名
-
-        Returns:
-            ツール名
-        """
-        return "monday_reversal_filter"
-
-    @property
-    def description(self) -> str:
-        """
-        ツールの説明
-
-        Returns:
-            ツールの説明
-        """
-        return "月曜日前半の調整局面（Reversal）を回避します"
+    tool_definition = ToolDefinition(
+        name="monday_reversal_filter",
+        description="月曜日前半の調整局面（Reversal）を回避します",
+        default_params={"enabled": True, "skip_hours": 12},
+    )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         """
@@ -67,15 +53,6 @@ class MondayReversalFilter(BaseTool):
 
         # 指定時間未満ならスキップ (例: skip_hours=12なら 00:00〜11:59 までスキップ)
         return hour < skip_hours
-
-    def get_default_params(self) -> Dict[str, Any]:
-        """
-        デフォルトパラメータ
-
-        Returns:
-            enabled=True, skip_hours=12
-        """
-        return {"enabled": True, "skip_hours": 12}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """

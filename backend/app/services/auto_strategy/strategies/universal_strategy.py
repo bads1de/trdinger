@@ -13,6 +13,7 @@ import pandas as pd
 from backtesting import Strategy
 
 from ..config.ml_filter_settings import resolve_ml_gate_settings
+from ..config.sub_configs import resolve_early_termination_settings
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import (
     Condition,
@@ -63,6 +64,7 @@ class UniversalStrategy(Strategy):
     volatility_model_path = None
     ml_filter_threshold = 0.5  # 旧互換の非推奨パラメータ。現行 gate 判定では未使用。
     enable_early_termination = False
+    early_termination_settings = None
     early_termination_max_drawdown = None
     early_termination_min_trades = None
     early_termination_min_trade_check_progress = 0.5
@@ -178,29 +180,35 @@ class UniversalStrategy(Strategy):
         self.base_timeframe = params.get("timeframe", "1h")
         self.evaluation_start = params.get("evaluation_start")
         self._evaluation_start = self._normalize_evaluation_start(self.evaluation_start)
+        resolved_early_termination_settings = resolve_early_termination_settings(params)
+        if params.get("early_termination_settings") is not None:
+            self.early_termination_settings = resolved_early_termination_settings
+        else:
+            self.early_termination_settings = None
+        early_termination_params = resolved_early_termination_settings.to_strategy_params()
         self.enable_early_termination = bool(
-            params.get("enable_early_termination", False)
+            early_termination_params["enable_early_termination"]
         )
-        self.early_termination_max_drawdown = params.get(
+        self.early_termination_max_drawdown = early_termination_params[
             "early_termination_max_drawdown"
-        )
-        self.early_termination_min_trades = params.get(
+        ]
+        self.early_termination_min_trades = early_termination_params[
             "early_termination_min_trades"
-        )
+        ]
         self.early_termination_min_trade_check_progress = float(
-            params.get("early_termination_min_trade_check_progress", 0.5) or 0.5
+            early_termination_params["early_termination_min_trade_check_progress"]
         )
         self.early_termination_trade_pace_tolerance = float(
-            params.get("early_termination_trade_pace_tolerance", 0.5) or 0.5
+            early_termination_params["early_termination_trade_pace_tolerance"]
         )
-        self.early_termination_min_expectancy = params.get(
+        self.early_termination_min_expectancy = early_termination_params[
             "early_termination_min_expectancy"
-        )
+        ]
         self.early_termination_expectancy_min_trades = int(
-            params.get("early_termination_expectancy_min_trades", 5) or 5
+            early_termination_params["early_termination_expectancy_min_trades"]
         )
         self.early_termination_expectancy_progress = float(
-            params.get("early_termination_expectancy_progress", 0.6) or 0.6
+            early_termination_params["early_termination_expectancy_progress"]
         )
 
         # 1分足データの取得（1分足シミュレーション用）

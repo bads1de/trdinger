@@ -11,6 +11,9 @@ from math import ceil
 from typing import Any, Optional
 
 import pandas as pd
+from app.services.auto_strategy.config.sub_configs import (
+    resolve_early_termination_settings,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +178,8 @@ class StrategyEarlyTerminationController:
 
     def should_terminate_early(self) -> Optional[str]:
         """早期打ち切りすべき理由を返す。"""
-        if not getattr(self.strategy, "enable_early_termination", False):
+        settings = resolve_early_termination_settings(self.strategy)
+        if not settings.enabled:
             return None
 
         current_equity = self.get_current_equity(
@@ -186,7 +190,7 @@ class StrategyEarlyTerminationController:
             current_equity,
         )
 
-        max_drawdown = getattr(self.strategy, "early_termination_max_drawdown", None)
+        max_drawdown = settings.max_drawdown
         if max_drawdown is not None and self.strategy._max_equity_seen > 0:
             drawdown = max(
                 0.0,
@@ -198,18 +202,10 @@ class StrategyEarlyTerminationController:
 
         progress = self.get_progress_ratio()
 
-        min_trades = getattr(self.strategy, "early_termination_min_trades", None)
+        min_trades = settings.min_trades
         if (
             min_trades is not None
-            and progress
-            >= float(
-                getattr(
-                    self.strategy,
-                    "early_termination_min_trade_check_progress",
-                    0.5,
-                )
-                or 0.5
-            )
+            and progress >= float(settings.min_trade_check_progress)
         ):
             closed_trade_count = len(getattr(self.strategy, "closed_trades", []) or [])
             required_trade_count = max(
@@ -218,46 +214,19 @@ class StrategyEarlyTerminationController:
                     ceil(
                         float(min_trades)
                         * progress
-                        * float(
-                            getattr(
-                                self.strategy,
-                                "early_termination_trade_pace_tolerance",
-                                0.5,
-                            )
-                            or 0.5
-                        )
+                        * float(settings.trade_pace_tolerance)
                     )
                 ),
             )
             if closed_trade_count < required_trade_count:
                 return "trade_pace"
 
-        min_expectancy = getattr(
-            self.strategy,
-            "early_termination_min_expectancy",
-            None,
-        )
-        if (
-            min_expectancy is not None
-            and progress
-            >= float(
-                getattr(
-                    self.strategy,
-                    "early_termination_expectancy_progress",
-                    0.6,
-                )
-                or 0.6
-            )
+        min_expectancy = settings.min_expectancy
+        if min_expectancy is not None and progress >= float(
+            settings.expectancy_progress
         ):
             closed_trade_count = len(getattr(self.strategy, "closed_trades", []) or [])
-            expectancy_min_trades = int(
-                getattr(
-                    self.strategy,
-                    "early_termination_expectancy_min_trades",
-                    5,
-                )
-                or 5
-            )
+            expectancy_min_trades = int(settings.expectancy_min_trades)
             if closed_trade_count >= expectancy_min_trades:
                 expectancy = self.calculate_closed_trade_expectancy()
                 if expectancy is not None and expectancy < float(min_expectancy):

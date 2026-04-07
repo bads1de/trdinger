@@ -10,6 +10,9 @@ from typing import Any, Dict, Mapping, Optional
 from app.services.auto_strategy.config.ml_filter_settings import (
     resolve_ml_gate_settings,
 )
+from app.services.auto_strategy.config.sub_configs import (
+    resolve_early_termination_settings,
+)
 from app.services.backtest.config.builders import build_execution_config
 
 logger = logging.getLogger(__name__)
@@ -28,45 +31,17 @@ class RunConfigBuilder:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
             ml_gate_settings = resolve_ml_gate_settings(config)
+            early_termination_settings = resolve_early_termination_settings(config)
             strategy_parameters = {
                 "strategy_gene": gene,
                 "volatility_gate_enabled": ml_gate_settings.enabled,
                 "volatility_model_path": ml_gate_settings.model_path,
                 "ml_filter_enabled": ml_gate_settings.enabled,
                 "ml_model_path": ml_gate_settings.model_path,
-                "enable_early_termination": bool(
-                    getattr(config, "enable_early_termination", False)
-                ),
-                "early_termination_max_drawdown": getattr(
-                    config, "early_termination_max_drawdown", None
-                ),
-                "early_termination_min_trades": getattr(
-                    config, "early_termination_min_trades", None
-                ),
-                "early_termination_min_trade_check_progress": getattr(
-                    config,
-                    "early_termination_min_trade_check_progress",
-                    0.5,
-                ),
-                "early_termination_trade_pace_tolerance": getattr(
-                    config,
-                    "early_termination_trade_pace_tolerance",
-                    0.5,
-                ),
-                "early_termination_min_expectancy": getattr(
-                    config, "early_termination_min_expectancy", None
-                ),
-                "early_termination_expectancy_min_trades": getattr(
-                    config,
-                    "early_termination_expectancy_min_trades",
-                    5,
-                ),
-                "early_termination_expectancy_progress": getattr(
-                    config,
-                    "early_termination_expectancy_progress",
-                    0.6,
-                ),
             }
+            strategy_parameters.update(
+                early_termination_settings.to_strategy_params()
+            )
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:
                 strategy_parameters["evaluation_start"] = evaluation_start

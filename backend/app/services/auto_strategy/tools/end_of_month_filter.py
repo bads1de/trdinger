@@ -9,7 +9,7 @@ import calendar
 import random
 from typing import Any, Dict
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 
 
@@ -20,25 +20,11 @@ class EndOfMonthFilter(BaseTool):
     月の最終日（およびその数日前）のエントリーをスキップします。
     """
 
-    @property
-    def name(self) -> str:
-        """
-        ツール名
-
-        Returns:
-            ツール名
-        """
-        return "end_of_month_filter"
-
-    @property
-    def description(self) -> str:
-        """
-        ツールの説明
-
-        Returns:
-            ツールの説明
-        """
-        return "月末のリバランスによる不規則な動きを回避します"
+    tool_definition = ToolDefinition(
+        name="end_of_month_filter",
+        description="月末のリバランスによる不規則な動きを回避します",
+        default_params={"enabled": True, "days_before_end": 0},
+    )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         """
@@ -73,15 +59,6 @@ class EndOfMonthFilter(BaseTool):
         # 残り日数が指定範囲内ならスキップ
         # days_left == 0 (最終日) <= 0 -> True
         return days_left <= days_before
-
-    def get_default_params(self) -> Dict[str, Any]:
-        """
-        デフォルトパラメータ
-
-        Returns:
-            enabled=True, days_before_end=0 (最終日のみ)
-        """
-        return {"enabled": True, "days_before_end": 0}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """

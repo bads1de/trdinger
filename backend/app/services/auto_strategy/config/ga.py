@@ -28,12 +28,15 @@ from .constants import (
 )
 from .ml_filter_settings import normalize_ml_gate_fields
 from .sub_configs import (
+    EarlyTerminationSettings,
     EvaluationConfig,
     HybridConfig,
     MutationConfig,
     RobustnessConfig,
     TuningConfig,
     TwoStageSelectionConfig,
+    normalize_early_termination_fields,
+    resolve_early_termination_settings,
 )
 
 logger = logging.getLogger(__name__)
@@ -150,6 +153,7 @@ class GAConfig(BaseConfig):
     multi_fidelity_oos_ratio: float = 0.2
     multi_fidelity_candidate_ratio: float = 0.25
     multi_fidelity_min_candidates: int = 3
+    early_termination_settings: Optional[EarlyTerminationSettings] = None
     enable_early_termination: bool = False
     early_termination_max_drawdown: Optional[float] = None
     early_termination_min_trades: Optional[int] = None
@@ -276,6 +280,10 @@ class GAConfig(BaseConfig):
         volatility_gate_enabled と ml_filter_enabled の同期、
         およびモデルパスの相互補完を行います。
         """
+        self._sync_runtime_fields()
+
+    def _sync_runtime_fields(self) -> None:
+        """互換性のあるフラットフィールドを正規化する。"""
         normalized = normalize_ml_gate_fields(self)
         self.volatility_gate_enabled = bool(normalized["volatility_gate_enabled"])
         self.ml_filter_enabled = bool(normalized["ml_filter_enabled"])
@@ -283,6 +291,39 @@ class GAConfig(BaseConfig):
             Optional[str], normalized["volatility_model_path"]
         )
         self.ml_model_path = cast(Optional[str], normalized["ml_model_path"])
+        early_termination_settings = resolve_early_termination_settings(self)
+        self.early_termination_settings = early_termination_settings
+        early_termination_fields = normalize_early_termination_fields(
+            early_termination_settings
+        )
+        self.enable_early_termination = bool(
+            early_termination_fields["enable_early_termination"]
+        )
+        self.early_termination_max_drawdown = cast(
+            Optional[float], early_termination_fields["early_termination_max_drawdown"]
+        )
+        self.early_termination_min_trades = cast(
+            Optional[int], early_termination_fields["early_termination_min_trades"]
+        )
+        self.early_termination_min_trade_check_progress = float(
+            early_termination_fields["early_termination_min_trade_check_progress"]
+        )
+        self.early_termination_trade_pace_tolerance = float(
+            early_termination_fields["early_termination_trade_pace_tolerance"]
+        )
+        self.early_termination_min_expectancy = cast(
+            Optional[float], early_termination_fields["early_termination_min_expectancy"]
+        )
+        self.early_termination_expectancy_min_trades = int(
+            early_termination_fields["early_termination_expectancy_min_trades"]
+        )
+        self.early_termination_expectancy_progress = float(
+            early_termination_fields["early_termination_expectancy_progress"]
+        )
+        if self.evaluation_config is not None:
+            self.evaluation_config.early_termination_settings = copy.deepcopy(
+                early_termination_settings
+            )
         self.indicator_universe_mode = normalize_indicator_universe_mode(
             self.indicator_universe_mode
         )
@@ -317,6 +358,12 @@ class GAConfig(BaseConfig):
         ):
             working["evaluation_config"] = EvaluationConfig.from_dict(
                 working["evaluation_config"]
+            )
+        if "early_termination_settings" in working and isinstance(
+            working["early_termination_settings"], dict
+        ):
+            working["early_termination_settings"] = EarlyTerminationSettings.from_dict(
+                working["early_termination_settings"]
             )
         if "hybrid_config" in working and isinstance(working["hybrid_config"], dict):
             working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
@@ -410,5 +457,9 @@ class GAConfig(BaseConfig):
         cls._apply_robustness_overrides(working, provided_keys)
 
         # BaseConfigのfrom_dict処理を使用
-        return cast(GAConfig, super().from_dict(working))
+        instance = cast(GAConfig, super().from_dict(working))
+        if "early_termination_settings" not in provided_keys:
+            instance.early_termination_settings = None
+        instance._sync_runtime_fields()
+        return instance
 

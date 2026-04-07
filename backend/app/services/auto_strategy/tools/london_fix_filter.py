@@ -8,7 +8,7 @@
 import random
 from typing import Any, Dict
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 
 
@@ -21,25 +21,11 @@ class LondonFixFilter(BaseTool):
     デフォルトでは安全のため、両方の時間帯の前後をスキップ対象とします。
     """
 
-    @property
-    def name(self) -> str:
-        """
-        ツール名
-
-        Returns:
-            ツール名
-        """
-        return "london_fix_filter"
-
-    @property
-    def description(self) -> str:
-        """
-        ツールの説明
-
-        Returns:
-            ツールの説明
-        """
-        return "ロンドンフィックス（16:00 LDN）前後の乱高下を回避します"
+    tool_definition = ToolDefinition(
+        name="london_fix_filter",
+        description="ロンドンフィックス（16:00 LDN）前後の乱高下を回避します",
+        default_params={"enabled": True, "window_minutes": 15},
+    )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         """
@@ -82,15 +68,6 @@ class LondonFixFilter(BaseTool):
 
         # どちらかの時間帯に入っていればスキップ
         return in_winter_fix or in_summer_fix
-
-    def get_default_params(self) -> Dict[str, Any]:
-        """
-        デフォルトパラメータ
-
-        Returns:
-            enabled=True, window_minutes=15
-        """
-        return {"enabled": True, "window_minutes": 15}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """

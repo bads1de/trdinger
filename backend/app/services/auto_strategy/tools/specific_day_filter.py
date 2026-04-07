@@ -8,7 +8,7 @@
 import random
 from typing import Any, Dict
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 
 
@@ -19,25 +19,11 @@ class SpecificDayFilter(BaseTool):
     指定された曜日（0=月曜 〜 6=日曜）のエントリーをスキップします。
     """
 
-    @property
-    def name(self) -> str:
-        """
-        ツール名
-
-        Returns:
-            ツール名
-        """
-        return "specific_day_filter"
-
-    @property
-    def description(self) -> str:
-        """
-        ツールの説明
-
-        Returns:
-            ツールの説明
-        """
-        return "特定の曜日を指定してエントリーを回避します"
+    tool_definition = ToolDefinition(
+        name="specific_day_filter",
+        description="特定の曜日を指定してエントリーを回避します",
+        default_params={"enabled": True, "skip_days": []},
+    )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         """
@@ -62,15 +48,6 @@ class SpecificDayFilter(BaseTool):
         skip_days = params.get("skip_days", [])
 
         return current_day in skip_days
-
-    def get_default_params(self) -> Dict[str, Any]:
-        """
-        デフォルトパラメータ
-
-        Returns:
-            enabled=True, skip_days=[]
-        """
-        return {"enabled": True, "skip_days": []}
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """

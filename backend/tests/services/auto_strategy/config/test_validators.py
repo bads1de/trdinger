@@ -55,6 +55,7 @@ class TestConfigValidator:
         config.multi_fidelity_oos_ratio = 0.2
         config.multi_fidelity_candidate_ratio = 0.25
         config.multi_fidelity_min_candidates = 3
+        config.early_termination_settings = None
         config.enable_early_termination = False
         config.early_termination_max_drawdown = None
         config.early_termination_min_trades = None

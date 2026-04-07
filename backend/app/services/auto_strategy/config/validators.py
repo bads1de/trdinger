@@ -10,6 +10,7 @@ from typing import Any, List, Tuple
 
 from .base import BaseConfig
 from .ga import GAConfig
+from .sub_configs import resolve_early_termination_settings
 
 logger = logging.getLogger(__name__)
 
@@ -430,10 +431,11 @@ class ConfigValidator:
     def _validate_ga_early_termination_settings(config: GAConfig) -> List[str]:
         """早期打ち切り設定の検証"""
         errors = []
-        if not getattr(config, "enable_early_termination", False):
+        settings = resolve_early_termination_settings(config)
+        if not settings.enabled:
             return errors
 
-        max_drawdown = getattr(config, "early_termination_max_drawdown", None)
+        max_drawdown = settings.max_drawdown
         if max_drawdown is not None and (
             not isinstance(max_drawdown, (int, float))
             or not 0.0 < float(max_drawdown) <= 1.0
@@ -442,19 +444,17 @@ class ConfigValidator:
                 "early_termination_max_drawdown は0より大きく1.0以下である必要があります"
             )
 
-        min_trades = getattr(config, "early_termination_min_trades", None)
+        min_trades = settings.min_trades
         if min_trades is not None and (
             not isinstance(min_trades, (int, float)) or int(min_trades) <= 0
         ):
             errors.append("early_termination_min_trades は正の整数である必要があります")
 
-        expectancy = getattr(config, "early_termination_min_expectancy", None)
+        expectancy = settings.min_expectancy
         if expectancy is not None and not isinstance(expectancy, (int, float)):
             errors.append("early_termination_min_expectancy は数値である必要があります")
 
-        expectancy_min_trades = getattr(
-            config, "early_termination_expectancy_min_trades", 0
-        )
+        expectancy_min_trades = settings.expectancy_min_trades
         if (
             not isinstance(expectancy_min_trades, (int, float))
             or int(expectancy_min_trades) <= 0
@@ -464,13 +464,15 @@ class ConfigValidator:
             )
 
         for field_name in (
-            "early_termination_min_trade_check_progress",
-            "early_termination_trade_pace_tolerance",
-            "early_termination_expectancy_progress",
+            "min_trade_check_progress",
+            "trade_pace_tolerance",
+            "expectancy_progress",
         ):
-            value = getattr(config, field_name, None)
+            value = getattr(settings, field_name, None)
             if not isinstance(value, (int, float)) or not 0.0 < float(value) <= 1.0:
-                errors.append(f"{field_name} は0より大きく1.0以下である必要があります")
+                errors.append(
+                    f"early_termination_{field_name} は0より大きく1.0以下である必要があります"
+                )
 
         return errors
 

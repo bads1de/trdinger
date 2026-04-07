@@ -7,7 +7,7 @@
 
 from typing import Any, Dict
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 
 
@@ -19,25 +19,11 @@ class WeekendFilter(BaseTool):
     実運用の知見から、週末トレード停止で成績が改善することが多いです。
     """
 
-    @property
-    def name(self) -> str:
-        """
-        ツール名
-
-        Returns:
-            ツール名
-        """
-        return "weekend_filter"
-
-    @property
-    def description(self) -> str:
-        """
-        ツールの説明
-
-        Returns:
-            ツールの説明
-        """
-        return "土曜日・日曜日のエントリーをスキップします"
+    tool_definition = ToolDefinition(
+        name="weekend_filter",
+        description="土曜日・日曜日のエントリーをスキップします",
+        default_params={"enabled": True},
+    )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         """週末かどうかを判定してエントリースキップを決定"""
@@ -51,15 +37,6 @@ class WeekendFilter(BaseTool):
             return weekday in (5, 6)
         except (AttributeError, Exception):
             return False
-
-    def get_default_params(self) -> Dict[str, Any]:
-        """
-        デフォルトパラメータ
-
-        Returns:
-            enabled=True の辞書
-        """
-        return {"enabled": True}
 
 
 # グローバルインスタンスを作成してレジストリに登録

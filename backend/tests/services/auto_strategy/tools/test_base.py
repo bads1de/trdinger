@@ -1,24 +1,24 @@
 import pytest
 from typing import Any, Dict
-from app.services.auto_strategy.tools.base import BaseTool, ToolContext
+
+from app.services.auto_strategy.tools.base import (
+    BaseTool,
+    ToolContext,
+    ToolDefinition,
+)
 
 
 class MockTool(BaseTool):
     """テスト用の具象ツールクラス"""
 
-    @property
-    def name(self) -> str:
-        return "mock_tool"
-
-    @property
-    def description(self) -> str:
-        return "Mock tool for testing"
+    tool_definition = ToolDefinition(
+        name="mock_tool",
+        description="Mock tool for testing",
+        default_params={"should_skip": False, "tags": []},
+    )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         return params.get("should_skip", False)
-
-    def get_default_params(self) -> Dict[str, Any]:
-        return {"should_skip": False}
 
 
 class TestBaseTool:
@@ -36,11 +36,22 @@ class TestBaseTool:
         tool = MockTool()
         assert tool.name == "mock_tool"
         assert tool.description == "Mock tool for testing"
+        assert tool.definition == MockTool.tool_definition
 
         context = ToolContext()
         assert tool.should_skip_entry(context, {"should_skip": True}) is True
         assert tool.should_skip_entry(context, {"should_skip": False}) is False
-        assert tool.get_default_params() == {"should_skip": False}
+        assert tool.get_default_params() == {
+            "should_skip": False,
+            "tags": [],
+        }
+
+    def test_mock_tool_default_params_are_copied(self):
+        tool = MockTool()
+        params = tool.get_default_params()
+        params["tags"].append("x")
+
+        assert tool.get_default_params()["tags"] == []
 
     def test_base_tool_default_methods(self):
         import random

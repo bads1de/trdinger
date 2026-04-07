@@ -4,7 +4,7 @@
 エントリーフィルターなどのツールを提供します。
 """
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .beginning_of_month_filter import BeginningOfMonthFilter, beginning_of_month_filter
 from .end_of_month_filter import EndOfMonthFilter, end_of_month_filter
 from .london_fix_filter import LondonFixFilter, london_fix_filter
@@ -21,6 +21,7 @@ __all__ = [
     # 基底クラス
     "BaseTool",
     "ToolContext",
+    "ToolDefinition",
     # レジストリ
     "ToolRegistry",
     "tool_registry",

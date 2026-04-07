@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
@@ -53,13 +54,13 @@ class ToolGene:
         return cls(
             tool_name=data.get("tool_name", ""),
             enabled=data.get("enabled", True),
-            params=data.get("params", {}).copy(),
+            params=deepcopy(data.get("params", {})),
         )
 
     def clone(self) -> ToolGene:
-        """軽量コピーを作成"""
+        """深いコピーを作成"""
         return ToolGene(
             tool_name=self.tool_name,
             enabled=self.enabled,
-            params=self.params.copy(),
+            params=deepcopy(self.params),
         )

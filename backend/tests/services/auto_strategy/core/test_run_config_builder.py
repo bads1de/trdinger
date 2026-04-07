@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from app.services.auto_strategy.core.evaluation.run_config_builder import (
     RunConfigBuilder,
 )
+from app.services.auto_strategy.config.sub_configs import EarlyTerminationSettings
 
 
 class TestRunConfigBuilder:
@@ -146,14 +147,24 @@ class TestRunConfigBuilder:
         ga_config.volatility_model_path = None
         ga_config.ml_filter_enabled = False
         ga_config.ml_model_path = None
-        ga_config.enable_early_termination = True
-        ga_config.early_termination_max_drawdown = 0.15
-        ga_config.early_termination_min_trades = 20
-        ga_config.early_termination_min_trade_check_progress = 0.4
-        ga_config.early_termination_trade_pace_tolerance = 0.5
-        ga_config.early_termination_min_expectancy = -0.01
-        ga_config.early_termination_expectancy_min_trades = 5
-        ga_config.early_termination_expectancy_progress = 0.6
+        ga_config.early_termination_settings = EarlyTerminationSettings(
+            enabled=True,
+            max_drawdown=0.15,
+            min_trades=20,
+            min_trade_check_progress=0.4,
+            trade_pace_tolerance=0.5,
+            min_expectancy=-0.01,
+            expectancy_min_trades=5,
+            expectancy_progress=0.6,
+        )
+        ga_config.enable_early_termination = False
+        ga_config.early_termination_max_drawdown = 0.9
+        ga_config.early_termination_min_trades = 99
+        ga_config.early_termination_min_trade_check_progress = 0.1
+        ga_config.early_termination_trade_pace_tolerance = 0.1
+        ga_config.early_termination_min_expectancy = 0.5
+        ga_config.early_termination_expectancy_min_trades = 1
+        ga_config.early_termination_expectancy_progress = 0.1
 
         result = builder.build_run_config(
             gene,

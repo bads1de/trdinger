@@ -39,6 +39,12 @@ class TestSpecificDayFilter:
         context.timestamp = pd.Timestamp("2023-01-05")
         assert filter_tool.should_skip_entry(context, params) is False
 
+    def test_get_default_params_returns_independent_copy(self, filter_tool):
+        params = filter_tool.get_default_params()
+        params["skip_days"].append(3)
+
+        assert filter_tool.get_default_params()["skip_days"] == []
+
     def test_mutate_params(self, filter_tool):
         # グローバルの random をパッチ
         with patch('random.random', side_effect=[0.5, 0.1, 0.5, 0.1]), \

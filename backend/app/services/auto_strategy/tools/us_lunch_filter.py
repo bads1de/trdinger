@@ -9,7 +9,7 @@ from typing import Any, Dict
 
 import pandas as pd
 
-from .base import BaseTool, ToolContext
+from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 
 
@@ -24,25 +24,11 @@ class USLunchFilter(BaseTool):
     EDT (夏時間): UTC-4 -> ランチは UTC 16:00 - 17:00
     """
 
-    @property
-    def name(self) -> str:
-        """
-        ツール名
-
-        Returns:
-            ツール名
-        """
-        return "us_lunch_filter"
-
-    @property
-    def description(self) -> str:
-        """
-        ツールの説明
-
-        Returns:
-            ツールの説明
-        """
-        return "米国ランチタイム（12:00-13:00 EST）の流動性低下を回避します"
+    tool_definition = ToolDefinition(
+        name="us_lunch_filter",
+        description="米国ランチタイム（12:00-13:00 EST）の流動性低下を回避します",
+        default_params={"enabled": True},
+    )
 
     def _is_dst(self, timestamp: pd.Timestamp) -> bool:
         """
@@ -125,15 +111,6 @@ class USLunchFilter(BaseTool):
                 return hour == 16
             else:
                 return hour == 17
-
-    def get_default_params(self) -> Dict[str, Any]:
-        """
-        デフォルトパラメータ
-
-        Returns:
-            enabled=True
-        """
-        return {"enabled": True}
 
 
 # グローバルインスタンスを作成してレジストリに登録
