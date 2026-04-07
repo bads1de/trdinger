@@ -9,6 +9,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, List, Mapping, Optional
 
+from .constants import GA_DEFAULT_CONFIG, GA_MUTATION_SETTINGS, OPERATORS
+
 logger = logging.getLogger(__name__)
 
 
@@ -137,7 +139,9 @@ class EarlyTerminationSettings:
             min_trades=_read_value(source, "early_termination_min_trades", None),
             min_trade_check_progress=float(min_trade_check_progress),
             trade_pace_tolerance=float(trade_pace_tolerance),
-            min_expectancy=_read_value(source, "early_termination_min_expectancy", None),
+            min_expectancy=_read_value(
+                source, "early_termination_min_expectancy", None
+            ),
             expectancy_min_trades=int(expectancy_min_trades),
             expectancy_progress=float(expectancy_progress),
         )
@@ -195,31 +199,50 @@ def resolve_early_termination_settings(source: Any) -> EarlyTerminationSettings:
 class MutationConfig:
     """突然変異関連設定。"""
 
-    rate: float = 0.1
-    crossover_field_selection_probability: float = 0.5
-    indicator_param_range: List[float] = field(default_factory=lambda: [0.8, 1.2])
-    risk_param_range: List[float] = field(default_factory=lambda: [0.9, 1.1])
-    indicator_add_delete_probability: float = 0.3
-    indicator_add_vs_delete_probability: float = 0.5
-    condition_change_multiplier: float = 1.0
-    condition_selection_probability: float = 0.5
-    condition_operator_switch_probability: float = 0.2
-    tpsl_gene_creation_multiplier: float = 0.2
-    position_sizing_gene_creation_multiplier: float = 0.2
-    adaptive_variance_threshold: float = 0.001
-    adaptive_decrease_multiplier: float = 0.8
-    adaptive_increase_multiplier: float = 1.2
+    rate: float = float(GA_DEFAULT_CONFIG["mutation_rate"])
+    crossover_field_selection_probability: float = GA_MUTATION_SETTINGS[
+        "crossover_field_selection_probability"
+    ]
+    indicator_param_range: List[float] = field(
+        default_factory=lambda: list(
+            GA_MUTATION_SETTINGS["indicator_param_mutation_range"]
+        )
+    )
+    risk_param_range: List[float] = field(
+        default_factory=lambda: list(GA_MUTATION_SETTINGS["risk_param_mutation_range"])
+    )
+    indicator_add_delete_probability: float = GA_MUTATION_SETTINGS[
+        "indicator_add_delete_probability"
+    ]
+    indicator_add_vs_delete_probability: float = GA_MUTATION_SETTINGS[
+        "indicator_add_vs_delete_probability"
+    ]
+    condition_change_multiplier: float = GA_MUTATION_SETTINGS[
+        "condition_change_probability_multiplier"
+    ]
+    condition_selection_probability: float = GA_MUTATION_SETTINGS[
+        "condition_selection_probability"
+    ]
+    condition_operator_switch_probability: float = GA_MUTATION_SETTINGS[
+        "condition_operator_switch_probability"
+    ]
+    tpsl_gene_creation_multiplier: float = GA_MUTATION_SETTINGS[
+        "tpsl_gene_creation_probability_multiplier"
+    ]
+    position_sizing_gene_creation_multiplier: float = GA_MUTATION_SETTINGS[
+        "position_sizing_gene_creation_probability_multiplier"
+    ]
+    adaptive_variance_threshold: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_variance_threshold"
+    ]
+    adaptive_decrease_multiplier: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_rate_decrease_multiplier"
+    ]
+    adaptive_increase_multiplier: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_rate_increase_multiplier"
+    ]
     valid_condition_operators: List[str] = field(
-        default_factory=lambda: [
-            ">",
-            "<",
-            ">=",
-            "<=",
-            "==",
-            "!=",
-            "CROSS_UP",
-            "CROSS_DOWN",
-        ]
+        default_factory=lambda: OPERATORS.copy()
     )
 
     @classmethod
@@ -235,6 +258,26 @@ class MutationConfig:
         """
         filtered = _filter_known_fields(cls, data, "MutationConfig")
         return cls(**filtered)
+
+    def to_flat_dict(self) -> dict[str, Any]:
+        """GAConfig のフラット設定名へ変換する。"""
+        return {
+            "mutation_rate": self.rate,
+            "crossover_field_selection_probability": self.crossover_field_selection_probability,
+            "indicator_param_mutation_range": list(self.indicator_param_range),
+            "risk_param_mutation_range": list(self.risk_param_range),
+            "indicator_add_delete_probability": self.indicator_add_delete_probability,
+            "indicator_add_vs_delete_probability": self.indicator_add_vs_delete_probability,
+            "condition_change_probability_multiplier": self.condition_change_multiplier,
+            "condition_selection_probability": self.condition_selection_probability,
+            "condition_operator_switch_probability": self.condition_operator_switch_probability,
+            "tpsl_gene_creation_probability_multiplier": self.tpsl_gene_creation_multiplier,
+            "position_sizing_gene_creation_probability_multiplier": self.position_sizing_gene_creation_multiplier,
+            "adaptive_mutation_variance_threshold": self.adaptive_variance_threshold,
+            "adaptive_mutation_rate_decrease_multiplier": self.adaptive_decrease_multiplier,
+            "adaptive_mutation_rate_increase_multiplier": self.adaptive_increase_multiplier,
+            "valid_condition_operators": list(self.valid_condition_operators),
+        }
 
 
 @dataclass
@@ -286,10 +329,29 @@ class EvaluationConfig:
         if settings is None:
             filtered["early_termination_settings"] = EarlyTerminationSettings()
         elif not isinstance(settings, EarlyTerminationSettings):
-            filtered["early_termination_settings"] = EarlyTerminationSettings.from_source(
-                settings
+            filtered["early_termination_settings"] = (
+                EarlyTerminationSettings.from_source(settings)
             )
         return cls(**filtered)
+
+    def to_flat_dict(self) -> dict[str, Any]:
+        """GAConfig のフラット設定名へ変換する。"""
+        return {
+            "enable_parallel_evaluation": self.enable_parallel,
+            "max_evaluation_workers": self.max_workers,
+            "evaluation_timeout": self.timeout,
+            "enable_multi_fidelity_evaluation": self.enable_multi_fidelity_evaluation,
+            "multi_fidelity_window_ratio": self.multi_fidelity_window_ratio,
+            "multi_fidelity_oos_ratio": self.multi_fidelity_oos_ratio,
+            "multi_fidelity_candidate_ratio": self.multi_fidelity_candidate_ratio,
+            "multi_fidelity_min_candidates": self.multi_fidelity_min_candidates,
+            "oos_split_ratio": self.oos_split_ratio,
+            "oos_fitness_weight": self.oos_fitness_weight,
+            "enable_walk_forward": self.enable_walk_forward,
+            "wfa_n_folds": self.wfa_n_folds,
+            "wfa_train_ratio": self.wfa_train_ratio,
+            "wfa_anchored": self.wfa_anchored,
+        }
 
 
 @dataclass
@@ -319,6 +381,21 @@ class HybridConfig:
         filtered = _filter_known_fields(cls, data, "HybridConfig")
         return cls(**filtered)
 
+    def to_flat_dict(self) -> dict[str, Any]:
+        """GAConfig のフラット設定名へ変換する。"""
+        return {
+            "hybrid_mode": self.mode,
+            "hybrid_model_type": self.model_type,
+            "hybrid_model_types": (
+                None if self.model_types is None else list(self.model_types)
+            ),
+            "volatility_gate_enabled": self.volatility_gate_enabled,
+            "volatility_model_path": self.volatility_model_path,
+            "ml_filter_enabled": self.ml_filter_enabled,
+            "ml_model_path": self.ml_model_path,
+            "preprocess_features": self.preprocess_features,
+        }
+
 
 @dataclass
 class TuningConfig:
@@ -346,6 +423,18 @@ class TuningConfig:
         filtered = _filter_known_fields(cls, data, "TuningConfig")
         return cls(**filtered)
 
+    def to_flat_dict(self) -> dict[str, Any]:
+        """GAConfig のフラット設定名へ変換する。"""
+        return {
+            "enable_parameter_tuning": self.enabled,
+            "tuning_n_trials": self.n_trials,
+            "tuning_elite_count": self.elite_count,
+            "tuning_use_wfa": self.use_wfa,
+            "tuning_include_indicators": self.include_indicators,
+            "tuning_include_tpsl": self.include_tpsl,
+            "tuning_include_thresholds": self.include_thresholds,
+        }
+
 
 @dataclass
 class TwoStageSelectionConfig:
@@ -369,6 +458,15 @@ class TwoStageSelectionConfig:
         """
         filtered = _filter_known_fields(cls, data, "TwoStageSelectionConfig")
         return cls(**filtered)
+
+    def to_flat_dict(self) -> dict[str, Any]:
+        """GAConfig のフラット設定名へ変換する。"""
+        return {
+            "enable_two_stage_selection": self.enabled,
+            "two_stage_elite_count": self.elite_count,
+            "two_stage_candidate_pool_size": self.candidate_pool_size,
+            "two_stage_min_pass_rate": self.min_pass_rate,
+        }
 
 
 @dataclass
@@ -394,3 +492,19 @@ class RobustnessConfig:
         """
         filtered = _filter_known_fields(cls, data, "RobustnessConfig")
         return cls(**filtered)
+
+    def to_flat_dict(self) -> dict[str, Any]:
+        """GAConfig のフラット設定名へ変換する。"""
+        return {
+            "robustness_validation_symbols": (
+                None
+                if self.validation_symbols is None
+                else list(self.validation_symbols)
+            ),
+            "robustness_regime_windows": list(self.regime_windows),
+            "robustness_stress_slippage": list(self.stress_slippage),
+            "robustness_stress_commission_multipliers": list(
+                self.stress_commission_multipliers
+            ),
+            "robustness_aggregate_method": self.aggregate_method,
+        }

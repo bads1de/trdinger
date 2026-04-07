@@ -10,6 +10,11 @@ from typing import Any, Dict
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
+from .time_windows import (
+    is_within_window,
+    mutate_window_minutes,
+    to_timezone_minutes,
+)
 
 
 class USMarketOpenFilter(BaseTool):
@@ -45,23 +50,13 @@ class USMarketOpenFilter(BaseTool):
             return False
 
         try:
-            # timestampがnaiveな場合、UTCとみなして変換
-            ts = context.timestamp
-            if ts.tz is None:
-                ts = ts.tz_localize("UTC")
-
-            # NY時間に変換
-            ny_time = ts.tz_convert("US/Eastern")
-
-            # 市場開始は 09:30
-            # 分単位で計算
-            current_minutes = ny_time.hour * 60 + ny_time.minute
+            current_minutes = to_timezone_minutes(context.timestamp, "US/Eastern")
             open_minutes = 9 * 60 + 30  # 09:30 = 570分
 
             window = params.get("window_minutes", 30)
 
             # 前後 window 分の範囲内ならスキップ
-            return abs(current_minutes - open_minutes) <= window
+            return is_within_window(current_minutes, open_minutes, window)
 
         except Exception:
             # 変換失敗時は簡易判定（UTCベース）
@@ -97,9 +92,14 @@ class USMarketOpenFilter(BaseTool):
 
         # 20%の確率でウィンドウサイズを変更
         if random.random() < 0.2:
-            current = new_params.get("window_minutes", 30)
-            delta = random.randint(-10, 10)
-            new_params["window_minutes"] = max(10, min(60, current + delta))
+            mutate_window_minutes(
+                new_params,
+                default=30,
+                minimum=10,
+                maximum=60,
+                delta_low=-10,
+                delta_high=10,
+            )
 
         return new_params
 

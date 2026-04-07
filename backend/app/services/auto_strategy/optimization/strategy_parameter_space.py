@@ -62,6 +62,11 @@ class StrategyParameterSpace:
         "momentum_zero_centered": {"low": -1.0, "high": 1.0, "type": "real"},
         "default": {"low": -100.0, "high": 100.0, "type": "real"},
     }
+    TPSL_FIELDS: tuple[tuple[str, str], ...] = (
+        ("tpsl_gene", "tpsl"),
+        ("long_tpsl_gene", "long_tpsl"),
+        ("short_tpsl_gene", "short_tpsl"),
+    )
 
     def __init__(self):
         """初期化"""
@@ -93,13 +98,7 @@ class StrategyParameterSpace:
             parameter_space.update(indicator_params)
 
         if include_tpsl:
-            # 各TPSL遺伝子をループで処理
-            tpsl_fields = [
-                ("tpsl_gene", "tpsl"),
-                ("long_tpsl_gene", "long_tpsl"),
-                ("short_tpsl_gene", "short_tpsl"),
-            ]
-            for field_name, prefix in tpsl_fields:
+            for field_name, prefix in self.TPSL_FIELDS:
                 gene_obj = getattr(gene, field_name, None)
                 if gene_obj:
                     parameter_space.update(
@@ -320,12 +319,7 @@ class StrategyParameterSpace:
         self._apply_indicator_params(new_gene.indicators, params)
 
         # TPSLパラメータを適用
-        tpsl_fields = [
-            ("tpsl_gene", "tpsl"),
-            ("long_tpsl_gene", "long_tpsl"),
-            ("short_tpsl_gene", "short_tpsl"),
-        ]
-        for field_name, prefix in tpsl_fields:
+        for field_name, prefix in self.TPSL_FIELDS:
             gene_obj = getattr(new_gene, field_name, None)
             if gene_obj:
                 self._apply_tpsl_params(gene_obj, params, prefix=prefix)

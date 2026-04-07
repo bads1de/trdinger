@@ -149,6 +149,111 @@ class TestGAConfig:
         assert restored.robustness_stress_commission_multipliers == [1.5]
         assert restored.robustness_aggregate_method == "mean"
 
+    def test_from_dict_expands_all_nested_runtime_configs(self):
+        """各種ネスト設定が対応するフラット設定へ復元されることを確認"""
+        restored = GAConfig.from_dict(
+            {
+                "mutation_config": {
+                    "rate": 0.25,
+                    "indicator_param_range": [0.7, 1.4],
+                    "risk_param_range": [0.8, 1.2],
+                    "indicator_add_delete_probability": 0.45,
+                    "indicator_add_vs_delete_probability": 0.35,
+                    "condition_change_multiplier": 1.3,
+                    "condition_selection_probability": 0.6,
+                    "condition_operator_switch_probability": 0.4,
+                    "tpsl_gene_creation_multiplier": 0.55,
+                    "position_sizing_gene_creation_multiplier": 0.65,
+                    "adaptive_variance_threshold": 0.02,
+                    "adaptive_decrease_multiplier": 0.75,
+                    "adaptive_increase_multiplier": 1.4,
+                    "valid_condition_operators": [">", "<", "CROSS_UP"],
+                },
+                "evaluation_config": {
+                    "enable_parallel": False,
+                    "max_workers": 3,
+                    "timeout": 120.0,
+                    "enable_multi_fidelity_evaluation": True,
+                    "multi_fidelity_window_ratio": 0.4,
+                    "multi_fidelity_oos_ratio": 0.3,
+                    "multi_fidelity_candidate_ratio": 0.5,
+                    "multi_fidelity_min_candidates": 7,
+                    "oos_split_ratio": 0.25,
+                    "oos_fitness_weight": 0.6,
+                    "enable_walk_forward": True,
+                    "wfa_n_folds": 4,
+                    "wfa_train_ratio": 0.8,
+                    "wfa_anchored": True,
+                },
+                "hybrid_config": {
+                    "mode": True,
+                    "model_type": "xgboost",
+                    "model_types": ["xgboost", "lightgbm"],
+                    "volatility_gate_enabled": True,
+                    "volatility_model_path": "vol.pkl",
+                    "ml_filter_enabled": True,
+                    "ml_model_path": "ml.pkl",
+                    "preprocess_features": False,
+                },
+                "tuning_config": {
+                    "enabled": False,
+                    "n_trials": 11,
+                    "elite_count": 2,
+                    "use_wfa": False,
+                    "include_indicators": False,
+                    "include_tpsl": False,
+                    "include_thresholds": True,
+                },
+            }
+        )
+
+        assert restored.mutation_rate == 0.25
+        assert restored.indicator_param_mutation_range == [0.7, 1.4]
+        assert restored.risk_param_mutation_range == [0.8, 1.2]
+        assert restored.indicator_add_delete_probability == 0.45
+        assert restored.indicator_add_vs_delete_probability == 0.35
+        assert restored.condition_change_probability_multiplier == 1.3
+        assert restored.condition_selection_probability == 0.6
+        assert restored.condition_operator_switch_probability == 0.4
+        assert restored.tpsl_gene_creation_probability_multiplier == 0.55
+        assert restored.position_sizing_gene_creation_probability_multiplier == 0.65
+        assert restored.adaptive_mutation_variance_threshold == 0.02
+        assert restored.adaptive_mutation_rate_decrease_multiplier == 0.75
+        assert restored.adaptive_mutation_rate_increase_multiplier == 1.4
+        assert restored.valid_condition_operators == [">", "<", "CROSS_UP"]
+
+        assert restored.enable_parallel_evaluation is False
+        assert restored.max_evaluation_workers == 3
+        assert restored.evaluation_timeout == 120.0
+        assert restored.enable_multi_fidelity_evaluation is True
+        assert restored.multi_fidelity_window_ratio == 0.4
+        assert restored.multi_fidelity_oos_ratio == 0.3
+        assert restored.multi_fidelity_candidate_ratio == 0.5
+        assert restored.multi_fidelity_min_candidates == 7
+        assert restored.oos_split_ratio == 0.25
+        assert restored.oos_fitness_weight == 0.6
+        assert restored.enable_walk_forward is True
+        assert restored.wfa_n_folds == 4
+        assert restored.wfa_train_ratio == 0.8
+        assert restored.wfa_anchored is True
+
+        assert restored.hybrid_mode is True
+        assert restored.hybrid_model_type == "xgboost"
+        assert restored.hybrid_model_types == ["xgboost", "lightgbm"]
+        assert restored.volatility_gate_enabled is True
+        assert restored.volatility_model_path == "vol.pkl"
+        assert restored.ml_filter_enabled is True
+        assert restored.ml_model_path == "vol.pkl"
+        assert restored.preprocess_features is False
+
+        assert restored.enable_parameter_tuning is False
+        assert restored.tuning_n_trials == 11
+        assert restored.tuning_elite_count == 2
+        assert restored.tuning_use_wfa is False
+        assert restored.tuning_include_indicators is False
+        assert restored.tuning_include_tpsl is False
+        assert restored.tuning_include_thresholds is True
+
     def test_from_dict_rejects_unknown_keys(self):
         """未知のキーは早期にエラーにすることを確認"""
         with pytest.raises(ValueError, match="未対応の設定キー"):

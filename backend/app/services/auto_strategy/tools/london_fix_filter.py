@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
+from .time_windows import is_within_any_window, mutate_window_minutes, to_utc_minutes
 
 
 class LondonFixFilter(BaseTool):
@@ -48,26 +49,9 @@ class LondonFixFilter(BaseTool):
         # Winter: UTC 16:00
         # Summer: UTC 15:00
 
-        # 時間と分を取得
-        hour = context.timestamp.hour
-        minute = context.timestamp.minute
-
         window = params.get("window_minutes", 15)
-
-        # ターゲット時間を分単位で計算
-        current_minutes = hour * 60 + minute
-
-        # 冬時間ターゲット (16:00 UTC) = 960分
-        winter_target = 16 * 60
-        # 夏時間ターゲット (15:00 UTC) = 900分
-        summer_target = 15 * 60
-
-        # 範囲内かチェック
-        in_winter_fix = abs(current_minutes - winter_target) <= window
-        in_summer_fix = abs(current_minutes - summer_target) <= window
-
-        # どちらかの時間帯に入っていればスキップ
-        return in_winter_fix or in_summer_fix
+        current_minutes = to_utc_minutes(context.timestamp)
+        return is_within_any_window(current_minutes, [15 * 60, 16 * 60], window)
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -83,11 +67,14 @@ class LondonFixFilter(BaseTool):
 
         # 20%の確率でウィンドウサイズを変更 (5分〜30分)
         if random.random() < 0.2:
-            current_window = new_params.get("window_minutes", 15)
-            # -5〜+5分の範囲で変動、ただし5〜30分に収める
-            delta = random.randint(-5, 5)
-            new_window = max(5, min(30, current_window + delta))
-            new_params["window_minutes"] = new_window
+            mutate_window_minutes(
+                new_params,
+                default=15,
+                minimum=5,
+                maximum=30,
+                delta_low=-5,
+                delta_high=5,
+            )
 
         return new_params
 

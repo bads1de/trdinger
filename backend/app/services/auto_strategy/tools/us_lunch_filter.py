@@ -7,10 +7,9 @@
 
 from typing import Any, Dict
 
-import pandas as pd
-
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
+from .time_windows import to_timezone_minutes
 
 
 class USLunchFilter(BaseTool):
@@ -30,46 +29,6 @@ class USLunchFilter(BaseTool):
         default_params={"enabled": True},
     )
 
-    def _is_dst(self, timestamp: pd.Timestamp) -> bool:
-        """
-        米国夏時間（DST）判定
-
-        原則: 3月の第2日曜日 午前2時から 11月の第1日曜日 午前2時まで
-        """
-        year = timestamp.year
-        month = timestamp.month
-
-        if month < 3 or month > 11:
-            return False
-        if month > 3 and month < 11:
-            return True
-
-        # 3月と11月の詳細判定
-        # その月の第N日曜日を求める簡易ロジック
-        # (ここでは厳密性より計算速度を優先し、近似的な判定を行う場合もあるが、
-        #  今回は標準的なpd.Timestampの機能で判定を試みる)
-
-        # タイムゾーン変換で判定するのが最も確実だが、
-        # timestampがnaiveなUTCであることを前提に簡易計算する
-
-        # 3月の第2日曜日
-        march_start = pd.Timestamp(f"{year}-03-01")
-        # 曜日 (0=Mon, 6=Sun)
-        # 最初の土曜日までの日数 + 8 で第2日曜日の日付が出る
-        # (ただし計算が複雑になるため、簡易的に pytz を使いたいところだが、
-        #  標準ライブラリ依存を避けるため、pandasの機能を使う)
-
-        try:
-            # pandasのtz_localizeを使って判定するのがベスト
-            # UTCとして解釈し、US/Easternに変換してオフセットを確認
-            localized = timestamp.tz_localize("UTC").tz_convert("US/Eastern")
-            dst_offset = localized.dst()
-            return dst_offset is not None and dst_offset.total_seconds() != 0
-        except Exception:
-            # タイムゾーン情報がない場合などのフォールバック
-            # 簡易的に夏時間を判定（誤差許容）
-            return False
-
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
         """
         米国ランチタイムかどうかを判定
@@ -87,16 +46,8 @@ class USLunchFilter(BaseTool):
 
         # タイムゾーン処理を行い、NY時間を取得
         try:
-            # timestampがnaiveな場合、UTCとみなして変換
-            ts = context.timestamp
-            if ts.tz is None:
-                ts = ts.tz_localize("UTC")
-
-            ny_time = ts.tz_convert("US/Eastern")
-
-            # 12:00 〜 13:00 の間ならスキップ
-            # 12時台 (12:00:00 〜 12:59:59)
-            return ny_time.hour == 12
+            current_minutes = to_timezone_minutes(context.timestamp, "US/Eastern")
+            return current_minutes is not None and 12 * 60 <= current_minutes < 13 * 60
 
         except Exception:
             # 変換失敗時は安全側に倒してスキップしない、あるいはUTCで概算

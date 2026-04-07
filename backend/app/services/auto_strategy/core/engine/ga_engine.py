@@ -12,7 +12,10 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 
 
 from ..evaluation.evaluation_report import EvaluationReport
-from ..evaluation.evaluation_fidelity import build_coarse_ga_config, is_multi_fidelity_enabled
+from ..evaluation.evaluation_fidelity import (
+    build_coarse_ga_config,
+    is_multi_fidelity_enabled,
+)
 
 import numpy as np
 from deap import tools
@@ -35,6 +38,10 @@ from .ga_utils import (
     create_deap_mutate_wrapper,
     crossover_strategy_genes,
     mutate_strategy_gene,
+)
+from .fitness_utils import (
+    extract_primary_fitness_from_result,
+    extract_result_fitness,
 )
 from .report_selection import (
     build_report_rank_key_from_primary_fitness,
@@ -654,14 +661,9 @@ class GeneticAlgorithmEngine:
 
             logger.info("[Tuning] エリート個体のパラメータチューニングを開始")
 
-            tuner = StrategyParameterTuner(
-                evaluator=self.individual_evaluator,
-                config=config,
-                n_trials=config.tuning_n_trials,
-                use_wfa=config.tuning_use_wfa,
-                include_indicators=config.tuning_include_indicators,
-                include_tpsl=config.tuning_include_tpsl,
-                include_thresholds=config.tuning_include_thresholds,
+            tuner = StrategyParameterTuner.from_ga_config(
+                self.individual_evaluator,
+                config,
             )
 
             tuned_gene = tuner.tune(best_gene)
@@ -747,16 +749,10 @@ class GeneticAlgorithmEngine:
         self, best_individual: Any, config: GAConfig
     ) -> Any:
         """結果出力用の best fitness を抽出する。"""
-        if best_individual is None or getattr(best_individual, "fitness", None) is None:
-            return () if config.enable_multi_objective else 0.0
-
-        fitness_values = getattr(best_individual.fitness, "values", ())
-        if config.enable_multi_objective:
-            return tuple(fitness_values)
-
-        if isinstance(fitness_values, (tuple, list)) and fitness_values:
-            return float(fitness_values[0])
-        return 0.0
+        return extract_result_fitness(
+            best_individual,
+            enable_multi_objective=config.enable_multi_objective,
+        )
 
     def _rank_population_for_persistence(self, population: List[Any]) -> List[Any]:
         """保存順序用に個体群を安定ソートする。"""
@@ -863,14 +859,9 @@ class GeneticAlgorithmEngine:
         """候補遺伝子群を順次チューニングする。"""
         from app.services.auto_strategy.optimization import StrategyParameterTuner
 
-        tuner = StrategyParameterTuner(
-            evaluator=self.individual_evaluator,
-            config=config,
-            n_trials=config.tuning_n_trials,
-            use_wfa=config.tuning_use_wfa,
-            include_indicators=config.tuning_include_indicators,
-            include_tpsl=config.tuning_include_tpsl,
-            include_thresholds=config.tuning_include_thresholds,
+        tuner = StrategyParameterTuner.from_ga_config(
+            self.individual_evaluator,
+            config,
         )
 
         tuned_candidates: List[StrategyGene] = []
@@ -1112,14 +1103,7 @@ class GeneticAlgorithmEngine:
     @staticmethod
     def _extract_primary_fitness_from_result(result: Any) -> float:
         """評価結果から主 fitness を取り出す。"""
-        if isinstance(result, (tuple, list)) and result:
-            try:
-                return float(result[0])
-            except (TypeError, ValueError):
-                return 0.0
-        if isinstance(result, (int, float)):
-            return float(result)
-        return 0.0
+        return extract_primary_fitness_from_result(result)
 
     @staticmethod
     def _get_strategy_result_key(strategy: Any) -> str:

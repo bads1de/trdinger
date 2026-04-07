@@ -23,6 +23,8 @@ from .constants import (
     DEFAULT_GA_OBJECTIVES,
     GA_DEFAULT_CONFIG,
     GA_DEFAULT_FITNESS_SHARING,
+    GA_MUTATION_SETTINGS,
+    OPERATORS,
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
 )
@@ -69,37 +71,56 @@ class GAConfig(BaseConfig):
     ]
 
     # 交叉・突然変異拡張設定
-    crossover_field_selection_probability: float = 0.5
+    crossover_field_selection_probability: float = GA_MUTATION_SETTINGS[
+        "crossover_field_selection_probability"
+    ]
     indicator_param_mutation_range: List[float] = field(
-        default_factory=lambda: [0.8, 1.2]
+        default_factory=lambda: list(
+            GA_MUTATION_SETTINGS["indicator_param_mutation_range"]
+        )
     )
-    risk_param_mutation_range: List[float] = field(default_factory=lambda: [0.9, 1.1])
-    indicator_add_delete_probability: float = 0.3
-    indicator_add_vs_delete_probability: float = 0.5
-    condition_change_probability_multiplier: float = 1.0
-    condition_selection_probability: float = 0.5
-    condition_operator_switch_probability: float = 0.2
+    risk_param_mutation_range: List[float] = field(
+        default_factory=lambda: list(GA_MUTATION_SETTINGS["risk_param_mutation_range"])
+    )
+    indicator_add_delete_probability: float = GA_MUTATION_SETTINGS[
+        "indicator_add_delete_probability"
+    ]
+    indicator_add_vs_delete_probability: float = GA_MUTATION_SETTINGS[
+        "indicator_add_vs_delete_probability"
+    ]
+    condition_change_probability_multiplier: float = GA_MUTATION_SETTINGS[
+        "condition_change_probability_multiplier"
+    ]
+    condition_selection_probability: float = GA_MUTATION_SETTINGS[
+        "condition_selection_probability"
+    ]
+    condition_operator_switch_probability: float = GA_MUTATION_SETTINGS[
+        "condition_operator_switch_probability"
+    ]
     valid_condition_operators: List[str] = field(
-        default_factory=lambda: [
-            ">",
-            "<",
-            ">=",
-            "<=",
-            "==",
-            "!=",
-            "CROSS_UP",
-            "CROSS_DOWN",
-        ]
+        default_factory=lambda: OPERATORS.copy()
     )
-    tpsl_gene_creation_probability_multiplier: float = 0.2
-    position_sizing_gene_creation_probability_multiplier: float = 0.2
-    adaptive_mutation_variance_threshold: float = 0.001
-    adaptive_mutation_rate_decrease_multiplier: float = 0.8
-    adaptive_mutation_rate_increase_multiplier: float = 1.2
+    tpsl_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS[
+        "tpsl_gene_creation_probability_multiplier"
+    ]
+    position_sizing_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS[
+        "position_sizing_gene_creation_probability_multiplier"
+    ]
+    adaptive_mutation_variance_threshold: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_variance_threshold"
+    ]
+    adaptive_mutation_rate_decrease_multiplier: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_rate_decrease_multiplier"
+    ]
+    adaptive_mutation_rate_increase_multiplier: float = GA_MUTATION_SETTINGS[
+        "adaptive_mutation_rate_increase_multiplier"
+    ]
 
     # パラメータ範囲
     parameter_ranges: Dict[str, List] = field(
-        default_factory=lambda: cast(Dict[str, List], copy.deepcopy(GA_PARAMETER_RANGES))
+        default_factory=lambda: cast(
+            Dict[str, List], copy.deepcopy(GA_PARAMETER_RANGES)
+        )
     )
     threshold_ranges: Dict[str, List[float]] = field(
         default_factory=lambda: cast(
@@ -309,7 +330,8 @@ class GAConfig(BaseConfig):
             early_termination_fields["early_termination_trade_pace_tolerance"]
         )
         self.early_termination_min_expectancy = cast(
-            Optional[float], early_termination_fields["early_termination_min_expectancy"]
+            Optional[float],
+            early_termination_fields["early_termination_min_expectancy"],
         )
         self.early_termination_expectancy_min_trades = int(
             early_termination_fields["early_termination_expectancy_min_trades"]
@@ -376,48 +398,26 @@ class GAConfig(BaseConfig):
             )
 
     @staticmethod
-    def _apply_two_stage_overrides(
+    def _apply_nested_config_overrides(
         working: Dict[str, Any], provided_keys: Set[str]
     ) -> None:
-        """two-stage 設定のネスト値をフラットフィールドへ反映する。"""
-        two_stage_config = working.get("two_stage_selection_config")
-        if not isinstance(two_stage_config, TwoStageSelectionConfig):
-            return
-
-        if "enable_two_stage_selection" not in provided_keys:
-            working["enable_two_stage_selection"] = two_stage_config.enabled
-        if "two_stage_elite_count" not in provided_keys:
-            working["two_stage_elite_count"] = two_stage_config.elite_count
-        if "two_stage_candidate_pool_size" not in provided_keys:
-            working["two_stage_candidate_pool_size"] = (
-                two_stage_config.candidate_pool_size
-            )
-        if "two_stage_min_pass_rate" not in provided_keys:
-            working["two_stage_min_pass_rate"] = two_stage_config.min_pass_rate
-
-    @staticmethod
-    def _apply_robustness_overrides(
-        working: Dict[str, Any], provided_keys: Set[str]
-    ) -> None:
-        """robustness 設定のネスト値をフラットフィールドへ反映する。"""
-        robustness_config = working.get("robustness_config")
-        if not isinstance(robustness_config, RobustnessConfig):
-            return
-
-        if "robustness_validation_symbols" not in provided_keys:
-            working["robustness_validation_symbols"] = (
-                robustness_config.validation_symbols
-            )
-        if "robustness_regime_windows" not in provided_keys:
-            working["robustness_regime_windows"] = robustness_config.regime_windows
-        if "robustness_stress_slippage" not in provided_keys:
-            working["robustness_stress_slippage"] = robustness_config.stress_slippage
-        if "robustness_stress_commission_multipliers" not in provided_keys:
-            working["robustness_stress_commission_multipliers"] = (
-                robustness_config.stress_commission_multipliers
-            )
-        if "robustness_aggregate_method" not in provided_keys:
-            working["robustness_aggregate_method"] = robustness_config.aggregate_method
+        """ネスト設定の値を、未指定のフラットフィールドへ反映する。"""
+        nested_config_fields = (
+            "mutation_config",
+            "evaluation_config",
+            "hybrid_config",
+            "tuning_config",
+            "two_stage_selection_config",
+            "robustness_config",
+        )
+        for field_name in nested_config_fields:
+            config_obj = working.get(field_name)
+            if config_obj is None or not hasattr(config_obj, "to_flat_dict"):
+                continue
+            for flat_key, value in config_obj.to_flat_dict().items():
+                if flat_key in provided_keys:
+                    continue
+                working[flat_key] = copy.deepcopy(value)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
@@ -446,11 +446,9 @@ class GAConfig(BaseConfig):
                 working[key] = default_value
 
         cls._restore_nested_configs(working)
-        cls._apply_two_stage_overrides(working, provided_keys)
-        cls._apply_robustness_overrides(working, provided_keys)
+        cls._apply_nested_config_overrides(working, provided_keys)
 
         # BaseConfigのfrom_dict処理を使用
         instance = cast(GAConfig, super().from_dict(working))
         instance._sync_runtime_fields()
         return instance
-

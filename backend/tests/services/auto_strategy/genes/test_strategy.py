@@ -2,7 +2,11 @@ import pytest
 from unittest.mock import MagicMock, patch
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.indicator import IndicatorGene
-from app.services.auto_strategy.genes.conditions import Condition
+from app.services.auto_strategy.genes.conditions import Condition, StatefulCondition
+from app.services.auto_strategy.genes.entry import EntryGene
+from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
+from app.services.auto_strategy.genes.tool import ToolGene
+from app.services.auto_strategy.genes.tpsl import TPSLGene
 
 
 class TestStrategyGene:
@@ -138,3 +142,56 @@ class TestStrategyGene:
         # デフォルトは有効なはず
         assert is_valid is True
         assert len(errors) == 0
+
+    def test_clone_copies_all_nested_runtime_fields(self):
+        gene = StrategyGene(
+            id="source-id",
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand=100.0)
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand=90.0)
+            ],
+            stateful_conditions=[
+                StatefulCondition(
+                    trigger_condition=Condition(
+                        left_operand="close",
+                        operator=">",
+                        right_operand=100.0,
+                    ),
+                    follow_condition=Condition(
+                        left_operand="close",
+                        operator="<",
+                        right_operand=95.0,
+                    ),
+                )
+            ],
+            risk_management={"position_size": 0.1},
+            tpsl_gene=TPSLGene(stop_loss_pct=0.02, take_profit_pct=0.04),
+            long_tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.05),
+            short_tpsl_gene=TPSLGene(stop_loss_pct=0.04, take_profit_pct=0.06),
+            position_sizing_gene=PositionSizingGene(risk_per_trade=0.02),
+            entry_gene=EntryGene(),
+            long_entry_gene=EntryGene(limit_offset_pct=0.01),
+            short_entry_gene=EntryGene(stop_offset_pct=0.02),
+            tool_genes=[ToolGene(tool_name="weekend_filter", params={"enabled": True})],
+            metadata={"source": {"name": "test"}},
+        )
+
+        cloned = gene.clone()
+
+        assert cloned.id != gene.id
+        assert cloned.indicators[0] is not gene.indicators[0]
+        assert cloned.long_entry_conditions[0] is not gene.long_entry_conditions[0]
+        assert cloned.short_entry_conditions[0] is not gene.short_entry_conditions[0]
+        assert cloned.stateful_conditions[0] is not gene.stateful_conditions[0]
+        assert cloned.tpsl_gene is not gene.tpsl_gene
+        assert cloned.long_tpsl_gene is not gene.long_tpsl_gene
+        assert cloned.short_tpsl_gene is not gene.short_tpsl_gene
+        assert cloned.position_sizing_gene is not gene.position_sizing_gene
+        assert cloned.entry_gene is not gene.entry_gene
+        assert cloned.long_entry_gene is not gene.long_entry_gene
+        assert cloned.short_entry_gene is not gene.short_entry_gene
+        assert cloned.tool_genes[0] is not gene.tool_genes[0]
+        assert cloned.metadata is not gene.metadata

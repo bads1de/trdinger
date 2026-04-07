@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .conditions import Condition, ConditionGroup, StatefulCondition
@@ -107,50 +107,28 @@ class StrategyGene:
         is_valid, errors = validator.validate_strategy_gene(self)
         return is_valid, errors
 
-    @staticmethod
-    def _smart_copy(value: Any) -> Any:
-        """値をスマートにコピー（cloneメソッドがあれば使用）。"""
-        if hasattr(value, "clone"):
-            return value.clone()
-        if isinstance(value, list):
-            return [StrategyGene._smart_copy(item) for item in value]
-        if isinstance(value, dict):
-            return value.copy()
-        return value
+    @classmethod
+    def clone_field_names(cls) -> Tuple[str, ...]:
+        """clone 対象となるフィールド名を返す。"""
+        return tuple(
+            field_info.name for field_info in fields(cls) if field_info.name != "id"
+        )
+
+    @classmethod
+    def crossover_field_names(cls) -> Tuple[str, ...]:
+        """uniform crossover 対象となるフィールド名を返す。"""
+        return tuple(name for name in cls.clone_field_names() if name != "metadata")
 
     def clone(self, keep_id: bool = False) -> "StrategyGene":
         """軽量コピーを作成。"""
-        return StrategyGene(
-            id=self.id if keep_id else str(uuid.uuid4()),
-            indicators=[ind.clone() for ind in self.indicators],
-            long_entry_conditions=[
-                self._smart_copy(c) for c in self.long_entry_conditions
-            ],
-            short_entry_conditions=[
-                self._smart_copy(c) for c in self.short_entry_conditions
-            ],
-            stateful_conditions=[c.clone() for c in self.stateful_conditions],
-            risk_management=self.risk_management.copy(),
-            tpsl_gene=self.tpsl_gene.clone() if self.tpsl_gene else None,
-            long_tpsl_gene=(
-                self.long_tpsl_gene.clone() if self.long_tpsl_gene else None
-            ),
-            short_tpsl_gene=(
-                self.short_tpsl_gene.clone() if self.short_tpsl_gene else None
-            ),
-            position_sizing_gene=(
-                self.position_sizing_gene.clone() if self.position_sizing_gene else None
-            ),
-            entry_gene=self.entry_gene.clone() if self.entry_gene else None,
-            long_entry_gene=(
-                self.long_entry_gene.clone() if self.long_entry_gene else None
-            ),
-            short_entry_gene=(
-                self.short_entry_gene.clone() if self.short_entry_gene else None
-            ),
-            tool_genes=[t.clone() for t in self.tool_genes],
-            metadata=self.metadata.copy(),
-        )
+        from .genetic_utils import GeneticUtils
+
+        cloned_fields = {
+            field_name: GeneticUtils.smart_copy(getattr(self, field_name))
+            for field_name in self.clone_field_names()
+        }
+        cloned_fields["id"] = self.id if keep_id else str(uuid.uuid4())
+        return type(self)(**cloned_fields)
 
     def mutate(self, config: Any, mutation_rate: float = 0.1) -> "StrategyGene":
         """戦略遺伝子の突然変異を実行する。"""

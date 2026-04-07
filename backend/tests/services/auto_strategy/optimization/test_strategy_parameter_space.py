@@ -232,6 +232,23 @@ class TestStrategyParameterSpace:
         assert "long_tpsl_stop_loss_pct" in result
         assert "short_tpsl_stop_loss_pct" in result
 
+    def test_apply_params_to_long_short_tpsl_genes(self, parameter_space):
+        """ロング・ショート別TPSLに個別のパラメータが適用される"""
+        gene = StrategyGene(
+            id="test-gene",
+            long_tpsl_gene=TPSLGene(stop_loss_pct=0.02, take_profit_pct=0.04),
+            short_tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.06),
+        )
 
+        result = parameter_space.apply_params_to_gene(
+            gene,
+            {
+                "long_tpsl_stop_loss_pct": 0.05,
+                "short_tpsl_take_profit_pct": 0.09,
+            },
+        )
 
-
+        assert result.long_tpsl_gene.stop_loss_pct == 0.05
+        assert result.long_tpsl_gene.take_profit_pct == 0.04
+        assert result.short_tpsl_gene.stop_loss_pct == 0.03
+        assert result.short_tpsl_gene.take_profit_pct == 0.09

@@ -155,3 +155,22 @@ class TestStrategyParameterTuner:
 
         assert len(results) == 2
         assert tuner.tune.call_count == 2
+
+    def test_from_ga_config_uses_tuning_fields(self, mock_evaluator):
+        config = GAConfig(
+            tuning_n_trials=17,
+            tuning_use_wfa=False,
+            tuning_include_indicators=False,
+            tuning_include_tpsl=False,
+            tuning_include_thresholds=True,
+        )
+
+        tuner = StrategyParameterTuner.from_ga_config(mock_evaluator, config)
+
+        assert tuner.evaluator is mock_evaluator
+        assert tuner.config is config
+        assert tuner.n_trials == 17
+        assert tuner.use_wfa is False
+        assert tuner.include_indicators is False
+        assert tuner.include_tpsl is False
+        assert tuner.include_thresholds is True

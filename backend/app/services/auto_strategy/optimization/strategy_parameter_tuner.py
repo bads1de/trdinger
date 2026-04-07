@@ -12,6 +12,7 @@ from app.services.ml.optimization.optuna_optimizer import OptunaOptimizer
 
 from ..config.ga import GAConfig
 from ..core.evaluation.individual_evaluator import IndividualEvaluator
+from ..core.engine.fitness_utils import extract_primary_fitness_from_result
 from ..genes.strategy import StrategyGene
 from .strategy_parameter_space import StrategyParameterSpace
 
@@ -58,6 +59,23 @@ class StrategyParameterTuner:
 
         self.parameter_space_builder = StrategyParameterSpace()
         self.optimizer = OptunaOptimizer()
+
+    @classmethod
+    def from_ga_config(
+        cls,
+        evaluator: IndividualEvaluator,
+        config: GAConfig,
+    ) -> "StrategyParameterTuner":
+        """GAConfig のチューニング関連フィールドからチューナーを構築する。"""
+        return cls(
+            evaluator=evaluator,
+            config=config,
+            n_trials=config.tuning_n_trials,
+            use_wfa=config.tuning_use_wfa,
+            include_indicators=config.tuning_include_indicators,
+            include_tpsl=config.tuning_include_tpsl,
+            include_thresholds=config.tuning_include_thresholds,
+        )
 
     def tune(self, gene: StrategyGene) -> StrategyGene:
         """
@@ -132,11 +150,7 @@ class StrategyParameterTuner:
             else:
                 fitness_tuple = self.evaluator.evaluate_individual(gene, self.config)
 
-            # フィットネスタプルから主要スコアを抽出
-            if isinstance(fitness_tuple, tuple) and len(fitness_tuple) > 0:
-                return float(fitness_tuple[0])
-            else:
-                return 0.0
+            return extract_primary_fitness_from_result(fitness_tuple)
 
         except Exception as e:
             logger.warning(f"遺伝子評価中にエラー: {e}")

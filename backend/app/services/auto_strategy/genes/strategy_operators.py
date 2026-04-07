@@ -344,21 +344,11 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
     child1_params: Dict[str, Any] = {"id": str(uuid.uuid4())}
     child2_params: Dict[str, Any] = {"id": str(uuid.uuid4())}
 
-    fields = [
-        "indicators",
-        "long_entry_conditions",
-        "short_entry_conditions",
-        "stateful_conditions",
-        "risk_management",
-        "tpsl_gene",
-        "long_tpsl_gene",
-        "short_tpsl_gene",
-        "position_sizing_gene",
-        "entry_gene",
-        "long_entry_gene",
-        "short_entry_gene",
-        "tool_genes",
-    ]
+    fields = (
+        strategy_gene_class.crossover_field_names()
+        if hasattr(strategy_gene_class, "crossover_field_names")
+        else ()
+    )
 
     for field_name in fields:
         val1 = getattr(parent1, field_name)

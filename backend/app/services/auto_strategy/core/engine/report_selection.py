@@ -10,6 +10,9 @@ from typing import Any, Optional, Sequence, Tuple
 
 from .. import objective_registry
 from ..evaluation.evaluation_report import EvaluationReport
+from .fitness_utils import (
+    extract_individual_primary_fitness as _extract_individual_primary_fitness,
+)
 
 TWO_STAGE_RANK_ATTR = "_two_stage_selection_rank"
 TWO_STAGE_SCORE_ATTR = "_two_stage_selection_score"
@@ -109,19 +112,7 @@ def build_report_rank_key_from_primary_fitness(
 
 def extract_primary_fitness(individual: Any) -> float:
     """個体から単一目的の主 fitness を取り出す。"""
-    try:
-        fitness = getattr(individual, "fitness", None)
-        if fitness is not None:
-            weighted_values = getattr(fitness, "wvalues", ())
-            if isinstance(weighted_values, (tuple, list)) and weighted_values:
-                return float(weighted_values[0])
-
-            values = getattr(fitness, "values", ())
-            if isinstance(values, (tuple, list)) and values:
-                return float(values[0])
-    except (TypeError, ValueError):
-        pass
-    return float("-inf")
+    return _extract_individual_primary_fitness(individual)
 
 
 def get_individual_identity(individual: Any) -> Any:
@@ -207,16 +198,18 @@ def is_evaluation_report(report: Any) -> bool:
 
 def _safe_int(value: Any) -> int:
     """値を安全に整数に変換する。
-    
+
     変換できない場合は0を返す。
     """
     try:
         return int(value)
     except (TypeError, ValueError):
         return 0
+
+
 def _get_two_stage_metadata_target(individual: Any) -> Any:
     """2段階評価のメタデータを取得する対象を抽出する。
-    
+
     個体にfitness属性があればそれを返し、なければ個体自身を返す。
     """
     fitness = getattr(individual, "fitness", None)
