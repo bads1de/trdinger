@@ -10,6 +10,11 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config.constants import SUPPORTED_TIMEFRAMES
+from app.services.backtest.shared import (
+    current_datetime_like,
+    normalize_datetimes_for_comparison,
+    parse_datetime_value,
+)
 
 VALID_TIMEFRAMES = SUPPORTED_TIMEFRAMES
 
@@ -94,14 +99,7 @@ class BacktestRunConfig(BaseModel):
     def parse_datetime(cls, v):
         """日付文字列をdatetimeオブジェクトに変換"""
         if isinstance(v, str):
-            # 'Z'付きのISOフォーマットなどの対応
-            try:
-                return datetime.fromisoformat(v.replace("Z", "+00:00"))
-            except ValueError:
-                # pandasのto_datetimeのような柔軟なパースが必要な場合
-                import pandas as pd
-
-                return pd.to_datetime(v).to_pydatetime()
+            return parse_datetime_value(v)
         return v
 
     @model_validator(mode="after")
@@ -109,11 +107,15 @@ class BacktestRunConfig(BaseModel):
         """日付の整合性を検証"""
         errors: List[str] = []
 
-        if self.start_date >= self.end_date:
+        start_date, end_date = normalize_datetimes_for_comparison(
+            self.start_date, self.end_date
+        )
+
+        if start_date >= end_date:
             errors.append("start_dateはend_dateより前である必要があります")
 
-        now = datetime.now()
-        if self.end_date > now:
+        now = current_datetime_like(end_date)
+        if end_date > now:
             errors.append("end_dateは現在時刻より前である必要があります")
 
         if errors:

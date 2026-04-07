@@ -68,3 +68,10 @@ class TestBacktestRunConfig:
         valid_config["end_date"] = "2023-01-02"
         config = BacktestRunConfig(**valid_config)
         assert isinstance(config.start_date, datetime)
+
+    def test_validate_timezone_aware_string_dates(self, valid_config):
+        valid_config["start_date"] = "2023-01-01T00:00:00Z"
+        valid_config["end_date"] = "2023-01-02T00:00:00Z"
+        config = BacktestRunConfig(**valid_config)
+        assert isinstance(config.start_date, datetime)
+        assert isinstance(config.end_date, datetime)

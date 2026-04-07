@@ -97,10 +97,12 @@ class GAConfig(BaseConfig):
 
     # パラメータ範囲
     parameter_ranges: Dict[str, List] = field(
-        default_factory=lambda: cast(Dict[str, List], GA_PARAMETER_RANGES.copy())
+        default_factory=lambda: cast(Dict[str, List], copy.deepcopy(GA_PARAMETER_RANGES))
     )
     threshold_ranges: Dict[str, List[float]] = field(
-        default_factory=lambda: cast(Dict[str, List[float]], GA_THRESHOLD_RANGES.copy())
+        default_factory=lambda: cast(
+            Dict[str, List[float]], copy.deepcopy(GA_THRESHOLD_RANGES)
+        )
     )
 
     # フィットネス設定
@@ -294,69 +296,12 @@ class GAConfig(BaseConfig):
         Returns:
             設定値を含む辞書
         """
-        return dataclass_to_dict(self)
+        return cast(Dict[str, Any], dataclass_to_dict(self))
 
-    @staticmethod
-    def _from_dict_defaults() -> Dict[str, Any]:
+    @classmethod
+    def _from_dict_defaults(cls) -> Dict[str, Any]:
         """from_dict 用のデフォルト値を生成する。"""
-        return copy.deepcopy(
-            {
-                "population_size": GA_DEFAULT_CONFIG["population_size"],
-                "generations": GA_DEFAULT_CONFIG["generations"],
-                "crossover_rate": GA_DEFAULT_CONFIG["crossover_rate"],
-                "mutation_rate": GA_DEFAULT_CONFIG["mutation_rate"],
-                "elite_size": GA_DEFAULT_CONFIG.get("elite_size", 10),
-                "primary_metric": "sharpe_ratio",
-                "fitness_weights": DEFAULT_FITNESS_WEIGHTS,
-                "fitness_constraints": DEFAULT_FITNESS_CONSTRAINTS,
-                "max_indicators": GA_DEFAULT_CONFIG["max_indicators"],
-                "parameter_ranges": GA_PARAMETER_RANGES,
-                "threshold_ranges": GA_THRESHOLD_RANGES,
-                "min_indicators": 1,
-                "min_conditions": 1,
-                "max_conditions": 3,
-                "zero_trades_penalty": GA_DEFAULT_CONFIG["zero_trades_penalty"],
-                "constraint_violation_penalty": GA_DEFAULT_CONFIG[
-                    "constraint_violation_penalty"
-                ],
-                "enable_fitness_sharing": GA_DEFAULT_FITNESS_SHARING[
-                    "enable_fitness_sharing"
-                ],
-                "sharing_radius": GA_DEFAULT_FITNESS_SHARING["sharing_radius"],
-                "sharing_alpha": GA_DEFAULT_FITNESS_SHARING["sharing_alpha"],
-                "sampling_threshold": GA_DEFAULT_FITNESS_SHARING["sampling_threshold"],
-                "sampling_ratio": GA_DEFAULT_FITNESS_SHARING["sampling_ratio"],
-                "enable_multi_fidelity_evaluation": False,
-                "multi_fidelity_window_ratio": 0.3,
-                "multi_fidelity_oos_ratio": 0.2,
-                "multi_fidelity_candidate_ratio": 0.25,
-                "multi_fidelity_min_candidates": 3,
-                "enable_early_termination": False,
-                "early_termination_max_drawdown": None,
-                "early_termination_min_trades": None,
-                "early_termination_min_trade_check_progress": 0.5,
-                "early_termination_trade_pace_tolerance": 0.5,
-                "early_termination_min_expectancy": None,
-                "early_termination_expectancy_min_trades": 5,
-                "early_termination_expectancy_progress": 0.6,
-                "enable_multi_objective": False,
-                "objectives": DEFAULT_GA_OBJECTIVES,
-                "objective_weights": DEFAULT_GA_OBJECTIVE_WEIGHTS,
-                "enable_two_stage_selection": True,
-                "two_stage_elite_count": 3,
-                "two_stage_candidate_pool_size": 5,
-                "two_stage_min_pass_rate": 0.5,
-                "volatility_gate_enabled": False,
-                "volatility_model_path": None,
-                "gate_quantile": 0.67,
-                "robustness_validation_symbols": None,
-                "robustness_regime_windows": [],
-                "robustness_stress_slippage": [],
-                "robustness_stress_commission_multipliers": [],
-                "robustness_aggregate_method": "robust",
-                "indicator_universe_mode": "curated",
-            }
-        )
+        return cast(Dict[str, Any], copy.deepcopy(cls.get_default_values_from_fields()))
 
     @staticmethod
     def _restore_nested_configs(working: Dict[str, Any]) -> None:
@@ -467,11 +412,3 @@ class GAConfig(BaseConfig):
         # BaseConfigのfrom_dict処理を使用
         return cast(GAConfig, super().from_dict(working))
 
-    def get_default_values(self) -> Dict[str, Any]:
-        """BaseConfig用のデフォルト値を取得（自動生成を利用）"""
-        # フィールドから自動生成したデフォルト値を取得
-        defaults = self.get_default_values_from_fields()
-        return {
-            **defaults,
-            "primary_metric": self.primary_metric,
-        }

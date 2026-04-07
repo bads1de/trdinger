@@ -6,8 +6,10 @@ pandas標準機能を活用し、冗長なカスタム実装を削除。
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict, List, Optional
+
+from app.utils.datetime_utils import parse_timestamp_safe as _parse_timestamp_safe
 
 logger = logging.getLogger(__name__)
 
@@ -17,34 +19,11 @@ class DataConversionError(Exception):
 
 
 def parse_timestamp_safe(value: Any) -> Optional[datetime]:
-    """
-    様々な形式のタイムスタンプをdatetimeに安全に変換
-
-    Args:
-        value: 変換対象のタイムスタンプ（datetime, str, int, float）
-
-    Returns:
-        変換されたdatetime、変換できない場合は None
-    """
-    if value is None:
-        return None
-
-    try:
-        if isinstance(value, datetime):
-            return value
-        elif isinstance(value, str):
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        elif isinstance(value, (int, float)):
-            # 負の値は無効として扱う（Windows/Linux間の挙動差異を吸収）
-            if value < 0:
-                return None
-            return datetime.fromtimestamp(value / 1000, tz=timezone.utc)
-        else:
-            logger.warning(f"不明なタイムスタンプ型: {type(value)}")
-            return None
-    except (ValueError, TypeError, OSError) as e:
-        logger.warning(f"タイムスタンプ変換エラー: {value} - エラー: {e}")
-        return None
+    """共通ユーティリティへ委譲する互換ラッパー。"""
+    result = _parse_timestamp_safe(value)
+    if result is None and value is not None:
+        logger.warning("タイムスタンプ変換エラー: %s - 型: %s", value, type(value))
+    return result
 
 
 class OHLCVDataConverter:

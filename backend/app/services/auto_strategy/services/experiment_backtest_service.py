@@ -14,6 +14,7 @@ from app.services.auto_strategy.core.evaluation.report_persistence import (
     attach_backtest_evaluation_summary,
 )
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
+from app.services.backtest.config.builders import build_execution_config
 from app.services.backtest.services.backtest_service import BacktestService
 
 from ..config import GAConfig
@@ -123,14 +124,18 @@ class ExperimentBacktestService:
         cleaned_name = cleaned_name.rstrip("_")
 
         strategy_id = str(getattr(best_strategy, "id", ""))[:6] or "unknown"
-        config["strategy_name"] = f"AS_{cleaned_name}_{strategy_id}"
-        config["strategy_config"] = {
-            "strategy_type": "GENERATED_GA",
-            "parameters": {
-                "strategy_gene": self.serializer.strategy_gene_to_dict(best_strategy)
+        return build_execution_config(
+            config,
+            strategy_name=f"AS_{cleaned_name}_{strategy_id}",
+            strategy_config={
+                "strategy_type": "GENERATED_GA",
+                "parameters": {
+                    "strategy_gene": self.serializer.strategy_gene_to_dict(
+                        best_strategy
+                    )
+                },
             },
-        }
-        return config
+        )
 
     def _prepare_backtest_result_data(
         self,

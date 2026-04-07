@@ -23,6 +23,21 @@ class TestHybridIndividualEvaluator:
         assert evaluator.predictor is None
         assert evaluator.feature_adapter is not None
 
+    def test_ensure_backtest_defaults_uses_ga_fallback_values(self, evaluator):
+        ga_config = Mock(
+            target_symbol="ETHUSDT",
+            target_timeframe="4h",
+            fallback_start_date="2024-01-01",
+            fallback_end_date="2024-01-31",
+        )
+
+        result = evaluator._ensure_backtest_defaults({}, ga_config)
+
+        assert result["symbol"] == "ETHUSDT"
+        assert result["timeframe"] == "4h"
+        assert result["start_date"] == "2024-01-01"
+        assert result["end_date"] == "2024-01-31"
+
     def test_calculate_fitness_delegates_to_base(self, evaluator):
         backtest_result = {
             "performance_metrics": {

@@ -159,6 +159,34 @@ class TestGetOHLCVData:
             assert len(result["data"]["ohlcv_data"]) == 2
 
     @pytest.mark.asyncio
+    async def test_get_ohlcv_data_with_timezone_aware_dates(
+        self,
+        orchestration_service: MarketDataOrchestrationService,
+        sample_ohlcv_data: List[Dict[str, Any]],
+    ):
+        orchestration_service.repository.get_ohlcv_data = MagicMock(
+            return_value=sample_ohlcv_data
+        )
+
+        with patch(
+            "app.services.data_collection.orchestration.market_data_orchestration_service.OHLCVDataConverter"
+        ) as mock_converter:
+            mock_converter.db_to_api_format.return_value = sample_ohlcv_data
+
+            result = await orchestration_service.get_ohlcv_data(
+                symbol="BTC/USDT:USDT",
+                timeframe="1h",
+                limit=100,
+                start_date="2024-01-01T00:00:00Z",
+                end_date="2024-01-31T00:00:00Z",
+            )
+
+        assert result["success"] is True
+        call_kwargs = orchestration_service.repository.get_ohlcv_data.call_args.kwargs
+        assert call_kwargs["start_time"].tzinfo is not None
+        assert call_kwargs["end_time"].tzinfo is not None
+
+    @pytest.mark.asyncio
     async def test_get_ohlcv_data_empty_result(
         self,
         orchestration_service: MarketDataOrchestrationService,
@@ -468,7 +496,3 @@ class TestMultipleSymbols:
 
                 assert result["success"] is True
                 assert result["data"]["symbol"] == symbol
-
-
-
-

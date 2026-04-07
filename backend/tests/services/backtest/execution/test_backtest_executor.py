@@ -149,3 +149,14 @@ class TestBacktestExecutor:
         strategies = executor.get_supported_strategies()
         assert "auto_strategy" in strategies
         assert strategies["auto_strategy"]["name"] == "オートストラテジー"
+
+    def test_get_supported_strategies_uses_shared_definition(self, executor):
+        sentinel = {"shared_strategy": {"name": "shared"}}
+
+        with patch(
+            "app.services.backtest.execution.backtest_executor.SUPPORTED_STRATEGIES",
+            sentinel,
+        ):
+            strategies = executor.get_supported_strategies()
+
+        assert strategies == sentinel

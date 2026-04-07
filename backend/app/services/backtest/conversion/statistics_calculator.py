@@ -9,6 +9,12 @@ from typing import Any, Callable, Dict, Optional
 
 import pandas as pd
 
+from app.services.backtest.shared import (
+    resolve_stats_object,
+    safe_float_conversion as _safe_float_conversion,
+    safe_int_conversion as _safe_int_conversion,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +32,7 @@ class BacktestStatisticsCalculator:
             統計情報辞書
         """
         try:
-            actual_stats = self._resolve_stats_object(stats)
+            actual_stats = resolve_stats_object(stats, warning_logger=logger)
             statistics: Dict[str, Any] = {}
 
             is_series = isinstance(actual_stats, pd.Series)
@@ -46,24 +52,18 @@ class BacktestStatisticsCalculator:
 
     def _resolve_stats_object(self, stats: Any) -> Any:
         """statsオブジェクトの実体を取得（callableなら呼び出す）"""
-        if hasattr(stats, "__call__"):
-            try:
-                return stats()
-            except Exception as e:
-                logger.warning(f"statsの呼び出しに失敗: {e}")
-                return stats
-        return stats
+        return resolve_stats_object(stats, warning_logger=logger)
 
     def _extract_metrics_from_series(self, stats: Any) -> Dict[str, Any]:
         """pandas.Seriesから基本統計情報を抽出"""
-        statistics = self._extract_common_metrics(stats.get)
-        statistics["total_trades"] = self._safe_int_conversion(stats.get("# Trades", 0))
-        statistics["avg_win"] = 0.0
-        statistics["avg_loss"] = 0.0
-        return statistics
+        return self._extract_metrics(stats)
 
     def _extract_metrics_from_dict(self, stats: Any) -> Dict[str, Any]:
         """辞書ライクなオブジェクトから基本統計情報を抽出"""
+        return self._extract_metrics(stats)
+
+    def _extract_metrics(self, stats: Any) -> Dict[str, Any]:
+        """Series/Dict 共通の統計指標を抽出"""
         statistics = self._extract_common_metrics(stats.get)
         statistics["total_trades"] = self._safe_int_conversion(stats.get("# Trades", 0))
         statistics["avg_win"] = 0.0
@@ -280,19 +280,9 @@ class BacktestStatisticsCalculator:
     @staticmethod
     def _safe_float_conversion(value: Any) -> float:
         """安全なfloat変換"""
-        if value is None or pd.isna(value):
-            return 0.0
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return 0.0
+        return _safe_float_conversion(value)
 
     @staticmethod
     def _safe_int_conversion(value: Any) -> int:
         """安全なint変換"""
-        if value is None or pd.isna(value):
-            return 0
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return 0
+        return _safe_int_conversion(value)

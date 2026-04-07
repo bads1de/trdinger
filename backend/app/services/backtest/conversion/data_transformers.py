@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+from app.services.backtest.shared import safe_timestamp_conversion
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,16 +38,19 @@ class TradeHistoryTransformer:
 
             df = trades_df.copy()
 
+            def _convert_timestamps(series: Any) -> list[Optional[datetime]]:
+                return [safe_timestamp_conversion(value) for value in pd.to_datetime(series, errors="coerce")]
+
             conversions = [
                 (
                     "entry_time",
                     "EntryTime",
-                    lambda s: pd.to_datetime(s, errors="coerce").dt.to_pydatetime(),
+                    _convert_timestamps,
                 ),
                 (
                     "exit_time",
                     "ExitTime",
-                    lambda s: pd.to_datetime(s, errors="coerce").dt.to_pydatetime(),
+                    _convert_timestamps,
                 ),
                 (
                     "entry_price",
@@ -141,14 +146,4 @@ class EquityCurveTransformer:
     @staticmethod
     def _safe_timestamp_conversion(value: Any) -> Optional[datetime]:
         """安全なtimestamp変換"""
-        if value is None or pd.isna(value):
-            return None
-        try:
-            if isinstance(value, pd.Timestamp):
-                return value.to_pydatetime()
-            elif isinstance(value, datetime):
-                return value
-            else:
-                return pd.to_datetime(value).to_pydatetime()
-        except Exception:
-            return None
+        return safe_timestamp_conversion(value)

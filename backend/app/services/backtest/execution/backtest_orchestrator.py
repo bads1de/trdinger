@@ -60,20 +60,22 @@ class BacktestOrchestrator:
             バックテスト結果の辞書
         """
         try:
+            working_config = config.copy()
+
             # 高速化フラグの確認
-            skip_validation = config.pop("_skip_validation", False)
-            include_raw_stats = config.pop("_include_raw_stats", False)
+            skip_validation = working_config.pop("_skip_validation", False)
+            include_raw_stats = working_config.pop("_include_raw_stats", False)
 
             if skip_validation:
                 # バリデーションスキップ（GAなど信頼できる内部呼び出し用）
                 # model_constructでバリデーションをスキップしつつPydanticモデルインスタンスを取得
                 # 呼出し側でstart_date/end_dateはdatetime変換済みである前提
-                backtest_config = BacktestRunConfig.model_construct(**config)
-                strategy_config_dict = config["strategy_config"]
+                backtest_config = BacktestRunConfig.model_construct(**working_config)
+                strategy_config_dict = working_config["strategy_config"]
             else:
                 # 1. 設定の検証とモデル変換 (Pydantic)
                 try:
-                    backtest_config = BacktestRunConfig(**config)
+                    backtest_config = BacktestRunConfig(**working_config)
                 except ValidationError as e:
                     raise BacktestRunConfigValidationError(f"設定が無効です: {e}")
 
@@ -84,8 +86,8 @@ class BacktestOrchestrator:
 
             # strategy_class が config に直接含まれている場合の対応（GAエンジンからの直接渡しなど）
             # Pydanticモデルには含まれていないため、元のconfig辞書を確認
-            if "strategy_class" in config:
-                strategy_class = config["strategy_class"]
+            if "strategy_class" in working_config:
+                strategy_class = working_config["strategy_class"]
                 strategy_parameters = {}
             else:
                 strategy_class = self._strategy_factory.create_strategy_class(

@@ -5,6 +5,7 @@
 
 import logging
 import warnings
+from copy import deepcopy
 from datetime import datetime
 from typing import Any, Dict, Optional, Type
 
@@ -12,6 +13,7 @@ import pandas as pd
 from backtesting import Backtest, Strategy
 from backtesting.lib import FractionalBacktest
 
+from ..config.constants import SUPPORTED_STRATEGIES
 from app.services.auto_strategy.strategies.universal_strategy import (
     StrategyEarlyTermination,
 )
@@ -208,17 +210,4 @@ class BacktestExecutor:
         Returns:
             戦略一覧
         """
-        # 現在はオートストラテジーのみサポート
-        return {
-            "auto_strategy": {
-                "name": "オートストラテジー",
-                "description": "遺伝的アルゴリズムで生成された戦略",
-                "parameters": {
-                    "strategy_gene": {
-                        "type": "dict",
-                        "required": True,
-                        "description": "戦略遺伝子",
-                    }
-                },
-            }
-        }
+        return deepcopy(SUPPORTED_STRATEGIES)

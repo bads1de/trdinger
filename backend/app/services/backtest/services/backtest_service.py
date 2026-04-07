@@ -15,6 +15,7 @@ from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
 
+from ..config.builders import build_execution_config
 from ..execution.backtest_executor import BacktestExecutionError
 from ..execution.backtest_orchestrator import BacktestOrchestrator
 from .backtest_data_service import BacktestDataService
@@ -138,35 +139,7 @@ class BacktestService:
 
     def _build_execution_config(self, request: Any) -> Dict[str, Any]:
         """dict / Pydantic モデルどちらからでもバックテスト設定を組み立てる。"""
-        if isinstance(request, dict):
-            strategy_config = request["strategy_config"]
-            if hasattr(strategy_config, "model_dump"):
-                strategy_config = strategy_config.model_dump()
-            return {
-                "strategy_name": request["strategy_name"],
-                "symbol": request["symbol"],
-                "timeframe": request["timeframe"],
-                "start_date": request["start_date"],
-                "end_date": request["end_date"],
-                "initial_capital": request["initial_capital"],
-                "commission_rate": request["commission_rate"],
-                "slippage": request.get("slippage", 0.0),
-                "leverage": request.get("leverage", 1.0),
-                "strategy_config": strategy_config,
-            }
-
-        return {
-            "strategy_name": request.strategy_name,
-            "symbol": request.symbol,
-            "timeframe": request.timeframe,
-            "start_date": request.start_date,
-            "end_date": request.end_date,
-            "initial_capital": request.initial_capital,
-            "commission_rate": request.commission_rate,
-            "slippage": getattr(request, "slippage", 0.0),
-            "leverage": getattr(request, "leverage", 1.0),
-            "strategy_config": request.strategy_config.model_dump(),
-        }
+        return build_execution_config(request)
 
     def execute_and_save_backtest(self, request, db_session: Session) -> Dict[str, Any]:
         """

@@ -3,7 +3,6 @@
 """
 
 import logging
-from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -15,6 +14,7 @@ from app.api.dependencies import (
 from app.services.data_collection.bybit.long_short_ratio_service import (
     BybitLongShortRatioService,
 )
+from app.utils.datetime_utils import parse_datetime_optional
 from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 
 logger = logging.getLogger(__name__)
@@ -52,8 +52,13 @@ async def get_long_short_ratio_data(
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
     try:
-        start_dt = datetime.fromisoformat(start_date) if start_date else None
-        end_dt = datetime.fromisoformat(end_date) if end_date else None
+        start_dt = parse_datetime_optional(start_date)
+        if start_date and start_dt is None:
+            raise ValueError(f"無効なstart_dateです: {start_date}")
+
+        end_dt = parse_datetime_optional(end_date)
+        if end_date and end_dt is None:
+            raise ValueError(f"無効なend_dateです: {end_date}")
 
         # データベースから取得
         records = repository.get_long_short_ratio_data(

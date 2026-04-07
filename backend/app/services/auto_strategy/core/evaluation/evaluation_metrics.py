@@ -13,6 +13,8 @@ from typing import Any, Iterable, Mapping, Optional, Sequence
 import numpy as np
 from numba import njit
 
+from app.utils.datetime_utils import parse_datetime_optional
+
 logger = logging.getLogger(__name__)
 
 # 基準となる1日あたりの取引回数（これを超えると過剰取引とみなすペナルティが増加）
@@ -22,14 +24,7 @@ REFERENCE_TRADES_PER_DAY = 8.0
 @functools.lru_cache(maxsize=1024)
 def _ensure_datetime(value: Optional[object]) -> Optional[datetime]:
     """値をdatetimeオブジェクトに変換します（キャッシュ付き）。"""
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-    return None
+    return parse_datetime_optional(value)
 
 
 @njit(cache=True)

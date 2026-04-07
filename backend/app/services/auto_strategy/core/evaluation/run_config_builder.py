@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from app.services.auto_strategy.config.ml_filter_settings import (
     resolve_ml_gate_settings,
 )
+from app.services.backtest.config.builders import build_execution_config
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,6 @@ class RunConfigBuilder:
     ) -> Optional[Dict[str, Any]]:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
-            config_dict = backtest_config.copy()
             ml_gate_settings = resolve_ml_gate_settings(config)
             strategy_parameters = {
                 "strategy_gene": gene,
@@ -70,12 +70,14 @@ class RunConfigBuilder:
             if evaluation_start is not None:
                 strategy_parameters["evaluation_start"] = evaluation_start
 
-            config_dict["strategy_config"] = {
-                "strategy_type": "GENERATED_GA",
-                "parameters": strategy_parameters,
-            }
-            gene_id = getattr(gene, "id", "unknown")[:8]
-            config_dict["strategy_name"] = f"GA_Individual_{gene_id}"
+            config_dict = build_execution_config(
+                backtest_config,
+                strategy_name=f"GA_Individual_{str(getattr(gene, 'id', 'unknown'))[:8]}",
+                strategy_config={
+                    "strategy_type": "GENERATED_GA",
+                    "parameters": strategy_parameters,
+                },
+            )
             config_dict["_skip_validation"] = True
             return config_dict
         except Exception as e:

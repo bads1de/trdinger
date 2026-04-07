@@ -6,7 +6,7 @@
 
 from datetime import datetime, timezone
 from typing import List
-from unittest.mock import AsyncMock, Mock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -192,6 +192,32 @@ class TestGetLongShortRatioData:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
+
+    def test_get_long_short_ratio_with_timezone_aware_dates(
+        self,
+        test_client: TestClient,
+        mock_repository: Mock,
+        sample_ls_ratio_record: LongShortRatioData,
+    ) -> None:
+        mock_repository.get_long_short_ratio_data.return_value = [
+            sample_ls_ratio_record
+        ]
+
+        response = test_client.get(
+            "/api/long-short-ratio/",
+            params={
+                "symbol": "BTC/USDT:USDT",
+                "period": "1h",
+                "start_date": "2024-01-01T00:00:00Z",
+                "end_date": "2024-01-31T23:59:59Z",
+                "limit": 100,
+            },
+        )
+
+        assert response.status_code == 200
+        call_kwargs = mock_repository.get_long_short_ratio_data.call_args.kwargs
+        assert call_kwargs["start_time"].tzinfo is not None
+        assert call_kwargs["end_time"].tzinfo is not None
 
     def test_get_long_short_ratio_empty(
         self,
@@ -402,7 +428,3 @@ class TestPeriodsValidation:
             params={"symbol": "BTC/USDT:USDT", "period": period},
         )
         assert response.status_code == 200
-
-
-
-

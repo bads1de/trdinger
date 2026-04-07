@@ -1,7 +1,10 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from app.services.backtest.services.backtest_service import BacktestService
+
+import pytest
+
 from app.services.backtest.execution.backtest_executor import BacktestExecutionError
+from app.services.backtest.services.backtest_service import BacktestService
+
 
 class TestBacktestServiceEnhancement:
     @pytest.fixture
@@ -13,16 +16,23 @@ class TestBacktestServiceEnhancement:
         mock_db_gen = MagicMock()
         mock_session = MagicMock()
         mock_db_gen.__next__.return_value = mock_session
-        
-        with patch("app.services.backtest.services.backtest_service.get_db", return_value=mock_db_gen):
+
+        with patch(
+            "app.services.backtest.services.backtest_service.get_db",
+            return_value=mock_db_gen,
+        ):
             service.ensure_data_service_initialized()
-            
+
             assert service.data_service is not None
             assert service._db_session == mock_session
 
     def test_ensure_data_service_initialized_failure(self, service):
-        with patch("app.services.backtest.services.backtest_service.get_db") as mock_get_db:
-            mock_get_db.return_value.__next__.side_effect = Exception("DB connection error")
+        with patch(
+            "app.services.backtest.services.backtest_service.get_db"
+        ) as mock_get_db:
+            mock_get_db.return_value.__next__.side_effect = Exception(
+                "DB connection error"
+            )
             with pytest.raises(BacktestExecutionError) as excinfo:
                 service.ensure_data_service_initialized()
             assert "初期化に失敗しました" in str(excinfo.value)
@@ -41,13 +51,13 @@ class TestBacktestServiceEnhancement:
         # 内部メソッドをモック
         service.ensure_data_service_initialized = MagicMock()
         service._ensure_orchestrator_initialized = MagicMock()
-        
+
         mock_orchestrator = MagicMock()
         mock_orchestrator.run.return_value = {"result": "ok"}
         service._orchestrator = mock_orchestrator
-        
+
         result = service.run_backtest({"symbol": "BTC"})
-        
+
         assert result == {"result": "ok"}
         service.ensure_data_service_initialized.assert_called_once()
         service._ensure_orchestrator_initialized.assert_called_once()
@@ -55,20 +65,20 @@ class TestBacktestServiceEnhancement:
     def test_cleanup(self, service):
         mock_session = MagicMock()
         service._db_session = mock_session
-        
+
         service.cleanup()
-        
+
         mock_session.close.assert_called_once()
         assert service._db_session is None
 
     def test_get_supported_strategies(self, service):
         service.ensure_data_service_initialized = MagicMock()
         service._ensure_orchestrator_initialized = MagicMock()
-        
+
         mock_orchestrator = MagicMock()
         mock_orchestrator.get_supported_strategies.return_value = {"strat": {}}
         service._orchestrator = mock_orchestrator
-        
+
         result = service.get_supported_strategies()
         assert "strat" in result
 
@@ -83,19 +93,58 @@ class TestBacktestServiceEnhancement:
         request.initial_capital = 10000
         request.commission_rate = 0.001
         request.strategy_config.model_dump.return_value = {"p": 1}
-        
+
         db_session = MagicMock()
-        
-        with patch.object(service, 'run_backtest', return_value={"id": 1}) as mock_run, \
-             patch("app.services.backtest.services.backtest_service.BacktestResultRepository") as MockRepo:
-            
-            MockRepo.return_value.save_backtest_result.return_value = {"id": 1, "saved": True}
-            
+
+        with (
+            patch.object(service, "run_backtest", return_value={"id": 1}) as mock_run,
+            patch(
+                "app.services.backtest.services.backtest_service.BacktestResultRepository"
+            ) as MockRepo,
+        ):
+
+            MockRepo.return_value.save_backtest_result.return_value = {
+                "id": 1,
+                "saved": True,
+            }
+
             result = service.execute_and_save_backtest(request, db_session)
-            
+
             assert result["success"] is True
             mock_run.assert_called_once()
             # 引数から組み立てられたconfigの確認
             config = mock_run.call_args[0][0]
             assert config["strategy_name"] == "SMA"
             assert config["strategy_config"] == {"p": 1}
+
+    def test_build_execution_config_from_dict_preserves_defaults_and_flags(
+        self, service
+    ):
+        strategy_config = MagicMock()
+        strategy_config.model_dump.return_value = {
+            "strategy_type": "MANUAL",
+            "parameters": {},
+        }
+
+        request = {
+            "strategy_name": "dict_strategy",
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-02",
+            "initial_capital": 10000,
+            "commission_rate": 0.001,
+            "strategy_config": strategy_config,
+            "_skip_validation": True,
+        }
+
+        config = service._build_execution_config(request)
+
+        assert config["strategy_name"] == "dict_strategy"
+        assert config["strategy_config"] == {
+            "strategy_type": "MANUAL",
+            "parameters": {},
+        }
+        assert config["slippage"] == 0.0
+        assert config["leverage"] == 1.0
+        assert config["_skip_validation"] is True

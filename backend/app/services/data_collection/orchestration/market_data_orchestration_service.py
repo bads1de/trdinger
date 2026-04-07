@@ -3,7 +3,6 @@
 """
 
 import logging
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
@@ -33,9 +32,13 @@ class MarketDataOrchestrationService(BaseDataCollectionOrchestrationService):
         end_time = None
 
         if start_date:
-            start_time = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+            start_time = self._parse_datetime(start_date)
+            if start_time is None:
+                raise ValueError(f"無効なstart_dateです: {start_date}")
         if end_date:
-            end_time = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+            end_time = self._parse_datetime(end_date)
+            if end_time is None:
+                raise ValueError(f"無効なend_dateです: {end_date}")
 
         if start_time is None and end_time is None:
             ohlcv_records = self.repository.get_latest_ohlcv_data(

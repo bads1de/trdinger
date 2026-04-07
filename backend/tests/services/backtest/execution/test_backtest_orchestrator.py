@@ -2,6 +2,7 @@
 BacktestOrchestratorの単体テスト
 """
 
+from copy import deepcopy
 from unittest.mock import MagicMock, patch
 
 
@@ -160,3 +161,32 @@ def test_run_can_include_raw_stats_for_internal_evaluation(orchestrator, sample_
 
     assert result["result"] == "ok"
     assert result["_raw_stats"] is raw_stats
+
+
+def test_run_does_not_mutate_input_config(orchestrator, sample_config):
+    sample_config["_skip_validation"] = True
+    sample_config["_include_raw_stats"] = True
+    original_config = deepcopy(sample_config)
+
+    orchestrator._strategy_factory.create_strategy_class = MagicMock(
+        return_value="StrategyClass"
+    )
+    orchestrator._strategy_factory.get_strategy_parameters = MagicMock(
+        return_value={"param": 1}
+    )
+    orchestrator._executor.execute_backtest = MagicMock(return_value="Stats")
+    orchestrator._result_converter.convert_backtest_results = MagicMock(
+        return_value={"result": "ok"}
+    )
+
+    with patch(
+        "app.services.backtest.execution.backtest_orchestrator.BacktestRunConfig"
+    ) as MockConfig:
+        mock_instance = MagicMock(
+            strategy_config=MagicMock(model_dump=MagicMock(return_value={}))
+        )
+        MockConfig.model_construct.return_value = mock_instance
+
+        orchestrator.run(sample_config)
+
+    assert sample_config == original_config

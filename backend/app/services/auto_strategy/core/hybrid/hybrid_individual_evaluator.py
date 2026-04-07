@@ -11,16 +11,16 @@ from app.services.auto_strategy.config.ml_filter_settings import (
 from app.services.auto_strategy.core.evaluation.individual_evaluator import (
     IndividualEvaluator,
 )
+from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
+    HybridFeatureAdapter,
+)
 from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
     HybridPredictor,
     RuntimeModelPredictorAdapter,
 )
+from app.services.backtest.config.builders import ensure_backtest_defaults
 from app.services.backtest.services.backtest_service import BacktestService
 from app.services.ml.models.model_manager import model_manager
-
-from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
-    HybridFeatureAdapter,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -152,16 +152,16 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                     run_config["strategy_config"]["parameters"][
                         "volatility_gate_enabled"
                     ] = True
-                    run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = (
-                        True
-                    )
+                    run_config["strategy_config"]["parameters"][
+                        "ml_filter_enabled"
+                    ] = True
                 else:
                     run_config["strategy_config"]["parameters"][
                         "volatility_gate_enabled"
                     ] = False
-                    run_config["strategy_config"]["parameters"]["ml_filter_enabled"] = (
-                        False
-                    )
+                    run_config["strategy_config"]["parameters"][
+                        "ml_filter_enabled"
+                    ] = False
             except Exception:
                 run_config["strategy_config"]["parameters"][
                     "volatility_gate_enabled"
@@ -202,31 +202,27 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         ga_config: GAConfig,
     ) -> Dict[str, Any]:
         """バックテスト設定に欠損している基本情報を補完"""
-
-        ensured = backtest_config.copy()
-
-        default_symbol = (
-            getattr(ga_config, "target_symbol", None)
-            or getattr(ga_config, "base_symbol", None)
-            or "BTCUSDT"
-        )
-        default_timeframe = (
-            getattr(ga_config, "target_timeframe", None)
-            or getattr(ga_config, "timeframe", None)
-            or "1h"
-        )
-
-        ensured.setdefault("symbol", default_symbol)
-        ensured.setdefault("timeframe", default_timeframe)
+        defaults: Dict[str, Any] = {
+            "symbol": (
+                getattr(ga_config, "target_symbol", None)
+                or getattr(ga_config, "base_symbol", None)
+                or "BTCUSDT"
+            ),
+            "timeframe": (
+                getattr(ga_config, "target_timeframe", None)
+                or getattr(ga_config, "timeframe", None)
+                or "1h"
+            ),
+        }
 
         fallback_start = getattr(ga_config, "fallback_start_date", None)
         fallback_end = getattr(ga_config, "fallback_end_date", None)
         if fallback_start:
-            ensured.setdefault("start_date", fallback_start)
+            defaults["start_date"] = fallback_start
         if fallback_end:
-            ensured.setdefault("end_date", fallback_end)
+            defaults["end_date"] = fallback_end
 
-        return ensured
+        return ensure_backtest_defaults(backtest_config, defaults)
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""

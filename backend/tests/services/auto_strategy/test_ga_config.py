@@ -222,3 +222,12 @@ class TestGAConfig:
         assert config.adaptive_mutation_rate_decrease_multiplier == 0.6
         assert config.adaptive_mutation_rate_increase_multiplier == 1.5
         assert config.valid_condition_operators == ["==", "!="]
+
+    def test_parameter_range_defaults_are_isolated(self):
+        """parameter_ranges のネスト値がインスタンス間で共有されないことを確認"""
+        first = GAConfig()
+        second = GAConfig()
+
+        first.parameter_ranges["period"][0] = 999
+
+        assert second.parameter_ranges["period"] == [5, 200]

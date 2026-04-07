@@ -9,6 +9,14 @@ import logging
 from datetime import datetime
 from typing import Any, Dict
 
+from app.services.backtest.shared import (
+    parse_datetime_value,
+    resolve_stats_object,
+    safe_float_conversion as _safe_float_conversion,
+    safe_int_conversion as _safe_int_conversion,
+    safe_timestamp_conversion as _safe_timestamp_conversion,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,22 +101,11 @@ class BacktestResultConverter:
 
     def _resolve_stats_object(self, stats: Any) -> Any:
         """statsオブジェクトの実体を取得（callableなら呼び出す）"""
-        if hasattr(stats, "__call__"):
-            try:
-                return stats()
-            except Exception as e:
-                logger.warning(f"statsの呼び出しに失敗: {e}")
-                return stats
-        return stats
+        return resolve_stats_object(stats, warning_logger=logger)
 
     def _normalize_date(self, date_value: Any) -> datetime:
         """日付値を正規化"""
-        if isinstance(date_value, datetime):
-            return date_value
-        elif isinstance(date_value, str):
-            return datetime.fromisoformat(date_value.replace("Z", "+00:00"))
-        else:
-            raise ValueError(f"サポートされていない日付形式: {type(date_value)}")
+        return parse_datetime_value(date_value)
 
     def _extract_statistics(self, stats: Any) -> Dict[str, Any]:
         """
@@ -148,28 +145,12 @@ class BacktestResultConverter:
 
     def _safe_float_conversion(self, value: Any) -> float:
         """安全なfloat変換"""
-        return self._stats_calculator._safe_float_conversion(value)
+        return _safe_float_conversion(value)
 
     def _safe_int_conversion(self, value: Any) -> int:
         """安全なint変換"""
-        return self._stats_calculator._safe_int_conversion(value)
+        return _safe_int_conversion(value)
 
     def _safe_timestamp_conversion(self, value: Any) -> Any:
         """安全なtimestamp変換"""
-        if value is None:
-            return None
-        try:
-            import pandas as pd
-
-            if pd.isna(value):
-                return None
-        except (ValueError, TypeError):
-            pass
-        try:
-            if isinstance(value, datetime):
-                return value
-            import pandas as pd
-
-            return pd.to_datetime(value).to_pydatetime()
-        except Exception:
-            return None
+        return _safe_timestamp_conversion(value)
