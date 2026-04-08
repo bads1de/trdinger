@@ -38,9 +38,12 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         self.evaluator.set_backtest_config(self.backtest_config)
 
         # テスト用GA設定（MLフィルター有効）
+        from app.services.auto_strategy.config.sub_configs import HybridConfig
         self.ga_config = GAConfig(
-            volatility_gate_enabled=True,
-            volatility_model_path="dummy/path/to/model",
+            hybrid_config=HybridConfig(
+                volatility_gate_enabled=True,
+                volatility_model_path="dummy/path/to/model",
+            ),
         )
 
         # ダミー遺伝子

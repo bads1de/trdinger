@@ -50,80 +50,95 @@ class TestGAConfig:
         """二段階選抜と robustness のデフォルト設定を確認"""
         config = GAConfig()
 
-        assert config.enable_two_stage_selection is True
-        assert config.two_stage_elite_count == 3
-        assert config.two_stage_candidate_pool_size == 5
-        assert config.two_stage_min_pass_rate == 0.5
-        assert config.robustness_validation_symbols is None
-        assert config.robustness_stress_slippage == []
-        assert config.robustness_stress_commission_multipliers == []
-        assert config.robustness_aggregate_method == "robust"
-        assert config.enable_multi_fidelity_evaluation is False
-        assert config.multi_fidelity_window_ratio == 0.3
-        assert config.enable_early_termination is False
-        assert config.early_termination_expectancy_min_trades == 5
+        assert config.two_stage_selection_config.enabled is True
+        assert config.two_stage_selection_config.elite_count == 3
+        assert config.two_stage_selection_config.candidate_pool_size == 5
+        assert config.two_stage_selection_config.min_pass_rate == 0.5
+        assert config.robustness_config.validation_symbols is None
+        assert config.robustness_config.stress_slippage == []
+        assert config.robustness_config.stress_commission_multipliers == []
+        assert config.robustness_config.aggregate_method == "robust"
+        assert config.evaluation_config.enable_multi_fidelity_evaluation is False
+        assert config.evaluation_config.multi_fidelity_window_ratio == 0.3
+        assert config.evaluation_config.early_termination_settings.enabled is False
+        assert config.evaluation_config.early_termination_settings.expectancy_min_trades == 5
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
         """二段階選抜/robustness 設定がシリアライズされることを確認"""
+        from app.services.auto_strategy.config.sub_configs import (
+            RobustnessConfig,
+            TwoStageSelectionConfig,
+        )
+
         original = GAConfig(
-            enable_two_stage_selection=True,
-            two_stage_elite_count=4,
-            two_stage_candidate_pool_size=9,
-            two_stage_min_pass_rate=0.75,
-            robustness_validation_symbols=["ETH/USDT:USDT", "SOL/USDT:USDT"],
-            robustness_stress_slippage=[0.0003, 0.0006],
-            robustness_stress_commission_multipliers=[1.5, 2.0],
+            two_stage_selection_config=TwoStageSelectionConfig(
+                enabled=True,
+                elite_count=4,
+                candidate_pool_size=9,
+                min_pass_rate=0.75,
+            ),
+            robustness_config=RobustnessConfig(
+                validation_symbols=["ETH/USDT:USDT", "SOL/USDT:USDT"],
+                stress_slippage=[0.0003, 0.0006],
+                stress_commission_multipliers=[1.5, 2.0],
+            ),
         )
 
         data = original.to_dict()
-        restored = GAConfig(**data)
+        restored = GAConfig.from_dict(data)
 
-        assert restored.two_stage_elite_count == 4
-        assert restored.two_stage_candidate_pool_size == 9
-        assert restored.two_stage_min_pass_rate == 0.75
-        assert restored.robustness_validation_symbols == [
+        assert restored.two_stage_selection_config.elite_count == 4
+        assert restored.two_stage_selection_config.candidate_pool_size == 9
+        assert restored.two_stage_selection_config.min_pass_rate == 0.75
+        assert restored.robustness_config.validation_symbols == [
             "ETH/USDT:USDT",
             "SOL/USDT:USDT",
         ]
-        assert restored.robustness_stress_slippage == [0.0003, 0.0006]
-        assert restored.robustness_stress_commission_multipliers == [1.5, 2.0]
+        assert restored.robustness_config.stress_slippage == [0.0003, 0.0006]
+        assert restored.robustness_config.stress_commission_multipliers == [1.5, 2.0]
 
     def test_multi_fidelity_and_early_termination_serialize_deserialize(self):
         """高速化設定がシリアライズされることを確認"""
+        from app.services.auto_strategy.config.sub_configs import EvaluationConfig
+
         original = GAConfig(
-            enable_multi_fidelity_evaluation=True,
-            multi_fidelity_window_ratio=0.4,
-            multi_fidelity_oos_ratio=0.15,
-            multi_fidelity_candidate_ratio=0.3,
-            multi_fidelity_min_candidates=4,
-            enable_early_termination=True,
-            early_termination_max_drawdown=0.2,
-            early_termination_min_trades=12,
-            early_termination_min_trade_check_progress=0.45,
-            early_termination_trade_pace_tolerance=0.6,
-            early_termination_min_expectancy=-0.02,
-            early_termination_expectancy_min_trades=6,
-            early_termination_expectancy_progress=0.7,
+            evaluation_config=EvaluationConfig(
+                enable_multi_fidelity_evaluation=True,
+                multi_fidelity_window_ratio=0.4,
+                multi_fidelity_oos_ratio=0.15,
+                multi_fidelity_candidate_ratio=0.3,
+                multi_fidelity_min_candidates=4,
+                early_termination_settings=EarlyTerminationSettings(
+                    enabled=True,
+                    max_drawdown=0.2,
+                    min_trades=12,
+                    min_trade_check_progress=0.45,
+                    trade_pace_tolerance=0.6,
+                    min_expectancy=-0.02,
+                    expectancy_min_trades=6,
+                    expectancy_progress=0.7,
+                ),
+            ),
         )
 
-        restored = GAConfig(**original.to_dict())
+        restored = GAConfig.from_dict(original.to_dict())
 
-        assert restored.enable_multi_fidelity_evaluation is True
-        assert restored.multi_fidelity_window_ratio == 0.4
-        assert restored.multi_fidelity_oos_ratio == 0.15
-        assert restored.multi_fidelity_candidate_ratio == 0.3
-        assert restored.multi_fidelity_min_candidates == 4
-        assert restored.enable_early_termination is True
-        assert restored.early_termination_max_drawdown == 0.2
-        assert restored.early_termination_min_trades == 12
-        assert restored.early_termination_min_trade_check_progress == 0.45
-        assert restored.early_termination_trade_pace_tolerance == 0.6
-        assert restored.early_termination_min_expectancy == -0.02
-        assert restored.early_termination_expectancy_min_trades == 6
-        assert restored.early_termination_expectancy_progress == 0.7
+        assert restored.evaluation_config.enable_multi_fidelity_evaluation is True
+        assert restored.evaluation_config.multi_fidelity_window_ratio == 0.4
+        assert restored.evaluation_config.multi_fidelity_oos_ratio == 0.15
+        assert restored.evaluation_config.multi_fidelity_candidate_ratio == 0.3
+        assert restored.evaluation_config.multi_fidelity_min_candidates == 4
+        assert restored.evaluation_config.early_termination_settings.enabled is True
+        assert restored.evaluation_config.early_termination_settings.max_drawdown == 0.2
+        assert restored.evaluation_config.early_termination_settings.min_trades == 12
+        assert restored.evaluation_config.early_termination_settings.min_trade_check_progress == 0.45
+        assert restored.evaluation_config.early_termination_settings.trade_pace_tolerance == 0.6
+        assert restored.evaluation_config.early_termination_settings.min_expectancy == -0.02
+        assert restored.evaluation_config.early_termination_settings.expectancy_min_trades == 6
+        assert restored.evaluation_config.early_termination_settings.expectancy_progress == 0.7
 
     def test_from_dict_expands_nested_two_stage_and_robustness_config(self):
-        """ネスト設定からフラット設定へ復元されることを確認"""
+        """ネスト設定が正しく復元されることを確認"""
         restored = GAConfig.from_dict(
             {
                 "two_stage_selection_config": {
@@ -141,16 +156,16 @@ class TestGAConfig:
             }
         )
 
-        assert restored.two_stage_elite_count == 6
-        assert restored.two_stage_candidate_pool_size == 12
-        assert restored.two_stage_min_pass_rate == 0.8
-        assert restored.robustness_validation_symbols == ["ETH/USDT:USDT"]
-        assert restored.robustness_stress_slippage == [0.0004]
-        assert restored.robustness_stress_commission_multipliers == [1.5]
-        assert restored.robustness_aggregate_method == "mean"
+        assert restored.two_stage_selection_config.elite_count == 6
+        assert restored.two_stage_selection_config.candidate_pool_size == 12
+        assert restored.two_stage_selection_config.min_pass_rate == 0.8
+        assert restored.robustness_config.validation_symbols == ["ETH/USDT:USDT"]
+        assert restored.robustness_config.stress_slippage == [0.0004]
+        assert restored.robustness_config.stress_commission_multipliers == [1.5]
+        assert restored.robustness_config.aggregate_method == "mean"
 
     def test_from_dict_expands_all_nested_runtime_configs(self):
-        """各種ネスト設定が対応するフラット設定へ復元されることを確認"""
+        """各種ネスト設定が正しく復元されることを確認"""
         restored = GAConfig.from_dict(
             {
                 "mutation_config": {
@@ -207,52 +222,123 @@ class TestGAConfig:
             }
         )
 
-        assert restored.mutation_rate == 0.25
-        assert restored.indicator_param_mutation_range == [0.7, 1.4]
-        assert restored.risk_param_mutation_range == [0.8, 1.2]
-        assert restored.indicator_add_delete_probability == 0.45
-        assert restored.indicator_add_vs_delete_probability == 0.35
-        assert restored.condition_change_probability_multiplier == 1.3
-        assert restored.condition_selection_probability == 0.6
-        assert restored.condition_operator_switch_probability == 0.4
-        assert restored.tpsl_gene_creation_probability_multiplier == 0.55
-        assert restored.position_sizing_gene_creation_probability_multiplier == 0.65
-        assert restored.adaptive_mutation_variance_threshold == 0.02
-        assert restored.adaptive_mutation_rate_decrease_multiplier == 0.75
-        assert restored.adaptive_mutation_rate_increase_multiplier == 1.4
-        assert restored.valid_condition_operators == [">", "<", "CROSS_UP"]
+        assert restored.mutation_config.rate == 0.25
+        assert restored.mutation_config.indicator_param_range == [0.7, 1.4]
+        assert restored.mutation_config.risk_param_range == [0.8, 1.2]
+        assert restored.mutation_config.indicator_add_delete_probability == 0.45
+        assert restored.mutation_config.indicator_add_vs_delete_probability == 0.35
+        assert restored.mutation_config.condition_change_multiplier == 1.3
+        assert restored.mutation_config.condition_selection_probability == 0.6
+        assert restored.mutation_config.condition_operator_switch_probability == 0.4
+        assert restored.mutation_config.tpsl_gene_creation_multiplier == 0.55
+        assert restored.mutation_config.position_sizing_gene_creation_multiplier == 0.65
+        assert restored.mutation_config.adaptive_variance_threshold == 0.02
+        assert restored.mutation_config.adaptive_decrease_multiplier == 0.75
+        assert restored.mutation_config.adaptive_increase_multiplier == 1.4
+        assert restored.mutation_config.valid_condition_operators == [">", "<", "CROSS_UP"]
 
-        assert restored.enable_parallel_evaluation is False
-        assert restored.max_evaluation_workers == 3
-        assert restored.evaluation_timeout == 120.0
-        assert restored.enable_multi_fidelity_evaluation is True
-        assert restored.multi_fidelity_window_ratio == 0.4
-        assert restored.multi_fidelity_oos_ratio == 0.3
-        assert restored.multi_fidelity_candidate_ratio == 0.5
-        assert restored.multi_fidelity_min_candidates == 7
-        assert restored.oos_split_ratio == 0.25
-        assert restored.oos_fitness_weight == 0.6
-        assert restored.enable_walk_forward is True
-        assert restored.wfa_n_folds == 4
-        assert restored.wfa_train_ratio == 0.8
-        assert restored.wfa_anchored is True
+        assert restored.evaluation_config.enable_parallel is False
+        assert restored.evaluation_config.max_workers == 3
+        assert restored.evaluation_config.timeout == 120.0
+        assert restored.evaluation_config.enable_multi_fidelity_evaluation is True
+        assert restored.evaluation_config.multi_fidelity_window_ratio == 0.4
+        assert restored.evaluation_config.multi_fidelity_oos_ratio == 0.3
+        assert restored.evaluation_config.multi_fidelity_candidate_ratio == 0.5
+        assert restored.evaluation_config.multi_fidelity_min_candidates == 7
+        assert restored.evaluation_config.oos_split_ratio == 0.25
+        assert restored.evaluation_config.oos_fitness_weight == 0.6
+        assert restored.evaluation_config.enable_walk_forward is True
+        assert restored.evaluation_config.wfa_n_folds == 4
+        assert restored.evaluation_config.wfa_train_ratio == 0.8
+        assert restored.evaluation_config.wfa_anchored is True
 
-        assert restored.hybrid_mode is True
-        assert restored.hybrid_model_type == "xgboost"
-        assert restored.hybrid_model_types == ["xgboost", "lightgbm"]
-        assert restored.volatility_gate_enabled is True
-        assert restored.volatility_model_path == "vol.pkl"
-        assert restored.ml_filter_enabled is True
-        assert restored.ml_model_path == "vol.pkl"
-        assert restored.preprocess_features is False
+        assert restored.hybrid_config.mode is True
+        assert restored.hybrid_config.model_type == "xgboost"
+        assert restored.hybrid_config.model_types == ["xgboost", "lightgbm"]
+        assert restored.hybrid_config.volatility_gate_enabled is True
+        assert restored.hybrid_config.volatility_model_path == "vol.pkl"
+        assert restored.hybrid_config.ml_filter_enabled is True
+        assert restored.hybrid_config.ml_model_path == "ml.pkl"
+        assert restored.hybrid_config.preprocess_features is False
 
-        assert restored.enable_parameter_tuning is False
-        assert restored.tuning_n_trials == 11
-        assert restored.tuning_elite_count == 2
-        assert restored.tuning_use_wfa is False
-        assert restored.tuning_include_indicators is False
-        assert restored.tuning_include_tpsl is False
-        assert restored.tuning_include_thresholds is True
+        assert restored.tuning_config.enabled is False
+        assert restored.tuning_config.n_trials == 11
+        assert restored.tuning_config.elite_count == 2
+        assert restored.tuning_config.use_wfa is False
+        assert restored.tuning_config.include_indicators is False
+        assert restored.tuning_config.include_tpsl is False
+        assert restored.tuning_config.include_thresholds is True
+
+    def test_from_dict_accepts_legacy_flat_payload(self):
+        """旧フラット形式の GA 設定が正しく復元されることを確認"""
+        config = GAConfig.from_dict(
+            {
+                "population_size": 128,
+                "enable_parallel_evaluation": False,
+                "max_evaluation_workers": 4,
+                "evaluation_timeout": 90.0,
+                "enable_walk_forward": True,
+                "wfa_n_folds": 4,
+                "wfa_train_ratio": 0.8,
+                "wfa_anchored": True,
+                "enable_parameter_tuning": False,
+                "tuning_n_trials": 18,
+                "tuning_elite_count": 6,
+                "enable_two_stage_selection": True,
+                "two_stage_elite_count": 5,
+                "two_stage_candidate_pool_size": 11,
+                "two_stage_min_pass_rate": 0.7,
+                "enable_early_termination": True,
+                "early_termination_max_drawdown": 0.2,
+                "early_termination_min_trades": 14,
+                "early_termination_min_trade_check_progress": 0.4,
+                "early_termination_trade_pace_tolerance": 0.6,
+                "early_termination_min_expectancy": -0.03,
+                "early_termination_expectancy_min_trades": 7,
+                "early_termination_expectancy_progress": 0.75,
+                "enable_fitness_sharing": True,
+                "sharing_radius": 0.25,
+                "sharing_alpha": 1.3,
+                "sampling_threshold": 80,
+                "robustness_validation_symbols": ["BTC/USDT:USDT"],
+                "robustness_stress_slippage": [0.0005],
+                "robustness_aggregate_method": "mean",
+            }
+        )
+
+        assert config.population_size == 128
+        assert config.evaluation_config.enable_parallel is False
+        assert config.max_evaluation_workers == 4
+        assert config.evaluation_timeout == 90.0
+        assert config.enable_walk_forward is True
+        assert config.wfa_n_folds == 4
+        assert config.wfa_train_ratio == 0.8
+        assert config.wfa_anchored is True
+        assert config.tuning_config.enabled is False
+        assert config.enable_parameter_tuning is False
+        assert config.tuning_config.n_trials == 18
+        assert config.tuning_elite_count == 6
+        assert config.two_stage_selection_config.enabled is True
+        assert config.enable_two_stage_selection is True
+        assert config.two_stage_selection_config.elite_count == 5
+        assert config.two_stage_candidate_pool_size == 11
+        assert config.two_stage_min_pass_rate == 0.7
+        assert config.evaluation_config.early_termination_settings.enabled is True
+        assert config.enable_early_termination is True
+        assert config.early_termination_max_drawdown == 0.2
+        assert config.early_termination_min_trades == 14
+        assert config.early_termination_min_trade_check_progress == 0.4
+        assert config.early_termination_trade_pace_tolerance == 0.6
+        assert config.early_termination_min_expectancy == -0.03
+        assert config.early_termination_expectancy_min_trades == 7
+        assert config.early_termination_expectancy_progress == 0.75
+        assert config.enable_fitness_sharing is True
+        assert config.sharing_radius == 0.25
+        assert config.sharing_alpha == 1.3
+        assert config.sampling_threshold == 80
+        assert config.robustness_config.validation_symbols == ["BTC/USDT:USDT"]
+        assert config.robustness_config.stress_slippage == [0.0005]
+        assert config.robustness_config.aggregate_method == "mean"
 
     def test_from_dict_rejects_unknown_keys(self):
         """未知のキーは早期にエラーにすることを確認"""
@@ -267,79 +353,87 @@ class TestGAConfig:
     def test_early_termination_sync_does_not_mutate_evaluation_config(self):
         """GAConfig の早期終了設定は evaluation_config へは自動同期しない。"""
         config = GAConfig(
-            early_termination_settings=EarlyTerminationSettings(
-                enabled=True,
-                max_drawdown=0.2,
-                min_trades=12,
-                min_trade_check_progress=0.45,
-                trade_pace_tolerance=0.6,
-                min_expectancy=-0.02,
-                expectancy_min_trades=6,
-                expectancy_progress=0.7,
-            ),
             evaluation_config=EvaluationConfig(
                 early_termination_settings=EarlyTerminationSettings(
-                    enabled=False,
-                    max_drawdown=0.9,
+                    enabled=True,
+                    max_drawdown=0.2,
+                    min_trades=12,
+                    min_trade_check_progress=0.45,
+                    trade_pace_tolerance=0.6,
+                    min_expectancy=-0.02,
+                    expectancy_min_trades=6,
+                    expectancy_progress=0.7,
                 )
             ),
         )
 
-        assert config.enable_early_termination is True
-        assert config.early_termination_max_drawdown == 0.2
         assert config.evaluation_config is not None
-        assert config.evaluation_config.early_termination_settings.enabled is False
-        assert config.evaluation_config.early_termination_settings.max_drawdown == 0.9
+        assert config.evaluation_config.early_termination_settings.enabled is True
+        assert config.evaluation_config.early_termination_settings.max_drawdown == 0.2
+
+    def test_legacy_early_termination_assignment_updates_nested_config(self):
+        """legacy の早期終了属性代入が nested 設定へ反映されることを確認"""
+        config = GAConfig()
+
+        config.enable_early_termination = True
+        config.early_termination_max_drawdown = 0.25
+        config.early_termination_min_trades = 11
+
+        assert config.enable_early_termination is True
+        assert config.early_termination_max_drawdown == 0.25
+        assert config.early_termination_min_trades == 11
+        assert config.evaluation_config.early_termination_settings.enabled is True
+        assert config.evaluation_config.early_termination_settings.max_drawdown == 0.25
+        assert config.evaluation_config.early_termination_settings.min_trades == 11
 
     def test_mutation_settings_defaults(self):
         """突然変異関連のデフォルト設定が正しいことを確認"""
         config = GAConfig()
-        # GAConfig uses List instead of Tuple
-        assert config.indicator_param_mutation_range == [0.8, 1.2]
-        assert config.indicator_add_delete_probability == 0.3
-        assert config.indicator_add_vs_delete_probability == 0.5
-        assert config.crossover_field_selection_probability == 0.5
-        assert config.condition_operator_switch_probability == 0.2  # GAConfig default
-        assert config.condition_change_probability_multiplier == 1.0  # GAConfig default
-        assert config.condition_selection_probability == 0.5
-        assert config.risk_param_mutation_range == [0.9, 1.1]  # GAConfig default
-        assert config.tpsl_gene_creation_probability_multiplier == 0.2
-        assert config.position_sizing_gene_creation_probability_multiplier == 0.2
-        assert config.adaptive_mutation_variance_threshold == 0.001  # GAConfig default
-        assert (
-            config.adaptive_mutation_rate_decrease_multiplier == 0.8
-        )  # GAConfig default
-        assert (
-            config.adaptive_mutation_rate_increase_multiplier == 1.2
-        )  # GAConfig default
-        # GAConfig has extended operators including CROSS_UP/CROSS_DOWN
-        assert ">=" in config.valid_condition_operators
-        assert config.numeric_threshold_probability == 0.8  # GAConfig default
-        assert config.min_compatibility_score == 0.8  # GAConfig default
-        assert config.strict_compatibility_score == 0.9  # GAConfig default
+        # mutation_config経由で確認
+        assert config.mutation_config.indicator_param_range == [0.8, 1.2]
+        assert config.mutation_config.indicator_add_delete_probability == 0.3
+        assert config.mutation_config.indicator_add_vs_delete_probability == 0.5
+        assert config.mutation_config.crossover_field_selection_probability == 0.5
+        assert config.mutation_config.condition_operator_switch_probability == 0.2
+        assert config.mutation_config.condition_change_multiplier == 1.0
+        assert config.mutation_config.condition_selection_probability == 0.5
+        assert config.mutation_config.risk_param_range == [0.9, 1.1]
+        assert config.mutation_config.tpsl_gene_creation_multiplier == 0.2
+        assert config.mutation_config.position_sizing_gene_creation_multiplier == 0.2
+        assert config.mutation_config.adaptive_variance_threshold == 0.001
+        assert config.mutation_config.adaptive_decrease_multiplier == 0.8
+        assert config.mutation_config.adaptive_increase_multiplier == 1.2
+        assert ">=" in config.mutation_config.valid_condition_operators
+        assert config.numeric_threshold_probability == 0.8
+        assert config.min_compatibility_score == 0.8
+        assert config.strict_compatibility_score == 0.9
         assert config.enable_multi_timeframe is False
         assert config.mtf_indicator_probability == 0.3
-        assert config.available_timeframes is None  # GAConfig default
+        assert config.available_timeframes is None
 
     def test_mutation_settings_custom_values(self):
         """突然変異関連のカスタム設定が正しく適用されることを確認"""
-        custom_range = [0.9, 1.1]  # List for GAConfig
+        from app.services.auto_strategy.config.sub_configs import MutationConfig
+
+        custom_range = [0.9, 1.1]
         custom_prob = 0.4
         config = GAConfig(
-            indicator_param_mutation_range=custom_range,
-            indicator_add_delete_probability=custom_prob,
-            indicator_add_vs_delete_probability=0.3,
-            crossover_field_selection_probability=0.7,
-            condition_operator_switch_probability=0.6,
-            condition_change_probability_multiplier=0.7,
-            condition_selection_probability=0.8,
-            risk_param_mutation_range=[0.7, 1.3],  # List for GAConfig
-            tpsl_gene_creation_probability_multiplier=0.1,
-            position_sizing_gene_creation_probability_multiplier=0.3,
-            adaptive_mutation_variance_threshold=0.05,
-            adaptive_mutation_rate_decrease_multiplier=0.6,
-            adaptive_mutation_rate_increase_multiplier=1.5,
-            valid_condition_operators=["==", "!="],
+            mutation_config=MutationConfig(
+                indicator_param_range=custom_range,
+                indicator_add_delete_probability=custom_prob,
+                indicator_add_vs_delete_probability=0.3,
+                crossover_field_selection_probability=0.7,
+                condition_operator_switch_probability=0.6,
+                condition_change_multiplier=0.7,
+                condition_selection_probability=0.8,
+                risk_param_range=[0.7, 1.3],
+                tpsl_gene_creation_multiplier=0.1,
+                position_sizing_gene_creation_multiplier=0.3,
+                adaptive_variance_threshold=0.05,
+                adaptive_decrease_multiplier=0.6,
+                adaptive_increase_multiplier=1.5,
+                valid_condition_operators=["==", "!="],
+            ),
             numeric_threshold_probability=0.5,
             min_compatibility_score=0.6,
             strict_compatibility_score=0.8,
@@ -347,17 +441,17 @@ class TestGAConfig:
             mtf_indicator_probability=0.5,
             available_timeframes=["1h", "4h"],
         )
-        assert config.indicator_param_mutation_range == custom_range
-        assert config.indicator_add_delete_probability == custom_prob
-        assert config.condition_operator_switch_probability == 0.6
-        assert config.condition_change_probability_multiplier == 0.7
-        assert config.risk_param_mutation_range == [0.7, 1.3]
-        assert config.tpsl_gene_creation_probability_multiplier == 0.1
-        assert config.position_sizing_gene_creation_probability_multiplier == 0.3
-        assert config.adaptive_mutation_variance_threshold == 0.05
-        assert config.adaptive_mutation_rate_decrease_multiplier == 0.6
-        assert config.adaptive_mutation_rate_increase_multiplier == 1.5
-        assert config.valid_condition_operators == ["==", "!="]
+        assert config.mutation_config.indicator_param_range == custom_range
+        assert config.mutation_config.indicator_add_delete_probability == custom_prob
+        assert config.mutation_config.condition_operator_switch_probability == 0.6
+        assert config.mutation_config.condition_change_multiplier == 0.7
+        assert config.mutation_config.risk_param_range == [0.7, 1.3]
+        assert config.mutation_config.tpsl_gene_creation_multiplier == 0.1
+        assert config.mutation_config.position_sizing_gene_creation_multiplier == 0.3
+        assert config.mutation_config.adaptive_variance_threshold == 0.05
+        assert config.mutation_config.adaptive_decrease_multiplier == 0.6
+        assert config.mutation_config.adaptive_increase_multiplier == 1.5
+        assert config.mutation_config.valid_condition_operators == ["==", "!="]
 
     def test_parameter_range_defaults_are_isolated(self):
         """parameter_ranges のネスト値がインスタンス間で共有されないことを確認"""

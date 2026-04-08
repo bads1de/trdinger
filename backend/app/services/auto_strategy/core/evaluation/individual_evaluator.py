@@ -413,18 +413,18 @@ class IndividualEvaluator(EvaluationWindowService):
         signature = (
             bool(getattr(config, "enable_two_stage_selection", True)),
             float(getattr(config, "two_stage_min_pass_rate", 0.0) or 0.0),
-            tuple(getattr(config, "robustness_validation_symbols", None) or ()),
+            tuple(getattr(config.robustness_config, "validation_symbols", None) or ()),
             tuple(
                 window.signature
                 for window in normalize_robustness_regime_windows(
-                    getattr(config, "robustness_regime_windows", [])
+                    getattr(config.robustness_config, "regime_windows", [])
                 )
             ),
-            tuple(getattr(config, "robustness_stress_slippage", ()) or ()),
+            tuple(getattr(config.robustness_config, "stress_slippage", ()) or ()),
             tuple(
-                getattr(config, "robustness_stress_commission_multipliers", ()) or ()
+                getattr(config.robustness_config, "stress_commission_multipliers", ()) or ()
             ),
-            str(getattr(config, "robustness_aggregate_method", "robust")),
+            str(getattr(config.robustness_config, "aggregate_method", "robust")),
             bool(getattr(config, "enable_purged_kfold", False)),
             int(getattr(config, "purged_kfold_splits", 0) or 0),
             float(getattr(config, "purged_kfold_embargo", 0.0) or 0.0),

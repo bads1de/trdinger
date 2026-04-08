@@ -431,7 +431,7 @@ class ConfigValidator:
     def _validate_ga_early_termination_settings(config: GAConfig) -> List[str]:
         """早期打ち切り設定の検証"""
         errors = []
-        settings = resolve_early_termination_settings(config)
+        settings = config.evaluation_config.early_termination_settings
         if not settings.enabled:
             return errors
 
@@ -488,12 +488,13 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        if not getattr(config, "enable_two_stage_selection", False):
+        two_stage_config = config.two_stage_selection_config
+        if not two_stage_config.enabled:
             return errors
 
-        elite_count = config.two_stage_elite_count
+        elite_count = two_stage_config.elite_count
         population_size = config.population_size
-        candidate_pool_size = config.two_stage_candidate_pool_size
+        candidate_pool_size = two_stage_config.candidate_pool_size
 
         if (
             not isinstance(elite_count, (int, float))
@@ -518,8 +519,8 @@ class ConfigValidator:
             )
 
         if (
-            not isinstance(config.two_stage_min_pass_rate, (int, float))
-            or not 0.0 <= float(config.two_stage_min_pass_rate) <= 1.0
+            not isinstance(two_stage_config.min_pass_rate, (int, float))
+            or not 0.0 <= float(two_stage_config.min_pass_rate) <= 1.0
         ):
             errors.append("二段階選抜 pass rate は0.0-1.0の範囲である必要があります")
 
@@ -537,7 +538,7 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        validation_symbols = getattr(config, "robustness_validation_symbols", None)
+        validation_symbols = config.robustness_config.validation_symbols
         if validation_symbols is not None and not isinstance(validation_symbols, list):
             errors.append("robustness_validation_symbols はリストである必要があります")
         return errors
@@ -567,9 +568,7 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        regime_windows = getattr(config, "robustness_regime_windows", None)
-        if regime_windows is None:
-            regime_windows = []
+        regime_windows = config.robustness_config.regime_windows
         if not isinstance(regime_windows, list):
             errors.append("robustness の regime windows はリストである必要があります")
             return errors
@@ -641,7 +640,7 @@ class ConfigValidator:
         Returns:
             エラーメッセージのリスト
         """
-        aggregate_method = getattr(config, "robustness_aggregate_method", "robust")
+        aggregate_method = config.robustness_config.aggregate_method
         if not isinstance(aggregate_method, str) or aggregate_method not in {
             "robust",
             "mean",
@@ -665,20 +664,14 @@ class ConfigValidator:
         errors = []
         errors.extend(ConfigValidator._validate_robustness_validation_symbols(config))
         errors.extend(ConfigValidator._validate_robustness_regime_windows(config))
-        slippage = getattr(config, "robustness_stress_slippage", None)
-        if slippage is None:
-            slippage = []
+        slippage = config.robustness_config.stress_slippage
         errors.extend(
             ConfigValidator._validate_non_negative_numeric_list(
                 slippage,
                 "robustness の slippage",
             )
         )
-        commission_multipliers = getattr(
-            config, "robustness_stress_commission_multipliers", None
-        )
-        if commission_multipliers is None:
-            commission_multipliers = []
+        commission_multipliers = config.robustness_config.stress_commission_multipliers
         errors.extend(
             ConfigValidator._validate_positive_numeric_list(
                 commission_multipliers,

@@ -96,7 +96,7 @@ class TestEvolutionRunner:
             objectives=["total_return"],
             crossover_rate=0.5,
             mutation_rate=0.2,
-            enable_fitness_sharing=False,
+            fitness_sharing={"enable_fitness_sharing": False},
             dynamic_objective_reweighting=False,
         )
 
@@ -238,7 +238,7 @@ class TestEvolutionRunner:
 
     def test_fitness_sharing_application(self, mock_toolbox, dummy_population, config):
         """Test fitness sharing application during evolution."""
-        config.enable_fitness_sharing = True
+        config.fitness_sharing = {"enable_fitness_sharing": True}
         mock_fitness_sharing = Mock()
         mock_fitness_sharing.apply_fitness_sharing.side_effect = (
             lambda pop: pop

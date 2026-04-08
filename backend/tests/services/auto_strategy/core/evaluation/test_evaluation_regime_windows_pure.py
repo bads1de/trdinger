@@ -36,17 +36,19 @@ def test_execute_robustness_report_adds_regime_windows():
         objectives=["weighted_score"],
         fitness_constraints={},
         two_stage_min_pass_rate=0.5,
-        robustness_validation_symbols=[],
-        robustness_stress_slippage=[],
-        robustness_stress_commission_multipliers=[],
-        robustness_regime_windows=[
-            {
-                "name": " bear ",
-                "start_date": " 2024-07-01 00:00:00 ",
-                "end_date": " 2024-08-01 00:00:00 ",
-            }
-        ],
-        robustness_aggregate_method="robust",
+        robustness_config=SimpleNamespace(
+            validation_symbols=[],
+            stress_slippage=[],
+            stress_commission_multipliers=[],
+            regime_windows=[
+                {
+                    "name": " bear ",
+                    "start_date": " 2024-07-01 00:00:00 ",
+                    "end_date": " 2024-08-01 00:00:00 ",
+                }
+            ],
+            aggregate_method="robust",
+        ),
     )
 
     report = strategy.execute_robustness_report(

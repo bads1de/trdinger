@@ -20,7 +20,7 @@ def test_from_dict_expands_robustness_regime_windows():
         }
     )
 
-    assert config.robustness_regime_windows == [
+    assert config.robustness_config.regime_windows == [
         {
             "name": "bull",
             "start_date": "2024-01-01 00:00:00",
@@ -30,14 +30,18 @@ def test_from_dict_expands_robustness_regime_windows():
 
 
 def test_validator_rejects_invalid_regime_window_order():
+    from app.services.auto_strategy.config.sub_configs import RobustnessConfig
+
     config = GAConfig(
-        robustness_regime_windows=[
-            {
-                "name": "invalid",
-                "start_date": "2024-04-01 00:00:00",
-                "end_date": "2024-03-01 00:00:00",
-            }
-        ]
+        robustness_config=RobustnessConfig(
+            regime_windows=[
+                {
+                    "name": "invalid",
+                    "start_date": "2024-04-01 00:00:00",
+                    "end_date": "2024-03-01 00:00:00",
+                }
+            ]
+        )
     )
 
     is_valid, errors = ConfigValidator.validate(config)

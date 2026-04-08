@@ -134,12 +134,15 @@ class GeneticAlgorithmEngine:
         self.individual_class = self.deap_setup.get_individual_class()
 
         # フィットネス共有の初期化
-        if config.enable_fitness_sharing:
+        fitness_sharing_config = config.fitness_sharing
+        if fitness_sharing_config.get("enable_fitness_sharing", False):
             self.fitness_sharing = FitnessSharing(
-                sharing_radius=config.sharing_radius,
-                alpha=config.sharing_alpha,
-                sampling_threshold=config.sampling_threshold,
-                sampling_ratio=config.sampling_ratio,
+                sharing_radius=fitness_sharing_config.get("sharing_radius", 0.1),
+                alpha=fitness_sharing_config.get("sharing_alpha", 1.0),
+                sampling_threshold=fitness_sharing_config.get("sampling_threshold", 200),
+                sampling_ratio=fitness_sharing_config.get(
+                    "sampling_ratio", FitnessSharing.SAMPLING_RATIO
+                ),
             )
         else:
             self.fitness_sharing = None
@@ -480,7 +483,7 @@ class GeneticAlgorithmEngine:
         )
 
         # パラメータチューニング（有効な場合）
-        if config.enable_parameter_tuning:
+        if config.tuning_config.enabled:
             (
                 best_gene,
                 best_fitness_value,
@@ -497,7 +500,7 @@ class GeneticAlgorithmEngine:
                 best_gene,
                 config,
                 force_robustness=bool(
-                    getattr(config, "enable_two_stage_selection", False)
+                    config.two_stage_selection_config.enabled
                 ),
             )
 
@@ -714,7 +717,7 @@ class GeneticAlgorithmEngine:
             return current_best_gene, refreshed_fitness, refreshed_summary
 
         tuned_candidates = self._tune_candidate_genes(tuning_candidates, config)
-        if getattr(config, "enable_two_stage_selection", True):
+        if config.two_stage_selection_config.enabled:
             tuned_winner = self._select_best_tuned_candidate(
                 tuned_candidates,
                 config,
@@ -733,7 +736,7 @@ class GeneticAlgorithmEngine:
             )
             return current_best_gene, refreshed_fitness, refreshed_summary
 
-        if getattr(config, "enable_two_stage_selection", True):
+        if config.two_stage_selection_config.enabled:
             logger.info(
                 "[Tuning] %s候補をチューニングし、robustness 再選抜で最終勝者を決定しました",
                 len(tuned_candidates),
@@ -810,7 +813,7 @@ class GeneticAlgorithmEngine:
         refreshed_summary = self._build_individual_evaluation_summary(
             best_gene,
             config,
-            force_robustness=bool(getattr(config, "enable_two_stage_selection", False)),
+            force_robustness=bool(config.two_stage_selection_config.enabled),
             primary_fitness=self._extract_primary_fitness_from_result(
                 refreshed_fitness
             ),

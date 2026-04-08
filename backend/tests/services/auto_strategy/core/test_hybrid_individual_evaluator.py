@@ -43,11 +43,14 @@ class TestHybridIndividualEvaluator:
 
     def test_inject_external_objects_loads_runtime_predictor(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.sub_configs import HybridConfig
 
         run_config = {"strategy_config": {"parameters": {}}}
         config = GAConfig(
-            volatility_gate_enabled=True,
-            volatility_model_path="dummy/model.pkl",
+            hybrid_config=HybridConfig(
+                volatility_gate_enabled=True,
+                volatility_model_path="dummy/model.pkl",
+            ),
         )
 
         model_data = {
@@ -77,11 +80,14 @@ class TestHybridIndividualEvaluator:
 
     def test_inject_external_objects_disables_gate_on_load_error(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.sub_configs import HybridConfig
 
         run_config = {"strategy_config": {"parameters": {}}}
         config = GAConfig(
-            volatility_gate_enabled=True,
-            volatility_model_path="dummy/model.pkl",
+            hybrid_config=HybridConfig(
+                volatility_gate_enabled=True,
+                volatility_model_path="dummy/model.pkl",
+            ),
         )
 
         with patch(
@@ -95,6 +101,7 @@ class TestHybridIndividualEvaluator:
 
     def test_inject_external_objects_falls_back_to_runtime_predictor(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.sub_configs import HybridConfig
 
         runtime_predictor = Mock()
         runtime_predictor.is_trained.return_value = True
@@ -102,8 +109,10 @@ class TestHybridIndividualEvaluator:
 
         run_config = {"strategy_config": {"parameters": {}}}
         config = GAConfig(
-            volatility_gate_enabled=True,
-            volatility_model_path=None,
+            hybrid_config=HybridConfig(
+                volatility_gate_enabled=True,
+                volatility_model_path=None,
+            ),
         )
 
         evaluator._inject_external_objects(run_config, {}, config)
@@ -152,27 +161,32 @@ class TestHybridIndividualEvaluator:
 
     def test_build_robustness_cache_key_normalizes_regime_windows(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.sub_configs import RobustnessConfig
 
         gene = Mock()
         evaluator._build_cache_key = Mock(return_value="gene-key")
 
         spaced_config = GAConfig(
-            robustness_regime_windows=[
-                {
-                    "name": " bear ",
-                    "start_date": " 2024-07-01 00:00:00 ",
-                    "end_date": " 2024-08-01 00:00:00 ",
-                }
-            ]
+            robustness_config=RobustnessConfig(
+                regime_windows=[
+                    {
+                        "name": " bear ",
+                        "start_date": " 2024-07-01 00:00:00 ",
+                        "end_date": " 2024-08-01 00:00:00 ",
+                    }
+                ]
+            )
         )
         trimmed_config = GAConfig(
-            robustness_regime_windows=[
-                {
-                    "name": "bear",
-                    "start_date": "2024-07-01 00:00:00",
-                    "end_date": "2024-08-01 00:00:00",
-                }
-            ]
+            robustness_config=RobustnessConfig(
+                regime_windows=[
+                    {
+                        "name": "bear",
+                        "start_date": "2024-07-01 00:00:00",
+                        "end_date": "2024-08-01 00:00:00",
+                    }
+                ]
+            )
         )
 
         spaced_key = evaluator._build_robustness_cache_key(gene, spaced_config)

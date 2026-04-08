@@ -16,23 +16,8 @@ class TestStrategyGene:
 
     @pytest.fixture
     def mock_config(self):
-        config = MagicMock()
-        config.risk_param_mutation_range = (0.8, 1.2)
-        config.indicator_param_mutation_range = (0.8, 1.2)
-        config.tpsl_gene_creation_probability_multiplier = 1.0
-        config.position_sizing_gene_creation_probability_multiplier = 1.0
-        config.indicator_add_delete_probability = 0.5
-        config.indicator_add_vs_delete_probability = 0.5
-        config.max_indicators = 5
-        config.min_indicators = 1
-        config.condition_change_probability_multiplier = 1.0
-        config.condition_selection_probability = 1.0
-        config.condition_operator_switch_probability = 0.5
-        config.valid_condition_operators = [">", "<", "=="]
-        config.crossover_field_selection_probability = 0.5
-        config.adaptive_mutation_variance_threshold = 0.01
-        config.adaptive_mutation_rate_decrease_multiplier = 0.5
-        config.adaptive_mutation_rate_increase_multiplier = 2.0
+        from app.services.auto_strategy.config import GAConfig
+        config = GAConfig()
         return config
 
     def test_create_default(self):
@@ -87,7 +72,7 @@ class TestStrategyGene:
         with patch("random.random", return_value=0.0):
             StrategyGene._mutate_conditions(sample_gene, 1.0, mock_config)
 
-        assert cond.operator in mock_config.valid_condition_operators
+        assert cond.operator in mock_config.mutation_config.valid_condition_operators
 
     def test_crossover_uniform(self, sample_gene, mock_config):
         parent2 = StrategyGene.create_default()
@@ -120,14 +105,14 @@ class TestStrategyGene:
         population = [ind1, ind2]
 
         # 分散が大きい場合 -> 変異率低下
-        mock_config.adaptive_mutation_variance_threshold = 0.0001
+        mock_config.mutation_config.adaptive_variance_threshold = 0.0001
         mutated = sample_gene.adaptive_mutate(
             population, mock_config, base_mutation_rate=0.5
         )
         assert mutated.metadata["adaptive_mutation_rate"] < 0.5
 
         # 分散が小さい場合 -> 変異率上昇
-        mock_config.adaptive_mutation_variance_threshold = 100.0
+        mock_config.mutation_config.adaptive_variance_threshold = 100.0
         mutated = sample_gene.adaptive_mutate(
             population, mock_config, base_mutation_rate=0.1
         )

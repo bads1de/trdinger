@@ -70,11 +70,11 @@ class StrategyParameterTuner:
         return cls(
             evaluator=evaluator,
             config=config,
-            n_trials=config.tuning_n_trials,
-            use_wfa=config.tuning_use_wfa,
-            include_indicators=config.tuning_include_indicators,
-            include_tpsl=config.tuning_include_tpsl,
-            include_thresholds=config.tuning_include_thresholds,
+            n_trials=config.tuning_config.n_trials,
+            use_wfa=config.tuning_config.use_wfa,
+            include_indicators=config.tuning_config.include_indicators,
+            include_tpsl=config.tuning_config.include_tpsl,
+            include_thresholds=config.tuning_config.include_thresholds,
         )
 
     def tune(self, gene: StrategyGene) -> StrategyGene:

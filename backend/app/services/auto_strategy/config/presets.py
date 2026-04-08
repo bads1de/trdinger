@@ -21,14 +21,20 @@ class GAPresets:
         パラメータチューニングとWFAを無効にし、小規模な集団で
         素早く有望な戦略領域を特定する用途。
         """
+        from .sub_configs import (
+            EvaluationConfig,
+            TuningConfig,
+            TwoStageSelectionConfig,
+        )
+
         return GAConfig(
             population_size=50,
             generations=20,
             max_indicators=5,
             max_conditions=2,
-            enable_parameter_tuning=False,
-            enable_walk_forward=False,
-            enable_two_stage_selection=False,
+            tuning_config=TuningConfig(enabled=False),
+            evaluation_config=EvaluationConfig(enable_walk_forward=False),
+            two_stage_selection_config=TwoStageSelectionConfig(enabled=False),
             use_seed_strategies=True,
             seed_injection_rate=0.15,
             enable_parallel_evaluation=True,
@@ -41,6 +47,13 @@ class GAPresets:
         大規模な集団と多数の世代で広範囲を探索し、
         エリート個体に対してOptunaチューニングとWFA検証を実施する。
         """
+        from .sub_configs import (
+            EvaluationConfig,
+            RobustnessConfig,
+            TuningConfig,
+            TwoStageSelectionConfig,
+        )
+
         return GAConfig(
             population_size=200,
             generations=100,
@@ -49,35 +62,43 @@ class GAPresets:
             crossover_rate=0.85,
             mutation_rate=0.15,
             elite_size=20,
-            enable_parameter_tuning=True,
-            tuning_n_trials=100,
-            tuning_use_wfa=True,
-            enable_walk_forward=True,
-            wfa_n_folds=5,
-            wfa_train_ratio=0.7,
+            tuning_config=TuningConfig(
+                enabled=True,
+                n_trials=100,
+                use_wfa=True,
+                elite_count=5,
+            ),
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=5,
+                wfa_train_ratio=0.7,
+            ),
             use_seed_strategies=True,
             seed_injection_rate=0.1,
-            enable_fitness_sharing=True,
+            fitness_sharing={"enable_fitness_sharing": True},
             enable_parallel_evaluation=True,
-            enable_two_stage_selection=True,
-            two_stage_elite_count=5,
-            two_stage_candidate_pool_size=12,
-            two_stage_min_pass_rate=0.6,
-            tuning_elite_count=5,
-            robustness_regime_windows=[
-                {
-                    "name": "early_trend",
-                    "start_date": "2024-01-01 00:00:00",
-                    "end_date": "2024-02-15 00:00:00",
-                },
-                {
-                    "name": "late_chop",
-                    "start_date": "2024-02-15 00:00:00",
-                    "end_date": "2024-04-09 00:00:00",
-                },
-            ],
-            robustness_stress_slippage=[0.0002, 0.0005],
-            robustness_stress_commission_multipliers=[1.5],
+            two_stage_selection_config=TwoStageSelectionConfig(
+                enabled=True,
+                elite_count=5,
+                candidate_pool_size=12,
+                min_pass_rate=0.6,
+            ),
+            robustness_config=RobustnessConfig(
+                regime_windows=[
+                    {
+                        "name": "early_trend",
+                        "start_date": "2024-01-01 00:00:00",
+                        "end_date": "2024-02-15 00:00:00",
+                    },
+                    {
+                        "name": "late_chop",
+                        "start_date": "2024-02-15 00:00:00",
+                        "end_date": "2024-04-09 00:00:00",
+                    },
+                ],
+                stress_slippage=[0.0002, 0.0005],
+                stress_commission_multipliers=[1.5],
+            ),
         )
 
     @staticmethod
@@ -86,6 +107,12 @@ class GAPresets:
 
         リターン、シャープレシオ、ドローダウンを同時に最適化する。
         """
+        from .sub_configs import (
+            RobustnessConfig,
+            TuningConfig,
+            TwoStageSelectionConfig,
+        )
+
         return GAConfig(
             population_size=150,
             generations=80,
@@ -96,15 +123,19 @@ class GAPresets:
                 "max_drawdown",
             ],
             objective_weights=[1.0, 1.0, 1.0],
-            enable_parameter_tuning=False,
+            tuning_config=TuningConfig(enabled=False),
             use_seed_strategies=True,
-            enable_fitness_sharing=True,
+            fitness_sharing={"enable_fitness_sharing": True},
             enable_parallel_evaluation=True,
-            enable_two_stage_selection=True,
-            two_stage_elite_count=4,
-            two_stage_candidate_pool_size=8,
-            robustness_stress_slippage=[0.0003],
-            robustness_stress_commission_multipliers=[1.5],
+            two_stage_selection_config=TwoStageSelectionConfig(
+                enabled=True,
+                elite_count=4,
+                candidate_pool_size=8,
+            ),
+            robustness_config=RobustnessConfig(
+                stress_slippage=[0.0003],
+                stress_commission_multipliers=[1.5],
+            ),
         )
 
     @staticmethod
@@ -114,14 +145,15 @@ class GAPresets:
         高頻度取引に適した設定。トレード頻度ペナルティを緩和し、
         より.Aggressiveなパラメータ範囲を使用する。
         """
+        from .sub_configs import TuningConfig
+
         config = GAConfig(
             population_size=100,
             generations=50,
             max_indicators=6,
             use_seed_strategies=True,
             seed_injection_rate=0.1,
-            enable_parameter_tuning=True,
-            tuning_n_trials=30,
+            tuning_config=TuningConfig(enabled=True, n_trials=30),
             enable_parallel_evaluation=True,
         )
         # 短期向けフィットネス重み
@@ -143,6 +175,13 @@ class GAPresets:
         低頻度取引に適した設定。ドローダウンとUlcer Indexの
         ペナルティを強化し、安定性を重視する。
         """
+        from .sub_configs import (
+            EvaluationConfig,
+            RobustnessConfig,
+            TuningConfig,
+            TwoStageSelectionConfig,
+        )
+
         config = GAConfig(
             population_size=150,
             generations=80,
@@ -150,29 +189,34 @@ class GAPresets:
             max_conditions=3,
             use_seed_strategies=True,
             seed_injection_rate=0.1,
-            enable_parameter_tuning=True,
-            tuning_n_trials=50,
-            tuning_elite_count=4,
-            enable_walk_forward=True,
-            wfa_n_folds=4,
+            tuning_config=TuningConfig(
+                enabled=True, n_trials=50, elite_count=4
+            ),
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True, wfa_n_folds=4
+            ),
             enable_parallel_evaluation=True,
-            enable_two_stage_selection=True,
-            two_stage_elite_count=4,
-            two_stage_candidate_pool_size=8,
-            robustness_regime_windows=[
-                {
-                    "name": "cycle_a",
-                    "start_date": "2024-01-01 00:00:00",
-                    "end_date": "2024-02-20 00:00:00",
-                },
-                {
-                    "name": "cycle_b",
-                    "start_date": "2024-02-20 00:00:00",
-                    "end_date": "2024-04-09 00:00:00",
-                },
-            ],
-            robustness_stress_slippage=[0.0003],
-            robustness_stress_commission_multipliers=[1.5],
+            two_stage_selection_config=TwoStageSelectionConfig(
+                enabled=True,
+                elite_count=4,
+                candidate_pool_size=8,
+            ),
+            robustness_config=RobustnessConfig(
+                regime_windows=[
+                    {
+                        "name": "cycle_a",
+                        "start_date": "2024-01-01 00:00:00",
+                        "end_date": "2024-02-20 00:00:00",
+                    },
+                    {
+                        "name": "cycle_b",
+                        "start_date": "2024-02-20 00:00:00",
+                        "end_date": "2024-04-09 00:00:00",
+                    },
+                ],
+                stress_slippage=[0.0003],
+                stress_commission_multipliers=[1.5],
+            ),
         )
         # 長期向けフィットネス重み
         config.fitness_weights = {

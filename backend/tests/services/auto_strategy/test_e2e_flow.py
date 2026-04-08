@@ -99,7 +99,7 @@ class TestE2EFlow:
             min_indicators=1,
             max_indicators=2,
             elite_size=1,
-            enable_fitness_sharing=False,
+            fitness_sharing={"enable_fitness_sharing": False},
             enable_parallel_evaluation=False,
         )
         backtest_config = {

@@ -32,6 +32,7 @@ def _resolve_model_path(*candidates: Any) -> Optional[str]:
 
 def resolve_ml_gate_settings(source: Any) -> MLGateSettings:
     """volatility gate / legacy ML filter 設定を共通形に解決する。"""
+    # フラットフィールドから読み取り
     gate_enabled = bool(
         _read_value(source, "volatility_gate_enabled")
         or _read_value(source, "ml_filter_enabled")
@@ -40,6 +41,19 @@ def resolve_ml_gate_settings(source: Any) -> MLGateSettings:
         _read_value(source, "volatility_model_path"),
         _read_value(source, "ml_model_path"),
     )
+    
+    # hybrid_configからも読み取り（優先）
+    hybrid_config = _read_value(source, "hybrid_config")
+    if hybrid_config is not None:
+        gate_enabled = gate_enabled or bool(
+            _read_value(hybrid_config, "volatility_gate_enabled")
+            or _read_value(hybrid_config, "ml_filter_enabled")
+        )
+        model_path = model_path or _resolve_model_path(
+            _read_value(hybrid_config, "volatility_model_path"),
+            _read_value(hybrid_config, "ml_model_path"),
+        )
+    
     return MLGateSettings(enabled=gate_enabled, model_path=model_path)
 
 

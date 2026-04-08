@@ -74,7 +74,7 @@ def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
 
 def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
     """指標遺伝子の突然変異処理。"""
-    min_multiplier, max_multiplier = config.indicator_param_mutation_range
+    min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
     for i, indicator in enumerate(mutated.indicators):
         if random.random() < mutation_rate:
@@ -104,11 +104,11 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
                             param_value * random.uniform(min_multiplier, max_multiplier)
                         )
 
-    if random.random() < mutation_rate * config.indicator_add_delete_probability:
+    if random.random() < mutation_rate * config.mutation_config.indicator_add_delete_probability:
         max_indicators = config.max_indicators
         if (
             len(mutated.indicators) < max_indicators
-            and random.random() < config.indicator_add_vs_delete_probability
+            and random.random() < config.mutation_config.indicator_add_vs_delete_probability
         ):
             from .indicator import generate_random_indicators
             from .validator import GeneValidator
@@ -130,7 +130,7 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
             if valid_new_indicators:
                 mutated.indicators.append(random.choice(valid_new_indicators))
         elif len(mutated.indicators) > config.min_indicators and random.random() < (
-            1 - config.indicator_add_vs_delete_probability
+            1 - config.mutation_config.indicator_add_vs_delete_probability
         ):
             mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
@@ -140,18 +140,18 @@ def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
 
     def mutate_item(condition):
         if isinstance(condition, ConditionGroup):
-            if random.random() < config.condition_operator_switch_probability:
+            if random.random() < config.mutation_config.condition_operator_switch_probability:
                 condition.operator = "AND" if condition.operator == "OR" else "OR"
             elif condition.conditions:
                 idx = random.randint(0, len(condition.conditions) - 1)
                 mutate_item(condition.conditions[idx])
         else:
-            condition.operator = random.choice(config.valid_condition_operators)
+            condition.operator = random.choice(config.mutation_config.valid_condition_operators)
 
-    mutation_threshold = mutation_rate * config.condition_change_probability_multiplier
+    mutation_threshold = mutation_rate * config.mutation_config.condition_change_multiplier
 
     def maybe_mutate_branch(conditions):
-        if conditions and random.random() < config.condition_selection_probability:
+        if conditions and random.random() < config.mutation_config.condition_selection_probability:
             idx = random.randint(0, len(conditions) - 1)
             mutate_item(conditions[idx])
 
@@ -192,7 +192,7 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
         mutate_indicators(mutated, mutation_rate, config)
         mutate_conditions(mutated, mutation_rate, config)
 
-        min_risk_multiplier, max_risk_multiplier = config.risk_param_mutation_range
+        min_risk_multiplier, max_risk_multiplier = config.mutation_config.risk_param_range
         for key, value in mutated.risk_management.items():
             if isinstance(value, (int, float)) and random.random() < mutation_rate:
                 if key == "position_size":
@@ -275,17 +275,17 @@ def adaptive_mutate_strategy_gene(
             adaptive_rate = base_mutation_rate
         else:
             variance = np.var(fitnesses)
-            variance_threshold = config.adaptive_mutation_variance_threshold
+            variance_threshold = config.mutation_config.adaptive_variance_threshold
 
             if variance > variance_threshold:
                 adaptive_rate = (
                     base_mutation_rate
-                    * config.adaptive_mutation_rate_decrease_multiplier
+                    * config.mutation_config.adaptive_decrease_multiplier
                 )
             else:
                 adaptive_rate = (
                     base_mutation_rate
-                    * config.adaptive_mutation_rate_increase_multiplier
+                    * config.mutation_config.adaptive_increase_multiplier
                 )
 
             adaptive_rate = max(0.01, min(1.0, adaptive_rate))
@@ -367,7 +367,7 @@ def crossover_strategy_genes_batch(
 
 def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
     """ユニフォーム交叉。"""
-    selection_prob = config.crossover_field_selection_probability
+    selection_prob = config.mutation_config.crossover_field_selection_probability
 
     child1_params: Dict[str, Any] = {"id": str(uuid.uuid4())}
     child2_params: Dict[str, Any] = {"id": str(uuid.uuid4())}

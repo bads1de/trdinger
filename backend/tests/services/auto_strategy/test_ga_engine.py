@@ -122,6 +122,39 @@ class TestGeneticAlgorithmEngine:
         assert engine.individual_evaluator is not None
         assert engine.deap_setup is not None
 
+    @patch("app.services.auto_strategy.core.engine.ga_engine.FitnessSharing")
+    def test_setup_deap_uses_default_sampling_ratio_when_missing(
+        self,
+        mock_fitness_sharing_cls,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """fitness_sharing に sampling_ratio がない場合は既定値を使う"""
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+        engine.deap_setup.setup_deap = Mock()
+        engine.deap_setup.get_individual_class = Mock(return_value=None)
+
+        config = Mock()
+        config.fitness_sharing = {
+            "enable_fitness_sharing": True,
+            "sharing_radius": 0.2,
+            "sharing_alpha": 1.5,
+            "sampling_threshold": 50,
+        }
+        mock_fitness_sharing_cls.SAMPLING_RATIO = 0.3
+
+        engine.setup_deap(config)
+
+        mock_fitness_sharing_cls.assert_called_once_with(
+            sharing_radius=0.2,
+            alpha=1.5,
+            sampling_threshold=50,
+            sampling_ratio=0.3,
+        )
+
     def test_extract_best_individuals_prefers_two_stage_leader(
         self,
         mock_backtest_service,
@@ -235,7 +268,8 @@ class TestGeneticAlgorithmEngine:
         current_best = object()
         config = Mock()
         config.enable_multi_objective = False
-        config.enable_two_stage_selection = False
+        config.two_stage_selection_config = Mock()
+        config.two_stage_selection_config.enabled = False
 
         engine._select_tuning_candidates = Mock(return_value=["candidate"])
         engine._tune_candidate_genes = Mock(return_value=["tuned"])

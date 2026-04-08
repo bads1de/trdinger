@@ -132,7 +132,7 @@ class EvolutionRunner:
 
                 # 適応度共有の適用（有効な場合、世代毎）
                 if (
-                    getattr(config, "enable_fitness_sharing", False)
+                    config.fitness_sharing.get("enable_fitness_sharing", False)
                     and self.fitness_sharing
                 ):
                     population = self.fitness_sharing.apply_fitness_sharing(population)

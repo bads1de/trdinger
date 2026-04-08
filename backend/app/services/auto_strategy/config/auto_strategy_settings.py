@@ -14,7 +14,10 @@ from typing import List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from .constants import GA_DEFAULT_CONFIG
+from .constants import (
+    AUTO_STRATEGY_CONFIG_DEFAULTS,
+    GA_DEFAULT_CONFIG,
+)
 
 
 class AutoStrategyConfig(BaseSettings):
@@ -24,14 +27,17 @@ class AutoStrategyConfig(BaseSettings):
     環境変数 `AUTO_STRATEGY_*` から値を読み取ります。
     """
 
-    # 遺伝的アルゴリズム基本設定（デフォルト値は ga_constants.GA_DEFAULT_CONFIG と同期）
+    # 遺伝的アルゴリズム基本設定（デフォルト値は GA_DEFAULT_CONFIG と同期）
     population_size: int = Field(
         default=int(GA_DEFAULT_CONFIG["population_size"]), description="個体数"
     )
     generations: int = Field(
         default=int(GA_DEFAULT_CONFIG["generations"]), description="世代数"
     )
-    tournament_size: int = Field(default=3, description="トーナメントサイズ")
+    tournament_size: int = Field(
+        default=int(AUTO_STRATEGY_CONFIG_DEFAULTS["tournament_size"]),
+        description="トーナメントサイズ",
+    )
     crossover_rate: float = Field(
         default=GA_DEFAULT_CONFIG["crossover_rate"], description="交叉率"
     )
@@ -46,48 +52,81 @@ class AutoStrategyConfig(BaseSettings):
     max_indicators: int = Field(
         default=int(GA_DEFAULT_CONFIG["max_indicators"]), description="最大指標数"
     )
-    min_indicators: int = Field(default=2, description="最小指標数")
-    max_conditions: int = Field(default=5, description="最大条件数")
-    min_conditions: int = Field(default=2, description="最小条件数")
+    min_indicators: int = Field(
+        default=int(AUTO_STRATEGY_CONFIG_DEFAULTS["min_indicators"]),
+        description="最小指標数",
+    )
+    max_conditions: int = Field(
+        default=int(AUTO_STRATEGY_CONFIG_DEFAULTS["max_conditions"]),
+        description="最大条件数",
+    )
+    min_conditions: int = Field(
+        default=int(AUTO_STRATEGY_CONFIG_DEFAULTS["min_conditions"]),
+        description="最小条件数",
+    )
 
     # 多目的最適化設定
     enable_multi_objective: bool = Field(
-        default=False, description="多目的最適化を有効にするか"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["enable_multi_objective"],
+        description="多目的最適化を有効にするか",
     )
     objectives: List[str] = Field(
-        default=["total_return"], description="最適化対象の指標"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["objectives"],
+        description="最適化対象の指標",
     )
-    objective_weights: List[float] = Field(default=[1.0], description="各指標の重み")
+    objective_weights: List[float] = Field(
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["objective_weights"],
+        description="各指標の重み",
+    )
 
     # フィットネス共有設定
     enable_fitness_sharing: bool = Field(
-        default=False, description="フィットネス共有を有効にするか"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["enable_fitness_sharing"],
+        description="フィットネス共有を有効にするか",
     )
-    fitness_sharing_radius: float = Field(default=0.1, description="共有半径")
-    sharing_alpha: float = Field(default=1.0, description="共有アルファ")
+    fitness_sharing_radius: float = Field(
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["fitness_sharing_radius"],
+        description="共有半径",
+    )
+    sharing_alpha: float = Field(
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["sharing_alpha"],
+        description="共有アルファ",
+    )
 
     # フォールバック設定（GA実行時のデフォルト値）
     fallback_symbol: str = Field(
-        default="BTC/USDT:USDT", description="フォールバックシンボル"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_symbol"],
+        description="フォールバックシンボル",
     )
-    fallback_timeframe: str = Field(default="1d", description="フォールバック時間足")
+    fallback_timeframe: str = Field(
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_timeframe"],
+        description="フォールバック時間足",
+    )
     fallback_start_date: str = Field(
-        default="2024-01-01", description="フォールバック開始日"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_start_date"],
+        description="フォールバック開始日",
     )
     fallback_end_date: str = Field(
-        default="2024-04-09", description="フォールバック終了日"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_end_date"],
+        description="フォールバック終了日",
     )
     fallback_initial_capital: float = Field(
-        default=100000.0, description="フォールバック初期資金"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_initial_capital"],
+        description="フォールバック初期資金",
     )
     fallback_commission_rate: float = Field(
-        default=0.001, description="フォールバック手数料率"
+        default=AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_commission_rate"],
+        description="フォールバック手数料率",
     )
 
     # 戦略API設定
     default_strategies_limit: int = Field(
-        default=20, description="戦略取得デフォルト件数"
+        default=int(AUTO_STRATEGY_CONFIG_DEFAULTS["default_strategies_limit"]),
+        description="戦略取得デフォルト件数",
     )
-    max_strategies_limit: int = Field(default=100, description="戦略取得最大件数")
+    max_strategies_limit: int = Field(
+        default=int(AUTO_STRATEGY_CONFIG_DEFAULTS["max_strategies_limit"]),
+        description="戦略取得最大件数",
+    )
 
     model_config = SettingsConfigDict(env_prefix="AUTO_STRATEGY_", extra="ignore")

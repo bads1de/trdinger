@@ -10,7 +10,7 @@ GAConfig は GA エンジンのランタイム設定用 dataclass です。
 import copy
 import logging
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional, Set, cast
+from typing import Any, Dict, List, Mapping, Optional, cast
 
 from app.utils.serialization import dataclass_to_dict
 
@@ -23,24 +23,184 @@ from .constants import (
     DEFAULT_GA_OBJECTIVES,
     GA_DEFAULT_CONFIG,
     GA_DEFAULT_FITNESS_SHARING,
-    GA_MUTATION_SETTINGS,
-    OPERATORS,
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
 )
-from .ml_filter_settings import normalize_ml_gate_fields
 from .sub_configs import (
-    EarlyTerminationSettings,
+    EARLY_TERMINATION_LEGACY_FIELD_MAP,
     EvaluationConfig,
     HybridConfig,
     MutationConfig,
     RobustnessConfig,
     TuningConfig,
     TwoStageSelectionConfig,
-    resolve_early_termination_settings,
 )
 
 logger = logging.getLogger(__name__)
+
+
+_MUTATION_LEGACY_FIELD_MAP = {
+    "crossover_field_selection_probability": "crossover_field_selection_probability",
+    "indicator_param_mutation_range": "indicator_param_range",
+    "risk_param_mutation_range": "risk_param_range",
+    "indicator_add_delete_probability": "indicator_add_delete_probability",
+    "indicator_add_vs_delete_probability": "indicator_add_vs_delete_probability",
+    "condition_change_probability_multiplier": "condition_change_multiplier",
+    "condition_selection_probability": "condition_selection_probability",
+    "condition_operator_switch_probability": "condition_operator_switch_probability",
+    "tpsl_gene_creation_probability_multiplier": "tpsl_gene_creation_multiplier",
+    "position_sizing_gene_creation_probability_multiplier": "position_sizing_gene_creation_multiplier",
+    "adaptive_mutation_variance_threshold": "adaptive_variance_threshold",
+    "adaptive_mutation_rate_decrease_multiplier": "adaptive_decrease_multiplier",
+    "adaptive_mutation_rate_increase_multiplier": "adaptive_increase_multiplier",
+    "valid_condition_operators": "valid_condition_operators",
+}
+
+_EVALUATION_LEGACY_FIELD_MAP = {
+    "enable_parallel_evaluation": "enable_parallel",
+    "max_evaluation_workers": "max_workers",
+    "evaluation_timeout": "timeout",
+    "enable_multi_fidelity_evaluation": "enable_multi_fidelity_evaluation",
+    "multi_fidelity_window_ratio": "multi_fidelity_window_ratio",
+    "multi_fidelity_oos_ratio": "multi_fidelity_oos_ratio",
+    "multi_fidelity_candidate_ratio": "multi_fidelity_candidate_ratio",
+    "multi_fidelity_min_candidates": "multi_fidelity_min_candidates",
+    "oos_split_ratio": "oos_split_ratio",
+    "oos_fitness_weight": "oos_fitness_weight",
+    "enable_walk_forward": "enable_walk_forward",
+    "wfa_n_folds": "wfa_n_folds",
+    "wfa_train_ratio": "wfa_train_ratio",
+    "wfa_anchored": "wfa_anchored",
+}
+
+_HYBRID_LEGACY_FIELD_MAP = {
+    "hybrid_mode": "mode",
+    "hybrid_model_type": "model_type",
+    "hybrid_model_types": "model_types",
+    "volatility_gate_enabled": "volatility_gate_enabled",
+    "volatility_model_path": "volatility_model_path",
+    "ml_filter_enabled": "ml_filter_enabled",
+    "ml_model_path": "ml_model_path",
+    "preprocess_features": "preprocess_features",
+}
+
+_TUNING_LEGACY_FIELD_MAP = {
+    "enable_parameter_tuning": "enabled",
+    "tuning_n_trials": "n_trials",
+    "tuning_elite_count": "elite_count",
+    "tuning_use_wfa": "use_wfa",
+    "tuning_include_indicators": "include_indicators",
+    "tuning_include_tpsl": "include_tpsl",
+    "tuning_include_thresholds": "include_thresholds",
+}
+
+_TWO_STAGE_LEGACY_FIELD_MAP = {
+    "enable_two_stage_selection": "enabled",
+    "two_stage_elite_count": "elite_count",
+    "two_stage_candidate_pool_size": "candidate_pool_size",
+    "two_stage_min_pass_rate": "min_pass_rate",
+}
+
+_ROBUSTNESS_LEGACY_FIELD_MAP = {
+    "robustness_validation_symbols": "validation_symbols",
+    "robustness_regime_windows": "regime_windows",
+    "robustness_stress_slippage": "stress_slippage",
+    "robustness_stress_commission_multipliers": "stress_commission_multipliers",
+    "robustness_aggregate_method": "aggregate_method",
+}
+
+_FITNESS_SHARING_LEGACY_KEYS = (
+    "enable_fitness_sharing",
+    "sharing_radius",
+    "sharing_alpha",
+    "sampling_threshold",
+    "sampling_ratio",
+)
+
+_LEGACY_ATTRIBUTE_PATHS = {
+    "enable_parameter_tuning": ("tuning_config", "enabled"),
+    "tuning_n_trials": ("tuning_config", "n_trials"),
+    "tuning_elite_count": ("tuning_config", "elite_count"),
+    "tuning_use_wfa": ("tuning_config", "use_wfa"),
+    "tuning_include_indicators": ("tuning_config", "include_indicators"),
+    "tuning_include_tpsl": ("tuning_config", "include_tpsl"),
+    "tuning_include_thresholds": ("tuning_config", "include_thresholds"),
+    "enable_two_stage_selection": ("two_stage_selection_config", "enabled"),
+    "two_stage_elite_count": ("two_stage_selection_config", "elite_count"),
+    "two_stage_candidate_pool_size": ("two_stage_selection_config", "candidate_pool_size"),
+    "two_stage_min_pass_rate": ("two_stage_selection_config", "min_pass_rate"),
+    "robustness_validation_symbols": ("robustness_config", "validation_symbols"),
+    "robustness_regime_windows": ("robustness_config", "regime_windows"),
+    "robustness_stress_slippage": ("robustness_config", "stress_slippage"),
+    "robustness_stress_commission_multipliers": (
+        "robustness_config",
+        "stress_commission_multipliers",
+    ),
+    "robustness_aggregate_method": ("robustness_config", "aggregate_method"),
+    "early_termination_settings": (
+        "evaluation_config",
+        "early_termination_settings",
+    ),
+    "enable_early_termination": (
+        "evaluation_config",
+        "early_termination_settings",
+        "enabled",
+    ),
+    "early_termination_max_drawdown": (
+        "evaluation_config",
+        "early_termination_settings",
+        "max_drawdown",
+    ),
+    "early_termination_min_trades": (
+        "evaluation_config",
+        "early_termination_settings",
+        "min_trades",
+    ),
+    "early_termination_min_trade_check_progress": (
+        "evaluation_config",
+        "early_termination_settings",
+        "min_trade_check_progress",
+    ),
+    "early_termination_trade_pace_tolerance": (
+        "evaluation_config",
+        "early_termination_settings",
+        "trade_pace_tolerance",
+    ),
+    "early_termination_min_expectancy": (
+        "evaluation_config",
+        "early_termination_settings",
+        "min_expectancy",
+    ),
+    "early_termination_expectancy_min_trades": (
+        "evaluation_config",
+        "early_termination_settings",
+        "expectancy_min_trades",
+    ),
+    "early_termination_expectancy_progress": (
+        "evaluation_config",
+        "early_termination_settings",
+        "expectancy_progress",
+    ),
+    "enable_fitness_sharing": ("fitness_sharing", "enable_fitness_sharing"),
+    "sharing_radius": ("fitness_sharing", "sharing_radius"),
+    "sharing_alpha": ("fitness_sharing", "sharing_alpha"),
+    "sampling_threshold": ("fitness_sharing", "sampling_threshold"),
+    "sampling_ratio": ("fitness_sharing", "sampling_ratio"),
+}
+
+
+def _coerce_mapping(value: Any) -> Dict[str, Any]:
+    """dict / オブジェクトのどちらからでも浅い辞書を作る。"""
+    if value is None:
+        return {}
+
+    if isinstance(value, Mapping):
+        return copy.deepcopy(dict(value))
+
+    try:
+        return copy.deepcopy(dict(vars(value)))
+    except TypeError:
+        return {}
 
 
 @dataclass
@@ -71,50 +231,7 @@ class GAConfig(BaseConfig):
     ]
 
     # 交叉・突然変異拡張設定
-    crossover_field_selection_probability: float = GA_MUTATION_SETTINGS[
-        "crossover_field_selection_probability"
-    ]
-    indicator_param_mutation_range: List[float] = field(
-        default_factory=lambda: list(
-            GA_MUTATION_SETTINGS["indicator_param_mutation_range"]
-        )
-    )
-    risk_param_mutation_range: List[float] = field(
-        default_factory=lambda: list(GA_MUTATION_SETTINGS["risk_param_mutation_range"])
-    )
-    indicator_add_delete_probability: float = GA_MUTATION_SETTINGS[
-        "indicator_add_delete_probability"
-    ]
-    indicator_add_vs_delete_probability: float = GA_MUTATION_SETTINGS[
-        "indicator_add_vs_delete_probability"
-    ]
-    condition_change_probability_multiplier: float = GA_MUTATION_SETTINGS[
-        "condition_change_probability_multiplier"
-    ]
-    condition_selection_probability: float = GA_MUTATION_SETTINGS[
-        "condition_selection_probability"
-    ]
-    condition_operator_switch_probability: float = GA_MUTATION_SETTINGS[
-        "condition_operator_switch_probability"
-    ]
-    valid_condition_operators: List[str] = field(
-        default_factory=lambda: OPERATORS.copy()
-    )
-    tpsl_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS[
-        "tpsl_gene_creation_probability_multiplier"
-    ]
-    position_sizing_gene_creation_probability_multiplier: float = GA_MUTATION_SETTINGS[
-        "position_sizing_gene_creation_probability_multiplier"
-    ]
-    adaptive_mutation_variance_threshold: float = GA_MUTATION_SETTINGS[
-        "adaptive_mutation_variance_threshold"
-    ]
-    adaptive_mutation_rate_decrease_multiplier: float = GA_MUTATION_SETTINGS[
-        "adaptive_mutation_rate_decrease_multiplier"
-    ]
-    adaptive_mutation_rate_increase_multiplier: float = GA_MUTATION_SETTINGS[
-        "adaptive_mutation_rate_increase_multiplier"
-    ]
+    # サブ設定: mutation_config
 
     # パラメータ範囲
     parameter_ranges: Dict[str, List] = field(
@@ -140,13 +257,6 @@ class GAConfig(BaseConfig):
     fitness_sharing: Dict[str, Any] = field(
         default_factory=lambda: GA_DEFAULT_FITNESS_SHARING.copy()
     )
-    enable_fitness_sharing: bool = bool(
-        GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
-    )
-    sharing_radius: float = GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
-    sharing_alpha: float = GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
-    sampling_threshold: int = int(GA_DEFAULT_FITNESS_SHARING["sampling_threshold"])
-    sampling_ratio: float = GA_DEFAULT_FITNESS_SHARING["sampling_ratio"]
 
     # 多目的最適化設定
     enable_multi_objective: bool = False
@@ -173,15 +283,6 @@ class GAConfig(BaseConfig):
     multi_fidelity_oos_ratio: float = 0.2
     multi_fidelity_candidate_ratio: float = 0.25
     multi_fidelity_min_candidates: int = 3
-    early_termination_settings: Optional[EarlyTerminationSettings] = None
-    enable_early_termination: bool = False
-    early_termination_max_drawdown: Optional[float] = None
-    early_termination_min_trades: Optional[int] = None
-    early_termination_min_trade_check_progress: float = 0.5
-    early_termination_trade_pace_tolerance: float = 0.5
-    early_termination_min_expectancy: Optional[float] = None
-    early_termination_expectancy_min_trades: int = 5
-    early_termination_expectancy_progress: float = 0.6
 
     # ハイブリッドGA+ML設定
     hybrid_mode: bool = False
@@ -198,14 +299,6 @@ class GAConfig(BaseConfig):
     enable_purged_kfold: bool = False  # PurgedKFoldを有効にするフラグ
     purged_kfold_splits: int = 5  # 分割数
     purged_kfold_embargo: float = 0.01  # エンバーゴ率
-
-    # MLフィルター設定
-    volatility_gate_enabled: bool = False
-    volatility_model_path: Optional[str] = None
-    gate_quantile: float = 0.67
-    ml_filter_enabled: bool = False
-    ml_model_path: Optional[str] = None
-    preprocess_features: bool = True  # 特徴量前処理を適用するかどうか
 
     # 遺伝子生成設定拡張
     price_data_weight: int = 3
@@ -251,28 +344,13 @@ class GAConfig(BaseConfig):
     seed_injection_rate: float = 0.1  # 初期集団のうちシードで置き換える割合（0.0-1.0）
 
     # パラメータチューニング設定（GA×Optunaハイブリッド）
-    enable_parameter_tuning: bool = (
-        True  # エリート個体のパラメータチューニング有効化（デフォルト有効）
-    )
-    tuning_n_trials: int = 30  # Optunaの試行回数
-    tuning_elite_count: int = 3  # チューニング対象エリート数
-    tuning_use_wfa: bool = True  # WFA評価を使用（過学習防止）
-    tuning_include_indicators: bool = True  # インジケーターパラメータを最適化
-    tuning_include_tpsl: bool = True  # TPSLパラメータを最適化
-    tuning_include_thresholds: bool = False  # 条件閾値を最適化
+    # サブ設定: tuning_config
 
     # 二段階選抜設定
-    enable_two_stage_selection: bool = True
-    two_stage_elite_count: int = 3
-    two_stage_candidate_pool_size: int = 5
-    two_stage_min_pass_rate: float = 0.5
+    # サブ設定: two_stage_selection_config
 
     # 二段階選抜用 robustness 設定
-    robustness_validation_symbols: Optional[List[str]] = None
-    robustness_regime_windows: List[Dict[str, str]] = field(default_factory=list)
-    robustness_stress_slippage: List[float] = field(default_factory=list)
-    robustness_stress_commission_multipliers: List[float] = field(default_factory=list)
-    robustness_aggregate_method: str = "robust"
+    # サブ設定: robustness_config
 
     # 階層的GA設定（サブGA）
     hierarchical_ga_config: Dict[str, Any] = field(
@@ -284,64 +362,202 @@ class GAConfig(BaseConfig):
         }
     )
 
-    # サブ設定（ネスト辞書からの復元用、None時はフラットフィールドを使用）
-    mutation_config: Optional[MutationConfig] = None
-    evaluation_config: Optional[EvaluationConfig] = None
-    hybrid_config: Optional[HybridConfig] = None
-    tuning_config: Optional[TuningConfig] = None
-    two_stage_selection_config: Optional[TwoStageSelectionConfig] = None
-    robustness_config: Optional[RobustnessConfig] = None
+    # サブ設定（ネスト辞書からの復元用）
+    mutation_config: MutationConfig = field(default_factory=MutationConfig)
+    evaluation_config: EvaluationConfig = field(default_factory=EvaluationConfig)
+    hybrid_config: HybridConfig = field(default_factory=HybridConfig)
+    tuning_config: TuningConfig = field(default_factory=TuningConfig)
+    two_stage_selection_config: TwoStageSelectionConfig = field(
+        default_factory=TwoStageSelectionConfig
+    )
+    robustness_config: RobustnessConfig = field(default_factory=RobustnessConfig)
+
+    def __init__(self, **data: Any) -> None:
+        """legacy flat keys も受け付ける手動初期化器。"""
+        normalized = self._normalize_input_data(data)
+        defaults = self._from_dict_defaults()
+        defaults.update(normalized)
+
+        for key, value in defaults.items():
+            object.__setattr__(self, key, value)
+
+        self.__post_init__()
 
     def __post_init__(self) -> None:
-        """
-        インスタンス初期化後の後処理
-
-        MLフィルター関連の設定値の整合性を確保します。
-        volatility_gate_enabled と ml_filter_enabled の同期、
-        およびモデルパスの相互補完を行います。
-        """
+        """初期化後に呼ばれる整合性同期フック。"""
         self._sync_runtime_fields()
 
+    def __getattr__(self, name: str) -> Any:
+        """legacy 属性名を新しいネスト設定へフォールバックする。"""
+        path = _LEGACY_ATTRIBUTE_PATHS.get(name)
+        if path is None:
+            raise AttributeError(f"{type(self).__name__!r} object has no attribute {name!r}")
+
+        value: Any = self
+        for segment in path:
+            if isinstance(value, dict):
+                value = value.get(segment)
+            else:
+                value = getattr(value, segment)
+        return value
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """legacy 属性名への代入をネスト設定へ反映する。"""
+        path = _LEGACY_ATTRIBUTE_PATHS.get(name)
+        if path is None:
+            object.__setattr__(self, name, value)
+            return
+
+        try:
+            target: Any = object.__getattribute__(self, path[0])
+            for segment in path[1:-1]:
+                if isinstance(target, dict):
+                    target = target.get(segment)
+                else:
+                    target = getattr(target, segment)
+
+            last_segment = path[-1]
+            if isinstance(target, dict):
+                target[last_segment] = value
+            else:
+                object.__setattr__(target, last_segment, value)
+        except Exception:
+            object.__setattr__(self, name, value)
+
     def _sync_runtime_fields(self) -> None:
-        """互換性のあるフラットフィールドを正規化する。"""
-        normalized = normalize_ml_gate_fields(self)
-        self.volatility_gate_enabled = bool(normalized["volatility_gate_enabled"])
-        self.ml_filter_enabled = bool(normalized["ml_filter_enabled"])
-        self.volatility_model_path = cast(
-            Optional[str], normalized["volatility_model_path"]
+        """互換性のあるフィールドを正規化する。"""
+        object.__setattr__(
+            self,
+            "indicator_universe_mode",
+            normalize_indicator_universe_mode(self.indicator_universe_mode),
         )
-        self.ml_model_path = cast(Optional[str], normalized["ml_model_path"])
-        early_termination_settings = resolve_early_termination_settings(self)
-        self.early_termination_settings = early_termination_settings
-        early_termination_fields = early_termination_settings.to_strategy_params()
-        self.enable_early_termination = bool(
-            early_termination_fields["enable_early_termination"]
+
+        if not isinstance(self.fitness_sharing, dict):
+            object.__setattr__(
+                self,
+                "fitness_sharing",
+                copy.deepcopy(GA_DEFAULT_FITNESS_SHARING),
+            )
+        else:
+            merged_fitness_sharing = copy.deepcopy(GA_DEFAULT_FITNESS_SHARING)
+            merged_fitness_sharing.update(self.fitness_sharing)
+            object.__setattr__(self, "fitness_sharing", merged_fitness_sharing)
+
+        if isinstance(self.mutation_config, dict):
+            object.__setattr__(
+                self,
+                "mutation_config",
+                MutationConfig.from_dict(self.mutation_config),
+            )
+        if isinstance(self.evaluation_config, dict):
+            object.__setattr__(
+                self,
+                "evaluation_config",
+                EvaluationConfig.from_dict(self.evaluation_config),
+            )
+        if isinstance(self.hybrid_config, dict):
+            object.__setattr__(
+                self, "hybrid_config", HybridConfig.from_dict(self.hybrid_config)
+            )
+        if isinstance(self.tuning_config, dict):
+            object.__setattr__(
+                self, "tuning_config", TuningConfig.from_dict(self.tuning_config)
+            )
+        if isinstance(self.two_stage_selection_config, dict):
+            object.__setattr__(
+                self,
+                "two_stage_selection_config",
+                TwoStageSelectionConfig.from_dict(self.two_stage_selection_config),
+            )
+        if isinstance(self.robustness_config, dict):
+            object.__setattr__(
+                self,
+                "robustness_config",
+                RobustnessConfig.from_dict(self.robustness_config),
+            )
+
+        evaluation_config = self.evaluation_config
+        object.__setattr__(
+            self,
+            "enable_parallel_evaluation",
+            bool(evaluation_config.enable_parallel),
         )
-        self.early_termination_max_drawdown = cast(
-            Optional[float], early_termination_fields["early_termination_max_drawdown"]
+        object.__setattr__(
+            self,
+            "max_evaluation_workers",
+            evaluation_config.max_workers,
         )
-        self.early_termination_min_trades = cast(
-            Optional[int], early_termination_fields["early_termination_min_trades"]
+        object.__setattr__(self, "evaluation_timeout", evaluation_config.timeout)
+        object.__setattr__(
+            self,
+            "enable_multi_fidelity_evaluation",
+            bool(evaluation_config.enable_multi_fidelity_evaluation),
         )
-        self.early_termination_min_trade_check_progress = float(
-            early_termination_fields["early_termination_min_trade_check_progress"]
+        object.__setattr__(
+            self,
+            "multi_fidelity_window_ratio",
+            evaluation_config.multi_fidelity_window_ratio,
         )
-        self.early_termination_trade_pace_tolerance = float(
-            early_termination_fields["early_termination_trade_pace_tolerance"]
+        object.__setattr__(
+            self,
+            "multi_fidelity_oos_ratio",
+            evaluation_config.multi_fidelity_oos_ratio,
         )
-        self.early_termination_min_expectancy = cast(
-            Optional[float],
-            early_termination_fields["early_termination_min_expectancy"],
+        object.__setattr__(
+            self,
+            "multi_fidelity_candidate_ratio",
+            evaluation_config.multi_fidelity_candidate_ratio,
         )
-        self.early_termination_expectancy_min_trades = int(
-            early_termination_fields["early_termination_expectancy_min_trades"]
+        object.__setattr__(
+            self,
+            "multi_fidelity_min_candidates",
+            evaluation_config.multi_fidelity_min_candidates,
         )
-        self.early_termination_expectancy_progress = float(
-            early_termination_fields["early_termination_expectancy_progress"]
+        object.__setattr__(self, "oos_split_ratio", evaluation_config.oos_split_ratio)
+        object.__setattr__(
+            self, "oos_fitness_weight", evaluation_config.oos_fitness_weight
         )
-        self.indicator_universe_mode = normalize_indicator_universe_mode(
-            self.indicator_universe_mode
+        object.__setattr__(
+            self,
+            "enable_walk_forward",
+            bool(evaluation_config.enable_walk_forward),
         )
+        object.__setattr__(self, "wfa_n_folds", evaluation_config.wfa_n_folds)
+        object.__setattr__(self, "wfa_train_ratio", evaluation_config.wfa_train_ratio)
+        object.__setattr__(self, "wfa_anchored", evaluation_config.wfa_anchored)
+
+        hybrid_config = self.hybrid_config
+        object.__setattr__(self, "hybrid_mode", bool(hybrid_config.mode))
+        object.__setattr__(self, "hybrid_model_type", hybrid_config.model_type)
+        object.__setattr__(
+            self,
+            "hybrid_model_types",
+            None if hybrid_config.model_types is None else list(hybrid_config.model_types),
+        )
+        object.__setattr__(
+            self,
+            "volatility_gate_enabled",
+            bool(hybrid_config.volatility_gate_enabled),
+        )
+        object.__setattr__(
+            self,
+            "volatility_model_path",
+            hybrid_config.volatility_model_path,
+        )
+        object.__setattr__(
+            self,
+            "ml_filter_enabled",
+            bool(hybrid_config.ml_filter_enabled),
+        )
+        object.__setattr__(self, "ml_model_path", hybrid_config.ml_model_path)
+        object.__setattr__(
+            self,
+            "preprocess_features",
+            bool(hybrid_config.preprocess_features),
+        )
+
+        mutation_config = self.mutation_config
+        object.__setattr__(self, "mutation_rate", mutation_config.rate)
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -359,96 +575,90 @@ class GAConfig(BaseConfig):
         """from_dict 用のデフォルト値を生成する。"""
         return cast(Dict[str, Any], copy.deepcopy(cls.get_default_values_from_fields()))
 
-    @staticmethod
-    def _restore_nested_configs(working: Dict[str, Any]) -> None:
-        """ネストされた設定辞書をサブ設定クラスへ復元する。"""
-        if "mutation_config" in working and isinstance(
-            working["mutation_config"], dict
-        ):
-            working["mutation_config"] = MutationConfig.from_dict(
-                working["mutation_config"]
-            )
-        if "evaluation_config" in working and isinstance(
-            working["evaluation_config"], dict
-        ):
-            working["evaluation_config"] = EvaluationConfig.from_dict(
-                working["evaluation_config"]
-            )
-        if "early_termination_settings" in working and isinstance(
-            working["early_termination_settings"], dict
-        ):
-            working["early_termination_settings"] = EarlyTerminationSettings.from_dict(
-                working["early_termination_settings"]
-            )
-        if "hybrid_config" in working and isinstance(working["hybrid_config"], dict):
-            working["hybrid_config"] = HybridConfig.from_dict(working["hybrid_config"])
-        if "tuning_config" in working and isinstance(working["tuning_config"], dict):
-            working["tuning_config"] = TuningConfig.from_dict(working["tuning_config"])
-        if "two_stage_selection_config" in working and isinstance(
-            working["two_stage_selection_config"], dict
-        ):
-            working["two_stage_selection_config"] = TwoStageSelectionConfig.from_dict(
-                working["two_stage_selection_config"]
-            )
-        if "robustness_config" in working and isinstance(
-            working["robustness_config"], dict
-        ):
-            working["robustness_config"] = RobustnessConfig.from_dict(
-                working["robustness_config"]
-            )
+    @classmethod
+    def _normalize_input_data(cls, data: Mapping[str, Any]) -> Dict[str, Any]:
+        """legacy flat keys を含む入力を正規化する。"""
+        working = copy.deepcopy(dict(data))
+        normalized = cls._from_dict_defaults()
 
-    @staticmethod
-    def _apply_nested_config_overrides(
-        working: Dict[str, Any], provided_keys: Set[str]
-    ) -> None:
-        """ネスト設定の値を、未指定のフラットフィールドへ反映する。"""
-        nested_config_fields = (
-            "mutation_config",
-            "evaluation_config",
-            "hybrid_config",
-            "tuning_config",
-            "two_stage_selection_config",
-            "robustness_config",
+        mutation_payload = _coerce_mapping(working.pop("mutation_config", None))
+        if "mutation_rate" in working:
+            mutation_payload["rate"] = working.pop("mutation_rate")
+        for flat_key, nested_key in _MUTATION_LEGACY_FIELD_MAP.items():
+            if flat_key in working:
+                mutation_payload[nested_key] = working.pop(flat_key)
+        normalized["mutation_config"] = MutationConfig.from_dict(mutation_payload)
+
+        evaluation_payload = _coerce_mapping(working.pop("evaluation_config", None))
+        early_termination_payload = _coerce_mapping(
+            evaluation_payload.pop("early_termination_settings", None)
         )
-        for field_name in nested_config_fields:
-            config_obj = working.get(field_name)
-            if config_obj is None or not hasattr(config_obj, "to_flat_dict"):
-                continue
-            for flat_key, value in config_obj.to_flat_dict().items():
-                if flat_key in provided_keys:
-                    continue
-                working[flat_key] = copy.deepcopy(value)
+        if "early_termination_settings" in working:
+            early_termination_payload.update(
+                _coerce_mapping(working.pop("early_termination_settings", None))
+            )
+        for flat_key, nested_key in EARLY_TERMINATION_LEGACY_FIELD_MAP.items():
+            if flat_key in working:
+                early_termination_payload[nested_key] = working.pop(flat_key)
+        if early_termination_payload:
+            evaluation_payload["early_termination_settings"] = early_termination_payload
+        for flat_key, nested_key in _EVALUATION_LEGACY_FIELD_MAP.items():
+            if flat_key in working:
+                evaluation_payload[nested_key] = working.pop(flat_key)
+        normalized["evaluation_config"] = EvaluationConfig.from_dict(evaluation_payload)
+
+        hybrid_payload = _coerce_mapping(working.pop("hybrid_config", None))
+        for flat_key, nested_key in _HYBRID_LEGACY_FIELD_MAP.items():
+            if flat_key in working:
+                hybrid_payload[nested_key] = working.pop(flat_key)
+        normalized["hybrid_config"] = HybridConfig.from_dict(hybrid_payload)
+
+        tuning_payload = _coerce_mapping(working.pop("tuning_config", None))
+        for flat_key, nested_key in _TUNING_LEGACY_FIELD_MAP.items():
+            if flat_key in working:
+                tuning_payload[nested_key] = working.pop(flat_key)
+        normalized["tuning_config"] = TuningConfig.from_dict(tuning_payload)
+
+        two_stage_payload = _coerce_mapping(working.pop("two_stage_selection_config", None))
+        for flat_key, nested_key in _TWO_STAGE_LEGACY_FIELD_MAP.items():
+            if flat_key in working:
+                two_stage_payload[nested_key] = working.pop(flat_key)
+        normalized["two_stage_selection_config"] = TwoStageSelectionConfig.from_dict(
+            two_stage_payload
+        )
+
+        robustness_payload = _coerce_mapping(working.pop("robustness_config", None))
+        for flat_key, nested_key in _ROBUSTNESS_LEGACY_FIELD_MAP.items():
+            if flat_key in working:
+                robustness_payload[nested_key] = working.pop(flat_key)
+        normalized["robustness_config"] = RobustnessConfig.from_dict(robustness_payload)
+
+        fitness_sharing_payload = copy.deepcopy(normalized["fitness_sharing"])
+        if "fitness_sharing" in working:
+            fitness_sharing_payload.update(
+                _coerce_mapping(working.pop("fitness_sharing", None))
+            )
+        for legacy_key in _FITNESS_SHARING_LEGACY_KEYS:
+            if legacy_key in working:
+                fitness_sharing_payload[legacy_key] = working.pop(legacy_key)
+        normalized["fitness_sharing"] = fitness_sharing_payload
+
+        field_names = {field_info.name for field_info in fields(cls)}
+        for key in list(working.keys()):
+            if key in field_names:
+                normalized[key] = working.pop(key)
+
+        if working:
+            unknown_keys = sorted(working.keys())
+            raise ValueError(f"未対応の設定キーがあります: {', '.join(unknown_keys)}")
+
+        return normalized
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":
         """
         辞書形式からGAConfigインスタンスを生成
 
-        フラット辞書とネスト辞書（mutation_config等）の両方に対応する。
-        ネスト辞書が存在する場合、サブ設定からフラットフィールドへ逆展開する。
-
-        Args:
-            data: 設定値を含む辞書
-
-        Returns:
-            初期化されたGAConfigインスタンス
+        legacy のフラット設定とネスト辞書の両方に対応する。
         """
-        field_names = {field_info.name for field_info in fields(cls)}
-        unknown_keys = sorted(key for key in data.keys() if key not in field_names)
-        if unknown_keys:
-            raise ValueError(f"未対応の設定キーがあります: {', '.join(unknown_keys)}")
-
-        provided_keys = {key for key, value in data.items() if value is not None}
-        working = copy.deepcopy(data)
-        defaults = cls._from_dict_defaults()
-        for key, default_value in defaults.items():
-            if key not in working or working[key] is None:
-                working[key] = default_value
-
-        cls._restore_nested_configs(working)
-        cls._apply_nested_config_overrides(working, provided_keys)
-
-        # BaseConfigのfrom_dict処理を使用
-        instance = cast(GAConfig, super().from_dict(working))
-        instance._sync_runtime_fields()
-        return instance
+        return cls(**copy.deepcopy(data))

@@ -180,10 +180,12 @@ class TestEvaluationStrategy:
             objectives=["weighted_score"],
             fitness_constraints={},
             two_stage_min_pass_rate=1.0,
-            robustness_validation_symbols=["ETHUSDT"],
-            robustness_stress_slippage=[0.0005],
-            robustness_stress_commission_multipliers=[1.5],
-            robustness_aggregate_method="robust",
+            robustness_config=SimpleNamespace(
+                validation_symbols=["ETHUSDT"],
+                stress_slippage=[0.0005],
+                stress_commission_multipliers=[1.5],
+                aggregate_method="robust",
+            ),
         )
 
         report = self.strategy.execute_robustness_report(

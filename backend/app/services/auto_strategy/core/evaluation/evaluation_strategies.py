@@ -204,7 +204,7 @@ class EvaluationStrategy:
             },
         )
 
-        for symbol in getattr(config, "robustness_validation_symbols", None) or []:
+        for symbol in getattr(config.robustness_config, "validation_symbols", None) or []:
             symbol_str = str(symbol or "")
             if not symbol_str or symbol_str == base_symbol:
                 continue
@@ -224,7 +224,7 @@ class EvaluationStrategy:
             )
 
         for regime_window in normalize_robustness_regime_windows(
-            getattr(config, "robustness_regime_windows", [])
+            getattr(config.robustness_config, "regime_windows", [])
         ):
             scenario_config = base_backtest_config.copy()
             scenario_config["start_date"] = regime_window.start_date
@@ -243,7 +243,7 @@ class EvaluationStrategy:
                 },
             )
 
-        for slippage_delta in getattr(config, "robustness_stress_slippage", []) or []:
+        for slippage_delta in getattr(config.robustness_config, "stress_slippage", []) or []:
             scenario_config = base_backtest_config.copy()
             stressed_slippage = base_slippage + float(slippage_delta)
             scenario_config["slippage"] = stressed_slippage
@@ -261,7 +261,7 @@ class EvaluationStrategy:
             )
 
         for multiplier in (
-            getattr(config, "robustness_stress_commission_multipliers", []) or []
+            getattr(config.robustness_config, "stress_commission_multipliers", []) or []
         ):
             multiplier_value = float(multiplier)
             scenario_config = base_backtest_config.copy()
