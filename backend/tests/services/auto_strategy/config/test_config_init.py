@@ -15,9 +15,9 @@ import app.services.auto_strategy.config as config_package
 class TestAutoStrategyConfigInitExports:
     """auto_strategy/config/__init__.pyのエクスポートテスト"""
 
-    def test_base_config_exported(self):
-        """BaseConfigがエクスポートされている"""
-        assert hasattr(config_package, "BaseConfig")
+    def test_base_config_is_not_exported(self):
+        """BaseConfig は削除済みで公開しない"""
+        assert hasattr(config_package, "BaseConfig") is False
 
     def test_auto_strategy_config_exported(self):
         """AutoStrategyConfigがエクスポートされている"""
@@ -67,7 +67,6 @@ class TestAutoStrategyConfigInitExports:
     def test_all_contains_expected_items(self):
         """__all__に期待されるアイテムが含まれる"""
         expected_items = [
-            "BaseConfig",
             "AutoStrategyConfig",
             "EarlyTerminationSettings",
             "MutationConfig",
@@ -103,6 +102,11 @@ class TestAutoStrategyConfigInitExports:
             nested_configs.TwoStageSelectionConfig
             is config_package.TwoStageSelectionConfig
         )
+
+    def test_legacy_base_module_is_removed(self):
+        """旧 base モジュールは削除済み"""
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module("app.services.auto_strategy.config.base")
 
     def test_internal_code_no_longer_references_legacy_nested_config_module(self):
         """コードベース内部では旧 sub_configs モジュールを参照しない"""

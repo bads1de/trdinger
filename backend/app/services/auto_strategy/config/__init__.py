@@ -5,7 +5,6 @@ Auto Strategy Config モジュール
 重い依存（pandas_ta_classic等）を避けるため、設定クラスは遅延インポートします。
 
 モジュール構成:
-- base.py: BaseConfig 基底クラス
 - constants.py: 共通定数・Enum・GA固有定数を統合
 - ga.py: GAConfig ランタイム設定（dataclass）、GAPresetsプリセット、ConfigValidatorバリデーション
 - ga_nested_configs.py: GAConfig ネスト設定（MutationConfig, EvaluationConfig 等）
@@ -15,9 +14,6 @@ Auto Strategy Config モジュール
 
 # auto_strategy_settings.py は軽量（pydanticのみ）
 from .auto_strategy_settings import AutoStrategyConfig
-
-# 基底クラス（軽量、依存なし）
-from .base import BaseConfig
 
 # サブ設定クラス
 from .ga_nested_configs import (
@@ -60,7 +56,6 @@ def __getattr__(name: str):
 
 
 __all__ = [
-    "BaseConfig",
     "AutoStrategyConfig",
     "EarlyTerminationSettings",
     "MutationConfig",

@@ -1,8 +1,8 @@
-from unittest.mock import MagicMock, PropertyMock
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
-from app.services.auto_strategy.config.base import BaseConfig
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config import ConfigValidator
 
@@ -11,23 +11,21 @@ class TestConfigValidator:
 
     @pytest.fixture
     def base_config(self):
-        config = MagicMock(spec=BaseConfig)
-        config.validation_rules = {
-            "required_fields": ["field_a"],
-            "ranges": {"field_b": (0, 10)},
-            "types": {"field_c": int},
-        }
-        config.field_a = "present"
-        config.field_b = 5
-        config.field_c = 100
-        return config
+        return SimpleNamespace(
+            validation_rules={
+                "required_fields": ["field_a"],
+                "ranges": {"field_b": (0, 10)},
+                "types": {"field_c": int},
+            },
+            field_a="present",
+            field_b=5,
+            field_c=100,
+        )
 
     @pytest.fixture
     def ga_config(self):
         # GAConfigは多数の属性を持つので、MagicMockで必要な属性を設定する
         config = MagicMock(spec=GAConfig)
-        # BaseConfigの検証をパスするための設定（GAConfigはBaseConfigを継承している想定だが、バリデータはインスタンスを見る）
-        # GAConfig自体にvalidation_rulesがあるかどうかは実装によるが、ここでは空にしておく
         config.validation_rules = {}
 
         # 正常なGA設定
@@ -116,11 +114,15 @@ class TestConfigValidator:
         assert any("'field_c' は int 型" in e for e in errors)
 
     def test_validate_base_exception(self, base_config):
-        # プロパティアクセスで例外を発生させる
-        type(base_config).field_a = PropertyMock(side_effect=Exception("Test Error"))
+        class FailingConfig:
+            validation_rules = {"required_fields": ["field_a"]}
+
+            @property
+            def field_a(self):
+                raise Exception("Test Error")
 
         # エラーはキャッチされてエラーメッセージに追加されるはず
-        is_valid, errors = ConfigValidator.validate(base_config)
+        is_valid, errors = ConfigValidator.validate(FailingConfig())
         assert is_valid is False
         assert any("検証処理エラー: Test Error" in e for e in errors)
 

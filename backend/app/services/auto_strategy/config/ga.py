@@ -9,13 +9,12 @@ GAConfig は GA エンジンのランタイム設定用 dataclass です。
 
 import copy
 import logging
-from dataclasses import dataclass, field, fields
+from dataclasses import MISSING, dataclass, field, fields
 from typing import Any, Dict, List, Mapping, Optional, Tuple, cast
 
 from app.utils.serialization import dataclass_to_dict
 
-from ..indicator_universe import normalize_indicator_universe_mode
-from .base import BaseConfig
+from .indicator_universe import normalize_indicator_universe_mode
 from .constants import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
@@ -142,13 +141,43 @@ def _coerce_mapping(value: Any) -> Dict[str, Any]:
         return {}
 
 
+def _get_default_values_from_fields(cls: type[Any]) -> Dict[str, Any]:
+    """dataclass フィールド定義からデフォルト値辞書を組み立てる。"""
+    defaults: Dict[str, Any] = {}
+    for field_info in fields(cls):
+        if field_info.default is not MISSING:
+            defaults[field_info.name] = field_info.default
+        if field_info.default_factory is not MISSING:
+            try:
+                if callable(field_info.default_factory):
+                    defaults[field_info.name] = field_info.default_factory()
+                else:
+                    defaults[field_info.name] = field_info.default_factory
+            except Exception as exc:
+                logger.warning(
+                    "デフォルト値生成失敗: %s, %s",
+                    field_info.name,
+                    exc,
+                )
+                defaults[field_info.name] = None
+    return defaults
+
+
+def _read_validation_rules(config: Any) -> Dict[str, Any]:
+    """validation_rules を辞書として安全に取得する。"""
+    rules = getattr(config, "validation_rules", {})
+    return rules if isinstance(rules, dict) else {}
+
+
 @dataclass
-class GAConfig(BaseConfig):
+class GAConfig:
     """
     実行時GA設定クラス
 
     GA実行時のフラット設定を管理する。
     """
+
+    validation_rules: Dict[str, Any] = field(default_factory=dict)
 
     # 基本GA設定
     population_size: int = int(GA_DEFAULT_CONFIG["population_size"])
@@ -518,7 +547,7 @@ class GAConfig(BaseConfig):
     @classmethod
     def _from_dict_defaults(cls) -> Dict[str, Any]:
         """from_dict 用のデフォルト値を生成する。"""
-        return cast(Dict[str, Any], copy.deepcopy(cls.get_default_values_from_fields()))
+        return cast(Dict[str, Any], copy.deepcopy(_get_default_values_from_fields(cls)))
 
     @classmethod
     def _normalize_input_data(cls, data: Mapping[str, Any]) -> Dict[str, Any]:
@@ -832,7 +861,7 @@ class ConfigValidator:
     VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
     @staticmethod
-    def validate(config: BaseConfig) -> Tuple[bool, List[str]]:
+    def validate(config: Any) -> Tuple[bool, List[str]]:
         """
         設定オブジェクトの妥当性を検証
 
@@ -856,9 +885,9 @@ class ConfigValidator:
         return len(errors) == 0, errors
 
     @staticmethod
-    def _validate_base(config: BaseConfig) -> List[str]:
+    def _validate_base(config: Any) -> List[str]:
         """
-        BaseConfigの設定に基づいた共通検証ロジック
+        validation_rules に基づいた共通検証ロジック
 
         validation_rules に定義された必須フィールド、数値範囲、
         およびデータ型のチェックを行います。
@@ -882,7 +911,7 @@ class ConfigValidator:
         return errors
 
     @staticmethod
-    def _validate_required_fields(config: BaseConfig) -> List[str]:
+    def _validate_required_fields(config: Any) -> List[str]:
         """
         必須フィールドの存在確認
 
@@ -893,14 +922,14 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        required_fields = config.validation_rules.get("required_fields", [])
+        required_fields = _read_validation_rules(config).get("required_fields", [])
         for field_name in required_fields:
             if not hasattr(config, field_name) or not getattr(config, field_name):
                 errors.append(f"必須フィールド '{field_name}' が設定されていません")
         return errors
 
     @staticmethod
-    def _validate_range_rules(config: BaseConfig) -> List[str]:
+    def _validate_range_rules(config: Any) -> List[str]:
         """
         数値範囲の検証
 
@@ -911,7 +940,7 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        range_rules = config.validation_rules.get("ranges", {})
+        range_rules = _read_validation_rules(config).get("ranges", {})
         for field_name, (min_val, max_val) in range_rules.items():
             if hasattr(config, field_name):
                 value = getattr(config, field_name)
@@ -924,7 +953,7 @@ class ConfigValidator:
         return errors
 
     @staticmethod
-    def _validate_type_rules(config: BaseConfig) -> List[str]:
+    def _validate_type_rules(config: Any) -> List[str]:
         """
         データ型の検証
 
@@ -935,7 +964,7 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        type_rules = config.validation_rules.get("types", {})
+        type_rules = _read_validation_rules(config).get("types", {})
         for field_name, expected_type in type_rules.items():
             if hasattr(config, field_name):
                 value = getattr(config, field_name)

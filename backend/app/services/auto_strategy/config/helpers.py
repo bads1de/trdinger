@@ -16,9 +16,6 @@ from app.utils.datetime_utils import (
 )
 
 
-# === ML filter / volatility gate 設定 ===
-
-
 @dataclass(frozen=True)
 class MLGateSettings:
     """ML gate の有効状態とモデルパスを表す正規化済み設定。"""
@@ -79,9 +76,6 @@ def normalize_ml_gate_fields(source: Any) -> dict[str, Optional[str] | bool]:
         "volatility_model_path": settings.model_path,
         "ml_model_path": settings.model_path,
     }
-
-
-# === Robustness regime window 設定 ===
 
 
 @dataclass(frozen=True)

@@ -110,7 +110,7 @@ class GeneValidator:
                 return False
             return str(indicator_gene.type).upper() in normalized_allowed
 
-        from ..indicator_universe import is_indicator_in_universe
+        from ..config.indicator_universe import is_indicator_in_universe
 
         return is_indicator_in_universe(indicator_gene.type, indicator_universe_mode)
 

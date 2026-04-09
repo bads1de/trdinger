@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from app.services.auto_strategy.core import objective_registry
+from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.core.engine.evolution_runner import EvolutionRunner
 
 

@@ -36,8 +36,6 @@ class RandomGeneGenerator:
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
 
-    # トレンド系指標の優先順位（normalize_conditionsに移譲されたため削除可能だが、一旦メソッド削除を優先）
-
     def __init__(
         self,
         config: Any,
@@ -100,7 +98,7 @@ class RandomGeneGenerator:
         for _ in range(10):
             self._position_sizing_cache.append(
                 create_random_position_sizing_gene(self.config)
-                )
+            )
 
         self._tool_genes_template = self._generate_tool_genes_template()
 
@@ -169,7 +167,10 @@ class RandomGeneGenerator:
         if self._tool_genes_template is None:
             self._initialize_caches()
 
-        return [self._clone_tool_gene_template(tool) for tool in self._tool_genes_template or []]
+        return [
+            self._clone_tool_gene_template(tool)
+            for tool in self._tool_genes_template or []
+        ]
 
     @staticmethod
     def _clone_tool_gene_template(tool: ToolGene) -> ToolGene:

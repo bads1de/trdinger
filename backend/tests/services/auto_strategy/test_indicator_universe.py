@@ -1,5 +1,5 @@
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.indicator_universe import (
+from app.services.auto_strategy.config.indicator_universe import (
     IndicatorUniverseMode,
     get_indicator_universe_names,
 )

@@ -1,4 +1,4 @@
-from app.services.auto_strategy.core import objective_registry
+from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.core.evaluation.evaluation_report import (
     EvaluationReport,
     ScenarioEvaluation,

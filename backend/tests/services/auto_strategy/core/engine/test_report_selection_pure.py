@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from app.services.auto_strategy.core import objective_registry
+from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.core.engine.report_selection import (
     build_report_rank_key_from_primary_fitness,
     get_two_stage_best_individual,

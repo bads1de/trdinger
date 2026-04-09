@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
-from ..indicator_universe import get_indicator_universe_names
+from ..config.indicator_universe import get_indicator_universe_names
 
 logger = logging.getLogger(__name__)
 

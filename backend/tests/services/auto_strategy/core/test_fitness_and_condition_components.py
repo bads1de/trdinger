@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import MagicMock, Mock
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core import objective_registry
+from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
 from app.services.auto_strategy.core.fitness.fitness_calculator import FitnessCalculator
 from app.services.auto_strategy.genes import Condition, ConditionGroup
