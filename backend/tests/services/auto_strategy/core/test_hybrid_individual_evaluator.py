@@ -43,7 +43,7 @@ class TestHybridIndividualEvaluator:
 
     def test_inject_external_objects_loads_runtime_predictor(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
-        from app.services.auto_strategy.config.ga_nested_configs import HybridConfig
+        from app.services.auto_strategy.config.ga.nested_configs import HybridConfig
 
         run_config = {"strategy_config": {"parameters": {}}}
         config = GAConfig(
@@ -80,7 +80,7 @@ class TestHybridIndividualEvaluator:
 
     def test_inject_external_objects_disables_gate_on_load_error(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
-        from app.services.auto_strategy.config.ga_nested_configs import HybridConfig
+        from app.services.auto_strategy.config.ga.nested_configs import HybridConfig
 
         run_config = {"strategy_config": {"parameters": {}}}
         config = GAConfig(
@@ -101,7 +101,7 @@ class TestHybridIndividualEvaluator:
 
     def test_inject_external_objects_falls_back_to_runtime_predictor(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
-        from app.services.auto_strategy.config.ga_nested_configs import HybridConfig
+        from app.services.auto_strategy.config.ga.nested_configs import HybridConfig
 
         runtime_predictor = Mock()
         runtime_predictor.is_trained.return_value = True
@@ -161,7 +161,7 @@ class TestHybridIndividualEvaluator:
 
     def test_build_robustness_cache_key_normalizes_regime_windows(self, evaluator):
         from app.services.auto_strategy.config.ga import GAConfig
-        from app.services.auto_strategy.config.ga_nested_configs import RobustnessConfig
+        from app.services.auto_strategy.config.ga.nested_configs import RobustnessConfig
 
         gene = Mock()
         evaluator._build_cache_key = Mock(return_value="gene-key")

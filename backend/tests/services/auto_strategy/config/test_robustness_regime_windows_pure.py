@@ -30,7 +30,7 @@ def test_from_dict_expands_robustness_regime_windows():
 
 
 def test_validator_rejects_invalid_regime_window_order():
-    from app.services.auto_strategy.config.ga_nested_configs import RobustnessConfig
+    from app.services.auto_strategy.config.ga.nested_configs import RobustnessConfig
 
     config = GAConfig(
         robustness_config=RobustnessConfig(

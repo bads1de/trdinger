@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Mapping, Optional
 
-from app.services.auto_strategy.config.ga_nested_configs import (
+from app.services.auto_strategy.config.ga.nested_configs import (
     resolve_early_termination_settings,
 )
 from app.services.auto_strategy.config.helpers import (

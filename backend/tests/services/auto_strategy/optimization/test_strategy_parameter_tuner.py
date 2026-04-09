@@ -157,7 +157,7 @@ class TestStrategyParameterTuner:
         assert tuner.tune.call_count == 2
 
     def test_from_ga_config_uses_tuning_fields(self, mock_evaluator):
-        from app.services.auto_strategy.config.ga_nested_configs import TuningConfig
+        from app.services.auto_strategy.config.ga.nested_configs import TuningConfig
 
         config = GAConfig(
             tuning_config=TuningConfig(

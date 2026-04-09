@@ -9,7 +9,7 @@ import logging
 from dataclasses import dataclass, field, fields
 from typing import Any, ClassVar, List, Mapping, Optional
 
-from .constants import GA_DEFAULT_CONFIG, GA_MUTATION_SETTINGS, OPERATORS
+from ..constants import GA_DEFAULT_CONFIG, GA_MUTATION_SETTINGS, OPERATORS
 
 logger = logging.getLogger(__name__)
 

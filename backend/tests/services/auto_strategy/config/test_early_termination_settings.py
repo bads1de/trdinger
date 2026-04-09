@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.ga_nested_configs import (
+from app.services.auto_strategy.config.ga.nested_configs import (
     EarlyTerminationSettings,
     EvaluationConfig,
     resolve_early_termination_settings,

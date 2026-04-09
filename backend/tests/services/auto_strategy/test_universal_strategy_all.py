@@ -17,7 +17,7 @@ from app.services.auto_strategy.genes import (
 )
 from app.services.auto_strategy.genes.conditions import Condition, StatefulCondition
 from app.services.auto_strategy.config.constants import PositionSizingMethod
-from app.services.auto_strategy.config.ga_nested_configs import EarlyTerminationSettings
+from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 
 
 class TestUniversalStrategyAll:

@@ -1,0 +1,683 @@
+"""
+設定バリデーター
+
+ConfigValidator クラスを提供します。
+GAConfigを含む設定オブジェクトの妥当性を検証します。
+"""
+
+import logging
+from typing import Any, List, Tuple
+
+from .ga_config import GAConfig, _read_validation_rules
+from ..helpers import validate_robustness_regime_window
+
+logger = logging.getLogger(__name__)
+
+
+class ConfigValidator:
+    """設定バリデーター"""
+
+    VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+
+    @staticmethod
+    def validate(config: Any) -> Tuple[bool, List[str]]:
+        """
+        設定オブジェクトの妥当性を検証
+
+        共通のバリデーション（必須項目、範囲チェック等）に加えて、
+        クラス固有の検証（GAConfigの進化したロジック等）を実行します。
+
+        Args:
+            config: 検証対象の設定インスタンス
+
+        Returns:
+            (妥当であればTrue, エラーメッセージのリスト) のタプル
+        """
+        errors = ConfigValidator._validate_base(config)
+
+        # クラスごとの追加検証
+        if isinstance(config, GAConfig):
+            errors.extend(ConfigValidator._validate_ga_config(config))
+
+        # 将来的に GAConfig 以外の設定検証が必要になったらここに追加
+
+        return len(errors) == 0, errors
+
+    @staticmethod
+    def _validate_base(config: Any) -> List[str]:
+        """
+        validation_rules に基づいた共通検証ロジック
+
+        validation_rules に定義された必須フィールド、数値範囲、
+        およびデータ型のチェックを行います。
+
+        Args:
+            config: 検証対象の設定インスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        try:
+            errors.extend(ConfigValidator._validate_required_fields(config))
+            errors.extend(ConfigValidator._validate_range_rules(config))
+            errors.extend(ConfigValidator._validate_type_rules(config))
+
+        except Exception as e:
+            logger.error(f"基本検証中にエラーが発生: {e}", exc_info=True)
+            errors.append(f"検証処理エラー: {e}")
+
+        return errors
+
+    @staticmethod
+    def _validate_required_fields(config: Any) -> List[str]:
+        """
+        必須フィールドの存在確認
+
+        Args:
+            config: 検証対象の設定インスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        required_fields = _read_validation_rules(config).get("required_fields", [])
+        for field_name in required_fields:
+            if not hasattr(config, field_name) or not getattr(config, field_name):
+                errors.append(f"必須フィールド '{field_name}' が設定されていません")
+        return errors
+
+    @staticmethod
+    def _validate_range_rules(config: Any) -> List[str]:
+        """
+        数値範囲の検証
+
+        Args:
+            config: 検証対象の設定インスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        range_rules = _read_validation_rules(config).get("ranges", {})
+        for field_name, (min_val, max_val) in range_rules.items():
+            if hasattr(config, field_name):
+                value = getattr(config, field_name)
+                if isinstance(value, (int, float)) and not (
+                    min_val <= value <= max_val
+                ):
+                    errors.append(
+                        f"'{field_name}' は {min_val} から {max_val} の範囲で設定してください"
+                    )
+        return errors
+
+    @staticmethod
+    def _validate_type_rules(config: Any) -> List[str]:
+        """
+        データ型の検証
+
+        Args:
+            config: 検証対象の設定インスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        type_rules = _read_validation_rules(config).get("types", {})
+        for field_name, expected_type in type_rules.items():
+            if hasattr(config, field_name):
+                value = getattr(config, field_name)
+                if value is not None and not isinstance(value, expected_type):
+                    errors.append(
+                        f"'{field_name}' は {expected_type.__name__} 型である必要があります"
+                    )
+        return errors
+
+    @staticmethod
+    def _validate_ga_config(config: GAConfig) -> List[str]:
+        """
+        GAConfig固有の検証を実行
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        errors.extend(ConfigValidator._validate_ga_evolution_settings(config))
+        errors.extend(ConfigValidator._validate_ga_oos_settings(config))
+        errors.extend(ConfigValidator._validate_ga_fitness_settings(config))
+        errors.extend(ConfigValidator._validate_ga_parameter_settings(config))
+        errors.extend(ConfigValidator._validate_ga_execution_settings(config))
+        errors.extend(ConfigValidator._validate_ga_multi_fidelity_settings(config))
+        errors.extend(ConfigValidator._validate_ga_early_termination_settings(config))
+        errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
+        errors.extend(ConfigValidator._validate_ga_robustness_settings(config))
+        return errors
+
+    @staticmethod
+    def _validate_numeric_range(
+        val, min_v, max_v, name, is_int: bool = True
+    ) -> List[str]:
+        """
+        汎用的な数値範囲検証
+
+        Args:
+            val: 検証対象の値
+            min_v: 最小値
+            max_v: 最大値
+            name: パラメータ名（エラー表示用）
+            is_int: 整数として検証するかどうか
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        try:
+            if not isinstance(val, (int, float)):
+                return [f"{name}は数値である必要があります"]
+            if not (min_v <= val <= max_v):
+                if is_int:
+                    if val > max_v:
+                        return [
+                            f"{name}は{max_v}以下である必要があります（パフォーマンス上の制約）"
+                        ]
+                    return [f"{name}は正の整数である必要があります"]
+                return [f"{name}は{min_v}-{max_v}の範囲である必要があります"]
+            return []
+        except (TypeError, ValueError):
+            return [f"{name}は数値である必要があります"]
+
+    @staticmethod
+    def _validate_ga_evolution_settings(config: GAConfig) -> List[str]:
+        """
+        GA進化パラメータ（個体数、世代数、交叉率、突然変異率等）の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        errors.extend(
+            ConfigValidator._validate_numeric_range(
+                config.population_size, 1, 1000, "個体数"
+            )
+        )
+        errors.extend(
+            ConfigValidator._validate_numeric_range(
+                config.generations, 1, 500, "世代数"
+            )
+        )
+        errors.extend(
+            ConfigValidator._validate_numeric_range(
+                config.crossover_rate, 0, 1, "交叉率", False
+            )
+        )
+        errors.extend(
+            ConfigValidator._validate_numeric_range(
+                config.mutation_rate, 0, 1, "突然変異率", False
+            )
+        )
+
+        if isinstance(config.elite_size, (int, float)) and isinstance(
+            config.population_size, (int, float)
+        ):
+            if config.elite_size < 0 or config.elite_size >= config.population_size:
+                errors.append("エリート保存数は0以上、個体数未満である必要があります")
+        else:
+            errors.append("elite_size と population_size は数値である必要があります")
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_oos_settings(config: GAConfig) -> List[str]:
+        """
+        OOS（Out-of-Sample）検証設定の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        if (
+            not isinstance(config.oos_split_ratio, (int, float))
+            or not 0.0 <= config.oos_split_ratio < 1.0
+        ):
+            errors.append("OOS分割比率は0.0以上1.0未満である必要があります")
+        return errors
+
+    @staticmethod
+    def _validate_ga_fitness_settings(config: GAConfig) -> List[str]:
+        """
+        フィットネス計算設定（重み、メトリクス、多目的最適化等）の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        fitness_weights = getattr(config, "fitness_weights", {})
+        if not isinstance(fitness_weights, dict):
+            errors.append("fitness_weights は辞書である必要があります")
+            return errors
+
+        weights_are_numeric = not any(
+            not isinstance(weight, (int, float)) for weight in fitness_weights.values()
+        )
+        if not weights_are_numeric:
+            errors.append("フィットネス重みは数値である必要があります")
+        else:
+            if abs(sum(fitness_weights.values()) - 1.0) > 0.01:
+                errors.append("フィットネス重みの合計は1.0である必要があります")
+
+        required_metrics = {"total_return", "sharpe_ratio", "max_drawdown", "win_rate"}
+        missing_metrics = required_metrics - set(fitness_weights.keys())
+        if missing_metrics:
+            errors.append(f"必要なメトリクスが不足しています: {missing_metrics}")
+
+        if (
+            not isinstance(config.primary_metric, str)
+            or config.primary_metric not in fitness_weights
+        ):
+            errors.append(
+                f"プライマリメトリクス '{config.primary_metric}' がフィットネス重みに含まれていません"
+            )
+
+        if "prediction_score" in fitness_weights:
+            errors.append(
+                "prediction_score はボラ回帰化に伴い fitness_weights ではサポートされません"
+            )
+
+        objectives = getattr(config, "objectives", None)
+        if objectives is None:
+            objectives = []
+        if "prediction_score" in objectives:
+            errors.append(
+                "prediction_score はボラ回帰化に伴い objectives ではサポートされません"
+            )
+
+        return errors
+
+    @staticmethod
+    def _validate_parameter_ranges(parameter_ranges: Any) -> List[str]:
+        """
+        パラメータ探索範囲設定の検証
+
+        Args:
+            parameter_ranges: パラメータ名と [min, max] リストの辞書
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        if not isinstance(parameter_ranges, dict):
+            errors.append("パラメータ範囲は辞書である必要があります")
+            return errors
+
+        for param, value_range in parameter_ranges.items():
+            if not isinstance(value_range, list) or len(value_range) != 2:
+                errors.append(
+                    f"パラメータ '{param}' の範囲は [min, max] の形式である必要があります"
+                )
+            else:
+                try:
+                    if value_range[0] >= value_range[1]:
+                        errors.append(
+                            f"パラメータ '{param}' の最小値は最大値より小さい必要があります"
+                        )
+                except TypeError:
+                    errors.append(
+                        f"パラメータ '{param}' の最小値は最大値より小さい必要があります"
+                    )
+        return errors
+
+    @staticmethod
+    def _validate_ga_parameter_settings(config: GAConfig) -> List[str]:
+        """
+        GA戦略パラメータ（指標数、探索範囲、ログレベル等）の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        errors.extend(
+            ConfigValidator._validate_numeric_range(
+                config.max_indicators, 1, 10, "最大指標数"
+            )
+        )
+        errors.extend(
+            ConfigValidator._validate_parameter_ranges(config.parameter_ranges)
+        )
+
+        if (
+            not isinstance(config.log_level, str)
+            or config.log_level not in ConfigValidator.VALID_LOG_LEVELS
+        ):
+            errors.append(
+                f"無効なログレベル: {config.log_level}. 有効な値: {{'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}}"
+            )
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_execution_settings(config: GAConfig) -> List[str]:
+        """
+        GA実行環境設定（並列プロセス数等）の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        if config.parallel_processes is not None:
+            if (
+                not isinstance(config.parallel_processes, (int, float))
+                or config.parallel_processes <= 0
+            ):
+                errors.append("並列プロセス数は正の整数である必要があります")
+            elif config.parallel_processes > 32:
+                errors.append("並列プロセス数は32以下である必要があります")
+        return errors
+
+    @staticmethod
+    def _validate_ga_multi_fidelity_settings(config: GAConfig) -> List[str]:
+        """multi-fidelity 評価設定の検証"""
+        errors = []
+        if not getattr(config, "enable_multi_fidelity_evaluation", False):
+            return errors
+
+        if (
+            not isinstance(config.multi_fidelity_window_ratio, (int, float))
+            or not 0.0 < float(config.multi_fidelity_window_ratio) <= 1.0
+        ):
+            errors.append(
+                "multi_fidelity_window_ratio は0より大きく1.0以下である必要があります"
+            )
+
+        if (
+            not isinstance(config.multi_fidelity_oos_ratio, (int, float))
+            or not 0.0 < float(config.multi_fidelity_oos_ratio) < 1.0
+        ):
+            errors.append(
+                "multi_fidelity_oos_ratio は0より大きく1.0未満である必要があります"
+            )
+
+        if (
+            not isinstance(config.multi_fidelity_candidate_ratio, (int, float))
+            or not 0.0 < float(config.multi_fidelity_candidate_ratio) <= 1.0
+        ):
+            errors.append(
+                "multi_fidelity_candidate_ratio は0より大きく1.0以下である必要があります"
+            )
+
+        if (
+            not isinstance(config.multi_fidelity_min_candidates, (int, float))
+            or int(config.multi_fidelity_min_candidates) <= 0
+        ):
+            errors.append(
+                "multi_fidelity_min_candidates は正の整数である必要があります"
+            )
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_early_termination_settings(config: GAConfig) -> List[str]:
+        """早期打ち切り設定の検証"""
+        errors = []
+        settings = config.evaluation_config.early_termination_settings
+        if not settings.enabled:
+            return errors
+
+        max_drawdown = settings.max_drawdown
+        if max_drawdown is not None and (
+            not isinstance(max_drawdown, (int, float))
+            or not 0.0 < float(max_drawdown) <= 1.0
+        ):
+            errors.append(
+                "early_termination_max_drawdown は0より大きく1.0以下である必要があります"
+            )
+
+        min_trades = settings.min_trades
+        if min_trades is not None and (
+            not isinstance(min_trades, (int, float)) or int(min_trades) <= 0
+        ):
+            errors.append("early_termination_min_trades は正の整数である必要があります")
+
+        expectancy = settings.min_expectancy
+        if expectancy is not None and not isinstance(expectancy, (int, float)):
+            errors.append("early_termination_min_expectancy は数値である必要があります")
+
+        expectancy_min_trades = settings.expectancy_min_trades
+        if (
+            not isinstance(expectancy_min_trades, (int, float))
+            or int(expectancy_min_trades) <= 0
+        ):
+            errors.append(
+                "early_termination_expectancy_min_trades は正の整数である必要があります"
+            )
+
+        for field_name in (
+            "min_trade_check_progress",
+            "trade_pace_tolerance",
+            "expectancy_progress",
+        ):
+            value = getattr(settings, field_name, None)
+            if not isinstance(value, (int, float)) or not 0.0 < float(value) <= 1.0:
+                errors.append(
+                    f"early_termination_{field_name} は0より大きく1.0以下である必要があります"
+                )
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_two_stage_settings(config: GAConfig) -> List[str]:
+        """
+        二段階選抜設定の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        two_stage_config = config.two_stage_selection_config
+        if not two_stage_config.enabled:
+            return errors
+
+        elite_count = two_stage_config.elite_count
+        population_size = config.population_size
+        candidate_pool_size = two_stage_config.candidate_pool_size
+
+        if not isinstance(elite_count, (int, float)) or int(elite_count) <= 0:
+            errors.append("二段階選抜エリート数は正の整数である必要があります")
+        elif isinstance(population_size, (int, float)) and int(elite_count) >= int(
+            population_size
+        ):
+            errors.append("二段階選抜エリート数は個体数未満である必要があります")
+
+        if (
+            not isinstance(candidate_pool_size, (int, float))
+            or int(candidate_pool_size) <= 0
+        ):
+            errors.append("二段階選抜候補数は正の整数である必要があります")
+        elif isinstance(elite_count, (int, float)) and int(candidate_pool_size) < int(
+            elite_count
+        ):
+            errors.append(
+                "二段階選抜候補数は二段階選抜エリート数以上である必要があります"
+            )
+
+        if (
+            not isinstance(two_stage_config.min_pass_rate, (int, float))
+            or not 0.0 <= float(two_stage_config.min_pass_rate) <= 1.0
+        ):
+            errors.append("二段階選抜 pass rate は0.0-1.0の範囲である必要があります")
+
+        return errors
+
+    @staticmethod
+    def _validate_robustness_validation_symbols(config: GAConfig) -> List[str]:
+        """
+        robustness 検証用通貨ペア設定の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        validation_symbols = config.robustness_config.validation_symbols
+        if validation_symbols is not None and not isinstance(validation_symbols, list):
+            errors.append("robustness_validation_symbols はリストである必要があります")
+        return errors
+
+    @staticmethod
+    def _validate_robustness_window(window: Any) -> List[str]:
+        """
+        robustness 検証用期間設定の検証
+
+        Args:
+            window: 検証期間設定を含む辞書
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        return validate_robustness_regime_window(window)
+
+    @staticmethod
+    def _validate_robustness_regime_windows(config: GAConfig) -> List[str]:
+        """
+        robustness 検証用全期間リストの検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        regime_windows = config.robustness_config.regime_windows
+        if not isinstance(regime_windows, list):
+            errors.append("robustness の regime windows はリストである必要があります")
+            return errors
+
+        for window in regime_windows:
+            window_errors = ConfigValidator._validate_robustness_window(window)
+            if window_errors:
+                errors.extend(window_errors)
+                break
+
+        return errors
+
+    @staticmethod
+    def _validate_non_negative_numeric_list(values: Any, label: str) -> List[str]:
+        """
+        非負数値リストの検証
+
+        Args:
+            values: 検証対象のリスト
+            label: エラー表示用ラベル
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        if not isinstance(values, list):
+            errors.append(f"{label} はリストである必要があります")
+            return errors
+
+        for value in values:
+            if not isinstance(value, (int, float)) or float(value) < 0.0:
+                errors.append(f"{label} は0以上の数値である必要があります")
+                break
+
+        return errors
+
+    @staticmethod
+    def _validate_positive_numeric_list(values: Any, label: str) -> List[str]:
+        """
+        正の数値リストの検証
+
+        Args:
+            values: 検証対象のリスト
+            label: エラー表示用ラベル
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        if not isinstance(values, list):
+            errors.append(f"{label} はリストである必要があります")
+            return errors
+
+        for value in values:
+            if not isinstance(value, (int, float)) or float(value) <= 0.0:
+                errors.append(f"{label} は正の数値である必要があります")
+                break
+
+        return errors
+
+    @staticmethod
+    def _validate_aggregate_method(config: GAConfig) -> List[str]:
+        """
+        robustness 評価集計方法の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        aggregate_method = config.robustness_config.aggregate_method
+        if not isinstance(aggregate_method, str) or aggregate_method not in {
+            "robust",
+            "mean",
+        }:
+            return [
+                "robustness_aggregate_method は {'robust', 'mean'} のいずれかである必要があります"
+            ]
+        return []
+
+    @staticmethod
+    def _validate_ga_robustness_settings(config: GAConfig) -> List[str]:
+        """
+        robustness 検証全設定の検証
+
+        Args:
+            config: 検証対象のGAConfigインスタンス
+
+        Returns:
+            エラーメッセージのリスト
+        """
+        errors = []
+        errors.extend(ConfigValidator._validate_robustness_validation_symbols(config))
+        errors.extend(ConfigValidator._validate_robustness_regime_windows(config))
+        slippage = config.robustness_config.stress_slippage
+        errors.extend(
+            ConfigValidator._validate_non_negative_numeric_list(
+                slippage,
+                "robustness の slippage",
+            )
+        )
+        commission_multipliers = config.robustness_config.stress_commission_multipliers
+        errors.extend(
+            ConfigValidator._validate_positive_numeric_list(
+                commission_multipliers,
+                "robustness の commission multiplier",
+            )
+        )
+        errors.extend(ConfigValidator._validate_aggregate_method(config))
+        return errors

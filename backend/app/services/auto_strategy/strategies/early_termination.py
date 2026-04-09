@@ -12,7 +12,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from app.services.auto_strategy.config.ga_nested_configs import (
+from app.services.auto_strategy.config.ga.nested_configs import (
     resolve_early_termination_settings,
 )
 from app.services.auto_strategy.core.evaluation.time_alignment import (
