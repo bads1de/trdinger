@@ -162,3 +162,90 @@ class TestGeneSerializerCacheIntegration:
         assert first["metadata"]["tag"] == "first"
         assert second["metadata"]["tag"] == "second"
         assert serializer.get_cache_statistics()["serialize_cache_size"] == 2
+
+    def test_strategy_gene_to_dict_recomputes_cache_key_after_in_place_mutation(
+        self,
+        serializer,
+        gene,
+    ):
+        first = serializer.strategy_gene_to_dict(gene)
+
+        gene.metadata["nested"]["flag"] = False
+
+        second = serializer.strategy_gene_to_dict(gene)
+        stats = serializer.get_cache_statistics()
+
+        assert stats["serialize_cache_size"] == 2
+        assert first["metadata"]["nested"]["flag"] is True
+        assert second["metadata"]["nested"]["flag"] is False
+
+    def test_dict_to_strategy_gene_recomputes_cache_key_after_in_place_mutation(
+        self,
+        serializer,
+        gene,
+    ):
+        data = serializer.strategy_gene_to_dict(gene)
+        restored_first = serializer.dict_to_strategy_gene(data, StrategyGene)
+
+        data["metadata"]["nested"]["flag"] = False
+
+        restored_second = serializer.dict_to_strategy_gene(data, StrategyGene)
+        stats = serializer.get_cache_statistics()
+
+        assert stats["deserialize_cache_size"] == 2
+        assert restored_first.metadata["nested"]["flag"] is True
+        assert restored_second.metadata["nested"]["flag"] is False
+
+    def test_strategy_gene_to_dict_returns_deep_copies_for_nested_condition_operands(
+        self,
+        serializer,
+    ):
+        gene = StrategyGene(
+            id="gene-condition-dict",
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
+            long_entry_conditions=[
+                Condition(
+                    left_operand={"source": {"name": "close"}},
+                    operator=">",
+                    right_operand={"source": {"name": "open"}},
+                )
+            ],
+            short_entry_conditions=[],
+            metadata={},
+        )
+
+        first = serializer.strategy_gene_to_dict(gene)
+        first["long_entry_conditions"][0]["left_operand"]["source"]["name"] = "changed"
+
+        second = serializer.strategy_gene_to_dict(gene)
+
+        assert (
+            second["long_entry_conditions"][0]["left_operand"]["source"]["name"]
+            == "close"
+        )
+
+    def test_dict_to_strategy_gene_returns_deep_copies_for_nested_condition_operands(
+        self,
+        serializer,
+    ):
+        data = {
+            "id": "gene-condition-dict",
+            "indicators": [{"type": "SMA", "parameters": {"period": 20}, "enabled": True}],
+            "long_entry_conditions": [
+                {
+                    "left_operand": {"source": {"name": "close"}},
+                    "operator": ">",
+                    "right_operand": {"source": {"name": "open"}},
+                }
+            ],
+            "short_entry_conditions": [],
+            "risk_management": {"position_size": 0.1},
+            "metadata": {},
+        }
+
+        restored_first = serializer.dict_to_strategy_gene(data, StrategyGene)
+        restored_first.long_entry_conditions[0].left_operand["source"]["name"] = "changed"
+
+        restored_second = serializer.dict_to_strategy_gene(data, StrategyGene)
+
+        assert restored_second.long_entry_conditions[0].left_operand["source"]["name"] == "close"

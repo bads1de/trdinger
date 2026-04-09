@@ -8,6 +8,7 @@ from app.services.auto_strategy.genes import (
     IndicatorGene,
     PositionSizingGene,
     PositionSizingMethod,
+    StatefulCondition,
     StrategyGene,
     TPSLGene,
     TPSLMethod,
@@ -354,6 +355,55 @@ def test_condition_round_trip(serializer: GeneSerializer) -> None:
     assert restored.left_operand == cond.left_operand
     assert restored.operator == cond.operator
     assert restored.right_operand == cond.right_operand
+
+
+def test_condition_round_trip_preserves_direction(serializer: GeneSerializer) -> None:
+    """Condition.direction がラウンドトリップで保持されること."""
+    cond = Condition(
+        left_operand="close",
+        operator=">",
+        right_operand="open",
+        direction="long",
+    )
+
+    data = serializer.condition_to_dict(cond)
+    restored = serializer.dict_to_condition(data)
+
+    assert data["direction"] == "long"
+    assert restored.direction == "long"
+
+
+def test_stateful_condition_round_trip_preserves_nested_condition_direction(
+    serializer: GeneSerializer,
+) -> None:
+    """StatefulCondition 内の Condition.direction も保持されること."""
+    stateful = StatefulCondition(
+        trigger_condition=Condition(
+            left_operand="rsi",
+            operator="<",
+            right_operand=30,
+            direction="long",
+        ),
+        follow_condition=Condition(
+            left_operand="close",
+            operator=">",
+            right_operand="ema",
+            direction="short",
+        ),
+        lookback_bars=7,
+        cooldown_bars=2,
+        direction="short",
+        enabled=True,
+    )
+
+    data = serializer.stateful_condition_to_dict(stateful)
+    restored = serializer.dict_to_stateful_condition(data)
+
+    assert data["trigger_condition"]["direction"] == "long"
+    assert data["follow_condition"]["direction"] == "short"
+    assert restored.trigger_condition.direction == "long"
+    assert restored.follow_condition.direction == "short"
+    assert restored.direction == "short"
 
 
 # e. マルチタイムフレーム（MTF）サポート

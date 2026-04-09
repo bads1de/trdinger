@@ -12,8 +12,8 @@ from typing import Any, Callable, List, Optional
 
 import numpy as np
 from deap import tools
+from app.services.auto_strategy.config import objective_registry
 
-from .. import objective_registry
 from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
@@ -252,7 +252,7 @@ class EvolutionRunner:
         Returns:
             評価値（fitness.values）が設定された個体群
         """
-        if is_multi_fidelity_enabled(config):
+        if config is not None and is_multi_fidelity_enabled(config):
             coarse_config = build_coarse_ga_config(config)
             fitnesses = self._evaluate_individuals_with_config(population, coarse_config)
             _set_fitness_values(population, fitnesses)
@@ -280,7 +280,7 @@ class EvolutionRunner:
         if not invalid_ind:
             return
 
-        if is_multi_fidelity_enabled(config):
+        if config is not None and is_multi_fidelity_enabled(config):
             coarse_config = build_coarse_ga_config(config)
             fitnesses = self._evaluate_individuals_with_config(invalid_ind, coarse_config)
             _set_fitness_values(invalid_ind, fitnesses)

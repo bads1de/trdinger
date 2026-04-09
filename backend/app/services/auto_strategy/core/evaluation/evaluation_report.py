@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from .. import objective_registry
+from app.services.auto_strategy.config import objective_registry
 
 _ROBUST_WORST_CASE_WEIGHT = 0.3
 

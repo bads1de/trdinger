@@ -9,13 +9,13 @@ import hashlib
 import json
 import logging
 import math
-from typing import Any, Dict, Mapping, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 import numpy as np
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config import objective_registry
 
-from .. import objective_registry
 from ..evaluation.evaluation_metrics import (
     calculate_trade_frequency_penalty,
     calculate_ulcer_index,
@@ -36,10 +36,16 @@ class FitnessCalculator:
         # メトリクスキャッシュ（同一 backtest_result の再計算を避ける）
         self._metrics_cache: Dict[str, Dict[str, Any]] = {}
         self._cache_enabled = True
+        self._recent_metrics_result: Optional[Dict[str, Any]] = None
+        self._recent_metrics_signature: Any = None
+        self._recent_metrics_value: Optional[Dict[str, Any]] = None
 
     def clear_cache(self) -> None:
         """メトリクスキャッシュをクリアする。"""
         self._metrics_cache.clear()
+        self._recent_metrics_result = None
+        self._recent_metrics_signature = None
+        self._recent_metrics_value = None
 
     @staticmethod
     def _json_default(value: Any) -> Any:
@@ -47,6 +53,69 @@ class FitnessCalculator:
         if isinstance(value, np.generic):
             return value.item()
         return str(value)
+
+    @staticmethod
+    def _normalize_signature_value(value: Any) -> Any:
+        """直近 result 判定用に値を軽量に正規化する。"""
+        if isinstance(value, np.generic):
+            value = value.item()
+
+        if isinstance(value, float):
+            if math.isnan(value):
+                return ("float", "nan")
+            if math.isinf(value):
+                return ("float", "inf" if value > 0 else "-inf")
+        if value is None or isinstance(value, (str, int, float, bool, bytes)):
+            return value
+
+        return repr(value)
+
+    def _sample_sequence_signature(self, value: Any) -> tuple[Any, ...]:
+        """大きいシーケンスの軽量シグネチャを作る。"""
+        if not isinstance(value, (list, tuple)) or not value:
+            return ()
+
+        candidate_indices = [0, len(value) // 2, len(value) - 1]
+        indices: list[int] = []
+        for idx in candidate_indices:
+            if idx not in indices:
+                indices.append(idx)
+
+        return tuple(self._normalize_signature_value(value[idx]) for idx in indices)
+
+    def _build_recent_result_signature(self, backtest_result: Dict[str, Any]) -> Any:
+        """同一 result の直近再利用判定に使う軽量シグネチャを作る。"""
+        performance_metrics = backtest_result.get("performance_metrics") or {}
+        equity_curve = backtest_result.get("equity_curve") or []
+        trade_history = backtest_result.get("trade_history") or []
+
+        metric_keys = (
+            "total_return",
+            "sharpe_ratio",
+            "max_drawdown",
+            "win_rate",
+            "profit_factor",
+            "sortino_ratio",
+            "calmar_ratio",
+            "total_trades",
+        )
+
+        return (
+            id(backtest_result),
+            tuple(
+                (
+                    key,
+                    self._normalize_signature_value(performance_metrics.get(key)),
+                )
+                for key in metric_keys
+            ),
+            len(equity_curve) if isinstance(equity_curve, (list, tuple)) else None,
+            self._sample_sequence_signature(equity_curve),
+            len(trade_history) if isinstance(trade_history, (list, tuple)) else None,
+            self._sample_sequence_signature(trade_history),
+            self._normalize_signature_value(backtest_result.get("start_date")),
+            self._normalize_signature_value(backtest_result.get("end_date")),
+        )
 
     def _generate_cache_key(self, backtest_result: Dict[str, Any]) -> str:
         """バックテスト結果の内容から安定したキャッシュキーを生成する。"""
@@ -96,9 +165,22 @@ class FitnessCalculator:
         Returns:
             抽出されたパフォーマンスメトリクス
         """
+        recent_signature = self._build_recent_result_signature(backtest_result)
+        if (
+            self._cache_enabled
+            and self._recent_metrics_result is backtest_result
+            and self._recent_metrics_signature == recent_signature
+            and self._recent_metrics_value is not None
+        ):
+            return self._recent_metrics_value
+
         cache_key = self._generate_cache_key(backtest_result)
         if self._cache_enabled and cache_key in self._metrics_cache:
-            return self._metrics_cache[cache_key]
+            cached_metrics = self._metrics_cache[cache_key]
+            self._recent_metrics_result = backtest_result
+            self._recent_metrics_signature = recent_signature
+            self._recent_metrics_value = cached_metrics
+            return cached_metrics
 
         performance_metrics = backtest_result.get("performance_metrics") or {}
 
@@ -161,6 +243,9 @@ class FitnessCalculator:
 
         if self._cache_enabled:
             self._metrics_cache[cache_key] = metrics
+            self._recent_metrics_result = backtest_result
+            self._recent_metrics_signature = recent_signature
+            self._recent_metrics_value = metrics
 
         return metrics
 

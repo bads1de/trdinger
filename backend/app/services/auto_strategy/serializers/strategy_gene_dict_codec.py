@@ -2,9 +2,10 @@
 StrategyGene の dict encode/decode helper。
 """
 
+from collections.abc import Iterable, Mapping
 import logging
 import uuid
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, cast
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,21 @@ class StrategyGeneDictCodec:
         """StrategyGene 系クラスのサブ遺伝子フィールド名を取得する。"""
         getter = getattr(strategy_gene_class, "sub_gene_field_names", None)
         if callable(getter):
-            return tuple(getter())
+            raw_field_names = getter()
+            if isinstance(raw_field_names, (str, bytes)) or not isinstance(
+                raw_field_names, Iterable
+            ):
+                raise TypeError(
+                    "sub_gene_field_names は str/bytes ではない反復可能な文字列コレクションを返す必要があります。"
+                )
+
+            field_names = tuple(raw_field_names)
+            if not all(isinstance(name, str) for name in field_names):
+                raise TypeError(
+                    "sub_gene_field_names は str のみで構成されたコレクションを返す必要があります。"
+                )
+
+            return cast(Tuple[str, ...], field_names)
 
         from ..genes import StrategyGene
 
@@ -31,7 +46,18 @@ class StrategyGeneDictCodec:
         """StrategyGene 系クラスのサブ遺伝子クラス対応表を取得する。"""
         getter = getattr(strategy_gene_class, "sub_gene_class_map", None)
         if callable(getter):
-            return dict(getter())
+            raw_class_map = getter()
+            if not isinstance(raw_class_map, Mapping):
+                raise TypeError(
+                    "sub_gene_class_map は Mapping[str, Any] を返す必要があります。"
+                )
+
+            if not all(isinstance(field_name, str) for field_name in raw_class_map):
+                raise TypeError(
+                    "sub_gene_class_map のキーはすべて str である必要があります。"
+                )
+
+            return dict(cast(Mapping[str, Any], raw_class_map))
 
         from ..genes import StrategyGene
 
@@ -180,6 +206,7 @@ class StrategyGeneDictCodec:
                 left_operand=data["left_operand"],
                 operator=data["operator"],
                 right_operand=data["right_operand"],
+                direction=data.get("direction"),
             )
 
         except Exception as e:

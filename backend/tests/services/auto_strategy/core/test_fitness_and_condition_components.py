@@ -264,6 +264,41 @@ class TestFitnessCalculator:
         assert metrics_a == metrics_b
         assert len(self.calculator._metrics_cache) == 1
 
+    def test_extract_performance_metrics_recomputes_after_in_place_equity_change(
+        self, mock_backtest_result
+    ):
+        """nested な equity_curve 変更時は別キャッシュとして再計算すること"""
+        result = copy.deepcopy(mock_backtest_result)
+
+        metrics_before = self.calculator.extract_performance_metrics(result)
+        result["equity_curve"][0]["drawdown"] = 0.25
+        metrics_after = self.calculator.extract_performance_metrics(result)
+
+        assert len(self.calculator._metrics_cache) == 2
+        assert metrics_before["ulcer_index"] != metrics_after["ulcer_index"]
+
+    def test_extract_performance_metrics_reuses_recent_result_without_key_regeneration(
+        self, mock_backtest_result, monkeypatch
+    ):
+        """同じ result オブジェクトの連続評価では重いキー生成を繰り返さないこと"""
+        original_generate_cache_key = self.calculator._generate_cache_key
+        calls = {"count": 0}
+
+        def counted_generate_cache_key(backtest_result):
+            calls["count"] += 1
+            return original_generate_cache_key(backtest_result)
+
+        monkeypatch.setattr(
+            self.calculator,
+            "_generate_cache_key",
+            counted_generate_cache_key,
+        )
+
+        self.calculator.extract_performance_metrics(mock_backtest_result)
+        self.calculator.extract_performance_metrics(mock_backtest_result)
+
+        assert calls["count"] == 1
+
 
 # =============================================================================
 # ConditionEvaluator のテスト

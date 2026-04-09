@@ -12,6 +12,10 @@ Auto Strategy Config モジュール
 - helpers.py: 設定ヘルパー関数（ML filter/volatility gate、robustness regime window）
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
 # auto_strategy_settings.py は軽量（pydanticのみ）
 from .auto_strategy_settings import AutoStrategyConfig
 
@@ -37,22 +41,31 @@ from .helpers import (
     validate_robustness_regime_window,
 )
 
+if TYPE_CHECKING:
+    from .ga import ConfigValidator, GAConfig, GAPresets
 
-def __getattr__(name: str):
+_LAZY_EXPORTS = {
+    "GAConfig": "GAConfig",
+    "GAPresets": "GAPresets",
+    "ConfigValidator": "ConfigValidator",
+}
+
+
+def __getattr__(name: str) -> Any:
     """遅延インポートで重い依存を回避"""
-    if name == "GAConfig":
-        from .ga import GAConfig
+    attr_name = _LAZY_EXPORTS.get(name)
+    if attr_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-        return GAConfig
-    if name == "GAPresets":
-        from .ga import GAPresets
+    from . import ga
 
-        return GAPresets
-    if name == "ConfigValidator":
-        from .ga import ConfigValidator
+    value = getattr(ga, attr_name)
+    globals()[name] = value
+    return value
 
-        return ConfigValidator
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+def __dir__() -> list[str]:
+    return sorted({*globals().keys(), *_LAZY_EXPORTS})
 
 
 __all__ = [
@@ -71,4 +84,7 @@ __all__ = [
     "normalize_robustness_regime_window",
     "normalize_robustness_regime_windows",
     "validate_robustness_regime_window",
+    "GAConfig",
+    "GAPresets",
+    "ConfigValidator",
 ]

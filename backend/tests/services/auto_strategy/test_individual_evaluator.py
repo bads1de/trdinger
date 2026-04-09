@@ -44,6 +44,56 @@ class TestIndividualEvaluator:
         assert self.evaluator.backtest_service == self.mock_backtest_service
         assert self.evaluator._fixed_backtest_config is None
 
+    def test_resolve_gene_reuses_single_serializer_instance(self):
+        """辞書入力の復元でGeneSerializerを再生成しないことを確認する。"""
+        serializer_instance = Mock()
+        expected_gene = self._create_mock_gene(gene_id="")
+        serializer_instance.dict_to_strategy_gene.return_value = expected_gene
+
+        with patch(
+            "app.services.auto_strategy.core.evaluation.individual_evaluator.GeneSerializer"
+        ) as serializer_cls:
+            serializer_cls.return_value = serializer_instance
+            evaluator = IndividualEvaluator(self.mock_backtest_service)
+
+            first = evaluator._resolve_gene({"id": ""})
+            second = evaluator._resolve_gene({"id": ""})
+
+            assert first is expected_gene
+            assert second is expected_gene
+            assert serializer_cls.call_count == 1
+            assert serializer_instance.dict_to_strategy_gene.call_count == 2
+
+    def test_build_cache_key_reuses_single_serializer_instance_for_empty_gene_id(self):
+        """IDなし遺伝子のキー生成でもGeneSerializerを再生成しないことを確認する。"""
+        serializer_instance = Mock()
+        serializer_instance.strategy_gene_to_dict.return_value = {"a": 1, "b": 2}
+
+        with patch(
+            "app.services.auto_strategy.core.evaluation.individual_evaluator.GeneSerializer"
+        ) as serializer_cls:
+            serializer_cls.return_value = serializer_instance
+            evaluator = IndividualEvaluator(self.mock_backtest_service)
+            gene = self._create_mock_gene(gene_id="")
+
+            first_key = evaluator._build_cache_key(gene)
+            second_key = evaluator._build_cache_key(gene)
+
+            assert first_key == second_key
+            assert serializer_cls.call_count == 1
+            assert serializer_instance.strategy_gene_to_dict.call_count == 2
+
+    def test_getstate_setstate_recreates_gene_serializer_component(self):
+        """pickle復元時にGeneSerializerコンポーネントが再生成されることを確認する。"""
+        state = self.evaluator.__getstate__()
+        assert "_gene_serializer" not in state
+
+        restored = IndividualEvaluator.__new__(IndividualEvaluator)
+        restored.__setstate__(state)
+
+        assert hasattr(restored, "_gene_serializer")
+        assert restored._gene_serializer is not None
+
     def test_prepare_run_config_optimization(self):
         """バックテスト設定生成の最適化検証"""
         gene = self._create_mock_gene()

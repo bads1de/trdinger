@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Optional, Sequence, Tuple
 
-from .. import objective_registry
+from app.services.auto_strategy.config import objective_registry
 from ..evaluation.evaluation_report import EvaluationReport
 from .fitness_utils import (
     extract_individual_primary_fitness as _extract_individual_primary_fitness,

@@ -5,13 +5,14 @@
 DictConverterとGeneSerializerを統合し、JSON/Dict形式の相互変換を提供します。
 """
 
+from collections.abc import Mapping
 import copy
-import hashlib
+from dataclasses import fields, is_dataclass
+from enum import Enum
 import json
 import logging
+import math
 from typing import Any, Dict, Optional, cast
-
-from app.utils.serialization import dataclass_to_dict
 
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
@@ -41,30 +42,123 @@ class DictConverter:
     def __init__(self, cache_size: int = 1000) -> None:
         self._strategy_gene_codec = StrategyGeneDictCodec(self)
         self._cache_size = cache_size
-        self._serialize_cache: Dict[str, Dict[str, Any]] = {}
-        self._deserialize_cache: Dict[str, Any] = {}
+        self._serialize_cache: Dict[Any, Dict[str, Any]] = {}
+        self._deserialize_cache: Dict[Any, Any] = {}
 
-    def _generate_cache_key(self, strategy_gene: Any) -> str:
+    def _freeze_for_cache_key(self, value: Any) -> Any:
+        """キャッシュキー用にオブジェクトをハッシュ可能な構造へ正規化する。"""
+        if value is None or isinstance(value, (str, int, bool, bytes)):
+            return value
+
+        if isinstance(value, float):
+            if math.isnan(value):
+                return ("float", "nan")
+            if math.isinf(value):
+                return ("float", "inf" if value > 0 else "-inf")
+            return value
+
+        if isinstance(value, Enum):
+            return (
+                "enum",
+                type(value).__qualname__,
+                self._freeze_for_cache_key(value.value),
+            )
+
+        if isinstance(value, Mapping):
+            frozen_items = [
+                (
+                    self._freeze_for_cache_key(key),
+                    self._freeze_for_cache_key(item_value),
+                )
+                for key, item_value in value.items()
+            ]
+            frozen_items.sort(key=lambda item: repr(item[0]))
+            return ("mapping", tuple(frozen_items))
+
+        if isinstance(value, (list, tuple)):
+            return (
+                "sequence",
+                tuple(self._freeze_for_cache_key(item) for item in value),
+            )
+
+        if isinstance(value, set):
+            frozen_items = [self._freeze_for_cache_key(item) for item in value]
+            frozen_items.sort(key=repr)
+            return ("set", tuple(frozen_items))
+
+        if is_dataclass(value) and not isinstance(value, type):
+            return (
+                "dataclass",
+                type(value).__qualname__,
+                tuple(
+                    (
+                        field_info.name,
+                        self._freeze_for_cache_key(getattr(value, field_info.name)),
+                    )
+                    for field_info in fields(value)
+                ),
+            )
+
+        if hasattr(value, "__dict__"):
+            attrs = [
+                (attr_name, self._freeze_for_cache_key(attr_value))
+                for attr_name, attr_value in vars(value).items()
+            ]
+            attrs.sort(key=lambda item: item[0])
+            return ("object", type(value).__qualname__, tuple(attrs))
+
+        return ("repr", repr(value))
+
+    def _copy_cached_value(self, value: Any) -> Any:
+        """キャッシュ内容を返却用に軽量コピーする。"""
+        if value is None or isinstance(value, (str, int, float, bool, bytes)):
+            return value
+
+        if isinstance(value, Enum):
+            return value
+
+        if isinstance(value, Mapping):
+            return {
+                self._copy_cached_value(key): self._copy_cached_value(item_value)
+                for key, item_value in value.items()
+            }
+
+        if isinstance(value, list):
+            return [self._copy_cached_value(item) for item in value]
+
+        if isinstance(value, tuple):
+            return tuple(self._copy_cached_value(item) for item in value)
+
+        if isinstance(value, set):
+            return {self._copy_cached_value(item) for item in value}
+
+        if is_dataclass(value) and not isinstance(value, type):
+            field_values = {
+                field_info.name: self._copy_cached_value(
+                    getattr(value, field_info.name)
+                )
+                for field_info in fields(value)
+            }
+            try:
+                return type(value)(**field_values)
+            except Exception:
+                return copy.deepcopy(value)
+
+        return copy.deepcopy(value)
+
+    def _generate_cache_key(self, strategy_gene: Any) -> Any:
         """戦略遺伝子の構造に基づいて安定したキャッシュキーを生成する。"""
         try:
-            key_payload = dataclass_to_dict(strategy_gene)
-            key_str = json.dumps(
-                key_payload,
-                sort_keys=True,
-                ensure_ascii=False,
-                default=str,
-            )
-            return hashlib.sha256(key_str.encode("utf-8")).hexdigest()[:32]
+            return self._freeze_for_cache_key(strategy_gene)
         except Exception:
-            return str(id(strategy_gene))
+            return ("object_id", id(strategy_gene))
 
-    def _generate_dict_cache_key(self, data: Dict[str, Any]) -> str:
+    def _generate_dict_cache_key(self, data: Any) -> Any:
         """辞書データ用のキャッシュキーを生成する。"""
         try:
-            key_str = json.dumps(data, sort_keys=True, ensure_ascii=False, default=str)
-            return hashlib.sha256(key_str.encode("utf-8")).hexdigest()[:32]
+            return self._freeze_for_cache_key(data)
         except Exception:
-            return str(id(data))
+            return ("object_id", id(data))
 
     def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換"""
@@ -76,10 +170,7 @@ class DictConverter:
                 result = self._strategy_gene_codec.strategy_gene_to_dict(strategy_gene)
                 if len(self._serialize_cache) < self._cache_size:
                     self._serialize_cache[cache_key] = result
-            try:
-                return copy.deepcopy(result)
-            except Exception:
-                return result
+            return cast(Dict[str, Any], self._copy_cached_value(result))
         except Exception as e:
             logger.error(f"戦略遺伝子辞書変換エラー: {e}")
             raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
@@ -145,11 +236,14 @@ class DictConverter:
             辞書形式의データ
         """
         try:
-            return {
+            result = {
                 "left_operand": condition.left_operand,
                 "operator": condition.operator,
                 "right_operand": condition.right_operand,
             }
+            if getattr(condition, "direction", None) is not None:
+                result["direction"] = condition.direction
+            return result
 
         except Exception as e:
             logger.error(f"条件辞書変換エラー: {e}")
@@ -328,10 +422,7 @@ class DictConverter:
                 )
                 if len(self._deserialize_cache) < self._cache_size:
                     self._deserialize_cache[cache_key] = result
-            try:
-                return copy.deepcopy(result)
-            except Exception:
-                return result
+            return self._copy_cached_value(result)
         except Exception as e:
             logger.error(f"戦略遺伝子復元エラー: {e}")
             raise ValueError(f"戦略遺伝子の復元に失敗: {e}")

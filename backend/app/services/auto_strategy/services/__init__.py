@@ -46,16 +46,14 @@ def __getattr__(name: str) -> Any:
 def __dir__() -> list[str]:
     return sorted({*globals().keys(), *_ATTRIBUTE_EXPORTS})
 
+
 __all__ = [
     "AutoStrategyService",
     "PositionSizingService",
     "TPSLService",
-    # Backtest
     "ExperimentBacktestService",
     "ExperimentApplicationService",
     "ExperimentEngineRegistry",
-    # Managers
     "ExperimentManager",
-    # Persistence
     "ExperimentPersistenceService",
 ]

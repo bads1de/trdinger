@@ -244,3 +244,53 @@ class TestFitnessSharing:
         
         assert len(result) == population_size
         assert elapsed_time < 5.0  # 5秒以内を期待
+
+    def test_apply_fitness_sharing_reuses_cached_vectors_for_silhouette_phase(
+        self,
+        fitness_sharing,
+        sample_population,
+        monkeypatch,
+    ):
+        """シルエット段でも同じベクトルキャッシュを再利用すること."""
+        vectorize_calls = {"count": 0}
+        original_vectorize = fitness_sharing._vectorize_gene
+
+        def counted_vectorize(gene):
+            vectorize_calls["count"] += 1
+            return original_vectorize(gene)
+
+        def fake_silhouette(population, gene_serializer, vectorize_gene):
+            for individual in population:
+                gene = gene_serializer.from_list(individual, StrategyGene)
+                vectorize_gene(gene)
+            return population
+
+        monkeypatch.setattr(fitness_sharing, "_vectorize_gene", counted_vectorize)
+        monkeypatch.setattr(
+            fitness_sharing,
+            "compute_niche_counts_vectorized",
+            lambda vectors: np.ones(len(vectors)),
+        )
+        monkeypatch.setattr(
+            "app.services.auto_strategy.core.fitness.fitness_sharing._silhouette_based_sharing",
+            fake_silhouette,
+        )
+
+        result = fitness_sharing.apply_fitness_sharing(sample_population)
+
+        assert len(result) == len(sample_population)
+        assert vectorize_calls["count"] == len(sample_population)
+
+    def test_feature_vector_cache_key_changes_after_in_place_gene_mutation(
+        self,
+        fitness_sharing,
+        sample_strategy_gene,
+    ):
+        """同一個体の内容変更時は特徴ベクトルキャッシュキーも変わること."""
+        first_key = fitness_sharing._get_feature_vector_cache_key(sample_strategy_gene)
+
+        sample_strategy_gene.risk_management["position_size"] = 0.25
+
+        second_key = fitness_sharing._get_feature_vector_cache_key(sample_strategy_gene)
+
+        assert first_key != second_key

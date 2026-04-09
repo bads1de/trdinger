@@ -164,7 +164,11 @@ class FitnessSharing:
                     )
                     individual.fitness.values = shared_fitness_values
 
-            return self.silhouette_based_sharing(population)
+            return _silhouette_based_sharing(
+                population,
+                gene_serializer=self.gene_serializer,
+                vectorize_gene=resolve_vector,
+            )
 
         except Exception as e:
             logger.error(f"フィットネス共有適用エラー: {e}")

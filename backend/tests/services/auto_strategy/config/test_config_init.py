@@ -5,6 +5,9 @@ auto_strategy/configパッケージの__init__.pyのテスト
 """
 
 import importlib
+import subprocess
+import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -58,6 +61,44 @@ class TestAutoStrategyConfigInitExports:
         config = getattr(config_package, "GAConfig")
 
         assert config is GAConfig
+
+    def test_pyright_resolves_lazy_ga_exports(self):
+        """pyright が GA 関連の遅延 export を正しく解決できる"""
+        backend_root = Path(__file__).resolve().parents[4]
+        snippet_path = backend_root / "tests" / "_pyright_lazy_ga_exports.py"
+        try:
+            snippet_path.write_text(
+                textwrap.dedent(
+                    """
+                    from app.services.auto_strategy.config import (
+                        ConfigValidator,
+                        GAConfig,
+                        GAPresets,
+                    )
+
+                    def build_config() -> GAConfig:
+                        config = GAConfig.from_dict({})
+                        ConfigValidator.validate(config)
+                        return config
+
+                    def build_preset() -> GAConfig | None:
+                        return GAPresets.get_preset("quick_scan")
+                    """
+                ),
+                encoding="utf-8",
+            )
+
+            result = subprocess.run(
+                [sys.executable, "-m", "pyright", str(snippet_path)],
+                cwd=backend_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+            assert result.returncode == 0, result.stdout
+        finally:
+            snippet_path.unlink(missing_ok=True)
 
     def test_getattr_raises_for_non_existent(self):
         """存在しない属性でAttributeErrorが発生する"""

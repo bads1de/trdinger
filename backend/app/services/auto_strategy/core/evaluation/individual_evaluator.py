@@ -15,8 +15,7 @@ from typing import (
 )
 
 import pandas as pd
-import pandas_ta_classic as ta  # type: ignore
-from cachetools import LRUCache  # type: ignore[import-untyped]
+from cachetools import LRUCache
 from pydantic import ValidationError
 
 from app.services.auto_strategy.config import GAConfig
@@ -94,6 +93,7 @@ class IndividualEvaluator(EvaluationWindowService):
         self._fitness_calculator = FitnessCalculator()
         self._evaluation_strategy = EvaluationStrategy(self)
         self._run_config_builder = RunConfigBuilder()
+        self._gene_serializer = GeneSerializer()
         self._data_provider = BacktestDataProvider(
             backtest_service=self.backtest_service,
             data_cache=self._data_cache,  # type: ignore
@@ -110,7 +110,7 @@ class IndividualEvaluator(EvaluationWindowService):
         if gene_id:
             return gene_id
         try:
-            serialized = GeneSerializer().strategy_gene_to_dict(gene)
+            serialized = self._gene_serializer.strategy_gene_to_dict(gene)
             raw = str(sorted(serialized.items(), key=lambda x: str(x[0])))
             return hashlib.md5(raw.encode()).hexdigest()
         except Exception:
@@ -261,6 +261,8 @@ class IndividualEvaluator(EvaluationWindowService):
             del state["_evaluation_strategy"]
         if "_run_config_builder" in state:
             del state["_run_config_builder"]
+        if "_gene_serializer" in state:
+            del state["_gene_serializer"]
         if "_data_provider" in state:
             del state["_data_provider"]
 
@@ -398,8 +400,7 @@ class IndividualEvaluator(EvaluationWindowService):
         if isinstance(individual, StrategyGene):
             return individual
         if isinstance(individual, dict):
-            gene_serializer = GeneSerializer()
-            return gene_serializer.dict_to_strategy_gene(individual, StrategyGene)
+            return self._gene_serializer.dict_to_strategy_gene(individual, StrategyGene)
         if isinstance(individual, list):
             if len(individual) > 0 and isinstance(individual[0], StrategyGene):
                 return individual[0]
@@ -422,7 +423,8 @@ class IndividualEvaluator(EvaluationWindowService):
             ),
             tuple(getattr(config.robustness_config, "stress_slippage", ()) or ()),
             tuple(
-                getattr(config.robustness_config, "stress_commission_multipliers", ()) or ()
+                getattr(config.robustness_config, "stress_commission_multipliers", ())
+                or ()
             ),
             str(getattr(config.robustness_config, "aggregate_method", "robust")),
             bool(getattr(config, "enable_purged_kfold", False)),
@@ -606,9 +608,7 @@ class IndividualEvaluator(EvaluationWindowService):
             logger.info("単一評価を早期終了しました: %s", e)
             scenario_metadata = metadata.copy() if metadata else {}
             scenario_metadata["early_terminated"] = True
-            scenario_metadata["termination_reason"] = getattr(
-                e, "reason", str(e)
-            )
+            scenario_metadata["termination_reason"] = getattr(e, "reason", str(e))
             return ScenarioEvaluation(  # type: ignore[call-arg]
                 name=scenario_name,
                 fitness=self._fitness_calculator.get_penalty_values(config),
