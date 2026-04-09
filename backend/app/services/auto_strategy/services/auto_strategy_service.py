@@ -156,7 +156,7 @@ class AutoStrategyService:
         @safe_operation(context="GA設定構築と検証", is_api_call=True)
         def _validate_ga_config():
             ga_config = GAConfig.from_dict(settings)
-            from ..config.validators import ConfigValidator
+            from ..config import ConfigValidator
 
             is_valid, errors = ConfigValidator.validate(ga_config)
             if not is_valid:

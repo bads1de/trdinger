@@ -3,7 +3,7 @@ from unittest.mock import Mock
 from app.services.auto_strategy.core.evaluation.run_config_builder import (
     RunConfigBuilder,
 )
-from app.services.auto_strategy.config.sub_configs import EarlyTerminationSettings
+from app.services.auto_strategy.config.ga_nested_configs import EarlyTerminationSettings
 
 
 class TestRunConfigBuilder:

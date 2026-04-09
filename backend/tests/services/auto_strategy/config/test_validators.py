@@ -4,7 +4,7 @@ import pytest
 
 from app.services.auto_strategy.config.base import BaseConfig
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.validators import ConfigValidator
+from app.services.auto_strategy.config import ConfigValidator
 
 
 class TestConfigValidator:

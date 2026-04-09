@@ -12,8 +12,8 @@ from typing import Any, Optional, Tuple, cast
 import pandas as pd
 from backtesting import Strategy
 
-from ..config.ml_filter_settings import normalize_ml_gate_fields
-from ..config.sub_configs import resolve_early_termination_settings
+from ..config.ga_nested_configs import resolve_early_termination_settings
+from ..config.helpers import normalize_ml_gate_fields
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import (
     IndicatorGene,
@@ -26,11 +26,11 @@ from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.position_sizing_service import PositionSizingService
 from ..services.indicator_service import IndicatorCalculator
 from ..tpsl.tpsl_service import TPSLService
-from .entry_decision_engine import EntryDecisionEngine
 from .early_termination import (
     StrategyEarlyTermination,
     StrategyEarlyTerminationController,
 )
+from .entry_decision_engine import EntryDecisionEngine
 from .execution_cycle import StrategyExecutionCycle
 from .ml_filter import MLFilter
 from .order_manager import OrderManager

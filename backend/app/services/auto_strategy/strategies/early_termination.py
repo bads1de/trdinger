@@ -11,7 +11,8 @@ from math import ceil
 from typing import Any, Optional
 
 import pandas as pd
-from app.services.auto_strategy.config.sub_configs import (
+
+from app.services.auto_strategy.config.ga_nested_configs import (
     resolve_early_termination_settings,
 )
 from app.services.auto_strategy.core.evaluation.time_alignment import (
@@ -53,7 +54,10 @@ class StrategyEarlyTerminationController:
         if evaluation_start_raw is None:
             return True
 
-        if not hasattr(self.strategy.data, "index") or len(self.strategy.data.index) == 0:
+        if (
+            not hasattr(self.strategy.data, "index")
+            or len(self.strategy.data.index) == 0
+        ):
             return True
 
         current_time = pd.Timestamp(self.strategy.data.index[-1])
@@ -127,7 +131,9 @@ class StrategyEarlyTerminationController:
                     evaluated_bars = max(0, current_position - evaluation_start_index)
                     return min(1.0, evaluated_bars / evaluation_total_bars)
                 except Exception:
-                    logger.debug("評価窓ベースの進捗計算に失敗したためフォールバックします")
+                    logger.debug(
+                        "評価窓ベースの進捗計算に失敗したためフォールバックします"
+                    )
 
         total_bars = max(1, int(getattr(self.strategy, "_total_bars", 1) or 1))
         current_bar = max(
@@ -190,9 +196,8 @@ class StrategyEarlyTerminationController:
         progress = self.get_progress_ratio()
 
         min_trades = settings.min_trades
-        if (
-            min_trades is not None
-            and progress >= float(settings.min_trade_check_progress)
+        if min_trades is not None and progress >= float(
+            settings.min_trade_check_progress
         ):
             closed_trade_count = len(getattr(self.strategy, "closed_trades", []) or [])
             required_trade_count = max(

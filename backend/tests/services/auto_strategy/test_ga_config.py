@@ -1,7 +1,7 @@
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.sub_configs import (
+from app.services.auto_strategy.config.ga_nested_configs import (
     EarlyTerminationSettings,
     EvaluationConfig,
 )
@@ -65,7 +65,7 @@ class TestGAConfig:
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
         """二段階選抜/robustness 設定がシリアライズされることを確認"""
-        from app.services.auto_strategy.config.sub_configs import (
+        from app.services.auto_strategy.config.ga_nested_configs import (
             RobustnessConfig,
             TwoStageSelectionConfig,
         )
@@ -99,7 +99,7 @@ class TestGAConfig:
 
     def test_multi_fidelity_and_early_termination_serialize_deserialize(self):
         """高速化設定がシリアライズされることを確認"""
-        from app.services.auto_strategy.config.sub_configs import EvaluationConfig
+        from app.services.auto_strategy.config.ga_nested_configs import EvaluationConfig
 
         original = GAConfig(
             evaluation_config=EvaluationConfig(
@@ -413,7 +413,7 @@ class TestGAConfig:
 
     def test_mutation_settings_custom_values(self):
         """突然変異関連のカスタム設定が正しく適用されることを確認"""
-        from app.services.auto_strategy.config.sub_configs import MutationConfig
+        from app.services.auto_strategy.config.ga_nested_configs import MutationConfig
 
         custom_range = [0.9, 1.1]
         custom_prob = 0.4

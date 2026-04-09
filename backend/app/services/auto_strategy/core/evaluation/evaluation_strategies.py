@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 import pandas as pd
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.robustness_windows import (
+from app.services.auto_strategy.config.helpers import (
     normalize_robustness_regime_windows,
 )
 from app.utils.datetime_utils import parse_datetime_range_optional

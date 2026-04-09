@@ -21,7 +21,7 @@ from app.services.auto_strategy.config import AutoStrategyConfig
 from app.services.auto_strategy.config.ga import GAConfig as GAConfigRuntime
 from app.services.backtest.config import BacktestConfig
 from app.services.ml.common.ml_config import MLConfig, MLPredictionConfig
-from app.services.auto_strategy.config.validators import ConfigValidator
+from app.services.auto_strategy.config import ConfigValidator
 
 
 class TestUnifiedConfig:

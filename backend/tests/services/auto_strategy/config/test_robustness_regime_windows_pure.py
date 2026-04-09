@@ -1,8 +1,8 @@
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.robustness_windows import (
+from app.services.auto_strategy.config.helpers import (
     normalize_robustness_regime_windows,
 )
-from app.services.auto_strategy.config.validators import ConfigValidator
+from app.services.auto_strategy.config import ConfigValidator
 
 
 def test_from_dict_expands_robustness_regime_windows():
@@ -30,7 +30,7 @@ def test_from_dict_expands_robustness_regime_windows():
 
 
 def test_validator_rejects_invalid_regime_window_order():
-    from app.services.auto_strategy.config.sub_configs import RobustnessConfig
+    from app.services.auto_strategy.config.ga_nested_configs import RobustnessConfig
 
     config = GAConfig(
         robustness_config=RobustnessConfig(

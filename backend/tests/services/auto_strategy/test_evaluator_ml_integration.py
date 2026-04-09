@@ -38,7 +38,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         self.evaluator.set_backtest_config(self.backtest_config)
 
         # テスト用GA設定（MLフィルター有効）
-        from app.services.auto_strategy.config.sub_configs import HybridConfig
+        from app.services.auto_strategy.config.ga_nested_configs import HybridConfig
         self.ga_config = GAConfig(
             hybrid_config=HybridConfig(
                 volatility_gate_enabled=True,

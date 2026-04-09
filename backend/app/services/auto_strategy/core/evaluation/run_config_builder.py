@@ -7,11 +7,11 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Mapping, Optional
 
-from app.services.auto_strategy.config.ml_filter_settings import (
-    normalize_ml_gate_fields,
-)
-from app.services.auto_strategy.config.sub_configs import (
+from app.services.auto_strategy.config.ga_nested_configs import (
     resolve_early_termination_settings,
+)
+from app.services.auto_strategy.config.helpers import (
+    normalize_ml_gate_fields,
 )
 from app.services.backtest.config.builders import build_execution_config
 
@@ -35,9 +35,7 @@ class RunConfigBuilder:
                 "strategy_gene": gene,
             }
             strategy_parameters.update(normalize_ml_gate_fields(config))
-            strategy_parameters.update(
-                early_termination_settings.to_strategy_params()
-            )
+            strategy_parameters.update(early_termination_settings.to_strategy_params())
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:
                 strategy_parameters["evaluation_start"] = evaluation_start

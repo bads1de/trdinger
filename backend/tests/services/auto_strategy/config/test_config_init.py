@@ -4,6 +4,9 @@ auto_strategy/configパッケージの__init__.pyのテスト
 遅延ロード機能（__getattr__）とエクスポート定義を確認します。
 """
 
+import importlib
+from pathlib import Path
+
 import pytest
 
 import app.services.auto_strategy.config as config_package
@@ -86,3 +89,50 @@ class TestAutoStrategyConfigInitExports:
         """モジュールにドキュメント文字列がある"""
         assert config_package.__doc__ is not None
         assert len(config_package.__doc__) > 0
+
+    def test_ga_nested_configs_module_exports_runtime_configs(self):
+        """意味が明確な新モジュール名から runtime config 群を読める"""
+        nested_configs = importlib.import_module(
+            "app.services.auto_strategy.config.ga_nested_configs"
+        )
+
+        assert nested_configs.MutationConfig is config_package.MutationConfig
+        assert nested_configs.EvaluationConfig is config_package.EvaluationConfig
+        assert nested_configs.HybridConfig is config_package.HybridConfig
+        assert (
+            nested_configs.TwoStageSelectionConfig
+            is config_package.TwoStageSelectionConfig
+        )
+
+    def test_internal_code_no_longer_references_legacy_nested_config_module(self):
+        """コードベース内部では旧 sub_configs モジュールを参照しない"""
+        project_root = Path(__file__).resolve().parents[4]
+        current_file = Path(__file__).resolve()
+        removed_legacy_module_file = (
+            project_root
+            / "app"
+            / "services"
+            / "auto_strategy"
+            / "config"
+            / "sub_configs.py"
+        )
+        assert removed_legacy_module_file.exists() is False
+
+        legacy_module_name = "_".join(("sub", "configs"))
+        forbidden_patterns = (
+            ".".join(("config", legacy_module_name)),
+            "." + legacy_module_name + " import",
+        )
+
+        offenders = []
+        for root_name in ("app", "tests"):
+            root_dir = project_root / root_name
+            for file_path in root_dir.rglob("*.py"):
+                if file_path == current_file:
+                    continue
+
+                content = file_path.read_text(encoding="utf-8")
+                if any(pattern in content for pattern in forbidden_patterns):
+                    offenders.append(str(file_path.relative_to(project_root)))
+
+        assert offenders == []

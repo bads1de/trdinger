@@ -5,7 +5,7 @@ import logging
 from typing import Any, Dict, Optional, Type
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.ml_filter_settings import (
+from app.services.auto_strategy.config.helpers import (
     resolve_ml_gate_settings,
 )
 from app.services.auto_strategy.core.evaluation.individual_evaluator import (

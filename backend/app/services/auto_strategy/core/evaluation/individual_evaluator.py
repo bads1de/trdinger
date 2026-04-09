@@ -20,7 +20,7 @@ from cachetools import LRUCache  # type: ignore[import-untyped]
 from pydantic import ValidationError
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.robustness_windows import (
+from app.services.auto_strategy.config.helpers import (
     normalize_robustness_regime_windows,
 )
 from app.services.auto_strategy.genes import StrategyGene

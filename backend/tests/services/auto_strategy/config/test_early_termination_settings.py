@@ -1,12 +1,12 @@
 from types import SimpleNamespace
 
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.sub_configs import (
+from app.services.auto_strategy.config.ga_nested_configs import (
     EarlyTerminationSettings,
     EvaluationConfig,
     resolve_early_termination_settings,
 )
-from app.services.auto_strategy.config.validators import ConfigValidator
+from app.services.auto_strategy.config import ConfigValidator
 
 
 class TestEarlyTerminationSettings:

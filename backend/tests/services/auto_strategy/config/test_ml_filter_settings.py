@@ -1,5 +1,5 @@
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.ml_filter_settings import (
+from app.services.auto_strategy.config.helpers import (
     normalize_ml_gate_fields,
     resolve_ml_gate_settings,
 )
