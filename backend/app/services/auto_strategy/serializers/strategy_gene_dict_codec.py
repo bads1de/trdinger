@@ -116,11 +116,10 @@ class StrategyGeneDictCodec:
                 return data
 
             if not isinstance(data, dict):
-                logger.error(
-                    "dict_to_strategy_gene に渡されたデータの型が不正です: %s",
-                    type(data).__name__,
+                raise TypeError(
+                    "dict_to_strategy_gene に渡されたデータの型が不正です: "
+                    f"{type(data).__name__}"
                 )
-                return strategy_gene_class.create_default()
 
             if not data:
                 logger.warning(
@@ -137,7 +136,10 @@ class StrategyGeneDictCodec:
 
             def parse_condition_or_group(cond_data):
                 if not isinstance(cond_data, dict):
-                    return None
+                    raise TypeError(
+                        "条件データはdictである必要があります: "
+                        f"{type(cond_data).__name__}"
+                    )
                 if cond_data.get("type") in ("GROUP", "OR_GROUP"):
                     conditions = [
                         parse_condition_or_group(c)
@@ -195,7 +197,7 @@ class StrategyGeneDictCodec:
 
         except Exception as e:
             logger.error(f"戦略遺伝子辞書復元エラー: {e}")
-            return strategy_gene_class.create_default()
+            raise ValueError(f"戦略遺伝子の復元に失敗: {e}") from e
 
     def dict_to_condition(self, data: Dict[str, Any]):
         """辞書形式から条件を復元。"""

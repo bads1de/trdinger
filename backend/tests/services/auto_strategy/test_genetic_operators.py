@@ -2,16 +2,20 @@
 遺伝的演算子のテスト
 """
 
-from unittest.mock import Mock
-import pytest
 import copy
+from unittest.mock import Mock, patch
+
+import pytest
 
 from app.services.auto_strategy.genes import (
+    Condition,
+    EntryGene,
     IndicatorGene,
     PositionSizingGene,
     StrategyGene,
     TPSLGene,
 )
+from app.services.auto_strategy.config.constants import EntryType, TPSLMethod
 
 
 class TestGeneticOperators:
@@ -66,15 +70,86 @@ class TestGeneticOperators:
             _iter_mutable_sub_gene_specs,
         )
 
-        field_names = [field_name for field_name, _, _ in _iter_mutable_sub_gene_specs(ga_config)]
+        specs = list(_iter_mutable_sub_gene_specs(ga_config))
+        field_names = [field_name for field_name, _, _ in specs]
+        multipliers = {
+            field_name: creation_prob for field_name, _, creation_prob in specs
+        }
 
         assert field_names == [
             "tpsl_gene",
             "long_tpsl_gene",
             "short_tpsl_gene",
             "position_sizing_gene",
+            "entry_gene",
+            "long_entry_gene",
+            "short_entry_gene",
         ]
-        assert "entry_gene" not in field_names
+        assert (
+            multipliers["tpsl_gene"]
+            == ga_config.mutation_config.tpsl_gene_creation_multiplier
+        )
+        assert (
+            multipliers["position_sizing_gene"]
+            == ga_config.mutation_config.position_sizing_gene_creation_multiplier
+        )
+        assert multipliers["entry_gene"] == 0.0
+        assert multipliers["long_entry_gene"] == 0.0
+        assert multipliers["short_entry_gene"] == 0.0
+
+    def test_mutate_strategy_gene_mutates_existing_entry_genes(self, ga_config):
+        """既存の entry_gene 系が突然変異対象に含まれることを確認"""
+        gene = StrategyGene(
+            entry_gene=EntryGene(entry_type=EntryType.MARKET),
+            long_entry_gene=EntryGene(entry_type=EntryType.LIMIT),
+            short_entry_gene=EntryGene(entry_type=EntryType.STOP),
+        )
+        mutated_entry = EntryGene(entry_type=EntryType.LIMIT, limit_offset_pct=0.01)
+        mutated_long = EntryGene(entry_type=EntryType.STOP, stop_offset_pct=0.02)
+        mutated_short = EntryGene(
+            entry_type=EntryType.STOP_LIMIT,
+            order_validity_bars=12,
+        )
+
+        with patch(
+            "app.services.auto_strategy.genes.entry.EntryGene.mutate",
+            autospec=True,
+            side_effect=[mutated_entry, mutated_long, mutated_short],
+        ) as mutate_mock:
+            mutated = gene.mutate(ga_config, mutation_rate=1.0)
+
+        assert mutate_mock.call_count == 3
+        assert mutated.entry_gene is mutated_entry
+        assert mutated.long_entry_gene is mutated_long
+        assert mutated.short_entry_gene is mutated_short
+
+    def test_mutate_strategy_gene_creates_tpsl_gene_using_nested_config(self):
+        """MutationConfig の nested 設定と TP/SL 制約が新規生成にも反映されることを確認"""
+        from app.services.auto_strategy.config import GAConfig
+
+        config = GAConfig(
+            mutation_config={
+                "tpsl_gene_creation_multiplier": 1.0,
+                "position_sizing_gene_creation_multiplier": 0.0,
+            },
+            tpsl_method_constraints=["risk_reward_ratio"],
+        )
+        gene = StrategyGene(
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="open")
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand="open")
+            ],
+        )
+
+        with patch("random.random", return_value=0.0), patch(
+            "random.choice", side_effect=lambda seq: seq[0]
+        ):
+            mutated = gene.mutate(config, mutation_rate=1.0)
+
+        assert mutated.tpsl_gene is not None
+        assert mutated.tpsl_gene.method == TPSLMethod.RISK_REWARD_RATIO
 
     def test_adaptive_mutate(self, sample_strategy_gene, ga_config):
         """適応的突然変異率調整のテスト"""

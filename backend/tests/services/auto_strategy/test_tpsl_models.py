@@ -65,11 +65,7 @@ class TestTPSLGene:
             "enabled": False,
         }
         gene = TPSLGene.from_dict(data)
-        # from_dictは文字列として格納する（Enumへの変換は実装依存）
-        assert (
-            gene.method == "volatility_based"
-            or gene.method == TPSLMethod.VOLATILITY_BASED
-        )
+        assert gene.method == TPSLMethod.VOLATILITY_BASED
         assert gene.stop_loss_pct == 0.04
         assert gene.take_profit_pct == 0.08
         assert gene.risk_reward_ratio == 2.5
@@ -82,8 +78,17 @@ class TestTPSLGene:
             "stop_loss_pct": 0.03,
         }
         gene = TPSLGene.from_dict(data)
-        # 無効なmethodは無視される可能性がある
+        assert gene.method == TPSLMethod.RISK_REWARD_RATIO
         assert gene.stop_loss_pct == 0.03
+
+    def test_validate_invalid_method_type(self):
+        """不正な method 型は validation で検出されること"""
+        gene = TPSLGene(method="invalid_method")
+
+        is_valid, errors = gene.validate()
+
+        assert is_valid is False
+        assert any("method" in error for error in errors)
 
     @patch("app.services.auto_strategy.genes.tpsl.logger")
     def test_from_dict_enum_conversion_warning(self, mock_logger):

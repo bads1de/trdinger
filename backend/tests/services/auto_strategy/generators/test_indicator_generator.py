@@ -98,3 +98,10 @@ class TestIndicatorGenerationBasic:
 
         for indicator in indicators:
             assert indicator.enabled is True
+
+    def test_create_random_indicator_gene_uses_numeric_length_for_ema(self) -> None:
+        """EMA の discovery 崩れで data 列が疑似パラメータ化されないこと"""
+        indicator = create_random_indicator_gene("EMA")
+
+        assert "close" not in indicator.parameters
+        assert isinstance(indicator.parameters["length"], int)

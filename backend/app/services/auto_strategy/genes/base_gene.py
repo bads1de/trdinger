@@ -5,10 +5,11 @@
 """
 
 import logging
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union, get_type_hints
 
 from app.utils.serialization import dataclass_to_dict
 
@@ -31,6 +32,7 @@ class BaseGene(ABC):
     ENUM_FIELDS: List[str] = []
     CHOICE_FIELDS: List[str] = []
     NUMERIC_RANGES: Dict[str, Tuple[float, float]] = {}
+    _SKIP_FIELD_CONVERSION = object()
 
     def to_dict(self) -> Dict[str, Any]:
         """オブジェクトを辞書形式に変換"""
@@ -78,7 +80,7 @@ class BaseGene(ABC):
         値をEnum型に変換
 
         文字列が渡された場合、指定されたEnumクラスのメンバーに変換を試みます。
-        変換に失敗した場合は、Enumの最初のメンバーをデフォルト値として返します。
+        変換に失敗した場合はフィールド設定をスキップし、クラス既定値へフォールバックします。
 
         Args:
             value: 変換対象の値
@@ -91,9 +93,10 @@ class BaseGene(ABC):
             try:
                 return param_type(value)
             except ValueError:
-                logger.warning(f"無効なEnum値 {value} を無視、デフォルト値を設定")
-                # Enumの最初の値をデフォルトとして返す
-                return next(iter(param_type))
+                logger.warning(
+                    f"無効なEnum値 {value} を無視、既定値へフォールバック"
+                )
+                return BaseGene._SKIP_FIELD_CONVERSION
         return value
 
     @staticmethod
@@ -129,24 +132,55 @@ class BaseGene(ABC):
             return value
 
     @classmethod
+    def _get_resolved_annotations(cls) -> Dict[str, Any]:
+        """継承階層を含む型注釈を解決済みで取得する。"""
+        annotations: Dict[str, Any] = {}
+        module = sys.modules.get(cls.__module__)
+        globalns = vars(module) if module is not None else {}
+        localns: Dict[str, Any] = {}
+
+        for base in cls.__mro__:
+            try:
+                localns.update(vars(base))
+            except TypeError:
+                continue
+
+        for base in reversed(cls.__mro__):
+            raw_annotations = getattr(base, "__annotations__", {})
+            if not raw_annotations:
+                continue
+
+            try:
+                annotations.update(
+                    get_type_hints(base, globalns=globalns, localns=localns)
+                )
+            except Exception:
+                annotations.update(raw_annotations)
+
+        return annotations
+
+    @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Any:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
+        skipped_fields = set()
 
         # クラスアノテーションを取得（継承チェーンを含む）
-        annotations: Dict[str, Any] = {}
-        for base in reversed(cls.__mro__):
-            annotations.update(getattr(base, "__annotations__", {}))
+        annotations = cls._get_resolved_annotations()
 
         # 1. アノテーションがあるフィールドについては型変換を試みる
         for param_name, param_type in annotations.items():
             if param_name in data:
                 raw_value = data[param_name]
-                init_params[param_name] = cls._convert_value(raw_value, param_type)
+                converted_value = cls._convert_value(raw_value, param_type)
+                if converted_value is cls._SKIP_FIELD_CONVERSION:
+                    skipped_fields.add(param_name)
+                    continue
+                init_params[param_name] = converted_value
 
         # 2. アノテーションにないフィールドもすべて含める（型変換なし）
         for key, value in data.items():
-            if key not in init_params:
+            if key not in init_params and key not in skipped_fields:
                 init_params[key] = value
 
         # 3. 実際のクラス生成

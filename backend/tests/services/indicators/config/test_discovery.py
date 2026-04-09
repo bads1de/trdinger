@@ -4,7 +4,10 @@ DynamicIndicatorDiscovery のテスト
 動的インジケーター検出と特別オーバーライドのテストを行います。
 """
 
+from unittest.mock import patch
+
 import pytest
+from app.services.indicators.config import discovery as discovery_module
 from app.services.indicators.config.discovery import DynamicIndicatorDiscovery
 from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
@@ -195,6 +198,22 @@ class TestDiscoverAll:
 
         assert len(names) == len(set(names)), "重複するインジケーター設定があります"
 
+    def test_discover_all_excludes_non_timeseries_helpers(self):
+        """時系列結果を返さない helper / 集計関数は登録しないこと"""
+        configs = DynamicIndicatorDiscovery.discover_all()
+        names = {c.indicator_name for c in configs}
+
+        excluded = {
+            "DATAFRAME",
+            "SERIES",
+            "CAGR",
+            "CALMAR_RATIO",
+            "GEOMETRIC_MEAN",
+            "GET_WEIGHTS_FFD",
+            "MA",
+        }
+        assert names.isdisjoint(excluded)
+
     def test_custom_trend_package_takes_priority_for_duplicate_names(self):
         """custom trend 系の同名指標が pandas_ta より優先されること"""
         configs = DynamicIndicatorDiscovery.discover_all()
@@ -209,6 +228,72 @@ class TestDiscoverAll:
             )
             assert config.adapter_function is not None
             assert config.adapter_function.__module__ == expected_module
+
+    @pytest.mark.parametrize(("indicator_name", "expected_default"), [
+        ("EMA", 10),
+        ("DEMA", 10),
+        ("TEMA", 10),
+    ])
+    def test_required_length_defaults_are_inferred_for_overlap_wrappers(
+        self, indicator_name: str, expected_default: int
+    ):
+        """必須 length を持つ wrapper でも discovery が数値パラメータを生成すること"""
+        configs = {
+            config.indicator_name: config
+            for config in DynamicIndicatorDiscovery.discover_all()
+        }
+
+        config = configs[indicator_name]
+
+        assert "close" not in config.parameters
+        assert "length" in config.parameters
+        assert config.parameters["length"].default_value == expected_default
+
+    def test_discover_pandas_ta_skips_excluded_names_before_timeseries_probe(self):
+        """除外対象は互換性チェックを走らせずにスキップすること"""
+
+        def fake_indicator(close):
+            return close
+
+        def fake_config(name: str) -> IndicatorConfig | None:
+            if name != "rsi_fake":
+                return None
+            return IndicatorConfig(
+                indicator_name="RSI_FAKE",
+                category="technical",
+                required_data=["close"],
+                param_map={},
+                parameters={},
+                default_values={},
+                result_type=IndicatorResultType.SINGLE,
+                scale_type=IndicatorScaleType.PRICE_RATIO,
+            )
+
+        probed: list[str] = []
+
+        with patch.object(
+            discovery_module, "get_all_pandas_ta_indicators", return_value=["cdl_fake", "rsi_fake"]
+        ), patch.object(
+            discovery_module, "extract_default_parameters", return_value={}
+        ), patch.object(
+            discovery_module.ta, "cdl_fake", fake_indicator, create=True
+        ), patch.object(
+            discovery_module.ta, "rsi_fake", fake_indicator, create=True
+        ), patch.object(
+            DynamicIndicatorDiscovery, "_is_indicator_function", return_value=True
+        ), patch.object(
+            DynamicIndicatorDiscovery,
+            "_supports_timeseries_output",
+            side_effect=lambda name, *args, **kwargs: probed.append(name) or True,
+        ), patch.object(
+            DynamicIndicatorDiscovery,
+            "_analyze_function",
+            side_effect=lambda name, func, category: fake_config(name),
+        ):
+            configs = DynamicIndicatorDiscovery._discover_pandas_ta()
+
+        assert probed == ["rsi_fake"]
+        assert [config.indicator_name for config in configs] == ["RSI_FAKE"]
 
 
 class TestAnalyzeFunction:

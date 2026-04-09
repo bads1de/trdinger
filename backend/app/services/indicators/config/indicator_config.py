@@ -236,12 +236,17 @@ class IndicatorConfig:
     def _build_parameters_from_defaults(self) -> Dict[str, ParameterConfig]:
         """デフォルト値からパラメータを構築"""
         params: Dict[str, ParameterConfig] = {}
+        required_data_keys = {name.lower() for name in self.required_data}
 
         # param_mapからパラメータ名を取得
         param_names = set()
         if self.param_map:
             for param_name in self.param_map.keys():
-                if param_name and param_name != "data":
+                if (
+                    param_name
+                    and param_name != "data"
+                    and param_name.lower() not in required_data_keys
+                ):
                     param_names.add(param_name)
 
         # default_valuesからもパラメータ名を取得

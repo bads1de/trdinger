@@ -134,6 +134,41 @@ class TestDynamicPositionSizing:
         assert any("var_confidence" in error for error in errors)
         assert any("max_var_ratio" in error for error in errors)
 
+    def test_position_sizing_gene_validates_size_parameter_consistency(self):
+        """サイズ関連パラメータの論理不整合は検出されること"""
+
+        gene = self._create_gene(
+            fixed_quantity=0.0,
+            min_position_size=2.0,
+            max_position_size=1.0,
+            atr_period=0,
+        )
+        is_valid, errors = gene.validate()
+
+        assert is_valid is False
+        assert any("fixed_quantity" in error for error in errors)
+        assert any("min_position_size" in error for error in errors)
+        assert any("max_position_size" in error for error in errors)
+        assert any("atr_period" in error for error in errors)
+
+    def test_position_sizing_gene_from_dict_invalid_method_falls_back_to_default(self):
+        """無効な method は別方式へ丸め込まず既定値へ戻ること"""
+
+        gene = PositionSizingGene.from_dict(
+            {"method": "invalid_method", "risk_per_trade": 0.02}
+        )
+
+        assert gene.method == PositionSizingMethod.VOLATILITY_BASED
+
+    def test_position_sizing_gene_validates_invalid_method_type(self):
+        """不正な method 型は validation で検出されること"""
+
+        gene = self._create_gene(method="invalid_method")
+        is_valid, errors = gene.validate()
+
+        assert is_valid is False
+        assert any("method" in error for error in errors)
+
     def test_volatility_calculator_applies_expected_shortfall_cap(self):
         """ES制限が適用されるケースを検証"""
 

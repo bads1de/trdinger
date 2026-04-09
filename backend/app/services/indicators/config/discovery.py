@@ -24,6 +24,8 @@ from .indicator_config import (
 from .pandas_ta_introspection import (
     _run_indicator_on_sample_frame,
     calculate_min_length,
+    extract_default_parameters,
+    get_all_pandas_ta_indicators,
     get_indicator_category,
     get_return_column_names,
     is_multi_column_indicator,
@@ -34,6 +36,37 @@ logger = logging.getLogger(__name__)
 
 class DynamicIndicatorDiscovery:
     """インジケーター動的検出クラス"""
+
+    _EXCLUDED_DISCOVERY_NAMES = {
+        "above",
+        "above_value",
+        "below",
+        "below_value",
+        "cross",
+        "cross_value",
+        "df_dates",
+        "df_error_analysis",
+        "df_month_to_date",
+        "df_quarter_to_date",
+        "df_year_to_date",
+        "downside_deviation",
+        "is_datetime_ordered",
+        "jensens_alpha",
+        "linear_regression",
+        "mtd",
+        "qtd",
+        "total_time",
+        "to_utc",
+        "ytd",
+        "verify_series",
+        "short_run",
+        "long_run",
+        "recent_maximum_index",
+        "recent_minimum_index",
+        "signals",
+        "tsignals",
+        "xsignals",
+    }
 
     # プロジェクト固有のデータカラム（pandas-ta標準以外）
     _PROJECT_DATA_COLUMNS = {
@@ -196,6 +229,46 @@ class DynamicIndicatorDiscovery:
         except Exception:
             # 判定失敗時は安全なデフォルトを返す
             return IndicatorScaleType.PRICE_ABSOLUTE
+
+    @classmethod
+    def _supports_timeseries_output(
+        cls,
+        indicator_name: str,
+        func: Any,
+        default_params: Optional[Dict[str, Any]] = None,
+    ) -> bool:
+        """エンジンで扱える時系列出力を返す関数だけを対象にする。"""
+        try:
+            result = _run_indicator_on_sample_frame(
+                func,
+                rows=120,
+                default_params=default_params,
+                walk_close=True,
+                with_datetime_index=True,
+            )
+        except Exception as exc:
+            logger.debug(
+                "時系列互換性チェックに失敗: %s (%s)", indicator_name, exc
+            )
+            return False
+
+        if isinstance(result, (pd.Series, pd.DataFrame)):
+            return True
+
+        if isinstance(result, tuple):
+            return bool(result) and all(
+                isinstance(item, (pd.Series, pd.DataFrame)) for item in result
+            )
+
+        return False
+
+    @classmethod
+    def _should_skip_indicator_name(cls, indicator_name: str) -> bool:
+        """discovery 対象外の関数名かどうかを軽量に判定する。"""
+        name_lower = indicator_name.lower()
+        if "cdl" in name_lower or "candle" in name_lower:
+            return True
+        return name_lower in cls._EXCLUDED_DISCOVERY_NAMES
 
     @classmethod
     def discover_all(cls) -> List[IndicatorConfig]:
@@ -363,20 +436,22 @@ class DynamicIndicatorDiscovery:
         """pandas-taの関数をスキャン"""
         configs = []
 
-        discovered_functions = set()
-
         try:
-            # pandas-ta の全指標を動的にスキャン
-            for name in dir(ta):
-                if name.startswith("_") or name in discovered_functions:
-                    continue
-
+            for name in get_all_pandas_ta_indicators():
                 func = getattr(ta, name, None)
                 if func is None or not callable(func):
                     continue
 
-                # 動的にユーティリティ関数を判定
                 if not cls._is_indicator_function(func):
+                    continue
+
+                if cls._should_skip_indicator_name(name):
+                    continue
+
+                default_params = extract_default_parameters(name)
+                if not cls._supports_timeseries_output(
+                    name, func, default_params=default_params
+                ):
                     continue
 
                 # カテゴリ抽出 (イントロスペクションを使用)
@@ -388,7 +463,6 @@ class DynamicIndicatorDiscovery:
                 if config:
                     config.pandas_function = name
                     configs.append(config)
-                    discovered_functions.add(name)
 
         except Exception as e:
             logger.error(f"pandas-ta スキャンエラー: {e}")
@@ -401,6 +475,8 @@ class DynamicIndicatorDiscovery:
         configs = []
         for name, method in inspect.getmembers(klass, predicate=inspect.isfunction):
             if name.startswith("_") or name.startswith("calculate_"):
+                continue
+            if not cls._is_indicator_function(method):
                 continue
 
             config = cls._analyze_function(name, method, category="custom")
@@ -422,44 +498,7 @@ class DynamicIndicatorDiscovery:
             name_lower = name.lower()
 
             # 除外対象のフィルタリング
-            # 1. キャンドル系 (TA-Lib依存やオートストラテジー不適合)
-            if "cdl" in name_lower or "candle" in name_lower:
-                return None
-
-            # 2. シグナル生成・複雑な戻り値の関数
-            if name_lower in ["tsignals", "xsignals"]:
-                return None
-
-            # 3. ユーティリティ関数およびデータ整合性チェック関数の除外
-            utility_names = {
-                "above",
-                "above_value",
-                "below",
-                "below_value",
-                "cross",
-                "cross_value",
-                "df_dates",
-                "df_error_analysis",
-                "df_month_to_date",
-                "df_quarter_to_date",
-                "df_year_to_date",
-                "downside_deviation",
-                "is_datetime_ordered",
-                "jensens_alpha",
-                "linear_regression",
-                "mtd",
-                "qtd",
-                "total_time",
-                "to_utc",
-                "ytd",
-                "verify_series",
-                "short_run",
-                "long_run",
-                "recent_maximum_index",
-                "recent_minimum_index",
-                "signals",
-            }
-            if name_lower in utility_names:
+            if cls._should_skip_indicator_name(name_lower):
                 return None
 
             sig = inspect.signature(func)
@@ -469,6 +508,7 @@ class DynamicIndicatorDiscovery:
             parameters = {}
             default_values = {}
             param_map = {}
+            inferred_defaults = extract_default_parameters(name_lower)
 
             for param_name, param in sig.parameters.items():
                 if param_name in ["kwargs", "args"]:
@@ -489,7 +529,7 @@ class DynamicIndicatorDiscovery:
                     # パラメータ
                     default_val = param.default
                     if default_val == inspect.Parameter.empty:
-                        default_val = None
+                        default_val = inferred_defaults.get(param_name)
 
                     default_values[param_name] = default_val
 

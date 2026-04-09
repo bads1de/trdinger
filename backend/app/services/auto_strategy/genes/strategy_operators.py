@@ -4,6 +4,7 @@ StrategyGene の遺伝的演算ロジック。
 
 from __future__ import annotations
 
+import inspect
 import logging
 import random
 import uuid
@@ -12,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from .conditions import ConditionGroup
-from .entry import EntryGene
+from .entry import EntryGene, create_random_entry_gene
 from .genetic_utils import GeneticUtils
 from .position_sizing import (
     PositionSizingGene,
@@ -33,23 +34,56 @@ _SUB_GENE_MUTATION_RULES = {
         create_random_position_sizing_gene,
         "position_sizing_gene_creation_probability_multiplier",
     ),
+    EntryGene: (
+        create_random_entry_gene,
+        "entry_gene_creation_probability_multiplier",
+    ),
+}
+
+_MUTATION_CONFIG_CREATION_ATTR_MAP = {
+    "tpsl_gene_creation_probability_multiplier": "tpsl_gene_creation_multiplier",
+    "position_sizing_gene_creation_probability_multiplier": (
+        "position_sizing_gene_creation_multiplier"
+    ),
+    "entry_gene_creation_probability_multiplier": "entry_gene_creation_multiplier",
 }
 
 
 def _get_creation_probability_multiplier(config: Any, attr_name: str) -> float:
     """突然変異で使用する生成確率倍率を安全に取得する。"""
+    nested_attr_name = _MUTATION_CONFIG_CREATION_ATTR_MAP.get(attr_name)
+    mutation_config = getattr(config, "mutation_config", None)
+
     try:
-        return float(getattr(config, attr_name, 0.0) or 0.0)
+        return float(getattr(config, attr_name) or 0.0)
+    except (AttributeError, TypeError, ValueError):
+        pass
+
+    if nested_attr_name is not None and mutation_config is not None:
+        try:
+            value = getattr(mutation_config, nested_attr_name)
+            return float(value or 0.0)
+        except (AttributeError, TypeError, ValueError):
+            pass
+
+    return 0.0
+
+
+def _create_sub_gene(creator_func: Any, config: Any) -> Any:
+    """生成関数のシグネチャに応じて設定を渡し分ける。"""
+    try:
+        signature = inspect.signature(creator_func)
     except (TypeError, ValueError):
-        return 0.0
+        return creator_func()
+
+    if len(signature.parameters) == 0:
+        return creator_func()
+    return creator_func(config)
 
 
 def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
     """
     StrategyGene の定義を基準に、突然変異対象のサブ遺伝子を列挙する。
-
-    entry_gene 系は現時点で生成倍率設定がないため、既存挙動を維持して
-    列挙対象外にする。
     """
     class_map = StrategyGene.sub_gene_class_map()
     specs: list[tuple[str, Any, float]] = []
@@ -221,7 +255,7 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
                 if random.random() < mutation_rate:
                     setattr(mutated, field_name, sub_gene.mutate(mutation_rate))
             elif random.random() < mutation_rate * creation_prob_mult:
-                setattr(mutated, field_name, creator_func())
+                setattr(mutated, field_name, _create_sub_gene(creator_func, config))
 
         if mutated.tool_genes:
             from ..tools import tool_registry

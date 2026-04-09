@@ -56,6 +56,26 @@ if hasattr(MockGeneWithoutAnnotations, "__annotations__"):
     del MockGeneWithoutAnnotations.__annotations__
 
 
+class MockGeneWithStringAnnotations(BaseGene):
+    """文字列アノテーションを使うテストクラス"""
+
+    def __init__(
+        self,
+        enum_field: "MockEnum" = None,
+        datetime_field: "datetime" = None,
+    ):
+        self.enum_field = enum_field
+        self.datetime_field = datetime_field
+
+    def _validate_parameters(self, errors):
+        pass
+
+    __annotations__ = {
+        "enum_field": "MockEnum",
+        "datetime_field": "datetime",
+    }
+
+
 class TestGeneUtils:
     """BaseGene.from_dict のテスト"""
 
@@ -76,7 +96,7 @@ class TestGeneUtils:
         assert gene.optional_field == "custom_value"
 
     def test_from_dict_with_invalid_enum_value(self):
-        """無効なEnum値での復元テスト（デフォルト値が設定される）"""
+        """無効なEnum値は別のEnumへ丸め込まず既定値へフォールバックする"""
         data = {
             "normal_field": "test_value",
             "enum_field": "invalid_value",
@@ -86,8 +106,7 @@ class TestGeneUtils:
         gene = MockGene.from_dict(data)
 
         assert gene.normal_field == "test_value"
-        # 無効なEnum値の場合は最初の値をデフォルトとして設定
-        assert gene.enum_field == MockEnum.VALUE1
+        assert gene.enum_field is None
         assert gene.datetime_field == datetime(2023, 1, 1, 0, 0, 0)
 
     def test_from_dict_with_invalid_datetime_value(self):
@@ -165,6 +184,18 @@ class TestGeneUtils:
         # datetime_field は設定されないのでNoneになる
         assert gene.datetime_field is None
 
+    def test_from_dict_resolves_string_annotations(self):
+        """future annotations 由来の文字列型注釈も解決して復元できる"""
+        data = {
+            "enum_field": "value2",
+            "datetime_field": "2023-01-01T00:00:00",
+        }
+
+        gene = MockGeneWithStringAnnotations.from_dict(data)
+
+        assert gene.enum_field == MockEnum.VALUE2
+        assert gene.datetime_field == datetime(2023, 1, 1, 0, 0, 0)
+
     def test_convert_value_enum(self):
         """Enum変換のテスト"""
         # 文字列からの変換
@@ -173,7 +204,7 @@ class TestGeneUtils:
 
         # 無効な文字列
         result = BaseGene._convert_value("invalid", MockEnum)
-        assert result == MockEnum.VALUE1  # デフォルト値
+        assert result is BaseGene._SKIP_FIELD_CONVERSION
 
         # すでにEnumオブジェクト
         result = BaseGene._convert_value(MockEnum.VALUE2, MockEnum)
@@ -219,7 +250,5 @@ class TestGeneUtils:
         assert BaseGene._is_datetime_type(datetime) is True
         assert BaseGene._is_datetime_type(str) is False
         assert BaseGene._is_datetime_type(MockEnum) is False
-
-
 
 

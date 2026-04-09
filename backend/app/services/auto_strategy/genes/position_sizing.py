@@ -69,6 +69,11 @@ class PositionSizingGene(BaseGene):
         try:
             from ..config.constants import POSITION_SIZING_LIMITS
 
+            if not isinstance(self.method, PositionSizingMethod):
+                errors.append(
+                    "methodは有効なPositionSizingMethodである必要があります"
+                )
+
             lb_min, lb_max = POSITION_SIZING_LIMITS["lookback_period"]
             if not (lb_min <= self.lookback_period <= lb_max):
                 errors.append(
@@ -111,9 +116,51 @@ class PositionSizingGene(BaseGene):
                 "var_lookback",
                 errors,
             )
+            self._validate_range(
+                self.optimal_f_multiplier,
+                POSITION_SIZING_LIMITS["optimal_f_multiplier"][0],
+                POSITION_SIZING_LIMITS["optimal_f_multiplier"][1],
+                "optimal_f_multiplier",
+                errors,
+            )
+            self._validate_range(
+                self.atr_period,
+                POSITION_SIZING_LIMITS["atr_period"][0],
+                POSITION_SIZING_LIMITS["atr_period"][1],
+                "atr_period",
+                errors,
+            )
+            self._validate_range(
+                self.fixed_quantity,
+                POSITION_SIZING_LIMITS["fixed_quantity"][0],
+                POSITION_SIZING_LIMITS["fixed_quantity"][1],
+                "fixed_quantity",
+                errors,
+            )
+            self._validate_range(
+                self.min_position_size,
+                POSITION_SIZING_LIMITS["min_position_size"][0],
+                POSITION_SIZING_LIMITS["min_position_size"][1],
+                "min_position_size",
+                errors,
+            )
+            if self.max_position_size < POSITION_SIZING_LIMITS["max_position_size"][0]:
+                errors.append(
+                    "max_position_sizeは"
+                    f"{POSITION_SIZING_LIMITS['max_position_size'][0]}以上である必要があります"
+                )
+            if self.min_position_size > self.max_position_size:
+                errors.append(
+                    "min_position_sizeはmax_position_size以下である必要があります"
+                )
 
         except ImportError:
             # 定数が利用できない場合の基本検証
+            if not isinstance(self.method, PositionSizingMethod):
+                errors.append(
+                    "methodは有効なPositionSizingMethodである必要があります"
+                )
+
             if not (50 <= self.lookback_period <= 200):
                 errors.append("lookback_periodは50-200の範囲である必要があります")
 
@@ -132,6 +179,20 @@ class PositionSizingGene(BaseGene):
                 )
             if not (20 <= self.var_lookback <= 1000):
                 errors.append("var_lookbackは20-1000の範囲である必要があります")
+            if not (0.1 <= self.optimal_f_multiplier <= 1.0):
+                errors.append("optimal_f_multiplierは0.1-1.0の範囲である必要があります")
+            if not (5 <= self.atr_period <= 50):
+                errors.append("atr_periodは5-50の範囲である必要があります")
+            if not (0.01 <= self.fixed_quantity <= 1000.0):
+                errors.append("fixed_quantityは0.01-1000.0の範囲である必要があります")
+            if not (0.001 <= self.min_position_size <= 1.0):
+                errors.append("min_position_sizeは0.001-1.0の範囲である必要があります")
+            if self.max_position_size < 0.001:
+                errors.append("max_position_sizeは0.001以上である必要があります")
+            if self.min_position_size > self.max_position_size:
+                errors.append(
+                    "min_position_sizeはmax_position_size以下である必要があります"
+                )
 
     def clone(self) -> PositionSizingGene:
         """軽量コピーを作成"""

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 
 from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
+from app.services.auto_strategy.genes.tpsl import TPSLGene
 
 
 # テスト用のヘルパークラス
@@ -165,3 +166,17 @@ class TestGeneticUtils:
         )
 
         assert mutated.numeric_val == 10.0
+
+    def test_crossover_optional_gene_clones_single_parent_gene(self):
+        parent = TPSLGene(stop_loss_pct=0.02, take_profit_pct=0.04)
+
+        child1, child2 = GeneticUtils.crossover_optional_gene(parent, None, TPSLGene)
+
+        assert child1 is not None
+        assert child2 is not None
+        assert child1 is not parent
+        assert child2 is not parent
+        assert child1 is not child2
+
+        child1.stop_loss_pct = 0.05
+        assert parent.stop_loss_pct == 0.02

@@ -103,8 +103,7 @@ def test_strategy_gene_round_trip_dict(
     # TP/SL Gene
     assert isinstance(restored.tpsl_gene, TPSLGene)
     assert restored.tpsl_gene.enabled is True
-    # Enum の値（文字列）が正しく保持されていることを確認
-    assert restored.tpsl_gene.method == base_strategy_gene.tpsl_gene.method.value
+    assert restored.tpsl_gene.method == base_strategy_gene.tpsl_gene.method
     assert restored.tpsl_gene.stop_loss_pct == pytest.approx(
         base_strategy_gene.tpsl_gene.stop_loss_pct
     )
@@ -113,7 +112,7 @@ def test_strategy_gene_round_trip_dict(
     assert isinstance(restored.position_sizing_gene, PositionSizingGene)
     assert (
         restored.position_sizing_gene.method
-        == base_strategy_gene.position_sizing_gene.method.value
+        == base_strategy_gene.position_sizing_gene.method
     )
     assert restored.position_sizing_gene.fixed_quantity == pytest.approx(
         base_strategy_gene.position_sizing_gene.fixed_quantity
@@ -160,10 +159,7 @@ def test_tpsl_gene_round_trip_via_dict(serializer: GeneSerializer) -> None:
     restored = serializer.dict_to_tpsl_gene(data)
     assert isinstance(restored, TPSLGene)
     assert restored.enabled is True
-    # from_dict 側が method を文字列として扱う現行挙動を固定（後方互換のため）
-    assert str(restored.method) == str(
-        gene.method.value if hasattr(gene.method, "value") else gene.method
-    )
+    assert restored.method == gene.method
     assert restored.stop_loss_pct == pytest.approx(gene.stop_loss_pct)
     assert restored.take_profit_pct == pytest.approx(gene.take_profit_pct)
     assert restored.risk_reward_ratio == pytest.approx(gene.risk_reward_ratio)
@@ -237,10 +233,7 @@ def test_position_sizing_gene_round_trip_via_dict(serializer: GeneSerializer) ->
     restored = serializer.dict_to_position_sizing_gene(data)
     assert isinstance(restored, PositionSizingGene)
     assert restored.enabled is True
-    # from_dict 側が method を文字列として扱う現行挙動を固定（後方互換のため）
-    assert str(restored.method) == str(
-        gene.method.value if hasattr(gene.method, "value") else gene.method
-    )
+    assert restored.method == gene.method
     assert restored.risk_per_trade == pytest.approx(gene.risk_per_trade)
     assert restored.min_position_size == pytest.approx(gene.min_position_size)
 
@@ -324,6 +317,23 @@ def test_invalid_position_sizing_dict_raises_or_falls_back(
 
     # TODO: clarify expected behavior
     assert result is None or isinstance(result, PositionSizingGene)
+
+
+def test_invalid_condition_payload_raises_value_error(
+    serializer: GeneSerializer,
+) -> None:
+    """条件payloadが壊れている場合は黙って復元せず失敗すること"""
+    invalid_data = {
+        "id": "invalid-condition",
+        "indicators": [{"type": "SMA", "parameters": {"period": 20}, "enabled": True}],
+        "long_entry_conditions": ["broken-condition"],
+        "short_entry_conditions": [],
+        "risk_management": {"position_size": 0.1},
+        "metadata": {},
+    }
+
+    with pytest.raises(ValueError):
+        serializer.dict_to_strategy_gene(invalid_data, StrategyGene)
 
 
 # d. List/ネスト構造: ListEncoder/ListDecoder 安定性

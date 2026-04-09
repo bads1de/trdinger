@@ -55,38 +55,8 @@ class TPSLGene(BaseGene):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> TPSLGene:
         """辞書形式からTPSLGeneオブジェクトを復元
-
-        BaseGeneのfrom_dictを安全に拡張し、すべてのフィールドを適切に初期化します。
         """
-        init_params = {}
-
-        # クラスアノテーションからパラメータ情報を取得
-        if hasattr(cls, "__annotations__"):
-            annotations = cls.__annotations__
-
-            for param_name, param_type in annotations.items():
-                if param_name in data:
-                    value = data[param_name]
-
-                    # Enum型への変換
-                    if hasattr(param_type, "__members__"):
-                        if isinstance(value, str):
-                            try:
-                                init_params[param_name] = param_type(value)
-                            except ValueError:
-                                logger.warning(f"無効なEnum値 {value} を無視")
-                        else:
-                            init_params[param_name] = value
-                    else:
-                        init_params[param_name] = value
-
-        # TPSLGene固有のフィールドを明示的に処理
-        # slots=True対応: __dict__の代わりに__dataclass_fields__を使用
-        for param_name in cls.__dataclass_fields__.keys():
-            if param_name not in init_params and param_name in data:
-                init_params[param_name] = data[param_name]
-
-        return cls(**init_params)
+        return BaseGene.from_dict.__func__(cls, data)
 
     method: TPSLMethod = TPSLMethod.RISK_REWARD_RATIO
     stop_loss_pct: float = 0.03
@@ -118,6 +88,9 @@ class TPSLGene(BaseGene):
         """パラメータ固有の検証を実装"""
         try:
             from ..config.constants import TPSL_LIMITS
+
+            if not isinstance(self.method, TPSLMethod):
+                errors.append("methodは有効なTPSLMethodである必要があります")
 
             sl_min, sl_max = TPSL_LIMITS["stop_loss_pct"]
             if not (sl_min <= self.stop_loss_pct <= sl_max):
@@ -164,6 +137,9 @@ class TPSLGene(BaseGene):
 
         except ImportError:
             # 定数が利用できない場合の基本検証
+            if not isinstance(self.method, TPSLMethod):
+                errors.append("methodは有効なTPSLMethodである必要があります")
+
             if not (0.005 <= self.stop_loss_pct <= 0.15):
                 errors.append("stop_loss_pct must be between 0.5% and 15%")
 

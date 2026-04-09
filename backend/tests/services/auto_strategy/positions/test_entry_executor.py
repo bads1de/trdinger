@@ -29,10 +29,10 @@ class TestEntryExecutor:
 
     def test_calculate_entry_prices_limit_long(self, executor):
         """指値注文（ロング）の価格計算"""
-        # 1% 下に指値を置く設定 (pct単位なので 1.0)
+        # 1% 下に指値を置く設定 (0.01 = 1%)
         gene = EntryGene(
             entry_type=EntryType.LIMIT,
-            limit_offset_pct=1.0
+            limit_offset_pct=0.01
         )
         current_price = 100.0
         
@@ -45,7 +45,7 @@ class TestEntryExecutor:
         """指値注文（ショート）の価格計算"""
         gene = EntryGene(
             entry_type=EntryType.LIMIT,
-            limit_offset_pct=1.0
+            limit_offset_pct=0.01
         )
         current_price = 100.0
         
@@ -58,8 +58,8 @@ class TestEntryExecutor:
         """逆指値指値注文（ロング）の価格計算"""
         gene = EntryGene(
             entry_type=EntryType.STOP_LIMIT,
-            stop_offset_pct=2.0,
-            limit_offset_pct=1.0
+            stop_offset_pct=0.02,
+            limit_offset_pct=0.01
         )
         current_price = 100.0
         

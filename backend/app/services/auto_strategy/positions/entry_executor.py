@@ -55,24 +55,24 @@ class EntryExecutor:
         # 指値注文: 有利な価格で約定を狙う
         if entry_type == EntryType.LIMIT:
             limit_price = self._calculate_limit_price(
-                current_price, direction, entry_gene.limit_offset_pct / 100.0
+                current_price, direction, entry_gene.limit_offset_pct
             )
             return {"limit": limit_price}
 
         # 逆指値注文: ブレイクアウトで約定
         if entry_type == EntryType.STOP:
             stop_price = self._calculate_stop_price(
-                current_price, direction, entry_gene.stop_offset_pct / 100.0
+                current_price, direction, entry_gene.stop_offset_pct
             )
             return {"stop": stop_price}
 
         # 逆指値指値注文: ストップ発動後、指値で約定を狙う
         if entry_type == EntryType.STOP_LIMIT:
             stop_price = self._calculate_stop_price(
-                current_price, direction, entry_gene.stop_offset_pct / 100.0
+                current_price, direction, entry_gene.stop_offset_pct
             )
             limit_price = self._calculate_limit_price(
-                stop_price, direction, entry_gene.limit_offset_pct / 100.0
+                stop_price, direction, entry_gene.limit_offset_pct
             )
             return {"stop": stop_price, "limit": limit_price}
 
