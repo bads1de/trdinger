@@ -533,6 +533,18 @@ class TrendIndicators:
         offset: int = 26,
     ) -> pd.DataFrame:
         """Ichimoku Kinko Hyo"""
+        def nan_result() -> pd.DataFrame:
+            return pd.DataFrame(
+                {
+                    "tenkan_sen": np.full(len(high), np.nan),
+                    "kijun_sen": np.full(len(high), np.nan),
+                    "senkou_span_a": np.full(len(high), np.nan),
+                    "senkou_span_b": np.full(len(high), np.nan),
+                    "chikou_span": np.full(len(high), np.nan),
+                },
+                index=high.index,
+            )
+
         try:
             result = run_multi_series_indicator(
                 {"high": high, "low": low, "close": close},
@@ -547,13 +559,17 @@ class TrendIndicators:
                     include_chikou=include_chikou,
                     offset=offset,
                 ),
+                fallback_factory=nan_result,
             )
 
-            if isinstance(result, pd.Series):
-                return pd.DataFrame()
+            if isinstance(result, tuple):
+                result = result[0]
 
-            if result is None or result.empty:
-                return pd.DataFrame()
+            if isinstance(result, pd.Series):
+                return nan_result()
+
+            if result is None or (hasattr(result, "empty") and result.empty):
+                return nan_result()
 
             rename_map = {
                 f"ITS_{tenkan}_{kijun}_{senkou}": "tenkan_sen",
@@ -566,7 +582,7 @@ class TrendIndicators:
             result = result.rename(columns=rename_map)
             return result
         except Exception:
-            return pd.DataFrame()
+            return nan_result()
 
     @staticmethod
     @handle_pandas_ta_errors

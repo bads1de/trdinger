@@ -50,6 +50,13 @@ class TechnicalIndicatorService:
     # 計算結果キャッシュ（クラスレベル）
     # GA実行時は多数の個体が生成されるため、キャッシュサイズを拡大
     _calculation_cache: LRUCache = LRUCache(maxsize=5000)
+    _STANDARD_SUPPORT_DATA = {"open", "open_", "high", "low", "close", "volume"}
+    _EXTENDED_MARKET_DATA = {
+        "open_interest",
+        "funding_rate",
+        "openinterest",
+        "fundingrate",
+    }
 
     def __init__(self):
         """サービスを初期化"""
@@ -468,6 +475,14 @@ class TechnicalIndicatorService:
             for k, v in all_args.items()
             if not isinstance(v, (pd.Series, pd.DataFrame))
         }
+        reference_index = next(
+            (
+                value.index
+                for value in series_data.values()
+                if isinstance(value, (pd.Series, pd.DataFrame))
+            ),
+            None,
+        )
 
         assigned_params: Dict[str, Any] = {}
 
@@ -483,13 +498,11 @@ class TechnicalIndicatorService:
                 "ohlcv",
                 "close",
                 "open",
+                "open_",
                 "high",
                 "low",
                 "volume",
-                "fast",
-                "slow",
                 "trend",
-                "signal",
                 "series",
                 "market_cap",
                 "funding_rate",
@@ -534,6 +547,8 @@ class TechnicalIndicatorService:
             fallback_input = input_ref if input_ref is not None else pd.DataFrame()
             return self._create_nan_result(fallback_input, {"function": indicator_type})
 
+        result = self._align_adapter_result(result, reference_index)
+
         # 結果の後処理
         if isinstance(result, pd.Series):
             return result.to_numpy()
@@ -557,6 +572,76 @@ class TechnicalIndicatorService:
             )
         else:
             return result
+
+    def _align_adapter_result(self, result: Any, reference_index: Any) -> Any:
+        """入力 index に合わせて adapter の結果を再整列する。"""
+        if reference_index is None:
+            return result
+
+        if isinstance(result, pd.Series):
+            return self._align_series_like_result(result, reference_index)
+
+        if isinstance(result, pd.DataFrame):
+            return self._align_series_like_result(result, reference_index)
+
+        if isinstance(result, tuple):
+            return tuple(
+                self._align_adapter_result(item, reference_index) for item in result
+            )
+
+        return result
+
+    def _align_series_like_result(
+        self,
+        result: Union[pd.Series, pd.DataFrame],
+        reference_index: pd.Index,
+    ) -> Union[pd.Series, pd.DataFrame]:
+        """Series/DataFrame を入力 index に位置またはラベルで整列する。"""
+        if result.index.equals(reference_index):
+            return result
+
+        if len(result) == len(reference_index):
+            aligned = result.copy()
+            aligned.index = reference_index
+            return aligned
+
+        positional_labels = self._map_positional_index_to_reference(
+            result.index,
+            reference_index,
+        )
+        if positional_labels is not None:
+            aligned = result.copy()
+            aligned.index = positional_labels
+            try:
+                return aligned.reindex(reference_index)
+            except Exception:
+                return aligned
+
+        try:
+            return result.reindex(reference_index)
+        except Exception:
+            return result
+
+    def _map_positional_index_to_reference(
+        self,
+        result_index: pd.Index,
+        reference_index: pd.Index,
+    ) -> Optional[pd.Index]:
+        """RangeIndex などの位置 index を参照 index のラベルへ写像する。"""
+        if len(result_index) == 0 or len(reference_index) == 0:
+            return None
+
+        if not pd.api.types.is_integer_dtype(result_index):
+            return None
+
+        positions = np.asarray(result_index, dtype=int)
+        if positions.ndim != 1:
+            return None
+
+        if (positions < 0).any() or (positions >= len(reference_index)).any():
+            return None
+
+        return reference_index.take(positions)
 
     def _calculate_with_adapter(
         self,
@@ -608,6 +693,27 @@ class TechnicalIndicatorService:
 
         return None
 
+    def _get_support_tier(self, config: IndicatorConfig) -> str:
+        """required_data からサポート水準を分類する。"""
+        normalized_required_data = {
+            data_key.lower()
+            for data_key in config.required_data
+            if isinstance(data_key, str) and data_key
+        }
+
+        if not normalized_required_data:
+            return "standard"
+
+        if normalized_required_data.issubset(self._STANDARD_SUPPORT_DATA):
+            return "standard"
+
+        if normalized_required_data.issubset(
+            self._STANDARD_SUPPORT_DATA | self._EXTENDED_MARKET_DATA
+        ):
+            return "extended_market"
+
+        return "experimental"
+
     def get_supported_indicators(self) -> Dict[str, Any]:
         """
         サポートされている指標の情報を取得
@@ -624,5 +730,6 @@ class TechnicalIndicatorService:
                 "result_type": config.result_type.value,
                 "required_data": config.required_data,
                 "scale_type": config.scale_type.value if config.scale_type else None,
+                "support_tier": self._get_support_tier(config),
             }
         return infos

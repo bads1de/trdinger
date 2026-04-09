@@ -78,6 +78,39 @@ class TestAutoStrategyLoader:
             loader.load_strategy_gene({})
         assert "含まれていません" in str(excinfo.value)
 
+    def test_load_strategy_gene_preserves_large_position_sizing_cap(self, loader):
+        config = {
+            "strategy_gene": {
+                "id": "serialized-gene",
+                "indicators": [
+                    {"type": "SMA", "parameters": {"period": 20}, "enabled": True}
+                ],
+                "long_entry_conditions": [
+                    {
+                        "left_operand": "close",
+                        "operator": ">",
+                        "right_operand": "open",
+                    }
+                ],
+                "short_entry_conditions": [],
+                "risk_management": {"position_size": 0.1},
+                "position_sizing_gene": {
+                    "method": "volatility_based",
+                    "risk_per_trade": 0.02,
+                    "min_position_size": 0.01,
+                    "max_position_size": 500.0,
+                    "enabled": True,
+                },
+                "metadata": {},
+            }
+        }
+
+        result = loader.load_strategy_gene(config)
+        is_valid, errors = result.position_sizing_gene.validate()
+
+        assert result.position_sizing_gene.max_position_size == pytest.approx(500.0)
+        assert is_valid is True, errors
+
     def test_load_strategy_gene_import_error(self, loader):
         # インポート時にエラーが出るようにパッチ（少しトリッキー）
         # load_strategy_geneの先頭でインポートしている箇所をターゲットにする

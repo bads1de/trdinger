@@ -13,10 +13,13 @@ import pandas as pd
 import pytest
 
 from app.services.indicators import TechnicalIndicatorService
+from app.services.indicators.config import IndicatorResultType
 
 
 class TestAllTechnicalIndicators:
     """全テクニカル指標の網羅的テストクラス"""
+
+    _SPARSE_STANDARD_INDICATORS = {"TD_SEQ"}
 
     # 指標リストを動的に取得
     try:
@@ -26,6 +29,25 @@ class TestAllTechnicalIndicators:
     except Exception:
         # フォールバック
         INDICATORS = ["RSI", "SMA", "EMA", "MACD", "BBANDS"]
+
+    @staticmethod
+    def _count_finite_values(result) -> int:
+        arrays = result if isinstance(result, tuple) else (result,)
+        finite_count = 0
+        for array in arrays:
+            finite_count += int(np.isfinite(np.asarray(array)).sum())
+        return finite_count
+
+    @staticmethod
+    def _has_required_data(
+        indicator_service: TechnicalIndicatorService,
+        df: pd.DataFrame,
+        required_data: list[str],
+    ) -> bool:
+        return all(
+            indicator_service._resolve_column_name(df, data_key) is not None
+            for data_key in required_data
+        )
 
     def test_all_indicators_initializable(self, indicator_service):
         """すべてのインジケーターが初期化可能か確認"""
@@ -60,24 +82,53 @@ class TestAllTechnicalIndicators:
             if config is None:
                 pytest.skip(f"{indicator}の設定が見つからないためスキップ")
 
+            if not self._has_required_data(
+                indicator_service, sample_ohlcv, config.required_data
+            ):
+                pytest.skip(f"{indicator} は sample_ohlcv にない列を要求するためスキップ")
+
             # デフォルトパラメータでテスト
             default_params = config.default_values or {}
-            params = {}
+            final_params = dict(default_params)
 
             # 指標ごとの主要パラメータ名を特定
             supported_params = set(config.parameters.keys())
             
             # テスト用パラメータを設定（サポートされている場合のみ）
             def set_param(test_key, value, aliases=None):
+                actual_key = None
                 if test_key in supported_params:
-                    params[test_key] = value
-                    return True
-                if aliases:
+                    actual_key = test_key
+                elif aliases:
                     for alias in aliases:
                         if alias in supported_params:
-                            params[alias] = value
-                            return True
-                return False
+                            actual_key = alias
+                            break
+
+                if actual_key is None:
+                    return False
+
+                if actual_key in {"length", "period", "window", "n"}:
+                    param_config = config.parameters.get(actual_key)
+                    current_value = final_params.get(actual_key)
+                    safe_value = value
+
+                    if isinstance(current_value, (int, float)):
+                        safe_value = max(safe_value, current_value)
+                    if (
+                        param_config is not None
+                        and isinstance(param_config.min_value, (int, float))
+                    ):
+                        safe_value = max(safe_value, param_config.min_value)
+
+                    if isinstance(value, int) or isinstance(current_value, int):
+                        safe_value = int(safe_value)
+
+                    final_params[actual_key] = safe_value
+                    return True
+
+                final_params[actual_key] = value
+                return True
 
             if indicator == "ADOSC":
                 set_param("fast", 3)
@@ -97,22 +148,14 @@ class TestAllTechnicalIndicators:
                 # 一般的な期間パラメータ
                 set_param("length", 14, ["period", "window", "n"])
 
-            # 登録されているパラメータ以外は渡さないようにする
-            final_params = {}
-            for k, v in params.items():
-                if k in supported_params:
-                    final_params[k] = v
-            
-            # 何も設定されなかった場合はデフォルトを使用
-            if not final_params:
-                final_params = default_params
-
             # 計算を実行
             result = indicator_service.calculate_indicator(
                 sample_ohlcv, indicator, final_params
             )
+            support_info = indicator_service.get_supported_indicators().get(indicator, {})
+
             # 結果の形式を検証
-            if config.result_type == "single":
+            if config.result_type == IndicatorResultType.SINGLE:
                 assert isinstance(result, np.ndarray), (
                     f"{indicator}の結果がndarrayではありません"
                 )
@@ -122,7 +165,7 @@ class TestAllTechnicalIndicators:
                 # NaNを含む場合があるが、最後の数ポイントは有効な場合がある
                 assert result.shape[0] > 0, f"{indicator}の結果が空"
 
-            elif config.result_type == "complex" or config.result_type == "multiple":
+            elif config.result_type == IndicatorResultType.COMPLEX:
                 assert isinstance(result, tuple), (
                     f"{indicator}の結果がtupleではありません"
                 )
@@ -135,8 +178,42 @@ class TestAllTechnicalIndicators:
                         f"{indicator}の結果[{i}]の長さが不正{indicator}"
                     )
 
+            if (
+                support_info.get("support_tier") == "standard"
+                and indicator not in self._SPARSE_STANDARD_INDICATORS
+            ):
+                assert self._count_finite_values(result) > 0, (
+                    f"{indicator} は標準 OHLCV 指標なのに有限値を返していません"
+                )
+
         except Exception as e:
             pytest.fail(f"{indicator}のテストでエラー: {e}")
+
+    def test_td_seq_produces_sparse_events_on_trending_data(
+        self,
+        indicator_service: TechnicalIndicatorService,
+    ):
+        """TD_SEQ はトレンド系列で疎なイベント値を返す。"""
+        index = pd.date_range("2022-01-01", periods=500, freq="h")
+        close = pd.Series(np.linspace(100.0, 150.0, 500), index=index)
+        trending_ohlcv = pd.DataFrame(
+            {
+                "Open": close.shift(1).fillna(close.iloc[0]),
+                "High": close + 1.0,
+                "Low": close - 1.0,
+                "Close": close,
+                "Volume": np.linspace(1000.0, 2000.0, 500),
+            },
+            index=index,
+        )
+
+        result = indicator_service.calculate_indicator(trending_ohlcv, "TD_SEQ", {})
+
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        assert all(isinstance(series, np.ndarray) for series in result)
+        assert all(series.shape[0] == len(trending_ohlcv) for series in result)
+        assert self._count_finite_values(result) > 0
 
     @pytest.mark.parametrize("indicator", INDICATORS)
     def test_indicator_handle_insufficient_data(
@@ -157,6 +234,11 @@ class TestAllTechnicalIndicators:
             if not config:
                 pytest.skip(f"{indicator}の設定が見つからないためスキップ")
 
+            if not self._has_required_data(
+                indicator_service, short_data, config.required_data
+            ):
+                pytest.skip(f"{indicator} は short_data にない列を要求するためスキップ")
+
             # 短いデータで計算を試みる
             params = config.default_values or {}
 
@@ -165,12 +247,19 @@ class TestAllTechnicalIndicators:
             )
 
             # 結果が期待通りか検証
-            if config.result_type == "single":
+            if config.result_type == IndicatorResultType.SINGLE:
                 assert isinstance(result, np.ndarray)
                 # すべてNaNまたは部分的にNaN
                 assert result.shape[0] == len(short_data)
-            elif config.result_type in ["complex", "multiple"]:
-                assert isinstance(result, tuple)
+            elif config.result_type == IndicatorResultType.COMPLEX:
+                if isinstance(result, tuple):
+                    assert len(result) > 0
+                    for series in result:
+                        assert isinstance(series, np.ndarray)
+                        assert series.shape[0] == len(short_data)
+                else:
+                    assert isinstance(result, np.ndarray)
+                    assert result.shape[0] == len(short_data)
 
         except Exception as e:
             # "データ長"や"長さ"に関するエラーは許容（バリデーションによるもの）
@@ -274,7 +363,3 @@ class TestAllTechnicalIndicators:
 if __name__ == "__main__":
     # コマンドラインからの実行用
     pytest.main([__file__, "-v"])
-
-
-
-

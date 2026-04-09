@@ -12,6 +12,7 @@ import logging
 import pkgutil
 from typing import Any, Dict, List, Optional, Type, cast
 
+import numpy as np
 import pandas as pd
 import pandas_ta_classic as ta
 
@@ -22,6 +23,7 @@ from .indicator_config import (
     ParameterConfig,
 )
 from .pandas_ta_introspection import (
+    _build_sample_ohlcv_frame,
     _run_indicator_on_sample_frame,
     calculate_min_length,
     extract_default_parameters,
@@ -90,6 +92,93 @@ class DynamicIndicatorDiscovery:
         "series",
     }
 
+    _SAMPLE_PROBE_DATA_COLUMNS = {"open", "open_", "high", "low", "close", "volume"}
+
+    _ALIAS_OVERRIDES = {
+        "BBANDS": ["BB", "BOLLINGER"],
+        "MOM": ["MOMENTUM"],
+        "EMA": ["EXP_MA"],
+        "SMA": ["SIMPLE_MA"],
+    }
+
+    _SPECIAL_CONFIG_OVERRIDES = {
+        "DEMARKER": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+            "use_default_thresholds": True,
+        },
+        "RMI": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+            "use_default_thresholds": True,
+        },
+        "MMI": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+            "use_default_thresholds": True,
+        },
+        "TTF": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
+            "thresholds": {
+                "aggressive": {"long_gt": 80, "short_lt": -80},
+                "normal": {"long_gt": 100, "short_lt": -100},
+                "conservative": {"long_gt": 120, "short_lt": -120},
+            },
+            "min_length_func": lambda p: max(int(p.get("length", 15)) * 2, 2),
+        },
+        "RWI": {
+            "result_type": IndicatorResultType.COMPLEX,
+            "returns": "multiple",
+            "return_cols": ["RWI_HIGH", "RWI_LOW"],
+            "output_names": ["RWI_HIGH", "RWI_LOW"],
+            "default_output": "RWI_HIGH",
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "thresholds": {
+                "aggressive": {"long_gt": 0.8, "short_lt": 0.8},
+                "normal": {"long_gt": 1.0, "short_lt": 1.0},
+                "conservative": {"long_gt": 1.2, "short_lt": 1.2},
+            },
+            "min_length_func": lambda p: max(int(p.get("length", 14)) + 1, 2),
+        },
+        "PFE": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "use_default_thresholds": True,
+        },
+        "CRYPTO_LEVERAGE_INDEX": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "use_default_thresholds": True,
+        },
+        "LIQUIDATION_CASCADE_SCORE": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "use_default_thresholds": True,
+        },
+        "TREND_QUALITY": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "use_default_thresholds": True,
+        },
+        "OI_WEIGHTED_FUNDING_RATE": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "use_default_thresholds": True,
+        },
+        "OI_PRICE_CONFIRMATION": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "use_default_thresholds": True,
+        },
+        "SQUEEZE_PROBABILITY": {
+            "scale_type": IndicatorScaleType.FUNDING_RATE,
+            "thresholds": {
+                "aggressive": {"long_gt": 0.0, "short_lt": 0.001},
+                "normal": {"long_gt": 0.0, "short_lt": 0.01},
+                "conservative": {"long_gt": 0.0, "short_lt": 0.05},
+            },
+        },
+        "WHALE_DIVERGENCE": {
+            "scale_type": IndicatorScaleType.PRICE_RATIO,
+            "thresholds": {
+                "aggressive": {"long_gt": 1.02, "short_lt": 0.98},
+                "normal": {"long_gt": 1.05, "short_lt": 0.95},
+                "conservative": {"long_gt": 1.1, "short_lt": 0.9},
+            },
+        },
+    }
+
     @classmethod
     def _calculate_param_range(
         cls, param_name: str, default_val: Any
@@ -109,18 +198,51 @@ class DynamicIndicatorDiscovery:
         name_lower = param_name.lower()
 
         # 特殊なパラメータタイプごとの処理
+        if "distribution_offset" in name_lower:
+            return (0.0, 1.0)
         if "std" in name_lower or "factor" in name_lower:
             # 標準偏差・係数: 0.1 ~ 5.0倍
             return (max(0.1, default_val * 0.1), default_val * 3.0)
         elif "multiplier" in name_lower:
             # 乗数: 0.5 ~ 5.0
             return (0.5, 5.0)
-        elif "offset" in name_lower:
+        elif name_lower == "offset":
             # オフセット: 負の値も許可
             return (-50, 50)
         elif "drift" in name_lower:
             # ドリフト: 1 ~ 20
             return (1, 20)
+        elif isinstance(default_val, float) and (
+            not default_val.is_integer()
+            or abs(default_val) <= 1
+            or any(
+                token in name_lower
+                for token in (
+                    "scalar",
+                    "alpha",
+                    "beta",
+                    "gamma",
+                    "coef",
+                    "quantile",
+                    "prob",
+                    "weight",
+                    "ratio",
+                )
+            )
+        ):
+            if default_val > 0:
+                min_val = max(0.01, default_val * 0.5)
+                max_val = max(default_val * 2.0, default_val + 0.1)
+                if default_val <= 1:
+                    max_val = min(1.0, max_val)
+                return (min_val, max_val)
+
+            if default_val < 0:
+                min_val = min(default_val * 2.0, default_val - 0.1)
+                max_val = min(-0.01, default_val * 0.5)
+                return (min_val, max_val)
+
+            return (-1.0, 1.0)
         else:
             # 一般的な期間パラメータ: 最小2、最大は5倍
             min_val = max(2, int(default_val * 0.2))
@@ -238,10 +360,16 @@ class DynamicIndicatorDiscovery:
         default_params: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """エンジンで扱える時系列出力を返す関数だけを対象にする。"""
+        expected_length = 120
+        sample_frame = _build_sample_ohlcv_frame(
+            expected_length,
+            walk_close=True,
+            with_datetime_index=True,
+        )
         try:
             result = _run_indicator_on_sample_frame(
                 func,
-                rows=120,
+                rows=expected_length,
                 default_params=default_params,
                 walk_close=True,
                 with_datetime_index=True,
@@ -252,15 +380,109 @@ class DynamicIndicatorDiscovery:
             )
             return False
 
-        if isinstance(result, (pd.Series, pd.DataFrame)):
-            return True
+        return cls._is_timeseries_compatible_result(result, sample_frame.index)
+
+    @classmethod
+    def _is_timeseries_compatible_result(cls, result: Any, expected_index: Any) -> bool:
+        """出力がサンプル入力長と整合する時系列結果かどうかを判定する。"""
+        if isinstance(result, pd.Series):
+            return cls._has_compatible_timeseries_index(result.index, expected_index)
+
+        if isinstance(result, pd.DataFrame):
+            return result.shape[1] > 0 and cls._has_compatible_timeseries_index(
+                result.index, expected_index
+            )
+
+        if isinstance(result, np.ndarray):
+            return cls._has_compatible_array_shape(result, expected_index)
 
         if isinstance(result, tuple):
             return bool(result) and all(
-                isinstance(item, (pd.Series, pd.DataFrame)) for item in result
+                cls._is_timeseries_compatible_result(item, expected_index)
+                for item in result
             )
 
         return False
+
+    @classmethod
+    def _has_compatible_timeseries_index(cls, result_index: Any, expected_index: Any) -> bool:
+        """出力 index が入力時系列と整合しているかを判定する。"""
+        if len(result_index) == 0:
+            return False
+
+        if len(result_index) == len(expected_index):
+            return True
+
+        try:
+            if not getattr(result_index, "is_monotonic_increasing", True):
+                return False
+            return bool(result_index.isin(expected_index).all())
+        except Exception:
+            return False
+
+    @classmethod
+    def _has_compatible_array_shape(cls, result: np.ndarray, expected_index: Any) -> bool:
+        """index を持たない ndarray は入力長と一致する場合のみ許容する。"""
+        if result.ndim == 0 or result.size == 0:
+            return False
+
+        return result.shape[0] == len(expected_index)
+
+    @classmethod
+    def _can_probe_with_sample(cls, required_data: List[str]) -> bool:
+        """標準 OHLCV サンプルだけで関数を実行できるかを判定する。"""
+        return all(
+            data_key.lower() in cls._SAMPLE_PROBE_DATA_COLUMNS
+            for data_key in required_data
+        )
+
+    @classmethod
+    def _probe_indicator_output(
+        cls,
+        indicator_name: str,
+        func: Any,
+        required_data: List[str],
+        default_params: Optional[Dict[str, Any]] = None,
+    ) -> Optional[Any]:
+        """標準 OHLCV だけで評価できる指標はサンプル実行結果を返す。"""
+        if not cls._can_probe_with_sample(required_data):
+            return None
+
+        try:
+            return _run_indicator_on_sample_frame(
+                func,
+                rows=120,
+                default_params=default_params,
+                walk_close=True,
+                with_datetime_index=True,
+            )
+        except Exception as exc:
+            logger.debug("出力プローブに失敗: %s (%s)", indicator_name, exc)
+            return None
+
+    @classmethod
+    def _infer_result_type_from_output(
+        cls, result: Any
+    ) -> Optional[IndicatorResultType]:
+        """サンプル出力から result_type を推定する。"""
+        if isinstance(result, pd.DataFrame):
+            return (
+                IndicatorResultType.COMPLEX
+                if result.shape[1] > 1
+                else IndicatorResultType.SINGLE
+            )
+
+        if isinstance(result, tuple):
+            return (
+                IndicatorResultType.COMPLEX
+                if len(result) > 1
+                else IndicatorResultType.SINGLE
+            )
+
+        if isinstance(result, pd.Series):
+            return IndicatorResultType.SINGLE
+
+        return None
 
     @classmethod
     def _should_skip_indicator_name(cls, indicator_name: str) -> bool:
@@ -358,71 +580,29 @@ class DynamicIndicatorDiscovery:
                     config.return_cols = cols
 
         # 2. ルールベースのエイリアス自動付与
-        aliases = set()
-        if name_upper == "BBANDS":
-            aliases.update(["BB", "BOLLINGER"])
-        elif name_upper == "MOM":
-            aliases.add("MOMENTUM")
-        elif name_upper == "EMA":
-            aliases.add("EXP_MA")
-        elif name_upper == "SMA":
-            aliases.add("SIMPLE_MA")
+        aliases = set(cls._ALIAS_OVERRIDES.get(name_upper, []))
 
         if aliases:
             if config.aliases:
                 aliases.update(config.aliases)
             config.aliases = list(aliases)
 
-        if name_upper in {"DEMARKER", "RMI", "MMI"}:
-            config.scale_type = IndicatorScaleType.OSCILLATOR_0_100
+        overrides = cls._SPECIAL_CONFIG_OVERRIDES.get(name_upper, {})
+        for attr_name in (
+            "result_type",
+            "returns",
+            "return_cols",
+            "output_names",
+            "default_output",
+            "scale_type",
+            "thresholds",
+            "min_length_func",
+        ):
+            if attr_name in overrides:
+                setattr(config, attr_name, overrides[attr_name])
+
+        if overrides.get("use_default_thresholds"):
             config.thresholds = config._get_default_thresholds()
-        elif name_upper == "TTF":
-            config.scale_type = IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100
-            config.thresholds = {
-                "aggressive": {"long_gt": 80, "short_lt": -80},
-                "normal": {"long_gt": 100, "short_lt": -100},
-                "conservative": {"long_gt": 120, "short_lt": -120},
-            }
-            config.min_length_func = lambda p: max(int(p.get("length", 15)) * 2, 2)
-        elif name_upper == "RWI":
-            config.result_type = IndicatorResultType.COMPLEX
-            config.returns = "multiple"
-            config.return_cols = ["RWI_HIGH", "RWI_LOW"]
-            config.output_names = ["RWI_HIGH", "RWI_LOW"]
-            config.default_output = "RWI_HIGH"
-            config.scale_type = IndicatorScaleType.MOMENTUM_ZERO_CENTERED
-            config.thresholds = {
-                "aggressive": {"long_gt": 0.8, "short_lt": 0.8},
-                "normal": {"long_gt": 1.0, "short_lt": 1.0},
-                "conservative": {"long_gt": 1.2, "short_lt": 1.2},
-            }
-            config.min_length_func = lambda p: max(int(p.get("length", 14)) + 1, 2)
-        elif name_upper == "PFE":
-            config.scale_type = IndicatorScaleType.MOMENTUM_ZERO_CENTERED
-            config.thresholds = config._get_default_thresholds()
-        elif name_upper in {
-            "CRYPTO_LEVERAGE_INDEX",
-            "LIQUIDATION_CASCADE_SCORE",
-            "TREND_QUALITY",
-            "OI_WEIGHTED_FUNDING_RATE",
-            "OI_PRICE_CONFIRMATION",
-        }:
-            config.scale_type = IndicatorScaleType.MOMENTUM_ZERO_CENTERED
-            config.thresholds = config._get_default_thresholds()
-        elif name_upper == "SQUEEZE_PROBABILITY":
-            config.scale_type = IndicatorScaleType.FUNDING_RATE
-            config.thresholds = {
-                "aggressive": {"long_gt": 0.0, "short_lt": 0.001},
-                "normal": {"long_gt": 0.0, "short_lt": 0.01},
-                "conservative": {"long_gt": 0.0, "short_lt": 0.05},
-            }
-        elif name_upper == "WHALE_DIVERGENCE":
-            config.scale_type = IndicatorScaleType.PRICE_RATIO
-            config.thresholds = {
-                "aggressive": {"long_gt": 1.02, "short_lt": 0.98},
-                "normal": {"long_gt": 1.05, "short_lt": 0.95},
-                "conservative": {"long_gt": 1.1, "short_lt": 0.9},
-            }
 
         # 3. 特殊なパラメータ制約の付与
         if name_upper == "FRAMA":
@@ -481,6 +661,13 @@ class DynamicIndicatorDiscovery:
 
             config = cls._analyze_function(name, method, category="custom")
             if config:
+                if cls._can_probe_with_sample(config.required_data) and not cls._supports_timeseries_output(
+                    name,
+                    getattr(klass, name),
+                    default_params=config.default_values,
+                ):
+                    continue
+
                 # 独自実装なので adapter_function を設定
                 # Orchestrator は config.adapter_function を直接呼び出すため、
                 # callable を直接設定する
@@ -540,7 +727,16 @@ class DynamicIndicatorDiscovery:
 
             # 2. 戻り値情報の推測
             result_type = IndicatorResultType.SINGLE
-            if is_multi_column_indicator(name.lower()):
+            sample_result = cls._probe_indicator_output(
+                name,
+                func,
+                required_data,
+                default_params=default_values,
+            )
+            inferred_result_type = cls._infer_result_type_from_output(sample_result)
+            if inferred_result_type is not None:
+                result_type = inferred_result_type
+            elif is_multi_column_indicator(name.lower()):
                 result_type = IndicatorResultType.COMPLEX
 
             # 3. スケールタイプの推測 (動的判定)

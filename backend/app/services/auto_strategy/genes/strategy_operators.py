@@ -253,7 +253,14 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
             sub_gene = getattr(mutated, field_name)
             if sub_gene:
                 if random.random() < mutation_rate:
-                    setattr(mutated, field_name, sub_gene.mutate(mutation_rate))
+                    if isinstance(sub_gene, PositionSizingGene):
+                        setattr(
+                            mutated,
+                            field_name,
+                            sub_gene.mutate(mutation_rate, config=config),
+                        )
+                    else:
+                        setattr(mutated, field_name, sub_gene.mutate(mutation_rate))
             elif random.random() < mutation_rate * creation_prob_mult:
                 setattr(mutated, field_name, _create_sub_gene(creator_func, config))
 

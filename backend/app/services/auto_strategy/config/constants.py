@@ -151,12 +151,12 @@ GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [
     0.05,
 ]  # 1取引あたりのリスク範囲（1%-5%）
 GA_POSITION_SIZING_FIXED_RATIO_RANGE = [0.05, 0.3]  # 固定比率範囲（5%-30%）
-GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 5.0]  # 固定枚数範囲
+GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 10.0]  # 固定枚数範囲
 GA_POSITION_SIZING_MIN_SIZE_RANGE = [0.01, 0.1]  # 最小ポジションサイズ範囲
 GA_POSITION_SIZING_MAX_SIZE_RANGE = [
-    0.001,
-    1.0,
-]  # 最大ポジションサイズ範囲（システム全体のmax_position_sizeに一致）
+    5.0,
+    50.0,
+]  # 最大ポジションサイズ範囲（GA探索用の絶対数量上限）
 GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]  # 優先度範囲
 GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE = [0.8, 0.99]  # VaR信頼水準
 GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE = [0.005, 0.05]  # VaR許容比率
@@ -173,7 +173,7 @@ POSITION_SIZING_LIMITS = {
     "fixed_ratio": (0.01, 10.0),
     "fixed_quantity": (0.01, 1000.0),
     "min_position_size": (0.001, 1.0),
-    "max_position_size": (0.001, 1.0),
+    "max_position_size": (0.001, 1000000000.0),
     "var_confidence": (0.8, 0.999),
     "max_var_ratio": (0.001, 0.1),
     "max_expected_shortfall_ratio": (0.001, 0.2),
@@ -318,7 +318,7 @@ ERROR_CODES = {
 CONSTRAINTS = {
     "min_trades": 10,
     "max_drawdown_limit": 0.3,
-    "max_position_size": 1.0,
+    "max_position_size": 9999.0,
     "min_position_size": 0.01,
 }
 

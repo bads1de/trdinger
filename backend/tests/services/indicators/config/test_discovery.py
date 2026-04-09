@@ -6,6 +6,7 @@ DynamicIndicatorDiscovery のテスト
 
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 from app.services.indicators.config import discovery as discovery_module
 from app.services.indicators.config.discovery import DynamicIndicatorDiscovery
@@ -13,6 +14,9 @@ from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
     IndicatorResultType,
     IndicatorScaleType,
+)
+from app.services.indicators.technical_indicators.pandas_ta.momentum import (
+    MomentumIndicators,
 )
 
 
@@ -129,7 +133,7 @@ class TestDiscoverAll:
         names = {c.indicator_name for c in configs}
 
         # 一般的なインジケーターが含まれていることを確認
-        common_indicators = {"RSI", "SMA", "EMA", "MACD", "BBANDS", "ATR"}
+        common_indicators = {"RSI", "SMA", "EMA", "MACD", "BBANDS", "ATR", "STOCH"}
         for ind in common_indicators:
             assert ind in names, f"{ind} が検出されていません"
 
@@ -211,6 +215,7 @@ class TestDiscoverAll:
             "GEOMETRIC_MEAN",
             "GET_WEIGHTS_FFD",
             "MA",
+            "VP",
         }
         assert names.isdisjoint(excluded)
 
@@ -295,6 +300,77 @@ class TestDiscoverAll:
         assert probed == ["rsi_fake"]
         assert [config.indicator_name for config in configs] == ["RSI_FAKE"]
 
+    def test_supports_trimmed_index_aligned_timeseries_output(self):
+        """先頭 NaN を落として短くなる時系列出力も discovery 対象に含めること"""
+        import pandas as pd
+
+        sample_index = pd.date_range("2024-01-01", periods=120, freq="h")
+        trimmed = sample_index[13:]
+        result = (
+            pd.Series(range(len(trimmed)), index=trimmed),
+            pd.Series(range(len(trimmed)), index=trimmed),
+        )
+
+        assert DynamicIndicatorDiscovery._is_timeseries_compatible_result(
+            result, sample_index
+        )
+
+    def test_rejects_non_aligned_short_outputs(self):
+        """短くても元の時系列に整合しない出力は除外すること"""
+        import pandas as pd
+
+        sample_index = pd.date_range("2024-01-01", periods=120, freq="h")
+        result = pd.DataFrame(
+            {"volume": [1.0] * 10},
+            index=pd.Index(range(10)),
+        )
+
+        assert not DynamicIndicatorDiscovery._is_timeseries_compatible_result(
+            result, sample_index
+        )
+
+    def test_accepts_tuple_ndarray_with_expected_length(self):
+        """full length の ndarray tuple も discovery 対象に含めること"""
+        import pandas as pd
+
+        sample_index = pd.date_range("2024-01-01", periods=120, freq="h")
+        result = (
+            np.full(len(sample_index), np.nan),
+            np.arange(len(sample_index), dtype=float),
+            np.arange(len(sample_index), dtype=float) + 1.0,
+        )
+
+        assert DynamicIndicatorDiscovery._is_timeseries_compatible_result(
+            result, sample_index
+        )
+
+    def test_discover_custom_class_keeps_trix_adapter(self):
+        """TRIX は custom adapter として discovery に残ること"""
+        configs = DynamicIndicatorDiscovery._discover_custom_class(MomentumIndicators)
+
+        trix = next(
+            (config for config in configs if config.indicator_name == "TRIX"),
+            None,
+        )
+
+        assert trix is not None
+        assert trix.adapter_function is not None
+        assert trix.result_type == IndicatorResultType.COMPLEX
+
+    def test_discover_all_prefers_custom_trix_adapter(self):
+        """discover_all でも TRIX は pandas-ta ではなく custom adapter を優先すること"""
+        configs = DynamicIndicatorDiscovery.discover_all()
+
+        trix = next(
+            (config for config in configs if config.indicator_name == "TRIX"),
+            None,
+        )
+
+        assert trix is not None
+        assert trix.adapter_function is not None
+        assert trix.pandas_function is None
+        assert trix.result_type == IndicatorResultType.COMPLEX
+
 
 class TestAnalyzeFunction:
     """_analyze_function のテスト"""
@@ -368,3 +444,37 @@ class TestCreateParameterConfig:
             "string_param", "some_string"
         )
         assert config is None
+
+    @pytest.mark.parametrize(
+        ("param_name", "default_value"),
+        [
+            ("alpha", 0.07),
+            ("volume_threshold_quantile", 0.2),
+            ("coef", 0.2),
+        ],
+    )
+    def test_fractional_parameters_keep_fractional_ranges(
+        self, param_name: str, default_value: float
+    ):
+        """0-1 系の float パラメータが 2-200 に丸め込まれないこと"""
+        config = DynamicIndicatorDiscovery._create_parameter_config(
+            param_name, default_value
+        )
+
+        assert config is not None
+        assert config.min_value is not None
+        assert config.max_value is not None
+        assert config.min_value < default_value < config.max_value
+        assert config.max_value <= 1.0
+
+    def test_non_integer_float_parameters_keep_relative_ranges(self):
+        """1 を超える非整数 float も整数レンジへ切り上げられないこと"""
+        config = DynamicIndicatorDiscovery._create_parameter_config(
+            "kc_scalar_normal", 1.5
+        )
+
+        assert config is not None
+        assert config.min_value is not None
+        assert config.max_value is not None
+        assert config.min_value < 1.5 < config.max_value
+        assert config.max_value < 10

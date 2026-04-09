@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.services.indicators.config import IndicatorConfig, IndicatorResultType
 from app.services.indicators.indicator_orchestrator import (
     TechnicalIndicatorService,
 )
@@ -216,6 +217,59 @@ class TestTechnicalIndicatorService:
         assert isinstance(processed, tuple)
         assert len(processed) == 2
 
+    def test_call_adapter_function_reindexes_trimmed_tuple_series(
+        self, indicator_service, sample_df
+    ):
+        """adapter の短い tuple Series 結果は入力 index に再整列されること"""
+        trimmed_index = sample_df.index[13:]
+        adapter_result = (
+            pd.Series(np.arange(len(trimmed_index), dtype=float), index=trimmed_index),
+            pd.Series(np.arange(len(trimmed_index), dtype=float) + 1, index=trimmed_index),
+        )
+        config = IndicatorConfig(
+            indicator_name="STOCH",
+            result_type=IndicatorResultType.COMPLEX,
+        )
+
+        result = indicator_service._call_adapter_function(
+            adapter_function=Mock(return_value=adapter_result),
+            all_args={"close": sample_df["close"]},
+            indicator_type="STOCH",
+            config=config,
+        )
+
+        assert isinstance(result, tuple)
+        assert all(arr.shape[0] == len(sample_df) for arr in result)
+        assert np.isnan(result[0][:13]).all()
+
+    def test_call_adapter_function_preserves_positional_full_length_dataframe(
+        self, indicator_service, sample_df
+    ):
+        """full length の RangeIndex 結果は位置合わせで元 index に載せ替えること"""
+        adapter_result = pd.DataFrame(
+            {
+                "up": [np.nan] * 9 + [6.0, 7.0, 8.0, 9.0] + [np.nan] * (len(sample_df) - 13),
+                "down": [np.nan] * len(sample_df),
+            }
+        )
+        config = IndicatorConfig(
+            indicator_name="TD_SEQ",
+            result_type=IndicatorResultType.COMPLEX,
+        )
+
+        result = indicator_service._call_adapter_function(
+            adapter_function=Mock(return_value=adapter_result),
+            all_args={"close": sample_df["close"]},
+            indicator_type="TD_SEQ",
+            config=config,
+        )
+
+        assert isinstance(result, tuple)
+        assert result[0].shape[0] == len(sample_df)
+        assert np.isfinite(result[0]).sum() == 4
+        assert np.isnan(result[0][:9]).all()
+        assert np.allclose(result[0][9:13], np.array([6.0, 7.0, 8.0, 9.0]))
+
     def test_get_supported_indicators(self, indicator_service):
         """サポート指標取得テスト"""
         result = indicator_service.get_supported_indicators()
@@ -235,6 +289,14 @@ class TestTechnicalIndicatorService:
         assert "default" in sma_config["parameters"]["length"]
         assert "min" in sma_config["parameters"]["length"]
         assert "max" in sma_config["parameters"]["length"]
+
+    def test_get_supported_indicators_support_tiers(self, indicator_service):
+        """required_data に応じて support_tier が付与されること"""
+        result = indicator_service.get_supported_indicators()
+
+        assert result["SMA"]["support_tier"] == "standard"
+        assert result["OI_PRICE_CONFIRMATION"]["support_tier"] == "extended_market"
+        assert result["WHALE_DIVERGENCE"]["support_tier"] == "experimental"
 
     def test_clear_cache(self, indicator_service, sample_df):
         """キャッシュクリアのテスト"""

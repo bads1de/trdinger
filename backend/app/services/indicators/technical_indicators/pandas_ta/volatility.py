@@ -204,7 +204,12 @@ class VolatilityIndicators:
         df = run_multi_series_indicator(
             {"high": high, "low": low},
             length,
-            lambda: ta.donchian(high=high, low=low, length=length),
+            lambda: ta.donchian(
+                high=high,
+                low=low,
+                lower_length=length,
+                upper_length=length,
+            ),
             fallback_factory=nan_result,
         )
 

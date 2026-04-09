@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.genes import (
     Condition,
     EntryGene,
@@ -15,7 +16,11 @@ from app.services.auto_strategy.genes import (
     StrategyGene,
     TPSLGene,
 )
-from app.services.auto_strategy.config.constants import EntryType, TPSLMethod
+from app.services.auto_strategy.config.constants import (
+    EntryType,
+    PositionSizingMethod,
+    TPSLMethod,
+)
 
 
 class TestGeneticOperators:
@@ -125,8 +130,6 @@ class TestGeneticOperators:
 
     def test_mutate_strategy_gene_creates_tpsl_gene_using_nested_config(self):
         """MutationConfig の nested 設定と TP/SL 制約が新規生成にも反映されることを確認"""
-        from app.services.auto_strategy.config import GAConfig
-
         config = GAConfig(
             mutation_config={
                 "tpsl_gene_creation_multiplier": 1.0,
@@ -150,6 +153,40 @@ class TestGeneticOperators:
 
         assert mutated.tpsl_gene is not None
         assert mutated.tpsl_gene.method == TPSLMethod.RISK_REWARD_RATIO
+
+    def test_mutate_strategy_gene_respects_position_sizing_config_ranges(self):
+        """既存の PositionSizingGene 突然変異も config の探索レンジを使う"""
+        config = GAConfig(
+            position_sizing_method_constraints=["fixed_quantity"],
+            position_sizing_fixed_ratio_range=[0.2, 0.21],
+            position_sizing_fixed_quantity_range=[2.0, 2.1],
+            position_sizing_max_size_range=[20.0, 21.0],
+            position_sizing_var_confidence_range=[0.9, 0.91],
+            position_sizing_var_lookback_range=[60, 61],
+        )
+        gene = StrategyGene(
+            position_sizing_gene=PositionSizingGene(
+                method=PositionSizingMethod.FIXED_RATIO,
+                fixed_ratio=0.1,
+                fixed_quantity=1.0,
+                max_position_size=10.0,
+                var_confidence=0.95,
+                var_lookback=100,
+            ),
+        )
+
+        with patch("random.random", return_value=0.0), patch(
+            "random.uniform", return_value=1.5
+        ):
+            mutated = gene.mutate(config, mutation_rate=1.0)
+
+        assert mutated.position_sizing_gene is not None
+        assert mutated.position_sizing_gene.method == PositionSizingMethod.FIXED_QUANTITY
+        assert mutated.position_sizing_gene.fixed_ratio == pytest.approx(0.2)
+        assert mutated.position_sizing_gene.fixed_quantity == pytest.approx(2.0)
+        assert mutated.position_sizing_gene.max_position_size == pytest.approx(20.0)
+        assert mutated.position_sizing_gene.var_confidence == pytest.approx(0.91)
+        assert mutated.position_sizing_gene.var_lookback == 61
 
     def test_adaptive_mutate(self, sample_strategy_gene, ga_config):
         """適応的突然変異率調整のテスト"""

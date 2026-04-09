@@ -195,11 +195,15 @@ class MomentumIndicators:
                 drift=drift,
                 offset=offset,
             ),
+            min_data_length=length,
             fallback_factory=lambda: create_nan_series_bundle(high, 2),
         )
 
         if isinstance(result, tuple):
             return result
+
+        if result is None or result.empty:
+            return create_nan_series_bundle(high, 2)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 

@@ -146,6 +146,23 @@ class TestEntryDecisionEngine:
         assert engine.calculate_position_size() == 0.05
         assert engine.calculate_position_size() == 0.08
 
+    def test_calculate_position_size_preserves_gene_sized_quantity(self, engine, strategy):
+        position_sizing_gene = PositionSizingGene(
+            enabled=True,
+            method=PositionSizingMethod.FIXED_QUANTITY,
+            min_position_size=0.001,
+            max_position_size=500.0,
+        )
+        strategy.gene.position_sizing_gene = position_sizing_gene
+        strategy.equity = 100000.0
+        strategy.position_sizing_service.calculate_position_size_fast.return_value = 250.0
+        strategy.data.Close = [50000.0, 51000.0]
+        strategy.data.High = np.array([50500.0, 51500.0])
+        strategy.data.Low = np.array([49500.0, 50500.0])
+        strategy.data.__len__ = MagicMock(return_value=2)
+
+        assert engine.calculate_position_size() == pytest.approx(250.0)
+
     def test_calculate_effective_tpsl_prices_uses_precomputed_atr(self, engine, strategy):
         tpsl_gene = TPSLGene(
             enabled=True,
