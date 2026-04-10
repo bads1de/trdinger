@@ -88,10 +88,8 @@ def test_hybrid_evaluator_multi_objective_does_not_support_prediction_score():
         enable_multi_objective=True,
         objectives=["sharpe_ratio", "prediction_score"],
     )
-    is_valid, errors = __import__(
-        "app.services.auto_strategy.config.validators",
-        fromlist=["ConfigValidator"],
-    ).ConfigValidator.validate(config)
+    from app.services.auto_strategy.config import ConfigValidator
+    is_valid, errors = ConfigValidator.validate(config)
 
     assert is_valid is False
     assert any("prediction_score" in error for error in errors)

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import math
 
-from app.services.auto_strategy.config.constants import PositionSizingMethod
+from app.services.auto_strategy.config.constants import (
+    POSITION_SIZING_LIMITS,
+    PositionSizingMethod,
+)
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.positions.calculators.volatility_based_calculator import (
     VolatilityBasedCalculator,
@@ -150,6 +153,18 @@ class TestDynamicPositionSizing:
         assert any("min_position_size" in error for error in errors)
         assert any("max_position_size" in error for error in errors)
         assert any("atr_period" in error for error in errors)
+
+    def test_position_sizing_gene_accepts_public_lookback_limit(self):
+        """公開された lookback_period の下限内の値が検証で弾かれないこと"""
+
+        lower, upper = POSITION_SIZING_LIMITS["lookback_period"]
+        assert lower <= 20 <= upper
+
+        gene = self._create_gene(lookback_period=20)
+        is_valid, errors = gene.validate()
+
+        assert is_valid is True
+        assert errors == []
 
     def test_position_sizing_gene_from_dict_invalid_method_falls_back_to_default(self):
         """無効な method は別方式へ丸め込まず既定値へ戻ること"""

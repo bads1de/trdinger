@@ -43,6 +43,7 @@ from .fitness_utils import (
     extract_primary_fitness_from_result,
     extract_result_fitness,
 )
+from .parameter_tuning_manager import ParameterTuningManager
 from .report_selection import (
     build_report_rank_key_from_primary_fitness,
     extract_primary_fitness,
@@ -51,6 +52,7 @@ from .report_selection import (
     get_two_stage_score,
     is_evaluation_report,
 )
+from .result_processor import ResultProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +91,8 @@ class GeneticAlgorithmEngine:
 
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
+        self.result_processor = ResultProcessor()
+        self.parameter_tuning_manager: Optional[ParameterTuningManager] = None
 
         # ハイブリッドモードに応じてEvaluatorを選択
         if hybrid_mode:
@@ -108,6 +112,7 @@ class GeneticAlgorithmEngine:
 
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing: Any = None  # setup_deap時に初期化
+        self.parameter_tuning_manager = ParameterTuningManager(self.individual_evaluator)
 
     def setup_deap(self, config: GAConfig) -> None:
         """
@@ -462,13 +467,13 @@ class GeneticAlgorithmEngine:
             Dict[str, Any]: 処理された進化結果の辞書。
         """
         # 最良個体の取得とデコード
-        best_individual, best_gene, best_strategies = self._extract_best_individuals(
-            population, config, halloffame
+        best_individual, best_gene, best_strategies = (
+            self.result_processor.extract_best_individuals(population, config, halloffame)
         )
 
         if best_individual is not None and is_multi_fidelity_enabled(config):
             try:
-                refreshed = self._evaluate_individual_with_full_fidelity(
+                refreshed = self.parameter_tuning_manager.evaluate_individual_with_full_fidelity(
                     best_individual,
                     config,
                 )
@@ -478,7 +483,7 @@ class GeneticAlgorithmEngine:
                 logger.warning("最終候補の full 評価に失敗しました: %s", exc)
 
         best_fitness_value = self._extract_result_best_fitness(best_individual, config)
-        best_evaluation_summary = self._build_individual_evaluation_summary(
+        best_evaluation_summary = self.parameter_tuning_manager.build_individual_evaluation_summary(
             best_individual, config
         )
 
@@ -488,7 +493,7 @@ class GeneticAlgorithmEngine:
                 best_gene,
                 best_fitness_value,
                 best_evaluation_summary,
-            ) = self._tune_and_select_best_gene(
+            ) = self.parameter_tuning_manager.tune_and_select_best_gene(
                 population=population,
                 current_best_gene=best_gene,
                 config=config,
@@ -496,7 +501,7 @@ class GeneticAlgorithmEngine:
                 fallback_summary=best_evaluation_summary,
             )
         elif best_evaluation_summary is None:
-            best_evaluation_summary = self._build_individual_evaluation_summary(
+            best_evaluation_summary = self.parameter_tuning_manager.build_individual_evaluation_summary(
                 best_gene,
                 config,
                 force_robustness=bool(
@@ -519,7 +524,7 @@ class GeneticAlgorithmEngine:
         }
 
         if not config.enable_multi_objective:
-            ranked_population = self._rank_population_for_persistence(population)
+            ranked_population = self.result_processor.rank_population_for_persistence(population)
             persisted_population = ranked_population[:100]
             result["all_strategies"] = persisted_population
             result["fitness_scores"] = [
@@ -540,75 +545,6 @@ class GeneticAlgorithmEngine:
 
         return result
 
-    def _extract_best_individuals(
-        self, population: List[Any], config: GAConfig, halloffame: Optional[Any] = None
-    ) -> Tuple[Any, Optional[StrategyGene], Optional[List[Dict[str, Any]]]]:
-        """
-        最終集団または殿堂入りオブジェクトから最良の個体群を抽出
-
-        多目的最適化の場合はパレートフロントから、単一目的の場合は
-        単純な最高スコア個体を選択し、バックテストでそのまま利用可能な
-        形式に変換して返します。
-
-        Args:
-            population: 最終世代の全個体リスト
-            config: GA 設定
-            halloffame: 保存されている優良個体のリスト（またはパレートフロント）
-
-        Returns:
-            (最良個体, 最良遺伝子, 最良戦略リスト) のタプル
-        """
-        best_strategies = None
-        best_individual = None
-        best_gene = None  # Initialize best_gene
-
-        if config.enable_multi_objective:
-            # 多目的最適化の場合、パレート最適解を取得
-            # halloffameがParetoFrontでない場合（fallback）はpopulationから再構築
-            if halloffame is None or not isinstance(halloffame, tools.ParetoFront):
-                pareto_front = tools.ParetoFront()
-                pareto_front.update(population)
-                best_individuals = list(pareto_front)
-            else:
-                best_individuals = list(halloffame)
-
-            # 空の場合のガード
-            if not best_individuals:
-                best_individuals = [tools.selBest(population, 1)[0]]
-
-            best_individual = best_individuals[0]
-
-            best_strategies = []
-            for ind in best_individuals[:10]:  # 上位10個のパレート最適解
-                if isinstance(ind, StrategyGene):
-                    gene = ind
-                else:
-                    # 個体がオブジェクトでない場合は、シリアライザーを使用せずにエラーログを出力
-                    logger.error(f"個体がStrategyGene型ではありません: {type(ind)}")
-                    continue
-
-                best_strategies.append(
-                    {"strategy": gene, "fitness_values": list(ind.fitness.values)}  # type: ignore[union-attr]
-                )
-        else:
-            # 単一目的最適化の場合
-            two_stage_best = get_two_stage_best_individual(population)
-            if two_stage_best is not None:
-                best_individual = two_stage_best
-            elif halloffame is not None and len(halloffame) > 0:
-                best_individual = halloffame[0]
-            else:
-                best_individual = tools.selBest(population, 1)[0]
-
-        if isinstance(best_individual, StrategyGene):
-            best_gene = best_individual
-        else:
-            logger.error(
-                f"最良個体がStrategyGene型ではありません: {type(best_individual)}"
-            )
-            best_gene = None
-
-        return best_individual, best_gene, best_strategies
 
     def stop_evolution(self):
         """進化を停止します。"""
@@ -649,104 +585,6 @@ class GeneticAlgorithmEngine:
             # 遺伝子生成はGAの根幹部分であり、失敗した場合は例外をスローして処理を停止するのが安全
             raise
 
-    def _tune_elite_parameters(self, best_gene, config: GAConfig):
-        """エリート個体のパラメータをOptunaでチューニングします。
-
-        Args:
-            best_gene: 最良戦略遺伝子
-            config (GAConfig): GA設定
-
-        Returns:
-            チューニングされた戦略遺伝子
-        """
-        try:
-            from app.services.auto_strategy.optimization import StrategyParameterTuner
-
-            logger.info("[Tuning] エリート個体のパラメータチューニングを開始")
-
-            tuner = StrategyParameterTuner.from_ga_config(
-                self.individual_evaluator,
-                config,
-            )
-
-            tuned_gene = tuner.tune(best_gene)
-
-            logger.info("[Done] パラメータチューニング完了")
-            return tuned_gene
-
-        except Exception as e:
-            logger.warning(f"パラメータチューニング中にエラーが発生: {e}")
-            # エラー時は元の遺伝子を返す
-            return best_gene
-
-    def _tune_and_select_best_gene(
-        self,
-        *,
-        population: List[Any],
-        current_best_gene: Optional[StrategyGene],
-        config: GAConfig,
-        fallback_fitness: Any,
-        fallback_summary: Optional[Dict[str, Any]],
-    ) -> Tuple[Optional[StrategyGene], Any, Optional[Dict[str, Any]]]:
-        """上位候補をチューニングし、設定に応じた基準で最終勝者を選び直す。"""
-        if current_best_gene is None:
-            return current_best_gene, fallback_fitness, fallback_summary
-
-        if config.enable_multi_objective:
-            tuned_gene = self._tune_elite_parameters(current_best_gene, config)
-            refreshed_fitness, refreshed_summary = self._refresh_best_gene_reporting(
-                best_gene=tuned_gene,
-                config=config,
-                fallback_fitness=fallback_fitness,
-                fallback_summary=fallback_summary,
-            )
-            return tuned_gene, refreshed_fitness, refreshed_summary
-
-        tuning_candidates = self._select_tuning_candidates(
-            population,
-            config,
-            fallback_gene=current_best_gene,
-        )
-        if not tuning_candidates:
-            refreshed_fitness, refreshed_summary = self._refresh_best_gene_reporting(
-                best_gene=current_best_gene,
-                config=config,
-                fallback_fitness=fallback_fitness,
-                fallback_summary=fallback_summary,
-            )
-            return current_best_gene, refreshed_fitness, refreshed_summary
-
-        tuned_candidates = self._tune_candidate_genes(tuning_candidates, config)
-        if config.two_stage_selection_config.enabled:
-            tuned_winner = self._select_best_tuned_candidate(
-                tuned_candidates,
-                config,
-            )
-        else:
-            tuned_winner = self._select_best_tuned_candidate_by_fitness(
-                tuned_candidates,
-                config,
-            )
-        if tuned_winner is None:
-            refreshed_fitness, refreshed_summary = self._refresh_best_gene_reporting(
-                best_gene=current_best_gene,
-                config=config,
-                fallback_fitness=fallback_fitness,
-                fallback_summary=fallback_summary,
-            )
-            return current_best_gene, refreshed_fitness, refreshed_summary
-
-        if config.two_stage_selection_config.enabled:
-            logger.info(
-                "[Tuning] %s候補をチューニングし、robustness 再選抜で最終勝者を決定しました",
-                len(tuned_candidates),
-            )
-        else:
-            logger.info(
-                "[Tuning] %s候補をチューニングし、主 fitness で最終勝者を決定しました",
-                len(tuned_candidates),
-            )
-        return tuned_winner
 
     def _extract_result_best_fitness(
         self, best_individual: Any, config: GAConfig
@@ -757,21 +595,6 @@ class GeneticAlgorithmEngine:
             enable_multi_objective=config.enable_multi_objective,
         )
 
-    def _rank_population_for_persistence(self, population: List[Any]) -> List[Any]:
-        """保存順序用に個体群を安定ソートする。"""
-
-        def sort_key(individual: Any) -> Tuple[int, int, float]:
-            """ソート用のキーを生成する。
-
-            2段階評価のランクがあればそれを最優先し、なければ後回しにする。
-            同じランク内では、プライマリフィットネスの降順でソートする。
-            """
-            rank = get_two_stage_rank(individual)
-            if rank is not None:
-                return (0, rank, -extract_primary_fitness(individual))
-            return (1, 0, -extract_primary_fitness(individual))
-
-        return sorted(population, key=sort_key)
 
     def _collect_population_evaluation_summaries(
         self,
@@ -781,227 +604,12 @@ class GeneticAlgorithmEngine:
         """保存対象個体の評価 summary を収集する。"""
         summaries: Dict[str, Dict[str, Any]] = {}
         for individual in population:
-            summary = self._build_individual_evaluation_summary(individual, config)
+            summary = self.parameter_tuning_manager.build_individual_evaluation_summary(individual, config)
             if not summary:
                 continue
-            strategy_key = self._get_strategy_result_key(individual)
+            strategy_key = self.result_processor.get_strategy_result_key(individual)
             summaries[strategy_key] = summary
         return summaries
-
-    def _refresh_best_gene_reporting(
-        self,
-        *,
-        best_gene: Optional[StrategyGene],
-        config: GAConfig,
-        fallback_fitness: Any,
-        fallback_summary: Optional[Dict[str, Any]],
-    ) -> Tuple[Any, Optional[Dict[str, Any]]]:
-        """チューニング後の最良遺伝子を再評価し、summary を最新化する。"""
-        if best_gene is None:
-            return fallback_fitness, fallback_summary
-
-        refreshed_fitness = fallback_fitness
-        try:
-            evaluated = self._evaluate_individual_with_full_fidelity(best_gene, config)
-            if config.enable_multi_objective:
-                refreshed_fitness = tuple(evaluated)
-            elif isinstance(evaluated, (tuple, list)) and evaluated:
-                refreshed_fitness = float(evaluated[0])
-        except Exception as exc:
-            logger.warning("最良遺伝子の再評価に失敗しました: %s", exc)
-
-        refreshed_summary = self._build_individual_evaluation_summary(
-            best_gene,
-            config,
-            force_robustness=bool(config.two_stage_selection_config.enabled),
-            primary_fitness=self._extract_primary_fitness_from_result(
-                refreshed_fitness
-            ),
-        )
-        return refreshed_fitness, refreshed_summary or fallback_summary
-
-    def _select_tuning_candidates(
-        self,
-        population: List[Any],
-        config: GAConfig,
-        *,
-        fallback_gene: Optional[StrategyGene] = None,
-    ) -> List[StrategyGene]:
-        """チューニング対象の上位候補を抽出する。"""
-        budget = getattr(config, "tuning_elite_count", 1)
-        try:
-            candidate_budget = max(1, int(budget))
-        except (TypeError, ValueError):
-            candidate_budget = 1
-
-        ordered_population = self._rank_population_for_persistence(population)
-        candidates: List[StrategyGene] = []
-        seen_keys = set()
-
-        for individual in ordered_population:
-            if not isinstance(individual, StrategyGene):
-                continue
-            identity = self._get_strategy_result_key(individual)
-            if identity in seen_keys:
-                continue
-            seen_keys.add(identity)
-            candidates.append(individual)
-            if len(candidates) >= candidate_budget:
-                break
-
-        if fallback_gene is not None and not candidates:
-            candidates.append(fallback_gene)
-
-        return candidates
-
-    def _tune_candidate_genes(
-        self,
-        candidates: List[StrategyGene],
-        config: GAConfig,
-    ) -> List[StrategyGene]:
-        """候補遺伝子群を順次チューニングする。"""
-        from app.services.auto_strategy.optimization import StrategyParameterTuner
-
-        tuner = StrategyParameterTuner.from_ga_config(
-            self.individual_evaluator,
-            config,
-        )
-
-        tuned_candidates: List[StrategyGene] = []
-        for candidate_rank, candidate in enumerate(candidates):
-            try:
-                tuned_candidate = tuner.tune(candidate)
-            except Exception as exc:
-                logger.warning(
-                    "[Tuning] 候補 %s のチューニングに失敗: %s", candidate_rank, exc
-                )
-                tuned_candidate = candidate
-            tuned_candidate.metadata.setdefault("tuning_candidate_rank", candidate_rank)
-            tuned_candidates.append(tuned_candidate)
-
-        return tuned_candidates
-
-    def _select_best_tuned_candidate(
-        self,
-        tuned_candidates: List[StrategyGene],
-        config: GAConfig,
-    ) -> Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]]:
-        """チューニング後候補を robustness で再評価し最終勝者を返す。"""
-        if not tuned_candidates:
-            return None
-
-        best_tuple: Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]] = (
-            None
-        )
-        best_key = None
-
-        for candidate_rank, candidate in enumerate(tuned_candidates):
-            try:
-                fitness_result = self._evaluate_individual_with_full_fidelity(
-                    candidate,
-                    config,
-                )
-            except Exception as exc:
-                logger.warning(
-                    "[Tuning] 候補 %s の再評価に失敗: %s",
-                    candidate_rank,
-                    exc,
-                )
-                continue
-
-            primary_fitness = self._extract_primary_fitness_from_result(fitness_result)
-            report = None
-            evaluate_robustness_report = getattr(
-                self.individual_evaluator,
-                "evaluate_robustness_report",
-                None,
-            )
-            if callable(evaluate_robustness_report):
-                try:
-                    report = evaluate_robustness_report(candidate, config)
-                except Exception as exc:
-                    logger.debug(
-                        "[Tuning] 候補 %s の robustness 評価に失敗: %s",
-                        candidate_rank,
-                        exc,
-                    )
-
-            if not is_evaluation_report(report):
-                get_cached_evaluation_report = getattr(
-                    self.individual_evaluator,
-                    "get_cached_evaluation_report",
-                    None,
-                )
-                if callable(get_cached_evaluation_report):
-                    report = get_cached_evaluation_report(candidate)
-
-            rank_key = build_report_rank_key_from_primary_fitness(
-                primary_fitness,
-                cast(Optional["EvaluationReport"], report if is_evaluation_report(report) else None),  # type: ignore[reportArgumentType]
-                min_pass_rate=float(
-                    getattr(config, "two_stage_min_pass_rate", 0.0) or 0.0
-                ),
-            )
-            summary = self._build_individual_evaluation_summary(
-                candidate,
-                config,
-                force_robustness=False,
-                primary_fitness=primary_fitness,
-                selection_rank_override=candidate_rank,
-                selection_score_override=rank_key,
-            )
-            candidate_result = (
-                candidate,
-                primary_fitness,
-                summary,
-            )
-            if best_key is None or rank_key > best_key:
-                best_key = rank_key
-                best_tuple = candidate_result
-
-        return best_tuple
-
-    def _select_best_tuned_candidate_by_fitness(
-        self,
-        tuned_candidates: List[StrategyGene],
-        config: GAConfig,
-    ) -> Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]]:
-        """チューニング後候補を主 fitness だけで再選抜する。"""
-        if not tuned_candidates:
-            return None
-
-        best_tuple: Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]] = (
-            None
-        )
-        best_fitness: Optional[float] = None
-
-        for candidate in tuned_candidates:
-            try:
-                fitness_result = self._evaluate_individual_with_full_fidelity(
-                    candidate,
-                    config,
-                )
-            except Exception as exc:
-                logger.warning("[Tuning] 候補の再評価に失敗: %s", exc)
-                continue
-
-            primary_fitness = self._extract_primary_fitness_from_result(fitness_result)
-            summary = self._build_individual_evaluation_summary(
-                candidate,
-                config,
-                force_robustness=False,
-                primary_fitness=primary_fitness,
-            )
-            candidate_result = (
-                candidate,
-                primary_fitness,
-                summary,
-            )
-            if best_fitness is None or primary_fitness > best_fitness:
-                best_fitness = primary_fitness
-                best_tuple = candidate_result
-
-        return best_tuple
 
     def _build_individual_evaluation_summary(
         self,
@@ -1014,79 +622,13 @@ class GeneticAlgorithmEngine:
         selection_score_override: Optional[Tuple[float, float, float, float]] = None,
     ) -> Optional[Dict[str, Any]]:
         """個体の評価 report から保存向け summary を構築する。"""
-        if individual is None:
-            return None
-
-        get_cached_robustness_report = getattr(
-            self.individual_evaluator,
-            "get_cached_robustness_report",
-            None,
-        )
-        evaluate_robustness_report = getattr(
-            self.individual_evaluator,
-            "evaluate_robustness_report",
-            None,
-        )
-        get_cached_evaluation_report = getattr(
-            self.individual_evaluator,
-            "get_cached_evaluation_report",
-            None,
-        )
-
-        report = None
-        if callable(get_cached_robustness_report):
-            report = get_cached_robustness_report(individual, config)
-
-        if report is None and force_robustness and callable(evaluate_robustness_report):
-            try:
-                report = evaluate_robustness_report(individual, config)
-            except Exception as exc:
-                logger.debug("summary 用 robustness 評価に失敗しました: %s", exc)
-
-        if report is None and callable(get_cached_evaluation_report):
-            report = get_cached_evaluation_report(individual)
-
-        if (
-            report is not None
-            and is_evaluation_report(report)
-            and report.metadata.get("evaluation_fidelity") == "coarse"
-        ):
-            report = None
-
-        if report is None and is_multi_fidelity_enabled(config):
-            try:
-                self._evaluate_individual_with_full_fidelity(individual, config)
-            except Exception as exc:
-                logger.debug("summary 用 full 評価に失敗しました: %s", exc)
-            if callable(get_cached_evaluation_report):
-                report = get_cached_evaluation_report(individual)
-
-        if not is_evaluation_report(report):
-            return None
-
-        if primary_fitness is None:
-            fitness_score = extract_primary_fitness(individual)
-            numeric_fitness = fitness_score if isfinite(fitness_score) else None
-        else:
-            numeric_fitness = (
-                float(primary_fitness) if isfinite(float(primary_fitness)) else None
-            )
-
-        selection_rank = selection_rank_override
-        if selection_rank is None:
-            selection_rank = get_two_stage_rank(individual)
-
-        selection_score: Any = selection_score_override
-        if selection_score is None:
-            selection_score = get_two_stage_score(individual)
-        if not isinstance(selection_score, (tuple, list)):
-            selection_score = None
-
-        return build_report_summary(
-            cast("EvaluationReport", report),  # type: ignore[reportArgumentType]
-            selection_rank=selection_rank if isinstance(selection_rank, int) else None,
-            selection_score=selection_score,
-            fitness_score=numeric_fitness,
+        return self.parameter_tuning_manager.build_individual_evaluation_summary(
+            individual,
+            config,
+            force_robustness=force_robustness,
+            primary_fitness=primary_fitness,
+            selection_rank_override=selection_rank_override,
+            selection_score_override=selection_score_override,
         )
 
     def _evaluate_individual_with_full_fidelity(
@@ -1095,23 +637,14 @@ class GeneticAlgorithmEngine:
         config: GAConfig,
     ) -> Tuple[float, ...]:
         """必要に応じて full fidelity で個体を再評価する。"""
-        if is_multi_fidelity_enabled(config):
-            return self.individual_evaluator.evaluate(
-                individual,
-                config,
-                force_refresh=True,
-            )
-        return self.individual_evaluator.evaluate(individual, config)
+        return self.parameter_tuning_manager.evaluate_individual_with_full_fidelity(
+            individual, config
+        )
 
-    @staticmethod
-    def _extract_primary_fitness_from_result(result: Any) -> float:
+    def _extract_primary_fitness_from_result(self, result: Any) -> float:
         """評価結果から主 fitness を取り出す。"""
-        return extract_primary_fitness_from_result(result)
+        return self.parameter_tuning_manager.extract_primary_fitness_from_result(result)
 
-    @staticmethod
-    def _get_strategy_result_key(strategy: Any) -> str:
+    def _get_strategy_result_key(self, strategy: Any) -> str:
         """result 内部で戦略 summary を対応付けるキーを返す。"""
-        strategy_id = getattr(strategy, "id", None)
-        if strategy_id not in (None, ""):
-            return str(strategy_id)
-        return str(id(strategy))
+        return self.result_processor.get_strategy_result_key(strategy)

@@ -182,7 +182,7 @@ class TestGeneticAlgorithmEngine:
         config = Mock()
         config.enable_multi_objective = False
 
-        best_individual, best_gene, best_strategies = engine._extract_best_individuals(
+        best_individual, best_gene, best_strategies = engine.result_processor.extract_best_individuals(
             [raw_best, robust_leader],
             config,
             halloffame=[raw_best],
@@ -271,16 +271,16 @@ class TestGeneticAlgorithmEngine:
         config.two_stage_selection_config = Mock()
         config.two_stage_selection_config.enabled = False
 
-        engine._select_tuning_candidates = Mock(return_value=["candidate"])
-        engine._tune_candidate_genes = Mock(return_value=["tuned"])
-        engine._select_best_tuned_candidate = Mock(
+        engine.parameter_tuning_manager.select_tuning_candidates = Mock(return_value=["candidate"])
+        engine.parameter_tuning_manager.tune_candidate_genes = Mock(return_value=["tuned"])
+        engine.parameter_tuning_manager.select_best_tuned_candidate = Mock(
             return_value=("wrong", -1.0, None)
         )
-        engine._select_best_tuned_candidate_by_fitness = Mock(
+        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness = Mock(
             return_value=("tuned", 1.23, {"mode": "single"})
         )
 
-        result = engine._tune_and_select_best_gene(
+        result = engine.parameter_tuning_manager.tune_and_select_best_gene(
             population=[],
             current_best_gene=current_best,
             config=config,
@@ -289,8 +289,8 @@ class TestGeneticAlgorithmEngine:
         )
 
         assert result == ("tuned", 1.23, {"mode": "single"})
-        engine._select_best_tuned_candidate.assert_not_called()
-        engine._select_best_tuned_candidate_by_fitness.assert_called_once_with(
+        engine.parameter_tuning_manager.select_best_tuned_candidate.assert_not_called()
+        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness.assert_called_once_with(
             ["tuned"],
             config,
         )

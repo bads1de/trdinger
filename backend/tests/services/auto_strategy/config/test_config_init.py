@@ -133,7 +133,7 @@ class TestAutoStrategyConfigInitExports:
     def test_ga_nested_configs_module_exports_runtime_configs(self):
         """意味が明確な新モジュール名から runtime config 群を読める"""
         nested_configs = importlib.import_module(
-            "app.services.auto_strategy.config.ga_nested_configs"
+            "app.services.auto_strategy.config.ga.nested_configs"
         )
 
         assert nested_configs.MutationConfig is config_package.MutationConfig

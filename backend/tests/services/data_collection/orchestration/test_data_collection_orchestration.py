@@ -73,7 +73,11 @@ class TestServiceInitialization:
         """
         assert orchestration_service is not None
         assert isinstance(orchestration_service, DataCollectionOrchestrationService)
-        assert orchestration_service.historical_service is not None
+        assert orchestration_service.data_validator is not None
+        assert orchestration_service.historical_orchestrator is not None
+        assert orchestration_service.bulk_data_orchestrator is not None
+        assert orchestration_service.collection_status_checker is not None
+        assert orchestration_service.oi_collection_orchestrator is not None
 
 
 class TestValidateSymbolAndTimeframe:
@@ -152,13 +156,13 @@ class TestValidateSymbolAndTimeframe:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            "app.services.data_collection.orchestration.data_validator.unified_config"
         ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
             mock_config.market.supported_timeframes = ["1h"]
 
-            with pytest.raises(ValueError, match="無効な時間軸"):
+            with pytest.raises(ValueError, match="無効な時間軸:"):
                 orchestration_service.validate_symbol_and_timeframe(
                     "BTC/USDT:USDT", "5m"
                 )
@@ -187,7 +191,7 @@ class TestStartHistoricalDataCollection:
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
             ) as mock_config,
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.historical_data_orchestrator.OHLCVRepository"
             ) as mock_repo_class,
         ):
             mock_config.market.symbol_mapping = {}
@@ -230,7 +234,7 @@ class TestStartHistoricalDataCollection:
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
             ) as mock_config,
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.historical_data_orchestrator.OHLCVRepository"
             ) as mock_repo_class,
         ):
             mock_config.market.symbol_mapping = {}
@@ -274,7 +278,7 @@ class TestStartHistoricalDataCollection:
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
             ) as mock_config,
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.historical_data_orchestrator.OHLCVRepository"
             ) as mock_repo_class,
         ):
             mock_config.market.symbol_mapping = {}
@@ -311,13 +315,15 @@ class TestExecuteBulkIncrementalUpdate:
         mock_db_session: MagicMock,
     ):
         """
-        正常系: 一括差分更新が正常に実行される
+        正常系: 一括差分更新が正常に完了
 
         Args:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
         mock_result = {
+            "success": True,
+            "message": "一括差分更新が完了",
             "data": {
                 "ohlcv_updates": 100,
                 "funding_rate_updates": 50,
@@ -327,16 +333,16 @@ class TestExecuteBulkIncrementalUpdate:
 
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
             ),
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.FundingRateRepository"
+                "app.services.data_collection.orchestration.bulk_data_orchestrator.FundingRateRepository"
             ),
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OpenInterestRepository"
+                "app.services.data_collection.orchestration.bulk_data_orchestrator.OpenInterestRepository"
             ),
         ):
-            orchestration_service.historical_service.collect_bulk_incremental_data = (
+            orchestration_service.bulk_data_orchestrator.execute_bulk_incremental_update = (
                 AsyncMock(return_value=mock_result)
             )
 
@@ -346,7 +352,7 @@ class TestExecuteBulkIncrementalUpdate:
 
             assert result["success"] is True
             assert "一括差分更新が完了" in result["message"]
-            assert result["data"] == mock_result
+            assert result["data"] == mock_result["data"]
 
     @pytest.mark.asyncio
     async def test_execute_bulk_incremental_update_error(
@@ -363,16 +369,16 @@ class TestExecuteBulkIncrementalUpdate:
         """
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
             ),
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.FundingRateRepository"
+                "app.services.data_collection.orchestration.bulk_data_orchestrator.FundingRateRepository"
             ),
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OpenInterestRepository"
+                "app.services.data_collection.orchestration.bulk_data_orchestrator.OpenInterestRepository"
             ),
         ):
-            orchestration_service.historical_service.collect_bulk_incremental_data = (
+            orchestration_service.bulk_data_orchestrator.execute_bulk_incremental_update = (
                 AsyncMock(side_effect=Exception("Update failed"))
             )
 
@@ -438,7 +444,7 @@ class TestGetCollectionStatus:
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
             ) as mock_config,
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.collection_status_checker.OHLCVRepository"
             ) as mock_repo_class,
         ):
             mock_config.market.symbol_mapping = {}
@@ -483,8 +489,11 @@ class TestGetCollectionStatus:
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
             ) as mock_config,
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.collection_status_checker.OHLCVRepository"
             ) as mock_repo_class,
+            patch(
+                "app.services.data_collection.orchestration.historical_data_orchestrator.OHLCVRepository"
+            ) as mock_historical_repo_class,
         ):
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
@@ -493,6 +502,7 @@ class TestGetCollectionStatus:
             mock_repo = MagicMock()
             mock_repo.get_data_count.return_value = 0
             mock_repo_class.return_value = mock_repo
+            mock_historical_repo_class.return_value = mock_repo
 
             result = await orchestration_service.get_collection_status(
                 symbol="BTC/USDT:USDT",
@@ -526,7 +536,7 @@ class TestGetCollectionStatus:
                 "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
             ) as mock_config,
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+                "app.services.data_collection.orchestration.collection_status_checker.OHLCVRepository"
             ) as mock_repo_class,
         ):
             mock_config.market.symbol_mapping = {}
@@ -570,7 +580,7 @@ class TestStartBulkHistoricalDataCollection:
             mock_background_tasks: BackgroundTasksモック
         """
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
         ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_data_count.return_value = 0
@@ -603,7 +613,7 @@ class TestStartBulkHistoricalDataCollection:
             mock_background_tasks: BackgroundTasksモック
         """
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
         ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_data_count.return_value = 1000
@@ -640,7 +650,7 @@ class TestStartAllDataBulkCollection:
             mock_background_tasks: BackgroundTasksモック
         """
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.OHLCVRepository"
+            "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
         ) as mock_repo_class:
             mock_repo = MagicMock()
             mock_repo.get_data_count.return_value = 0

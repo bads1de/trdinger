@@ -43,46 +43,30 @@ class TestTechnicalIndicatorService:
                 "INVALID_INDICATOR_THAT_DOES_NOT_EXIST"
             )
 
-    @patch.object(TechnicalIndicatorService, "_get_pandas_ta_config")
-    @patch.object(TechnicalIndicatorService, "_normalize_params")
-    @patch.object(TechnicalIndicatorService, "_basic_validation")
-    @patch.object(TechnicalIndicatorService, "_call_pandas_ta")
-    @patch.object(TechnicalIndicatorService, "_post_process")
     def test_calculate_indicator_pandas_ta_success(
         self,
-        mock_post_process,
-        mock_call_pandas_ta,
-        mock_validation,
-        mock_normalize,
-        mock_get_config,
         indicator_service,
         sample_df,
     ):
         """pandas-taを使用した指標計算成功テスト"""
         mock_config = {"function": "sma", "returns": "single"}
-        mock_get_config.return_value = mock_config
-        mock_normalize.return_value = {"length": 10}
-        mock_validation.return_value = True
-        mock_call_pandas_ta.return_value = pd.Series([1, 2, 3])
-        mock_post_process.return_value = np.array([1, 2, 3])
+        indicator_service.pandas_ta_caller.get_pandas_ta_config = Mock(return_value=mock_config)
+        indicator_service.parameter_normalizer.normalize_params = Mock(return_value={"length": 10})
+        indicator_service.validator.basic_validation = Mock(return_value=True)
+        indicator_service.pandas_ta_caller.call_pandas_ta = Mock(return_value=pd.Series([1, 2, 3]))
+        indicator_service.post_processor.post_process = Mock(return_value=np.array([1, 2, 3]))
 
         result = indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
 
         assert isinstance(result, np.ndarray)
-        mock_get_config.assert_called_with("SMA")
-        mock_normalize.assert_called()
-        mock_validation.assert_called()
-        mock_call_pandas_ta.assert_called()
-        mock_post_process.assert_called()
+        indicator_service.pandas_ta_caller.get_pandas_ta_config.assert_called_with("SMA", indicator_service.registry)
+        indicator_service.parameter_normalizer.normalize_params.assert_called()
+        indicator_service.validator.basic_validation.assert_called()
+        indicator_service.pandas_ta_caller.call_pandas_ta.assert_called()
+        indicator_service.post_processor.post_process.assert_called()
 
-    @patch.object(TechnicalIndicatorService, "_get_pandas_ta_config")
-    @patch.object(TechnicalIndicatorService, "_get_indicator_config")
-    @patch.object(TechnicalIndicatorService, "_calculate_with_adapter")
     def test_calculate_indicator_adapter_fallback(
         self,
-        mock_calculate_adapter,
-        mock_get_indicator_config,
-        mock_get_config,
         indicator_service,
         sample_df,
     ):
@@ -90,19 +74,19 @@ class TestTechnicalIndicatorService:
         indicator_service.clear_cache()  # キャッシュをクリア
         mock_config = Mock()
         mock_config.adapter_function = Mock()
-        mock_get_indicator_config.return_value = mock_config
-        mock_get_config.return_value = None  # pandas-ta設定なし
-        mock_calculate_adapter.return_value = np.array([1, 2, 3])
+        indicator_service._get_indicator_config = Mock(return_value=mock_config)
+        indicator_service.pandas_ta_caller.get_pandas_ta_config = Mock(return_value=None)  # pandas-ta設定なし
+        indicator_service.adapter_handler.calculate_with_adapter = Mock(return_value=np.array([1, 2, 3]))
 
         result = indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
 
         assert isinstance(result, np.ndarray)
-        mock_calculate_adapter.assert_called_once()
+        indicator_service.adapter_handler.calculate_with_adapter.assert_called_once()
 
     def test_calculate_indicator_unsupported(self, indicator_service, sample_df):
         """サポートされていない指標テスト"""
         with patch.object(
-            indicator_service, "_get_pandas_ta_config", return_value=None
+            indicator_service.pandas_ta_caller, "get_pandas_ta_config", return_value=None
         ):
             with patch.object(
                 indicator_service, "_get_indicator_config", side_effect=ValueError
@@ -111,7 +95,7 @@ class TestTechnicalIndicatorService:
                     indicator_service.calculate_indicator(sample_df, "UNSUPPORTED", {})
 
     @patch(
-        "app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
+        "app.services.indicators.indicator_validator.validate_data_length_with_fallback"
     )
     def test_basic_validation_success(
         self, mock_validate_length, indicator_service, sample_df
@@ -120,11 +104,11 @@ class TestTechnicalIndicatorService:
         mock_validate_length.return_value = (True, 10)
         config = {"function": "sma", "data_column": "close", "multi_column": False}
 
-        result = indicator_service._basic_validation(sample_df, config, {"length": 10})
+        result = indicator_service.validator.basic_validation(sample_df, config, {"length": 10})
         assert result is True
 
     @patch(
-        "app.services.indicators.indicator_orchestrator.validate_data_length_with_fallback"
+        "app.services.indicators.indicator_validator.validate_data_length_with_fallback"
     )
     def test_basic_validation_data_too_short(
         self, mock_validate_length, indicator_service, sample_df
@@ -133,22 +117,22 @@ class TestTechnicalIndicatorService:
         mock_validate_length.return_value = (False, 10)
         config = {"function": "sma"}
 
-        result = indicator_service._basic_validation(sample_df, config, {"length": 100})
+        result = indicator_service.validator.basic_validation(sample_df, config, {"length": 100})
         assert result is False
 
     def test_resolve_column_name(self, indicator_service, sample_df):
         """カラム名解決テスト"""
         # 直接一致
-        assert indicator_service._resolve_column_name(sample_df, "close") == "close"
+        assert indicator_service.validator.resolve_column_name(sample_df, "close") == "close"
 
         # 大文字
-        assert indicator_service._resolve_column_name(sample_df, "Close") == "close"
+        assert indicator_service.validator.resolve_column_name(sample_df, "Close") == "close"
 
         # 小文字
-        assert indicator_service._resolve_column_name(sample_df, "CLOSE") == "close"
+        assert indicator_service.validator.resolve_column_name(sample_df, "CLOSE") == "close"
 
         # 存在しないカラム
-        assert indicator_service._resolve_column_name(sample_df, "nonexistent") is None
+        assert indicator_service.validator.resolve_column_name(sample_df, "nonexistent") is None
 
     def test_normalize_params(self, indicator_service):
         """パラメータ正規化テスト"""
@@ -158,7 +142,7 @@ class TestTechnicalIndicatorService:
         }
         params = {"period": 20, "other": 1.5}
 
-        result = indicator_service._normalize_params(params, config)
+        result = indicator_service.parameter_normalizer.normalize_params(params, config)
         assert result["length"] == 20
         assert "multiplier" not in result  # デフォルト値なしで入力なし
 
@@ -171,10 +155,10 @@ class TestTechnicalIndicatorService:
         }
         params = {"period": 3}  # 最小値未満
 
-        result = indicator_service._normalize_params(params, config)
+        result = indicator_service.parameter_normalizer.normalize_params(params, config)
         assert result["length"] == 5  # 調整される
 
-    @patch("app.services.indicators.indicator_orchestrator.ta")
+    @patch("app.services.indicators.pandas_ta_caller.ta")
     def test_call_pandas_ta_single_column(self, mock_ta, indicator_service, sample_df):
         """pandas-ta単一カラム呼び出しテスト"""
         expected_series = pd.Series([1, 2, 3])
@@ -184,18 +168,18 @@ class TestTechnicalIndicatorService:
         config = {"function": "sma", "data_column": "close", "multi_column": False}
         params = {"length": 10}
 
-        result = indicator_service._call_pandas_ta(sample_df, config, params)
+        result = indicator_service.pandas_ta_caller.call_pandas_ta(sample_df, config, params)
 
         assert result.equals(expected_series)
         mock_func.assert_called_once()
 
-    @patch("app.services.indicators.indicator_orchestrator.create_nan_result")
+    @patch("app.services.indicators.indicator_validator.create_nan_result")
     def test_create_nan_result(self, mock_create_nan, indicator_service, sample_df):
         """NaN結果作成テスト"""
         mock_create_nan.return_value = np.array([np.nan] * len(sample_df))
         config = {"function": "sma"}
 
-        result = indicator_service._create_nan_result(sample_df, config)
+        result = indicator_service.validator.create_nan_result(sample_df, config)
         assert isinstance(result, np.ndarray)
         mock_create_nan.assert_called_once()
 
@@ -204,18 +188,26 @@ class TestTechnicalIndicatorService:
         config = {"returns": "single"}
         result = pd.Series([1, 2, 3])
 
-        processed = indicator_service._post_process(result, config)
+        processed = indicator_service.post_processor.post_process(result, config)
         assert isinstance(processed, np.ndarray)
         assert np.array_equal(processed, [1, 2, 3])
 
     def test_post_process_multiple_return(self, indicator_service):
         """複数戻り値の後処理テスト"""
         config = {"returns": "multiple", "return_cols": ["upper", "lower"]}
-        result = pd.DataFrame({"upper": [1, 2, 3], "lower": [0.5, 1.5, 2.5]})
+        result = pd.DataFrame(
+            {
+                "noise": [9, 9, 9],
+                "lower": [0.5, 1.5, 2.5],
+                "upper": [1, 2, 3],
+            }
+        )
 
-        processed = indicator_service._post_process(result, config)
+        processed = indicator_service.post_processor.post_process(result, config)
         assert isinstance(processed, tuple)
         assert len(processed) == 2
+        assert np.array_equal(processed[0], np.array([1, 2, 3]))
+        assert np.array_equal(processed[1], np.array([0.5, 1.5, 2.5]))
 
     def test_call_adapter_function_reindexes_trimmed_tuple_series(
         self, indicator_service, sample_df
@@ -231,7 +223,7 @@ class TestTechnicalIndicatorService:
             result_type=IndicatorResultType.COMPLEX,
         )
 
-        result = indicator_service._call_adapter_function(
+        result = indicator_service.adapter_handler._call_adapter_function(
             adapter_function=Mock(return_value=adapter_result),
             all_args={"close": sample_df["close"]},
             indicator_type="STOCH",
@@ -257,7 +249,7 @@ class TestTechnicalIndicatorService:
             result_type=IndicatorResultType.COMPLEX,
         )
 
-        result = indicator_service._call_adapter_function(
+        result = indicator_service.adapter_handler._call_adapter_function(
             adapter_function=Mock(return_value=adapter_result),
             all_args={"close": sample_df["close"]},
             indicator_type="TD_SEQ",
@@ -302,11 +294,11 @@ class TestTechnicalIndicatorService:
         """キャッシュクリアのテスト"""
         # 一度計算してキャッシュさせる
         indicator_service.calculate_indicator(sample_df, "SMA", {"length": 10})
-        assert len(indicator_service._calculation_cache) > 0
+        assert len(indicator_service.cache_manager._calculation_cache) > 0
 
         # クリア
         indicator_service.clear_cache()
-        assert len(indicator_service._calculation_cache) == 0
+        assert len(indicator_service.cache_manager._calculation_cache) == 0
 
     def test_calculate_unknown_indicator(self, indicator_service, sample_df):
         """未登録の指標に対するテスト"""
@@ -317,8 +309,8 @@ class TestTechnicalIndicatorService:
         """指標計算時のエラーハンドリングテスト"""
         unique_df = sample_df.copy()
         with patch.object(
-            indicator_service,
-            "_get_pandas_ta_config",
+            indicator_service.pandas_ta_caller,
+            "get_pandas_ta_config",
             side_effect=Exception("Test error"),
         ):
             with pytest.raises(Exception):
@@ -326,7 +318,7 @@ class TestTechnicalIndicatorService:
 
     def test_make_cache_key(self, indicator_service, sample_df):
         """キャッシュキー生成テスト"""
-        cache_key = indicator_service._make_cache_key("SMA", {"length": 10}, sample_df)
+        cache_key = indicator_service.cache_manager.make_cache_key("SMA", {"length": 10}, sample_df)
         assert cache_key is not None
         assert len(cache_key) == 3
         assert cache_key[0] == "SMA"
@@ -360,13 +352,13 @@ class TestTechnicalIndicatorService:
         data = sample_df.copy()
 
         # 1. 生成時に DataFrame へ属性を載せない
-        key1 = indicator_service._make_cache_key(indicator, params, data)
+        key1 = indicator_service.cache_manager.make_cache_key(indicator, params, data)
         assert key1 is not None
         assert not hasattr(data, "_cached_hash")
 
         # 2. 同じ DataFrame を in-place 更新したらキーが変わる
         data.loc[data.index[0], "close"] = data.loc[data.index[0], "close"] * 10
-        key2 = indicator_service._make_cache_key(indicator, params, data)
+        key2 = indicator_service.cache_manager.make_cache_key(indicator, params, data)
         assert key2 is not None
         assert key1 != key2
 

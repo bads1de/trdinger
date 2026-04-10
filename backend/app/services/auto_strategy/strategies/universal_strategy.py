@@ -12,7 +12,7 @@ from typing import Any, Optional, Tuple, cast
 import pandas as pd
 from backtesting import Strategy
 
-from ..config.ga_nested_configs import resolve_early_termination_settings
+from ..config.ga.nested_configs import resolve_early_termination_settings
 from ..config.helpers import normalize_ml_gate_fields
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import (

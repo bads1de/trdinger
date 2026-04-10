@@ -48,10 +48,9 @@ from .indicator_universe import (
     CURATED_INDICATOR_CATALOG,
     IndicatorUniverseMode,
     get_indicator_universe_names,
-    is_in_indicator_universe,
+    is_indicator_in_universe,
     iter_indicator_universe_names,
     normalize_indicator_universe_mode,
-    validate_indicator_universe,
 )
 
 # 目的関数レジストリ
@@ -113,10 +112,9 @@ __all__ = [
     "CURATED_INDICATOR_CATALOG",
     "IndicatorUniverseMode",
     "get_indicator_universe_names",
-    "is_in_indicator_universe",
+    "is_indicator_in_universe",
     "iter_indicator_universe_names",
     "normalize_indicator_universe_mode",
-    "validate_indicator_universe",
     "DEFAULT_OBJECTIVE_DEFINITION",
     "OBJECTIVE_REGISTRY",
     "ObjectiveDefinition",
