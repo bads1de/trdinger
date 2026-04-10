@@ -21,7 +21,6 @@ def evaluate_meta_labeling(
     y_true: pd.Series,
     y_pred: np.ndarray,
     y_pred_proba: Optional[np.ndarray] = None,
-    threshold: float = 0.5,
 ) -> Dict[str, Any]:
     """メタラベリング用の評価指標を計算"""
     y_t = y_true.values if hasattr(y_true, "values") else y_true
@@ -165,7 +164,6 @@ def find_optimal_threshold(
         y_true,
         (proba_positive >= optimal_threshold).astype(int),
         y_pred_proba,
-        threshold=optimal_threshold,
     )
 
     return {

@@ -91,8 +91,6 @@ class PandasTaCaller:
                 logger.warning(f"pandas-ta関数 {config['function']} が存在しません")
                 return None
 
-            func = getattr(ta, config["function"])
-
             if config.get("multi_column", False):
                 return self._call_multi_column(df, config, params)
             else:
@@ -132,15 +130,11 @@ class PandasTaCaller:
         """シングルカラム指標の呼び出し"""
         col_name = self.validator.resolve_column_name(df, config.get("data_column"))
         if col_name is None:
-            logger.error(
-                f"必須カラム '{config.get('data_column')}' が存在しません"
-            )
+            logger.error(f"必須カラム '{config.get('data_column')}' が存在しません")
             return None
 
         if len(df) < params.get("length", 0):
-            logger.error(
-                f"データ長({len(df)})がlength({params.get('length')})未満"
-            )
+            logger.error(f"データ長({len(df)})がlength({params.get('length')})未満")
             return None
 
         # 安全策: 位置引数として渡すデータと同じ名前のパラメータがあれば削除

@@ -61,11 +61,6 @@ class BacktestDataService:
             event_label_generator or EventDrivenLabelGenerator()
         )
 
-        # 後方互換性のためにリポジトリも保持
-        self.ohlcv_repo = ohlcv_repo
-        self.oi_repo = oi_repo
-        self.fr_repo = fr_repo
-
     def get_data_for_backtest(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:

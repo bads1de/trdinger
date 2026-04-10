@@ -12,7 +12,7 @@ pandas-taと独自実装のテクニカル指標を統一的に管理し、
 """
 
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -99,21 +99,29 @@ class TechnicalIndicatorService:
 
         try:
             # pandas-ta設定を取得
-            pandas_config = self.pandas_ta_caller.get_pandas_ta_config(indicator_type, self.registry)
+            pandas_config = self.pandas_ta_caller.get_pandas_ta_config(
+                indicator_type, self.registry
+            )
             result = None
 
             if pandas_config:
                 # pandas-ta方式で処理
-                normalized_params = self.parameter_normalizer.normalize_params(params, pandas_config)
+                normalized_params = self.parameter_normalizer.normalize_params(
+                    params, pandas_config
+                )
 
-                if not self.validator.basic_validation(df, pandas_config, normalized_params):
+                if not self.validator.basic_validation(
+                    df, pandas_config, normalized_params
+                ):
                     result = self.validator.create_nan_result(df, pandas_config)
                 else:
                     raw_result = self.pandas_ta_caller.call_pandas_ta(
                         df, pandas_config, normalized_params
                     )
                     if raw_result is not None:
-                        result = self.post_processor.post_process(raw_result, pandas_config, df)
+                        result = self.post_processor.post_process(
+                            raw_result, pandas_config, df
+                        )
 
             # アダプター方式にフォールバック
             if result is None:
@@ -144,8 +152,6 @@ class TechnicalIndicatorService:
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
             raise
-
-
 
     def _get_support_tier(self, config: IndicatorConfig) -> str:
         """required_data からサポート水準を分類する。"""

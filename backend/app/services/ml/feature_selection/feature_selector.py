@@ -24,14 +24,6 @@ from .config import FeatureSelectionConfig, SelectionMethod
 from .strategy_registry import default_staged_methods, get_selection_strategy
 from .strategies import (
     BaseSelectionStrategy,
-    LassoStrategy,
-    PermutationStrategy,
-    RFECVStrategy,
-    ShadowFeatureStrategy,
-    StagedStrategy,
-    TreeBasedStrategy,
-    UnivariateStrategy,
-    VarianceStrategy,
 )
 
 logger = logging.getLogger(__name__)
@@ -204,8 +196,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             random_state=self.random_state,
             n_jobs=self.n_jobs,
             shadow_iterations=self.shadow_iterations,
-            staged_methods=staged_methods
-            or default_staged_methods(),
+            staged_methods=staged_methods or default_staged_methods(),
         )
 
     def _remove_correlated_features(

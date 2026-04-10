@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
+from app.utils.error_handler import safe_operation
 from app.utils.response import api_response
 from database.repositories.backtest_result_repository import BacktestResultRepository
 from database.repositories.ga_experiment_repository import GAExperimentRepository
@@ -19,13 +20,6 @@ from database.repositories.generated_strategy_repository import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _safe_backtest_api_operation(context: str):
-    """API向けの safe_operation 設定を共通化する。"""
-    from app.utils.error_handler import safe_operation
-
-    return safe_operation(context=context, is_api_call=True)
 
 
 class BacktestOrchestrationService:
@@ -61,7 +55,7 @@ class BacktestOrchestrationService:
             バックテスト結果一覧
         """
 
-        @_safe_backtest_api_operation("バックテスト結果取得")
+        @safe_operation(context="バックテスト結果取得", is_api_call=True)
         def _get_backtest_results():
             backtest_repo = BacktestResultRepository(db)
 
@@ -95,7 +89,7 @@ class BacktestOrchestrationService:
             バックテスト結果
         """
 
-        @_safe_backtest_api_operation(f"バックテスト結果取得 (ID: {result_id})")
+        @safe_operation(context=f"バックテスト結果取得 (ID: {result_id})", is_api_call=True)
         def _get_backtest_result_by_id():
             backtest_repo = BacktestResultRepository(db)
             result = backtest_repo.get_backtest_result_by_id(result_id)
@@ -123,7 +117,7 @@ class BacktestOrchestrationService:
             削除結果
         """
 
-        @_safe_backtest_api_operation(f"バックテスト結果削除 (ID: {result_id})")
+        @safe_operation(context=f"バックテスト結果削除 (ID: {result_id})", is_api_call=True)
         def _delete_backtest_result():
             # 関連する戦略のリンクを解除
             strategy_repo = GeneratedStrategyRepository(db)
@@ -152,7 +146,7 @@ class BacktestOrchestrationService:
             削除結果
         """
 
-        @_safe_backtest_api_operation("全バックテスト結果削除")
+        @safe_operation(context="全バックテスト結果削除", is_api_call=True)
         def _delete_all_backtest_results():
             backtest_repo = BacktestResultRepository(db)
             ga_experiment_repo = GAExperimentRepository(db)
@@ -188,7 +182,7 @@ class BacktestOrchestrationService:
             戦略一覧
         """
 
-        @_safe_backtest_api_operation("サポート戦略取得")
+        @safe_operation(context="サポート戦略取得", is_api_call=True)
         def _get_supported_strategies():
             from ..config.constants import SUPPORTED_STRATEGIES
 

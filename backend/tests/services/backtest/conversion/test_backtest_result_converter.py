@@ -4,12 +4,34 @@ from datetime import datetime
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
+from app.services.backtest.conversion.statistics_calculator import BacktestStatisticsCalculator
+from app.services.backtest.conversion.data_transformers import (
+    TradeHistoryTransformer,
+    EquityCurveTransformer,
+)
+from app.services.backtest.shared import (
+    safe_float_conversion,
+    safe_int_conversion,
+    safe_timestamp_conversion,
+)
 
 
 class TestBacktestResultConverter:
     @pytest.fixture
     def converter(self):
         return BacktestResultConverter()
+
+    @pytest.fixture
+    def stats_calculator(self):
+        return BacktestStatisticsCalculator()
+
+    @pytest.fixture
+    def trade_transformer(self):
+        return TradeHistoryTransformer()
+
+    @pytest.fixture
+    def equity_transformer(self):
+        return EquityCurveTransformer()
 
     @pytest.fixture
     def mock_stats(self):
@@ -58,27 +80,29 @@ class TestBacktestResultConverter:
         return stats
 
     def test_normalize_date(self, converter):
+        # We test through the public convert_backtest_results since _normalize_date is gone
         dt = datetime(2023, 1, 1)
-        assert converter._normalize_date(dt) == dt
-        assert converter._normalize_date("2023-01-01T00:00:00") == dt
+        result = converter.convert_backtest_results(
+            stats=pd.Series({"Return [%]": 10.0}),
+            strategy_name="S", symbol="S", timeframe="1h", initial_capital=100,
+            start_date=dt, end_date=datetime(2023, 1, 2), config_json={}
+        )
+        assert result["start_date"] == dt
 
-        with pytest.raises(ValueError):
-            converter._normalize_date(12345)
+    def test_safe_conversions(self):
+        assert safe_float_conversion("10.5") == 10.5
+        assert safe_float_conversion(None) == 0.0
+        assert safe_float_conversion("abc") == 0.0
 
-    def test_safe_conversions(self, converter):
-        assert converter._safe_float_conversion("10.5") == 10.5
-        assert converter._safe_float_conversion(None) == 0.0
-        assert converter._safe_float_conversion("abc") == 0.0
-
-        assert converter._safe_int_conversion("5") == 5
-        assert converter._safe_int_conversion(None) == 0
+        assert safe_int_conversion("5") == 5
+        assert safe_int_conversion(None) == 0
 
         ts = pd.Timestamp("2023-01-01")
-        assert converter._safe_timestamp_conversion(ts) == ts.to_pydatetime()
-        assert converter._safe_timestamp_conversion(None) is None
+        assert safe_timestamp_conversion(ts) == ts.to_pydatetime()
+        assert safe_timestamp_conversion(None) is None
 
-    def test_extract_statistics_from_series(self, converter, mock_stats):
-        metrics = converter._extract_statistics(mock_stats)
+    def test_extract_statistics_from_series(self, stats_calculator, mock_stats):
+        metrics = stats_calculator.calculate_statistics(mock_stats)
 
         assert metrics["total_return"] == 10.5
         assert metrics["total_trades"] == 2  # trades_dfの長さで上書きされる
@@ -86,23 +110,23 @@ class TestBacktestResultConverter:
         assert metrics["profit_factor"] == 2.0  # 2 / 1
         assert metrics["final_equity"] == 11050.0
 
-    def test_extract_statistics_from_dict(self, converter):
+    def test_extract_statistics_from_dict(self, stats_calculator):
         stats_dict = {"Return [%]": 5.0, "# Trades": 1, "Win Rate [%]": 100.0}
         # 取引データなし
-        metrics = converter._extract_statistics(stats_dict)
+        metrics = stats_calculator.calculate_statistics(stats_dict)
         assert metrics["total_return"] == 5.0
         assert metrics["total_trades"] == 1
 
-    def test_convert_trade_history(self, converter, mock_stats):
-        history = converter._convert_trade_history(mock_stats)
+    def test_convert_trade_history(self, trade_transformer, mock_stats):
+        history = trade_transformer.transform(mock_stats)
 
         assert len(history) == 2
         assert history[0]["entry_price"] == 100.0
         assert history[0]["pnl"] == 2.0
         assert isinstance(history[0]["entry_time"], datetime)
 
-    def test_convert_equity_curve(self, converter, mock_stats):
-        curve = converter._convert_equity_curve(mock_stats)
+    def test_convert_equity_curve(self, equity_transformer, mock_stats):
+        curve = equity_transformer.transform(mock_stats)
 
         assert len(curve) == 4
         assert curve[0]["equity"] == 10000.0

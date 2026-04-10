@@ -101,9 +101,9 @@ class TestServiceInitialization:
             fr_repo=mock_fr_repo,
         )
 
-        assert service.ohlcv_repo == mock_ohlcv_repo
-        assert service.oi_repo == mock_oi_repo
-        assert service.fr_repo == mock_fr_repo
+        assert service._retrieval_service.ohlcv_repo == mock_ohlcv_repo
+        assert service._retrieval_service.oi_repo == mock_oi_repo
+        assert service._retrieval_service.fr_repo == mock_fr_repo
         assert service._retrieval_service is not None
         assert service._conversion_service is not None
         assert service._integration_service is not None
@@ -112,9 +112,9 @@ class TestServiceInitialization:
         """リポジトリなしで初期化できること"""
         service = BacktestDataService()
 
-        assert service.ohlcv_repo is None
-        assert service.oi_repo is None
-        assert service.fr_repo is None
+        assert service._retrieval_service.ohlcv_repo is None
+        assert service._retrieval_service.oi_repo is None
+        assert service._retrieval_service.fr_repo is None
 
 
 class TestDataRetrieval:
@@ -508,9 +508,9 @@ class TestErrorHandling:
             fr_repo=None,
         )
 
-        assert service.ohlcv_repo is None
-        assert service.oi_repo is None
-        assert service.fr_repo is None
+        assert service._retrieval_service.ohlcv_repo is None
+        assert service._retrieval_service.oi_repo is None
+        assert service._retrieval_service.fr_repo is None
 
     def test_handle_data_retrieval_error(self, backtest_data_service):
         """データ取得エラーを適切に処理すること"""

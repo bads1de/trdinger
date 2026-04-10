@@ -16,6 +16,16 @@ from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConversionError,
     BacktestResultConverter,
 )
+from app.services.backtest.conversion.statistics_calculator import BacktestStatisticsCalculator
+from app.services.backtest.conversion.data_transformers import (
+    TradeHistoryTransformer,
+    EquityCurveTransformer,
+)
+from app.services.backtest.shared import (
+    safe_float_conversion,
+    safe_int_conversion,
+    safe_timestamp_conversion,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +34,24 @@ logger = logging.getLogger(__name__)
 def converter():
     """BacktestResultConverterインスタンス"""
     return BacktestResultConverter()
+
+
+@pytest.fixture
+def stats_calculator():
+    """BacktestStatisticsCalculatorインスタンス"""
+    return BacktestStatisticsCalculator()
+
+
+@pytest.fixture
+def trade_transformer():
+    """TradeHistoryTransformerインスタンス"""
+    return TradeHistoryTransformer()
+
+
+@pytest.fixture
+def equity_transformer():
+    """EquityCurveTransformerインスタンス"""
+    return EquityCurveTransformer()
 
 
 @pytest.fixture
@@ -201,9 +229,9 @@ class TestResultConversion:
 class TestPerformanceMetricsExtraction:
     """パフォーマンス指標抽出テスト"""
 
-    def test_extract_statistics_from_series(self, converter, mock_backtest_stats):
+    def test_extract_statistics_from_series(self, stats_calculator, mock_backtest_stats):
         """pandas.Seriesから統計情報を抽出できること"""
-        statistics = converter._extract_statistics(mock_backtest_stats)
+        statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
         assert statistics["total_return"] == 15.5
         assert statistics["total_trades"] == 10
@@ -213,10 +241,10 @@ class TestPerformanceMetricsExtraction:
         assert statistics["sharpe_ratio"] == 1.5
 
     def test_extract_statistics_recompute_from_trades(
-        self, converter, mock_backtest_stats
+        self, stats_calculator, mock_backtest_stats
     ):
         """取引データから統計を再計算できること"""
-        statistics = converter._extract_statistics(mock_backtest_stats)
+        statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
         # 取引データから計算された値を確認
         assert statistics["total_trades"] == 10
@@ -225,20 +253,20 @@ class TestPerformanceMetricsExtraction:
         assert statistics["avg_loss"] > 0
 
     def test_extract_statistics_profit_factor_calculation(
-        self, converter, mock_backtest_stats
+        self, stats_calculator, mock_backtest_stats
     ):
         """プロフィットファクターが正しく計算されること"""
-        statistics = converter._extract_statistics(mock_backtest_stats)
+        statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
         # 6勝 * 100 = 600, 4敗 * 50 = 200 → PF = 600/200 = 3.0
         assert statistics["profit_factor"] > 0
         assert statistics["profit_factor"] == pytest.approx(3.0, rel=0.1)
 
     def test_extract_statistics_with_no_trades(
-        self, converter, mock_stats_with_no_trades
+        self, stats_calculator, mock_stats_with_no_trades
     ):
         """取引がない場合の統計抽出"""
-        statistics = converter._extract_statistics(mock_stats_with_no_trades)
+        statistics = stats_calculator.calculate_statistics(mock_stats_with_no_trades)
 
         assert statistics["total_trades"] == 0
         assert statistics["win_rate"] == 0.0
@@ -246,7 +274,7 @@ class TestPerformanceMetricsExtraction:
         assert statistics["avg_win"] == 0.0
         assert statistics["avg_loss"] == 0.0
 
-    def test_extract_statistics_handle_only_wins(self, converter):
+    def test_extract_statistics_handle_only_wins(self, stats_calculator):
         """勝ちトレードのみの場合の処理"""
         stats = pd.Series(
             {
@@ -268,13 +296,13 @@ class TestPerformanceMetricsExtraction:
         stats._trades = pd.DataFrame(trades_data)
         stats._equity_curve = pd.DataFrame()
 
-        statistics = converter._extract_statistics(stats)
+        statistics = stats_calculator.calculate_statistics(stats)
 
         assert statistics["total_trades"] == 5
         assert statistics["win_rate"] == 100.0
         assert statistics["profit_factor"] == 999.99  # 無限大の代わり
 
-    def test_extract_statistics_handle_only_losses(self, converter):
+    def test_extract_statistics_handle_only_losses(self, stats_calculator):
         """負けトレードのみの場合の処理"""
         stats = pd.Series(
             {
@@ -296,7 +324,7 @@ class TestPerformanceMetricsExtraction:
         stats._trades = pd.DataFrame(trades_data)
         stats._equity_curve = pd.DataFrame()
 
-        statistics = converter._extract_statistics(stats)
+        statistics = stats_calculator.calculate_statistics(stats)
 
         assert statistics["total_trades"] == 5
         assert statistics["win_rate"] == 0.0
@@ -306,18 +334,18 @@ class TestPerformanceMetricsExtraction:
 class TestTradeHistoryConversion:
     """取引履歴変換テスト"""
 
-    def test_convert_trade_history_success(self, converter, mock_backtest_stats):
+    def test_convert_trade_history_success(self, trade_transformer, mock_backtest_stats):
         """取引履歴を正常に変換できること"""
-        trades = converter._convert_trade_history(mock_backtest_stats)
+        trades = trade_transformer.transform(mock_backtest_stats)
 
         assert len(trades) == 10
         assert all("entry_time" in trade for trade in trades)
         assert all("exit_time" in trade for trade in trades)
         assert all("pnl" in trade for trade in trades)
 
-    def test_convert_trade_history_structure(self, converter, mock_backtest_stats):
+    def test_convert_trade_history_structure(self, trade_transformer, mock_backtest_stats):
         """取引履歴の構造が正しいこと"""
-        trades = converter._convert_trade_history(mock_backtest_stats)
+        trades = trade_transformer.transform(mock_backtest_stats)
 
         trade = trades[0]
         assert "entry_time" in trade
@@ -330,19 +358,18 @@ class TestTradeHistoryConversion:
         assert "duration" in trade
 
     def test_convert_trade_history_with_no_trades(
-        self, converter, mock_stats_with_no_trades
+        self, trade_transformer, mock_stats_with_no_trades
     ):
         """取引がない場合の処理"""
-        trades = converter._convert_trade_history(mock_stats_with_no_trades)
+        trades = trade_transformer.transform(mock_stats_with_no_trades)
 
         assert len(trades) == 0
 
-    def test_convert_trade_history_handle_invalid_data(self, converter):
+    def test_convert_trade_history_handle_invalid_data(self, trade_transformer):
         """不正な取引データの処理"""
         stats = MagicMock()
         stats._trades = None
-
-        trades = converter._convert_trade_history(stats)
+        trades = trade_transformer.transform(stats)
 
         assert len(trades) == 0
 
@@ -350,16 +377,16 @@ class TestTradeHistoryConversion:
 class TestEquityCurveConversion:
     """エクイティカーブ変換テスト"""
 
-    def test_convert_equity_curve_success(self, converter, mock_backtest_stats):
+    def test_convert_equity_curve_success(self, equity_transformer, mock_backtest_stats):
         """エクイティカーブを正常に変換できること"""
-        equity_curve = converter._convert_equity_curve(mock_backtest_stats)
+        equity_curve = equity_transformer.transform(mock_backtest_stats)
 
         assert len(equity_curve) > 0
         assert all("timestamp" in point for point in equity_curve)
         assert all("equity" in point for point in equity_curve)
         assert all("drawdown" in point for point in equity_curve)
 
-    def test_convert_equity_curve_limit_points(self, converter):
+    def test_convert_equity_curve_limit_points(self, equity_transformer):
         """エクイティカーブのポイント数が制限されること"""
         # 1500ポイントのエクイティカーブ
         stats = pd.Series({"Return [%]": 10.0})
@@ -373,7 +400,7 @@ class TestEquityCurveConversion:
         )
         stats._trades = pd.DataFrame()
 
-        equity_curve = converter._convert_equity_curve(stats)
+        equity_curve = equity_transformer.transform(stats)
 
         # サンプリングにより約1000ポイントになる
         # 実装では step = len(df) // 1000 なので、1500 / 1000 = 1でstep=1となり全てのポイントが含まれる
@@ -381,19 +408,18 @@ class TestEquityCurveConversion:
         assert len(equity_curve) == 1500  # step=1なので全ポイント
 
     def test_convert_equity_curve_with_empty_data(
-        self, converter, mock_stats_with_no_trades
+        self, equity_transformer, mock_stats_with_no_trades
     ):
         """空のエクイティカーブの処理"""
-        equity_curve = converter._convert_equity_curve(mock_stats_with_no_trades)
+        equity_curve = equity_transformer.transform(mock_stats_with_no_trades)
 
         assert len(equity_curve) == 0
 
-    def test_convert_equity_curve_handle_none(self, converter):
+    def test_convert_equity_curve_handle_none(self, equity_transformer):
         """エクイティカーブがNoneの場合の処理"""
         stats = MagicMock()
         stats._equity_curve = None
-
-        equity_curve = converter._convert_equity_curve(stats)
+        equity_curve = equity_transformer.transform(stats)
 
         assert len(equity_curve) == 0
 
@@ -404,79 +430,90 @@ class TestDataConversion:
     def test_normalize_date_from_datetime(self, converter):
         """datetimeオブジェクトの正規化"""
         date = datetime(2024, 1, 1, 12, 30, 45)
-        result = converter._normalize_date(date)
-
-        assert isinstance(result, datetime)
-        assert result == date
+        result = BacktestResultConverter().convert_backtest_results(
+            stats=pd.Series({"Return [%]": 10.0}),
+            strategy_name="Test",
+            symbol="BTC/USDT:USDT",
+            timeframe="1h",
+            initial_capital=10000.0,
+            start_date=date,
+            end_date=datetime(2024, 1, 2),
+            config_json={},
+        )
+        assert result["start_date"] == date
 
     def test_normalize_date_from_string(self, converter):
         """文字列からのdatetime変換"""
         date_str = "2024-01-01T12:30:45+00:00"
-        result = converter._normalize_date(date_str)
-
-        assert isinstance(result, datetime)
-        assert result.year == 2024
+        result = BacktestResultConverter().convert_backtest_results(
+            stats=pd.Series({"Return [%]": 10.0}),
+            strategy_name="Test",
+            symbol="BTC/USDT:USDT",
+            timeframe="1h",
+            initial_capital=10000.0,
+            start_date=date_str,
+            end_date=datetime(2024, 1, 2),
+            config_json={},
+        )
+        assert result["start_date"].year == 2024
         assert result.month == 1
         assert result.day == 1
 
     def test_normalize_date_invalid_type(self, converter):
         """無効な型のエラー処理"""
-        with pytest.raises(ValueError, match="サポートされていない日付形式"):
-            converter._normalize_date(12345)
+        with pytest.raises(BacktestResultConversionError):
+            BacktestResultConverter().convert_backtest_results(
+                stats=pd.Series({"Return [%]": 10.0}),
+                strategy_name="Test",
+                symbol="BTC/USDT:USDT",
+                timeframe="1h",
+                initial_capital=10000.0,
+                start_date=12345,  # 無効な日付型
+                end_date=datetime(2024, 1, 2),
+                config_json={},
+            )
 
-    def test_safe_float_conversion_valid(self, converter):
-        """有効なfloat変換"""
-        assert converter._safe_float_conversion(10.5) == 10.5
-        assert converter._safe_float_conversion("15.3") == 15.3
-        assert converter._safe_float_conversion(20) == 20.0
+        assert safe_float_conversion(10.5) == 10.5
+        assert safe_float_conversion("15.3") == 15.3
+        assert safe_float_conversion(20) == 20.0
 
-    def test_safe_float_conversion_invalid(self, converter):
-        """無効な値のfloat変換"""
-        assert converter._safe_float_conversion(None) == 0.0
-        assert converter._safe_float_conversion(pd.NA) == 0.0
-        assert converter._safe_float_conversion("invalid") == 0.0
+        assert safe_float_conversion(None) == 0.0
+        assert safe_float_conversion(pd.NA) == 0.0
+        assert safe_float_conversion("invalid") == 0.0
 
-    def test_safe_int_conversion_valid(self, converter):
-        """有効なint変換"""
-        assert converter._safe_int_conversion(10) == 10
-        assert converter._safe_int_conversion(10.9) == 10
-        assert converter._safe_int_conversion("15") == 15
+        assert safe_int_conversion(10) == 10
+        assert safe_int_conversion(10.9) == 10
+        assert safe_int_conversion("15") == 15
 
-    def test_safe_int_conversion_invalid(self, converter):
-        """無効な値のint変換"""
-        assert converter._safe_int_conversion(None) == 0
-        assert converter._safe_int_conversion(pd.NA) == 0
-        assert converter._safe_int_conversion("invalid") == 0
+        assert safe_int_conversion(None) == 0
+        assert safe_int_conversion(pd.NA) == 0
+        assert safe_int_conversion("invalid") == 0
 
-    def test_safe_timestamp_conversion_valid(self, converter):
-        """有効なtimestamp変換"""
         ts = pd.Timestamp("2024-01-01 12:30:45")
-        result = converter._safe_timestamp_conversion(ts)
+        result = safe_timestamp_conversion(ts)
 
         assert isinstance(result, datetime)
         assert result.year == 2024
 
-    def test_safe_timestamp_conversion_invalid(self, converter):
-        """無効な値のtimestamp変換"""
-        assert converter._safe_timestamp_conversion(None) is None
-        assert converter._safe_timestamp_conversion(pd.NA) is None
+        assert safe_timestamp_conversion(None) is None
+        assert safe_timestamp_conversion(pd.NA) is None
 
 
 class TestRiskMetrics:
     """リスク指標テスト"""
 
-    def test_extract_drawdown_metrics(self, converter, mock_backtest_stats):
+    def test_extract_drawdown_metrics(self, stats_calculator, mock_backtest_stats):
         """ドローダウン指標の抽出"""
-        statistics = converter._extract_statistics(mock_backtest_stats)
+        statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
         assert "max_drawdown" in statistics
         assert "avg_drawdown" in statistics
         assert statistics["max_drawdown"] == -12.5
         assert statistics["avg_drawdown"] == -5.2
 
-    def test_extract_risk_ratios(self, converter, mock_backtest_stats):
+    def test_extract_risk_ratios(self, stats_calculator, mock_backtest_stats):
         """リスク比率の抽出"""
-        statistics = converter._extract_statistics(mock_backtest_stats)
+        statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
         assert "sharpe_ratio" in statistics
         assert "sortino_ratio" in statistics
@@ -485,9 +522,9 @@ class TestRiskMetrics:
         assert statistics["sortino_ratio"] == 2.0
         assert statistics["calmar_ratio"] == 1.24
 
-    def test_validate_risk_metrics_ranges(self, converter, mock_backtest_stats):
+    def test_validate_risk_metrics_ranges(self, stats_calculator, mock_backtest_stats):
         """リスク指標の妥当な範囲を検証"""
-        statistics = converter._extract_statistics(mock_backtest_stats)
+        statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
         # ドローダウンは負の値
         assert statistics["max_drawdown"] <= 0
@@ -572,7 +609,7 @@ class TestEdgeCases:
 class TestPerformanceCalculation:
     """パフォーマンス計算テスト"""
 
-    def test_calculate_win_rate(self, converter):
+    def test_calculate_win_rate(self, stats_calculator):
         """勝率の計算"""
         stats = pd.Series({"Return [%]": 10.0})
 
@@ -581,11 +618,11 @@ class TestPerformanceCalculation:
         stats._trades = pd.DataFrame(trades_data)
         stats._equity_curve = pd.DataFrame()
 
-        statistics = converter._extract_statistics(stats)
+        statistics = stats_calculator.calculate_statistics(stats)
 
         assert statistics["win_rate"] == 60.0
 
-    def test_calculate_average_win_loss(self, converter):
+    def test_calculate_average_win_loss(self, stats_calculator):
         """平均利益と平均損失の計算"""
         stats = pd.Series({"Return [%]": 5.0})
 
@@ -599,14 +636,14 @@ class TestPerformanceCalculation:
         stats._trades = pd.DataFrame(trades_data)
         stats._equity_curve = pd.DataFrame()
 
-        statistics = converter._extract_statistics(stats)
+        statistics = stats_calculator.calculate_statistics(stats)
 
         # 平均利益 = (100 + 150 + 120) / 3 = 123.33
         assert statistics["avg_win"] == pytest.approx(123.33, rel=0.01)
         # 平均損失 = (50 + 60) / 2 = 55.0
         assert statistics["avg_loss"] == pytest.approx(55.0, rel=0.01)
 
-    def test_calculate_total_return_from_equity(self, converter):
+    def test_calculate_total_return_from_equity(self, stats_calculator):
         """エクイティカーブからの総リターン計算"""
         stats = pd.Series({"Return [%]": 0.0})  # 初期値0
 
@@ -617,7 +654,7 @@ class TestPerformanceCalculation:
         )
         stats._trades = pd.DataFrame()
 
-        statistics = converter._extract_statistics(stats)
+        statistics = stats_calculator.calculate_statistics(stats)
 
         # (19900 - 10000) / 10000 * 100 = 99.0%
         assert statistics["total_return"] == pytest.approx(99.0, rel=0.1)
@@ -626,17 +663,17 @@ class TestPerformanceCalculation:
 class TestErrorHandling:
     """エラーハンドリングテスト"""
 
-    def test_handle_missing_stats_attribute(self, converter):
+    def test_handle_missing_stats_attribute(self, stats_calculator):
         """stats属性が欠けている場合の処理"""
         stats = MagicMock()
         delattr(stats, "_trades")
         delattr(stats, "_equity_curve")
 
         # エラーでなく空の結果を返すべき
-        statistics = converter._extract_statistics(stats)
+        statistics = stats_calculator.calculate_statistics(stats)
         assert isinstance(statistics, dict)
 
-    def test_handle_corrupt_trade_data(self, converter):
+    def test_handle_corrupt_trade_data(self, trade_transformer):
         """破損した取引データの処理"""
         stats = pd.Series({"Return [%]": 10.0})
 
@@ -650,10 +687,10 @@ class TestErrorHandling:
         stats._equity_curve = pd.DataFrame()
 
         # エラーなく処理されるべき
-        trades = converter._convert_trade_history(stats)
+        trades = trade_transformer.transform(stats)
         assert len(trades) == 3
 
-    def test_handle_invalid_equity_curve(self, converter):
+    def test_handle_invalid_equity_curve(self, equity_transformer):
         """無効なエクイティカーブの処理"""
         stats = pd.Series({"Return [%]": 10.0})
         stats._trades = pd.DataFrame()
@@ -661,7 +698,7 @@ class TestErrorHandling:
         # 不正な形式のエクイティカーブ
         stats._equity_curve = [1, 2, 3]  # DataFrameでない
 
-        equity_curve = converter._convert_equity_curve(stats)
+        equity_curve = equity_transformer.transform(stats)
         assert len(equity_curve) == 0
 
 

@@ -12,9 +12,6 @@ from typing import Any, Dict
 from app.services.backtest.shared import (
     parse_datetime_value,
     resolve_stats_object,
-    safe_float_conversion as _safe_float_conversion,
-    safe_int_conversion as _safe_int_conversion,
-    safe_timestamp_conversion as _safe_timestamp_conversion,
 )
 
 logger = logging.getLogger(__name__)
@@ -78,8 +75,8 @@ class BacktestResultConverter:
                 "strategy_name": strategy_name,
                 "symbol": symbol,
                 "timeframe": timeframe,
-                "start_date": self._normalize_date(start_date),
-                "end_date": self._normalize_date(end_date),
+                "start_date": parse_datetime_value(start_date),
+                "end_date": parse_datetime_value(end_date),
                 "initial_capital": float(initial_capital),
                 "commission_rate": config_json.get("commission_rate", 0.001),
                 "config_json": config_json,
@@ -98,55 +95,3 @@ class BacktestResultConverter:
         except Exception as e:
             logger.error(f"バックテスト結果変換エラー: {e}")
             raise BacktestResultConversionError(f"結果の変換に失敗しました: {e}")
-
-    def _normalize_date(self, date_value: Any) -> datetime:
-        """日付値を正規化"""
-        return parse_datetime_value(date_value)
-
-    def _extract_statistics(self, stats: Any) -> Dict[str, Any]:
-        """
-        統計情報を抽出（テスト互換性のため）
-
-        Args:
-            stats: backtesting.pyの統計結果
-
-        Returns:
-            統計情報辞書
-        """
-        return self._stats_calculator.calculate_statistics(stats)
-
-    def _convert_trade_history(self, stats: Any) -> list:
-        """
-        取引履歴を変換（テスト互換性のため）
-
-        Args:
-            stats: backtesting.pyの統計結果
-
-        Returns:
-            取引履歴リスト
-        """
-        return self._trade_transformer.transform(stats)
-
-    def _convert_equity_curve(self, stats: Any) -> list:
-        """
-        エクイティカーブを変換（テスト互換性のため）
-
-        Args:
-            stats: backtesting.pyの統計結果
-
-        Returns:
-            エクイティカーブリスト
-        """
-        return self._equity_transformer.transform(stats)
-
-    def _safe_float_conversion(self, value: Any) -> float:
-        """安全なfloat変換"""
-        return _safe_float_conversion(value)
-
-    def _safe_int_conversion(self, value: Any) -> int:
-        """安全なint変換"""
-        return _safe_int_conversion(value)
-
-    def _safe_timestamp_conversion(self, value: Any) -> Any:
-        """安全なtimestamp変換"""
-        return _safe_timestamp_conversion(value)

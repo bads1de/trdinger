@@ -26,7 +26,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         random_state: int = 42,
         max_depth: int = 6,
         learning_rate: float = 0.1,
-        n_estimators: int = 100,  # LightGBMと合わせて追加
+        n_estimators: int = 100,
         **kwargs,
     ):
         """
@@ -35,7 +35,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         super().__init__(random_state=random_state, **kwargs)
         self.max_depth = max_depth
         self.learning_rate = learning_rate
-        self.n_estimators = n_estimators  # LightGBMと合わせて追加
+        self.n_estimators = n_estimators
         self.feature_names: Optional[List[str]] = None
 
     def _create_dataset(

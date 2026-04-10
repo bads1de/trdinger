@@ -121,12 +121,12 @@ class TestMetaLabelingEvaluation:
 
         # 閾値0.7で評価
         metrics_high = evaluate_meta_labeling(
-            y_true, (y_pred_proba[:, 1] >= 0.7).astype(int), y_pred_proba, threshold=0.7
+            y_true, (y_pred_proba[:, 1] >= 0.7).astype(int), y_pred_proba
         )
 
         # 閾値0.3で評価
         metrics_low = evaluate_meta_labeling(
-            y_true, (y_pred_proba[:, 1] >= 0.3).astype(int), y_pred_proba, threshold=0.3
+            y_true, (y_pred_proba[:, 1] >= 0.3).astype(int), y_pred_proba
         )
 
         # 高い閾値の方がPrecisionが高く、Recallが低い
