@@ -6,13 +6,14 @@
 import logging
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from database.models import BacktestResult
+from database.types import SerializableValue
 
 from .base_repository import BaseRepository
 
@@ -46,7 +47,7 @@ class BacktestResultRepository(BaseRepository):
         d.setdefault("final_balance", performance_metrics.get("final_balance", 0.0))
         return d
 
-    def _to_json_safe(self, obj: Any) -> Any:
+    def _to_json_safe(self, obj: object) -> SerializableValue:
         """JSONにシリアライズ可能な形へ再帰的に変換"""
         try:
             # Noneやプリミティブ型
@@ -78,7 +79,7 @@ class BacktestResultRepository(BaseRepository):
         except Exception:
             return str(obj)
 
-    def _normalize_result_data(self, result_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_result_data(self, result_data: Dict[str, SerializableValue]) -> Dict[str, SerializableValue]:
         """
         生のバックテスト結果データを、データベースモデル `BacktestResult` が要求する形式に正規化します。
 
@@ -152,7 +153,7 @@ class BacktestResultRepository(BaseRepository):
             "error_message": result_data.get("error_message"),
         }
 
-    def save_backtest_result(self, result_data: Dict[str, Any]) -> Dict[str, Any]:
+    def save_backtest_result(self, result_data: Dict[str, SerializableValue]) -> Dict[str, SerializableValue]:
         """
         バックテスト結果を保存
 
@@ -192,7 +193,7 @@ class BacktestResultRepository(BaseRepository):
         offset: int = 0,
         symbol: Optional[str] = None,
         strategy_name: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[Dict[str, SerializableValue]]:
         """
         バックテスト結果一覧を取得
 
@@ -230,7 +231,7 @@ class BacktestResultRepository(BaseRepository):
 
         return _get_results()
 
-    def get_backtest_result_by_id(self, result_id: int) -> Optional[Dict[str, Any]]:
+    def get_backtest_result_by_id(self, result_id: int) -> Optional[Dict[str, SerializableValue]]:
         """
         ID指定でバックテスト結果を取得
 
@@ -334,7 +335,7 @@ class BacktestResultRepository(BaseRepository):
 
         return _count_results()
 
-    def get_recent_backtest_results(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_recent_backtest_results(self, limit: int = 10) -> List[Dict[str, SerializableValue]]:
         """
         最近のバックテスト結果を取得
 

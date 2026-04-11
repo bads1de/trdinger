@@ -76,7 +76,7 @@ def extract_result_fitness(
     *,
     enable_multi_objective: bool,
     default_single: float = 0.0,
-) -> Any:
+) -> object:
     """
     結果出力用に個体の fitness を整形して返す
 

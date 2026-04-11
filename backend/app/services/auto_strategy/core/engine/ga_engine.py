@@ -4,6 +4,8 @@
 DEAPライブラリを使用したGA実装。
 """
 
+from __future__ import annotations
+
 import logging
 import threading
 import time
@@ -615,7 +617,7 @@ class GeneticAlgorithmEngine:
 
     def _extract_result_best_fitness(
         self, best_individual: Any, config: GAConfig
-    ) -> Any:
+    ) -> object:
         """結果出力用の best fitness を抽出する。"""
         return extract_result_fitness(
             best_individual,

@@ -12,6 +12,7 @@ import warnings
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
+import pandas as pd
 import pandas_ta_classic as ta
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ def _build_sample_ohlcv_frame(
     *,
     walk_close: bool = False,
     with_datetime_index: bool = False,
-) -> Any:
+) -> pd.DataFrame:
     """
     pandas-ta の検証用サンプル OHLCV DataFrame を作る
 
@@ -130,13 +131,13 @@ def _build_indicator_call_kwargs(
 
 
 def _run_indicator_on_sample_frame(
-    func: Any,
+    func: object,
     *,
     rows: int,
-    default_params: Optional[Dict[str, Any]] = None,
+    default_params: Optional[Dict[str, object]] = None,
     walk_close: bool = False,
     with_datetime_index: bool = False,
-) -> Any:
+) -> object:
     """
     サンプル OHLCV DataFrame で指標を実行する共通処理
 

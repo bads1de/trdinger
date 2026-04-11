@@ -4,14 +4,18 @@
 すべての遺伝子モデルの共通基底クラスを提供します。
 """
 
+from __future__ import annotations
+
 import logging
 import sys
 from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Tuple, Union, get_type_hints
+from typing import Dict, List, Self, Tuple, Union, get_type_hints
 
 from app.utils.serialization import dataclass_to_dict
+
+from app.types import SerializableValue
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +79,7 @@ class BaseGene(ABC):
         return param_type == datetime
 
     @staticmethod
-    def _convert_enum_value(value: Any, param_type) -> Any:
+    def _convert_enum_value(value: object, param_type: type) -> SerializableValue | object:
         """
         値をEnum型に変換
 
@@ -100,7 +104,7 @@ class BaseGene(ABC):
         return value
 
     @staticmethod
-    def _convert_datetime_value(value: Any) -> Any:
+    def _convert_datetime_value(value: object) -> datetime | object:
         """
         値をdatetime型に変換（ISOフォーマット対応）
 
@@ -122,7 +126,7 @@ class BaseGene(ABC):
         return value
 
     @staticmethod
-    def _convert_value(value: Any, param_type) -> Any:
+    def _convert_value(value: object, param_type: type) -> SerializableValue | object:
         """一般的な値変換"""
         if BaseGene._is_enum_type(param_type):
             return BaseGene._convert_enum_value(value, param_type)
@@ -160,7 +164,7 @@ class BaseGene(ABC):
         return annotations
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Any:
+    def from_dict(cls, data: Dict[str, SerializableValue]) -> Self:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
         skipped_fields = set()

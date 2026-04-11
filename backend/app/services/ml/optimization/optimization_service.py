@@ -739,8 +739,8 @@ class OptimizationService:
         return objective_function
 
     def _create_temp_trainer(
-        self, original_trainer: Any, params: Dict[str, Any]
-    ) -> Any:
+        self, original_trainer: object, params: Dict[str, object]
+    ) -> object:
         """一時的なトレーナーを作成（全てEnsembleTrainerで統一）"""
         # オリジナルのトレーナーがEnsembleTrainerであることを前提
         if hasattr(original_trainer, "ensemble_config"):

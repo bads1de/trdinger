@@ -24,6 +24,9 @@ from app.services.ml.optimization.optimization_service import (
 from app.services.ml.orchestration.bg_task_orchestration_service import (
     background_task_manager,
 )
+from app.services.ml.orchestration.training_config_validator import (
+    validate_training_config,
+)
 from app.utils.error_handler import safe_ml_operation
 from app.utils.datetime_utils import parse_datetime_range_optional
 from app.utils.response import api_response, ensure_response_dict
@@ -333,57 +336,18 @@ class MLTrainingService(BaseResourceManager):
 
     def _validate_training_config(self, config) -> None:
         """
-        トレーニング設定の検証
+        トレーニング設定の検証（委譲メソッド）
 
-        APIリクエストから受け取ったトレーニング設定の妥当性を検証します。
-        日付範囲、分割比率、パラメータ値などが適切かどうかを確認します。
+        実際のバリデーションロジックは training_config_validator モジュールに
+        移行済み。このメソッドは後方互換性のため残している。
 
         Args:
             config: MLTrainingConfigオブジェクト
 
         Raises:
             ValueError: 設定値が不正な場合
-                - 開始日が終了日より後の場合
-                - トレーニング期間が7日未満の場合
-                - train_test_splitが0より大きく1未満でない場合
-                - validation_splitが0より大きく1未満でない場合
-                - prediction_horizonが1未満の場合
-                - cross_validation_foldsが1未満の場合
-                - サポートされていないtask_typeが指定された場合
-                - サポートされていないtarget_kindが指定された場合
-                - volatility_regressionでensemble_configが有効になっている場合
         """
-        date_range = parse_datetime_range_optional(config.start_date, config.end_date)
-        if date_range is None:
-            raise ValueError("開始日は終了日より前である必要があります")
-
-        start_date, end_date = date_range
-        if (end_date - start_date).days < 7:
-            raise ValueError("トレーニング期間は最低7日間必要です")
-        if not 0 < config.train_test_split < 1:
-            raise ValueError(
-                "train_test_split は 0 より大きく 1 未満である必要があります"
-            )
-        if not 0 < config.validation_split < 1:
-            raise ValueError(
-                "validation_split は 0 より大きく 1 未満である必要があります"
-            )
-        if config.prediction_horizon < 1:
-            raise ValueError("prediction_horizon は 1 以上である必要があります")
-        if config.cross_validation_folds < 1:
-            raise ValueError("cross_validation_folds は 1 以上である必要があります")
-        if config.task_type != "volatility_regression":
-            raise ValueError(
-                "現在サポートしている task_type は volatility_regression のみです"
-            )
-        if config.target_kind != "log_realized_vol":
-            raise ValueError(
-                "現在サポートしている target_kind は log_realized_vol のみです"
-            )
-        if config.ensemble_config and getattr(config.ensemble_config, "enabled", False):
-            raise ValueError(
-                "volatility_regression では ensemble_config はサポートしていません"
-            )
+        validate_training_config(config)
 
     async def get_training_status(self) -> Dict[str, Any]:
         """

@@ -43,7 +43,7 @@ _CONFIG_EXPORTS = {
 }
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> type:
     if name in _CONFIG_EXPORTS:
         module = import_module(".config", __name__)
         return getattr(module, name)

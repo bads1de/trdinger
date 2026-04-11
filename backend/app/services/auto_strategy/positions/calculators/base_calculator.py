@@ -4,6 +4,8 @@
 共通の計算ロジックとユーティリティを提供します。
 """
 
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional
@@ -20,7 +22,7 @@ class BaseCalculator(ABC):
     @abstractmethod
     def calculate(
         self, gene, account_balance: float, current_price: float, **kwargs
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, object]:
         """計算実行（サブクラスで実装）"""
 
     def _get_param(self, gene, attr_name: str, default: Any) -> Any:

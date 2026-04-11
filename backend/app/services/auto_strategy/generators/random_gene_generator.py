@@ -5,6 +5,8 @@ OI/FRデータを含む多様な戦略遺伝子をランダムに生成します
 スケール不一致問題を解決するため、オペランドグループ化システムを使用します。
 """
 
+from __future__ import annotations
+
 import logging
 import random
 from typing import Any, Dict, List, Optional
@@ -122,11 +124,11 @@ class RandomGeneGenerator:
 
     @staticmethod
     def _clone_or_create_gene(
-        cache: List[Any],
+        cache: List[object],
         creator: Any,
         *,
         postprocess: Optional[Any] = None,
-    ) -> Any:
+    ) -> object:
         """
         キャッシュから clone し、無ければ creator で生成する
 
@@ -139,7 +141,7 @@ class RandomGeneGenerator:
             postprocess: 生成後の後処理関数（オプション）
 
         Returns:
-            Any: クローンまたは生成された遺伝子
+            クローンまたは生成された遺伝子
         """
         gene = random.choice(cache).clone() if cache else creator()
         if postprocess is not None:

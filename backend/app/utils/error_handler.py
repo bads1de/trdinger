@@ -23,6 +23,7 @@ from .response import error_response
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+R = TypeVar("R")
 
 
 class TimeoutError(Exception):
@@ -151,14 +152,14 @@ class ErrorHandler:
 
     @staticmethod
     def safe_execute(
-        func: Callable[..., Any],
-        default_return: Optional[Any] = None,
+        func: Callable[..., T],
+        default_return: Optional[T] = None,
         error_message: str = "処理中にエラーが発生しました",
         log_level: str = "error",
         is_api_call: bool = False,
         api_status_code: int = 500,
         api_error_code: str = "INTERNAL_ERROR",
-    ) -> Any:
+    ) -> T:
         """
         関数を安全に実行し、例外を捕捉して適切に処理する
 
@@ -189,7 +190,7 @@ class ErrorHandler:
             else:
                 # MLコンテキストでHTTPExceptionが発生した場合の処理
                 logger.error(f"ML処理中にAPI例外が発生: {e.detail}")
-                return default_return
+                return default_return  # type: ignore[return-value]
         except Exception as e:
             if is_api_call:
                 # API関連のエラーとして処理
@@ -207,10 +208,10 @@ class ErrorHandler:
 
     @staticmethod
     async def safe_execute_async(
-        call: Callable[..., Awaitable[Any]],
+        call: Callable[..., Awaitable[T]],
         message: str = "Internal Server Error",
         status_code: int = 500,
-    ) -> Any:
+    ) -> T:
         """
         非同期関数を安全に実行（API用）
 
@@ -233,6 +234,45 @@ class ErrorHandler:
         except Exception as e:
             logger.error(f"API例外処理: {message} - {e}", exc_info=True)
             raise HTTPException(status_code=status_code, detail=message)
+
+    @staticmethod
+    def api_endpoint(
+        message: str = "Internal Server Error",
+        status_code: int = 500,
+    ):
+        """
+        APIエンドポイント用の簡潔なデコレータ
+
+        従来のボイラープレートパターン:
+            async def _inner():
+                return await service.do_something()
+            return await ErrorHandler.safe_execute_async(_inner)
+
+        を以下のように簡素化:
+            @ErrorHandler.api_endpoint("エラーメッセージ")
+            async def endpoint(service=Depends(get_service)):
+                return await service.do_something()
+
+        Args:
+            message: エラーメッセージ
+            status_code: エラー時のHTTPステータスコード
+        """
+
+        def decorator(func):
+            @functools.wraps(func)
+            async def wrapper(*args, **kwargs):
+                try:
+                    return await func(*args, **kwargs)
+                except HTTPException as e:
+                    logger.error(f"API例外処理: {message} - {e.detail}", exc_info=True)
+                    raise e
+                except Exception as e:
+                    logger.error(f"API例外処理: {message} - {e}", exc_info=True)
+                    raise HTTPException(status_code=status_code, detail=message)
+
+            return wrapper
+
+        return decorator
 
     @staticmethod
     def api_safe_execute(
@@ -398,11 +438,11 @@ class ErrorHandler:
 
 
 def safe_operation(
-    default_return: Any = "RAISE_EXCEPTION",
-    error_handler: Optional[Callable] = None,
+    default_return: R | str = "RAISE_EXCEPTION",
+    error_handler: Callable[[Exception, str], T] | None = None,
     context: str = "統一操作",
     is_api_call: bool = False,
-):
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """
     関数（同期・非同期）を例外から保護し、一貫したエラーハンドリングを提供する共通デコレータです。
 
@@ -413,16 +453,16 @@ def safe_operation(
     4. それ以外の場合、エラーをログに記録し、`default_return` に指定された値を返却して実行を継続させます。
 
     Args:
-        default_return (Any): エラー発生時に返却するデフォルト値。
-        error_handler (Optional[Callable]): 独自のエラー処理ロジックを持つ関数 `(exception, context) -> Any`。
+        default_return (R | str): エラー発生時に返却するデフォルト値。
+        error_handler (Callable[[Exception, str], T] | None): 独自のエラー処理ロジックを持つ関数 `(exception, context) -> T`。
         context (str): ログ出力やエラーメッセージに使用される操作の識別名（例: "DB保存"）。
         is_api_call (bool): APIエンドポイントとして動作させるか（エラー時にHTTP例外を投げるか）。
 
     Returns:
-        Callable: ラップされた関数。同期・非同期を自動判別します。
+        Callable[[Callable[..., T]], Callable[..., T]]: ラップされた関数。同期・非同期を自動判別します。
     """
 
-    def _handle_error(e: Exception) -> Any:
+    def _handle_error(e: Exception) -> T:
         """エラーハンドリングの共通ロジック"""
         if error_handler:
             return error_handler(e, context)
@@ -431,7 +471,7 @@ def safe_operation(
         logger.error(f"エラー in {context}: {e}")
         if isinstance(default_return, str) and default_return == "RAISE_EXCEPTION":
             raise e
-        return default_return
+        return default_return  # type: ignore[return-value]
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         if inspect.iscoroutinefunction(func):

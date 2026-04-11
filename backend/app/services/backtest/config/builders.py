@@ -23,7 +23,7 @@ def _copy_config_source(source: Any) -> Dict[str, Any]:
     return {}
 
 
-def _get_value(source: Any, key: str, default: Any = _MISSING) -> Any:
+def _get_value(source: object, key: str, default: object = _MISSING) -> object:
     """
     dictまたはオブジェクトから値を取得する
 
@@ -55,7 +55,7 @@ def _get_value(source: Any, key: str, default: Any = _MISSING) -> Any:
     raise AttributeError(f"{type(source).__name__} に {key} がありません")
 
 
-def _get_optional_value(source: Any, key: str) -> Any:
+def _get_optional_value(source: object, key: str) -> object:
     """
     dictまたはオブジェクトから値を取得する（エラー時は_MISSINGを返す）
 

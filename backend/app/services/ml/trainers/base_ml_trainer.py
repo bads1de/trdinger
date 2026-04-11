@@ -4,14 +4,17 @@ ML学習基盤クラス
 学習・評価・前処理・保存に関わる共通ロジックを提供します。
 """
 
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
+from app.types import SerializableValue, TrainedModel
 from ....utils.error_handler import (
     DataError,
     ml_operation_context,
@@ -54,7 +57,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def __init__(
         self,
-        trainer_config: Optional[Dict[str, Any]] = None,
+        trainer_config: Optional[Dict[str, SerializableValue]] = None,
     ):
         """
         トレーナーを初期化し、共通サービス（特徴量計算、ラベル生成等）を準備します。
@@ -91,10 +94,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.scaler: Optional[StandardScaler] = StandardScaler()
         self.feature_columns: Optional[List[str]] = None
         self.is_trained: bool = False
-        self._model: Any = None
+        self._model: TrainedModel | None = None
         self.current_model_path: Optional[str] = None
-        self.current_model_metadata: Optional[Dict[str, Any]] = None
-        self.metadata: Optional[Dict[str, Any]] = None
+        self.current_model_metadata: Optional[Dict[str, SerializableValue]] = None
+        self.metadata: Optional[Dict[str, SerializableValue]] = None
 
     @property
     def config(self):
@@ -102,7 +105,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         return ml_config_manager.config
 
     @property
-    def model(self) -> Any:
+    def model(self) -> TrainedModel | None:
         """学習済みモデルを取得"""
         return self._model
 
@@ -117,7 +120,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         save_model: bool = True,
         model_name: Optional[str] = None,
         **training_params,
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, SerializableValue]:
         """
         MLモデルを学習（テンプレートメソッド）
 
@@ -286,7 +289,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         y_train: pd.Series,
         y_test: pd.Series,
         **training_params,
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, SerializableValue]:
         """
         モデル学習の実装（抽象メソッド）
         """
@@ -419,7 +422,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def _time_series_cross_validate(
         self, X: pd.DataFrame, y: pd.Series, **training_params
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, SerializableValue]:
         """時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行"""
         n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
@@ -514,16 +517,16 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         )
         return X_train_scaled, X_test_scaled
 
-    def _get_model_to_save(self) -> Any:
+    def _get_model_to_save(self) -> TrainedModel | None:
         """保存対象のモデルオブジェクトを取得"""
         return self._model
 
-    def _get_model_specific_metadata(self, model_name: str) -> Dict[str, Any]:
+    def _get_model_specific_metadata(self, model_name: str) -> Dict[str, SerializableValue]:
         """モデル固有のメタデータを取得"""
         return {}
 
     def save_model(
-        self, model_name: str, metadata: Optional[Dict[str, Any]] = None
+        self, model_name: str, metadata: Optional[Dict[str, SerializableValue]] = None
     ) -> Optional[str]:
         """学習済みモデルを永続化"""
         if not self.is_trained:
@@ -563,8 +566,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         return model_path
 
     def _format_training_result(
-        self, training_result: Dict[str, Any], X: pd.DataFrame, y: pd.Series
-    ) -> Dict[str, Any]:
+        self, training_result: Dict[str, SerializableValue], X: pd.DataFrame, y: pd.Series
+    ) -> Dict[str, SerializableValue]:
         """学習結果を整形"""
         result = {
             "success": True,
@@ -674,8 +677,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         y_test_cv: pd.Series,
         X_train_cv: pd.DataFrame,
         X_test_cv: pd.DataFrame,
-        training_params: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        training_params: Dict[str, SerializableValue],
+    ) -> Dict[str, SerializableValue]:
         """エラーハンドリング付きフォールド学習"""
         fold_result = self._train_model_impl(
             X_train_scaled,

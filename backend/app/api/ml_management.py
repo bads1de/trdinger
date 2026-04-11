@@ -22,6 +22,7 @@ router = APIRouter(prefix="/api/ml", tags=["ml_management"])
 
 
 @router.get("/models")
+@ErrorHandler.api_endpoint("学習済みモデルの取得中にエラーが発生しました")
 async def get_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
@@ -36,15 +37,11 @@ async def get_models(
     Returns:
         モデル一覧
     """
-
-    async def _get_models():
-        """学習済みモデルの一覧を取得するためのメインロジックを実行します。"""
-        return await ml_service.get_formatted_models()
-
-    return await ErrorHandler.safe_execute_async(_get_models)
+    return await ml_service.get_formatted_models()
 
 
 @router.delete("/models/all")
+@ErrorHandler.api_endpoint("すべてのモデルの削除中にエラーが発生しました")
 async def delete_all_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
@@ -56,15 +53,11 @@ async def delete_all_models(
     Args:
         ml_service: ML管理サービス（依存性注入）
     """
-
-    async def _delete_all_models():
-        """すべてのモデルを削除するためのメインロジックを実行します。"""
-        return await ml_service.delete_all_models()
-
-    return await ErrorHandler.safe_execute_async(_delete_all_models)
+    return await ml_service.delete_all_models()
 
 
 @router.delete("/models/{model_id}")
+@ErrorHandler.api_endpoint("モデルの削除中にエラーが発生しました")
 async def delete_model(
     model_id: str,
     ml_service: MLManagementOrchestrationService = Depends(
@@ -81,15 +74,11 @@ async def delete_model(
     logger.info(
         f"🗑️ 個別モデル削除エンドポイントが呼び出されました: model_id={model_id}"
     )
-
-    async def _delete_model():
-        """指定されたモデルを削除するためのメインロジックを実行します。"""
-        return await ml_service.delete_model(model_id)
-
-    return await ErrorHandler.safe_execute_async(_delete_model)
+    return await ml_service.delete_model(model_id)
 
 
 @router.get("/status")
+@ErrorHandler.api_endpoint("MLモデル状態の取得中にエラーが発生しました")
 async def get_ml_status(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
@@ -104,15 +93,11 @@ async def get_ml_status(
     Returns:
         モデル状態情報
     """
-
-    async def _get_ml_status():
-        """MLモデルの現在の状態を取得するためのメインロジックを実行します。"""
-        return await ml_service.get_ml_status()
-
-    return await ErrorHandler.safe_execute_async(_get_ml_status)
+    return await ml_service.get_ml_status()
 
 
 @router.get("/feature-importance")
+@ErrorHandler.api_endpoint("特徴量重要度の取得中にエラーが発生しました")
 async def get_feature_importance(
     top_n: int = 10,
     ml_service: MLManagementOrchestrationService = Depends(
@@ -135,15 +120,11 @@ async def get_feature_importance(
     Raises:
         HTTPException: モデルが読み込まれていない場合
     """
-
-    async def _get_feature_importance():
-        """特徴量重要度を取得するためのメインロジックを実行します。"""
-        return await ml_service.get_feature_importance(top_n)
-
-    return await ErrorHandler.safe_execute_async(_get_feature_importance)
+    return await ml_service.get_feature_importance(top_n)
 
 
 @router.post("/models/{model_name}/load")
+@ErrorHandler.api_endpoint("モデルの読み込み中にエラーが発生しました")
 async def load_model(
     model_name: str,
     ml_service: MLManagementOrchestrationService = Depends(
@@ -166,15 +147,11 @@ async def load_model(
     Raises:
         HTTPException: モデルファイルが存在しない場合や読み込みに失敗した場合
     """
-
-    async def _load_model():
-        """指定されたモデルを読み込むためのメインロジックを実行します。"""
-        return await ml_service.load_model(model_name)
-
-    return await ErrorHandler.safe_execute_async(_load_model)
+    return await ml_service.load_model(model_name)
 
 
 @router.get("/models/current")
+@ErrorHandler.api_endpoint("現在のモデル情報取得中にエラーが発生しました")
 async def get_current_model(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
@@ -195,12 +172,7 @@ async def get_current_model(
     Raises:
         HTTPException: モデルが読み込まれていない場合
     """
-
-    async def _get_current_model():
-        """現在読み込まれているモデル情報を取得するためのメインロジックを実行します。"""
-        return await ml_service.get_current_model_info()
-
-    return await ErrorHandler.safe_execute_async(_get_current_model)
+    return await ml_service.get_current_model_info()
 
 
 # AutoML機能は削除されたため、/automl-feature-analysisエンドポイントは削除されました
@@ -208,6 +180,7 @@ async def get_current_model(
 
 
 @router.get("/config")
+@ErrorHandler.api_endpoint("ML設定の取得中にエラーが発生しました")
 async def get_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
@@ -222,15 +195,11 @@ async def get_ml_config(
     Returns:
         ML設定
     """
-
-    async def _get_ml_config():
-        """ML設定を取得するためのメインロジックを実行します。"""
-        return ml_service.get_ml_config_dict()
-
-    return await ErrorHandler.safe_execute_async(_get_ml_config)
+    return ml_service.get_ml_config_dict()
 
 
 @router.put("/config")
+@ErrorHandler.api_endpoint("ML設定の更新中にエラーが発生しました")
 async def update_ml_config(
     config_data: Dict[str, Any],
     ml_service: MLManagementOrchestrationService = Depends(
@@ -253,22 +222,18 @@ async def update_ml_config(
     Raises:
         HTTPException: 設定キーが無効な場合や値の形式が不正な場合
     """
+    logger.info(f"ML設定更新要求: {config_data}")
+    result = await ml_service.update_ml_config(config_data)
 
-    async def _update_ml_config():
-        """ML設定を更新するためのメインロジックを実行します。"""
-        logger.info(f"ML設定更新要求: {config_data}")
-        result = await ml_service.update_ml_config(config_data)
-
-        return result_response(
-            success=result["success"],
-            message=result["message"],
-            data=result.get("updated_config"),
-        )
-
-    return await ErrorHandler.safe_execute_async(_update_ml_config)
+    return result_response(
+        success=result["success"],
+        message=result["message"],
+        data=result.get("updated_config"),
+    )
 
 
 @router.post("/config/reset")
+@ErrorHandler.api_endpoint("ML設定のリセット中にエラーが発生しました")
 async def reset_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
@@ -285,22 +250,18 @@ async def reset_ml_config(
     Returns:
         リセット結果とデフォルト設定を含むJSONレスポンス
     """
+    logger.info("ML設定リセット要求")
+    result = await ml_service.reset_ml_config()
 
-    async def _reset_ml_config():
-        """ML設定をデフォルト値にリセットするためのメインロジックを実行します。"""
-        logger.info("ML設定リセット要求")
-        result = await ml_service.reset_ml_config()
-
-        return result_response(
-            success=result["success"],
-            message=result["message"],
-            data=result.get("config"),
-        )
-
-    return await ErrorHandler.safe_execute_async(_reset_ml_config)
+    return result_response(
+        success=result["success"],
+        message=result["message"],
+        data=result.get("config"),
+    )
 
 
 @router.post("/models/cleanup")
+@ErrorHandler.api_endpoint("古いモデルのクリーンアップ中にエラーが発生しました")
 async def cleanup_old_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
@@ -318,9 +279,4 @@ async def cleanup_old_models(
     Returns:
         削除されたモデル数とクリーンアップ結果を含むJSONレスポンス
     """
-
-    async def _cleanup_old_models():
-        """古いモデルファイルをクリーンアップするためのメインロジックを実行します。"""
-        return await ml_service.cleanup_old_models()
-
-    return await ErrorHandler.safe_execute_async(_cleanup_old_models)
+    return await ml_service.cleanup_old_models()

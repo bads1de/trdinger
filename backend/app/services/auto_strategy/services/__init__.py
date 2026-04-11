@@ -32,7 +32,7 @@ _ATTRIBUTE_EXPORTS = {
 }
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> type:
     module_path = _ATTRIBUTE_EXPORTS.get(name)
     if module_path is None:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

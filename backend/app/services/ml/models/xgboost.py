@@ -119,7 +119,7 @@ class XGBoostModel(BaseGradientBoostingModel):
             raise ModelError("学習済みモデルがありません")
         return self.model.predict(data)
 
-    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> xgb.DMatrix:
         """
         予測用の入力データを準備します。
         XGBoostはDMatrixを使用します。

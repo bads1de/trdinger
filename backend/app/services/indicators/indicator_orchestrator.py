@@ -102,7 +102,7 @@ class TechnicalIndicatorService:
         """
         return indicator_type.upper()
 
-    def _resolve_column_name(self, df: pd.DataFrame, data_key: Any) -> Any:
+    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> str:
         """
         カラム名解決をバリデータに委譲する
 

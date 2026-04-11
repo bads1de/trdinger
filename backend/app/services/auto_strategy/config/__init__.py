@@ -73,7 +73,7 @@ _LAZY_EXPORTS = {
 }
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> type:
     """遅延インポートで重い依存を回避"""
     attr_name = _LAZY_EXPORTS.get(name)
     if attr_name is None:

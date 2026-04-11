@@ -214,3 +214,23 @@ def current_datetime_like(reference: datetime) -> datetime:
     if reference.tzinfo is None:
         return datetime.now()
     return datetime.now(reference.tzinfo)
+
+
+def ensure_utc_timezone(dt: datetime | None) -> datetime | None:
+    """
+    datetimeオブジェクトのタイムゾーンがUTCであることを保証する。
+
+    naive（タイムゾーン情報なし）の場合はUTCを設定し、
+    他のタイムゾーンがある場合はUTCに変換します。
+
+    Args:
+        dt: 変換対象のdatetimeオブジェクト（Noneの場合はNoneを返す）
+
+    Returns:
+        datetime | None: UTCタイムゾーンに正規化されたdatetimeオブジェクト
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)

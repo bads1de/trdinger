@@ -5,16 +5,21 @@
 共通の初期化、検証、エラーハンドリング、計算パターンを提供します。
 """
 
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
 
+from app.types import SerializableValue
 from app.utils.data_processing.data_processor import _replace_inf_with_nan
 
 logger = logging.getLogger(__name__)
+
+SeriesOrDict = Union[pd.Series, Dict[str, pd.Series]]
 
 
 def sanitize_numeric_dataframe(
@@ -103,7 +108,7 @@ class BaseFeatureCalculator(ABC):
 
     @abstractmethod
     def calculate_features(
-        self, df: pd.DataFrame, config: Dict[str, Any]
+        self, df: pd.DataFrame, config: Dict[str, SerializableValue]
     ) -> pd.DataFrame:
         """
         特徴量計算の抽象メソッド
@@ -180,10 +185,10 @@ class BaseFeatureCalculator(ABC):
 
     def batch_calculate_ratio(
         self,
-        numerators: Any,
-        denominators: Any,
+        numerators: SeriesOrDict,
+        denominators: SeriesOrDict,
         fill_value: float = 0.0,
-    ) -> Any:
+    ) -> SeriesOrDict:
         """
         バッチで比率を計算する（ゼロ除算対応）
 

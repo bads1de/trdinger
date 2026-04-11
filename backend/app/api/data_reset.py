@@ -23,6 +23,7 @@ router = APIRouter(prefix="/api/data-reset", tags=["data-reset"])
 
 
 @router.delete("/all")
+@ErrorHandler.api_endpoint("全データのリセット中にエラーが発生しました")
 async def reset_all_data(
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(
@@ -41,17 +42,11 @@ async def reset_all_data(
     Returns:
         Dict[str, Any]: 削除結果の詳細。成功した場合は削除対象の件数を含む。
     """
-
-    async def _reset_all_data():
-        """全てのデータをリセットするためのメインロジックを実行する。"""
-        return await orchestration_service.reset_all_data(db_session=db)
-
-    return await ErrorHandler.safe_execute_async(
-        _reset_all_data, message="全データのリセット中にエラーが発生しました"
-    )
+    return await orchestration_service.reset_all_data(db_session=db)
 
 
 @router.delete("/ohlcv")
+@ErrorHandler.api_endpoint("OHLCVデータのリセット中にエラーが発生しました")
 async def reset_ohlcv_data(
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(
@@ -64,17 +59,11 @@ async def reset_ohlcv_data(
     Returns:
         削除結果の詳細
     """
-
-    async def _reset_ohlcv_data():
-        """OHLCVデータをリセットするためのメインロジックを実行します。"""
-        return await orchestration_service.reset_ohlcv_data(db_session=db)
-
-    return await ErrorHandler.safe_execute_async(
-        _reset_ohlcv_data, message="OHLCVデータのリセット中にエラーが発生しました"
-    )
+    return await orchestration_service.reset_ohlcv_data(db_session=db)
 
 
 @router.delete("/funding-rates")
+@ErrorHandler.api_endpoint("ファンディングレートデータのリセット中にエラーが発生しました")
 async def reset_funding_rate_data(
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(
@@ -87,18 +76,11 @@ async def reset_funding_rate_data(
     Returns:
         削除結果の詳細
     """
-
-    async def _reset_funding_rate_data():
-        """ファンディングレートデータをリセットするためのメインロジックを実行します。"""
-        return await orchestration_service.reset_funding_rate_data(db_session=db)
-
-    return await ErrorHandler.safe_execute_async(
-        _reset_funding_rate_data,
-        message="ファンディングレートデータのリセット中にエラーが発生しました",
-    )
+    return await orchestration_service.reset_funding_rate_data(db_session=db)
 
 
 @router.delete("/open-interest")
+@ErrorHandler.api_endpoint("オープンインタレストデータのリセット中にエラーが発生しました")
 async def reset_open_interest_data(
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(
@@ -111,18 +93,11 @@ async def reset_open_interest_data(
     Returns:
         削除結果の詳細
     """
-
-    async def _reset_open_interest():
-        """オープンインタレストデータをリセットするためのメインロジックを実行します。"""
-        return await orchestration_service.reset_open_interest_data(db_session=db)
-
-    return await ErrorHandler.safe_execute_async(
-        _reset_open_interest,
-        message="オープンインタレストデータのリセット中にエラーが発生しました",
-    )
+    return await orchestration_service.reset_open_interest_data(db_session=db)
 
 
 @router.delete("/symbol/{symbol:path}")
+@ErrorHandler.api_endpoint("シンボル別データのリセット中にエラーが発生しました")
 async def reset_data_by_symbol(
     symbol: str,
     db: Session = Depends(get_db),
@@ -139,19 +114,13 @@ async def reset_data_by_symbol(
     Returns:
         削除結果の詳細
     """
-
-    async def _reset_by_symbol():
-        """シンボル別データをリセットするためのメインロジックを実行します。"""
-        return await orchestration_service.reset_data_by_symbol(
-            symbol=symbol, db_session=db
-        )
-
-    return await ErrorHandler.safe_execute_async(
-        _reset_by_symbol, message="シンボル別データのリセット中にエラーが発生しました"
+    return await orchestration_service.reset_data_by_symbol(
+        symbol=symbol, db_session=db
     )
 
 
 @router.get("/status")
+@ErrorHandler.api_endpoint("データステータスの取得中にエラーが発生しました")
 async def get_data_status(
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(
@@ -164,11 +133,4 @@ async def get_data_status(
     Returns:
         各データタイプの詳細情報（件数、最新・最古データ）
     """
-
-    async def _get_status():
-        """データステータスを取得するためのメインロジックを実行します。"""
-        return await orchestration_service.get_data_status(db_session=db)
-
-    return await ErrorHandler.safe_execute_async(
-        _get_status, message="データステータスの取得中にエラーが発生しました"
-    )
+    return await orchestration_service.get_data_status(db_session=db)

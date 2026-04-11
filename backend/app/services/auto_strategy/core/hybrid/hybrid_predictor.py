@@ -96,7 +96,7 @@ class RuntimeModelPredictorAdapter:
         prepared = features_df.copy()
         return prepared.ffill().fillna(0.0)
 
-    def _run_model(self, features_df: pd.DataFrame) -> Any:
+    def _run_model(self, features_df: pd.DataFrame) -> np.ndarray:
         """モデル固有の予測関数を呼び出す。"""
         predict_volatility = getattr(self.model, "predict_volatility", None)
         if callable(predict_volatility):

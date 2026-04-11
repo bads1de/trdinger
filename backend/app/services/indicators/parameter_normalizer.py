@@ -64,8 +64,8 @@ class ParameterNormalizer:
         return normalized
 
     def _apply_min_length_guard(
-        self, param_name: str, value: Any, config: Dict[str, Any]
-    ) -> Any:
+        self, param_name: str, value: object, config: Dict[str, object]
+    ) -> object:
         """
         min_lengthガードを適用
 

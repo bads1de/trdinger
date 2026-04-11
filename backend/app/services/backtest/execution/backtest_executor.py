@@ -7,7 +7,7 @@ import logging
 import warnings
 from copy import deepcopy
 from datetime import datetime
-from typing import Any, Dict, Optional, Type
+from typing import Dict, Optional, Type
 
 import pandas as pd
 from backtesting import Backtest, Strategy
@@ -55,7 +55,7 @@ class BacktestExecutor:
     def execute_backtest(
         self,
         strategy_class: Type[Strategy],
-        strategy_parameters: Dict[str, Any],
+        strategy_parameters: Dict[str, object],
         symbol: str,
         timeframe: str,
         start_date: datetime,
@@ -65,7 +65,7 @@ class BacktestExecutor:
         slippage: float = 0.0,
         leverage: float = 1.0,
         preloaded_data: Optional[pd.DataFrame] = None,
-    ) -> Any:
+    ) -> dict:
         """
         指定された戦略とパラメータでバックテスト・シミュレーションを実行します。
 
@@ -202,7 +202,7 @@ class BacktestExecutor:
                 f"バックテストインスタンスの作成に失敗しました: {e}"
             )
 
-    def _run_backtest(self, bt: Backtest, strategy_parameters: Dict[str, Any]) -> Any:
+    def _run_backtest(self, bt: Backtest, strategy_parameters: Dict[str, object]) -> dict:
         """バックテストを実行"""
         try:
             # 警告を一時的に無効化
@@ -218,7 +218,7 @@ class BacktestExecutor:
                 f"バックテスト実行中にエラーが発生しました: {e}"
             )
 
-    def get_supported_strategies(self) -> Dict[str, Any]:
+    def get_supported_strategies(self) -> Dict[str, object]:
         """
         サポートされている戦略一覧を取得
 

@@ -114,7 +114,7 @@ class MetaLabelingService:
 
         return trend_mask, y_meta
 
-    def _init_model(self) -> Any:
+    def _init_model(self) -> object:
         """モデルを初期化"""
         if self.model_type == "random_forest":
             params = {

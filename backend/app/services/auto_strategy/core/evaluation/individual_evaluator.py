@@ -4,11 +4,12 @@
 遺伝的アルゴリズムの個体評価を担当します。
 """
 
+from __future__ import annotations
+
 import hashlib
 import logging
 import threading
 from typing import (
-    Any,
     Dict,
     Optional,
     Tuple,
@@ -17,6 +18,8 @@ from typing import (
 import pandas as pd
 from cachetools import LRUCache
 from pydantic import ValidationError
+
+from app.types import SerializableValue
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.config.helpers import (
@@ -420,7 +423,7 @@ class IndividualEvaluator(EvaluationWindowService):
             logger.error(f"robustness 評価エラー: {e}")
             return None
 
-    def _resolve_gene(self, individual: Any) -> Any:
+    def _resolve_gene(self, individual: object) -> object:
         """評価対象から遺伝子本体を取り出す。"""
         if isinstance(individual, StrategyGene):
             return individual
@@ -466,11 +469,11 @@ class IndividualEvaluator(EvaluationWindowService):
         )
         return f"{base_key}:robustness:{hash(signature)}"
 
-    def _get_cached_data(self, backtest_config: Dict[str, Any]) -> Any:
+    def _get_cached_data(self, backtest_config: Dict[str, SerializableValue]) -> object:
         """キャッシュされたバックテストデータを取得"""
         return self._data_provider.get_cached_backtest_data(backtest_config)
 
-    def _get_cached_minute_data(self, backtest_config: Dict[str, Any]) -> Any:
+    def _get_cached_minute_data(self, backtest_config: Dict[str, SerializableValue]) -> object:
         """
         1分足データをキャッシュから取得
 
@@ -488,10 +491,10 @@ class IndividualEvaluator(EvaluationWindowService):
         self,
         symbol: str,
         timeframe: str,
-        start_date: Any,
-        end_date: Any,
+        start_date: object,
+        end_date: object,
         cache_prefix: str = "ohlcv",
-    ) -> Any:
+    ) -> pd.DataFrame | None:
         """
         OHLCVデータをキャッシュから汎用的に取得
 

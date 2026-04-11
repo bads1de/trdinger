@@ -4,9 +4,11 @@
 アダプター関数を使用したインジケーター計算を担当します。
 """
 
+from __future__ import annotations
+
 import inspect
 import logging
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -39,9 +41,9 @@ class AdapterHandler:
         self,
         df: pd.DataFrame,
         indicator_type: str,
-        params: Dict[str, Any],
+        params: Dict[str, object],
         config: IndicatorConfig,
-    ) -> Any:
+    ) -> pd.DataFrame | None:
         """
         アダプター関数を使用した指標計算
 
@@ -122,10 +124,10 @@ class AdapterHandler:
 
     def _map_adapter_params(
         self,
-        params: Dict[str, Any],
+        params: Dict[str, object],
         config: IndicatorConfig,
         required_data: Dict[str, Union[pd.Series, pd.DataFrame]],
-    ) -> Tuple[Dict[str, Any], Dict[str, Union[pd.Series, pd.DataFrame]]]:
+    ) -> Tuple[Dict[str, object], Dict[str, Union[pd.Series, pd.DataFrame]]]:
         """
         アダプター関数のパラメータをマッピング
 
@@ -152,11 +154,11 @@ class AdapterHandler:
 
     def _call_adapter_function(
         self,
-        adapter_function: Any,
-        all_args: Dict[str, Any],
+        adapter_function: object,
+        all_args: Dict[str, object],
         indicator_type: str,
         config: IndicatorConfig,
-    ) -> Any:
+    ) -> object:
         """
         アダプター関数を呼び出し
 
@@ -215,10 +217,10 @@ class AdapterHandler:
     def _assign_parameters(
         self,
         sig: inspect.Signature,
-        all_args: Dict[str, Any],
-        series_data: Dict[str, Any],
-        scalar_params: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        all_args: Dict[str, object],
+        series_data: Dict[str, pd.Series | pd.DataFrame],
+        scalar_params: Dict[str, object],
+    ) -> Dict[str, object]:
         """
         パラメータを割り当て
 
@@ -288,11 +290,11 @@ class AdapterHandler:
 
     def _execute_adapter_function(
         self,
-        adapter_function: Any,
-        assigned_params: Dict[str, Any],
+        adapter_function: object,
+        assigned_params: Dict[str, object],
         indicator_type: str,
-        all_args: Dict[str, Any],
-    ) -> Any:
+        all_args: Dict[str, object],
+    ) -> object:
         """
         アダプター関数を実行
 
@@ -325,7 +327,7 @@ class AdapterHandler:
 
         return result
 
-    def _align_adapter_result(self, result: Any, reference_index: Any) -> Any:
+    def _align_adapter_result(self, result: object, reference_index: pd.Index | None) -> pd.DataFrame | pd.Series | None:
         """
         入力 index に合わせて adapter の結果を再整列する
 
@@ -337,7 +339,7 @@ class AdapterHandler:
             reference_index: 参照インデックス（入力DataFrameのインデックス）
 
         Returns:
-            Any: 整列された結果（インデックスが揃えられたSeries/DataFrame）
+            pd.DataFrame | pd.Series | None: 整列された結果（インデックスが揃えられたSeries/DataFrame）
         """
         if reference_index is None:
             return result
@@ -430,7 +432,7 @@ class AdapterHandler:
 
         return reference_index.take(positions)
 
-    def _convert_adapter_result(self, result: Any, config: IndicatorConfig) -> Any:
+    def _convert_adapter_result(self, result: object, config: IndicatorConfig) -> np.ndarray | tuple[np.ndarray, ...] | object:
         """
         アダプター結果を変換
 
@@ -443,7 +445,7 @@ class AdapterHandler:
             config: インジケーター設定（result_typeを含む）
 
         Returns:
-            Any: 変換された結果（numpy配列、タプル等）
+            np.ndarray | tuple[np.ndarray, ...] | object: 変換された結果（numpy配列、タプル等）
         """
         if isinstance(result, pd.Series):
             return result.to_numpy()

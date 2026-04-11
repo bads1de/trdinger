@@ -33,7 +33,7 @@ __all__ = [
 ]
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> type:
     """
     遅延インポートによる属性アクセスを提供
 

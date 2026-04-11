@@ -199,11 +199,11 @@ def _is_missing_indicator_result(result: Any) -> bool:
 
 def _run_indicator_with_validation(
     validation: Optional[pd.Series],
-    result_factory: Callable[[], Any],
+    result_factory: Callable[[], object],
     *,
-    fallback_factory: Optional[Callable[[], Any]] = None,
+    fallback_factory: Optional[Callable[[], object]] = None,
     reference_series: Optional[pd.Series] = None,
-) -> Any:
+) -> object:
     """
     検証と NaN フォールバックをまとめて扱う。
 
@@ -234,11 +234,11 @@ def _run_indicator_with_validation(
 def run_series_indicator(
     data: pd.Series,
     length: Optional[int],
-    result_factory: Callable[[], Any],
+    result_factory: Callable[[], object],
     *,
     min_data_length: int = 0,
-    fallback_factory: Optional[Callable[[], Any]] = None,
-) -> Any:
+    fallback_factory: Optional[Callable[[], object]] = None,
+) -> object:
     """
     単一 Series 入力の指標計算を検証付きで実行する。
 
@@ -267,11 +267,11 @@ def run_series_indicator(
 def run_multi_series_indicator(
     series_dict: Mapping[str, pd.Series],
     length: Optional[int],
-    result_factory: Callable[[], Any],
+    result_factory: Callable[[], object],
     *,
     min_data_length: int = 0,
-    fallback_factory: Optional[Callable[[], Any]] = None,
-) -> Any:
+    fallback_factory: Optional[Callable[[], object]] = None,
+) -> object:
     """
     複数 Series 入力の指標計算を検証付きで実行する。
 
@@ -518,7 +518,7 @@ def extract_tuple_result(
         raise
 
 
-def get_param_value(params: Dict[str, Any], keys: list, default: Any) -> Any:
+def get_param_value(params: Dict[str, object], keys: list, default: object = None) -> object:
     """
     パラメータ名がlengthまたはwindowの場合の値取得をサポート
 

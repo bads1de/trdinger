@@ -2,6 +2,8 @@
 評価期間の warmup と評価窓トリミングを扱う補助サービス
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from math import ceil
@@ -155,12 +157,12 @@ class EvaluationWindowService:
         return timeframe_map.get(str(timeframe), 60)
 
     @staticmethod
-    def format_datetime_like(original_value: Any, timestamp: pd.Timestamp) -> Any:
+    def format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
         """公開用ラッパー。"""
         return EvaluationWindowService._format_datetime_like(original_value, timestamp)
 
     @staticmethod
-    def _format_datetime_like(original_value: Any, timestamp: pd.Timestamp) -> Any:
+    def _format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
         """元の入力型に合わせて Timestamp を整形する。"""
         if isinstance(original_value, pd.Timestamp):
             return timestamp
@@ -389,9 +391,9 @@ class EvaluationWindowService:
     def _compute_window_stats(
         self,
         trades_df: pd.DataFrame,
-        equity_values: Any,
+        equity_values: object,
         ohlc_data: pd.DataFrame,
-    ) -> Any:
+    ) -> object:
         """評価窓だけを対象に backtesting.py の統計を再計算する。"""
         from backtesting._stats import compute_stats  # type: ignore
 

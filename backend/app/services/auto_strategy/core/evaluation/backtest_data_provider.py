@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Optional, cast
+from typing import Dict, Optional, cast
 
 import pandas as pd
 
@@ -49,7 +49,7 @@ class BacktestDataProvider:
         return pd.Timestamp(parsed_range[0]), pd.Timestamp(parsed_range[1])
 
     @staticmethod
-    def _extract_worker_data(worker_payload: Any, expected_key: tuple[Any, ...]) -> Any:
+    def _extract_worker_data(worker_payload: object, expected_key: tuple[object, ...]) -> object:
         """共有ワーカーデータが現在の要求期間と一致する場合のみ返す。"""
         if not isinstance(worker_payload, dict):
             return None
@@ -102,7 +102,7 @@ class BacktestDataProvider:
         expected_start, expected_end = expected_range
         return worker_start <= expected_start <= expected_end <= worker_end
 
-    def get_cached_backtest_data(self, backtest_config: Dict[str, Any]) -> Any:
+    def get_cached_backtest_data(self, backtest_config: Dict[str, SerializableValue]) -> pd.DataFrame | None:
         """メイン時間軸のバックテストデータをキャッシュ付きで取得する。"""
         symbol = backtest_config.get("symbol")
         timeframe = backtest_config.get("timeframe")
@@ -139,7 +139,7 @@ class BacktestDataProvider:
         logger.debug(f"バックテストデータをキャッシュしました: {key}")
         return data
 
-    def get_cached_minute_data(self, backtest_config: Dict[str, Any]) -> Any:
+    def get_cached_minute_data(self, backtest_config: Dict[str, SerializableValue]) -> pd.DataFrame | None:
         """1分足データをキャッシュ付きで取得する。"""
         symbol = backtest_config.get("symbol")
         start_date = backtest_config.get("start_date")
@@ -186,10 +186,10 @@ class BacktestDataProvider:
         self,
         symbol: str,
         timeframe: str,
-        start_date: Any,
-        end_date: Any,
+        start_date: object,
+        end_date: object,
         cache_prefix: str = "ohlcv",
-    ) -> Any:
+    ) -> pd.DataFrame | None:
         """OHLCV データを汎用キャッシュ経由で取得する。"""
         if not all([symbol, timeframe, start_date, end_date]):
             logger.warning(

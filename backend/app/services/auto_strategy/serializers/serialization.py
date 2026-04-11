@@ -5,6 +5,8 @@
 DictConverterとGeneSerializerを統合し、JSON/Dict形式の相互変換を提供します。
 """
 
+from __future__ import annotations
+
 from collections.abc import Mapping
 import copy
 from dataclasses import fields, is_dataclass
@@ -12,7 +14,7 @@ from enum import Enum
 import json
 import logging
 import math
-from typing import Any, Dict, Optional, cast
+from typing import Dict, Optional, cast
 
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
@@ -25,6 +27,11 @@ from ..genes import (
     StrategyGene,
     TPSLGene,
 )
+
+from app.types import SerializableValue
+
+# キャッシュキー用にハッシュ可能な構造
+_FrozenKey = tuple | str | int | float | bool | None
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +49,10 @@ class DictConverter:
     def __init__(self, cache_size: int = 1000) -> None:
         self._strategy_gene_codec = StrategyGeneDictCodec(self)
         self._cache_size = cache_size
-        self._serialize_cache: Dict[Any, Dict[str, Any]] = {}
-        self._deserialize_cache: Dict[Any, Any] = {}
+        self._serialize_cache: dict[int | str | tuple, dict[str, SerializableValue]] = {}
+        self._deserialize_cache: dict[int | str | tuple, object] = {}
 
-    def _freeze_for_cache_key(self, value: Any) -> Any:
+    def _freeze_for_cache_key(self, value: object) -> _FrozenKey:
         """キャッシュキー用にオブジェクトをハッシュ可能な構造へ正規化する。"""
         if value is None or isinstance(value, (str, int, bool, bytes)):
             return value
@@ -109,7 +116,7 @@ class DictConverter:
 
         return ("repr", repr(value))
 
-    def _copy_cached_value(self, value: Any) -> Any:
+    def _copy_cached_value(self, value: object) -> SerializableValue:
         """キャッシュ内容を返却用に軽量コピーする。"""
         if value is None or isinstance(value, (str, int, float, bool, bytes)):
             return value
@@ -146,14 +153,14 @@ class DictConverter:
 
         return copy.deepcopy(value)
 
-    def _generate_cache_key(self, strategy_gene: Any) -> Any:
+    def _generate_cache_key(self, strategy_gene: object) -> _FrozenKey:
         """戦略遺伝子の構造に基づいて安定したキャッシュキーを生成する。"""
         try:
             return self._freeze_for_cache_key(strategy_gene)
         except Exception:
             return ("object_id", id(strategy_gene))
 
-    def _generate_dict_cache_key(self, data: Any) -> Any:
+    def _generate_dict_cache_key(self, data: object) -> _FrozenKey:
         """辞書データ用のキャッシュキーを生成する。"""
         try:
             return self._freeze_for_cache_key(data)

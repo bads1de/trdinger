@@ -23,7 +23,7 @@ DEFAULT_EARLY_TERMINATION_VALUES = {
 }
 
 
-def _read_value(source: Any, key: str, default: Any = None) -> Any:
+def _read_value(source: object, key: str, default: object = None) -> object:
     """dict / オブジェクトのどちらからでも値を取得する。"""
     if isinstance(source, Mapping):
         if key in source:

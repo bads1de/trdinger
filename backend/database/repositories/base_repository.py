@@ -3,12 +3,14 @@
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar, cast
 
 import pandas as pd
 from sqlalchemy import asc, delete, desc, func, select
 from sqlalchemy.orm import Session
+
+from app.utils.datetime_utils import ensure_utc_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +59,7 @@ class BaseRepository(Generic[T]):
                 result[column.name] = val
         return result
 
-    def to_pydantic_model(self, model_instance: T, pydantic_model_class: Type) -> Any:
+    def to_pydantic_model(self, model_instance: T, pydantic_model_class: Type[T]) -> T:
         """モデルインスタンスをPydanticモデルに変換
 
         Args:
@@ -263,11 +265,7 @@ class BaseRepository(Generic[T]):
 
             result = self.db.scalar(stmt)
 
-            # タイムゾーン情報が失われている場合はUTCを設定
-            if result and result.tzinfo is None:
-                result = result.replace(tzinfo=timezone.utc)
-
-            return result
+            return ensure_utc_timezone(result)
 
         except Exception:
             from app.utils.error_handler import safe_operation
@@ -301,11 +299,7 @@ class BaseRepository(Generic[T]):
 
             result = self.db.scalar(stmt)
 
-            # タイムゾーン情報が失われている場合はUTCを設定
-            if result and result.tzinfo is None:
-                result = result.replace(tzinfo=timezone.utc)
-
-            return result
+            return ensure_utc_timezone(result)
 
         except Exception as e:
             logger.error(f"最古タイムスタンプの取得中にエラーが発生しました: {e}")

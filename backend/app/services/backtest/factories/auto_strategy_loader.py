@@ -5,8 +5,9 @@
 """
 
 import logging
-from typing import Any, Dict, Type
+from typing import Dict, Type
 
+from app.types import SerializableValue
 from backtesting import Strategy
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ class AutoStrategyLoader:
     遅延インポートを用いて循環参照を回避します。
     """
 
-    def _import_strategy_gene_components(self) -> tuple[Any, Any]:
+    def _import_strategy_gene_components(self) -> tuple[object, object]:
         """StrategyGene と GeneSerializer を遅延インポートする"""
         try:
             from app.services.auto_strategy.genes import StrategyGene
@@ -51,7 +52,7 @@ class AutoStrategyLoader:
                 f"オートストラテジーモジュールのインポートに失敗しました: {e}"
             )
 
-    def load_strategy_gene(self, strategy_config: Dict[str, Any]) -> Any:
+    def load_strategy_gene(self, strategy_config: Dict[str, object]) -> object:
         """
         戦略設定から戦略遺伝子オブジェクトをロード・復元
 
@@ -92,7 +93,7 @@ class AutoStrategyLoader:
             raise AutoStrategyLoaderError(f"戦略遺伝子の復元に失敗しました: {e}")
 
     def create_auto_strategy_class(
-        self, strategy_config: Dict[str, Any]
+        self, strategy_config: Dict[str, object]
     ) -> Type[Strategy]:
         """
         オートストラテジーのクラスを生成
@@ -119,7 +120,7 @@ class AutoStrategyLoader:
         # UniversalStrategyクラスを返す
         return UniversalStrategy
 
-    def _extract_strategy_gene(self, strategy_config: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_strategy_gene(self, strategy_config: Dict[str, SerializableValue]) -> Dict[str, SerializableValue]:
         """戦略設定から戦略遺伝子を抽出"""
         # 直接strategy_geneがある場合
         if "strategy_gene" in strategy_config:

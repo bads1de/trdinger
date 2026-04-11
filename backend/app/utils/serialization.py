@@ -5,19 +5,23 @@ dataclass、Enum、datetime 等の Python オブジェクトと
 JSON 辞書との相互変換を一箇所に集約し、各所の重複実装を排除します。
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from dataclasses import fields, is_dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Type, TypeVar
+from typing import Dict, Type, TypeVar
+
+from ..types import SerializableValue
 
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
 
-def _convert_value(value: Any) -> Any:
+def _convert_value(value: object) -> SerializableValue:
     """単一値をJSONシリアライズ可能な型に再帰変換する。
 
     Enum、datetime、dataclass、dict、listなどの複雑なオブジェクトを
@@ -54,7 +58,7 @@ def _convert_value(value: Any) -> Any:
     return value
 
 
-def dataclass_to_dict(obj: Any) -> Dict[str, Any]:
+def dataclass_to_dict(obj: object) -> dict[str, SerializableValue]:
     """
     dataclass インスタンスを JSON シリアライズ可能な辞書に変換する。
 
@@ -71,7 +75,7 @@ def dataclass_to_dict(obj: Any) -> Dict[str, Any]:
         変換済み辞書。変換に失敗した場合は空辞書を返す。
     """
     try:
-        result: Dict[str, Any] = {}
+        result: dict[str, SerializableValue] = {}
         for f in fields(obj):
             value = getattr(obj, f.name)
             result[f.name] = _convert_value(value)
@@ -81,7 +85,7 @@ def dataclass_to_dict(obj: Any) -> Dict[str, Any]:
         return {}
 
 
-def dataclass_to_json(obj: Any, *, indent: int = 2) -> str:
+def dataclass_to_json(obj: object, *, indent: int = 2) -> str:
     """dataclassインスタンスをJSON文字列に変換する。
 
     dataclass_to_dict()で辞書に変換した後、json.dumps()で
@@ -130,7 +134,7 @@ def dataclass_from_json(cls: Type[T], json_str: str) -> T:
     return dataclass_from_dict(cls, data)
 
 
-def dataclass_from_dict(cls: Type[T], data: Dict[str, Any]) -> T:
+def dataclass_from_dict(cls: Type[T], data: Dict[str, SerializableValue]) -> T:
     """
     辞書から dataclass インスタンスを復元する。
 

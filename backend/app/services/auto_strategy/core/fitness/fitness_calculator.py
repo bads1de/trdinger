@@ -9,10 +9,11 @@ import hashlib
 import json
 import logging
 import math
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Dict, Mapping, Optional, Tuple
 
 import numpy as np
 
+from app.types import SerializableValue
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config import objective_registry
 
@@ -34,11 +35,11 @@ class FitnessCalculator:
 
     def __init__(self) -> None:
         # メトリクスキャッシュ（同一 backtest_result の再計算を避ける）
-        self._metrics_cache: Dict[str, Dict[str, Any]] = {}
+        self._metrics_cache: Dict[str, Dict[str, SerializableValue]] = {}
         self._cache_enabled = True
-        self._recent_metrics_result: Optional[Dict[str, Any]] = None
-        self._recent_metrics_signature: Any = None
-        self._recent_metrics_value: Optional[Dict[str, Any]] = None
+        self._recent_metrics_result: Optional[Dict[str, SerializableValue]] = None
+        self._recent_metrics_signature: object = None
+        self._recent_metrics_value: Optional[Dict[str, SerializableValue]] = None
 
     def clear_cache(self) -> None:
         """メトリクスキャッシュをクリアする。"""
@@ -48,7 +49,7 @@ class FitnessCalculator:
         self._recent_metrics_value = None
 
     @staticmethod
-    def _json_default(value: Any) -> Any:
+    def _json_default(value: object) -> SerializableValue:
         """JSONキー生成時の非標準値を文字列または素値に落とす。
 
         NumPyのスカラー型など、JSONに変換できない値を
@@ -58,7 +59,7 @@ class FitnessCalculator:
             value: 変換対象の値。
 
         Returns:
-            Any: JSONに変換可能な値。NumPyスカラーの場合は.item()で変換、
+            SerializableValue: JSONに変換可能な値。NumPyスカラーの場合は.item()で変換、
                 それ以外はstr()変換。
         """
         if isinstance(value, np.generic):
@@ -66,7 +67,7 @@ class FitnessCalculator:
         return str(value)
 
     @staticmethod
-    def _normalize_signature_value(value: Any) -> Any:
+    def _normalize_signature_value(value: object) -> object:
         """直近result判定用に値を軽量に正規化する。
 
         NumPyスカラー、floatの特殊値（NaN、Inf）、
@@ -92,7 +93,7 @@ class FitnessCalculator:
 
         return repr(value)
 
-    def _sample_sequence_signature(self, value: Any) -> tuple[Any, ...]:
+    def _sample_sequence_signature(self, value: object) -> tuple[object, ...]:
         """大きいシーケンスの軽量シグネチャを作る。
 
         長大なリストやタプルの全要素をハッシュするのではなく、
@@ -103,7 +104,7 @@ class FitnessCalculator:
             value: シーケンス（listまたはtuple）。
 
         Returns:
-            tuple[Any, ...]: 代表点の値を正規化したタプル。
+            tuple[object, ...]: 代表点の値を正規化したタプル。
                 空シーケンスの場合は空タプル。
         """
         if not isinstance(value, (list, tuple)) or not value:
@@ -117,7 +118,7 @@ class FitnessCalculator:
 
         return tuple(self._normalize_signature_value(value[idx]) for idx in indices)
 
-    def _build_recent_result_signature(self, backtest_result: Dict[str, Any]) -> Any:
+    def _build_recent_result_signature(self, backtest_result: Dict[str, SerializableValue]) -> object:
         """同一resultの直近再利用判定に使う軽量シグネチャを作る。
 
         バックテスト結果の主要メトリクス、資産曲線、取引履歴の
@@ -163,7 +164,7 @@ class FitnessCalculator:
             self._normalize_signature_value(backtest_result.get("end_date")),
         )
 
-    def _generate_cache_key(self, backtest_result: Dict[str, Any]) -> str:
+    def _generate_cache_key(self, backtest_result: Dict[str, SerializableValue]) -> str:
         """バックテスト結果の内容から安定したキャッシュキーを生成する。"""
         payload = {
             "performance_metrics": backtest_result.get("performance_metrics") or {},
@@ -200,8 +201,8 @@ class FitnessCalculator:
         return tuple(penalty_values)
 
     def extract_performance_metrics(
-        self, backtest_result: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, backtest_result: Dict[str, SerializableValue]
+    ) -> Dict[str, SerializableValue]:
         """
         バックテスト結果からパフォーマンスメトリクスを抽出
 
@@ -239,7 +240,7 @@ class FitnessCalculator:
         calmar_ratio = performance_metrics.get("calmar_ratio", 0.0)
         total_trades = performance_metrics.get("total_trades", 0)
 
-        def _sanitize_float(value: Any, default: float) -> float:
+        def _sanitize_float(value: object, default: float) -> float:
             if value is None or not isinstance(value, (int, float)):
                 return default
             value_float = float(value)
@@ -296,7 +297,7 @@ class FitnessCalculator:
         return metrics
 
     def meets_constraints(
-        self, metrics: Mapping[str, Any], config: "GAConfig"
+        self, metrics: Mapping[str, SerializableValue], config: "GAConfig"
     ) -> bool:
         """単一目的評価で使う制約判定をまとめて返す。"""
         try:
@@ -331,7 +332,7 @@ class FitnessCalculator:
             return False
 
     def calculate_fitness(
-        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
+        self, backtest_result: Dict[str, SerializableValue], config: GAConfig, **kwargs
     ) -> float:
         """
         フィットネス計算（ロング・ショートバランス評価を含む）
@@ -397,7 +398,7 @@ class FitnessCalculator:
             logger.error(f"フィットネス計算エラー: {e}", exc_info=True)
             return config.constraint_violation_penalty
 
-    def _calculate_balance_score_fast(self, backtest_result: Dict[str, Any]) -> float:
+    def _calculate_balance_score_fast(self, backtest_result: Dict[str, SerializableValue]) -> float:
         """ロング・ショートバランススコア計算（最適化版）。"""
         trade_history = backtest_result.get("trade_history")
         if not trade_history:
@@ -502,7 +503,7 @@ class FitnessCalculator:
         balance_score = float(0.6 * trade_balance + 0.4 * profit_balance)
         return max(0.0, min(1.0, balance_score))
 
-    def calculate_long_short_balance(self, backtest_result: Dict[str, Any]) -> float:
+    def calculate_long_short_balance(self, backtest_result: Dict[str, SerializableValue]) -> float:
         """
         ロング・ショートバランススコアを計算
 
@@ -520,7 +521,7 @@ class FitnessCalculator:
             return 0.5
 
     def calculate_multi_objective_fitness(
-        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
+        self, backtest_result: Dict[str, SerializableValue], config: GAConfig, **kwargs
     ) -> Tuple[float, ...]:
         """
         複数の目的関数（利益、リスク、安定性等）に基づいて個体の多次元適応度を計算します。
@@ -533,7 +534,7 @@ class FitnessCalculator:
         5. **正規化**: 最小化すべき指標（ドローダウン等）は、DEAPの仕様に合わせて適切に処理されます。
 
         Args:
-            backtest_result (Dict[str, Any]): シミュレーターから出力された全統計データ。
+            backtest_result (Dict[str, SerializableValue]): シミュレーターから出力された全統計データ。
             config (GAConfig): 最適化対象とする目的関数リスト、制約、重みを含む統合設定。
             **kwargs: 追加の評価コンテキスト。
 

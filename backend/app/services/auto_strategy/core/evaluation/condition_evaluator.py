@@ -4,6 +4,8 @@
 戦略の条件評価ロジックを担当します。
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Any, Dict, List, Union
 
@@ -42,7 +44,7 @@ class ConditionEvaluator:
         }
 
         # 属性アクセサのキャッシュ: "sma_20" -> operator.attrgetter("sma_20")
-        self._accessor_cache: Dict[str, Any] = {}
+        self._accessor_cache: Dict[str, object] = {}
 
         # OHLCV名のマッピング
         self._ohlcv_map = {
@@ -53,7 +55,7 @@ class ConditionEvaluator:
             "volume": "Volume",
         }
 
-    def _get_accessor(self, attr_name: str) -> Any:
+    def _get_accessor(self, attr_name: str) -> object:
         """属性アクセサを取得または作成"""
         if attr_name not in self._accessor_cache:
             import operator

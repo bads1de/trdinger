@@ -7,8 +7,20 @@ from typing import Any
 import pandas as pd
 
 
-def _get_index_timezone(index: pd.Index) -> Any | None:
-    """Index から timezone を取得する。"""
+def _get_index_timezone(index: pd.Index) -> object | None:
+    """
+    Index から timezone を取得する
+
+    Args:
+        index: pandas Index
+
+    Returns:
+        timezone オブジェクトまたは None
+
+    Note:
+        Index が空の場合は None を返します。
+        Index に timezone が設定されていない場合は None を返します。
+    """
     if len(index) == 0:
         return None
 
@@ -24,7 +36,21 @@ def _get_index_timezone(index: pd.Index) -> Any | None:
 
 
 def align_timestamp_to_tz(value: Any, target_tz: Any | None) -> pd.Timestamp:
-    """Timestamp を指定 timezone に揃える。"""
+    """
+    Timestamp を指定 timezone に揃える
+
+    Args:
+        value: Timestamp または変換可能な値
+        target_tz: 目標 timezone
+
+    Returns:
+        pd.Timestamp: 指定 timezone に揃えられた Timestamp
+
+    Note:
+        target_tz が None の場合は timezone を削除します。
+        target_tz が存在し、value が timezone を持たない場合は local timezone で
+        timezone を付与します。
+    """
     timestamp = pd.Timestamp(value)
 
     if target_tz is None:
@@ -40,11 +66,35 @@ def align_timestamp_to_tz(value: Any, target_tz: Any | None) -> pd.Timestamp:
 
 
 def align_timestamp_to_reference(value: Any, reference: Any) -> pd.Timestamp:
-    """Timestamp を参照 Timestamp の timezone に揃える。"""
+    """
+    Timestamp を参照 Timestamp の timezone に揃える
+
+    Args:
+        value: Timestamp または変換可能な値
+        reference: 参照 Timestamp または変換可能な値
+
+    Returns:
+        pd.Timestamp: 参照 Timestamp の timezone に揃えられた Timestamp
+
+    Note:
+        参照値の timezone を使用して、値の timezone を変換します。
+    """
     reference_timestamp = pd.Timestamp(reference)
     return align_timestamp_to_tz(value, reference_timestamp.tzinfo)
 
 
 def align_timestamp_to_index(value: Any, index: pd.Index) -> pd.Timestamp:
-    """Timestamp を Index の timezone に揃える。"""
+    """
+    Timestamp を Index の timezone に揃える
+
+    Args:
+        value: Timestamp または変換可能な値
+        index: pandas Index
+
+    Returns:
+        pd.Timestamp: Index の timezone に揃えられた Timestamp
+
+    Note:
+        Index の timezone を使用して、値の timezone を変換します。
+    """
     return align_timestamp_to_tz(value, _get_index_timezone(index))

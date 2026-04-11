@@ -18,7 +18,7 @@ _ATTRIBUTE_EXPORTS = {
 }
 
 
-def __getattr__(name: str) -> Any:
+def __getattr__(name: str) -> type:
     """遅延インポートで循環参照を回避"""
     module_path = _ATTRIBUTE_EXPORTS.get(name)
     if module_path is None:

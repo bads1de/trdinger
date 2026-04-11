@@ -167,7 +167,7 @@ class LightGBMModel(BaseGradientBoostingModel):
             self.model.predict(X_data, num_iteration=self.model.best_iteration),
         )
 
-    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> pd.DataFrame:
         """
         予測用の入力データを準備します。
         LightGBMはDataFrameを直接受け取れます。

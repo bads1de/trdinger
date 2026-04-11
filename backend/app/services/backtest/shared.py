@@ -22,7 +22,7 @@ TRADE_PNL_COLUMNS: tuple[str, ...] = ("PnL", "Pnl", "Profit", "ProfitLoss")
 OHLCV_COLUMNS: tuple[str, ...] = ("open", "high", "low", "close", "volume")
 
 
-def resolve_stats_object(stats: Any, warning_logger: Any = None) -> Any:
+def resolve_stats_object(stats: object, warning_logger: object = None) -> object:
     """
     statsオブジェクトの実体を取得する。callableなら呼び出す。
 

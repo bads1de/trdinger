@@ -39,7 +39,7 @@ def _coerce_float(value: Any, default: float) -> float:
         return float(default)
 
 
-def _get_evaluation_config(source: Any) -> Any:
+def _get_evaluation_config(source: object) -> object:
     """評価設定のネスト先を取得する。"""
     if isinstance(source, Mapping):
         return source.get("evaluation_config")
@@ -162,7 +162,7 @@ def get_multi_fidelity_candidate_limit(population_size: int, config: Any) -> int
     return min(population_size, max(min_candidates, int(ceil(population_size * ratio))))
 
 
-def _format_timestamp_like_input(value: pd.Timestamp, source: Any) -> Any:
+def _format_timestamp_like_input(value: pd.Timestamp, source: object) -> object:
     """入力形式に寄せて日時を書き戻す。"""
     if isinstance(source, str):
         if "T" in source:

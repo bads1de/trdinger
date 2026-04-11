@@ -27,7 +27,7 @@ class MLGateSettings:
     model_path: Optional[str]
 
 
-def _read_value(source: Any, key: str) -> Any:
+def _read_value(source: object, key: str) -> object:
     """
     dict / オブジェクトのどちらからでも値を取得する
 

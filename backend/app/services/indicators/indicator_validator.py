@@ -79,8 +79,8 @@ class IndicatorValidator:
         return nan_result
 
     def resolve_column_name(
-        self, df: pd.DataFrame, data_key: Any
-    ) -> Any:
+        self, df: pd.DataFrame, data_key: str
+    ) -> str:
         """
         データフレームから適切なカラム名を解決
 

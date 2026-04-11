@@ -230,7 +230,7 @@ class UniversalStrategy(Strategy):
             if ind.enabled
         )
 
-    def _get_effective_sub_gene(self, direction: float, gene_type: str) -> Any:
+    def _get_effective_sub_gene(self, direction: float, gene_type: str) -> object:
         """
         方向とタイプに応じた有効なサブ遺伝子を取得（統合版）
 

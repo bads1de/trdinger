@@ -4,8 +4,12 @@
 遺伝子操作（交叉・変異）のための汎用機能を提供します。
 """
 
+from __future__ import annotations
+
 import random
-from typing import Any, Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Tuple, TypeVar
+
+from app.types import SerializableValue
 
 T = TypeVar("T")
 
@@ -94,7 +98,7 @@ class GeneticUtils:
         return GeneticUtils._extract_gene_params(gene)
 
     @staticmethod
-    def smart_copy(value: Any) -> Any:
+    def smart_copy(value: SerializableValue | object) -> SerializableValue | object:
         """
         値をスマートにコピーする。
 

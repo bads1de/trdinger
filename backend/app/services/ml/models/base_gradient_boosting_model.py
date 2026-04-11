@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -250,14 +252,14 @@ class BaseGradientBoostingModel(ABC):
         X: Union[pd.DataFrame, np.ndarray],
         y: Optional[Union[pd.Series, np.ndarray]] = None,
         sample_weight: Optional[np.ndarray] = None,
-    ) -> Any:
+    ) -> object:
         """
         モデル固有のデータセットオブジェクトを作成します。
         例: lgb.Dataset, xgb.DMatrix
         """
 
     @abstractmethod
-    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
+    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, object]:
         """
         モデル固有のパラメータディクショナリを生成します。
         """
@@ -265,12 +267,12 @@ class BaseGradientBoostingModel(ABC):
     @abstractmethod
     def _train_internal(
         self,
-        train_data: Any,
-        valid_data: Optional[Any],
-        params: Dict[str, Any],
+        train_data: object,
+        valid_data: Optional[object],
+        params: Dict[str, object],
         early_stopping_rounds: Optional[int] = None,
         **kwargs,
-    ) -> Any:
+    ) -> object:
         """
         モデル固有の学習プロセスを実行します。
         """
@@ -322,13 +324,13 @@ class BaseGradientBoostingModel(ABC):
         return predictions
 
     @abstractmethod
-    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> object:
         """
         予測用の入力データを準備します。
         """
 
     @abstractmethod
-    def _predict_raw(self, data: Any) -> np.ndarray:
+    def _predict_raw(self, data: object) -> np.ndarray:
         """
         モデルから生の予測値（確率）を取得します。
         """

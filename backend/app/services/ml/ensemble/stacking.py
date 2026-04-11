@@ -322,7 +322,7 @@ class StackingEnsemble(BaseEnsemble):
             except Exception as e:
                 logger.warning(f"  {name}の最終フィットエラー: {e}")
 
-    def _create_cv_splitter(self, X_train: pd.DataFrame) -> Any:
+    def _create_cv_splitter(self, X_train: pd.DataFrame) -> object:
         """クロスバリデーション分割器を作成する。
 
         設定されたCV戦略（purged_kfold、kfoldなど）に応じて、

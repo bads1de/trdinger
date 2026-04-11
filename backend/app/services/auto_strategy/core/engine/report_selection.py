@@ -167,7 +167,7 @@ def extract_primary_fitness(individual: Any) -> float:
     return _extract_individual_primary_fitness(individual)
 
 
-def get_individual_identity(individual: Any) -> Any:
+def get_individual_identity(individual: object) -> object:
     """個体比較用の安定キーを返す。
 
     個体のid属性を優先して使用し、存在しない場合は
@@ -177,7 +177,7 @@ def get_individual_identity(individual: Any) -> Any:
         individual: 比較対象の個体。
 
     Returns:
-        Any: 個体を一意に識別するキー（文字列のidまたはintのオブジェクトID）。
+        個体を一意に識別するキー（文字列のidまたはintのオブジェクトID）。
     """
     individual_id = getattr(individual, "id", None)
     return individual_id if individual_id not in (None, "") else id(individual)
@@ -283,7 +283,7 @@ def _safe_int(value: Any) -> int:
         return 0
 
 
-def _get_two_stage_metadata_target(individual: Any) -> Any:
+def _get_two_stage_metadata_target(individual: object) -> object:
     """2段階評価のメタデータを取得する対象を抽出する。
 
     個体にfitness属性があればそれを返し、なければ個体自身を返す。

@@ -83,7 +83,7 @@ def _get_creation_probability_multiplier(config: Any, attr_name: str) -> float:
     return 0.0
 
 
-def _create_sub_gene(creator_func: Any, config: Any) -> Any:
+def _create_sub_gene(creator_func: object, config: object) -> object:
     """生成関数のシグネチャに応じて設定を渡し分ける。
 
     サブ遺伝子（TPSL、PositionSizing、Entryなど）の生成関数を呼び出し、
