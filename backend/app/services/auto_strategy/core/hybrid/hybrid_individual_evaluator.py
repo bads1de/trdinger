@@ -151,7 +151,11 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""
-        return getattr(ga_config, "preprocess_features", True)
+        hybrid_config = getattr(ga_config, "hybrid_config", None)
+        if hybrid_config is None:
+            return True
+
+        return bool(getattr(hybrid_config, "preprocess_features", True))
 
     def _fetch_ohlcv_data(
         self,
@@ -199,7 +203,6 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         """MLゲート関連フラグをまとめて更新する。"""
         parameters = run_config["strategy_config"]["parameters"]
         parameters["volatility_gate_enabled"] = enabled
-        parameters["ml_filter_enabled"] = enabled
 
         if predictor is not None:
             parameters["ml_predictor"] = predictor

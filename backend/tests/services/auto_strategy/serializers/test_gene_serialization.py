@@ -9,15 +9,6 @@ from app.services.auto_strategy.genes import Condition, IndicatorGene, StrategyG
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
 
-class TestGeneSerializerInit:
-    """初期化のテスト"""
-
-    def test_init_exposes_self_as_converter(self):
-        """後方互換のため dict_converter は self を指す"""
-        serializer = GeneSerializer()
-        assert serializer.dict_converter is serializer
-
-
 class TestDelegation:
     """JSON 補助メソッドのテスト"""
 

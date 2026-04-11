@@ -14,6 +14,7 @@ from app.services.ml.optimization.optuna_optimizer import (
     OptimizationResult,
     OptunaOptimizer,
     ParameterSpace,
+    build_lightgbm_parameter_space,
 )
 
 
@@ -402,7 +403,7 @@ class TestDefaultParameterSpace:
 
     def test_get_default_parameter_space(self):
         """デフォルトパラメータ空間の取得"""
-        space = OptunaOptimizer.get_default_parameter_space()
+        space = build_lightgbm_parameter_space()
 
         assert "num_leaves" in space
         assert "learning_rate" in space
@@ -419,7 +420,7 @@ class TestDefaultParameterSpace:
     def test_default_space_with_optimizer(self):
         """デフォルトパラメータ空間で最適化"""
         optimizer = OptunaOptimizer()
-        space = OptunaOptimizer.get_default_parameter_space()
+        space = build_lightgbm_parameter_space()
 
         def objective(params: Dict[str, Any]) -> float:
             # LightGBMパラメータの簡易評価

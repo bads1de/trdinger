@@ -7,20 +7,31 @@ import pytest
 from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
     EvaluationStrategy,
 )
+from app.services.auto_strategy.core.evaluation.evaluation_report import (
+    ScenarioEvaluation,
+)
 
 
 class TestEvaluationStrategy:
     def setup_method(self):
         self.evaluator = Mock()
-        self.evaluator._perform_single_evaluation = Mock(return_value=(0.0,))
-        self.evaluator._perform_single_evaluation_report = None
+        self.evaluator._perform_single_evaluation_report = Mock(
+            side_effect=lambda _gene, _backtest_config, _config, **kwargs: ScenarioEvaluation(
+                name=kwargs.get("scenario_name", "single"),
+                fitness=(0.0,),
+                passed=True,
+                metadata=(kwargs.get("metadata") or {}).copy(),
+            )
+        )
         self.strategy = EvaluationStrategy(self.evaluator)
 
     def test_execute_prefers_purged_kfold_when_enabled(self):
         config = SimpleNamespace(
             enable_purged_kfold=True,
-            enable_walk_forward=False,
-            oos_split_ratio=0.0,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.0,
+            ),
         )
         self.strategy._evaluate_with_purged_kfold_report = Mock(
             return_value=Mock(aggregated_fitness=(0.42,))
@@ -37,25 +48,41 @@ class TestEvaluationStrategy:
 
         assert result == (0.42,)
         self.strategy._evaluate_with_purged_kfold_report.assert_called_once()
-        self.evaluator._perform_single_evaluation.assert_not_called()
+        self.evaluator._perform_single_evaluation_report.assert_not_called()
 
     def test_purged_kfold_averages_test_fold_results(self):
-        def side_effect(_gene, backtest_config, _config):
+        def side_effect(
+            _gene,
+            backtest_config,
+            _config,
+            *,
+            scenario_name="single",
+            metadata=None,
+        ):
             start_date = str(backtest_config["start_date"])
             if start_date == "2024-01-01 00:00:00":
-                return (1.0,)
-            if start_date == "2024-01-06 00:00:00":
-                return (0.5,)
-            return (0.0,)
+                fitness = (1.0,)
+            elif start_date == "2024-01-06 00:00:00":
+                fitness = (0.5,)
+            else:
+                fitness = (0.0,)
+            return ScenarioEvaluation(
+                name=scenario_name,
+                fitness=fitness,
+                passed=True,
+                metadata=(metadata or {}).copy(),
+            )
 
-        self.evaluator._perform_single_evaluation.side_effect = side_effect
+        self.evaluator._perform_single_evaluation_report.side_effect = side_effect
 
         config = SimpleNamespace(
             enable_purged_kfold=True,
             purged_kfold_splits=2,
             purged_kfold_embargo=0.0,
-            enable_walk_forward=False,
-            oos_split_ratio=0.0,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.0,
+            ),
             objectives=["weighted_score"],
         )
 
@@ -72,13 +99,18 @@ class TestEvaluationStrategy:
         assert result[0] == pytest.approx(0.675)
 
     def test_execute_report_returns_scenarios_for_oos(self):
-        self.evaluator._perform_single_evaluation.side_effect = [(1.0,), (0.4,)]
+        self.evaluator._perform_single_evaluation_report.side_effect = [
+            ScenarioEvaluation(name="is", fitness=(1.0,), passed=True, metadata={}),
+            ScenarioEvaluation(name="oos", fitness=(0.4,), passed=True, metadata={}),
+        ]
 
         config = SimpleNamespace(
             enable_purged_kfold=False,
-            enable_walk_forward=False,
-            oos_split_ratio=0.2,
-            oos_fitness_weight=0.75,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.2,
+                oos_fitness_weight=0.75,
+            ),
             objectives=["weighted_score"],
             fitness_constraints={},
         )
@@ -96,6 +128,38 @@ class TestEvaluationStrategy:
         assert len(report.scenarios) == 2
         assert [scenario.name for scenario in report.scenarios] == ["is", "oos"]
         assert report.aggregated_fitness == (0.55,)
+
+    def test_execute_report_falls_back_to_legacy_single_evaluation_method(self):
+        evaluator = Mock()
+        evaluator._perform_single_evaluation = Mock(return_value=(0.33,))
+        strategy = EvaluationStrategy(evaluator)
+        gene = object()
+
+        config = SimpleNamespace(
+            enable_purged_kfold=False,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.0,
+            ),
+            objectives=["weighted_score"],
+            fitness_constraints={},
+        )
+
+        backtest_config = {
+            "start_date": "2024-01-01 00:00:00",
+            "end_date": "2024-01-11 00:00:00",
+        }
+
+        report = strategy.execute_report(gene, backtest_config, config)
+
+        assert report.mode == "single"
+        assert report.aggregated_fitness == (0.33,)
+        evaluator._perform_single_evaluation.assert_called_once_with(
+            gene,
+            backtest_config,
+            config,
+        )
+        assert [scenario.name for scenario in report.scenarios] == ["single"]
 
     def test_resolve_backtest_date_range_rejects_missing_or_invalid_ranges(self):
         assert self.strategy._resolve_backtest_date_range({}) is None
@@ -115,9 +179,11 @@ class TestEvaluationStrategy:
 
         config = SimpleNamespace(
             enable_purged_kfold=False,
-            enable_walk_forward=False,
-            oos_split_ratio=0.2,
-            oos_fitness_weight=0.75,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.2,
+                oos_fitness_weight=0.75,
+            ),
             objectives=["weighted_score"],
             fitness_constraints={},
         )
@@ -132,6 +198,38 @@ class TestEvaluationStrategy:
 
         assert report is single_report
         self.strategy._evaluate_single_report.assert_called_once()
+
+    def test_execute_report_uses_nested_wfa_config(self):
+        single_report = Mock()
+        self.strategy._evaluate_single_report = Mock(return_value=single_report)
+        self.strategy._precompute_fold_configs = Mock(return_value=[])
+
+        config = SimpleNamespace(
+            enable_purged_kfold=False,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=True,
+                wfa_n_folds=3,
+                wfa_train_ratio=0.8,
+                wfa_anchored=True,
+            ),
+            objectives=["weighted_score"],
+            fitness_constraints={},
+        )
+
+        report = self.strategy._evaluate_with_walk_forward_report(
+            object(),
+            {
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-01-11 00:00:00",
+            },
+            config,
+        )
+
+        called_args = self.strategy._precompute_fold_configs.call_args.args
+        assert called_args[2] == 3
+        assert called_args[3] == 0.8
+        assert called_args[4] is True
+        assert report is single_report
 
     def test_precompute_purged_kfold_configs_does_not_add_internal_keys(self):
         configs = self.strategy._precompute_purged_kfold_configs(
@@ -162,24 +260,40 @@ class TestEvaluationStrategy:
         assert configs[1][1]["start_date"] == "2024-01-06 12:00:00"
 
     def test_execute_robustness_report_adds_symbol_and_cost_scenarios(self):
-        def side_effect(_gene, backtest_config, _config):
+        def side_effect(
+            _gene,
+            backtest_config,
+            _config,
+            *,
+            scenario_name="single",
+            metadata=None,
+        ):
             if backtest_config["symbol"] == "ETHUSDT":
-                return (0.7,)
-            if backtest_config.get("slippage") == 0.0015:
-                return (0.6,)
-            if backtest_config.get("commission_rate") == 0.0015:
-                return (0.65,)
-            return (0.8,)
+                fitness = (0.7,)
+            elif backtest_config.get("slippage") == 0.0015:
+                fitness = (0.6,)
+            elif backtest_config.get("commission_rate") == 0.0015:
+                fitness = (0.65,)
+            else:
+                fitness = (0.8,)
+            return ScenarioEvaluation(
+                name=scenario_name,
+                fitness=fitness,
+                passed=True,
+                metadata=(metadata or {}).copy(),
+            )
 
-        self.evaluator._perform_single_evaluation.side_effect = side_effect
+        self.evaluator._perform_single_evaluation_report.side_effect = side_effect
 
         config = SimpleNamespace(
             enable_purged_kfold=False,
-            enable_walk_forward=False,
-            oos_split_ratio=0.0,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.0,
+            ),
             objectives=["weighted_score"],
             fitness_constraints={},
-            two_stage_min_pass_rate=1.0,
+            two_stage_selection_config=SimpleNamespace(min_pass_rate=1.0),
             robustness_config=SimpleNamespace(
                 validation_symbols=["ETHUSDT"],
                 stress_slippage=[0.0005],

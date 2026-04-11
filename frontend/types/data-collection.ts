@@ -25,12 +25,6 @@ export interface BulkOHLCVCollectionResult {
   skipped_tasks?: number;
   /** 失敗したタスク数 */
   failed_tasks?: number;
-  /** 処理対象の総数（後方互換性のため） */
-  total_tasks?: number;
-  /** 処理済みの数（後方互換性のため） */
-  completed_tasks?: number;
-  /** 成功した数（後方互換性のため） */
-  successful_tasks?: number;
   /** 対象シンボル一覧 */
   symbols?: string[];
   /** 対象時間軸一覧 */
@@ -60,17 +54,6 @@ export interface BulkOHLCVCollectionResult {
       error: string;
     }>;
   };
-  /** 個別タスクの結果（後方互換性のため） */
-  task_results?: Array<{
-    symbol: string;
-    timeframe: string;
-    success: boolean;
-    message: string;
-    /** 保存件数（任意） */
-    saved_count?: number;
-    /** スキップ件数（任意） */
-    skipped_count?: number;
-  }>;
 }
 
 /**

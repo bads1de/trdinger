@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, TypeGuard
 
 from app.services.auto_strategy.config import objective_registry
 from ..evaluation.evaluation_report import EvaluationReport
@@ -21,24 +21,24 @@ _DEFAULT_RERANK_MARGIN = 2
 
 def get_two_stage_elite_count(config: Any, population_size: int) -> int:
     """二段階選抜に回すエリート数を返す。"""
+    two_stage_config = getattr(config, "two_stage_selection_config", None)
     if (
         population_size <= 0
         or getattr(config, "enable_multi_objective", False)
-        or not getattr(config, "enable_two_stage_selection", True)
+        or not getattr(two_stage_config, "enabled", True)
     ):
         return 0
 
     elite_size = _safe_int(getattr(config, "elite_size", 0))
     configured_elite_count = _safe_int(
-        getattr(config, "two_stage_elite_count", elite_size)
+        getattr(two_stage_config, "elite_count", elite_size)
     )
     if elite_size <= 0 and configured_elite_count <= 0:
         return 0
 
     rerank_budget = configured_elite_count
     if rerank_budget <= 0:
-        # 追加評価のコストを抑えるため、既存の小さいエリート予算を再利用する。
-        rerank_budget = _safe_int(getattr(config, "tuning_elite_count", elite_size))
+        rerank_budget = elite_size
     if rerank_budget <= 0:
         rerank_budget = elite_size
 
@@ -50,10 +50,11 @@ def get_two_stage_pool_size(candidate_count: int, elite_count: int, config: Any)
     """二段階選抜で再ランクする候補数を返す。"""
     if candidate_count <= 0 or elite_count <= 0:
         return 0
+    two_stage_config = getattr(config, "two_stage_selection_config", None)
     configured_pool_size = _safe_int(
         getattr(
-            config,
-            "two_stage_candidate_pool_size",
+            two_stage_config,
+            "candidate_pool_size",
             elite_count + _DEFAULT_RERANK_MARGIN,
         )
     )
@@ -189,7 +190,7 @@ def get_two_stage_best_individual(population: Sequence[Any]) -> Optional[Any]:
     return ranked[0][1]
 
 
-def is_evaluation_report(report: Any) -> bool:
+def is_evaluation_report(report: Any) -> TypeGuard[EvaluationReport]:
     """EvaluationReport 互換のオブジェクトかを判定する。"""
     if not isinstance(report, EvaluationReport):
         return False

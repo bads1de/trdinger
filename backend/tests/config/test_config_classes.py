@@ -541,10 +541,12 @@ class TestGAConfigRuntime:
         """二段階選抜の制約を検証"""
         config = GAConfigRuntime(
             population_size=10,
-            enable_two_stage_selection=True,
-            two_stage_elite_count=10,
-            two_stage_candidate_pool_size=2,
-            two_stage_min_pass_rate=1.5,
+            two_stage_selection_config={
+                "enabled": True,
+                "elite_count": 10,
+                "candidate_pool_size": 2,
+                "min_pass_rate": 1.5,
+            },
         )
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
@@ -581,7 +583,9 @@ class TestGAConfigRuntime:
         self, regime_window, expected_message
     ):
         """robustness の regime window を検証"""
-        config = GAConfigRuntime(robustness_regime_windows=[regime_window])
+        config = GAConfigRuntime(
+            robustness_config={"regime_windows": [regime_window]}
+        )
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
         assert any(expected_message in e for e in errors)
@@ -589,15 +593,18 @@ class TestGAConfigRuntime:
     def test_validate_robustness_related_fields(self):
         """robustness 関連のその他の制約を検証"""
         config = GAConfigRuntime(
-            robustness_validation_symbols="BTC/USDT",
-            robustness_stress_slippage=[-0.01],
-            robustness_stress_commission_multipliers=[0.0],
-            robustness_aggregate_method="invalid",
+            robustness_config={
+                "validation_symbols": "BTC/USDT",
+                "stress_slippage": [-0.01],
+                "stress_commission_multipliers": [0.0],
+                "aggregate_method": "invalid",
+            }
         )
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
         assert any(
-            "robustness_validation_symbols はリストである必要があります" in e
+            "robustness_config.validation_symbols はリストである必要があります"
+            in e
             for e in errors
         )
         assert any(
@@ -610,7 +617,7 @@ class TestGAConfigRuntime:
             for e in errors
         )
         assert any(
-            "robustness_aggregate_method は {'robust', 'mean'} のいずれかである必要があります"
+            "robustness_config.aggregate_method は {'robust', 'mean'} のいずれかである必要があります"
             in e
             for e in errors
         )
@@ -667,17 +674,18 @@ class TestGAConfigRuntime:
 
         config = GAConfigRuntime.from_dict(data)
 
-        config.robustness_validation_symbols.append("ETH/USDT")
-        config.robustness_regime_windows[0]["name"] = "regime_b"
+        config.two_stage_selection_config.enabled = False
+        config.robustness_config.validation_symbols.append("ETH/USDT")
+        config.robustness_config.regime_windows[0]["name"] = "regime_b"
 
         assert data == original
-        assert config.enable_two_stage_selection is False
-        assert config.two_stage_elite_count == 7
-        assert config.two_stage_candidate_pool_size == 9
-        assert config.two_stage_min_pass_rate == 0.75
-        assert config.robustness_validation_symbols == ["BTC/USDT", "ETH/USDT"]
-        assert config.robustness_regime_windows[0]["name"] == "regime_b"
-        assert config.robustness_aggregate_method == "mean"
+        assert config.two_stage_selection_config.enabled is False
+        assert config.two_stage_selection_config.elite_count == 7
+        assert config.two_stage_selection_config.candidate_pool_size == 9
+        assert config.two_stage_selection_config.min_pass_rate == 0.75
+        assert config.robustness_config.validation_symbols == ["BTC/USDT", "ETH/USDT"]
+        assert config.robustness_config.regime_windows[0]["name"] == "regime_b"
+        assert config.robustness_config.aggregate_method == "mean"
 
     def test_from_dict_creates_independent_mutable_defaults(self):
         """from_dict のデフォルト可変値がインスタンス間で共有されないことを確認"""
@@ -687,7 +695,7 @@ class TestGAConfigRuntime:
         first.fitness_weights["total_return"] = 0.99
         first.objectives.append("extra_objective")
         first.parameter_ranges["period"][0] = 999
-        first.robustness_regime_windows.append(
+        first.robustness_config.regime_windows.append(
             {
                 "name": "regime_b",
                 "start_date": "2024-01-01 00:00:00",
@@ -698,7 +706,7 @@ class TestGAConfigRuntime:
         assert second.fitness_weights["total_return"] != 0.99
         assert "extra_objective" not in second.objectives
         assert second.parameter_ranges["period"][0] == 5
-        assert second.robustness_regime_windows == []
+        assert second.robustness_config.regime_windows == []
 
     def test_fitness_weights_validation(self):
         """フィットネス重みの検証テスト"""

@@ -19,7 +19,7 @@ class DataConversionError(Exception):
 
 
 def parse_timestamp_safe(value: Any) -> Optional[datetime]:
-    """共通ユーティリティへ委譲する互換ラッパー。"""
+    """タイムスタンプを安全にパースする（警告ログ付き）。"""
     result = _parse_timestamp_safe(value)
     if result is None and value is not None:
         logger.warning("タイムスタンプ変換エラー: %s - 型: %s", value, type(value))

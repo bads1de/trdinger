@@ -179,8 +179,10 @@ class TestUniversalStrategyAll:
             mock_data,
             {
                 "strategy_gene": valid_gene,
-                "enable_early_termination": True,
-                "early_termination_max_drawdown": 0.1,
+                "early_termination_settings": EarlyTerminationSettings(
+                    enabled=True,
+                    max_drawdown=0.1,
+                ),
             },
         )
         strategy._starting_equity = 10000.0
@@ -204,10 +206,12 @@ class TestUniversalStrategyAll:
             mock_data,
             {
                 "strategy_gene": valid_gene,
-                "enable_early_termination": True,
-                "early_termination_min_trades": 10,
-                "early_termination_min_trade_check_progress": 0.5,
-                "early_termination_trade_pace_tolerance": 0.5,
+                "early_termination_settings": EarlyTerminationSettings(
+                    enabled=True,
+                    min_trades=10,
+                    min_trade_check_progress=0.5,
+                    trade_pace_tolerance=0.5,
+                ),
             },
         )
         strategy._total_bars = 10
@@ -229,8 +233,6 @@ class TestUniversalStrategyAll:
             mock_data,
             {
                 "strategy_gene": valid_gene,
-                "enable_early_termination": False,
-                "early_termination_max_drawdown": 0.9,
                 "early_termination_settings": EarlyTerminationSettings(
                     enabled=True,
                     max_drawdown=0.1,
@@ -277,8 +279,10 @@ class TestUniversalStrategyAll:
             mock_data,
             {
                 "strategy_gene": valid_gene,
-                "enable_early_termination": True,
-                "early_termination_max_drawdown": 0.1,
+                "early_termination_settings": EarlyTerminationSettings(
+                    enabled=True,
+                    max_drawdown=0.1,
+                ),
             },
         )
 

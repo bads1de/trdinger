@@ -58,7 +58,7 @@ def mock_config():
     config.objectives = ["total_return"]
     config.crossover_rate = 0.8
     config.mutation_rate = 0.1
-    config.enable_fitness_sharing = False
+    config.fitness_sharing = {"enable_fitness_sharing": False}
     config.dynamic_objective_reweighting = False
     return config
 
@@ -409,7 +409,12 @@ class TestEvolutionRunnerAdvanced:
         )
         config = SimpleNamespace(
             elite_size=1,
-            tuning_elite_count=1,
+            two_stage_selection_config=SimpleNamespace(
+                enabled=True,
+                elite_count=1,
+                candidate_pool_size=3,
+                min_pass_rate=0.0,
+            ),
             enable_multi_objective=False,
         )
 
@@ -478,7 +483,12 @@ class TestEvolutionRunnerAdvanced:
         )
         config = SimpleNamespace(
             elite_size=1,
-            tuning_elite_count=1,
+            two_stage_selection_config=SimpleNamespace(
+                enabled=True,
+                elite_count=1,
+                candidate_pool_size=3,
+                min_pass_rate=0.0,
+            ),
             enable_multi_objective=False,
         )
 

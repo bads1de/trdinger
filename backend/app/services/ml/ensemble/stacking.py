@@ -78,26 +78,6 @@ class StackingEnsemble(BaseEnsemble):
             f"passthrough={self.passthrough}"
         )
 
-    @property
-    def base_models(self) -> List[str]:
-        """後方互換性のためのプロパティ"""
-        return self._base_model_types
-
-    @base_models.setter
-    def base_models(self, value: List[str]) -> None:
-        """後方互換性のためのセッター"""
-        self._base_model_types = value
-
-    @property
-    def meta_model(self) -> str:
-        """後方互換性のためのプロパティ"""
-        return self._meta_model_type
-
-    @meta_model.setter
-    def meta_model(self, value: str) -> None:
-        """後方互換性のためのセッター"""
-        self._meta_model_type = value
-
     def fit(
         self,
         X_train: pd.DataFrame,
@@ -262,11 +242,14 @@ class StackingEnsemble(BaseEnsemble):
         """
         スタッキングアンサンブルで予測を実行
 
+        注意: このメソッドは predict_proba を返します（確率予測）。
+        クラス予測が必要な場合は predict_proba を直接呼び出してください。
+
         Args:
             X: 特徴量DataFrame
 
         Returns:
-            予測結果 (predict_probaの結果を返す、後方互換性のため)
+            予測確率
         """
         return self.predict_proba(X)
 

@@ -33,10 +33,7 @@ class GeneratedGAParameters(BaseModel):
     strategy_gene: Dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
     volatility_gate_enabled: bool = False
     volatility_model_path: Optional[str] = None
-    ml_filter_enabled: bool = False
-    ml_model_path: Optional[str] = None
     ml_predictor: Optional[Any] = None  # MLモデルインスタンス
-    ml_filter_threshold: float = 0.1
     evaluation_start: Optional[Any] = None
     minute_data: Optional[Any] = None  # DataFrameなどはPydanticで検証しにくいためAny
     enable_early_termination: bool = False

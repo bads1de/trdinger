@@ -2,10 +2,12 @@
 HybridPredictor Tests
 """
 
-import pytest
-import pandas as pd
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
+
 import numpy as np
-from unittest.mock import AsyncMock, Mock, MagicMock, patch
+import pandas as pd
+import pytest
 
 from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
     HybridPredictor,
@@ -138,6 +140,31 @@ class TestHybridPredictor:
 
         assert "forecast_log_rv" in result
         assert result["gate_open"] is True
+
+    def test_predict_falls_back_to_trainer_predict_volatility(self, predictor):
+        """generate_forecast が無い場合は trainer.predict_volatility を使う"""
+        trainer = SimpleNamespace(
+            is_trained=True,
+            model=object(),
+            predict_volatility=MagicMock(
+                return_value={
+                    "forecast_log_rv": 0.42,
+                    "forecast_vol": float(np.exp(0.42)),
+                    "gate_open": False,
+                }
+            ),
+        )
+        service = SimpleNamespace(trainer=trainer)
+
+        predictor.services = [service]
+        predictor.service = service
+
+        df = pd.DataFrame({"close": [100]})
+        result = predictor.predict(df)
+
+        assert result["forecast_log_rv"] == pytest.approx(0.42)
+        assert result["gate_open"] is False
+        trainer.predict_volatility.assert_called_once_with(df)
 
     def test_predict_empty_input(self, predictor):
         """空入力のハンドリング"""

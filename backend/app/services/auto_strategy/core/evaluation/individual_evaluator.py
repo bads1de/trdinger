@@ -31,6 +31,10 @@ from app.services.backtest.execution.backtest_executor import (
 from app.services.backtest.services.backtest_service import BacktestService
 
 from ..fitness.fitness_calculator import FitnessCalculator
+from .evaluation_metrics import (
+    calculate_trade_frequency_penalty,
+    calculate_ulcer_index,
+)
 from .backtest_data_provider import BacktestDataProvider
 from .evaluation_fidelity import adjust_backtest_config_for_fidelity, is_coarse_fidelity
 from .evaluation_report import EvaluationReport, ScenarioEvaluation
@@ -411,31 +415,33 @@ class IndividualEvaluator(EvaluationWindowService):
     def _build_robustness_cache_key(self, gene: Any, config: GAConfig) -> str:
         """robustness 評価用のキャッシュキーを生成する。"""
         base_key = self._build_cache_key(gene)
+        evaluation_config = getattr(config, "evaluation_config", None)
+        two_stage_config = getattr(config, "two_stage_selection_config", None)
+        robustness_config = getattr(config, "robustness_config", None)
         signature = (
-            bool(getattr(config, "enable_two_stage_selection", True)),
-            float(getattr(config, "two_stage_min_pass_rate", 0.0) or 0.0),
-            tuple(getattr(config.robustness_config, "validation_symbols", None) or ()),
+            bool(getattr(two_stage_config, "enabled", True)),
+            float(getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0),
+            tuple(getattr(robustness_config, "validation_symbols", None) or ()),
             tuple(
                 window.signature
                 for window in normalize_robustness_regime_windows(
-                    getattr(config.robustness_config, "regime_windows", [])
+                    getattr(robustness_config, "regime_windows", [])
                 )
             ),
-            tuple(getattr(config.robustness_config, "stress_slippage", ()) or ()),
+            tuple(getattr(robustness_config, "stress_slippage", ()) or ()),
             tuple(
-                getattr(config.robustness_config, "stress_commission_multipliers", ())
-                or ()
+                getattr(robustness_config, "stress_commission_multipliers", ()) or ()
             ),
-            str(getattr(config.robustness_config, "aggregate_method", "robust")),
+            str(getattr(robustness_config, "aggregate_method", "robust")),
             bool(getattr(config, "enable_purged_kfold", False)),
             int(getattr(config, "purged_kfold_splits", 0) or 0),
             float(getattr(config, "purged_kfold_embargo", 0.0) or 0.0),
-            bool(getattr(config, "enable_walk_forward", False)),
-            int(getattr(config, "wfa_n_folds", 0) or 0),
-            float(getattr(config, "wfa_train_ratio", 0.0) or 0.0),
-            bool(getattr(config, "wfa_anchored", False)),
-            float(getattr(config, "oos_split_ratio", 0.0) or 0.0),
-            float(getattr(config, "oos_fitness_weight", 0.0) or 0.0),
+            bool(getattr(evaluation_config, "enable_walk_forward", False)),
+            int(getattr(evaluation_config, "wfa_n_folds", 0) or 0),
+            float(getattr(evaluation_config, "wfa_train_ratio", 0.0) or 0.0),
+            bool(getattr(evaluation_config, "wfa_anchored", False)),
+            float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0),
+            float(getattr(evaluation_config, "oos_fitness_weight", 0.0) or 0.0),
         )
         return f"{base_key}:robustness:{hash(signature)}"
 
@@ -679,9 +685,9 @@ class IndividualEvaluator(EvaluationWindowService):
         oos_weight: float,
     ) -> Tuple[float, ...]:
         """OOS検証を含む評価（EvaluationStrategyに委譲）"""
-        return self._evaluation_strategy._evaluate_with_oos(
+        return self._evaluation_strategy._evaluate_with_oos_report(
             gene, base_backtest_config, config, oos_ratio, oos_weight
-        )
+        ).aggregated_fitness
 
     def _evaluate_with_walk_forward(
         self,
@@ -690,9 +696,9 @@ class IndividualEvaluator(EvaluationWindowService):
         config: GAConfig,
     ) -> Tuple[float, ...]:
         """Walk-Forward Analysis による評価（EvaluationStrategyに委譲）"""
-        return self._evaluation_strategy._evaluate_with_walk_forward(
+        return self._evaluation_strategy._evaluate_with_walk_forward_report(
             gene, base_backtest_config, config
-        )
+        ).aggregated_fitness
 
     # --- FitnessCalculator への委譲メソッド（バックワード互換性・サブクラス用） ---
 
@@ -722,15 +728,6 @@ class IndividualEvaluator(EvaluationWindowService):
             backtest_result, config, **kwargs
         )
 
-
-# 旧 shim モジュール向けの公開シンボルをここでも提供する
-from .evaluation_metrics import (  # noqa: E402, F401
-    REFERENCE_TRADES_PER_DAY,
-    _calculate_ulcer_index_numba,
-    _ensure_datetime,
-    calculate_trade_frequency_penalty,
-    calculate_ulcer_index,
-)
 
 __all__ = [
     "IndividualEvaluator",

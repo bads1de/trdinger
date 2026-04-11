@@ -51,7 +51,3 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
 
         logger.info("暗号通貨特化特徴量を追加: 1個")
         return result_df
-
-
-# 後方互換性のためのクラス別名
-CryptoFeatures = CryptoFeatureCalculator

@@ -15,49 +15,6 @@ import {
   AlgorithmCapability,
 } from "../constants/algorithms";
 
-// 後方互換性のための型定義（既存のコンポーネントで使用されている可能性があるため）
-/**
- * アルゴリズム統計情報のインターフェース
- * @deprecated 後方互換性のための型定義。新しい実装では直接定数を使用
- */
-export interface AlgorithmSummary {
-  total_algorithms: number;
-  by_type: Record<string, string[]>;
-  by_capability: Record<string, string[]>;
-  algorithms: Record<
-    string,
-    {
-      type: string;
-      description: string;
-      capabilities: string[];
-    }
-  >;
-}
-
-/**
- * アルゴリズム一覧取得APIレスポンスのインターフェース
- * @deprecated 定数ベース実装のため使用されていないが、APIレスポンスとの互換性のために保持
- */
-export interface AlgorithmsResponse {
-  success: boolean;
-  algorithms: Record<string, Algorithm>;
-  summary: AlgorithmSummary;
-  total_count: number;
-  message: string;
-}
-
-/**
- * 個別アルゴリズム情報取得APIレスポンスのインターフェース
- * @deprecated 定数ベース実装のため使用されていないが、APIレスポンスとの互換性のために保持
- */
-export interface AlgorithmInfoResponse {
-  success: boolean;
-  algorithm?: Algorithm;
-  error?: string;
-  available_algorithms?: string[];
-  message: string;
-}
-
 // 型をエクスポート（既存のコンポーネントとの互換性のため）
 /**
  * アルゴリズム関連の型定義をエクスポート

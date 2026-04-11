@@ -102,7 +102,7 @@ describe("GAConfigForm", () => {
     ) as HTMLInputElement;
     expect(popInput.value).toBe("10"); // デフォルト値
 
-    // max_evaluation_workersのデフォルト値確認
+    // max_workersのデフォルト値確認
     const workerInput = screen.getByTestId(
       "input-最大ワーカー数",
     ) as HTMLInputElement;
@@ -176,7 +176,7 @@ describe("GAConfigForm", () => {
     fireEvent.click(parallelCheckbox);
     expect(parallelCheckbox).not.toBeChecked();
 
-    // 設定項目が消えることを確認 (max_evaluation_workersInputなど)
+    // 設定項目が消えることを確認 (max_workersの入力欄など)
     // 存在しないことを確認するにはqueryByを使用
     expect(
       screen.queryByTestId("input-最大ワーカー数"),
@@ -192,17 +192,20 @@ describe("GAConfigForm", () => {
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it("nullable な早期打ち切り閾値を既存設定のまま送信できること", () => {
+  it("fitness sharing の設定を nested のまま送信すること", () => {
     render(
       <GAConfigForm
         onSubmit={mockOnSubmit}
         onClose={mockOnClose}
         initialConfig={{
           ga_config: {
-            enable_early_termination: true,
-            early_termination_max_drawdown: null,
-            early_termination_min_trades: null,
-            early_termination_min_expectancy: null,
+            fitness_sharing: {
+              enable_fitness_sharing: false,
+              sharing_radius: 0.25,
+              sharing_alpha: 1.3,
+              sampling_threshold: 80,
+              sampling_ratio: 0.4,
+            },
           },
         }}
       />,
@@ -213,9 +216,50 @@ describe("GAConfigForm", () => {
     expect(mockOnSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         ga_config: expect.objectContaining({
-          early_termination_max_drawdown: null,
-          early_termination_min_trades: null,
-          early_termination_min_expectancy: null,
+          fitness_sharing: expect.objectContaining({
+            enable_fitness_sharing: false,
+            sharing_radius: 0.25,
+            sharing_alpha: 1.3,
+            sampling_threshold: 80,
+            sampling_ratio: 0.4,
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("nullable な早期打ち切り閾値を既存設定のまま送信できること", () => {
+    render(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={{
+          ga_config: {
+            evaluation_config: {
+              early_termination_settings: {
+                enabled: true,
+                max_drawdown: null,
+                min_trades: null,
+                min_expectancy: null,
+              },
+            },
+          },
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("submit-button"));
+
+    expect(mockOnSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ga_config: expect.objectContaining({
+          evaluation_config: expect.objectContaining({
+            early_termination_settings: expect.objectContaining({
+              max_drawdown: null,
+              min_trades: null,
+              min_expectancy: null,
+            }),
+          }),
         }),
       }),
     );
@@ -228,8 +272,12 @@ describe("GAConfigForm", () => {
         onClose={mockOnClose}
         initialConfig={{
           ga_config: {
-            enable_early_termination: true,
-            early_termination_max_drawdown: 0.2,
+            evaluation_config: {
+              early_termination_settings: {
+                enabled: true,
+                max_drawdown: 0.2,
+              },
+            },
           },
         }}
       />,
@@ -243,7 +291,11 @@ describe("GAConfigForm", () => {
     expect(mockOnSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         ga_config: expect.objectContaining({
-          early_termination_max_drawdown: null,
+          evaluation_config: expect.objectContaining({
+            early_termination_settings: expect.objectContaining({
+              max_drawdown: null,
+            }),
+          }),
         }),
       }),
     );

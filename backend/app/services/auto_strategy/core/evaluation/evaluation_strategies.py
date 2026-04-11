@@ -5,6 +5,7 @@ OOS (Out-of-Sample) 検証、Walk-Forward 分析などの
 評価戦略ルーティングを担当します。
 """
 
+import inspect
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
@@ -60,19 +61,23 @@ class EvaluationStrategy:
         self, gene: Any, base_backtest_config: Dict[str, Any], config: GAConfig
     ) -> EvaluationReport:
         """設定に応じた評価戦略を評価レポートとして実行する。"""
+        evaluation_config = getattr(config, "evaluation_config", None)
+
         # PurgedKFold評価（過学習対策）
         if getattr(config, "enable_purged_kfold", False):
             return self._evaluate_with_purged_kfold_report(
                 gene, base_backtest_config, config
             )
 
-        if getattr(config, "enable_walk_forward", False):
+        if evaluation_config is not None and getattr(
+            evaluation_config, "enable_walk_forward", False
+        ):
             return self._evaluate_with_walk_forward_report(
                 gene, base_backtest_config, config
             )
 
-        oos_ratio = getattr(config, "oos_split_ratio", 0.0)
-        oos_weight = getattr(config, "oos_fitness_weight", 0.5)
+        oos_ratio = getattr(evaluation_config, "oos_split_ratio", 0.0)
+        oos_weight = getattr(evaluation_config, "oos_fitness_weight", 0.5)
 
         if oos_ratio > 0.0:
             return self._evaluate_with_oos_report(
@@ -126,8 +131,9 @@ class EvaluationStrategy:
         scenario_reports.sort(
             key=lambda scenario: int(scenario.metadata.get("scenario_order", -1))
         )
+        robustness_config = getattr(config, "robustness_config", None)
         aggregate_method = str(
-            getattr(config, "robustness_aggregate_method", "robust") or "robust"
+            getattr(robustness_config, "aggregate_method", "robust") or "robust"
         )
         return EvaluationReport.aggregate(
             mode="robustness",
@@ -301,7 +307,8 @@ class EvaluationStrategy:
                 "inner_scenario_count": len(scenario_report.scenarios),
             }
         )
-        min_pass_rate = float(getattr(config, "two_stage_min_pass_rate", 0.0) or 0.0)
+        two_stage_config = getattr(config, "two_stage_selection_config", None)
+        min_pass_rate = float(getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0)
         return ScenarioEvaluation(
             name=scenario_name,
             fitness=tuple(float(value) for value in scenario_report.aggregated_fitness),
@@ -333,11 +340,16 @@ class EvaluationStrategy:
         scenario_name: str,
         metadata: Dict[str, Any] | None = None,
     ) -> ScenarioEvaluation:
-        # 1. まず _perform_single_evaluation_report メソッド（新しい推奨される方法）を探す
-        report_method = getattr(
+        # 1. まず新しいレポート API を探す。
+        # inspect.getattr_static を使って、Mock の自動生成された属性を
+        # 誤って有効扱いしないようにする。
+        report_attr = inspect.getattr_static(
             self._evaluator, "_perform_single_evaluation_report", None
         )
-        if callable(report_method):
+        if callable(report_attr):
+            report_method = getattr(
+                self._evaluator, "_perform_single_evaluation_report"
+            )
             return cast(
                 ScenarioEvaluation,
                 report_method(
@@ -349,12 +361,23 @@ class EvaluationStrategy:
                 ),
             )
 
-        # 2. 次に _perform_single_evaluation メソッド（古い方法）を探す
-        perform_single = getattr(self._evaluator, "_perform_single_evaluation", None)
-        if callable(perform_single):
-            fitness = cast(
-                Tuple[float, ...], perform_single(gene, backtest_config, config)
-            )
+        legacy_attr = inspect.getattr_static(
+            self._evaluator, "_perform_single_evaluation", None
+        )
+        if callable(legacy_attr):
+            legacy_method = getattr(self._evaluator, "_perform_single_evaluation")
+            fitness = legacy_method(gene, backtest_config, config)
+            if isinstance(fitness, ScenarioEvaluation):
+                merged_metadata = fitness.metadata.copy()
+                if metadata:
+                    merged_metadata.update(metadata)
+                return ScenarioEvaluation(
+                    name=scenario_name,
+                    fitness=fitness.fitness,
+                    passed=fitness.passed,
+                    metadata=merged_metadata,
+                    performance_metrics=fitness.performance_metrics,
+                )
             return ScenarioEvaluation(
                 name=scenario_name,
                 fitness=tuple(float(value) for value in fitness),
@@ -362,58 +385,9 @@ class EvaluationStrategy:
                 metadata=metadata.copy() if metadata else {},
             )
 
-        # 3. どちらも見つからない場合はエラー
         raise AttributeError(
             f"Evaluator {type(self._evaluator)} lacks necessary evaluation methods."
         )
-
-    def _evaluate_with_oos_parallel(
-        self,
-        gene,
-        base_backtest_config: Dict[str, Any],
-        config: GAConfig,
-        oos_ratio: float,
-        oos_weight: float,
-    ) -> Tuple[float, ...]:
-        """OOS検証を含む評価（並列版の互換API）。"""
-        return self._evaluate_with_oos_report(
-            gene, base_backtest_config, config, oos_ratio, oos_weight
-        ).aggregated_fitness
-
-    def _evaluate_with_walk_forward_parallel(
-        self,
-        gene,
-        base_backtest_config: Dict[str, Any],
-        config: GAConfig,
-    ) -> Tuple[float, ...]:
-        """Walk-Forward Analysis の並列版の互換API。"""
-        return self._evaluate_with_walk_forward_report(
-            gene, base_backtest_config, config
-        ).aggregated_fitness
-
-    def _evaluate_with_purged_kfold_parallel(
-        self,
-        gene,
-        base_backtest_config: Dict[str, Any],
-        config: GAConfig,
-    ) -> Tuple[float, ...]:
-        """PurgedKFold評価の並列版の互換API。"""
-        return self._evaluate_with_purged_kfold_report(
-            gene, base_backtest_config, config
-        ).aggregated_fitness
-
-    def _evaluate_with_oos(
-        self,
-        gene,
-        base_backtest_config: Dict[str, Any],
-        config: GAConfig,
-        oos_ratio: float,
-        oos_weight: float,
-    ) -> Tuple[float, ...]:
-        """OOS検証を含む評価（タプル返却の互換API）。"""
-        return self._evaluate_with_oos_report(
-            gene, base_backtest_config, config, oos_ratio, oos_weight
-        ).aggregated_fitness
 
     def _evaluate_with_oos_report(
         self,
@@ -492,17 +466,6 @@ class EvaluationStrategy:
             logger.error(f"OOS評価中エラー: {e}")
             return self._evaluate_single_report(gene, base_backtest_config, config)
 
-    def _evaluate_with_walk_forward(
-        self,
-        gene,
-        base_backtest_config: Dict[str, Any],
-        config: GAConfig,
-    ) -> Tuple[float, ...]:
-        """Walk-Forward Analysis（タプル返却の互換API）。"""
-        return self._evaluate_with_walk_forward_report(
-            gene, base_backtest_config, config
-        ).aggregated_fitness
-
     def _evaluate_with_walk_forward_report(
         self,
         gene: Any,
@@ -517,9 +480,10 @@ class EvaluationStrategy:
                 return self._evaluate_single_report(gene, base_backtest_config, config)
             start_date, end_date = date_range
 
-            n_folds = getattr(config, "wfa_n_folds", 5)
-            train_ratio = getattr(config, "wfa_train_ratio", 0.7)
-            anchored = getattr(config, "wfa_anchored", False)
+            evaluation_config = getattr(config, "evaluation_config", None)
+            n_folds = getattr(evaluation_config, "wfa_n_folds", 5)
+            train_ratio = getattr(evaluation_config, "wfa_train_ratio", 0.7)
+            anchored = getattr(evaluation_config, "wfa_anchored", False)
 
             fold_configs = self._precompute_fold_configs(
                 start_date,
@@ -637,17 +601,6 @@ class EvaluationStrategy:
             fold_configs.append((fold_idx, test_config))
 
         return fold_configs
-
-    def _evaluate_with_purged_kfold(
-        self,
-        gene,
-        base_backtest_config: Dict[str, Any],
-        config: GAConfig,
-    ) -> Tuple[float, ...]:
-        """PurgedKFold評価（タプル返却の互換API）。"""
-        return self._evaluate_with_purged_kfold_report(
-            gene, base_backtest_config, config
-        ).aggregated_fitness
 
     def _evaluate_with_purged_kfold_report(
         self,

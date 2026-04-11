@@ -7,6 +7,7 @@ from app.services.auto_strategy.strategies.early_termination import (
     StrategyEarlyTermination,
     StrategyEarlyTerminationController,
 )
+from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 
 
 class TestStrategyEarlyTerminationController:
@@ -25,14 +26,7 @@ class TestStrategyEarlyTerminationController:
             _max_equity_seen=10000.0,
             equity=10000.0,
             closed_trades=[],
-            enable_early_termination=False,
-            early_termination_max_drawdown=None,
-            early_termination_min_trades=None,
-            early_termination_min_trade_check_progress=0.5,
-            early_termination_trade_pace_tolerance=0.5,
-            early_termination_min_expectancy=None,
-            early_termination_expectancy_min_trades=5,
-            early_termination_expectancy_progress=0.6,
+            early_termination_settings=EarlyTerminationSettings(),
         )
 
     def test_get_progress_ratio_uses_evaluation_window(self):
@@ -63,8 +57,10 @@ class TestStrategyEarlyTerminationController:
     def test_should_terminate_early_on_drawdown(self):
         strategy = self._build_strategy()
         controller = StrategyEarlyTerminationController(strategy)
-        strategy.enable_early_termination = True
-        strategy.early_termination_max_drawdown = 0.1
+        strategy.early_termination_settings = EarlyTerminationSettings(
+            enabled=True,
+            max_drawdown=0.1,
+        )
         strategy.equity = 8800.0
         strategy._current_bar_index = 5
 
@@ -73,10 +69,12 @@ class TestStrategyEarlyTerminationController:
     def test_should_terminate_early_on_expectancy(self):
         strategy = self._build_strategy()
         controller = StrategyEarlyTerminationController(strategy)
-        strategy.enable_early_termination = True
-        strategy.early_termination_min_expectancy = -0.01
-        strategy.early_termination_expectancy_min_trades = 2
-        strategy.early_termination_expectancy_progress = 0.6
+        strategy.early_termination_settings = EarlyTerminationSettings(
+            enabled=True,
+            min_expectancy=-0.01,
+            expectancy_min_trades=2,
+            expectancy_progress=0.6,
+        )
         strategy._current_bar_index = 8
         strategy.closed_trades = [
             SimpleNamespace(pl_pct=-0.03),
@@ -88,8 +86,10 @@ class TestStrategyEarlyTerminationController:
     def test_check_early_termination_raises_strategy_exception(self):
         strategy = self._build_strategy()
         controller = StrategyEarlyTerminationController(strategy)
-        strategy.enable_early_termination = True
-        strategy.early_termination_max_drawdown = 0.1
+        strategy.early_termination_settings = EarlyTerminationSettings(
+            enabled=True,
+            max_drawdown=0.1,
+        )
         strategy.equity = 8800.0
 
         with pytest.raises(StrategyEarlyTermination, match="max_drawdown"):

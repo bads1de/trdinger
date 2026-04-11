@@ -5,7 +5,7 @@ Feature Selection パッケージ
 """
 
 from .config import FeatureSelectionConfig, SelectionMethod
-from .feature_selector import FeatureSelector, create_feature_selector
+from .feature_selector import FeatureSelector
 from .strategies import (
     BaseSelectionStrategy,
     LassoStrategy,
@@ -22,7 +22,6 @@ from .utils import get_default_estimator
 __all__ = [
     # メインセレクター
     "FeatureSelector",
-    "create_feature_selector",
     # 設定
     "SelectionMethod",
     "FeatureSelectionConfig",

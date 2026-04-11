@@ -132,12 +132,17 @@ def benchmark_fitness_sharing():
     from app.services.auto_strategy.config.ga import GAConfig
 
     config = GAConfig()
-    config.enable_fitness_sharing = True
-    config.sharing_radius = 0.1
-    config.sharing_alpha = 1.0
+    config.fitness_sharing.update(
+        {
+            "enable_fitness_sharing": True,
+            "sharing_radius": 0.1,
+            "sharing_alpha": 1.0,
+        }
+    )
 
     sharing = FitnessSharing(
-        sharing_radius=config.sharing_radius, alpha=config.sharing_alpha
+        sharing_radius=config.fitness_sharing["sharing_radius"],
+        alpha=config.fitness_sharing["sharing_alpha"],
     )
 
     # モック個体

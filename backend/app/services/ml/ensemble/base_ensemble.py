@@ -49,7 +49,7 @@ class BaseEnsemble(ABC):
             config: アンサンブル設定
         """
         self.config = config
-        # 後方互換のため、名前だけでなく実体モデルも保持できるよう Any にしておく
+        # 実体モデルも保持できるよう型を緩和
         self._base_models_list: List[Any] = []
         self._meta_model_ref: Optional[Any] = None
         self.is_fitted = False
@@ -101,16 +101,6 @@ class BaseEnsemble(ABC):
         Returns:
             予測確率の配列
         """
-
-    @property
-    def base_models(self) -> List[Any]:
-        """後方互換性のためのプロパティ"""
-        return self._base_models_list
-
-    @base_models.setter
-    def base_models(self, value: List[Any]) -> None:
-        """後方互換性のためのセッター"""
-        self._base_models_list = value
 
     def _create_base_model(
         self, model_type: str, model_params: Optional[Dict[str, Any]] = None
@@ -303,9 +293,6 @@ class BaseEnsemble(ABC):
     def save_models(self, base_path: str) -> List[str]:
         """アンサンブルモデルを保存"""
         import os
-        from datetime import datetime
-
-        import joblib
 
         from ..models.model_manager import model_manager
 
@@ -356,11 +343,7 @@ class BaseEnsemble(ABC):
             )
             return [path] if path else []
 
-        # 3. その他（従来形式）
-        logger.warning("Falling back to legacy model saving")
-        path = f"{base_path}_legacy_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pkl"
-        joblib.dump(self, path)
-        return [path]
+        raise MLModelError("No valid model data found in ensemble")
 
     def load_models(self, base_path: str) -> bool:
         """アンサンブルモデルを読み込み"""

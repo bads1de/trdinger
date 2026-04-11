@@ -212,11 +212,6 @@ class OptunaOptimizer:
         return params
 
     @staticmethod
-    def get_default_parameter_space() -> Dict[str, ParameterSpace]:
-        """LightGBMのデフォルトパラメータ空間（後方互換性のため）"""
-        return build_lightgbm_parameter_space()
-
-    @staticmethod
     @safe_operation(context="アンサンブルパラメータ空間取得", is_api_call=False)
     def get_ensemble_parameter_space(
         ensemble_method: str, enabled_models: list

@@ -179,7 +179,9 @@ class TestPrepareParameterSpace:
         del mock_trainer.ensemble_config
         settings = OptimizationSettings(enabled=True)
 
-        with patch.object(service.optimizer, "get_default_parameter_space"):
+        with patch(
+            "app.services.ml.optimization.optimization_service.build_lightgbm_parameter_space"
+        ):
             result = service._prepare_parameter_space(mock_trainer, settings)
 
 

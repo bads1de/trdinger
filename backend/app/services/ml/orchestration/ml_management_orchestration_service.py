@@ -159,7 +159,6 @@ class MLManagementOrchestrationService:
         # デフォルトステータスの初期化
         status: Dict[str, Any] = {
             "is_model_loaded": False,
-            "is_loaded": False,  # 後方互換性のため保持
             "is_trained": False,
             "model_path": None,
             "model_type": None,

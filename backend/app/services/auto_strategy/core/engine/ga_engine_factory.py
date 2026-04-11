@@ -55,7 +55,8 @@ class GeneticAlgorithmEngineFactory:
         hybrid_predictor = None
         hybrid_feature_adapter = None
 
-        if ga_config.hybrid_mode:
+        hybrid_config = ga_config.hybrid_config
+        if hybrid_config.mode:
             hybrid_predictor, hybrid_feature_adapter = (
                 GeneticAlgorithmEngineFactory._setup_hybrid_components(ga_config)
             )
@@ -66,13 +67,13 @@ class GeneticAlgorithmEngineFactory:
         engine = GeneticAlgorithmEngine(
             backtest_service=backtest_service,
             gene_generator=gene_generator,
-            hybrid_mode=ga_config.hybrid_mode,
+            hybrid_mode=hybrid_config.mode,
             hybrid_predictor=hybrid_predictor,
             hybrid_feature_adapter=hybrid_feature_adapter,
         )
 
         logger.info(
-            f"GAエンジンを初期化しました (Mode: {'Hybrid' if ga_config.hybrid_mode else 'Standard'})"
+            f"GAエンジンを初期化しました (Mode: {'Hybrid' if hybrid_config.mode else 'Standard'})"
         )
         return engine
 
@@ -97,12 +98,13 @@ class GeneticAlgorithmEngineFactory:
         logger.info("🔬 ハイブリッドGA+MLモードのコンポーネントを準備中")
 
         # 予測器の初期化
-        model_types = ga_config.hybrid_model_types
+        hybrid_config = ga_config.hybrid_config
+        model_types = hybrid_config.model_types
         if model_types and len(model_types) > 1:
             logger.info(f"複数モデルアンサンブルを使用: {model_types}")
             predictor = HybridPredictor(trainer_type="single", model_types=model_types)
         else:
-            model_type = ga_config.hybrid_model_type or "lightgbm"
+            model_type = hybrid_config.model_type or "lightgbm"
             logger.info(f"単一モデルを使用: {model_type}")
             predictor = HybridPredictor(trainer_type="single", model_type=model_type)
 

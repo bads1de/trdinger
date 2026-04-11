@@ -146,9 +146,9 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               data={chartData.equity}
               initialCapital={result.initial_capital}
               buyHoldReturn={
-                result.performance_metrics.buy_hold_return || undefined
+                Number(result.performance_metrics?.buy_hold_return) || undefined
               }
-              showBuyHold={!!result.performance_metrics.buy_hold_return}
+              showBuyHold={!!result.performance_metrics?.buy_hold_return}
               title="資産曲線"
               subtitle="時系列での資産推移とBuy & Hold比較"
             />
@@ -158,7 +158,7 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
             <DrawdownChart
               data={chartData.equity}
               maxDrawdown={
-                Math.abs(result.performance_metrics.max_drawdown || 0) * 100
+                Math.abs(Number(result.performance_metrics?.max_drawdown) || 0) * 100
               }
               title="ドローダウン分析"
               subtitle="最大下落期間と回復パターンの可視化"
@@ -188,17 +188,17 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
             <div className="text-center">
               <div className="text-gray-400">総リターン</div>
               <div className="text-white font-semibold">
-                {result.performance_metrics.total_return
-                  ? `${result.performance_metrics.total_return.toFixed(2)}%`
+                {result.performance_metrics?.total_return
+                  ? `${Number(result.performance_metrics.total_return).toFixed(2)}%`
                   : "N/A"}
               </div>
             </div>
             <div className="text-center">
               <div className="text-gray-400">最大ドローダウン</div>
               <div className="text-red-400 font-semibold">
-                {result.performance_metrics.max_drawdown
+                {result.performance_metrics?.max_drawdown
                   ? `${Math.abs(
-                      result.performance_metrics.max_drawdown
+                      Number(result.performance_metrics.max_drawdown)
                     ).toFixed(2)}%`
                   : "N/A"}
               </div>
@@ -206,15 +206,15 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
             <div className="text-center">
               <div className="text-gray-400">勝率</div>
               <div className="text-green-400 font-semibold">
-                {result.performance_metrics.win_rate
-                  ? `${result.performance_metrics.win_rate.toFixed(1)}%`
+                {result.performance_metrics?.win_rate
+                  ? `${Number(result.performance_metrics.win_rate).toFixed(1)}%`
                   : "N/A"}
               </div>
             </div>
             <div className="text-center">
               <div className="text-gray-400">総取引数</div>
               <div className="text-blue-400 font-semibold">
-                {result.performance_metrics.total_trades || "N/A"}
+                {Number(result.performance_metrics?.total_trades) || "N/A"}
               </div>
             </div>
           </div>

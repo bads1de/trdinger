@@ -291,8 +291,7 @@ class ConditionEvaluator:
         if not group or group.is_empty():
             return False
 
-        # getattrの代わりに直接属性アクセスを試みる（slots=Trueなので高速）
-        # ただし互換性のためgetattrも残す
+        # 直接属性アクセス（slots=Trueのため高速）
         op = getattr(group, "operator", "OR")
 
         # リスト内包表記よりジェネレータ式の方がメモリ効率が良いが、
@@ -400,14 +399,6 @@ class ConditionEvaluator:
                 pass
 
         return float("nan")
-
-    def _is_comparable(self, v1: Any, v2: Any) -> bool:
-        """非推奨: evaluate_single_condition内にインライン化"""
-        return True
-
-    def _compare_values(self, v1: float, v2: float, operator: str) -> bool:
-        """非推奨: evaluate_single_condition内にインライン化"""
-        return False
 
     def _get_final_value(self, value: Any) -> float:
         """

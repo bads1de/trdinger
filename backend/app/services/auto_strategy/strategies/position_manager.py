@@ -7,8 +7,6 @@ UniversalStrategyのポジション管理と決済ロジックを担当します
 
 import logging
 
-from .runtime_state import resolve_runtime_state
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +30,7 @@ class PositionManager:
     @property
     def state(self):
         """strategy に紐づく実行時状態を返す。"""
-        return resolve_runtime_state(self.strategy)
+        return self.strategy.runtime_state
 
     def handle_open_position(self) -> bool:
         """

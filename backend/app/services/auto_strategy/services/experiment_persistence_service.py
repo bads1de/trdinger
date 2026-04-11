@@ -85,8 +85,6 @@ class ExperimentPersistenceService:
 
         logger.info(f"実験結果保存開始: {experiment_id}")
 
-        # backtest_config は互換性のために受け取るが、この保存処理では使わない。
-
         with self.db_session_factory() as db:
             self._save_best_strategy(
                 db, experiment_id, experiment_info, result, ga_config
@@ -288,12 +286,6 @@ class ExperimentPersistenceService:
             exp = repo.get_by_experiment_id(experiment_id)
             if exp:
                 return self._map_experiment_info(exp)
-
-            # 2. 後方互換: 名前またはDB IDで照合
-            experiments = repo.get_recent_experiments(limit=100)
-            for exp in experiments:
-                if str(exp.name) == experiment_id or str(exp.id) == experiment_id:
-                    return self._map_experiment_info(exp)
 
             logger.warning(f"実験が見つかりません: {experiment_id}")
             return None

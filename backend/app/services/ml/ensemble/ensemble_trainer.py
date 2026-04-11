@@ -38,7 +38,7 @@ class EnsembleTrainer(BaseMLTrainer):
         Args:
             ensemble_config: アンサンブル設定
                 - models: モデルのリスト (例: ["lightgbm"] or ["lightgbm", "xgboost"])
-                - model_type: 単一モデルタイプ (例: "lightgbm") ※後方互換
+                - model_type: 単一モデルタイプ (例: "lightgbm")
                 - method: アンサンブル手法 (デフォルト: "stacking")
         """
         super().__init__()
@@ -340,7 +340,7 @@ class EnsembleTrainer(BaseMLTrainer):
                 y_proba=y_pred_proba,
             )
 
-            # 分類レポート（詳細メトリクスに含まれているが、互換性のために明示的に取得）
+            # 分類レポート
             class_report = detailed_metrics.get("classification_report", {})
 
             # 特徴量重要度

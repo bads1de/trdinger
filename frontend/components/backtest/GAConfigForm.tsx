@@ -11,7 +11,13 @@ import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import ActionButton from "@/components/common/ActionButton";
 import ApiButton from "@/components/button/ApiButton";
-import { GAConfig as GAConfigType } from "@/types/optimization";
+import {
+  EarlyTerminationSettingsConfig,
+  GAConfig as GAConfigType,
+  GAEvaluationConfig,
+  GAHybridConfig,
+  FitnessSharingConfig,
+} from "@/types/optimization";
 import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
 import { BaseBacktestConfigForm } from "./BaseBacktestConfigForm";
 import { GA_INFO_MESSAGES } from "@/constants/info";
@@ -58,12 +64,24 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
 
     const effectiveBaseConfig = currentBacktestConfig || baseBacktestConfig;
     const initialGAConfig = (initialConfig.ga_config ?? {}) as any;
+    const initialEvaluationConfig = (initialGAConfig.evaluation_config ??
+      {}) as GAEvaluationConfig;
+    const initialEarlyTerminationSettings = (initialEvaluationConfig.early_termination_settings ??
+      {}) as EarlyTerminationSettingsConfig;
+    const initialFitnessSharing = (initialGAConfig.fitness_sharing ??
+      {}) as FitnessSharingConfig;
+    const initialHybridConfig = (initialGAConfig.hybrid_config ??
+      {}) as GAHybridConfig;
+    const initialFitnessWeights = {
+      ...(initialGAConfig.fitness_weights || {}),
+    };
+    delete initialFitnessWeights.prediction_score;
     const defaultFitnessWeights = {
       total_return: 0.3,
       sharpe_ratio: 0.4,
       max_drawdown: 0.2,
       win_rate: 0.1,
-      ...(initialGAConfig.fitness_weights || {}),
+      ...initialFitnessWeights,
     };
     const defaultFitnessConstraints = {
       min_trades: 10,
@@ -90,51 +108,75 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         max_indicators: initialGAConfig.max_indicators ?? 5,
         fitness_weights: defaultFitnessWeights,
         fitness_constraints: defaultFitnessConstraints,
+        fitness_sharing: {
+          ...initialFitnessSharing,
+          enable_fitness_sharing:
+            initialFitnessSharing.enable_fitness_sharing ?? true,
+        },
         enable_multi_objective: initialGAConfig.enable_multi_objective ?? false,
         objectives: initialGAConfig.objectives ?? ["total_return"],
         objective_weights: initialGAConfig.objective_weights ?? [1.0],
         dynamic_objective_reweighting:
           initialGAConfig.dynamic_objective_reweighting ?? false,
-        hybrid_mode: initialGAConfig.hybrid_mode ?? false,
-        hybrid_model_type: initialGAConfig.hybrid_model_type ?? "lightgbm",
-        hybrid_model_types: initialGAConfig.hybrid_model_types,
-        // 並列評価設定
-        enable_parallel_evaluation:
-          initialGAConfig.enable_parallel_evaluation ?? true,
-        max_evaluation_workers: initialGAConfig.max_evaluation_workers ?? 4,
-        evaluation_timeout: initialGAConfig.evaluation_timeout ?? 300,
-        enable_multi_fidelity_evaluation:
-          initialGAConfig.enable_multi_fidelity_evaluation ?? false,
-        multi_fidelity_window_ratio:
-          initialGAConfig.multi_fidelity_window_ratio ?? 0.3,
-        multi_fidelity_oos_ratio:
-          initialGAConfig.multi_fidelity_oos_ratio ?? 0.2,
-        multi_fidelity_candidate_ratio:
-          initialGAConfig.multi_fidelity_candidate_ratio ?? 0.25,
-        multi_fidelity_min_candidates:
-          initialGAConfig.multi_fidelity_min_candidates ?? 3,
-        enable_early_termination:
-          initialGAConfig.enable_early_termination ?? false,
-        early_termination_max_drawdown:
-          initialGAConfig.early_termination_max_drawdown === undefined
-            ? null
-            : initialGAConfig.early_termination_max_drawdown,
-        early_termination_min_trades:
-          initialGAConfig.early_termination_min_trades === undefined
-            ? null
-            : initialGAConfig.early_termination_min_trades,
-        early_termination_min_trade_check_progress:
-          initialGAConfig.early_termination_min_trade_check_progress ?? 0.5,
-        early_termination_trade_pace_tolerance:
-          initialGAConfig.early_termination_trade_pace_tolerance ?? 0.5,
-        early_termination_min_expectancy:
-          initialGAConfig.early_termination_min_expectancy === undefined
-            ? null
-            : initialGAConfig.early_termination_min_expectancy,
-        early_termination_expectancy_min_trades:
-          initialGAConfig.early_termination_expectancy_min_trades ?? 5,
-        early_termination_expectancy_progress:
-          initialGAConfig.early_termination_expectancy_progress ?? 0.6,
+        hybrid_config: {
+          ...initialHybridConfig,
+          mode: initialHybridConfig.mode ?? false,
+          model_type: initialHybridConfig.model_type ?? "lightgbm",
+          model_types: initialHybridConfig.model_types,
+          volatility_gate_enabled:
+            initialHybridConfig.volatility_gate_enabled ?? false,
+          volatility_model_path: initialHybridConfig.volatility_model_path,
+          ml_filter_enabled: initialHybridConfig.ml_filter_enabled ?? false,
+          ml_model_path: initialHybridConfig.ml_model_path,
+          preprocess_features: initialHybridConfig.preprocess_features ?? true,
+        },
+        evaluation_config: {
+          ...initialEvaluationConfig,
+          enable_parallel: initialEvaluationConfig.enable_parallel ?? true,
+          max_workers: initialEvaluationConfig.max_workers ?? 4,
+          timeout: initialEvaluationConfig.timeout ?? 300,
+          enable_multi_fidelity_evaluation:
+            initialEvaluationConfig.enable_multi_fidelity_evaluation ?? false,
+          multi_fidelity_window_ratio:
+            initialEvaluationConfig.multi_fidelity_window_ratio ?? 0.3,
+          multi_fidelity_oos_ratio:
+            initialEvaluationConfig.multi_fidelity_oos_ratio ?? 0.2,
+          multi_fidelity_candidate_ratio:
+            initialEvaluationConfig.multi_fidelity_candidate_ratio ?? 0.25,
+          multi_fidelity_min_candidates:
+            initialEvaluationConfig.multi_fidelity_min_candidates ?? 3,
+          early_termination_settings: {
+            ...initialEarlyTerminationSettings,
+            enabled: initialEarlyTerminationSettings.enabled ?? false,
+            max_drawdown:
+              initialEarlyTerminationSettings.max_drawdown === undefined
+                ? null
+                : initialEarlyTerminationSettings.max_drawdown,
+            min_trades:
+              initialEarlyTerminationSettings.min_trades === undefined
+                ? null
+                : initialEarlyTerminationSettings.min_trades,
+            min_trade_check_progress:
+              initialEarlyTerminationSettings.min_trade_check_progress ?? 0.5,
+            trade_pace_tolerance:
+              initialEarlyTerminationSettings.trade_pace_tolerance ?? 0.5,
+            min_expectancy:
+              initialEarlyTerminationSettings.min_expectancy === undefined
+                ? null
+                : initialEarlyTerminationSettings.min_expectancy,
+            expectancy_min_trades:
+              initialEarlyTerminationSettings.expectancy_min_trades ?? 5,
+            expectancy_progress:
+              initialEarlyTerminationSettings.expectancy_progress ?? 0.6,
+          },
+          oos_split_ratio: initialEvaluationConfig.oos_split_ratio ?? 0.0,
+          oos_fitness_weight: initialEvaluationConfig.oos_fitness_weight ?? 0.5,
+          enable_walk_forward:
+            initialEvaluationConfig.enable_walk_forward ?? false,
+          wfa_n_folds: initialEvaluationConfig.wfa_n_folds ?? 5,
+          wfa_train_ratio: initialEvaluationConfig.wfa_train_ratio ?? 0.7,
+          wfa_anchored: initialEvaluationConfig.wfa_anchored ?? false,
+        },
 
         // 制限設定
         min_indicators: initialGAConfig.min_indicators,
@@ -146,17 +188,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         constraint_violation_penalty:
           initialGAConfig.constraint_violation_penalty,
 
-        // 高度な設定 (Fitness Sharing)
-        enable_fitness_sharing: initialGAConfig.enable_fitness_sharing ?? true,
-        sharing_radius: initialGAConfig.sharing_radius,
-        sharing_alpha: initialGAConfig.sharing_alpha,
-        sampling_threshold: initialGAConfig.sampling_threshold,
-        sampling_ratio: initialGAConfig.sampling_ratio,
-
-        // OOS
-        oos_split_ratio: initialGAConfig.oos_split_ratio,
-        oos_fitness_weight: initialGAConfig.oos_fitness_weight,
-
         // TPSL設定
         tpsl_method_constraints: initialGAConfig.tpsl_method_constraints,
         tpsl_sl_range: initialGAConfig.tpsl_sl_range,
@@ -164,22 +195,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         tpsl_rr_range: initialGAConfig.tpsl_rr_range,
         tpsl_atr_multiplier_range: initialGAConfig.tpsl_atr_multiplier_range,
 
-        // WFA
-        enable_walk_forward: initialGAConfig.enable_walk_forward ?? false,
-        wfa_n_folds: initialGAConfig.wfa_n_folds ?? 5,
-        wfa_train_ratio: initialGAConfig.wfa_train_ratio ?? 0.7,
-        wfa_anchored: initialGAConfig.wfa_anchored ?? false,
-
         // MTF
         enable_multi_timeframe: initialGAConfig.enable_multi_timeframe ?? false,
         available_timeframes: initialGAConfig.available_timeframes,
         mtf_indicator_probability:
           initialGAConfig.mtf_indicator_probability ?? 0.3,
-
-        // ML Filter
-        ml_filter_enabled: initialGAConfig.ml_filter_enabled ?? false,
-        ml_model_path: initialGAConfig.ml_model_path,
-        preprocess_features: initialGAConfig.preprocess_features ?? true,
 
         // Data Weights
         price_data_weight: initialGAConfig.price_data_weight,
@@ -239,6 +259,57 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       ga_config: { ...prev.ga_config, ...updates },
     }));
   };
+
+  const handleEvaluationConfigChange = (
+    updates: Partial<GAEvaluationConfig>,
+  ) => {
+    setConfig((prev) => ({
+      ...prev,
+      ga_config: {
+        ...prev.ga_config,
+        evaluation_config: {
+          ...(prev.ga_config.evaluation_config ?? {}),
+          ...updates,
+        },
+      },
+    }));
+  };
+
+  const handleFitnessSharingChange = (
+    updates: Partial<FitnessSharingConfig>,
+  ) => {
+    setConfig((prev) => ({
+      ...prev,
+      ga_config: {
+        ...prev.ga_config,
+        fitness_sharing: {
+          ...(prev.ga_config.fitness_sharing ?? {}),
+          ...updates,
+        },
+      },
+    }));
+  };
+
+  const handleHybridConfigChange = (updates: Partial<GAHybridConfig>) => {
+    setConfig((prev) => ({
+      ...prev,
+      ga_config: {
+        ...prev.ga_config,
+        hybrid_config: {
+          ...(prev.ga_config.hybrid_config ?? {}),
+          ...updates,
+        },
+      },
+    }));
+  };
+
+  const evaluationConfig: GAEvaluationConfig =
+    config.ga_config.evaluation_config ?? {};
+  const earlyTerminationSettings: EarlyTerminationSettingsConfig =
+    evaluationConfig.early_termination_settings ?? {};
+  const fitnessSharingConfig: FitnessSharingConfig =
+    config.ga_config.fitness_sharing ?? {};
+  const hybridConfig: GAHybridConfig = config.ga_config.hybrid_config ?? {};
 
   const handleSubmit = () => {
     onSubmit(config);
@@ -416,14 +487,10 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             <label className="flex items-center space-x-2">
               <input
                 type="checkbox"
-                checked={config.ga_config.enable_fitness_sharing ?? true}
+                checked={fitnessSharingConfig.enable_fitness_sharing ?? true}
                 onChange={(e) =>
-                  setConfig({
-                    ...config,
-                    ga_config: {
-                      ...config.ga_config,
-                      enable_fitness_sharing: e.target.checked,
-                    },
+                  handleFitnessSharingChange({
+                    enable_fitness_sharing: e.target.checked,
                   })
                 }
                 className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
@@ -462,8 +529,10 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             <InputField
               label="Out-of-Sample 分割比率"
               type="number"
-              value={config.ga_config.oos_split_ratio ?? 0.0}
-              onChange={(val) => handleGAConfigChange({ oos_split_ratio: val })}
+              value={evaluationConfig.oos_split_ratio ?? 0.0}
+              onChange={(val) =>
+                handleEvaluationConfigChange({ oos_split_ratio: val })
+              }
               min={0}
               max={0.5}
               step={0.05}
@@ -475,9 +544,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={config.ga_config.enable_walk_forward ?? false}
+                  checked={evaluationConfig.enable_walk_forward ?? false}
                   onChange={(e) =>
-                    handleGAConfigChange({
+                    handleEvaluationConfigChange({
                       enable_walk_forward: e.target.checked,
                     })
                   }
@@ -488,14 +557,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 </span>
               </label>
 
-              {config.ga_config.enable_walk_forward && (
+              {evaluationConfig.enable_walk_forward && (
                 <div className="pl-6">
                   <InputField
                     label="WFAフォールド数"
                     type="number"
-                    value={config.ga_config.wfa_n_folds ?? 5}
+                    value={evaluationConfig.wfa_n_folds ?? 5}
                     onChange={(val) =>
-                      handleGAConfigChange({ wfa_n_folds: val })
+                      handleEvaluationConfigChange({ wfa_n_folds: val })
                     }
                     min={2}
                     max={10}
@@ -522,44 +591,27 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             </label>
             <input
               type="checkbox"
-              checked={config.ga_config.hybrid_mode || false}
+              checked={hybridConfig.mode ?? false}
               onChange={(e) =>
-                handleGAConfigChange({ hybrid_mode: e.target.checked })
+                handleHybridConfigChange({ mode: e.target.checked })
               }
               className="w-5 h-5 rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
               aria-label="ハイブリッドGA+MLモードを有効化"
             />
           </div>
 
-          {config.ga_config.hybrid_mode && (
+          {hybridConfig.mode && (
             <>
               <SelectField
                 label="MLモデル"
-                value={config.ga_config.hybrid_model_type || "lightgbm"}
+                value={hybridConfig.model_type || "lightgbm"}
                 onChange={(value) =>
-                  handleGAConfigChange({ hybrid_model_type: value })
+                  handleHybridConfigChange({ model_type: value })
                 }
                 options={[
                   { value: "lightgbm", label: "LightGBM" },
                   { value: "xgboost", label: "XGBoost" },
                 ]}
-              />
-              <InputField
-                label="ML予測重み (prediction_score)"
-                type="number"
-                value={config.ga_config.fitness_weights.prediction_score || 0.1}
-                onChange={(value) =>
-                  handleGAConfigChange({
-                    fitness_weights: {
-                      ...config.ga_config.fitness_weights,
-                      prediction_score: value,
-                    },
-                  })
-                }
-                min={0}
-                max={1}
-                step={0.05}
-                description="ML予測スコアの重み（0-1）"
               />
               <p className="text-xs text-indigo-300">
                 💡
@@ -577,40 +629,36 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             </label>
             <input
               type="checkbox"
-              checked={config.ga_config.enable_parallel_evaluation ?? true}
+              checked={evaluationConfig.enable_parallel ?? true}
               onChange={(e) =>
-                handleGAConfigChange({
-                  enable_parallel_evaluation: e.target.checked,
-                })
+                handleEvaluationConfigChange({ enable_parallel: e.target.checked })
               }
               className="w-5 h-5 rounded border-cyan-500 text-cyan-600 focus:ring-cyan-500"
               aria-label="並列評価を有効化"
             />
           </div>
 
-          {config.ga_config.enable_parallel_evaluation && (
+          {evaluationConfig.enable_parallel && (
             <>
               <InputField
                 label="最大ワーカー数"
                 type="number"
-                value={config.ga_config.max_evaluation_workers ?? ""}
+                value={evaluationConfig.max_workers ?? ""}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    max_evaluation_workers: value || null,
-                  })
+                  handleEvaluationConfigChange({ max_workers: value || null })
                 }
                 min={1}
                 max={32}
                 step={1}
-                description={GA_INFO_MESSAGES.max_evaluation_workers}
+                description={GA_INFO_MESSAGES.max_workers}
                 placeholder="自動（CPUコア数×2）"
               />
               <InputField
                 label="評価タイムアウト（秒）"
                 type="number"
-                value={config.ga_config.evaluation_timeout ?? 300}
+                value={evaluationConfig.timeout ?? 300}
                 onChange={(value) =>
-                  handleGAConfigChange({ evaluation_timeout: value })
+                  handleEvaluationConfigChange({ timeout: value })
                 }
                 min={30}
                 max={1800}
@@ -631,9 +679,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           <label className="flex items-center space-x-2">
             <input
               type="checkbox"
-              checked={config.ga_config.enable_multi_fidelity_evaluation ?? false}
+              checked={evaluationConfig.enable_multi_fidelity_evaluation ?? false}
               onChange={(e) =>
-                handleGAConfigChange({
+                handleEvaluationConfigChange({
                   enable_multi_fidelity_evaluation: e.target.checked,
                 })
               }
@@ -644,14 +692,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             </span>
           </label>
 
-          {config.ga_config.enable_multi_fidelity_evaluation && (
+          {evaluationConfig.enable_multi_fidelity_evaluation && (
             <>
               <InputField
                 label="coarse 期間比率"
                 type="number"
-                value={config.ga_config.multi_fidelity_window_ratio ?? 0.3}
+                value={evaluationConfig.multi_fidelity_window_ratio ?? 0.3}
                 onChange={(value) =>
-                  handleGAConfigChange({
+                  handleEvaluationConfigChange({
                     multi_fidelity_window_ratio: value,
                   })
                 }
@@ -663,9 +711,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="coarse OOS 比率"
                 type="number"
-                value={config.ga_config.multi_fidelity_oos_ratio ?? 0.2}
+                value={evaluationConfig.multi_fidelity_oos_ratio ?? 0.2}
                 onChange={(value) =>
-                  handleGAConfigChange({
+                  handleEvaluationConfigChange({
                     multi_fidelity_oos_ratio: value,
                   })
                 }
@@ -677,9 +725,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="full 評価候補比率"
                 type="number"
-                value={config.ga_config.multi_fidelity_candidate_ratio ?? 0.25}
+                value={evaluationConfig.multi_fidelity_candidate_ratio ?? 0.25}
                 onChange={(value) =>
-                  handleGAConfigChange({
+                  handleEvaluationConfigChange({
                     multi_fidelity_candidate_ratio: value,
                   })
                 }
@@ -691,9 +739,9 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="full 評価最小候補数"
                 type="number"
-                value={config.ga_config.multi_fidelity_min_candidates ?? 3}
+                value={evaluationConfig.multi_fidelity_min_candidates ?? 3}
                 onChange={(value) =>
-                  handleGAConfigChange({
+                  handleEvaluationConfigChange({
                     multi_fidelity_min_candidates: value,
                   })
                 }
@@ -708,10 +756,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           <label className="flex items-center space-x-2 pt-2">
             <input
               type="checkbox"
-              checked={config.ga_config.enable_early_termination ?? false}
+              checked={earlyTerminationSettings.enabled ?? false}
               onChange={(e) =>
-                handleGAConfigChange({
-                  enable_early_termination: e.target.checked,
+                handleEvaluationConfigChange({
+                  early_termination_settings: {
+                    ...earlyTerminationSettings,
+                    enabled: e.target.checked,
+                  },
                 })
               }
               className="rounded border-emerald-500 text-emerald-600 focus:ring-emerald-500"
@@ -721,15 +772,18 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             </span>
           </label>
 
-          {config.ga_config.enable_early_termination && (
+          {earlyTerminationSettings.enabled && (
             <>
               <InputField
                 label="最大DD打ち切り"
                 type="number"
-                value={config.ga_config.early_termination_max_drawdown}
+                value={earlyTerminationSettings.max_drawdown}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    early_termination_max_drawdown: value,
+                  handleEvaluationConfigChange({
+                    early_termination_settings: {
+                      ...earlyTerminationSettings,
+                      max_drawdown: value,
+                    },
                   })
                 }
                 allowEmptyNumber
@@ -741,10 +795,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="最低トレード数"
                 type="number"
-                value={config.ga_config.early_termination_min_trades}
+                value={earlyTerminationSettings.min_trades}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    early_termination_min_trades: value,
+                  handleEvaluationConfigChange({
+                    early_termination_settings: {
+                      ...earlyTerminationSettings,
+                      min_trades: value,
+                    },
                   })
                 }
                 allowEmptyNumber
@@ -756,13 +813,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="トレード数判定開始進捗"
                 type="number"
-                value={
-                  config.ga_config
-                    .early_termination_min_trade_check_progress ?? 0.5
-                }
+                value={earlyTerminationSettings.min_trade_check_progress ?? 0.5}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    early_termination_min_trade_check_progress: value,
+                  handleEvaluationConfigChange({
+                    early_termination_settings: {
+                      ...earlyTerminationSettings,
+                      min_trade_check_progress: value,
+                    },
                   })
                 }
                 min={0.05}
@@ -773,12 +830,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="トレードペース許容係数"
                 type="number"
-                value={
-                  config.ga_config.early_termination_trade_pace_tolerance ?? 0.5
-                }
+                value={earlyTerminationSettings.trade_pace_tolerance ?? 0.5}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    early_termination_trade_pace_tolerance: value,
+                  handleEvaluationConfigChange({
+                    early_termination_settings: {
+                      ...earlyTerminationSettings,
+                      trade_pace_tolerance: value,
+                    },
                   })
                 }
                 min={0.1}
@@ -789,10 +847,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="最低期待値"
                 type="number"
-                value={config.ga_config.early_termination_min_expectancy}
+                value={earlyTerminationSettings.min_expectancy}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    early_termination_min_expectancy: value,
+                  handleEvaluationConfigChange({
+                    early_termination_settings: {
+                      ...earlyTerminationSettings,
+                      min_expectancy: value,
+                    },
                   })
                 }
                 allowEmptyNumber
@@ -804,12 +865,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="期待値判定最小トレード数"
                 type="number"
-                value={
-                  config.ga_config.early_termination_expectancy_min_trades ?? 5
-                }
+                value={earlyTerminationSettings.expectancy_min_trades ?? 5}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    early_termination_expectancy_min_trades: value,
+                  handleEvaluationConfigChange({
+                    early_termination_settings: {
+                      ...earlyTerminationSettings,
+                      expectancy_min_trades: value,
+                    },
                   })
                 }
                 min={1}
@@ -820,12 +882,13 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <InputField
                 label="期待値判定開始進捗"
                 type="number"
-                value={
-                  config.ga_config.early_termination_expectancy_progress ?? 0.6
-                }
+                value={earlyTerminationSettings.expectancy_progress ?? 0.6}
                 onChange={(value) =>
-                  handleGAConfigChange({
-                    early_termination_expectancy_progress: value,
+                  handleEvaluationConfigChange({
+                    early_termination_settings: {
+                      ...earlyTerminationSettings,
+                      expectancy_progress: value,
+                    },
                   })
                 }
                 min={0.05}

@@ -213,7 +213,6 @@ class VolumeIndicators:
         close: pd.Series,
         volume: pd.Series,
         period: int = 10,
-        anchor: str | None = None,  # 互換性のため残すが未使用
     ) -> pd.Series:
         """Volume Weighted Average Price
 
@@ -225,8 +224,7 @@ class VolumeIndicators:
             low: 安値
             close: 終値
             volume: 出来高
-            period: 未使用（互換性のため残す）
-            anchor: 未使用（互換性のため残す）
+            period: 使用されない（累積VWAPを計算）
 
         Returns:
             VWAP (累積ベース)

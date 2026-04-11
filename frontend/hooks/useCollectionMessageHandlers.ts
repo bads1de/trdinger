@@ -94,7 +94,7 @@ export const useCollectionMessageHandlers = ({
 }: UseCollectionMessageHandlersDeps) => {
   const messageGenerators: Record<string, (result: any) => string> = {
     bulk: (result: BulkOHLCVCollectionResult) =>
-      `🚀 ${result.message} (${result.total_tasks}タスク)`,
+      `🚀 ${result.message} (${result.actual_tasks || 0}タスク)`,
     funding: (
       result: BulkFundingRateCollectionResult | FundingRateCollectionResult
     ) => {
@@ -113,7 +113,7 @@ export const useCollectionMessageHandlers = ({
     },
     alldata: (result: AllDataCollectionResult) => {
       if (result.ohlcv_result?.status === "completed") {
-        const ohlcvCount = result.ohlcv_result?.total_tasks || 0;
+        const ohlcvCount = result.ohlcv_result?.actual_tasks || 0;
         const fundingCount =
           result.funding_rate_result?.total_saved_records || 0;
         const openInterestCount =

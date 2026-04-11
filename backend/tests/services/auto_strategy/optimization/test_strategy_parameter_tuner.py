@@ -5,6 +5,7 @@ from app.services.auto_strategy.optimization.strategy_parameter_tuner import (
 )
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
 
 
 class TestStrategyParameterTuner:
@@ -18,8 +19,10 @@ class TestStrategyParameterTuner:
     @pytest.fixture
     def mock_config(self):
         config = MagicMock(spec=GAConfig)
-        config.enable_walk_forward = False
-        config.wfa_n_folds = 5
+        config.evaluation_config = EvaluationConfig(
+            enable_walk_forward=False,
+            wfa_n_folds=5,
+        )
         return config
 
     @pytest.fixture
@@ -104,7 +107,7 @@ class TestStrategyParameterTuner:
     def test_evaluate_gene_wfa(self, tuner, mock_gene):
         # WFAあり
         tuner.use_wfa = True
-        tuner.config.enable_walk_forward = True
+        tuner.config.evaluation_config.enable_walk_forward = True
 
         score = tuner._evaluate_gene(mock_gene)
 
@@ -113,9 +116,9 @@ class TestStrategyParameterTuner:
         # assert_called_with で完全一致を確認するのは難しいので、呼び出しが行われたことだけ確認
         args, _ = tuner.evaluator.evaluate_individual.call_args
         assert args[0] == mock_gene
-        assert args[1].enable_walk_forward is True
+        assert args[1].evaluation_config.enable_walk_forward is True
         # フォールド数が制限されているか
-        assert args[1].wfa_n_folds <= 3
+        assert args[1].evaluation_config.wfa_n_folds <= 3
 
     def test_objective_function_integration(self, tuner, mock_gene):
         # optimizeに渡されるobjective関数が正しく動作するか検証

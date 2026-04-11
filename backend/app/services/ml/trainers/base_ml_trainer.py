@@ -271,10 +271,6 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.error(f"ボラティリティ予測エラー: {e}")
             return self.config.prediction.get_default_predictions()
 
-    def predict_signal(self, features_df: pd.DataFrame) -> Dict[str, float]:
-        """後方互換の薄いラッパー。"""
-        return self.predict_volatility(features_df)
-
     @abstractmethod
     def _train_model_impl(
         self,

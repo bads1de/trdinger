@@ -190,10 +190,8 @@ class DictConverter:
                 "type": indicator_gene.type,
                 "parameters": indicator_gene.parameters,
                 "enabled": indicator_gene.enabled,
+                "timeframe": indicator_gene.timeframe,
             }
-            # timeframe が設定されている場合のみ含める（後方互換性）
-            if indicator_gene.timeframe is not None:
-                result["timeframe"] = indicator_gene.timeframe
             return result
 
         except Exception as e:
@@ -519,9 +517,7 @@ class GeneSerializer(DictConverter):
     """
 
     def __init__(self, cache_size: int = 1000):
-        """後方互換のために self を dict_converter として公開します。"""
         super().__init__(cache_size=cache_size)
-        self.dict_converter = self
 
     def from_list(
         self, individual_list: list, strategy_gene_class: Any

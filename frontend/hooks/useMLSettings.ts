@@ -6,7 +6,6 @@ import type {
 } from "@/types/ml-config";
 import {
   DEFAULT_LABEL_PRESET,
-  DEFAULT_FEATURE_PROFILE,
 } from "@/constants/ml-config-constants";
 
 export interface MLConfig {

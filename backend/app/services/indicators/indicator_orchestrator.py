@@ -68,7 +68,7 @@ class TechnicalIndicatorService:
         return indicator_type.upper()
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: Any) -> Any:
-        """後方互換のためにバリデータへ委譲する。"""
+        """カラム名解決をバリデータに委譲する。"""
         return self.validator.resolve_column_name(df, data_key)
 
     def clear_cache(self) -> None:

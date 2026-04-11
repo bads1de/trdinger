@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+from app.services.auto_strategy.core.evaluation.evaluation_report import ScenarioEvaluation
 from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
 
 
@@ -56,18 +58,18 @@ class TestWalkForwardAnalysis:
                 "initial_balance": 10000,
             }
         )
-        # Mock が _perform_single_evaluation_report を自動生成しないよう明示的に None を設定
-        evaluator._perform_single_evaluation_report = None
         return evaluator
 
     @pytest.fixture
     def wfa_config(self):
         """WFA が有効な GAConfig"""
         return GAConfig(
-            enable_walk_forward=True,
-            wfa_n_folds=5,
-            wfa_train_ratio=0.7,
-            wfa_anchored=False,
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=5,
+                wfa_train_ratio=0.7,
+                wfa_anchored=False,
+            ),
             objectives=["weighted_score"],
         )
 
@@ -83,60 +85,66 @@ class TestWalkForwardAnalysis:
         """WFA 設定のデフォルト値テスト"""
         config = GAConfig()
 
-        assert config.enable_walk_forward is False
-        assert config.wfa_n_folds == 5
-        assert config.wfa_train_ratio == 0.7
-        assert config.wfa_anchored is False
+        assert config.evaluation_config.enable_walk_forward is False
+        assert config.evaluation_config.wfa_n_folds == 5
+        assert config.evaluation_config.wfa_train_ratio == 0.7
+        assert config.evaluation_config.wfa_anchored is False
 
     def test_wfa_config_custom_values(self):
         """WFA 設定のカスタム値テスト"""
         config = GAConfig(
-            enable_walk_forward=True,
-            wfa_n_folds=10,
-            wfa_train_ratio=0.8,
-            wfa_anchored=True,
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=10,
+                wfa_train_ratio=0.8,
+                wfa_anchored=True,
+            ),
         )
 
-        assert config.enable_walk_forward is True
-        assert config.wfa_n_folds == 10
-        assert config.wfa_train_ratio == 0.8
-        assert config.wfa_anchored is True
+        assert config.evaluation_config.enable_walk_forward is True
+        assert config.evaluation_config.wfa_n_folds == 10
+        assert config.evaluation_config.wfa_train_ratio == 0.8
+        assert config.evaluation_config.wfa_anchored is True
 
     def test_wfa_config_to_dict(self, wfa_config):
         """WFA 設定の辞書変換テスト"""
         config_dict = wfa_config.to_dict()
 
-        assert "enable_walk_forward" in config_dict
-        assert "wfa_n_folds" in config_dict
-        assert "wfa_train_ratio" in config_dict
-        assert "wfa_anchored" in config_dict
-        assert config_dict["enable_walk_forward"] is True
-        assert config_dict["wfa_n_folds"] == 5
+        assert "evaluation_config" in config_dict
+        assert config_dict["evaluation_config"]["enable_walk_forward"] is True
+        assert config_dict["evaluation_config"]["wfa_n_folds"] == 5
 
     def test_wfa_config_from_dict(self):
         """WFA 設定の辞書復元テスト"""
         data = {
-            "enable_walk_forward": True,
-            "wfa_n_folds": 8,
-            "wfa_train_ratio": 0.75,
-            "wfa_anchored": True,
+            "evaluation_config": {
+                "enable_walk_forward": True,
+                "wfa_n_folds": 8,
+                "wfa_train_ratio": 0.75,
+                "wfa_anchored": True,
+            }
         }
         config = GAConfig.from_dict(data)
 
-        assert config.enable_walk_forward is True
-        assert config.wfa_n_folds == 8
-        assert config.wfa_train_ratio == 0.75
-        assert config.wfa_anchored is True
+        assert config.evaluation_config.enable_walk_forward is True
+        assert config.evaluation_config.wfa_n_folds == 8
+        assert config.evaluation_config.wfa_train_ratio == 0.75
+        assert config.evaluation_config.wfa_anchored is True
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation_report"
     )
     def test_evaluate_with_walk_forward_calls_perform_evaluation(
         self, mock_perform_eval, evaluator, wfa_config, mock_gene
     ):
-        """WFA 評価が _perform_single_evaluation を複数回呼び出すテスト"""
+        """WFA 評価が _perform_single_evaluation_report を複数回呼び出すテスト"""
         # モックの戻り値を設定
-        mock_perform_eval.return_value = (0.5,)
+        mock_perform_eval.return_value = ScenarioEvaluation(
+            name="fold_0",
+            fitness=(0.5,),
+            passed=True,
+            metadata={},
+        )
 
         # WFA 評価を実行
         result = evaluator._evaluate_with_walk_forward(
@@ -153,14 +161,17 @@ class TestWalkForwardAnalysis:
         assert len(result) > 0
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation_report"
     )
     def test_wfa_averages_oos_scores(
         self, mock_perform_eval, evaluator, wfa_config, mock_gene
     ):
         """WFA が OOS スコアを平均化するテスト"""
         # 各フォールドで異なるスコアを返す
-        scores = [(0.3,), (0.5,), (0.7,), (0.4,), (0.6,)]
+        scores = [
+            ScenarioEvaluation(name=f"fold_{idx}", fitness=(score,), passed=True, metadata={})
+            for idx, score in enumerate([0.3, 0.5, 0.7, 0.4, 0.6])
+        ]
         mock_perform_eval.side_effect = scores
 
         result = evaluator._evaluate_with_walk_forward(
@@ -175,19 +186,26 @@ class TestWalkForwardAnalysis:
         assert 0.0 <= result[0] <= 1.0
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation_report"
     )
     def test_wfa_anchored_mode(self, mock_perform_eval, evaluator, mock_gene):
         """Anchored WFA モードのテスト"""
         config = GAConfig(
-            enable_walk_forward=True,
-            wfa_n_folds=3,
-            wfa_train_ratio=0.7,
-            wfa_anchored=True,  # Anchored モード
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=3,
+                wfa_train_ratio=0.7,
+                wfa_anchored=True,  # Anchored モード
+            ),
             objectives=["weighted_score"],
         )
 
-        mock_perform_eval.return_value = (0.5,)
+        mock_perform_eval.return_value = ScenarioEvaluation(
+            name="fold_0",
+            fitness=(0.5,),
+            passed=True,
+            metadata={},
+        )
 
         result = evaluator._evaluate_with_walk_forward(
             mock_gene,
@@ -199,13 +217,18 @@ class TestWalkForwardAnalysis:
         assert mock_perform_eval.call_count >= 1
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation_report"
     )
     def test_wfa_fallback_on_missing_dates(
         self, mock_perform_eval, evaluator, wfa_config, mock_gene
     ):
         """日付が不明な場合のフォールバックテスト"""
-        mock_perform_eval.return_value = (0.5,)
+        mock_perform_eval.return_value = ScenarioEvaluation(
+            name="single",
+            fitness=(0.5,),
+            passed=True,
+            metadata={},
+        )
 
         # 日付なしの設定
         config_without_dates = {
@@ -219,7 +242,7 @@ class TestWalkForwardAnalysis:
             wfa_config,
         )
 
-        # フォールバックで _perform_single_evaluation が呼ばれることを確認
+        # フォールバックで _perform_single_evaluation_report が呼ばれることを確認
         assert mock_perform_eval.called
         assert isinstance(result, tuple)
 
@@ -236,7 +259,6 @@ class TestWFAEdgeCases:
         """IndividualEvaluator インスタンス"""
         mock_service = MagicMock()
         evaluator = IndividualEvaluator(backtest_service=mock_service)
-        evaluator._perform_single_evaluation_report = None
         return evaluator
 
     @pytest.fixture
@@ -247,11 +269,16 @@ class TestWFAEdgeCases:
         return gene
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation_report"
     )
     def test_wfa_short_period_fallback(self, mock_perform_eval, evaluator, mock_gene):
         """期間が短すぎる場合のフォールバックテスト"""
-        mock_perform_eval.return_value = (0.5,)
+        mock_perform_eval.return_value = ScenarioEvaluation(
+            name="single",
+            fitness=(0.5,),
+            passed=True,
+            metadata={},
+        )
 
         # 非常に短い期間
         short_config = {
@@ -260,8 +287,10 @@ class TestWFAEdgeCases:
         }
 
         wfa_config = GAConfig(
-            enable_walk_forward=True,
-            wfa_n_folds=5,
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=5,
+            ),
             objectives=["weighted_score"],
         )
 
@@ -273,11 +302,16 @@ class TestWFAEdgeCases:
         assert isinstance(result, tuple)
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation_report"
     )
     def test_wfa_single_fold(self, mock_perform_eval, evaluator, mock_gene):
         """単一フォールドのテスト"""
-        mock_perform_eval.return_value = (0.5,)
+        mock_perform_eval.return_value = ScenarioEvaluation(
+            name="single",
+            fitness=(0.5,),
+            passed=True,
+            metadata={},
+        )
 
         config = {
             "start_date": "2024-01-01 00:00:00",
@@ -285,8 +319,10 @@ class TestWFAEdgeCases:
         }
 
         wfa_config = GAConfig(
-            enable_walk_forward=True,
-            wfa_n_folds=1,  # 1フォールドのみ
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=1,  # 1フォールドのみ
+            ),
             objectives=["weighted_score"],
         )
 
@@ -311,7 +347,6 @@ class TestWFAMultiObjective:
                 "end_date": "2024-06-01 00:00:00",
             }
         )
-        evaluator._perform_single_evaluation_report = None
         return evaluator
 
     @pytest.fixture
@@ -322,21 +357,29 @@ class TestWFAMultiObjective:
         return gene
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator._perform_single_evaluation_report"
     )
     def test_wfa_multi_objective(self, mock_perform_eval, evaluator, mock_gene):
         """多目的最適化での WFA テスト"""
         # 各フォールドで複数の目的値を返す
         scores = [
-            (0.3, 0.4, 0.5),
-            (0.5, 0.6, 0.7),
-            (0.4, 0.5, 0.6),
+            ScenarioEvaluation(
+                name=f"fold_{idx}",
+                fitness=score,
+                passed=True,
+                metadata={},
+            )
+            for idx, score in enumerate(
+                [(0.3, 0.4, 0.5), (0.5, 0.6, 0.7), (0.4, 0.5, 0.6)]
+            )
         ]
         mock_perform_eval.side_effect = scores
 
         config = GAConfig(
-            enable_walk_forward=True,
-            wfa_n_folds=3,
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=3,
+            ),
             objectives=["sharpe_ratio", "total_return", "max_drawdown"],
         )
 
@@ -351,6 +394,3 @@ class TestWFAMultiObjective:
         # 評価が呼ばれた回数だけ目的値が返される
         if mock_perform_eval.call_count > 0:
             assert len(result) == 3
-
-
-

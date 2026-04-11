@@ -49,7 +49,8 @@ interface StrategyGene {
 export default function StrategyParametersModal({
   result,
 }: StrategyParametersModalProps) {
-  const strategyGene = result.config_json?.strategy_config?.parameters
+  const config = result.config_json as Record<string, any> | undefined;
+  const strategyGene = config?.strategy_config?.parameters
     ?.strategy_gene as StrategyGene | undefined;
 
   const formatValue = (value: any): string => {

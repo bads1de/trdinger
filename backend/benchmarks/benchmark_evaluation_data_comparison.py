@@ -40,14 +40,17 @@ def create_mock_backtest_result():
 def create_mock_config():
     """モックGA設定を生成"""
     from app.services.auto_strategy.config.ga import GAConfig
+    from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
 
-    config = GAConfig()
-    config.enable_walk_forward = True
-    config.wfa_n_folds = 3
-    config.wfa_train_ratio = 0.7
-    config.oos_split_ratio = 0.3
-    config.oos_fitness_weight = 0.5
-    return config
+    return GAConfig(
+        evaluation_config=EvaluationConfig(
+            enable_walk_forward=True,
+            wfa_n_folds=3,
+            wfa_train_ratio=0.7,
+            oos_split_ratio=0.3,
+            oos_fitness_weight=0.5,
+        )
+    )
 
 
 def benchmark_evaluation_strategy():

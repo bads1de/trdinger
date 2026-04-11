@@ -33,7 +33,7 @@ export default function ParametersTab({ result }: ParametersTabProps) {
           className="mb-4"
         />
 
-        {result.config_json && result.config_json.strategy_config ? (
+        {result.config_json && (result.config_json as Record<string, any>).strategy_config ? (
           <div className="space-y-4">
             {/* 戦略タイプ */}
             <div className="space-y-4">
@@ -45,11 +45,11 @@ export default function ParametersTab({ result }: ParametersTabProps) {
               </div>
 
               {/* 戦略遺伝子の有効条件表示 */}
-              {result.config_json.strategy_config.parameters?.strategy_gene && (
+              {(result.config_json as Record<string, any>).strategy_config.parameters?.strategy_gene && (
                 <div className="mt-4">
                   <StrategyGeneDisplay
                     strategyGene={
-                      result.config_json.strategy_config.parameters
+                      (result.config_json as Record<string, any>).strategy_config.parameters
                         .strategy_gene
                     }
                   />

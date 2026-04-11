@@ -464,10 +464,11 @@ class EvolutionRunner:
             seen_keys.add(candidate_key)
 
             report = self._resolve_evaluation_report(candidate, config)
+            two_stage_config = getattr(config, "two_stage_selection_config", None)
             rank_key = build_report_rank_key(
                 candidate,
                 report,
-                getattr(config, "two_stage_min_pass_rate", 0.0),
+                getattr(two_stage_config, "min_pass_rate", 0.0),
             )
             ranked_candidates.append((rank_key, candidate))
 

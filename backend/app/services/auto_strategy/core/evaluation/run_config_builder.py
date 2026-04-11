@@ -7,13 +7,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Mapping, Optional
 
-from app.services.auto_strategy.config.ga.nested_configs import (
-    resolve_early_termination_settings,
-)
+from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 from app.services.auto_strategy.config.helpers import (
     normalize_ml_gate_fields,
 )
 from app.services.backtest.config.builders import build_execution_config
+from app.utils.serialization import dataclass_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +29,18 @@ class RunConfigBuilder:
     ) -> Optional[Dict[str, Any]]:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
-            early_termination_settings = resolve_early_termination_settings(config)
+            early_termination_settings = config.evaluation_config.early_termination_settings
             strategy_parameters = {
                 "strategy_gene": gene,
             }
             strategy_parameters.update(normalize_ml_gate_fields(config))
-            strategy_parameters.update(early_termination_settings.to_strategy_params())
+            if not isinstance(early_termination_settings, EarlyTerminationSettings):
+                early_termination_settings = EarlyTerminationSettings.from_source(
+                    early_termination_settings
+                )
+            strategy_parameters["early_termination_settings"] = dataclass_to_dict(
+                early_termination_settings
+            )
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:
                 strategy_parameters["evaluation_start"] = evaluation_start

@@ -21,6 +21,10 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.backtest.services.backtest_service import BacktestService
+from app.services.auto_strategy.config.ga.nested_configs import (
+    EvaluationConfig,
+    HybridConfig,
+)
 
 
 class TestGeneticAlgorithmEngine:
@@ -211,9 +215,11 @@ class TestGeneticAlgorithmEngine:
 
         config = Mock()
         config.log_level = "INFO"
-        config.hybrid_mode = True
-        config.hybrid_model_types = None
-        config.hybrid_model_type = "lightgbm"
+        config.hybrid_config = HybridConfig(
+            mode=True,
+            model_types=None,
+            model_type="lightgbm",
+        )
 
         engine = GeneticAlgorithmEngineFactory.create_engine(
             mock_backtest_service,
@@ -242,9 +248,11 @@ class TestGeneticAlgorithmEngine:
 
         config = Mock()
         config.log_level = "INFO"
-        config.hybrid_mode = True
-        config.hybrid_model_types = None
-        config.hybrid_model_type = "lightgbm"
+        config.hybrid_config = HybridConfig(
+            mode=True,
+            model_types=None,
+            model_type="lightgbm",
+        )
 
         engine = GeneticAlgorithmEngineFactory.create_engine(
             mock_backtest_service,
@@ -336,8 +344,8 @@ class TestGeneticAlgorithmEngine:
         mock_config = GAConfig()
         mock_config.population_size = 10
         mock_config.generations = 5
-        mock_config.enable_parallel_evaluation = False
-        mock_config.enable_fitness_sharing = False
+        mock_config.evaluation_config.enable_parallel = False
+        mock_config.fitness_sharing["enable_fitness_sharing"] = False
         mock_config.enable_multi_objective = False
         mock_config.mutation_rate = 0.1
         mock_config.use_seed_strategies = False
@@ -396,11 +404,11 @@ class TestGeneticAlgorithmEngine:
         # Config - use real GAConfig for complete attribute coverage
         from app.services.auto_strategy.config.ga import GAConfig
         mock_config = GAConfig()
-        mock_config.enable_parallel_evaluation = True
-        mock_config.max_evaluation_workers = 4
-        mock_config.evaluation_timeout = 60.0
+        mock_config.evaluation_config.enable_parallel = True
+        mock_config.evaluation_config.max_workers = 4
+        mock_config.evaluation_config.timeout = 60.0
         mock_config.population_size = 10
-        mock_config.enable_fitness_sharing = False
+        mock_config.fitness_sharing["enable_fitness_sharing"] = False
         mock_config.enable_multi_objective = False
         mock_config.mutation_rate = 0.1
         mock_config.use_seed_strategies = False
@@ -457,12 +465,13 @@ class TestGeneticAlgorithmEngine:
             gene_generator=mock_gene_generator,
         )
         config = GAConfig(
-            enable_parallel_evaluation=True,
-            enable_multi_fidelity_evaluation=True,
-            enable_walk_forward=True,
+            evaluation_config=EvaluationConfig(
+                enable_parallel=True,
+                enable_multi_fidelity_evaluation=True,
+                enable_walk_forward=True,
+                multi_fidelity_oos_ratio=0.2,
+            ),
             enable_purged_kfold=True,
-            oos_split_ratio=0.0,
-            multi_fidelity_oos_ratio=0.2,
         )
         shared_data = {"main_data": pd.DataFrame({"close": [1, 2]})}
         captured_configs = []
@@ -484,7 +493,7 @@ class TestGeneticAlgorithmEngine:
         assert len(captured_configs) == 1
         worker_config = captured_configs[0]
         assert worker_config is not config
-        assert worker_config.enable_walk_forward is False
+        assert worker_config.evaluation_config.enable_walk_forward is False
         assert worker_config.enable_purged_kfold is False
-        assert worker_config.oos_split_ratio == 0.2
+        assert worker_config.evaluation_config.oos_split_ratio == 0.2
         assert getattr(worker_config, "_evaluation_fidelity", "full") == "coarse"

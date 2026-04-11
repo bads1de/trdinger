@@ -102,8 +102,8 @@ export interface BacktestResult {
   initial_capital: number;
   /** 片道手数料率（0-1） */
   commission_rate: number;
-  /** 実行時の設定（後方互換のため any） */
-  config_json: any;
+  /** 実行時の設定 */
+  config_json: Record<string, unknown>;
   /** 総リターン（0-1の割合） */
   total_return: number;
   /** シャープレシオ */
@@ -138,8 +138,8 @@ export interface BacktestResult {
   created_at: Date | string;
   /** 更新時刻 */
   updated_at?: Date;
-  /** 追加メトリクス（後方互換のため any） */
-  performance_metrics?: any; // 互換性のため
+  /** 追加メトリクス */
+  performance_metrics?: Record<string, unknown>;
 }
 
 /**

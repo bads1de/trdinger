@@ -76,7 +76,8 @@ class ParameterTuningManager:
         """
         チューニング対象の上位候補を抽出する。
         """
-        budget = getattr(config, "tuning_elite_count", 1)
+        tuning_config = getattr(config, "tuning_config", None)
+        budget = getattr(tuning_config, "elite_count", 1)
         try:
             candidate_budget = max(1, int(budget))
         except (TypeError, ValueError):
@@ -194,7 +195,12 @@ class ParameterTuningManager:
                     report if is_evaluation_report(report) else None,
                 ),
                 min_pass_rate=float(
-                    getattr(config, "two_stage_min_pass_rate", 0.0) or 0.0
+                    getattr(
+                        getattr(config, "two_stage_selection_config", None),
+                        "min_pass_rate",
+                        0.0,
+                    )
+                    or 0.0
                 ),
             )
             summary = self.build_individual_evaluation_summary(
@@ -417,7 +423,7 @@ class ParameterTuningManager:
             None,
         )
 
-        report = None
+        report: Optional[object] = None
         if callable(get_cached_robustness_report):
             report = get_cached_robustness_report(individual, config)
 
@@ -430,12 +436,9 @@ class ParameterTuningManager:
         if report is None and callable(get_cached_evaluation_report):
             report = get_cached_evaluation_report(individual)
 
-        if (
-            report is not None
-            and is_evaluation_report(report)
-            and report.metadata.get("evaluation_fidelity") == "coarse"
-        ):
-            report = None
+        if report is not None and is_evaluation_report(report):
+            if report.metadata.get("evaluation_fidelity") == "coarse":
+                report = None
 
         if report is None and is_multi_fidelity_enabled(config):
             try:

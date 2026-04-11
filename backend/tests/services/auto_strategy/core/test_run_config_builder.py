@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 from app.services.auto_strategy.core.evaluation.run_config_builder import (
@@ -12,11 +13,13 @@ class TestRunConfigBuilder:
         gene = Mock()
         gene.id = "gene-123456789"
 
-        ga_config = Mock()
-        ga_config.volatility_gate_enabled = True
-        ga_config.volatility_model_path = "/tmp/model.pkl"
-        ga_config.ml_filter_enabled = True
-        ga_config.ml_model_path = "/tmp/model.pkl"
+        ga_config = SimpleNamespace(
+            volatility_gate_enabled=True,
+            volatility_model_path="/tmp/model.pkl",
+            evaluation_config=SimpleNamespace(
+                early_termination_settings=EarlyTerminationSettings()
+            ),
+        )
 
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
@@ -34,22 +37,19 @@ class TestRunConfigBuilder:
             result["strategy_config"]["parameters"]["volatility_model_path"]
             == "/tmp/model.pkl"
         )
-        assert result["strategy_config"]["parameters"]["ml_filter_enabled"] is True
-        assert (
-            result["strategy_config"]["parameters"]["ml_model_path"]
-            == "/tmp/model.pkl"
-        )
 
-    def test_build_run_config_normalizes_legacy_ml_filter_aliases(self):
+    def test_build_run_config_applies_volatility_gate(self):
         builder = RunConfigBuilder()
         gene = Mock()
         gene.id = "gene-123456789"
 
-        ga_config = Mock()
-        ga_config.volatility_gate_enabled = False
-        ga_config.volatility_model_path = None
-        ga_config.ml_filter_enabled = True
-        ga_config.ml_model_path = "/tmp/legacy-model.pkl"
+        ga_config = SimpleNamespace(
+            volatility_gate_enabled=True,
+            volatility_model_path="/tmp/vol-model.pkl",
+            evaluation_config=SimpleNamespace(
+                early_termination_settings=EarlyTerminationSettings()
+            ),
+        )
 
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
@@ -61,20 +61,20 @@ class TestRunConfigBuilder:
         assert result is not None
         params = result["strategy_config"]["parameters"]
         assert params["volatility_gate_enabled"] is True
-        assert params["ml_filter_enabled"] is True
-        assert params["volatility_model_path"] == "/tmp/legacy-model.pkl"
-        assert params["ml_model_path"] == "/tmp/legacy-model.pkl"
+        assert params["volatility_model_path"] == "/tmp/vol-model.pkl"
 
     def test_build_run_config_applies_defaults(self):
         builder = RunConfigBuilder()
         gene = Mock()
         gene.id = "gene-123456789"
 
-        ga_config = Mock()
-        ga_config.volatility_gate_enabled = False
-        ga_config.volatility_model_path = None
-        ga_config.ml_filter_enabled = False
-        ga_config.ml_model_path = None
+        ga_config = SimpleNamespace(
+            volatility_gate_enabled=False,
+            volatility_model_path=None,
+            evaluation_config=SimpleNamespace(
+                early_termination_settings=EarlyTerminationSettings()
+            ),
+        )
 
         defaults = {
             "symbol": "ETH/USDT:USDT",
@@ -117,11 +117,13 @@ class TestRunConfigBuilder:
         gene = Mock()
         gene.id = "gene-123456789"
 
-        ga_config = Mock()
-        ga_config.volatility_gate_enabled = False
-        ga_config.volatility_model_path = None
-        ga_config.ml_filter_enabled = False
-        ga_config.ml_model_path = None
+        ga_config = SimpleNamespace(
+            volatility_gate_enabled=False,
+            volatility_model_path=None,
+            evaluation_config=SimpleNamespace(
+                early_termination_settings=EarlyTerminationSettings()
+            ),
+        )
 
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
@@ -142,29 +144,24 @@ class TestRunConfigBuilder:
         gene = Mock()
         gene.id = "gene-early-stop"
 
-        ga_config = Mock()
-        ga_config.volatility_gate_enabled = False
-        ga_config.volatility_model_path = None
-        ga_config.ml_filter_enabled = False
-        ga_config.ml_model_path = None
-        ga_config.early_termination_settings = EarlyTerminationSettings(
-            enabled=True,
-            max_drawdown=0.15,
-            min_trades=20,
-            min_trade_check_progress=0.4,
-            trade_pace_tolerance=0.5,
-            min_expectancy=-0.01,
-            expectancy_min_trades=5,
-            expectancy_progress=0.6,
+        ga_config = SimpleNamespace(
+            volatility_gate_enabled=False,
+            volatility_model_path=None,
+            ml_filter_enabled=False,
+            ml_model_path=None,
+            evaluation_config=SimpleNamespace(
+                early_termination_settings=EarlyTerminationSettings(
+                    enabled=True,
+                    max_drawdown=0.15,
+                    min_trades=20,
+                    min_trade_check_progress=0.4,
+                    trade_pace_tolerance=0.5,
+                    min_expectancy=-0.01,
+                    expectancy_min_trades=5,
+                    expectancy_progress=0.6,
+                )
+            ),
         )
-        ga_config.enable_early_termination = False
-        ga_config.early_termination_max_drawdown = 0.9
-        ga_config.early_termination_min_trades = 99
-        ga_config.early_termination_min_trade_check_progress = 0.1
-        ga_config.early_termination_trade_pace_tolerance = 0.1
-        ga_config.early_termination_min_expectancy = 0.5
-        ga_config.early_termination_expectancy_min_trades = 1
-        ga_config.early_termination_expectancy_progress = 0.1
 
         result = builder.build_run_config(
             gene,
@@ -177,11 +174,13 @@ class TestRunConfigBuilder:
 
         assert result is not None
         params = result["strategy_config"]["parameters"]
-        assert params["enable_early_termination"] is True
-        assert params["early_termination_max_drawdown"] == 0.15
-        assert params["early_termination_min_trades"] == 20
-        assert params["early_termination_min_trade_check_progress"] == 0.4
-        assert params["early_termination_trade_pace_tolerance"] == 0.5
-        assert params["early_termination_min_expectancy"] == -0.01
-        assert params["early_termination_expectancy_min_trades"] == 5
-        assert params["early_termination_expectancy_progress"] == 0.6
+        assert params["early_termination_settings"] == {
+            "enabled": True,
+            "max_drawdown": 0.15,
+            "min_trades": 20,
+            "min_trade_check_progress": 0.4,
+            "trade_pace_tolerance": 0.5,
+            "min_expectancy": -0.01,
+            "expectancy_min_trades": 5,
+            "expectancy_progress": 0.6,
+        }

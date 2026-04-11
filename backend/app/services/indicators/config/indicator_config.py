@@ -280,26 +280,11 @@ class IndicatorConfig:
         ranges = {}
 
         for param_name, param_config in self.parameters.items():
-            if isinstance(param_config, ParameterConfig):
-                ranges[param_name] = {
-                    "min": param_config.min_value,
-                    "max": param_config.max_value,
-                    "default": param_config.default_value,
-                }
-            else:
-                # 後方互換性のための処理
-                default_value = self.default_values.get(param_name, 14)
-                if any(word in param_name for word in ["length", "period"]):
-                    min_val = 2
-                    max_val = 200
-                else:
-                    min_val = None
-                    max_val = 100
-                ranges[param_name] = {
-                    "min": min_val,
-                    "max": max_val,
-                    "default": default_value,
-                }
+            ranges[param_name] = {
+                "min": param_config.min_value,
+                "max": param_config.max_value,
+                "default": param_config.default_value,
+            }
 
         return ranges
 
@@ -493,5 +478,5 @@ def _initialize_registry(registry: IndicatorConfigRegistry) -> None:
 
 
 def initialize_all_indicators() -> None:
-    """全インジケーターの設定を初期化（後方互換性用）"""
+    """全インジケーターの設定を初期化"""
     indicator_registry.ensure_initialized()

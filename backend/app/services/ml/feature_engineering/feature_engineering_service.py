@@ -22,7 +22,7 @@ from ..common.exceptions import MLFeatureError
 from .advanced_rolling_stats import AdvancedRollingStatsCalculator
 from .base_feature_calculator import sanitize_numeric_dataframe
 from .complexity_features import ComplexityFeatureCalculator
-from .crypto_features import CryptoFeatures
+from .crypto_features import CryptoFeatureCalculator
 from .data_frequency_manager import DataFrequencyManager
 from .market_data_features import MarketDataFeatureCalculator
 from .microstructure_features import MicrostructureFeatureCalculator
@@ -70,7 +70,7 @@ class FeatureEngineeringService:
         self.frequency_manager = DataFrequencyManager()
 
         # 暗号通貨特化特徴量エンジニアリング（デフォルトで有効）
-        self.crypto_features: Optional[CryptoFeatures] = CryptoFeatures()
+        self.crypto_features: Optional[CryptoFeatureCalculator] = CryptoFeatureCalculator()
         logger.debug("暗号通貨特化特徴量を有効化しました")
 
     def calculate_advanced_features(

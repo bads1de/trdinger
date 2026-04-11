@@ -12,9 +12,7 @@ from typing import Any, Optional
 
 import pandas as pd
 
-from app.services.auto_strategy.config.ga.nested_configs import (
-    resolve_early_termination_settings,
-)
+from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 from app.services.auto_strategy.core.evaluation.time_alignment import (
     align_timestamp_to_index,
     align_timestamp_to_reference,
@@ -171,7 +169,13 @@ class StrategyEarlyTerminationController:
 
     def should_terminate_early(self) -> Optional[str]:
         """早期打ち切りすべき理由を返す。"""
-        settings = resolve_early_termination_settings(self.strategy)
+        raw_settings = getattr(self.strategy, "early_termination_settings", None)
+        if raw_settings is None:
+            settings = EarlyTerminationSettings()
+        elif isinstance(raw_settings, EarlyTerminationSettings):
+            settings = raw_settings
+        else:
+            settings = EarlyTerminationSettings.from_source(raw_settings)
         if not settings.enabled:
             return None
 

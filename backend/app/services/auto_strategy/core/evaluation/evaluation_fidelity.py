@@ -7,7 +7,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import timedelta
 from math import ceil
-from typing import Any, Dict
+from typing import Any, Dict, Mapping
 
 import pandas as pd
 
@@ -39,20 +39,35 @@ def _coerce_float(value: Any, default: float) -> float:
         return float(default)
 
 
+def _get_evaluation_config(source: Any) -> Any:
+    """評価設定のネスト先を取得する。"""
+    if isinstance(source, Mapping):
+        return source.get("evaluation_config")
+    return getattr(source, "evaluation_config", None)
+
+
 def is_multi_fidelity_enabled(config: Any) -> bool:
     """multi-fidelity を有効とみなす条件を返す。"""
-    return _coerce_bool(getattr(config, "enable_multi_fidelity_evaluation", False))
+    evaluation_config = _get_evaluation_config(config)
+    if evaluation_config is None:
+        return False
+    return _coerce_bool(
+        getattr(evaluation_config, "enable_multi_fidelity_evaluation", False)
+    )
 
 
 def build_coarse_ga_config(config: GAConfig) -> GAConfig:
     """粗評価用に GA 設定を縮退させたコピーを返す。"""
     coarse = deepcopy(config)
-    coarse.enable_walk_forward = False
+    coarse.evaluation_config.enable_walk_forward = False
     coarse.enable_purged_kfold = False
-    oos_split_ratio = _coerce_float(getattr(coarse, "oos_split_ratio", 0.0), 0.0)
+    oos_split_ratio = _coerce_float(
+        getattr(coarse.evaluation_config, "oos_split_ratio", 0.0),
+        0.0,
+    )
     if oos_split_ratio <= 0.0:
-        coarse.oos_split_ratio = _coerce_float(
-            getattr(coarse, "multi_fidelity_oos_ratio", 0.2),
+        coarse.evaluation_config.oos_split_ratio = _coerce_float(
+            getattr(coarse.evaluation_config, "multi_fidelity_oos_ratio", 0.2),
             0.2,
         )
     setattr(coarse, "_evaluation_fidelity", "coarse")
@@ -66,6 +81,10 @@ def adjust_backtest_config_for_fidelity(
     """coarse fidelity の場合だけ評価期間を末尾側へ圧縮する。"""
     adjusted = backtest_config.copy()
     if not is_coarse_fidelity(config):
+        return adjusted
+
+    evaluation_config = _get_evaluation_config(config)
+    if evaluation_config is None:
         return adjusted
 
     start_date = adjusted.get("start_date")
@@ -82,7 +101,7 @@ def adjust_backtest_config_for_fidelity(
     end_ts = pd.Timestamp(end_dt)
 
     window_ratio = _coerce_float(
-        getattr(config, "multi_fidelity_window_ratio", 0.3),
+        getattr(evaluation_config, "multi_fidelity_window_ratio", 0.3),
         0.3,
     )
     total_duration = end_ts - start_ts
@@ -101,9 +120,17 @@ def get_multi_fidelity_candidate_limit(population_size: int, config: Any) -> int
     if population_size <= 0:
         return 0
 
-    ratio = _coerce_float(getattr(config, "multi_fidelity_candidate_ratio", 0.25), 0.25)
+    evaluation_config = _get_evaluation_config(config)
+    if evaluation_config is None:
+        return 0
+
+    ratio = _coerce_float(
+        getattr(evaluation_config, "multi_fidelity_candidate_ratio", 0.25), 0.25
+    )
     try:
-        min_candidates = int(getattr(config, "multi_fidelity_min_candidates", 3) or 3)
+        min_candidates = int(
+            getattr(evaluation_config, "multi_fidelity_min_candidates", 3) or 3
+        )
     except (TypeError, ValueError):
         min_candidates = 3
     return min(population_size, max(min_candidates, int(ceil(population_size * ratio))))

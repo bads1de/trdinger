@@ -27,7 +27,7 @@ def __getattr__(name: str):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-# 向後互換性のため、__all__を定義
+# パブリックAPIを明示的に定義
 __all__ = [
     "EventDrivenLabelGenerator",
     "ThresholdMethod",

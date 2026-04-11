@@ -243,11 +243,14 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
+        evaluation_config = config.evaluation_config
         if (
-            not isinstance(config.oos_split_ratio, (int, float))
-            or not 0.0 <= config.oos_split_ratio < 1.0
+            not isinstance(evaluation_config.oos_split_ratio, (int, float))
+            or not 0.0 <= evaluation_config.oos_split_ratio < 1.0
         ):
-            errors.append("OOS分割比率は0.0以上1.0未満である必要があります")
+            errors.append(
+                "evaluation_config.oos_split_ratio は0.0以上1.0未満である必要があります"
+            )
         return errors
 
     @staticmethod
@@ -394,39 +397,40 @@ class ConfigValidator:
     def _validate_ga_multi_fidelity_settings(config: GAConfig) -> List[str]:
         """multi-fidelity 評価設定の検証"""
         errors = []
-        if not getattr(config, "enable_multi_fidelity_evaluation", False):
+        evaluation_config = config.evaluation_config
+        if not getattr(evaluation_config, "enable_multi_fidelity_evaluation", False):
             return errors
 
         if (
-            not isinstance(config.multi_fidelity_window_ratio, (int, float))
-            or not 0.0 < float(config.multi_fidelity_window_ratio) <= 1.0
+            not isinstance(evaluation_config.multi_fidelity_window_ratio, (int, float))
+            or not 0.0 < float(evaluation_config.multi_fidelity_window_ratio) <= 1.0
         ):
             errors.append(
-                "multi_fidelity_window_ratio は0より大きく1.0以下である必要があります"
+                "evaluation_config.multi_fidelity_window_ratio は0より大きく1.0以下である必要があります"
             )
 
         if (
-            not isinstance(config.multi_fidelity_oos_ratio, (int, float))
-            or not 0.0 < float(config.multi_fidelity_oos_ratio) < 1.0
+            not isinstance(evaluation_config.multi_fidelity_oos_ratio, (int, float))
+            or not 0.0 < float(evaluation_config.multi_fidelity_oos_ratio) < 1.0
         ):
             errors.append(
-                "multi_fidelity_oos_ratio は0より大きく1.0未満である必要があります"
+                "evaluation_config.multi_fidelity_oos_ratio は0より大きく1.0未満である必要があります"
             )
 
         if (
-            not isinstance(config.multi_fidelity_candidate_ratio, (int, float))
-            or not 0.0 < float(config.multi_fidelity_candidate_ratio) <= 1.0
+            not isinstance(evaluation_config.multi_fidelity_candidate_ratio, (int, float))
+            or not 0.0 < float(evaluation_config.multi_fidelity_candidate_ratio) <= 1.0
         ):
             errors.append(
-                "multi_fidelity_candidate_ratio は0より大きく1.0以下である必要があります"
+                "evaluation_config.multi_fidelity_candidate_ratio は0より大きく1.0以下である必要があります"
             )
 
         if (
-            not isinstance(config.multi_fidelity_min_candidates, (int, float))
-            or int(config.multi_fidelity_min_candidates) <= 0
+            not isinstance(evaluation_config.multi_fidelity_min_candidates, (int, float))
+            or int(evaluation_config.multi_fidelity_min_candidates) <= 0
         ):
             errors.append(
-                "multi_fidelity_min_candidates は正の整数である必要があります"
+                "evaluation_config.multi_fidelity_min_candidates は正の整数である必要があります"
             )
 
         return errors
@@ -445,18 +449,22 @@ class ConfigValidator:
             or not 0.0 < float(max_drawdown) <= 1.0
         ):
             errors.append(
-                "early_termination_max_drawdown は0より大きく1.0以下である必要があります"
+                "evaluation_config.early_termination_settings.max_drawdown は0より大きく1.0以下である必要があります"
             )
 
         min_trades = settings.min_trades
         if min_trades is not None and (
             not isinstance(min_trades, (int, float)) or int(min_trades) <= 0
         ):
-            errors.append("early_termination_min_trades は正の整数である必要があります")
+            errors.append(
+                "evaluation_config.early_termination_settings.min_trades は正の整数である必要があります"
+            )
 
         expectancy = settings.min_expectancy
         if expectancy is not None and not isinstance(expectancy, (int, float)):
-            errors.append("early_termination_min_expectancy は数値である必要があります")
+            errors.append(
+                "evaluation_config.early_termination_settings.min_expectancy は数値である必要があります"
+            )
 
         expectancy_min_trades = settings.expectancy_min_trades
         if (
@@ -464,7 +472,7 @@ class ConfigValidator:
             or int(expectancy_min_trades) <= 0
         ):
             errors.append(
-                "early_termination_expectancy_min_trades は正の整数である必要があります"
+                "evaluation_config.early_termination_settings.expectancy_min_trades は正の整数である必要があります"
             )
 
         for field_name in (
@@ -475,7 +483,8 @@ class ConfigValidator:
             value = getattr(settings, field_name, None)
             if not isinstance(value, (int, float)) or not 0.0 < float(value) <= 1.0:
                 errors.append(
-                    f"early_termination_{field_name} は0より大きく1.0以下である必要があります"
+                    "evaluation_config.early_termination_settings."
+                    f"{field_name} は0より大きく1.0以下である必要があります"
                 )
 
         return errors
@@ -528,7 +537,7 @@ class ConfigValidator:
         return errors
 
     @staticmethod
-    def _validate_robustness_validation_symbols(config: GAConfig) -> List[str]:
+    def _validate_robustness_config_validation_symbols(config: GAConfig) -> List[str]:
         """
         robustness 検証用通貨ペア設定の検証
 
@@ -541,7 +550,9 @@ class ConfigValidator:
         errors = []
         validation_symbols = config.robustness_config.validation_symbols
         if validation_symbols is not None and not isinstance(validation_symbols, list):
-            errors.append("robustness_validation_symbols はリストである必要があります")
+            errors.append(
+                "robustness_config.validation_symbols はリストである必要があります"
+            )
         return errors
 
     @staticmethod
@@ -571,7 +582,9 @@ class ConfigValidator:
         errors = []
         regime_windows = config.robustness_config.regime_windows
         if not isinstance(regime_windows, list):
-            errors.append("robustness の regime windows はリストである必要があります")
+            errors.append(
+                "robustness_config.regime_windows はリストである必要があります"
+            )
             return errors
 
         for window in regime_windows:
@@ -647,7 +660,7 @@ class ConfigValidator:
             "mean",
         }:
             return [
-                "robustness_aggregate_method は {'robust', 'mean'} のいずれかである必要があります"
+                "robustness_config.aggregate_method は {'robust', 'mean'} のいずれかである必要があります"
             ]
         return []
 
@@ -663,7 +676,9 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        errors.extend(ConfigValidator._validate_robustness_validation_symbols(config))
+        errors.extend(
+            ConfigValidator._validate_robustness_config_validation_symbols(config)
+        )
         errors.extend(ConfigValidator._validate_robustness_regime_windows(config))
         slippage = config.robustness_config.stress_slippage
         errors.extend(

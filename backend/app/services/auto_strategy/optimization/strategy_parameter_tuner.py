@@ -143,7 +143,7 @@ class StrategyParameterTuner:
         """
         try:
             # WFA評価が有効な場合
-            if self.use_wfa and self.config.enable_walk_forward:
+            if self.use_wfa and self.config.evaluation_config.enable_walk_forward:
                 # WFA設定を一時的に有効化したconfigを使用
                 wfa_config = self._create_wfa_config()
                 fitness_tuple = self.evaluator.evaluate_individual(gene, wfa_config)
@@ -162,11 +162,11 @@ class StrategyParameterTuner:
         import copy
 
         wfa_config = copy.deepcopy(self.config)
-        wfa_config.enable_walk_forward = True
+        wfa_config.evaluation_config.enable_walk_forward = True
 
         # WFAフォールド数を減らして高速化（チューニング用）
-        if wfa_config.wfa_n_folds > 3:
-            wfa_config.wfa_n_folds = 3
+        if wfa_config.evaluation_config.wfa_n_folds > 3:
+            wfa_config.evaluation_config.wfa_n_folds = 3
 
         return wfa_config
 

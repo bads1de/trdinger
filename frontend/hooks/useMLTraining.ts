@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiCall } from "./useApiCall";
 import { EnsembleSettingsConfig } from "@/components/ml/EnsembleSettings";
-import type { LabelGenerationConfig, FeatureProfile } from "@/types/ml-config";
+import type { LabelGenerationConfig } from "@/types/ml-config";
 // 利用可能モデルはフロント定数で管理
 import { ALGORITHMS } from "../constants/algorithms";
 

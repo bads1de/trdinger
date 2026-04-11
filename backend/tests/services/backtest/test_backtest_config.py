@@ -37,7 +37,6 @@ def valid_strategy_config_dict(valid_strategy_gene_dict) -> Dict[str, Any]:
         "parameters": {
             "strategy_gene": valid_strategy_gene_dict,
             "volatility_gate_enabled": False,
-            "ml_filter_enabled": False,
         },
     }
 
@@ -63,7 +62,6 @@ def test_strategy_config_validation(valid_strategy_config_dict):
     assert config.strategy_type == "GENERATED_GA"
     assert isinstance(config.parameters, GeneratedGAParameters)
     assert config.parameters.volatility_gate_enabled is False
-    assert config.parameters.ml_filter_enabled is False
 
 
 def test_backtest_config_validation(valid_backtest_config_dict):

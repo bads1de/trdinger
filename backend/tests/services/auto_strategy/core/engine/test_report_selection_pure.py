@@ -5,6 +5,7 @@ from app.services.auto_strategy.core.engine.report_selection import (
     build_report_rank_key_from_primary_fitness,
     get_two_stage_best_individual,
     get_two_stage_rank,
+    is_evaluation_report,
     set_two_stage_metadata,
 )
 from app.services.auto_strategy.core.evaluation.evaluation_report import (
@@ -81,3 +82,17 @@ def test_two_stage_metadata_is_readable_from_slotted_individual_fitness():
 
     assert get_two_stage_rank(leader) == 0
     assert get_two_stage_best_individual([other, leader]) is leader
+
+
+def test_is_evaluation_report_distinguishes_report_and_plain_object():
+    report = EvaluationReport.aggregate(
+        mode="robustness",
+        objectives=["weighted_score"],
+        scenarios=[
+            ScenarioEvaluation(name="base", fitness=(0.9,), passed=True),
+        ],
+        aggregate_method="single",
+    )
+
+    assert is_evaluation_report(report) is True
+    assert is_evaluation_report(object()) is False

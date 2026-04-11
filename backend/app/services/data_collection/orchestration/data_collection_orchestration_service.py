@@ -46,7 +46,7 @@ class DataCollectionOrchestrationService:
         self.data_validator = DataValidator()
         self.historical_orchestrator = HistoricalDataOrchestrator()
         self.bulk_data_orchestrator = BulkDataOrchestrator()
-        # 旧コードが直接参照していた差分更新用サービスの互換エイリアス
+        # 差分更新用サービス
         self.historical_service = self.bulk_data_orchestrator.historical_service
         self.collection_status_checker = CollectionStatusChecker()
         self.oi_collection_orchestrator = OICollectionOrchestrator()

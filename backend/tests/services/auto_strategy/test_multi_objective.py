@@ -86,7 +86,7 @@ class TestEvolutionRunnerMultiObjective:
         config.generations = 2
         config.crossover_rate = 0.8
         config.mutation_rate = 0.2
-        config.enable_fitness_sharing = False
+        config.fitness_sharing = {"enable_fitness_sharing": False}
         config.dynamic_objective_reweighting = False
         config.objectives = ["sharpe_ratio", "total_return", "max_drawdown"]
         return config
@@ -139,7 +139,7 @@ class TestEvolutionRunnerMultiObjective:
         self, mock_toolbox, mock_stats, mock_config, mock_population
     ):
         """適応度共有ありの多目的最適化テスト"""
-        mock_config.enable_fitness_sharing = True
+        mock_config.fitness_sharing = {"enable_fitness_sharing": True}
         mock_fitness_sharing = Mock()
         mock_fitness_sharing.apply_fitness_sharing.return_value = mock_population
 
@@ -283,7 +283,6 @@ class TestEvolutionRunnerMultiObjective:
         # 交叉と突然変異が呼ばれたことを確認
         assert mock_toolbox.mate.called
         assert mock_toolbox.mutate.called
-
 
 
 

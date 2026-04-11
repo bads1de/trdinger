@@ -28,13 +28,13 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({ result }: OverviewTabProps) {
-  const { performance_metrics: metrics } = result;
+  const metrics = (result.performance_metrics || {}) as Record<string, unknown>;
 
   const finalEquity =
     result.initial_capital &&
     metrics.total_return !== undefined &&
     metrics.total_return !== null
-      ? result.initial_capital * (1 + metrics.total_return)
+      ? result.initial_capital * (1 + Number(metrics.total_return))
       : result.initial_capital;
 
   const SectionHeader = ({
@@ -101,33 +101,33 @@ export default function OverviewTab({ result }: OverviewTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="総リターン"
-            value={formatPercentage(metrics.total_return ?? 0)}
+            value={formatPercentage(Number(metrics.total_return ?? 0))}
             subtitle={`最終資産: ${formatCurrency(finalEquity)}`}
-            color={getReturnColor(metrics.total_return)}
+            color={getReturnColor(Number(metrics.total_return))}
             icon={<TrendingUp className="w-6 h-6" />}
           />
           <MetricCard
             title="シャープレシオ"
-            value={formatNumber(metrics.sharpe_ratio ?? 0)}
+            value={formatNumber(Number(metrics.sharpe_ratio ?? 0))}
             subtitle="リスク調整後リターン"
-            color={getSharpeColor(metrics.sharpe_ratio)}
+            color={getSharpeColor(Number(metrics.sharpe_ratio))}
             icon={<ShieldCheck className="w-6 h-6" />}
           />
           <MetricCard
             title="最大ドローダウン"
-            value={formatPercentage(metrics.max_drawdown ?? 0)}
+            value={formatPercentage(Number(metrics.max_drawdown ?? 0))}
             subtitle="最大下落率"
             color="red"
             icon={<TrendingDown className="w-6 h-6" />}
           />
           <MetricCard
             title="勝率"
-            value={formatPercentage(metrics.win_rate ?? 0)}
-            subtitle={`${metrics.winning_trades || 0}勝 / ${
-              metrics.losing_trades || 0
+            value={formatPercentage(Number(metrics.win_rate ?? 0))}
+            subtitle={`${Number(metrics.winning_trades) || 0}勝 / ${
+              Number(metrics.losing_trades) || 0
             }敗`}
             color={
-              metrics.win_rate && metrics.win_rate > 0.5 ? "green" : "yellow"
+              Number(metrics.win_rate) > 0.5 ? "green" : "yellow"
             }
             icon={<CheckCircle className="w-6 h-6" />}
           />
@@ -139,10 +139,10 @@ export default function OverviewTab({ result }: OverviewTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <MetricCard
             title="プロフィットファクター"
-            value={formatNumber(metrics.profit_factor ?? 0)}
+            value={formatNumber(Number(metrics.profit_factor ?? 0))}
             subtitle="総利益 / 総損失"
             color={
-              metrics.profit_factor && metrics.profit_factor > 1
+              Number(metrics.profit_factor) > 1
                 ? "green"
                 : "red"
             }
@@ -150,14 +150,14 @@ export default function OverviewTab({ result }: OverviewTabProps) {
           />
           <MetricCard
             title="総取引数"
-            value={metrics.total_trades || 0}
+            value={Number(metrics.total_trades) || 0}
             subtitle="実行された取引の総数"
             color="blue"
             icon={<List className="w-6 h-6" />}
           />
           <MetricCard
             title="平均利益"
-            value={formatCurrency(metrics.avg_win ?? 0)}
+            value={formatCurrency(Number(metrics.avg_win ?? 0))}
             subtitle="勝ちトレードあたり"
             color="green"
             icon={<ArrowUpRight className="w-6 h-6" />}
@@ -166,7 +166,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
             title="平均損失"
             value={formatCurrency(
               metrics.avg_loss !== undefined && metrics.avg_loss !== null
-                ? Math.abs(metrics.avg_loss)
+                ? Math.abs(Number(metrics.avg_loss))
                 : 0
             )}
             subtitle="負けトレードあたり"

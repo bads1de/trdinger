@@ -2,7 +2,7 @@
 
 import importlib
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Type, cast
 
 import numpy as np
 import pandas as pd
@@ -244,11 +244,7 @@ class HybridPredictor:
             for s in self.services:
                 if self._service_is_trained(s):
                     self._run_time_series_cv(s, features_df)
-                    generate_forecast = getattr(s, "generate_forecast", None)
-                    if callable(generate_forecast):
-                        preds.append(generate_forecast(features_df))
-                    else:
-                        preds.append(s.generate_signals(features_df))
+                    preds.append(self._predict_with_service(s, features_df))
 
             if not preds:
                 logger.warning("予測可能なモデルがありません")
@@ -472,6 +468,34 @@ class HybridPredictor:
             return False
 
         return True
+
+    def _predict_with_service(
+        self, service: "MLTrainingService", features_df: pd.DataFrame
+    ) -> Dict[str, float]:
+        """利用可能な予測インターフェースを順に試す。"""
+        generate_forecast = getattr(service, "generate_forecast", None)
+        if callable(generate_forecast):
+            return cast(
+                Callable[[pd.DataFrame], Dict[str, float]], generate_forecast
+            )(features_df)
+
+        predict_volatility = getattr(service, "predict_volatility", None)
+        if callable(predict_volatility):
+            return cast(
+                Callable[[pd.DataFrame], Dict[str, float]], predict_volatility
+            )(features_df)
+
+        trainer = getattr(service, "trainer", None)
+        trainer_predict_volatility = getattr(trainer, "predict_volatility", None)
+        if callable(trainer_predict_volatility):
+            return cast(
+                Callable[[pd.DataFrame], Dict[str, float]],
+                trainer_predict_volatility,
+            )(features_df)
+
+        raise MLPredictionError(
+            f"{type(service).__name__} に利用可能な予測インターフェースがありません"
+        )
 
     @staticmethod
     def _normalise_prediction(prediction: Dict[str, float]) -> Dict[str, float]:

@@ -45,7 +45,7 @@ class TestCreateGaConfig:
         assert config.crossover_rate == 0.8
         assert config.mutation_rate == 0.2
         assert config.elite_size == 2
-        assert config.enable_parallel_evaluation is True
+        assert config.evaluation_config.enable_parallel is True
 
     def test_custom_config(self):
         """カスタム設定でGAConfigを作成できる"""
@@ -71,7 +71,7 @@ class TestCreateGaConfig:
         assert config.crossover_rate == 0.9
         assert config.mutation_rate == 0.1
         assert config.elite_size == 5
-        assert config.enable_parallel_evaluation is False
+        assert config.evaluation_config.enable_parallel is False
         assert config.log_level == "DEBUG"
 
     def test_invalid_population_raises_error(self):
@@ -366,7 +366,6 @@ class TestParseArgs:
             args = run_auto_strategy.parse_args()
 
         assert args.no_parallel is True
-
 
 
 

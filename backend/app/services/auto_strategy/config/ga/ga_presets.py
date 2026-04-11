@@ -32,11 +32,13 @@ class GAPresets:
             max_indicators=5,
             max_conditions=2,
             tuning_config=TuningConfig(enabled=False),
-            evaluation_config=EvaluationConfig(enable_walk_forward=False),
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=False,
+                enable_parallel=True,
+            ),
             two_stage_selection_config=TwoStageSelectionConfig(enabled=False),
             use_seed_strategies=True,
             seed_injection_rate=0.15,
-            enable_parallel_evaluation=True,
         )
 
     @staticmethod
@@ -64,11 +66,11 @@ class GAPresets:
                 enable_walk_forward=True,
                 wfa_n_folds=5,
                 wfa_train_ratio=0.7,
+                enable_parallel=True,
             ),
             use_seed_strategies=True,
             seed_injection_rate=0.1,
             fitness_sharing={"enable_fitness_sharing": True},
-            enable_parallel_evaluation=True,
             two_stage_selection_config=TwoStageSelectionConfig(
                 enabled=True,
                 elite_count=5,
@@ -103,6 +105,7 @@ class GAPresets:
             population_size=150,
             generations=80,
             enable_multi_objective=True,
+            evaluation_config=EvaluationConfig(enable_parallel=True),
             objectives=[
                 "total_return",
                 "sharpe_ratio",
@@ -112,7 +115,6 @@ class GAPresets:
             tuning_config=TuningConfig(enabled=False),
             use_seed_strategies=True,
             fitness_sharing={"enable_fitness_sharing": True},
-            enable_parallel_evaluation=True,
             two_stage_selection_config=TwoStageSelectionConfig(
                 enabled=True,
                 elite_count=4,
@@ -138,7 +140,7 @@ class GAPresets:
             use_seed_strategies=True,
             seed_injection_rate=0.1,
             tuning_config=TuningConfig(enabled=True, n_trials=30),
-            enable_parallel_evaluation=True,
+            evaluation_config=EvaluationConfig(enable_parallel=True),
         )
         # 短期向けフィットネス重み
         config.fitness_weights = {
@@ -167,8 +169,11 @@ class GAPresets:
             use_seed_strategies=True,
             seed_injection_rate=0.1,
             tuning_config=TuningConfig(enabled=True, n_trials=50, elite_count=4),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True, wfa_n_folds=4),
-            enable_parallel_evaluation=True,
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=True,
+                wfa_n_folds=4,
+                enable_parallel=True,
+            ),
             two_stage_selection_config=TwoStageSelectionConfig(
                 enabled=True,
                 elite_count=4,

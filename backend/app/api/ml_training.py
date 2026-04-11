@@ -123,19 +123,6 @@ class MLTrainingRequest(BaseModel):
         default=0.67,
         description="high-vol gate を開くための学習分位点",
     )
-    threshold_up: float = Field(
-        default=0.02, description="旧方向予測互換キー（未使用）"
-    )
-    threshold_down: float = Field(
-        default=-0.02, description="旧方向予測互換キー（未使用）"
-    )
-    quantile_threshold: float = Field(
-        default=0.67, description="旧互換キー（gate_quantileへ読み替え）"
-    )
-    threshold_method: str = Field(
-        default="TREND_SCANNING",
-        description="旧互換キー（未使用）",
-    )
     save_model: bool = Field(default=True, description="モデルを保存するか")
     # 新しい設定項目
     train_test_split: float = Field(

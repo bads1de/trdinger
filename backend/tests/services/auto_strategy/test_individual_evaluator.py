@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
 from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
 )
@@ -272,8 +273,10 @@ class TestIndividualEvaluator:
         }
 
         full_config = GAConfig(
-            enable_multi_fidelity_evaluation=True,
-            multi_fidelity_window_ratio=0.3,
+            evaluation_config=EvaluationConfig(
+                enable_multi_fidelity_evaluation=True,
+                multi_fidelity_window_ratio=0.3,
+            ),
         )
         full_config.objectives = ["weighted_score"]
         coarse_config = build_coarse_ga_config(full_config)
@@ -870,13 +873,13 @@ class TestIndividualEvaluator:
             "max_drawdown_limit": 1.0,
             "min_sharpe_ratio": 0.0,
         }
-        ga_config_no_ml.ml_filter_enabled = False
-        ga_config_no_ml.ml_model_path = None
+        ga_config_no_ml.hybrid_config.volatility_gate_enabled = False
+        ga_config_no_ml.hybrid_config.volatility_model_path = None
 
-        # GA設定 - MLフィルター有効
-        ga_config_with_ml = GAConfig()
-        ga_config_with_ml.enable_multi_objective = False
-        ga_config_with_ml.fitness_weights = {
+        # GA設定 - ボラティリティゲート有効
+        ga_config_with_volatility = GAConfig()
+        ga_config_with_volatility.enable_multi_objective = False
+        ga_config_with_volatility.fitness_weights = {
             "total_return": 1.0,
             "sharpe_ratio": 0.0,
             "max_drawdown": 0.0,
@@ -885,47 +888,40 @@ class TestIndividualEvaluator:
             "ulcer_index_penalty": 0.0,
             "trade_frequency_penalty": 0.0,
         }
-        ga_config_with_ml.fitness_constraints = {
-            "min_trades": 0,  # 制約を無効化
+        ga_config_with_volatility.fitness_constraints = {
+            "min_trades": 0,
             "max_drawdown_limit": 1.0,
             "min_sharpe_ratio": 0.0,
         }
-        ga_config_with_ml.ml_filter_enabled = True
-        ga_config_with_ml.ml_model_path = "/path/to/ml_model.pkl"  # 仮のパス
+        ga_config_with_volatility.hybrid_config.volatility_gate_enabled = True
+        ga_config_with_volatility.hybrid_config.volatility_model_path = (
+            "/path/to/ml_model.pkl"
+        )
 
-        # backtest_service.run_backtestがGAconfigの内容に応じて異なる結果を返すようにモックを設定
+        # backtest_service.run_backtestが設定の内容に応じて異なる結果を返すようにモックを設定
         def run_backtest_side_effect(**kwargs):
-            backtest_config = kwargs.get("config", {})  # configをkwargsから取得
-            strategy_config = backtest_config.get(
-                "strategy_config", {}
-            )  # strategy_configはbacktest_configの中にある
+            backtest_config = kwargs.get("config", {})
+            strategy_config = backtest_config.get("strategy_config", {})
 
-            # Pydanticモデル経由の場合、strategy_configは辞書化されているか確認
             if hasattr(strategy_config, "model_dump"):
                 strategy_config = strategy_config.model_dump()
 
-            # GeneratedGAParametersの場合
             if "parameters" in strategy_config:
                 params = strategy_config["parameters"]
-                if params.get("ml_filter_enabled"):
+                if params.get("volatility_gate_enabled"):
                     return mock_result_with_ml_filter
-            elif strategy_config.get("ml_filter_enabled"):  # 旧構造互換
-                return mock_result_with_ml_filter
 
             return mock_result_no_ml_filter
 
         self.mock_backtest_service.run_backtest.side_effect = run_backtest_side_effect
 
-        # 1. MLフィルター無効で評価
+        # 1. ボラティリティゲート無効で評価
         result_no_ml = self.evaluator.evaluate(mock_individual, ga_config_no_ml)
-        # run_backtestがMLフィルターなしの引数で呼ばれたことを検証
-        # call_args.kwargsからbacktest_configを取り出し、その中のstrategy_configをチェック
         call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
         backtest_config_passed = call_kwargs["config"]
-        # strategy_config > parameters > ml_filter_enabled を確認
         params = backtest_config_passed["strategy_config"]["parameters"]
-        assert not params["ml_filter_enabled"]
-        assert params["ml_model_path"] is None
+        assert not params["volatility_gate_enabled"]
+        assert params["volatility_model_path"] is None
         assert params["strategy_gene"] is not None
 
         # 評価結果の検証
@@ -935,17 +931,16 @@ class TestIndividualEvaluator:
         )
         assert result_no_ml[0] == expected_fitness_no_ml
 
-        # 2. MLフィルター有効で評価
-        self.evaluator.evaluate(mock_individual, ga_config_with_ml)
-        # run_backtestがMLフィルターありの引数で呼ばれたことを検証
+        # 2. ボラティリティゲート有効で評価
+        self.evaluator.evaluate(
+            mock_individual,
+            ga_config_with_volatility,
+            force_refresh=True,
+        )
         call_kwargs = self.mock_backtest_service.run_backtest.call_args.kwargs
         backtest_config_passed = call_kwargs["config"]
         params = backtest_config_passed["strategy_config"]["parameters"]
-        # 注意: IndividualEvaluatorの実装によっては、ml_filter_modelオブジェクトが渡されるため
-        # ml_filter_enabledフラグはTrueにならない場合がある（モデルロード失敗時など）
-        # ここではモックなのでロード失敗扱いになり ml_filter_enabled=False に書き換わっている可能性がある
-        # しかしテストとしては「意図した設定が渡されたか」を確認したい
-        pass
+        assert params["volatility_gate_enabled"] is True
 
     def test_evaluate_individual_with_oos(self):
         """OOS検証ありの個体評価テスト"""
@@ -1003,8 +998,8 @@ class TestIndividualEvaluator:
         # GA設定: OOS有効化
         ga_config = GAConfig()
         ga_config.enable_multi_objective = False
-        ga_config.oos_split_ratio = 0.2  # 10日間のうち、最後の2日がOOS（8日がIS）
-        ga_config.oos_fitness_weight = 0.5  # 単純平均
+        ga_config.evaluation_config.oos_split_ratio = 0.2  # 10日間のうち、最後の2日がOOS（8日がIS）
+        ga_config.evaluation_config.oos_fitness_weight = 0.5  # 単純平均
 
         # フィットネス重み設定（total_returnのみ）
         ga_config.fitness_weights = {
@@ -1193,8 +1188,8 @@ class TestIndividualEvaluator:
 
         ga_config = GAConfig()
         ga_config.enable_multi_objective = False
-        ga_config.oos_split_ratio = 0.2
-        ga_config.oos_fitness_weight = 0.5
+        ga_config.evaluation_config.oos_split_ratio = 0.2
+        ga_config.evaluation_config.oos_fitness_weight = 0.5
         # 重み設定必須
         ga_config.fitness_weights = {"total_return": 1.0}
         ga_config.fitness_weights = {"total_return": 1.0}

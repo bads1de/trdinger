@@ -437,23 +437,6 @@ class TestPipelineOptimization:
         assert pipeline is not None
         assert isinstance(pipeline, Pipeline)
 
-    def test_optimization_with_time_budget(
-        self, optimization_data: tuple[pd.DataFrame, pd.Series]
-    ):
-        """正常系: 時間予算付き最適化."""
-        X, y = optimization_data
-        time_budget = 30.0  # 30秒
-
-        start_time = time.time()
-        pipeline = optimize_comprehensive_pipeline(
-            X, y, task_type="regression", time_budget=time_budget
-        )
-        duration = time.time() - start_time
-
-        assert pipeline is not None
-        # 時間予算内に完了（最適化自体は高速なので実際にはすぐ完了）
-        assert duration < time_budget + 5  # バッファを含む
-
     @pytest.mark.parametrize("data_size", [500, 5000, 15000])
     def test_optimization_data_size_adaptation(self, data_size: int):
         """正常系: データサイズに応じた最適化.

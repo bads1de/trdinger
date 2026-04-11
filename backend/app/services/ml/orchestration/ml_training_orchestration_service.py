@@ -604,23 +604,6 @@ class MLTrainingService(BaseResourceManager):
         )
         cross_validation_folds = config.cross_validation_folds
         gate_quantile = getattr(config, "gate_quantile", 0.67)
-        legacy_quantile = getattr(config, "quantile_threshold", None)
-        explicit_fields = set(getattr(config, "model_fields_set", set()) or [])
-        deprecated_threshold_fields = {
-            "threshold_up",
-            "threshold_down",
-            "threshold_method",
-        }
-        used_deprecated_fields = sorted(
-            explicit_fields.intersection(deprecated_threshold_fields)
-        )
-        if used_deprecated_fields:
-            logger.warning(
-                "旧方向予測キーは非推奨のため無視します: %s",
-                ", ".join(used_deprecated_fields),
-            )
-        if legacy_quantile is not None and gate_quantile == 0.67:
-            gate_quantile = legacy_quantile
 
         return {
             "test_size": test_size,
@@ -709,10 +692,6 @@ class MLTrainingService(BaseResourceManager):
     def generate_forecast(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """ボラティリティ予測を生成"""
         return self.trainer.predict_volatility(features_df)
-
-    def generate_signals(self, features_df: pd.DataFrame) -> Dict[str, float]:
-        """後方互換の薄いラッパー。"""
-        return self.generate_forecast(features_df)
 
     def load_model(self, model_path: str) -> bool:
         """モデルを読み込む"""

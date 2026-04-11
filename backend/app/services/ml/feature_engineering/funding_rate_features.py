@@ -121,12 +121,6 @@ class FundingRateFeatureCalculator:
                     .corr(close_series)
                 ).fillna(0.0)
 
-        # 元の実装にあるカラム名との互換性
-        if "fr_price_corr_72h" in res.columns:
-            res["fr_price_corr"] = res["fr_price_corr_72h"]
-        else:
-            res["fr_price_corr"] = 0.0
-
         res["fr_extreme"] = np.where(res["fr_bps"].abs() > 10.0, 1, 0)
         res["fr_direction"] = pd.Series(
             np.sign(res["fr_dev"].diff()), index=res.index

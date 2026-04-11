@@ -28,6 +28,7 @@ warnings.filterwarnings("ignore")
 def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> Dict[str, Any]:
     """単一のGA実行"""
     from app.services.auto_strategy.config.ga import GAConfig
+    from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
     from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
     from app.services.auto_strategy.generators.random_gene_generator import (
         RandomGeneGenerator,
@@ -43,7 +44,7 @@ def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> Dict[str, Any]:
         elite_size=2,
         max_indicators=3,
         min_indicators=1,
-        enable_parallel_evaluation=False,
+        evaluation_config=EvaluationConfig(enable_parallel=False),
         use_seed_strategies=use_seeds,
         seed_injection_rate=seed_rate if use_seeds else 0.0,
         fitness_constraints={"min_trades": 1},

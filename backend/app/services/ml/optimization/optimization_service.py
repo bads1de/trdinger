@@ -629,7 +629,11 @@ class OptimizationService:
                 c.get("method", "stacking"), c.get("models", ["lightgbm", "xgboost"])
             )
 
-        return self.optimizer.get_default_parameter_space()
+        from app.services.ml.optimization.optuna_optimizer import (
+            build_lightgbm_parameter_space,
+        )
+
+        return build_lightgbm_parameter_space()
 
     def _convert_parameter_space_config(
         self, parameter_space_config: Dict[str, Dict[str, Any]]

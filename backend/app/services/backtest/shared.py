@@ -63,7 +63,7 @@ def safe_int_conversion(value: Any) -> int:
 
 
 def parse_datetime_value(value: Any) -> datetime:
-    """互換ラッパー。"""
+    """datetime値をパースする。"""
     return _parse_datetime_value(value)
 
 
@@ -120,10 +120,10 @@ def normalize_ohlcv_columns(
 def normalize_datetimes_for_comparison(
     start_date: datetime, end_date: datetime
 ) -> Tuple[datetime, datetime]:
-    """互換ラッパー。"""
+    """datetime値を比較用に正規化する。"""
     return _normalize_datetimes_for_comparison(start_date, end_date)
 
 
 def current_datetime_like(reference: datetime) -> datetime:
-    """互換ラッパー。"""
+    """referenceと同じ種類の現在時刻を返す。"""
     return _current_datetime_like(reference)

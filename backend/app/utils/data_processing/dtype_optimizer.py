@@ -104,8 +104,6 @@ def optimize_dataframe_dtypes(
 
 
 class DtypeOptimizer(BaseEstimator, TransformerMixin):
-    # 後方互換性のための別名
-    DataTypeOptimizer = None
     """
     メモリ使用量を削減するためにデータ型を最適化するトランスフォーマー。
 

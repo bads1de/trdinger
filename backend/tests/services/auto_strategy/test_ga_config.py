@@ -269,76 +269,34 @@ class TestGAConfig:
         assert restored.tuning_config.include_tpsl is False
         assert restored.tuning_config.include_thresholds is True
 
-    def test_from_dict_accepts_legacy_flat_payload(self):
-        """旧フラット形式の GA 設定が正しく復元されることを確認"""
-        config = GAConfig.from_dict(
-            {
-                "population_size": 128,
-                "enable_parallel_evaluation": False,
-                "max_evaluation_workers": 4,
-                "evaluation_timeout": 90.0,
-                "enable_walk_forward": True,
-                "wfa_n_folds": 4,
-                "wfa_train_ratio": 0.8,
-                "wfa_anchored": True,
-                "enable_parameter_tuning": False,
-                "tuning_n_trials": 18,
-                "tuning_elite_count": 6,
-                "enable_two_stage_selection": True,
-                "two_stage_elite_count": 5,
-                "two_stage_candidate_pool_size": 11,
-                "two_stage_min_pass_rate": 0.7,
-                "enable_early_termination": True,
-                "early_termination_max_drawdown": 0.2,
-                "early_termination_min_trades": 14,
-                "early_termination_min_trade_check_progress": 0.4,
-                "early_termination_trade_pace_tolerance": 0.6,
-                "early_termination_min_expectancy": -0.03,
-                "early_termination_expectancy_min_trades": 7,
-                "early_termination_expectancy_progress": 0.75,
-                "enable_fitness_sharing": True,
-                "sharing_radius": 0.25,
-                "sharing_alpha": 1.3,
-                "sampling_threshold": 80,
-                "robustness_validation_symbols": ["BTC/USDT:USDT"],
-                "robustness_stress_slippage": [0.0005],
-                "robustness_aggregate_method": "mean",
-            }
-        )
-
-        assert config.population_size == 128
-        assert config.evaluation_config.enable_parallel is False
-        assert config.max_evaluation_workers == 4
-        assert config.evaluation_timeout == 90.0
-        assert config.enable_walk_forward is True
-        assert config.wfa_n_folds == 4
-        assert config.wfa_train_ratio == 0.8
-        assert config.wfa_anchored is True
-        assert config.tuning_config.enabled is False
-        assert config.enable_parameter_tuning is False
-        assert config.tuning_config.n_trials == 18
-        assert config.tuning_elite_count == 6
-        assert config.two_stage_selection_config.enabled is True
-        assert config.enable_two_stage_selection is True
-        assert config.two_stage_selection_config.elite_count == 5
-        assert config.two_stage_candidate_pool_size == 11
-        assert config.two_stage_min_pass_rate == 0.7
-        assert config.evaluation_config.early_termination_settings.enabled is True
-        assert config.enable_early_termination is True
-        assert config.early_termination_max_drawdown == 0.2
-        assert config.early_termination_min_trades == 14
-        assert config.early_termination_min_trade_check_progress == 0.4
-        assert config.early_termination_trade_pace_tolerance == 0.6
-        assert config.early_termination_min_expectancy == -0.03
-        assert config.early_termination_expectancy_min_trades == 7
-        assert config.early_termination_expectancy_progress == 0.75
-        assert config.enable_fitness_sharing is True
-        assert config.sharing_radius == 0.25
-        assert config.sharing_alpha == 1.3
-        assert config.sampling_threshold == 80
-        assert config.robustness_config.validation_symbols == ["BTC/USDT:USDT"]
-        assert config.robustness_config.stress_slippage == [0.0005]
-        assert config.robustness_config.aggregate_method == "mean"
+    def test_from_dict_rejects_legacy_flat_payload(self):
+        """旧フラット形式の GA 設定は受け付けないことを確認"""
+        with pytest.raises(ValueError, match="未対応の設定キー"):
+            GAConfig.from_dict(
+                {
+                    "population_size": 128,
+                    "enable_parallel_evaluation": False,
+                    "max_evaluation_workers": 4,
+                    "evaluation_timeout": 90.0,
+                    "enable_parameter_tuning": False,
+                    "tuning_n_trials": 18,
+                    "tuning_elite_count": 6,
+                    "enable_two_stage_selection": True,
+                    "two_stage_elite_count": 5,
+                    "two_stage_candidate_pool_size": 11,
+                    "two_stage_min_pass_rate": 0.7,
+                    "enable_early_termination": True,
+                    "early_termination_max_drawdown": 0.2,
+                    "early_termination_min_trades": 14,
+                    "enable_fitness_sharing": True,
+                    "sharing_radius": 0.25,
+                    "sharing_alpha": 1.3,
+                    "sampling_threshold": 80,
+                    "robustness_validation_symbols": ["BTC/USDT:USDT"],
+                    "robustness_stress_slippage": [0.0005],
+                    "robustness_aggregate_method": "mean",
+                }
+            )
 
     def test_from_dict_rejects_unknown_keys(self):
         """未知のキーは早期にエラーにすることを確認"""
@@ -371,20 +329,60 @@ class TestGAConfig:
         assert config.evaluation_config.early_termination_settings.enabled is True
         assert config.evaluation_config.early_termination_settings.max_drawdown == 0.2
 
-    def test_legacy_early_termination_assignment_updates_nested_config(self):
-        """legacy の早期終了属性代入が nested 設定へ反映されることを確認"""
+    def test_legacy_early_termination_assignment_is_rejected(self):
+        """旧名の早期終了属性代入は拒否されることを確認"""
         config = GAConfig()
 
-        config.enable_early_termination = True
-        config.early_termination_max_drawdown = 0.25
-        config.early_termination_min_trades = 11
+        with pytest.raises(AttributeError):
+            config.enable_early_termination = True
+        with pytest.raises(AttributeError):
+            config.early_termination_max_drawdown = 0.25
+        with pytest.raises(AttributeError):
+            config.early_termination_min_trades = 11
+        with pytest.raises(AttributeError):
+            config.volatility_gate_enabled = True
+        with pytest.raises(AttributeError):
+            config.volatility_model_path = "/path/to/model.pkl"
+        with pytest.raises(AttributeError):
+            config.preprocess_features = False
+        with pytest.raises(AttributeError):
+            config.enable_parallel_evaluation = True
+        with pytest.raises(AttributeError):
+            config.max_evaluation_workers = 4
+        with pytest.raises(AttributeError):
+            config.evaluation_timeout = 60.0
+        with pytest.raises(AttributeError):
+            config.enable_multi_fidelity_evaluation = True
+        with pytest.raises(AttributeError):
+            config.multi_fidelity_window_ratio = 0.3
+        with pytest.raises(AttributeError):
+            config.multi_fidelity_oos_ratio = 0.2
+        with pytest.raises(AttributeError):
+            config.multi_fidelity_candidate_ratio = 0.25
+        with pytest.raises(AttributeError):
+            config.multi_fidelity_min_candidates = 3
+        with pytest.raises(AttributeError):
+            config.hybrid_mode = True
+        with pytest.raises(AttributeError):
+            config.hybrid_model_type = "lightgbm"
+        with pytest.raises(AttributeError):
+            config.hybrid_model_types = ["lightgbm", "xgboost"]
+        with pytest.raises(AttributeError):
+            config.oos_split_ratio = 0.25
+        with pytest.raises(AttributeError):
+            config.oos_fitness_weight = 0.5
+        with pytest.raises(AttributeError):
+            config.enable_walk_forward = True
+        with pytest.raises(AttributeError):
+            config.wfa_n_folds = 4
+        with pytest.raises(AttributeError):
+            config.wfa_train_ratio = 0.8
+        with pytest.raises(AttributeError):
+            config.wfa_anchored = True
 
-        assert config.enable_early_termination is True
-        assert config.early_termination_max_drawdown == 0.25
-        assert config.early_termination_min_trades == 11
-        assert config.evaluation_config.early_termination_settings.enabled is True
-        assert config.evaluation_config.early_termination_settings.max_drawdown == 0.25
-        assert config.evaluation_config.early_termination_settings.min_trades == 11
+        assert config.evaluation_config.early_termination_settings.enabled is False
+        assert config.evaluation_config.early_termination_settings.max_drawdown is None
+        assert config.evaluation_config.early_termination_settings.min_trades is None
 
     def test_mutation_settings_defaults(self):
         """突然変異関連のデフォルト設定が正しいことを確認"""

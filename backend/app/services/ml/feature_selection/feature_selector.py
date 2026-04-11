@@ -256,15 +256,3 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             else SelectionMethod(self.method)
         )
         return get_selection_strategy(method)
-
-
-def create_feature_selector(
-    method: str = "staged",
-    **kwargs,
-) -> FeatureSelector:
-    """
-    特徴量選択器のファクトリー関数
-
-    後方互換性のために提供。新規コードでは直接 FeatureSelector を使用してください。
-    """
-    return FeatureSelector(method=method, **kwargs)

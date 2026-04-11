@@ -14,6 +14,7 @@ from app.services.auto_strategy.core.evaluation.report_persistence import (
     extract_evaluation_summary,
 )
 from app.services.auto_strategy.genes import StrategyGene
+from app.utils import response as response_utils
 from database.models import BacktestResult, GeneratedStrategy
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
@@ -98,6 +99,33 @@ class GeneratedStrategyService:
                 f"生成済み戦略の取得中にエラーが発生しました: {e}", exc_info=True
             )
             raise
+
+    def get_strategies_with_response(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        risk_level: Optional[str] = None,
+        experiment_id: Optional[int] = None,
+        min_fitness: Optional[float] = None,
+        sort_by: str = "fitness_score",
+        sort_order: str = "desc",
+    ) -> Dict[str, Any]:
+        """
+        生成済み戦略を API レスポンス形式で返す互換メソッド。
+
+        旧呼び出し元が `api_response` 前提で残っているため、`get_strategies`
+        の結果をそのまま包んで返します。
+        """
+        result = self.get_strategies(
+            limit=limit,
+            offset=offset,
+            risk_level=risk_level,
+            experiment_id=experiment_id,
+            min_fitness=min_fitness,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        )
+        return response_utils.api_response(success=True, data=result)
 
     def _convert_generated_strategy_to_display_format(
         self, strategy: GeneratedStrategy
@@ -258,64 +286,3 @@ class GeneratedStrategyService:
             return "medium"
         else:
             return "high"
-
-    def get_strategies_with_response(
-        self,
-        limit: int = 50,
-        offset: int = 0,
-        risk_level: Optional[str] = None,
-        experiment_id: Optional[int] = None,
-        min_fitness: Optional[float] = None,
-        sort_by: str = "fitness_score",
-        sort_order: str = "desc",
-    ) -> Dict[str, Any]:
-        """
-        戦略を取得してAPIレスポンス形式で返す
-
-        互換性維持用のラッパーです。新規呼び出しは `get_strategies()` を
-        直接使ってください。
-
-        Args:
-            limit: 取得件数制限
-            offset: オフセット
-            risk_level: リスクレベルフィルター
-            experiment_id: 実験IDフィルター
-            min_fitness: 最小フィットネススコア
-            sort_by: ソート項目
-            sort_order: ソート順序
-
-        Returns:
-            APIレスポンス形式の戦略データ
-        """
-        try:
-            logger.info(
-                f"戦略取得開始: limit={limit}, offset={offset}, experiment_id={experiment_id}"
-            )
-
-            result = self.get_strategies(
-                limit=limit,
-                offset=offset,
-                risk_level=risk_level,
-                experiment_id=experiment_id,
-                min_fitness=min_fitness,
-                sort_by=sort_by,
-                sort_order=sort_order,
-            )
-
-            logger.info(f"戦略取得完了: {len(result['strategies'])} 件")
-
-            from app.utils.response import api_response
-
-            return api_response(
-                success=True,
-                data={
-                    "strategies": result["strategies"],
-                    "total_count": result["total_count"],
-                    "has_more": result["has_more"],
-                },
-                message="戦略を正常に取得しました",
-            )
-
-        except Exception as e:
-            logger.error(f"戦略取得エラー: {e}", exc_info=True)
-            raise

@@ -16,6 +16,54 @@ export interface WaveletConfig {
   [key: string]: unknown;
 }
 
+export interface EarlyTerminationSettingsConfig {
+  enabled?: boolean;
+  max_drawdown?: number | null;
+  min_trades?: number | null;
+  min_trade_check_progress?: number;
+  trade_pace_tolerance?: number;
+  min_expectancy?: number | null;
+  expectancy_min_trades?: number;
+  expectancy_progress?: number;
+}
+
+export interface GAEvaluationConfig {
+  enable_parallel?: boolean;
+  max_workers?: number | null;
+  timeout?: number;
+  enable_multi_fidelity_evaluation?: boolean;
+  multi_fidelity_window_ratio?: number;
+  multi_fidelity_oos_ratio?: number;
+  multi_fidelity_candidate_ratio?: number;
+  multi_fidelity_min_candidates?: number;
+  early_termination_settings?: EarlyTerminationSettingsConfig;
+  oos_split_ratio?: number;
+  oos_fitness_weight?: number;
+  enable_walk_forward?: boolean;
+  wfa_n_folds?: number;
+  wfa_train_ratio?: number;
+  wfa_anchored?: boolean;
+}
+
+export interface FitnessSharingConfig {
+  enable_fitness_sharing?: boolean;
+  sharing_radius?: number;
+  sharing_alpha?: number;
+  sampling_threshold?: number;
+  sampling_ratio?: number;
+}
+
+export interface GAHybridConfig {
+  mode?: boolean;
+  model_type?: string;
+  model_types?: string[];
+  volatility_gate_enabled?: boolean;
+  volatility_model_path?: string;
+  ml_filter_enabled?: boolean;
+  ml_model_path?: string;
+  preprocess_features?: boolean;
+}
+
 export interface GAConfig {
   /** 実験名（UI表示/識別用） */
   experiment_name: string;
@@ -41,7 +89,6 @@ export interface GAConfig {
       sharpe_ratio: number;
       max_drawdown: number;
       win_rate: number;
-      prediction_score?: number; // ハイブリッドモード用
     };
     /** 実行時の制約（スクリーニング条件） */
     fitness_constraints: {
@@ -66,17 +113,8 @@ export interface GAConfig {
     /** 制約違反ペナルティ */
     constraint_violation_penalty?: number;
 
-    // 高度な設定（Fitness Sharing）
-    /** フィットネスシェアリング有効化（多様性維持） */
-    enable_fitness_sharing?: boolean;
-    /** 近傍半径（シェアリングの距離閾値） */
-    sharing_radius?: number;
-    /** シェアリングのアルファ値 */
-    sharing_alpha?: number;
-    /** サンプリング閾値 */
-    sampling_threshold?: number;
-    /** サンプリング比率 */
-    sampling_ratio?: number;
+    /** フィットネスシェアリング設定 */
+    fitness_sharing?: FitnessSharingConfig;
 
     // 多目的最適化設定
     /** 多目的最適化を有効化するか */
@@ -87,12 +125,6 @@ export interface GAConfig {
     objective_weights?: number[];
     /** 動的重み付け（レジーム適応） */
     dynamic_objective_reweighting?: boolean;
-
-    // OOS検証設定
-    /** OOS分割比率 */
-    oos_split_ratio?: number;
-    /** OOSフィットネス重み */
-    oos_fitness_weight?: number;
 
     // TPSL設定
     /** TPSL手法の制約リスト */
@@ -106,15 +138,8 @@ export interface GAConfig {
     /** ATR倍率範囲 [min, max] */
     tpsl_atr_multiplier_range?: number[];
 
-    // Walk-Forward Analysis
-    /** WFAを有効化するか */
-    enable_walk_forward?: boolean;
-    /** フォールド数 */
-    wfa_n_folds?: number;
-    /** 学習期間の比率 */
-    wfa_train_ratio?: number;
-    /** 学習開始点を固定するか */
-    wfa_anchored?: boolean;
+    /** 評価設定 */
+    evaluation_config?: GAEvaluationConfig;
 
     // マルチタイムフレーム
     /** MTFを有効化するか */
@@ -123,14 +148,6 @@ export interface GAConfig {
     available_timeframes?: string[];
     /** MTF指標の生成確率 */
     mtf_indicator_probability?: number;
-
-    // MLフィルター
-    /** MLフィルター有効化 */
-    ml_filter_enabled?: boolean;
-    /** MLモデルパス */
-    ml_model_path?: string;
-    /** 特徴量前処理の有効化 */
-    preprocess_features?: boolean;
 
     // 遺伝子生成重み
     /** 価格データの重み */
@@ -158,49 +175,8 @@ export interface GAConfig {
     parameter_range_preset?: string;
 
     // ハイブリッドGA+ML設定
-    /** ハイブリッドモード有効化（GA+ML予測統合） */
-    hybrid_mode?: boolean;
-    /** MLモデルタイプ（lightgbm, xgboost） */
-    hybrid_model_type?: string;
-    /** 複数モデル平均の場合のモデルリスト */
-    hybrid_model_types?: string[];
-
-    // 並列評価設定
-    /** 並列評価を有効化するか */
-    enable_parallel_evaluation?: boolean;
-    /** 最大ワーカー数（Noneの場合はCPUコア数×2） */
-    max_evaluation_workers?: number | null;
-    /** 個体あたりの評価タイムアウト秒数 */
-    evaluation_timeout?: number;
-
-    // 高速化設定
-    /** multi-fidelity 評価を有効化するか */
-    enable_multi_fidelity_evaluation?: boolean;
-    /** coarse 評価で使う期間比率 */
-    multi_fidelity_window_ratio?: number;
-    /** coarse 評価で使う OOS 比率 */
-    multi_fidelity_oos_ratio?: number;
-    /** full 評価へ昇格する候補比率 */
-    multi_fidelity_candidate_ratio?: number;
-    /** full 評価へ昇格する最小候補数 */
-    multi_fidelity_min_candidates?: number;
-
-    /** 早期打ち切りを有効化するか */
-    enable_early_termination?: boolean;
-    /** 許容最大 DD */
-    early_termination_max_drawdown?: number | null;
-    /** 目標最小トレード数 */
-    early_termination_min_trades?: number | null;
-    /** トレード数不足を判定し始める進捗 */
-    early_termination_min_trade_check_progress?: number;
-    /** トレードペース不足の許容係数 */
-    early_termination_trade_pace_tolerance?: number;
-    /** 許容最小期待値 */
-    early_termination_min_expectancy?: number | null;
-    /** 期待値判定に必要な最小トレード数 */
-    early_termination_expectancy_min_trades?: number;
-    /** 期待値不足を判定し始める進捗 */
-    early_termination_expectancy_progress?: number;
+    /** ハイブリッド設定 */
+    hybrid_config?: GAHybridConfig;
   };
 }
 

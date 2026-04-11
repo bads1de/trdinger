@@ -320,7 +320,6 @@ class MomentumIndicators:
         k: int = 14,
         d: int = 3,
         smooth_k: int = 3,
-        d_length: Optional[int] = None,
     ) -> Tuple[pd.Series, pd.Series]:
         """
         ストキャスティクス（Stochastic Oscillator）
@@ -332,15 +331,10 @@ class MomentumIndicators:
             k: %K期間（デフォルト: 14）
             d: %D平滑化期間（デフォルト: 3）
             smooth_k: %K平滑化期間（デフォルト: 3）
-            d_length: d のエイリアス（後方互換性）
 
         Returns:
             Tuple[%K, %D]
         """
-        # d_lengthパラメータが指定された場合の処理（後方互換性）
-        if d_length is not None and d == 3:
-            d = d_length
-
         result = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             k,

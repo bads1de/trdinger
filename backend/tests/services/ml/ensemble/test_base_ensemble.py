@@ -58,7 +58,7 @@ class TestBaseEnsemble:
 
         m1 = MagicMock()
         m2 = MagicMock()
-        ensemble.base_models = [m1, m2]
+        ensemble._base_models_list = [m1, m2]
 
         # 共通ユーティリティの戻り値をモック
         with patch(
@@ -86,16 +86,6 @@ class TestBaseEnsemble:
             importance = ensemble.get_feature_importance()
             assert importance["f1"] == 20.0
             assert importance["f2"] == 30.0
-
-    def test_save_models_legacy_fallback(self, ensemble):
-        """従来形式（レガシー）での保存フォールバック (mock path)"""
-        # 実ファイルパスを使わず、文字列のみを指定
-        base_path = "/mock/path/model"
-        with patch("joblib.dump") as mock_dump:
-            paths = ensemble.save_models(base_path)
-            assert len(paths) == 1
-            assert "legacy" in paths[0]
-            assert mock_dump.called
 
     def test_load_models_failure(self, ensemble):
         """ファイルが見つからない場合の読み込み失敗"""

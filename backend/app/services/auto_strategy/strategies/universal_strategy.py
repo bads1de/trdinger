@@ -12,7 +12,7 @@ from typing import Any, Optional, Tuple, cast
 import pandas as pd
 from backtesting import Strategy
 
-from ..config.ga.nested_configs import resolve_early_termination_settings
+from ..config.ga.nested_configs import EarlyTerminationSettings
 from ..config.helpers import normalize_ml_gate_fields
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import (
@@ -60,18 +60,7 @@ class UniversalStrategy(Strategy):
     ml_predictor = None  # MLフィルター用予測器
     volatility_gate_enabled = False
     volatility_model_path = None
-    ml_filter_enabled = False
-    ml_model_path = None
-    ml_filter_threshold = 0.5  # 旧互換の非推奨パラメータ。現行 gate 判定では未使用。
-    enable_early_termination = False
     early_termination_settings = None
-    early_termination_max_drawdown = None
-    early_termination_min_trades = None
-    early_termination_min_trade_check_progress = 0.5
-    early_termination_trade_pace_tolerance = 0.5
-    early_termination_min_expectancy = None
-    early_termination_expectancy_min_trades = 5
-    early_termination_expectancy_progress = 0.6
 
     @property
     def _sl_price(self) -> float | None:
@@ -180,38 +169,15 @@ class UniversalStrategy(Strategy):
         self.base_timeframe = params.get("timeframe", "1h")
         self.evaluation_start = params.get("evaluation_start")
         self._evaluation_start = self._normalize_evaluation_start(self.evaluation_start)
-        resolved_early_termination_settings = resolve_early_termination_settings(params)
-        if params.get("early_termination_settings") is not None:
-            self.early_termination_settings = resolved_early_termination_settings
+        early_termination_settings = params.get("early_termination_settings")
+        if early_termination_settings is None:
+            self.early_termination_settings = EarlyTerminationSettings()
+        elif isinstance(early_termination_settings, EarlyTerminationSettings):
+            self.early_termination_settings = early_termination_settings
         else:
-            self.early_termination_settings = None
-        early_termination_params = (
-            resolved_early_termination_settings.to_strategy_params()
-        )
-        self.enable_early_termination = bool(
-            early_termination_params["enable_early_termination"]
-        )
-        self.early_termination_max_drawdown = early_termination_params[
-            "early_termination_max_drawdown"
-        ]
-        self.early_termination_min_trades = early_termination_params[
-            "early_termination_min_trades"
-        ]
-        self.early_termination_min_trade_check_progress = float(
-            early_termination_params["early_termination_min_trade_check_progress"]
-        )
-        self.early_termination_trade_pace_tolerance = float(
-            early_termination_params["early_termination_trade_pace_tolerance"]
-        )
-        self.early_termination_min_expectancy = early_termination_params[
-            "early_termination_min_expectancy"
-        ]
-        self.early_termination_expectancy_min_trades = int(
-            early_termination_params["early_termination_expectancy_min_trades"]
-        )
-        self.early_termination_expectancy_progress = float(
-            early_termination_params["early_termination_expectancy_progress"]
-        )
+            self.early_termination_settings = EarlyTerminationSettings.from_source(
+                early_termination_settings
+            )
 
         # 1分足データの取得（1分足シミュレーション用）
         self._minute_data = params.get("minute_data")
@@ -250,14 +216,6 @@ class UniversalStrategy(Strategy):
         ml_gate_fields = normalize_ml_gate_fields(params)
         self.volatility_gate_enabled = bool(ml_gate_fields["volatility_gate_enabled"])
         self.volatility_model_path = ml_gate_fields["volatility_model_path"]
-        self.ml_filter_enabled = bool(ml_gate_fields["ml_filter_enabled"])
-        self.ml_model_path = ml_gate_fields["ml_model_path"]
-        if "ml_filter_threshold" in params:
-            logger.warning(
-                "ml_filter_threshold は非推奨のため無視されます。volatility gate は学習済み cut-off で判定します"
-            )
-        # 旧互換フィールド。volatility gate 化後は参照しない。
-        self.ml_filter_threshold = params.get("ml_filter_threshold", 0.5)
 
         # ベクトル化評価結果のキャッシュ
         self._precomputed_signals = {}

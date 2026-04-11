@@ -10,7 +10,6 @@
  */
 
 import type {
-  FeatureProfile,
   LabelPresetInfo,
   SupportedTimeframe,
   ThresholdMethod,
@@ -61,24 +60,6 @@ export const THRESHOLD_METHOD_DESCRIPTIONS: Record<ThresholdMethod, string> = {
     "動的なボラティリティに基づいて閾値を計算します。市場の変動性に応じた閾値設定が可能です。",
   KBINS_DISCRETIZER:
     "KBinsDiscretizerを使用してデータを3つのビンに分割します。バランスの取れたラベル分布が得られます（推奨）。",
-};
-
-/**
- * 特徴量プロファイル関連の定数（削除予定）
- * 
- * @deprecated 研究目的専用のためプロファイル概念は不要になりました
- * 後方互換性のためのみ残されています
- */
-export const FEATURE_PROFILES: FeatureProfile[] = ["research", "production"];
-export const FEATURE_PROFILE_LABELS: Record<FeatureProfile, string> = {
-  research: "研究用（全特徴量）",
-  production: "本番用（選択された特徴量）",
-};
-export const FEATURE_PROFILE_DESCRIPTIONS: Record<FeatureProfile, string> = {
-  research:
-    "全ての特徴量を使用します。研究・実験用途に適しています。計算時間が長くなる可能性があります。",
-  production:
-    "厳選された特徴量のみを使用します。本番運用に適しています。計算が高速で、過学習のリスクが低減されます。",
 };
 
 /**
@@ -269,13 +250,6 @@ export const LABEL_PRESETS: Record<string, LabelPresetInfo> = {
  * デフォルトのラベル生成プリセット名
  */
 export const DEFAULT_LABEL_PRESET = "4h_4bars";
-
-/**
- * デフォルトの特徴量プロファイル（削除予定）
- * 
- * @deprecated プロファイル概念は不要になりました
- */
-export const DEFAULT_FEATURE_PROFILE: FeatureProfile = "research";
 
 /**
  * プリセットのカテゴリ分け

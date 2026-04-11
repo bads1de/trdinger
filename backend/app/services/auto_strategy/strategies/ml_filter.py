@@ -76,7 +76,6 @@ class MLFilter:
         """
         gate_enabled = bool(
             getattr(self.strategy, "volatility_gate_enabled", False)
-            or getattr(self.strategy, "ml_filter_enabled", False)
         )
         if not gate_enabled:
             return True

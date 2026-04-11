@@ -98,6 +98,11 @@ class TestEvolutionRunner:
             mutation_rate=0.2,
             fitness_sharing={"enable_fitness_sharing": False},
             dynamic_objective_reweighting=False,
+            evaluation_config=SimpleNamespace(
+                enable_multi_fidelity_evaluation=False,
+                multi_fidelity_candidate_ratio=0.25,
+                multi_fidelity_min_candidates=3,
+            ),
         )
 
     def test_run_evolution_basic_flow(
@@ -199,9 +204,11 @@ class TestEvolutionRunner:
             individual_evaluator=mock_evaluator,
         )
         config = SimpleNamespace(
-            enable_multi_fidelity_evaluation=True,
-            multi_fidelity_candidate_ratio=0.5,
-            multi_fidelity_min_candidates=1,
+            evaluation_config=SimpleNamespace(
+                enable_multi_fidelity_evaluation=True,
+                multi_fidelity_candidate_ratio=0.5,
+                multi_fidelity_min_candidates=1,
+            ),
         )
 
         runner._evaluate_population(dummy_population, config)

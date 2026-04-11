@@ -119,5 +119,5 @@ class RecordValidator:
             raise ValueError(f"OHLCVデータのサニタイズに失敗しました: {e}")
 
 
-# 後方互換性のためのエイリアス
+# 別名（data_collection.data_validator との区別用）
 DataValidator = RecordValidator

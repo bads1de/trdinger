@@ -1,7 +1,7 @@
 """
 ML gate 設定ヘルパー関数
 
-volatility gate / ML filter 設定の正規化・解決ヘルパーを提供します。
+volatility gate 設定の正規化・解決ヘルパーを提供します。
 """
 
 from __future__ import annotations
@@ -36,15 +36,10 @@ def _resolve_model_path(*candidates: Any) -> Optional[str]:
 
 
 def resolve_ml_gate_settings(source: Any) -> MLGateSettings:
-    """volatility gate / legacy ML filter 設定を共通形に解決する。"""
-    # フラットフィールドから読み取り
-    gate_enabled = bool(
-        _read_value(source, "volatility_gate_enabled")
-        or _read_value(source, "ml_filter_enabled")
-    )
+    """volatility gate 設定を共通形に解決する。"""
+    gate_enabled = bool(_read_value(source, "volatility_gate_enabled"))
     model_path = _resolve_model_path(
         _read_value(source, "volatility_model_path"),
-        _read_value(source, "ml_model_path"),
     )
 
     # hybrid_configからも読み取り（優先）
@@ -52,22 +47,18 @@ def resolve_ml_gate_settings(source: Any) -> MLGateSettings:
     if hybrid_config is not None:
         gate_enabled = gate_enabled or bool(
             _read_value(hybrid_config, "volatility_gate_enabled")
-            or _read_value(hybrid_config, "ml_filter_enabled")
         )
         model_path = model_path or _resolve_model_path(
             _read_value(hybrid_config, "volatility_model_path"),
-            _read_value(hybrid_config, "ml_model_path"),
         )
 
     return MLGateSettings(enabled=gate_enabled, model_path=model_path)
 
 
 def normalize_ml_gate_fields(source: Any) -> dict[str, Optional[str] | bool]:
-    """互換フィールドを同期済みの辞書へ正規化する。"""
+    """volatility gate 設定を正規化する。"""
     settings = resolve_ml_gate_settings(source)
     return {
         "volatility_gate_enabled": settings.enabled,
-        "ml_filter_enabled": settings.enabled,
         "volatility_model_path": settings.model_path,
-        "ml_model_path": settings.model_path,
     }

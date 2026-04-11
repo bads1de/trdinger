@@ -336,16 +336,6 @@ class TestErrorHandler:
         assert result == "default"
         assert "ML処理中にAPI例外が発生" in caplog.text
 
-    def test_safe_execute_backward_compatibility(self):
-        """後方互換性のテスト（default_value）"""
-
-        def failing_func() -> None:
-            raise ValueError("Error")
-
-        result = ErrorHandler.safe_execute(failing_func, default_value="old_default")
-
-        assert result == "old_default"
-
     @pytest.mark.asyncio
     async def test_safe_execute_async_success(self):
         """safe_execute_async正常系のテスト"""

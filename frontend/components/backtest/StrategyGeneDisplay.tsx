@@ -1,7 +1,7 @@
 /**
  * 戦略遺伝子表示コンポーネント
  *
- * 戦略遺伝子の有効な条件を後方互換性を考慮して表示します。
+ * 戦略遺伝子の有効な条件を表示します。
  */
 
 "use client";
@@ -28,7 +28,6 @@ interface StrategyGene {
     parameters: Record<string, any>;
     enabled: boolean;
   }>;
-  entry_conditions?: ConditionOrGroup[];
   long_entry_conditions?: ConditionOrGroup[];
   short_entry_conditions?: ConditionOrGroup[];
   exit_conditions?: ConditionOrGroup[];
@@ -60,34 +59,8 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
     }));
   };
 
-  // 有効なロング条件を取得（後方互換性を考慮）
-  const getEffectiveLongConditions = (): ConditionOrGroup[] => {
-    if (
-      strategyGene.long_entry_conditions &&
-      strategyGene.long_entry_conditions.length > 0
-    ) {
-      return strategyGene.long_entry_conditions;
-    }
-    return strategyGene.entry_conditions || [];
-  };
-
-  // 有効なショート条件を取得（後方互換性を考慮）
-  const getEffectiveShortConditions = (): ConditionOrGroup[] => {
-    if (
-      strategyGene.short_entry_conditions &&
-      strategyGene.short_entry_conditions.length > 0
-    ) {
-      return strategyGene.short_entry_conditions;
-    }
-    // ロング・ショート分離がされていない場合は、entry_conditionsをショート条件としても使用
-    if (
-      !strategyGene.long_entry_conditions ||
-      strategyGene.long_entry_conditions.length === 0
-    ) {
-      return strategyGene.entry_conditions || [];
-    }
-    return [];
-  };
+  const effectiveLongConditions = strategyGene.long_entry_conditions || [];
+  const effectiveShortConditions = strategyGene.short_entry_conditions || [];
 
   const formatCondition = (condition: ConditionOrGroup): string => {
     if ('conditions' in condition) {
@@ -107,9 +80,6 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
     return strategyGene.tpsl_gene &&
            (strategyGene.tpsl_gene.enabled === undefined || strategyGene.tpsl_gene.enabled === true);
   };
-
-  const effectiveLongConditions = getEffectiveLongConditions();
-  const effectiveShortConditions = getEffectiveShortConditions();
 
   return (
     <div className="space-y-4">
@@ -176,13 +146,6 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
                 <span className="text-green-300 text-xs font-mono uppercase">
                   ロングエントリー条件 ({effectiveLongConditions.length}個)
                 </span>
-                {effectiveLongConditions.length > 0 &&
-                  (!strategyGene.long_entry_conditions ||
-                    strategyGene.long_entry_conditions.length === 0) && (
-                    <span className="ml-2 text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
-                      後方互換
-                    </span>
-                  )}
               </div>
               {effectiveLongConditions.length > 0 ? (
                 <div className="space-y-1">
@@ -207,13 +170,6 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
                 <span className="text-red-300 text-xs font-mono uppercase">
                   ショートエントリー条件 ({effectiveShortConditions.length}個)
                 </span>
-                {effectiveShortConditions.length > 0 &&
-                  (!strategyGene.short_entry_conditions ||
-                    strategyGene.short_entry_conditions.length === 0) && (
-                    <span className="ml-2 text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded">
-                      後方互換
-                    </span>
-                  )}
               </div>
               {effectiveShortConditions.length > 0 ? (
                 <div className="space-y-1">

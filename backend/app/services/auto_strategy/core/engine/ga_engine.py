@@ -7,11 +7,10 @@ DEAPライブラリを使用したGA実装。
 import logging
 import threading
 import time
-from math import isfinite
-from typing import Any, Dict, List, Optional, Tuple, cast
+
+from typing import Any, Dict, List, Optional, Tuple
 
 
-from ..evaluation.evaluation_report import EvaluationReport
 from ..evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
     is_multi_fidelity_enabled,
@@ -24,12 +23,10 @@ from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.services.auto_strategy.genes import StrategyGene
 from app.services.backtest.services.backtest_service import BacktestService
 
 from ..evaluation.individual_evaluator import IndividualEvaluator
 from ..evaluation.parallel_evaluator import ParallelEvaluator
-from ..evaluation.report_persistence import build_report_summary
 from ..fitness.fitness_sharing import FitnessSharing
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner, EvolutionStoppedError
@@ -40,17 +37,11 @@ from .ga_utils import (
     mutate_strategy_gene,
 )
 from .fitness_utils import (
-    extract_primary_fitness_from_result,
     extract_result_fitness,
 )
 from .parameter_tuning_manager import ParameterTuningManager
 from .report_selection import (
-    build_report_rank_key_from_primary_fitness,
     extract_primary_fitness,
-    get_two_stage_best_individual,
-    get_two_stage_rank,
-    get_two_stage_score,
-    is_evaluation_report,
 )
 from .result_processor import ResultProcessor
 
@@ -92,7 +83,6 @@ class GeneticAlgorithmEngine:
         # 分離されたコンポーネント
         self.deap_setup = DEAPSetup()
         self.result_processor = ResultProcessor()
-        self.parameter_tuning_manager: Optional[ParameterTuningManager] = None
 
         # ハイブリッドモードに応じてEvaluatorを選択
         if hybrid_mode:
@@ -112,7 +102,9 @@ class GeneticAlgorithmEngine:
 
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing: Any = None  # setup_deap時に初期化
-        self.parameter_tuning_manager = ParameterTuningManager(self.individual_evaluator)
+        self.parameter_tuning_manager: ParameterTuningManager = ParameterTuningManager(
+            self.individual_evaluator
+        )
 
     def setup_deap(self, config: GAConfig) -> None:
         """
@@ -144,7 +136,9 @@ class GeneticAlgorithmEngine:
             self.fitness_sharing = FitnessSharing(
                 sharing_radius=fitness_sharing_config.get("sharing_radius", 0.1),
                 alpha=fitness_sharing_config.get("sharing_alpha", 1.0),
-                sampling_threshold=fitness_sharing_config.get("sampling_threshold", 200),
+                sampling_threshold=fitness_sharing_config.get(
+                    "sampling_threshold", 200
+                ),
                 sampling_ratio=fitness_sharing_config.get(
                     "sampling_ratio", FitnessSharing.SAMPLING_RATIO
                 ),
@@ -340,7 +334,8 @@ class GeneticAlgorithmEngine:
         Returns:
             ParallelEvaluator: 並列評価器インスタンス、またはNone。
         """
-        if not getattr(config, "enable_parallel_evaluation", False):
+        evaluation_config = getattr(config, "evaluation_config", None)
+        if evaluation_config is None or not getattr(evaluation_config, "enable_parallel", False):
             return None
 
         from ..evaluation.evaluation_worker import (
@@ -374,8 +369,8 @@ class GeneticAlgorithmEngine:
 
         parallel_evaluator = ParallelEvaluator(
             evaluate_func=worker_evaluate_individual,  # トップレベル関数を指定
-            max_workers=getattr(config, "max_evaluation_workers", None),
-            timeout_per_individual=getattr(config, "evaluation_timeout", 300.0),
+            max_workers=getattr(evaluation_config, "max_workers", None),
+            timeout_per_individual=getattr(evaluation_config, "timeout", 300.0),
             worker_initializer=initialize_worker_process,  # トップレベル関数を指定
             worker_initargs=worker_initargs,
             use_process_pool=True,
@@ -468,7 +463,9 @@ class GeneticAlgorithmEngine:
         """
         # 最良個体の取得とデコード
         best_individual, best_gene, best_strategies = (
-            self.result_processor.extract_best_individuals(population, config, halloffame)
+            self.result_processor.extract_best_individuals(
+                population, config, halloffame
+            )
         )
 
         if best_individual is not None and is_multi_fidelity_enabled(config):
@@ -483,8 +480,10 @@ class GeneticAlgorithmEngine:
                 logger.warning("最終候補の full 評価に失敗しました: %s", exc)
 
         best_fitness_value = self._extract_result_best_fitness(best_individual, config)
-        best_evaluation_summary = self.parameter_tuning_manager.build_individual_evaluation_summary(
-            best_individual, config
+        best_evaluation_summary = (
+            self.parameter_tuning_manager.build_individual_evaluation_summary(
+                best_individual, config
+            )
         )
 
         # パラメータチューニング（有効な場合）
@@ -501,12 +500,12 @@ class GeneticAlgorithmEngine:
                 fallback_summary=best_evaluation_summary,
             )
         elif best_evaluation_summary is None:
-            best_evaluation_summary = self.parameter_tuning_manager.build_individual_evaluation_summary(
-                best_gene,
-                config,
-                force_robustness=bool(
-                    config.two_stage_selection_config.enabled
-                ),
+            best_evaluation_summary = (
+                self.parameter_tuning_manager.build_individual_evaluation_summary(
+                    best_gene,
+                    config,
+                    force_robustness=bool(config.two_stage_selection_config.enabled),
+                )
             )
 
         execution_time = time.time() - start_time
@@ -524,7 +523,9 @@ class GeneticAlgorithmEngine:
         }
 
         if not config.enable_multi_objective:
-            ranked_population = self.result_processor.rank_population_for_persistence(population)
+            ranked_population = self.result_processor.rank_population_for_persistence(
+                population
+            )
             persisted_population = ranked_population[:100]
             result["all_strategies"] = persisted_population
             result["fitness_scores"] = [
@@ -544,7 +545,6 @@ class GeneticAlgorithmEngine:
             result["objectives"] = config.objectives
 
         return result
-
 
     def stop_evolution(self):
         """進化を停止します。"""
@@ -585,7 +585,6 @@ class GeneticAlgorithmEngine:
             # 遺伝子生成はGAの根幹部分であり、失敗した場合は例外をスローして処理を停止するのが安全
             raise
 
-
     def _extract_result_best_fitness(
         self, best_individual: Any, config: GAConfig
     ) -> Any:
@@ -595,7 +594,6 @@ class GeneticAlgorithmEngine:
             enable_multi_objective=config.enable_multi_objective,
         )
 
-
     def _collect_population_evaluation_summaries(
         self,
         population: List[Any],
@@ -604,7 +602,9 @@ class GeneticAlgorithmEngine:
         """保存対象個体の評価 summary を収集する。"""
         summaries: Dict[str, Dict[str, Any]] = {}
         for individual in population:
-            summary = self.parameter_tuning_manager.build_individual_evaluation_summary(individual, config)
+            summary = self.parameter_tuning_manager.build_individual_evaluation_summary(
+                individual, config
+            )
             if not summary:
                 continue
             strategy_key = self.result_processor.get_strategy_result_key(individual)

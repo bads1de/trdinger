@@ -7,6 +7,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
 from app.services.auto_strategy.core.evaluation.parallel_evaluator import ParallelEvaluator
 from app.services.auto_strategy.core.evaluation.evaluation_worker import (
     initialize_worker_process,
@@ -45,8 +46,10 @@ def test_parallel_execution():
     config = GAConfig(
         population_size=4,
         generations=1,
-        enable_parallel_evaluation=True,
-        max_evaluation_workers=2,
+        evaluation_config=EvaluationConfig(
+            enable_parallel=True,
+            max_workers=2,
+        ),
     )
 
     # DEAPセットアップ

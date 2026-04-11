@@ -31,7 +31,6 @@ class DataProcessor:
     統合データ処理クラス
 
     transformers, pipelines, validatorsモジュールを統合した高レベルAPIを提供。
-    既存のAPIとの後方互換性を維持。
     """
 
     def __init__(self):
@@ -224,5 +223,5 @@ class DataProcessor:
         return result_df
 
 
-# グローバルインスタンス（後方互換性維持）
+# グローバルインスタンス
 data_processor = DataProcessor()

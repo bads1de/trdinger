@@ -16,6 +16,8 @@ from app.services.ml.feature_selection.feature_selector import (
     FeatureSelector,
     FeatureSelectionConfig,
     SelectionMethod,
+)
+from app.services.ml.feature_selection.strategies import (
     VarianceStrategy,
     UnivariateStrategy,
     LassoStrategy,
@@ -24,7 +26,6 @@ from app.services.ml.feature_selection.feature_selector import (
     ShadowFeatureStrategy,
     StagedStrategy,
     RFECVStrategy,
-    create_feature_selector,
 )
 
 
@@ -417,13 +418,6 @@ class TestEdgeCases:
 
 class TestBackwardCompatibility:
     """後方互換性のテスト"""
-
-    def test_create_feature_selector_factory(self):
-        """ファクトリー関数の動作確認"""
-        selector = create_feature_selector(method="variance")
-
-        assert isinstance(selector, FeatureSelector)
-        assert selector.method == "variance"
 
     def test_selection_details_available(self):
         """選択詳細が取得可能"""

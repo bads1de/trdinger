@@ -150,11 +150,13 @@ class BybitFundingRateService(BybitService):
         repository: FundingRateRepository,
     ) -> int:
         """
-        ファンディングレートデータをデータベースに保存（内部メソッド）
+        旧テスト/呼び出し元向けの後方互換保存メソッド。
 
-        注意: このメソッドは後方互換性のために残されています。
-        新しいコードでは基底クラスの_save_data_to_databaseを使用してください。
+        既存の汎用保存処理へ委譲しつつ、従来のメソッド名を維持します。
         """
         return await self._save_data_to_database(
-            funding_history, symbol, repository, self.config
+            funding_history,
+            symbol,
+            repository,
+            self.config,
         )

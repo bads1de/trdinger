@@ -134,7 +134,6 @@ class ErrorHandler:
     def safe_execute(
         func: Callable[..., Any],
         default_return: Optional[Any] = None,
-        default_value: Optional[Any] = None,  # 後方互換性のため
         error_message: str = "処理中にエラーが発生しました",
         log_level: str = "error",
         is_api_call: bool = False,
@@ -144,13 +143,9 @@ class ErrorHandler:
         """
         関数を安全に実行し、例外を捕捉して適切に処理する
 
-        APIErrorHandler.handle_api_exception と MLErrorHandler.safe_execute の
-        共通部分を統合した統一安全実行機能。
-
         Args:
             func: 実行する関数
             default_return: エラー時のデフォルト値
-            default_value: エラー時のデフォルト値（後方互換性のため）
             error_message: エラーメッセージ
             log_level: ログレベル
             is_api_call: API呼び出しかどうか
@@ -163,9 +158,6 @@ class ErrorHandler:
         Raises:
             HTTPException: API呼び出し時のエラー
         """
-        # 後方互換性の処理
-        if default_value is not None and default_return is None:
-            default_return = default_value
         try:
             return func()
         except HTTPException as e:

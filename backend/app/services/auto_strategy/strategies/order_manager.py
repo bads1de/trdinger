@@ -14,7 +14,6 @@ import pandas as pd
 from ..genes.entry import EntryGene
 from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.pending_order import PendingOrder
-from .runtime_state import resolve_runtime_state
 
 logger = logging.getLogger(__name__)
 
@@ -163,12 +162,50 @@ class OrderManager:
         else:
             strategy.sell(size=order.size)
 
-        resolve_runtime_state(strategy).set_open_position(
+        self._sync_open_position_state(
             entry_price=fill_price,
             sl_price=order.sl_price,
             tp_price=order.tp_price,
             direction=order.direction,
         )
+
+    def _sync_open_position_state(
+        self,
+        *,
+        entry_price: float,
+        sl_price: Optional[float],
+        tp_price: Optional[float],
+        direction: float,
+    ) -> None:
+        """新旧の戦略状態表現を同時に更新する。"""
+        strategy = self.strategy
+        if strategy is None:
+            return
+
+        runtime_state = getattr(strategy, "runtime_state", None)
+        if runtime_state is not None and hasattr(runtime_state, "set_open_position"):
+            try:
+                runtime_state.set_open_position(
+                    entry_price=entry_price,
+                    sl_price=sl_price,
+                    tp_price=tp_price,
+                    direction=direction,
+                )
+            except Exception as exc:
+                logger.debug("runtime_state の更新に失敗しました: %s", exc)
+
+        # 旧 UniversalStrategy 実装や MagicMock 互換のため、legacy 属性も更新する。
+        legacy_state_updates = {
+            "_entry_price": entry_price,
+            "_sl_price": sl_price,
+            "_tp_price": tp_price,
+            "_position_direction": direction,
+        }
+        for attr_name, value in legacy_state_updates.items():
+            try:
+                setattr(strategy, attr_name, value)
+            except Exception as exc:
+                logger.debug("legacy 属性 %s の更新に失敗しました: %s", attr_name, exc)
 
     def _get_bar_duration(self) -> Optional[pd.Timedelta]:
         """現在のタイムフレームのバー期間を取得"""

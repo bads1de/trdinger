@@ -34,7 +34,6 @@ class TestConfigValidator:
         config.crossover_rate = 0.8
         config.mutation_rate = 0.1
         config.elite_size = 5
-        config.oos_split_ratio = 0.3
 
         config.fitness_weights = {
             "total_return": 0.4,
@@ -237,13 +236,20 @@ class TestConfigValidator:
 
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
-        assert any("early_termination_max_drawdown" in e for e in errors)
+        assert any(
+            "evaluation_config.early_termination_settings.max_drawdown" in e
+            for e in errors
+        )
 
         ga_config.evaluation_config.early_termination_settings.max_drawdown = 0.2
         ga_config.evaluation_config.early_termination_settings.expectancy_min_trades = 0
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
-        assert any("early_termination_expectancy_min_trades" in e for e in errors)
+        assert any(
+            "evaluation_config.early_termination_settings.expectancy_min_trades"
+            in e
+            for e in errors
+        )
 
     def test_validate_ga_config_two_stage_selection(self, ga_config):
         ga_config.two_stage_selection_config.elite_count = 0
@@ -279,7 +285,9 @@ class TestConfigValidator:
         ga_config.robustness_config.aggregate_method = "unsupported"
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
-        assert any("robustness_aggregate_method" in e for e in errors)
+        assert any(
+            "robustness_config.aggregate_method" in e for e in errors
+        )
 
     def test_validate_robustness_window_supports_z_suffix(self):
         errors = ConfigValidator._validate_robustness_window(

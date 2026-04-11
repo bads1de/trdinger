@@ -37,6 +37,9 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from app.services.auto_strategy.config.ga import GAConfig  # noqa: E402
+from app.services.auto_strategy.config.ga.nested_configs import (  # noqa: E402
+    EvaluationConfig,
+)
 from app.services.auto_strategy.core import GeneticAlgorithmEngine  # noqa: E402
 from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402
     RandomGeneGenerator,
@@ -220,7 +223,7 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         crossover_rate=args.crossover_rate,
         mutation_rate=args.mutation_rate,
         elite_size=args.elite_size,
-        enable_parallel_evaluation=not args.no_parallel,
+        evaluation_config=EvaluationConfig(enable_parallel=not args.no_parallel),
         log_level="DEBUG" if args.verbose else "INFO",
         fallback_start_date=args.start_date,
         fallback_end_date=args.end_date,
@@ -624,6 +627,5 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-
 
 

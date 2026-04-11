@@ -119,7 +119,6 @@ class TestHybridIndividualEvaluator:
 
         params = run_config["strategy_config"]["parameters"]
         assert params["volatility_gate_enabled"] is True
-        assert params["ml_filter_enabled"] is True
         assert params["ml_predictor"] is runtime_predictor
 
     def test_fetch_ohlcv_data_preserves_non_ohlcv_columns(self, evaluator):

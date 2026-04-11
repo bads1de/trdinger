@@ -25,14 +25,6 @@ export type ThresholdMethod =
   | "KBINS_DISCRETIZER";
 
 /**
- * 特徴量プロファイル（削除予定）
- * 研究目的専用のためプロファイル概念は不要になりました
- *
- * @deprecated この型は後方互換性のためのみ残されています
- */
-export type FeatureProfile = "research" | "production";
-
-/**
  * サポートされる時間足
  *
  * @see backend/app/utils/label_generation/presets.py:SUPPORTED_TIMEFRAMES
@@ -148,16 +140,6 @@ export interface FeatureEngineeringConfig {
    * @default null
    */
   featureAllowlist: string[] | null;
-
-  /**
-   * 特徴量プロファイル（互換性のため維持）
-   */
-  profile?: string;
-
-  /**
-   * カスタムallowlist（互換性のため維持）
-   */
-  customAllowlist?: string[] | null;
 }
 
 /**

@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 from fastapi import BackgroundTasks
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
 from app.services.auto_strategy.services.auto_strategy_service import (
     AutoStrategyService,
 )
@@ -100,7 +101,7 @@ class TestE2EFlow:
             max_indicators=2,
             elite_size=1,
             fitness_sharing={"enable_fitness_sharing": False},
-            enable_parallel_evaluation=False,
+            evaluation_config=EvaluationConfig(enable_parallel=False),
         )
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
