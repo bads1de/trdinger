@@ -23,9 +23,13 @@ logger = logging.getLogger(__name__)
 
 class EnsembleTrainer(BaseMLTrainer):
     """
-    アンサンブル学習トレーナー
+    複数の機械学習モデルを組み合わせたアンサンブル学習を統括するトレーナーです。
 
-    BaseMLTrainerを継承し、スタッキングアンサンブル学習機能を提供します。
+    主な特徴:
+    - スタッキング（Stacking）: 複数のベースモデル（Layer 0）の予測値をメタモデル（Layer 1）の入力として学習し、予測精度を向上させます。
+    - 投票（Voting）: 複数のモデルの予測値を平均または多数決で統合します。
+    - 単一モデル対応: 設定により単一モデル（LightGBMのみ等）のトレーナーとしても動作可能です。
+    - メタラベリング: 基本的な予測モデルに加えて、その予測が正しいか（確信度）を判定する第2のモデルを統合可能です。
     """
 
     def __init__(
@@ -33,13 +37,14 @@ class EnsembleTrainer(BaseMLTrainer):
         ensemble_config: Dict[str, Any],
     ):
         """
-        初期化（統一トレーナー: 単一モデル・アンサンブル両対応）
+        アンサンブルトレーナーを初期化します。
 
         Args:
-            ensemble_config: アンサンブル設定
-                - models: モデルのリスト (例: ["lightgbm"] or ["lightgbm", "xgboost"])
-                - model_type: 単一モデルタイプ (例: "lightgbm")
-                - method: アンサンブル手法 (デフォルト: "stacking")
+            ensemble_config (Dict[str, Any]): アンサンブルの構成設定。
+                - "models" (List[str]): 使用するベースモデル名のリスト（例: ["lightgbm", "xgboost"]）。
+                - "model_type" (str, optional): 単一モデルとして動作させる場合のアルゴリズム名。
+                - "method" (str): アンサンブル手法。"stacking" または "voting"。デフォルトは "stacking"。
+                - "strict_error_mode" (bool): Trueの場合、予測失敗時に例外を送出します。
         """
         super().__init__()
 
@@ -70,7 +75,20 @@ class EnsembleTrainer(BaseMLTrainer):
         )
 
     def predict_proba(self, features_df: pd.DataFrame) -> np.ndarray:
-        """アンサンブルの確率予測を返す。"""
+        """
+        アンサンブルモデルを使用して、各クラスに属する確率を予測します。
+
+        スタッキングの場合、ベースモデルの予測値がメタモデルに渡され、最終的な確率が算出されます。
+
+        Args:
+            features_df (pd.DataFrame): 予測に使用する特徴量。
+
+        Returns:
+            np.ndarray: 各行のクラス確率を含む2次元配列（行数 x クラス数）。
+
+        Raises:
+            ModelError: モデルが学習されていない場合、または予測中に致命的なエラーが発生した場合。
+        """
         if self.ensemble_model is None or not getattr(
             self.ensemble_model, "is_fitted", False
         ):
@@ -90,13 +108,17 @@ class EnsembleTrainer(BaseMLTrainer):
         self, training_params: Dict[str, Any]
     ) -> Dict[str, Dict[str, Any]]:
         """
-        最適化されたパラメータを各モデル・手法別に分離
+        ハイパーパラメータ最適化（Optuna等）によって得られた平坦なパラメータ辞書を、
+        各ベースモデルおよびメタモデル（スタッキング）用の構造化された辞書に分離します。
 
         Args:
-            training_params: 最適化されたパラメータを含む学習パラメータ
+            training_params (Dict[str, Any]): 最適化された全パラメータを含む辞書。
+                プレフィックス（"lgb_", "xgb_", "stacking_"等）によって分類されます。
 
         Returns:
-            分離されたパラメータ辞書
+            Dict[str, Dict[str, Any]]: 構造化されたパラメータ辞書。
+                - "base_models": 各アルゴリズム（lightgbm, xgboost等）のパラメータ。
+                - "stacking": メタモデルやスタッキング自体の設定。
         """
         optimized_params: Dict[str, Any] = {
             "base_models": {"lightgbm": {}, "xgboost": {}},

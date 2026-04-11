@@ -47,13 +47,15 @@ class OrderManager:
     def check_pending_order_fills(
         self, minute_data: pd.DataFrame, current_bar_time, current_bar_index: int
     ) -> None:
-        """
-        保留注文の約定をチェック
+        """保留注文の約定をチェックする。
+
+        現在のバーの期間内に保留注文が約定する条件を満たしているかを確認し、
+        約定した場合は注文を実行します。1バーで1注文のみ約定可能です。
 
         Args:
-            minute_data: 1分足データ
-            current_bar_time: 現在のバーの開始時刻
-            current_bar_index: 現在のバーインデックス
+            minute_data: 1分足データ。約定価格の判定に使用。
+            current_bar_time: 現在のバーの開始時刻。
+            current_bar_index: 現在のバーインデックス。
         """
         if not self.pending_orders or minute_data is None:
             return

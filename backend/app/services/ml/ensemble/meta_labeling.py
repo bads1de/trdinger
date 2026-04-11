@@ -25,6 +25,19 @@ class MetaLabelingService:
         use_feature_selection: bool = True,
         feature_selection_params: Optional[Dict[str, Any]] = None,
     ):
+        """メタラベリングサービスを初期化する。
+
+        メタラベリングは、一次モデル（Primary Model）の予測結果を入力として、
+        その予測が正解（収益につながる）かどうかを判定する二次モデル（Meta Model）
+        を構築する手法です。
+
+        Args:
+            model_type: 使用するメタモデルの種類（"lightgbm", "randomforest"）。
+            base_model_names: 一次モデル名のリスト。特徴量計算に使用。
+            model_params: メタモデルのハイパーパラメータ。
+            use_feature_selection: 特徴量選択を有効にするかどうか。
+            feature_selection_params: 特徴量選択のパラメータ。
+        """
         self.model_type = model_type
         self.model: Any = None
         self.is_trained = False
@@ -42,8 +55,17 @@ class MetaLabelingService:
     def _add_base_model_statistics(
         self, X_meta: pd.DataFrame, base_probs_filtered: pd.DataFrame
     ) -> pd.DataFrame:
-        """
-        ベースモデルの予測確率から統計量を計算してメタ特徴量に追加
+        """ベースモデルの予測確率から統計量を計算してメタ特徴量に追加する。
+
+        複数の一次モデルの予測確率から、平均、最小、最大、標準偏差などの
+        統計量を計算し、メタモデルの特徴量として追加します。
+
+        Args:
+            X_meta: 現在のメタ特徴量DataFrame。
+            base_probs_filtered: フィルタリングされたベースモデルの予測確率DataFrame。
+
+        Returns:
+            pd.DataFrame: 統計量が追加されたメタ特徴量DataFrame。
         """
         if base_probs_filtered.empty:
             return X_meta

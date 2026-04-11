@@ -94,8 +94,15 @@ def _process_events_numba(
 
 class TripleBarrier:
     """
-    金融データのラベリングのためのトリプルバリア法。
-    Marcos Lopez de Pradoの「金融機械学習の進歩」に基づいています。
+    金融機械学習における「トリプルバリア法」を用いて、価格データにラベルを付与するクラスです。
+    Marcos Lopez de Prado の「Advances in Financial Machine Learning」に基づいています。
+
+    この手法は、以下の3つの「バリア（壁）」のいずれかに価格が最初に接触したタイミングでラベルを決定します：
+    1. **利食いバリア (Upper Barrier)**: 価格が上方に一定距離動いた場合に接触。ラベル +1（買い）またはリターンを付与。
+    2. **損切りバリア (Lower Barrier)**: 価格が下方に一定距離動いた場合に接触。ラベル -1（売り）またはリターンを付与。
+    3. **時間制限バリア (Vertical Barrier)**: 一定時間経過しても上下のバリアに接触しなかった場合に接触。その時点のリターンを付与。
+
+    これにより、単純な固定期間リターンよりも、実際の取引戦略（TP/SLを設定した注文）に近い形での学習が可能になります。
     """
 
     def __init__(
@@ -106,11 +113,13 @@ class TripleBarrier:
         num_threads: int = 1,
     ):
         """
+        TripleBarrierを初期化します。
+
         Args:
-            pt (float): 利食い（Profit Taking）の乗数。
-            sl (float): 損切り（Stop Loss）の乗数。
-            min_ret (float): ラベルと見なされるために必要な最小リターン。
-            num_threads (int): 並列処理のスレッド数（簡易版では使用されません）。
+            pt (float): 利食い（Profit Taking）の幅を決定する乗数。
+            sl (float): 損切り（Stop Loss）の幅を決定する乗数。
+            min_ret (float): ラベルとして有効と見なすための最小リターン。これ以下の変動は 0 (No Trade) とされます。
+            num_threads (int): 並列処理のスレッド数。
         """
         self.pt = pt
         self.sl = sl
@@ -127,7 +136,26 @@ class TripleBarrier:
         vertical_barrier_times: Optional[pd.Series] = None,
         side: Optional[pd.Series] = None,
     ) -> pd.DataFrame:
-        """バリア接触時刻を見つける（Numba完全ベクトル化バージョン）"""
+        """
+        指定されたイベント（エントリー候補点）に対して、各バリアの接触時刻とリターンを特定します。
+
+        このメソッドは Numba により高速化されており、大規模な時系列データに対しても高速に動作します。
+
+        Args:
+            close (pd.Series): 市場の終値データ（DatetimeIndex）。
+            t_events (pd.DatetimeIndex): ラベル付けの対象となる時刻（エントリー候補点）のリスト。
+            pt_sl (List[float]): 利食い・損切り幅のリスト（通常は `[pt, sl]`。本クラスでは `self.pt`, `self.sl` が優先されます）。
+            target (pd.Series): 各時刻のボラティリティ等に基づく動的なバリア幅。
+            min_ret (float): ラベル付与に必要な最小リターン閾値。
+            vertical_barrier_times (Optional[pd.Series]): 各イベントに対する時間制限バリア（決済期限）の時刻。
+            side (Optional[pd.Series]): 各イベントの方向（1: Longのみ、-1: Shortのみ、None: 両方）。
+
+        Returns:
+            pd.DataFrame: 発生したイベント情報のDataFrame。
+                - "t1" (datetime): 最初にバリアに接触した時刻。
+                - "trgt" (float): 使用されたバリア幅（ターゲット）。
+                - "side" (int): 接触したバリアの種類（1: 利食い, 2: 損切り, 3: 時間制限）。
+        """
         # ターゲットのフィルタリング
         target = target.loc[t_events]
         target = target[target > min_ret]

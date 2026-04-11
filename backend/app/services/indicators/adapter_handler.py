@@ -22,14 +22,16 @@ class AdapterHandler:
     アダプターハンドラークラス
 
     アダプター関数を使用したインジケーター計算を管理します。
+    pandas_taやTA-Libなどの外部ライブラリの関数を呼び出すための
+    アダプター機能を提供します。
     """
 
     def __init__(self, validator: IndicatorValidator):
         """
-        初期化
+        AdapterHandlerを初期化します。
 
         Args:
-            validator: インジケーターバリデーター
+            validator: インジケーターバリデーター（列名解決や結果検証に使用）
         """
         self.validator = validator
 
@@ -43,14 +45,21 @@ class AdapterHandler:
         """
         アダプター関数を使用した指標計算
 
+        外部ライブラリ（pandas_ta等）のアダプター関数を呼び出して
+        インジケーターを計算します。パラメータのマッピング、データの準備、
+        関数の呼び出し、結果の整列・変換を行います。
+
         Args:
-            df: データフレーム
-            indicator_type: 指標タイプ
-            params: パラメータ
-            config: インジケーター設定
+            df: データフレーム（OHLCVデータを含む）
+            indicator_type: インジケータータイプ（例: 'sma', 'rsi'）
+            params: インジケーターパラメータ（例: {'length': 20}）
+            config: インジケーター設定（アダプター関数、パラメータマップ等を含む）
 
         Returns:
-            計算結果
+            Any: 計算結果（numpy配列、タプル等）
+
+        Raises:
+            ValueError: アダプター関数が設定されていない場合
         """
         if not config.adapter_function:
             raise ValueError(
@@ -75,12 +84,16 @@ class AdapterHandler:
         """
         アダプター関数に渡すデータを準備
 
+        インジケーター設定のrequired_dataに基づいて、
+        DataFrameから必要な列（open、high、low、close、volume等）を抽出します。
+
         Args:
-            df: データフレーム
-            config: インジケーター設定
+            df: データフレーム（OHLCVデータを含む）
+            config: インジケーター設定（required_dataを含む）
 
         Returns:
-            準備されたデータ辞書
+            Dict[str, Union[pd.Series, pd.DataFrame]]: 準備されたデータ辞書
+                                                        キーは列名、値はSeriesまたはDataFrame
         """
         standard_keys = ["open", "high", "low", "close", "volume"]
         required_data: Dict[str, Union[pd.Series, pd.DataFrame]] = {}
@@ -116,13 +129,16 @@ class AdapterHandler:
         """
         アダプター関数のパラメータをマッピング
 
+        パラメータを正規化し、param_mapに基づいてデータ列をパラメータにマッピングします。
+
         Args:
-            params: パラメータ
-            config: インジケーター設定
-            required_data: 必要なデータ
+            params: ユーザー指定のパラメータ
+            config: インジケーター設定（param_mapを含む）
+            required_data: 必要なデータ辞書
 
         Returns:
-            (マッピングされたパラメータ, 必要なデータ) のタプル
+            Tuple[Dict[str, Any], Dict[str, Union[pd.Series, pd.DataFrame]]]:
+                (マッピングされたパラメータ, 必要なデータ) のタプル
         """
         converted_params = config.normalize_params(params)
         mapped_params = converted_params.copy()
@@ -144,14 +160,17 @@ class AdapterHandler:
         """
         アダプター関数を呼び出し
 
+        関数シグネチャに基づいてパラメータを割り当て、アダプター関数を実行し、
+        結果を整列・変換します。実行に失敗した場合はNaN結果を返します。
+
         Args:
-            adapter_function: アダプター関数
-            all_args: すべての引数
-            indicator_type: 指標タイプ
+            adapter_function: アダプター関数（callable）
+            all_args: すべての引数（パラメータとデータの結合）
+            indicator_type: インジケータータイプ（ログ用）
             config: インジケーター設定
 
         Returns:
-            計算結果
+            Any: 整列・変換された計算結果
         """
         sig = inspect.signature(adapter_function)
 
@@ -203,14 +222,24 @@ class AdapterHandler:
         """
         パラメータを割り当て
 
+        関数シグネチャのパラメータ名に基づいて、引数を割り当てます。
+        共通のパラメータ名（data、close、length等）に対して柔軟なマッピングを行います。
+
+        マッピングの優先順位:
+        1. 明示的にall_argsで指定されたパラメータ
+        2. パラメータ名の大文字小文字を無視した一致
+        3. デフォルト値（param.defaultが設定されている場合）
+        4. 一致するパラメータがない場合、そのパラメータはスキップされる
+
         Args:
             sig: 関数シグネチャ
             all_args: すべての引数
-            series_data: シリーズデータ
+            series_data: シリーズデータ（DataFrame、Series）
             scalar_params: スカラーパラメータ
 
         Returns:
-            割り当てられたパラメータ
+            Dict[str, Any]: 関数に渡す割り当てられたパラメータ。
+                マッピングできなかったパラメータは含まれません。
         """
         assigned_params: Dict[str, Any] = {}
 
@@ -267,14 +296,16 @@ class AdapterHandler:
         """
         アダプター関数を実行
 
+        キーワード引数での呼び出しを優先し、失敗した場合は位置引数で呼び出します。
+
         Args:
-            adapter_function: アダプター関数
+            adapter_function: アダプター関数（callable）
             assigned_params: 割り当てられたパラメータ
-            indicator_type: 指標タイプ
-            all_args: すべての引数
+            indicator_type: インジケータータイプ（ログ用）
+            all_args: すべての引数（フォールバック用）
 
         Returns:
-            実行結果
+            Any: 実行結果（失敗時はNone）
         """
         sig = inspect.signature(adapter_function)
         try:
@@ -298,12 +329,15 @@ class AdapterHandler:
         """
         入力 index に合わせて adapter の結果を再整列する
 
+        アダプター関数の結果のインデックスを入力DataFrameのインデックスに合わせます。
+        Series、DataFrame、タプルに対応します。
+
         Args:
-            result: 計算結果
-            reference_index: 参照インデックス
+            result: 計算結果（Series、DataFrame、タプル等）
+            reference_index: 参照インデックス（入力DataFrameのインデックス）
 
         Returns:
-        整列された結果
+            Any: 整列された結果（インデックスが揃えられたSeries/DataFrame）
         """
         if reference_index is None:
             return result
@@ -329,12 +363,15 @@ class AdapterHandler:
         """
         Series/DataFrame を入力 index に位置またはラベルで整列する
 
+        インデックスが一致する場合はそのまま返し、長さが同じ場合はインデックスを置換し、
+        位置インデックス（RangeIndex等）の場合はラベルにマッピングしてreindexします。
+
         Args:
-            result: 結果
+            result: 結果（SeriesまたはDataFrame）
             reference_index: 参照インデックス
 
         Returns:
-            整列された結果
+            Union[pd.Series, pd.DataFrame]: 整列された結果
         """
         if result.index.equals(reference_index):
             return result
@@ -369,12 +406,14 @@ class AdapterHandler:
         """
         RangeIndex などの位置 index を参照 index のラベルへ写像する
 
+        整数型のインデックスを位置として扱い、参照インデックスの対応するラベルに変換します。
+
         Args:
-            result_index: 結果インデックス
-            reference_index: 参照インデックス
+            result_index: 結果インデックス（整数型の位置インデックス）
+            reference_index: 参照インデックス（ラベル付き）
 
         Returns:
-            写像されたインデックス、またはNone
+            Optional[pd.Index]: 写像されたインデックス、または写像不可能な場合はNone
         """
         if len(result_index) == 0 or len(reference_index) == 0:
             return None
@@ -395,12 +434,16 @@ class AdapterHandler:
         """
         アダプター結果を変換
 
+        pandasのSeries/DataFrameをnumpy配列に変換します。
+        result_typeに基づいてDataFrameの複数列をタプルに変換するか、
+        最初の列のみを返すかを決定します。
+
         Args:
-            result: 計算結果
-            config: インジケーター設定
+            result: 計算結果（Series、DataFrame、タプル等）
+            config: インジケーター設定（result_typeを含む）
 
         Returns:
-            変換された結果
+            Any: 変換された結果（numpy配列、タプル等）
         """
         if isinstance(result, pd.Series):
             return result.to_numpy()

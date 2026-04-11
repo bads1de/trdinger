@@ -24,10 +24,18 @@ def evaluate_model_predictions(
     y_pred: np.ndarray,
     y_pred_proba: Optional[np.ndarray] = None,
 ) -> Dict[str, Any]:
-    """評価処理の共通ラッパー。
+    """モデル予測の評価メトリクスを計算する共通ラッパー。
 
-    旧テストや一部の呼び出し側がモジュール関数として patch しているため、
-    互換性を保つ目的で公開しておく。
+    真のラベルと予測値から、包括的な評価メトリクス（精度、QLike、
+    シャープレシオなど）を計算します。
+
+    Args:
+        y_true: 真のラベル（時系列インデックス付き）。
+        y_pred: モデルの予測値（numpy配列）。
+        y_pred_proba: 予測確率（分類タスクの場合）。指定されない場合はNone。
+
+    Returns:
+        Dict[str, Any]: 計算された評価メトリクスを含む辞書。
     """
     return metrics_collector.calculate_comprehensive_metrics(
         y_true, y_pred, y_pred_proba
@@ -103,9 +111,22 @@ class BaseEnsemble(ABC):
         """
 
     def _create_base_model(
-        self, model_type: str, model_params: Optional[Dict[str, Any]] = None
+        self,
+        model_type: str,
+        model_params: Optional[Dict[str, Any]] = None,
     ) -> Any:
-        """ベースモデルを作成"""
+        """ベースモデルを作成する。
+
+        指定されたモデルタイプとパラメータから、機械学習モデルのインスタンスを生成します。
+        学習フローの制御パラメータは自動的に除外されます。
+
+        Args:
+            model_type: モデルの種類（"lightgbm", "randomforest", "gradientboosting"など）。
+            model_params: モデルのハイパーパラメータ（任意）。
+
+        Returns:
+            Any: 作成されたモデルインスタンス。
+        """
         mt = model_type.lower()
         params = {k: v for k, v in (model_params or {}).items() if v is not None}
         ml_training = ml_config_manager.config.training
@@ -291,7 +312,17 @@ class BaseEnsemble(ABC):
         return {}
 
     def save_models(self, base_path: str) -> List[str]:
-        """アンサンブルモデルを保存"""
+        """アンサンブルモデルをファイルに保存する。
+
+        学習済みのアンサンブルモデル（ベースモデル、メタモデル、設定など）を
+        シリアライズして指定されたパスに保存します。
+
+        Args:
+            base_path: 保存ファイルのベースパス（拡張子は自動的に付加される）。
+
+        Returns:
+            List[str]: 保存されたファイルパスのリスト。
+        """
         import os
 
         from ..models.model_manager import model_manager
@@ -346,7 +377,17 @@ class BaseEnsemble(ABC):
         raise MLModelError("No valid model data found in ensemble")
 
     def load_models(self, base_path: str) -> bool:
-        """アンサンブルモデルを読み込み"""
+        """ファイルからアンサンブルモデルを読み込む。
+
+        指定されたパスからアンサンブルモデルのファイルを検索し、
+        デシリアライズして現在のインスタンスに復元します。
+
+        Args:
+            base_path: 読み込むモデルファイルのベースパス。
+
+        Returns:
+            bool: 読み込みが成功した場合はTrue、失敗した場合はFalse。
+        """
         import warnings
 
         import joblib

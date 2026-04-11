@@ -13,7 +13,19 @@ def now_iso() -> str:
 
 
 def ensure_response_dict(result: Any) -> Dict[str, Any]:
-    """辞書互換のレスポンス値を dict に正規化する。"""
+    """
+    辞書互換のレスポンス値を dict に正規化する
+
+    Pydanticモデルや辞書など、様々な形式のレスポンス値を
+    標準的な辞書形式に変換します。model_dump()メソッドや
+    dict()メソッドを試行し、失敗した場合は空辞書を返します。
+
+    Args:
+        result: 正規化対象のレスポンス値（辞書、Pydanticモデル等）
+
+    Returns:
+        Dict[str, Any]: 正規化された辞書。変換失敗時は空辞書
+    """
     if isinstance(result, dict):
         return result
 
@@ -36,7 +48,20 @@ def extract_response_data(
     result: Mapping[str, Any],
     key: str = "data",
 ) -> Dict[str, Any]:
-    """レスポンスのネストされた dict ペイロードを取り出す。"""
+    """
+    レスポンスのネストされた dict ペイロードを取り出す
+
+    レスポンス辞書から指定されたキーの値を取り出します。
+    値が辞書でない場合は空辞書を返します。
+
+    Args:
+        result: ペイロードを含むレスポンス辞書
+        key: 取り出すキー名（デフォルト: "data"）
+
+    Returns:
+        Dict[str, Any]: 指定されたキーの辞書値。
+                       キーが存在しないか値が辞書でない場合は空辞書
+    """
     payload = result.get(key)
     return payload if isinstance(payload, dict) else {}
 
@@ -45,15 +70,21 @@ def _build_response(
     success: bool,
     fields: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """
-    レスポンス辞書を構築する内部ヘルパー関数
+    """レスポンス辞書を構築する内部ヘルパー関数。
+
+    成功/失敗フラグと追加フィールドから、標準化されたAPIレスポンス辞書を生成します。
+    Noneや空文字のフィールドは自動的に除外され、タイムスタンプが付加されます。
 
     Args:
-        success: 成功フラグ
-        fields: 追加フィールドの辞書（値がNoneや空文字のものは除外される）
+        success: 成功フラグ。処理が成功した場合はTrue。
+        fields: 追加フィールドの辞書。
+            "data", "message", "error" などのキーを含む。
+            値がNoneまたは空文字("")の場合は除外される。
 
     Returns:
-        構築されたレスポンス辞書
+        Dict[str, Any]: 標準化されたレスポンス辞書。
+            常に "success"（bool）と "timestamp"（ISO形式文字列）を含み、
+            それに加えて有効なfieldsのキーが含まれる。
     """
     response: Dict[str, Any] = {"success": success}
 
@@ -75,14 +106,26 @@ def error_response(
     """
     エラーレスポンスを生成
 
-    message: エラーメッセージ
-    error_code: エラーコード
-    details: エラー詳細
-    context: エラーコンテキスト
-    data: 返却データ（必須フィールドとして追加）
+    標準化されたエラーレスポンス形式で失敗時の情報を返します。
+    successフィールドはFalseに設定されます。
+
+    Args:
+        message: エラーメッセージ（必須）
+        error_code: エラーコード（オプション）
+        details: エラー詳細情報を含む辞書（オプション）
+        context: エラーが発生したコンテキスト情報（オプション）
+        data: 返却データ（オプション、必須フィールドとして追加）
 
     Returns:
-        生成されたエラーレスポンス
+        Dict[str, Any]: 生成されたエラーレスポンス辞書。
+                       以下のキーを含みます：
+                       - success: False
+                       - message: エラーメッセージ
+                       - error_code: エラーコード（指定時）
+                       - details: エラー詳細（指定時）
+                       - context: コンテキスト（指定時）
+                       - data: 返却データ（指定時）
+                       - timestamp: ISO8601形式の現在時刻
     """
     fields = {
         "message": message,
@@ -149,15 +192,35 @@ def api_response(
     status_code: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
-    汎用APIレスポンス生成ユーティリティ。
+    汎用APIレスポンス生成ユーティリティ
 
-    既存コードベースでは呼び出し側が様々なキーワード引数（message, data, error, status_code 等）を
-    使用しているため、互換性を保つために柔軟に受け付けるようにしています。
+    既存コードベースでは呼び出し側が様々なキーワード引数
+    （message, data, error, status_code 等）を使用しているため、
+    互換性を保つために柔軟に受け付けるようにしています。
 
-    Rules:
-    - message はオプション（空文字が許容される）
-    - error が指定された場合は "error" フィールドを含める
-    - status_code が指定された場合は "status_code" フィールドを含める
+    Args:
+        success: 成功フラグ（必須）
+        message: レスポンスメッセージ（オプション、空文字許容）
+        status: ステータス文字列（オプション）
+        data: 返却データ（オプション）
+        error: エラーメッセージ（オプション、指定時は"error"フィールドを含める）
+        status_code: HTTPステータスコード（オプション、指定時は"status_code"フィールドを含める）
+
+    Returns:
+        Dict[str, Any]: 生成されたAPIレスポンス辞書。
+                       以下のキーを含みます：
+                       - success: 成功フラグ
+                       - message: メッセージ（指定時）
+                       - status: ステータス（指定時）
+                       - data: 返却データ（指定時）
+                       - error: エラーメッセージ（指定時）
+                       - status_code: HTTPステータスコード（指定時）
+                       - timestamp: ISO8601形式の現在時刻
+
+    Note:
+        - message はオプション（空文字が許容される）
+        - error が指定された場合は "error" フィールドを含める
+        - status_code が指定された場合は "status_code" フィールドを含める
     """
     fields = {
         "message": message,

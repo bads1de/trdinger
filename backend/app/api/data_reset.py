@@ -29,15 +29,21 @@ async def reset_all_data(
         get_data_management_orchestration_service
     ),
 ) -> Dict[str, Any]:
-    """
-    全てのデータ（OHLCV、ファンディングレート、オープンインタレスト）をリセット
+    """全ての市場データ（OHLCV、FR、OI）をリセットする。
+
+    データベースから全てのOHLCVデータ、ファンディングレート、
+    オープンインタレストデータを削除します。
+
+    Args:
+        db: データベースセッション（依存性注入）。
+        orchestration_service: データ管理オーケストレーションサービス（依存性注入）。
 
     Returns:
-        削除結果の詳細
+        Dict[str, Any]: 削除結果の詳細。成功した場合は削除対象の件数を含む。
     """
 
     async def _reset_all_data():
-        """全てのデータをリセットするためのメインロジックを実行します。"""
+        """全てのデータをリセットするためのメインロジックを実行する。"""
         return await orchestration_service.reset_all_data(db_session=db)
 
     return await ErrorHandler.safe_execute_async(

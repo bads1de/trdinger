@@ -166,7 +166,21 @@ class MLTrainingService(BaseResourceManager):
         ensemble_config: Optional[Dict[str, Any]] = None,
         single_model_config: Optional[Dict[str, Any]] = None,
     ):
-        """初期化"""
+        """
+        MLTrainingServiceを初期化
+
+        機械学習モデルのトレーニングフローを管理するサービスを初期化します。
+        アンサンブル学習または単一モデル学習のいずれかを選択できます。
+
+        Args:
+            trainer_type: トレーナータイプ（"ensemble"または"single"、デフォルト: "ensemble"）
+            ensemble_config: アンサンブル学習の設定辞書（オプション）
+            single_model_config: 単一モデル学習の設定辞書（オプション）
+
+        Note:
+            trainer_typeが"ensemble"の場合、EnsembleTrainerが使用されます。
+            trainer_typeが"single"の場合、VolatilityRegressionTrainerが使用されます。
+        """
         super().__init__()
         self.trainer_type = trainer_type
         self.trainer: Union[VolatilityRegressionTrainer, EnsembleTrainer]
@@ -189,7 +203,29 @@ class MLTrainingService(BaseResourceManager):
         ensemble_config: Optional[Dict[str, Any]],
         single_model_config: Optional[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """設定に基づいてトレーナー設定を作成"""
+        """
+        設定に基づいてトレーナー設定を作成
+
+        指定されたトレーナータイプと設定辞書から、
+        トレーナーに渡すための統合設定辞書を作成します。
+
+        Args:
+            trainer_type: トレーナータイプ（"ensemble"または"single"）
+            ensemble_config: アンサンブル学習の設定辞書（オプション）
+            single_model_config: 単一モデル学習の設定辞書（オプション）
+
+        Returns:
+            Dict[str, Any]: トレーナー設定辞書
+
+        Raises:
+            ValueError: サポートされていないトレーナータイプが指定された場合
+
+        Note:
+            trainer_typeが"ensemble"でensemble_configがNoneの場合、
+            デフォルトのアンサンブル設定が使用されます。
+            trainer_typeが"single"でsingle_model_configがNoneの場合、
+            デフォルトの単一モデル設定が使用されます。
+        """
         if trainer_type == "ensemble":
             if ensemble_config is None:
                 ensemble_config = ml_config_manager.config.ensemble.model_dump()
@@ -217,7 +253,27 @@ class MLTrainingService(BaseResourceManager):
     async def start_training(
         self, config, background_tasks, db: Session
     ) -> Dict[str, Any]:
-        """MLトレーニングをバックグラウンドで開始"""
+        """
+        MLトレーニングをバックグラウンドタスクとして開始します。
+
+        このメソッドはAPIリクエストを受け取り、以下の手順を実行します：
+        1. 入力されたトレーニング設定のバリデーション（`_validate_training_config`）。
+        2. ユニークな `training_id` を生成。
+        3. グローバルトレーニング状態（`training_status`）を更新し、二重起動を防止。
+        4. FastAPIの `BackgroundTasks` に `_train_in_background` を登録。
+
+        Args:
+            config (MLTrainingConfig): トレーニング設定（期間、シンボル、モデル設定等）。
+            background_tasks (BackgroundTasks): FastAPIのバックグラウンドタスク管理オブジェクト。
+            db (Session): データベースセッション。
+
+        Returns:
+            Dict[str, Any]: 実行結果のレスポンス辞書。`training_id` を含みます。
+
+        Raises:
+            ValueError: 既にトレーニングが実行中の場合、または設定が不正な場合。
+            Exception: タスクの登録中に予期しないエラーが発生した場合。
+        """
         try:
             # 設定の検証
             self._validate_training_config(config)
@@ -276,7 +332,27 @@ class MLTrainingService(BaseResourceManager):
             raise
 
     def _validate_training_config(self, config) -> None:
-        """トレーニング設定の検証"""
+        """
+        トレーニング設定の検証
+
+        APIリクエストから受け取ったトレーニング設定の妥当性を検証します。
+        日付範囲、分割比率、パラメータ値などが適切かどうかを確認します。
+
+        Args:
+            config: MLTrainingConfigオブジェクト
+
+        Raises:
+            ValueError: 設定値が不正な場合
+                - 開始日が終了日より後の場合
+                - トレーニング期間が7日未満の場合
+                - train_test_splitが0より大きく1未満でない場合
+                - validation_splitが0より大きく1未満でない場合
+                - prediction_horizonが1未満の場合
+                - cross_validation_foldsが1未満の場合
+                - サポートされていないtask_typeが指定された場合
+                - サポートされていないtarget_kindが指定された場合
+                - volatility_regressionでensemble_configが有効になっている場合
+        """
         date_range = parse_datetime_range_optional(config.start_date, config.end_date)
         if date_range is None:
             raise ValueError("開始日は終了日より前である必要があります")
@@ -310,12 +386,46 @@ class MLTrainingService(BaseResourceManager):
             )
 
     async def get_training_status(self) -> Dict[str, Any]:
-        """トレーニング状態を取得"""
+        """
+        トレーニング状態を取得
+
+        現在のMLトレーニングの状態情報を返します。
+        進捗率、ステータス、開始・終了時刻、エラー情報などを含みます。
+
+        Returns:
+            Dict[str, Any]: トレーニング状態辞書。以下のキーを含みます：
+                - is_training: トレーニング中かどうか
+                - progress: 進捗率（0-100）
+                - status: ステータス文字列（idle, starting, loading_data, training, completed, error, stopped）
+                - message: ステータスメッセージ
+                - start_time: 開始時刻（ISO8601形式）
+                - end_time: 終了時刻（ISO8601形式、完了時のみ）
+                - model_info: モデル情報（完了時のみ）
+                - error: エラーメッセージ（エラー時のみ）
+                - training_id: トレーニングID
+                - task_id: タスクID
+        """
         with training_status_lock:
             return dict(training_status)
 
     async def get_model_info(self) -> Dict[str, Any]:
-        """現在のモデル情報を取得"""
+        """
+        現在のモデル情報を取得
+
+        最新のトレーニング済みMLモデルの詳細情報を返します。
+        モデルタイプ、パフォーマンス指標、特徴量重要度、
+        ハイパーパラメータなどを含みます。
+
+        Returns:
+            Dict[str, Any]: モデル情報を含むAPIレスポンス辞書。
+                以下のキーを含みます：
+                - success: 成功フラグ
+                - message: メッセージ
+                - data: モデル情報辞書（model_status, last_trainingを含む）
+
+        Note:
+            モデルが存在しない場合は、デフォルト値を含む情報が返されます。
+        """
         try:
             model_info_data = get_latest_model_with_info()
             model_status_base = get_model_info_with_defaults(model_info_data)
@@ -340,7 +450,24 @@ class MLTrainingService(BaseResourceManager):
             return api_response(success=True, data={"model_status": default_status})
 
     async def stop_training(self) -> Dict[str, Any]:
-        """トレーニングを停止"""
+        """
+        トレーニングを停止
+
+        現在実行中のMLトレーニングプロセスを安全に停止します。
+        停止処理中は現在のエポックまでの結果が保存されます。
+
+        Returns:
+            Dict[str, Any]: 停止処理結果を含むAPIレスポンス辞書。
+                以下のキーを含みます：
+                - success: 成功フラグ
+                - message: メッセージ
+
+        Raises:
+            ValueError: 実行中のトレーニングがない場合
+
+        Note:
+            停止後、バックグラウンドタスクもクリーンアップされます。
+        """
         with training_status_lock:
             if not training_status["is_training"]:
                 raise ValueError("実行中のトレーニングがありません")
@@ -360,7 +487,25 @@ class MLTrainingService(BaseResourceManager):
         return api_response(success=True, message="MLトレーニングを停止しました")
 
     async def _train_in_background(self, config, training_id: str):
-        """バックグラウンドトレーニング実行"""
+        """
+        実際のトレーニング処理をバックグラウンドスレッドで実行します。
+
+        このメソッドは以下のトレーニングパイプラインを実行します：
+        1. データベースからOHLCV、OI、資金調達率データを取得。
+        2. `_determine_trainer_config` を使用してトレーナー設定を確定。
+        3. `_execute_actual_training` を呼び出して学習プロセスを開始。
+        4. 進捗状況（`training_status`）を随時更新。
+        5. 完了または失敗時に状態をリセットし、結果を記録。
+
+        Args:
+            config (MLTrainingConfig): トレーニング設定。
+            training_id (str): 管理用のトレーニングID。
+
+        Side Effects:
+            - グローバルな `training_status` を頻繁に更新します。
+            - 学習済みのモデルファイルをローカルストレージに保存します。
+            - `background_task_manager` を通じてタスクのライフサイクルを管理します。
+        """
         from database.connection import get_session
 
         db = get_session()
@@ -476,7 +621,26 @@ class MLTrainingService(BaseResourceManager):
     def _determine_trainer_config(
         self, config: Any
     ) -> Tuple[str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
-        """設定からトレーナータイプ等を決定"""
+        """
+        設定からトレーナータイプ等を決定
+
+        APIリクエストの設定から、使用するトレーナータイプ、
+        アンサンブル設定、単一モデル設定を決定します。
+
+        Args:
+            config: MLTrainingConfigオブジェクト
+
+        Returns:
+            Tuple[str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+                - trainer_type: トレーナータイプ（"single"）
+                - ensemble_cfg: アンサンブル設定辞書（現在は常にNone）
+                - single_cfg: 単一モデル設定辞書
+
+        Note:
+            現在の実装では、常に単一モデルトレーナーが使用されます。
+            single_model_configが指定されていない場合は、
+            デフォルト設定が使用されます。
+        """
         trainer_type = "single"
         ensemble_cfg = None
         single_cfg = (
@@ -498,7 +662,26 @@ class MLTrainingService(BaseResourceManager):
         training_data,
         training_params,
     ):
-        """実際の学習処理"""
+        """
+        トレーナーを初期化し、実際の学習・評価プロセスを実行します。
+
+        このメソッドは以下の手順を実行します：
+        1. ターゲットとなる `task_type` に基づいて適切なトレーナー（`VolatilityRegressionTrainer` または `EnsembleTrainer`）を初期化。
+        2. ハイパーパラメータ最適化設定（`optimization_settings`）を確認。
+        3. `train_model` を呼び出して、データの分割、学習、評価、保存を実行。
+        4. 学習結果（成功/失敗）に基づいてグローバルトレーニング状態を最終更新。
+
+        Args:
+            trainer_type (str): トレーナーの種類（"single" または "ensemble"）。
+            ensemble_cfg (Optional[Dict]): アンサンブル学習の設定。
+            single_cfg (Optional[Dict]): 単一モデル学習の設定。
+            config (MLTrainingConfig): トレーニング全体の実行設定。
+            training_data (Any): 学習に使用する生データ（DataFrame または辞書）。
+            training_params (Dict): トレーナーに渡す追加の学習パラメータ。
+
+        Returns:
+            Dict[str, Any]: 学習結果のサマリー（メトリクス、モデルパス等）。
+        """
         # 現在のインスタンスを更新
         self.trainer_type = trainer_type
         self.trainer: Union[VolatilityRegressionTrainer, EnsembleTrainer]
@@ -597,7 +780,40 @@ class MLTrainingService(BaseResourceManager):
             )
 
     def _build_training_params(self, config: Any) -> Dict[str, Any]:
-        """APIリクエスト設定を学習用パラメータに変換する"""
+        """
+        APIリクエスト設定を学習用パラメータに変換する
+
+        APIリクエストから受け取った設定を、
+        トレーナーのtrain_modelメソッドに渡すためのパラメータ辞書に変換します。
+
+        Args:
+            config: MLTrainingConfigオブジェクト
+
+        Returns:
+            Dict[str, Any]: トレーナー用パラメータ辞書。
+                以下のキーを含みます：
+                - test_size: テストデータ分割比率
+                - symbol: 取引ペアシンボル
+                - timeframe: 時間軸
+                - train_test_split: トレーニング/テスト分割比率
+                - validation_split: 検証データ分割比率
+                - prediction_horizon: 予測期間
+                - horizon_n: 予測期間（別名）
+                - task_type: タスク種別
+                - target_kind: 目的変数種別
+                - gate_quantile: ゲート分位点
+                - use_cross_validation: クロスバリデーション使用フラグ
+                - cv_splits: クロスバリデーション分割数
+                - cross_validation_folds: クロスバリデーション分割数（別名）
+                - random_state: ランダムシード
+                - early_stopping_rounds: 早期停止ラウンド数
+                - max_depth: 最大深度
+                - n_estimators: 推定器数
+                - learning_rate: 学習率
+
+        Note:
+            test_sizeはtrain_test_splitとvalidation_splitから計算されます。
+        """
         test_size = resolve_holdout_test_size(
             train_test_split=getattr(config, "train_test_split", None),
             validation_split=getattr(config, "validation_split", None),
@@ -638,7 +854,30 @@ class MLTrainingService(BaseResourceManager):
         random_state: int = 42,
         **kwargs,
     ) -> Dict[str, Any]:
-        """モデルの学習を実行"""
+        """
+        モデルの学習、ハイパーパラメータ最適化（オプション）、評価を実行します。
+
+        Args:
+            training_data (Any): 学習データ。DataFrame（OHLCVのみ）または
+                辞書（"ohlcv", "funding_rate", "open_interest" を含む）。
+            save_model (bool): 学習後にモデルファイルを保存するかどうか。デフォルトはTrue。
+            optimization_settings (Optional[OptimizationSettings]): ハイパーパラメータ最適化の設定。
+                有効な場合、`OptimizationService` を使用して最適なパラメータを探索します。
+            test_size (float): ホールドアウト検証用のテストデータ割合。デフォルトは0.2。
+            random_state (int): 再現性のための乱数シード。デフォルトは42。
+            **kwargs: トレーナーの `train_model` メソッドに渡される追加のパラメータ。
+
+        Returns:
+            Dict[str, Any]: 学習結果の辞書。以下のキーを含みます：
+                - "metrics": 学習・評価のパフォーマンスメトリクス。
+                - "model_path": 保存されたモデルのパス（`save_model=True` の場合）。
+                - "best_params": 最適化されたハイパーパラメータ（最適化実行時）。
+                - "feature_importance": 特徴量重要度の情報。
+
+        Raises:
+            ValueError: サポートされていないターゲット設定や最適化設定が指定された場合。
+            Exception: 学習プロセス中に致命的なエラーが発生した場合。
+        """
         data_dict = (
             {"ohlcv": training_data}
             if isinstance(training_data, pd.DataFrame)

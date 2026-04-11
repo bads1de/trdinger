@@ -24,14 +24,24 @@ logger = logging.getLogger(__name__)
 
 class BacktestOrchestrationService:
     """
-    バックテスト統合管理サービス
+    バックテストのデータ操作と戦略管理を統括するオーケストレーションサービスです。
 
-    バックテスト結果の取得、削除、戦略一覧取得等の
-    統一的な処理を担当します。
+    主な責務:
+    - 結果の取得とフィルタリング: データベースから特定の銘柄や戦略に基づいたバックテスト結果を抽出します。
+    - 安全な削除: バックテスト結果を削除する際、関連する `GeneratedStrategy` とのリンク解除を適切に行い、参照整合性を保ちます。
+    - 実験データの統合: GAの実行結果（実験）と、個別のバックテスト実行結果を紐付けて管理します。
     """
 
     def __init__(self):
-        """初期化"""
+        """
+        BacktestOrchestrationServiceを初期化
+
+        バックテスト結果の取得、削除、戦略管理等の統一的な処理を
+        提供するサービスを初期化します。
+
+        Note:
+            このサービスはステートレスであり、各操作で必要な `Session` はメソッド引数として受け取ります。
+        """
 
     async def get_backtest_results(
         self,
@@ -42,17 +52,20 @@ class BacktestOrchestrationService:
         strategy_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        バックテスト結果一覧を取得
+        条件に合致するバックテスト結果の一覧を取得します。
 
         Args:
-            db: データベースセッション
-            limit: 取得件数
-            offset: オフセット
-            symbol: 取引ペアフィルター
-            strategy_name: 戦略名フィルター
+            db (Session): データベースセッション。
+            limit (int): 1ページあたりの取得最大件数。デフォルトは50。
+            offset (int): 読み飛ばす件数（ページネーション用）。デフォルトは0。
+            symbol (Optional[str]): 特定の通貨ペアで絞り込む場合の検索文字列。
+            strategy_name (Optional[str]): 特定の戦略名で絞り込む場合の検索文字列。
 
         Returns:
-            バックテスト結果一覧
+            Dict[str, Any]: 結果一覧とメタデータを含む辞書。
+                - "success" (bool): 取得の成否。
+                - "results" (List[dict]): 取得された結果レコードのリスト。
+                - "total" (int): フィルター条件に合致する全レコード数。
         """
 
         @safe_operation(context="バックテスト結果取得", is_api_call=True)

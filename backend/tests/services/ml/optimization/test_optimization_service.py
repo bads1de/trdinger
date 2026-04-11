@@ -180,7 +180,7 @@ class TestPrepareParameterSpace:
         settings = OptimizationSettings(enabled=True)
 
         with patch(
-            "app.services.ml.optimization.optimization_service.build_lightgbm_parameter_space"
+            "app.services.ml.optimization.optuna_optimizer.build_lightgbm_parameter_space"
         ):
             result = service._prepare_parameter_space(mock_trainer, settings)
 

@@ -37,14 +37,18 @@ class ParameterTuningManager:
         self, best_gene: StrategyGene, config: Any
     ) -> StrategyGene:
         """
-        エリート個体のパラメータをOptunaでチューニングします。
+        GAで選出された最良個体に対して、Optunaを用いてパラメータの微調整（ローカルサーチ）を実行します。
+
+        この処理は、進化的探索で発見された「有望な構造」を維持したまま、
+        連続値パラメータ（指標期間、閾値、TP/SL幅等）を最適化し、
+        戦略のパフォーマンスを極限まで引き出すことを目的とします。
 
         Args:
-            best_gene: 最良戦略遺伝子
-            config: GA設定
+            best_gene (StrategyGene): GAによって得られた最良個体の遺伝子。
+            config (Any): チューニングの試行回数や探索範囲を含む設定。
 
         Returns:
-            チューニングされた戦略遺伝子
+            StrategyGene: 微調整後の新しい遺伝子。
         """
         try:
             from app.services.auto_strategy.optimization import StrategyParameterTuner

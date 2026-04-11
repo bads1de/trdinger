@@ -1,22 +1,68 @@
+"""
+データ検証ユーティリティ
+
+OHLCVデータ、ファンディングレートデータなどの市場データの
+整合性と妥当性を検証する機能を提供します。
+
+主な検証項目:
+- OHLCVデータの基本的な整合性（High >= Lowなど）
+- 欠損値、異常値の検出
+- 時系列データの順序チェック
+"""
+
 from typing import Sequence
 
 import pandas as pd
 
 
 def _validate_empty_data(df: pd.DataFrame) -> bool:
-    """空データチェックの共通ロジック"""
+    """
+    空データチェックの共通ロジック
+
+    DataFrameが空であるかどうかを判定します。
+
+    Args:
+        df: 検証対象のDataFrame
+
+    Returns:
+        bool: DataFrameが空の場合はTrue、そうでない場合はFalse
+    """
     return len(df) == 0 or df.empty
 
 
 def _validate_columns_exist(df: pd.DataFrame, required_columns: Sequence[str]) -> None:
-    """必須カラム存在確認"""
+    """
+    必須カラム存在確認
+
+    DataFrameに必須カラムが全て含まれているかを確認します。
+    欠損しているカラムがある場合はValueErrorを送出します。
+
+    Args:
+        df: 検証対象のDataFrame
+        required_columns: 必須カラム名のシーケンス
+
+    Raises:
+        ValueError: 必須カラムが不足している場合
+    """
     missing = set(required_columns) - set(df.columns)
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
 
 
 def _validate_numeric_columns(df: pd.DataFrame, columns: Sequence[str]) -> None:
-    """数値型カラム確認"""
+    """
+    数値型カラム確認
+
+    指定されたカラムが数値型であるかを確認します。
+    数値型でないカラムがある場合はValueErrorを送出します。
+
+    Args:
+        df: 検証対象のDataFrame
+        columns: 検証するカラム名のシーケンス
+
+    Raises:
+        ValueError: カラムが数値型でない場合
+    """
     for col in columns:
         if col not in df.columns:
             continue

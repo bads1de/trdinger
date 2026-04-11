@@ -19,7 +19,16 @@ class BybitOpenInterestService(BybitService):
     """Bybitオープンインタレストサービス"""
 
     def __init__(self):
-        """サービスを初期化"""
+        """
+        BybitOpenInterestServiceを初期化
+
+        Bybit取引所からのオープンインタレストデータ取得サービスを初期化します。
+        親クラスの初期化を実行し、オープンインタレスト専用の設定を読み込みます。
+
+        Note:
+            このサービスはBybitServiceを継承し、
+            オープンインタレスト専用の設定をself.configに保持します。
+        """
         super().__init__()
         self.config = get_open_interest_config()
 
@@ -32,6 +41,20 @@ class BybitOpenInterestService(BybitService):
     ) -> List[Dict[str, Any]]:
         """
         オープンインタレスト履歴を取得
+
+        指定されたシンボルのオープンインタレスト履歴データをBybitから取得します。
+
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+            limit: 取得するデータ数（デフォルト: 100）
+            since: 開始タイムスタンプ（ミリ秒、オプション）
+            interval: データ間隔（デフォルト: '1h'）
+
+        Returns:
+            List[Dict[str, Any]]: オープンインタレスト履歴データのリスト
+
+        Raises:
+            ValueError: パラメータが無効な場合
         """
         self._validate_parameters(symbol, limit)
         normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
@@ -81,6 +104,29 @@ class BybitOpenInterestService(BybitService):
     ) -> dict:
         """
         オープンインタレストデータを取得してデータベースに保存
+
+        指定されたシンボルのオープンインタレストデータをBybitから取得し、
+        データベースに保存します。全履歴の取得または差分更新が可能です。
+
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+            limit: 取得件数制限（オプション、デフォルトは設定値）
+            repository: OpenInterestRepositoryインスタンス（テスト用、オプション）
+            fetch_all: 全履歴を取得するフラグ（デフォルト: False）
+            interval: データ間隔（デフォルト: '1h'）
+
+        Returns:
+            dict: 取得・保存結果を含む辞書。
+                  以下のキーを含みます：
+                  - fetched_count: 取得件数
+                  - saved_count: 保存件数
+                  - skipped_count: 重複スキップ件数
+                  - error_count: エラー件数
+                  - message: 処理結果メッセージ
+
+        Note:
+            fetch_all=Trueの場合は全履歴を取得し、
+            fetch_all=Falseの場合は差分更新を実行します。
         """
         return await self.fetch_and_save_data(
             symbol=symbol,

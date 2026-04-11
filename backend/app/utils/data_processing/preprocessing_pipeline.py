@@ -23,14 +23,39 @@ from .dtype_optimizer import optimize_dataframe_dtypes
 
 
 class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
-    """IsolationForestを使用した外れ値除去トランスフォーマー。"""
+    """
+    IsolationForestを使用した外れ値除去トランスフォーマー
+
+    IsolationForestアルゴリズムを使用して外れ値を検出し、
+    中央値で置換することで外れ値を除去します。
+    """
 
     def __init__(self, method="isolation_forest", contamination=0.1, **kwargs):
+        """
+        初期化
+
+        Args:
+            method: 外れ値検出メソッド（デフォルト: "isolation_forest"）
+            contamination: 外れ値の予想割合（デフォルト: 0.1）
+            **kwargs: 追加パラメータ
+        """
         self.method = method
         self.contamination = contamination
         self.detector_ = None
 
     def fit(self, X, y=None):
+        """
+        外れ値検出器を適合させる
+
+        IsolationForestを入力データに適合させます。
+
+        Args:
+            X: 適合する入力データ
+            y: 無視されます。sklearnパイプラインとの互換性のために存在
+
+        Returns:
+            self: 適合済みトランスフォーマー
+        """
         if self.method == "isolation_forest":
             self.detector_ = IsolationForest(
                 contamination=cast(Any, self.contamination), random_state=42
@@ -39,6 +64,21 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
+        """
+        外れ値を中央値で置換して変換
+
+        外れ値を検出し、各カラムの中央値で置換します。
+
+        Args:
+            X: 変換する入力データ
+
+        Returns:
+            外れ値が置換されたデータ
+
+        Note:
+            - DataFrameの場合はカラムごとに中央値で置換
+            - NumPy配列の場合はカラムごとに中央値で置換
+        """
         if self.detector_ is None:
             return X
         predictions = self.detector_.predict(X)
@@ -65,19 +105,52 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
             return X_transformed
 
     def get_feature_names_out(self, input_features=None):
-        """Get output feature names for transformation."""
+        """
+        変換の出力特徴名を取得
+
+        Args:
+            input_features: 入力特徴名
+
+        Returns:
+            出力特徴名（入力特徴名と同じ）
+        """
         return input_features
 
 
 class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
-    """カテゴリエンコーダートランスフォーマー。"""
+    """
+    カテゴリエンコーダートランスフォーマー
+
+    カテゴリ変数を数値にエンコードします。
+    """
 
     def __init__(self, encoding_type="label", **kwargs):
+        """
+        初期化
+
+        Args:
+            encoding_type: エンコーディングタイプ（デフォルト: "label"）
+            **kwargs: 互換性維持のために無視される追加パラメータ
+        """
         self.encoding_type = encoding_type
         self.encoders_ = {}
-        # 互換性を維持するために余分なkwargsを無視
 
     def fit(self, X, y=None):
+        """
+        エンコーダーを適合させる
+
+        カテゴリカラムに対してLabelEncoderを適合させます。
+
+        Args:
+            X: 適合する入力データ
+            y: 無視されます。sklearnパイプラインとの互換性のために存在
+
+        Returns:
+            self: 適合済みトランスフォーマー
+
+        Note:
+            NaN値は"Unknown"で埋められます。
+        """
         if isinstance(X, pd.DataFrame):
             categorical_columns = X.select_dtypes(
                 include=["object", "category"]
@@ -89,6 +162,17 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
+        """
+        カテゴリ変数をエンコードして変換
+
+        適合させたエンコーダーを使用してカテゴリ変数をエンコードします。
+
+        Args:
+            X: 変換する入力データ
+
+        Returns:
+            エンコードされたデータ
+        """
         if isinstance(X, pd.DataFrame):
             X_encoded = X.copy()
             for col, encoder in self.encoders_.items():
@@ -100,17 +184,50 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
         return X
 
     def get_feature_names_out(self, input_features=None):
-        """変換の出力特徴名を取得。"""
+        """
+        変換の出力特徴名を取得
+
+        Args:
+            input_features: 入力特徴名
+
+        Returns:
+            出力特徴名（入力特徴名と同じ）
+        """
         return input_features
 
 
 class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
-    """dtype最適化のためのトランスフォーマー。"""
+    """
+    dtype最適化のためのトランスフォーマー
+
+    DataFrameのdtypeを最適化してメモリ効率を向上させます。
+    """
 
     def fit(self, X, y=None):
+        """
+        fitは何もしない（dtype最適化はtransformのみ）
+
+        Args:
+            X: 無視されます
+            y: 無視されます
+
+        Returns:
+            self
+        """
         return self
 
     def transform(self, X):
+        """
+        dtypeを最適化して変換
+
+        DataFrameのdtypeを最適化します。
+
+        Args:
+            X: 変換する入力データ
+
+        Returns:
+            dtype最適化後のDataFrame
+        """
         if isinstance(X, pd.DataFrame):
             return optimize_dataframe_dtypes(
                 X,
@@ -120,7 +237,15 @@ class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
         return X
 
     def get_feature_names_out(self, input_features=None):
-        """変換の出力特徴名を取得。"""
+        """
+        変換の出力特徴名を取得
+
+        Args:
+            input_features: 入力特徴名
+
+        Returns:
+            出力特徴名（入力特徴名と同じ）
+        """
         return input_features
 
 
@@ -128,7 +253,11 @@ logger = logging.getLogger(__name__)
 
 
 class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
-    """DataFrameを維持しながらカテゴリ前処理を扱うカスタムトランスフォーマー。"""
+    """
+    DataFrameを維持しながらカテゴリ前処理を扱うカスタムトランスフォーマー
+
+    カテゴリ変数の欠損値補間とエンコーディングを行います。
+    """
 
     def __init__(
         self,
@@ -137,6 +266,15 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
         encoding=True,
         categorical_encoding="label",
     ):
+        """
+        初期化
+
+        Args:
+            strategy: 欠損値補間戦略（デフォルト: "most_frequent"）
+            fill_value: 欠損値の埋め値（デフォルト: "Unknown"）
+            encoding: エンコーディングを有効にするか（デフォルト: True）
+            categorical_encoding: カテゴリエンコーディングタイプ（デフォルト: "label"）
+        """
         self.strategy = strategy
         self.fill_value = fill_value
         self.encoding = encoding
@@ -145,6 +283,16 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
         self.encoder_ = None
 
     def fit(self, X, y=None):
+        """
+        ImputerとEncoderを適合させる
+
+        Args:
+            X: 適合する入力データ
+            y: 無視されます。sklearnパイプラインとの互換性のために存在
+
+        Returns:
+            self: 適合済みトランスフォーマー
+        """
         if isinstance(X, pd.DataFrame):
             # Fit imputer
             self.imputer_ = SimpleImputer(
@@ -162,6 +310,19 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
+        """
+        欠損値補間とエンコーディングを適用して変換
+
+        Args:
+            X: 変換する入力データ
+
+        Returns:
+            変換されたDataFrame
+
+        Note:
+            - 全NaNカラムは定数値で埋められます
+            - 一部有効な値があるカラムは通常の補間が適用されます
+        """
         if isinstance(X, pd.DataFrame):
             result = X.copy()
 
@@ -196,18 +357,61 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
         return X
 
     def get_feature_names_out(self, input_features=None):
-        """Get output feature names."""
+        """
+        変換の出力特徴名を取得
+
+        Args:
+            input_features: 入力特徴名
+
+        Returns:
+            出力特徴名（入力特徴名と同じ）
+        """
         return input_features
 
 
 class MixedTypeTransformer(BaseEstimator, TransformerMixin):
-    """Transformer that handles mixed data types properly."""
+    """混合データ型を適切に処理するトランスフォーマー
+
+    DataFrameの数値カラムとカテゴリカラムを識別し、
+    それぞれに特化した前処理パイプラインを適用します。
+    sklearnの`BaseEstimator`と`TransformerMixin`を継承しており、
+    Pipeline内で使用可能です。
+
+    使用例:
+        >>> transformer = MixedTypeTransformer(
+        ...     numeric_pipeline=StandardScaler(),
+        ...     categorical_pipeline=OneHotEncoder()
+        ... )
+        >>> X_transformed = transformer.fit_transform(X)
+    """
 
     def __init__(self, numeric_pipeline, categorical_pipeline):
+        """混合型トランスフォーマーを初期化する。
+
+        Args:
+            numeric_pipeline: 数値カラムに適用するsklearnパイプライン。
+                例: StandardScaler、RobustScalerなど。
+            categorical_pipeline: カテゴリカルカラムに適用するsklearnパイプライン。
+                例: OneHotEncoder、OrdinalEncoderなど。
+        """
         self.numeric_pipeline = numeric_pipeline
         self.categorical_pipeline = categorical_pipeline
 
     def fit(self, X, y=None):
+        """
+        数値・カテゴリパイプラインを適合させる
+
+        Args:
+            X: 適合する入力データ
+            y: 無視されます。sklearnパイプラインとの互換性のために存在
+
+        Returns:
+            self: 適合済みトランスフォーマー
+
+        Note:
+            - DataFrameの場合は数値・カテゴリカラムを分離して適合
+            - NumPy配列の場合は全て数値として扱う
+        """
         if isinstance(X, pd.DataFrame):
             # Separate numeric and categorical columns
             self.numeric_columns_ = X.select_dtypes(
@@ -231,6 +435,20 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X):
+        """数値・カテゴリパイプラインを変換する。
+
+        入力データを数値カラムとカテゴリカルカラムに分割し、
+        それぞれのパイプラインで変換します。変換結果は元のDataFrameの
+        インデックスを保持して結合されます。
+
+        Args:
+            X: 変換する入力データ。DataFrameまたはNumPy配列。
+                DataFrameの場合はカラム型に応じて自動的に処理を分割します。
+
+        Returns:
+            pd.DataFrame: 変換後のデータ。数値カラムとカテゴリカルカラムが
+                各自のパイプラインで変換され、結合されて返されます。
+        """
         if isinstance(X, pd.DataFrame):
             result_parts = []
 
@@ -313,7 +531,15 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
             return self.numeric_pipeline.transform(X)
 
     def get_feature_names_out(self, input_features=None):
-        """Get output feature names."""
+        """
+        変換の出力特徴名を取得
+
+        Args:
+            input_features: 入力特徴名
+
+        Returns:
+            出力特徴名の配列
+        """
         feature_names = []
         if self.numeric_columns_:
             feature_names.extend(self.numeric_columns_)
@@ -404,11 +630,13 @@ def create_basic_preprocessing_pipeline(
     impute_strategy: str = "median", encode_categorical: bool = True
 ) -> Pipeline:
     """
-    外れ値除去なしの基本的な前処理パイプラインを作成。
+    外れ値除去なしの基本的な前処理パイプラインを作成
+
+    欠損値補間のみのシンプルなパイプラインを作成します。
 
     Args:
-        impute_strategy: 欠損値の補間戦略
-        encode_categorical: カテゴリ変数をエンコードするかどうか
+        impute_strategy: 欠損値の補間戦略（デフォルト: "median"）
+        encode_categorical: カテゴリ変数をエンコードするかどうか（デフォルト: True）
 
     Returns:
         基本的な前処理パイプライン
@@ -430,13 +658,22 @@ def create_basic_preprocessing_pipeline(
 
 def get_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     """
-    適合済みのパイプラインの情報を取得。
+    適合済みのパイプラインの情報を取得
+
+    パイプラインのステップ数、特徴量数などの情報を取得します。
 
     Args:
         pipeline: 適合済みのsklearnパイプライン
 
     Returns:
-        パイプライン情報を含む辞書
+        Dict[str, Any]: パイプライン情報を含む辞書
+            - n_steps: ステップ数
+            - step_names: ステップ名リスト
+            - is_fitted: 適合済みかどうか
+            - n_features_in: 入力特徴量数（適合済みの場合）
+            - feature_names_in: 入力特徴名（適合済みの場合）
+            - n_features_out: 出力特徴量数（取得可能な場合）
+            - feature_names_out: 出力特徴名（取得可能な場合）
     """
     info = {
         "n_steps": len(pipeline.steps),

@@ -22,7 +22,17 @@ logger = logging.getLogger(__name__)
 
 
 def _replace_inf_with_nan(series: pd.Series) -> pd.Series:
-    """Series 内の inf を NaN に揃える。"""
+    """
+    Series 内の inf を NaN に揃える。
+
+    正の無限大と負の無限大をNaNに置換します。
+
+    Args:
+        series: 処理対象のpandas Series
+
+    Returns:
+        pd.Series: infをNaNに置換したSeries
+    """
     return series.replace([np.inf, -np.inf], np.nan)
 
 
@@ -30,11 +40,16 @@ class DataProcessor:
     """
     統合データ処理クラス
 
-    transformers, pipelines, validatorsモジュールを統合した高レベルAPIを提供。
+    transformers, pipelines, validatorsモジュールを統合した高レベルAPIを提供します。
+    データのクリーニング、検証、補間、型最適化を一括して実行できます。
     """
 
     def __init__(self):
-        """初期化"""
+        """
+        DataProcessorを初期化します。
+
+        現在の実装では初期化パラメータはありません。
+        """
         pass
 
     def clean_and_validate_data(
@@ -47,14 +62,25 @@ class DataProcessor:
         """
         データのクリーニングと検証を一括実行
 
+        以下の処理を順番に実行します：
+        1. カラム名を小文字に統一
+        2. 拡張データ（funding_rate等）の範囲クリップ
+        3. データ補間（NaN/null値の処理）
+        4. データ検証（OHLC関係、整合性等）
+        5. データ型最適化
+        6. 時系列順にソート
+
         Args:
-            df: 対象のDataFrame
-            required_columns: 必須カラムのリスト
-            interpolate: 補間処理を実行するか
-            optimize: データ型最適化を実行するか
+            df: 処理対象のDataFrame
+            required_columns: 必須カラムのリスト（検証に使用）
+            interpolate: 補間処理を実行するか（デフォルト: True）
+            optimize: データ型最適化を実行するか（デフォルト: True）
 
         Returns:
-            クリーニング済みのDataFrame
+            pd.DataFrame: クリーニング済みのDataFrame
+
+        Raises:
+            ValueError: データ検証に失敗した場合
         """
         result_df = df.copy()
 
@@ -103,11 +129,29 @@ class DataProcessor:
         return result_df
 
     def clear_cache(self):
-        """キャッシュをクリア"""
+        """
+        キャッシュをクリアします。
+
+        現在の実装ではキャッシュ機能はありませんが、
+        将来的な拡張に備えてメソッドを提供しています。
+        """
         logger.info("DataProcessorのキャッシュをクリアしました")
 
     def _interpolate_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        """データ補間処理"""
+        """
+        データ補間処理
+
+        数値カラムとカテゴリカルカラムの欠損値を補間します。
+        - 数値カラム: inf→NaN変換後、前方補完→線形補完→ゼロ埋め
+        - OHLCカラム: 補間後にlow <= open/close <= highの関係を修正
+        - カテゴリカルカラム: 最頻値で補完
+
+        Args:
+            df: 補間対象のDataFrame
+
+        Returns:
+            pd.DataFrame: 補間済みのDataFrame
+        """
         result_df = df.copy()
 
         # 数値カラムの補間
@@ -194,7 +238,19 @@ class DataProcessor:
         return result_df
 
     def _clip_extended_data_ranges(self, df: pd.DataFrame) -> pd.DataFrame:
-        """拡張データの範囲クリップ処理"""
+        """
+        拡張データの範囲クリップ処理
+
+        以下の拡張データの範囲を制限します：
+        - funding_rate: -1から1の範囲にクリップ
+        - open_interest: 負値を0にクリップ
+
+        Args:
+            df: 処理対象のDataFrame
+
+        Returns:
+            pd.DataFrame: 範囲クリップ済みのDataFrame
+        """
         result_df = df.copy()
 
         # funding_rateの範囲クリップ (-1から1)

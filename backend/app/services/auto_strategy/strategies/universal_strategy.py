@@ -330,24 +330,68 @@ class UniversalStrategy(Strategy):
         return self.entry_decision_engine.calculate_position_size()
 
     def init(self):
-        """指標の初期化"""
+        """
+        戦略の初期化フェーズ（`backtesting.py` のライフサイクル）。
+
+        このメソッドは、バックテスト開始前に一度だけ呼び出されます。
+        `StrategyInitializer` を使用して、以下の初期化処理を実行します：
+        1. `StrategyGene` に定義されたテクニカル指標の計算とキャッシュ。
+        2. エントリー条件、決済条件、およびステートフルトリガーのセットアップ。
+        3. ポジション管理（利確・損切り）および注文管理コンポーネントの初期化。
+        4. MLフィルター（存在する場合）のモデル読み込みと特徴量パイプラインの準備。
+
+        Note:
+            `backtesting.py` では `init()` 内で全てのインジケータ（`I()`関数を使用）を
+            宣言する必要があります。本クラスでは `StrategyInitializer` がこの役割を担います。
+        """
         self.strategy_initializer.initialize()
 
     def _init_indicator(self, indicator_gene: IndicatorGene):
-        """単一指標の初期化"""
+        """
+        単一のテクニカル指標を初期化します。
+
+        Args:
+            indicator_gene (IndicatorGene): 指標の定義情報（タイプ、パラメータ、時間軸等）。
+        """
         self.strategy_initializer.init_indicator(indicator_gene)
 
     def _calculate_effective_tpsl_prices(
         self, direction: float, current_price: float
     ) -> Tuple[Optional[float], Optional[float]]:
-        """有効なTP/SL価格を計算"""
+        """
+        現在の価格と方向に基づいて、実効的な利確（TP）および損切り（SL）価格を計算します。
+
+        Args:
+            direction (float): ポジション方向（1.0: Long, -1.0: Short）。
+            current_price (float): 計算の基準となる現在価格。
+
+        Returns:
+            Tuple[Optional[float], Optional[float]]: (TP価格, SL価格) のタプル。
+                設定されていない場合は `None` が返ります。
+        """
         return self.entry_decision_engine.calculate_effective_tpsl_prices(
             direction,
             current_price,
         )
 
     def next(self):
-        """各バーでの戦略実行"""
+        """
+        メインの戦略実行ループ（`backtesting.py` のライフサイクル）。
+
+        各バー（ローソク足）が確定するたびに呼び出され、以下のサイクルを実行します（`StrategyExecutionCycle` に委譲）：
+        1. インデックスの更新と現在の市場データの取得。
+        2. 保有中ポジションの状態確認とトレールストップ等の更新。
+        3. 決済条件（Exit Conditions）の評価と、合致する場合の成行決済。
+        4. 新規エントリー条件（Entry Conditions）の評価。
+        5. エントリー許可時、MLフィルターやボラティリティゲートによる最終チェック。
+        6. 全てのフィルターを通過した場合、適切なロットサイズでの注文執行。
+        7. 早期終了条件（Early Termination）のチェック。
+
+        Raises:
+            StrategyEarlyTermination: ドローダウン制限などの早期終了条件に合致した場合に発生し、
+                バックテスト全体を中断させます。
+            Exception: 実行中に予期しないエラーが発生した場合。エラーはログに記録され、次のバーへ進みます。
+        """
         try:
             self._current_bar_index += 1
             self.execution_cycle.run_current_bar()

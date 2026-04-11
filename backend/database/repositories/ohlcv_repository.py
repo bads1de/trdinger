@@ -27,13 +27,23 @@ class OHLCVRepository(BaseRepository):
 
     def insert_ohlcv_data(self, ohlcv_records: List[dict]) -> int:
         """
-        OHLCV データを一括挿入（重複は無視）
+        大量のOHLCVレコードをデータベースに一括挿入します。
+
+        このメソッドは以下の高度な処理を実行します：
+        1. 入力データのバリデーション（タイムスタンプの整合性、欠損値チェック）。
+        2. `ON CONFLICT DO NOTHING` （または相当のロジック）による重複排除。
+           - 一意制約: (symbol, timeframe, timestamp)
+        3. パフォーマンス最適化のためのバルクインサート。
 
         Args:
-            ohlcv_records: OHLCV データのリスト
+            ohlcv_records (List[dict]): 挿入するOHLCVデータの辞書リスト。
+                各辞書は `symbol`, `timeframe`, `timestamp`, `open`, `high`, `low`, `close`, `volume` を含む必要があります。
 
         Returns:
-            挿入された件数
+            int: 実際に新しく挿入されたレコードの総数。
+
+        Raises:
+            ValueError: 必須項目の欠落や、重大なデータ不整合が検出された場合。
         """
         if not ohlcv_records:
             return 0
@@ -67,17 +77,20 @@ class OHLCVRepository(BaseRepository):
         limit: Optional[int] = None,
     ) -> List[OHLCVData]:
         """
-        OHLCV データを取得
+        指定された条件に基づいてOHLCVデータを取得します。
+
+        このメソッドは `BaseRepository` の高度なフィルタリング機能を活用し、
+        DBインデックス（symbol, timeframe, timestamp）を効率的に利用するようにクエリを構成します。
 
         Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-            start_time: 開始時刻
-            end_time: 終了時刻
-            limit: 取得件数制限
+            symbol (str): 取引ペア。
+            timeframe (str): 時間軸。
+            start_time (Optional[datetime]): 取得開始日時（含む）。
+            end_time (Optional[datetime]): 取得終了日時（含む）。
+            limit (Optional[int]): 最大取得件数。Noneの場合は無制限。
 
         Returns:
-            OHLCV データのリスト
+            List[OHLCVData]: 取得されたOHLCVモデルオブジェクトのリスト（時系列昇順）。
         """
         filters = {"symbol": symbol, "timeframe": timeframe}
         data = self.get_filtered_data(

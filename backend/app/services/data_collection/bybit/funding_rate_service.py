@@ -19,7 +19,16 @@ class BybitFundingRateService(BybitService):
     """Bybitファンディングレートサービス"""
 
     def __init__(self):
-        """サービスを初期化"""
+        """
+        BybitFundingRateServiceを初期化
+
+        Bybit取引所からのファンディングレートデータ取得サービスを初期化します。
+        親クラスの初期化を実行し、ファンディングレート専用の設定を読み込みます。
+
+        Note:
+            このサービスはBybitServiceを継承し、
+            ファンディングレート専用の設定をself.configに保持します。
+        """
         super().__init__()
         self.config = get_funding_rate_config()
 
@@ -134,6 +143,28 @@ class BybitFundingRateService(BybitService):
     ) -> dict:
         """
         ファンディングレートデータを取得してデータベースに保存
+
+        指定されたシンボルのファンディングレートデータをBybitから取得し、
+        データベースに保存します。全履歴の取得または差分更新が可能です。
+
+        Args:
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+            limit: 取得件数制限（オプション、デフォルトは設定値）
+            repository: FundingRateRepositoryインスタンス（テスト用、オプション）
+            fetch_all: 全履歴を取得するフラグ（デフォルト: False）
+
+        Returns:
+            dict: 取得・保存結果を含む辞書。
+                  以下のキーを含みます：
+                  - fetched_count: 取得件数
+                  - saved_count: 保存件数
+                  - skipped_count: 重複スキップ件数
+                  - error_count: エラー件数
+                  - message: 処理結果メッセージ
+
+        Note:
+            fetch_all=Trueの場合は全履歴を取得し、
+            fetch_all=Falseの場合は差分更新を実行します。
         """
         return await self.fetch_and_save_data(
             symbol=symbol,
@@ -150,9 +181,21 @@ class BybitFundingRateService(BybitService):
         repository: FundingRateRepository,
     ) -> int:
         """
-        旧テスト/呼び出し元向けの後方互換保存メソッド。
+        旧テスト/呼び出し元向けの後方互換保存メソッド
 
         既存の汎用保存処理へ委譲しつつ、従来のメソッド名を維持します。
+        テストコードや旧バージョンの呼び出し元との互換性を保つために使用されます。
+
+        Args:
+            funding_history: ファンディングレート履歴データのリスト
+            symbol: 取引ペアシンボル
+            repository: FundingRateRepositoryインスタンス
+
+        Returns:
+            int: 保存されたレコード数
+
+        Note:
+            内部的には親クラスの_save_data_to_databaseメソッドを呼び出します。
         """
         return await self._save_data_to_database(
             funding_history,

@@ -36,19 +36,25 @@ class ResultProcessor:
         halloffame: Optional[Any] = None,
     ) -> Tuple[Any, Optional[StrategyGene], Optional[List[Dict[str, Any]]]]:
         """
-        最終集団または殿堂入りオブジェクトから最良の個体群を抽出
+        GAの実行結果（最終集団および殿堂入りリスト）から、最も優れた個体を選択し、利用可能な形式に整形します。
 
-        多目的最適化の場合はパレートフロントから、単一目的の場合は
-        単純な最高スコア個体を選択し、バックテストでそのまま利用可能な
-        形式に変換して返します。
+        選定ロジック：
+        1. **多目的最適化の場合**:
+           - `halloffame`（ParetoFront）から非劣解集合を取得。
+           - それらが空の場合は最終集団からパレートフロントを再計算。
+           - 上位最大10個のパレート最適解を抽出し、多様な選択肢を提供します。
+        2. **単一目的最適化の場合**:
+           - 二段階選抜（Robustness等）が有効な場合、そのランクに基づいた最良個体を取得。
+           - 無効な場合は `halloffame` の先頭（最高スコア）を取得。
+           - いずれも利用不可な場合は、単純な `selBest`（DEAP標準）を使用。
 
         Args:
-            population: 最終世代の全個体リスト
-            config: GA 設定
-            halloffame: 保存されている優良個体のリスト（またはパレートフロント）
+            population (List[Any]): 最終世代の全個体。
+            config (Any): 評価モードや目的関数の設定。
+            halloffame (Optional[Any]): 最良個体を保持する DEAP オブジェクト。
 
         Returns:
-            (最良個体, 最良遺伝子, 最良戦略リスト) のタプル
+            Tuple[Any, StrategyGene, List]: (最良個体オブジェクト, 最良遺伝子, 詳細な戦略情報のリスト)。
         """
         best_strategies = None
         best_individual = None
@@ -102,7 +108,17 @@ class ResultProcessor:
 
     def rank_population_for_persistence(self, population: List[Any]) -> List[Any]:
         """
-        保存順序用に個体群を安定ソートする。
+        データベース保存やレポート表示のために、個体群を優先順位に従って並び替えます。
+
+        ソート順の優先度：
+        1. **二段階選抜ランク**: 堅牢性チェックを通過したランク（値が小さいほど上位）。
+        2. **主目的関数（Primary Fitness）**: 同じランク内、あるいはランクがない場合に適応度で比較（降順）。
+
+        Args:
+            population (List[Any]): 並び替え対象の個体リスト。
+
+        Returns:
+            List[Any]: ソート済みの個体リスト。
         """
 
         def sort_key(individual: Any) -> Tuple[int, int, float]:

@@ -1,3 +1,11 @@
+"""
+CUSUM（Cumulative Sum）フィルターモジュール
+
+CUSUMフィルターは、時系列データにおける構造変化（レジームチェンジ）
+を検出するための統計的手法です。
+価格トレンドの転換点やボラティリティの急変を捉えるために使用されます。
+"""
+
 from typing import Optional
 
 import numpy as np
@@ -89,7 +97,19 @@ class CusumSignalGenerator:
         return pd.DatetimeIndex(t_events)
 
     def get_daily_volatility(self, close: pd.Series, span: int = 100) -> pd.Series:
-        """ローカルボラティリティを計算 (EWM Std of Log Returns)"""
+        """ローカルボラティリティを計算する（EWM Std of Log Returns）。
+
+        対数リターンの指数移動平均（EWM）標準偏差を使用して、
+        時間変動するボラティリティを推定します。
+        Triple Barrier Methodなどのしきい値設定に使用されます。
+
+        Args:
+            close: 終値の時系列データ。
+            span: EWM計算のスパン（半減期）。デフォルト: 100。
+
+        Returns:
+            pd.Series: 各時点でのローカルボラティリティ（対数リターンのEWM標準偏差）。
+        """
         shifted = close.shift(1)
         log_returns = pd.Series(
             np.log(close.values / shifted.values),  # type: ignore[arg-type]

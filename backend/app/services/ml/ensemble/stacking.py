@@ -78,6 +78,42 @@ class StackingEnsemble(BaseEnsemble):
             f"passthrough={self.passthrough}"
         )
 
+    @property
+    def base_models(self) -> List[str]:
+        """ベースモデルの種類のリストを返す。
+
+        Returns:
+            List[str]: ベースモデル名のリスト（例: ["lightgbm", "xgboost", "catboost"]）
+        """
+        return self._base_model_types
+
+    @base_models.setter
+    def base_models(self, value: List[str]) -> None:
+        """ベースモデルの種類のリストを設定する。
+
+        Args:
+            value: 設定するベースモデル名のリスト。
+        """
+        self._base_model_types = value
+
+    @property
+    def meta_model(self) -> str:
+        """メタモデルの種類を返す。
+
+        Returns:
+            str: メタモデル名（例: "logistic_regression"）
+        """
+        return self._meta_model_type
+
+    @meta_model.setter
+    def meta_model(self, value: str) -> None:
+        """メタモデルの種類を設定する。
+
+        Args:
+            value: 設定するメタモデル名。
+        """
+        self._meta_model_type = value
+
     def fit(
         self,
         X_train: pd.DataFrame,
@@ -86,8 +122,32 @@ class StackingEnsemble(BaseEnsemble):
         y_test: Optional[pd.Series] = None,
         base_model_params: Optional[Dict[str, Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        """
-        自前実装のスタッキングアンサンブルモデルを学習
+        """自前実装のスタッキングアンサンブルモデルを学習する。
+
+        3段階のステップでスタッキングアンサンブルを構築します:
+        1. ベースモデルのOOF（Out-Of-Fold）予測を計算
+        2. OOF予測を特徴量としてメタモデルを学習
+        3. ベースモデルを全トレーニングデータで最終フィット
+
+        Args:
+            X_train: トレーニング特徴量（DataFrame）。
+            y_train: トレーニングラベル（Series）。
+            X_test: テスト特徴量（オプション）。評価用に使用。
+            y_test: テストラベル（オプション）。評価用に使用。
+            base_model_params: ベースモデルごとのハイパーパラメータ（オプション）。
+                辞書のキーはモデル名、値はパラメータ辞書。
+
+        Returns:
+            Dict[str, Any]: 学習結果を含む辞書。
+                - model_type: モデル種別（"StackingEnsemble"）
+                - base_models: 使用したベースモデルのリスト
+                - meta_model: メタモデルの種別
+                - cv_folds: CV分割数
+                - stack_method: スタッキング方法
+                - その他評価メトリクス（X_test/y_testが提供された場合）
+
+        Raises:
+            ModelError: 学習処理が失敗した場合。
         """
         try:
             logger.info("スタッキング学習開始（計算コスト最適化版）")
@@ -148,7 +208,25 @@ class StackingEnsemble(BaseEnsemble):
         y: pd.Series,
         cv: Any,
     ) -> pd.DataFrame:
-        """ベースモデルのOOF予測を計算"""
+        """ベースモデルのOOF（Out-Of-Fold）予測を計算する。
+
+        各ベースモデルについて、CV分割を使ってOOF予測を生成します。
+        これにより、学習データへの過学習を防ぎつつ、メタモデルの
+        トレーニング用の特徴量を作成します。
+
+        Args:
+            estimators: （モデル名、モデルインスタンス）のタプルリスト。
+            X: トレーニング特徴量（DataFrame）。
+            y: トレーニングラベル（Series）。
+            cv: クロスバリデーション分割器。
+
+        Returns:
+            pd.DataFrame: 各モデルのOOF予測確率（クラス1）を列に持つDataFrame。
+                インデックスはXと同じ。
+
+        Raises:
+            ModelError: 有効なOOF予測が1つも生成されなかった場合。
+        """
         oof_preds = pd.DataFrame(index=X.index)
         for name, estimator in estimators:
             try:
@@ -176,7 +254,21 @@ class StackingEnsemble(BaseEnsemble):
         y: pd.Series,
         meta_model_params: Optional[Dict[str, Any]] = None,
     ) -> np.ndarray:
-        """メタモデルを学習"""
+        """メタモデルを学習する。
+
+        OOF予測を特徴量として、メタモデル（最終的なアンサンブル結合モデル）
+        をトレーニングします。passthrough=Trueの場合は元のXも特徴量に結合します。
+
+        Args:
+            oof_preds: ベースモデルのOOF予測DataFrame。
+            X: 元のトレーニング特徴量（passthrough時に使用）。
+            y: トレーニングラベル。
+            meta_model_params: メタモデルのハイパーパラメータ（オプション）。
+
+        Returns:
+            np.ndarray: メタモデルのOOF予測値。
+                後続の評価や分析に使用されます。
+        """
         meta_features = (
             pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
         )
@@ -206,7 +298,21 @@ class StackingEnsemble(BaseEnsemble):
         X: pd.DataFrame,
         y: pd.Series,
     ) -> None:
-        """全データでベースモデルをフィット"""
+        """ベースモデルを全トレーニングデータで最終フィットする。
+
+        OOF予測用にCV分割で学習したモデルではなく、
+        全トレーニングデータを使って各ベースモデルを再学習します。
+        これにより、推論時に最高の予測性能が得られます。
+
+        Args:
+            estimators: （モデル名、モデルインスタンス）のタプルリスト。
+            X: 全トレーニング特徴量。
+            y: 全トレーニングラベル。
+
+        Note:
+            フィット済みのモデルは self._fitted_base_models に格納されます。
+            エラーが発生したモデルはスキップされ、警告ログが出力されます。
+        """
         self._fitted_base_models.clear()
         for name, estimator in estimators:
             try:
@@ -217,14 +323,21 @@ class StackingEnsemble(BaseEnsemble):
                 logger.warning(f"  {name}の最終フィットエラー: {e}")
 
     def _create_cv_splitter(self, X_train: pd.DataFrame) -> Any:
-        """
-        クロスバリデーション分割器を作成
+        """クロスバリデーション分割器を作成する。
+
+        設定されたCV戦略（purged_kfold、kfoldなど）に応じて、
+        適切なsklearn互換の分割器を生成します。
 
         Args:
-            X_train: 学習データ（インデックスから時系列情報を取得）
+            X_train: 学習データ（DataFrame）。
+                インデックスから時系列情報を取得して時間足を推定します。
 
         Returns:
-            CVスプリッター
+            Any: sklearn互換のCV分割器インスタンス。
+                PurgedKFold、KFold、またはStratifiedKFold。
+
+        Raises:
+            ValueError: サポートされていないCV戦略が設定されている場合。
         """
         cv_strategy = self.config.get("cv_strategy", "purged_kfold")
         ml_training = ml_config_manager.config.training
@@ -282,11 +395,18 @@ class StackingEnsemble(BaseEnsemble):
     def _create_base_estimators(
         self, base_model_params: Optional[Dict[str, Dict[str, Any]]] = None
     ) -> List[Tuple[str, Any]]:
-        """
-        ベースモデルのリストを作成（StackingClassifier用）
+        """ベースモデルのリストを作成する（StackingClassifier用）。
+
+        設定されたベースモデルの種類（LightGBM、XGBoostなど）に応じて、
+        モデルインスタンスを生成し、（名前、モデル）のタプルリストを返します。
+
+        Args:
+            base_model_params: ベースモデルごとのハイパーパラメータ（オプション）。
+                辞書のキーはモデル名、値はパラメータ辞書。
 
         Returns:
-            (name, estimator)のタプルのリスト
+            List[Tuple[str, Any]]: （モデル名, モデルインスタンス）のタプルリスト。
+                CV予測や最終フィットに使用されます。
         """
         estimators = []
 

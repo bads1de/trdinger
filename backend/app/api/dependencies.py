@@ -29,7 +29,22 @@ T = TypeVar("T")
 
 
 def _create_service(factory: Callable[[], T], service_name: str) -> T:
-    """サービス生成の定型エラーハンドリングをまとめる。"""
+    """
+    サービス生成の定型エラーハンドリングをまとめるヘルパー関数
+
+    指定されたファクトリ関数を使用してサービスインスタンスを生成し、
+    エラーが発生した場合は適切なHTTP例外をスローします。
+
+    Args:
+        factory: サービスインスタンスを生成する関数
+        service_name: サービス名（エラーメッセージ用）
+
+    Returns:
+        T: 生成されたサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
+    """
     try:
         return factory()
     except Exception as exc:
@@ -83,11 +98,24 @@ def get_generated_strategy_service_with_db(
     return _create_service(lambda: GeneratedStrategyService(db), "GeneratedStrategyService")
 
 
-def get_bybit_open_interest_service():
-    """BybitOpenInterestService を取得する。"""
+def get_bybit_open_interest_service() -> "BybitOpenInterestService":
+    """BybitOpenInterestServiceのインスタンスを取得（依存性注入用）。
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    Bybit取引所からのオープンインタレストデータ取得サービスを提供します。
+
+    Returns:
+        BybitOpenInterestService: オープンインタレストサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
+    """
+
+    def factory() -> "BybitOpenInterestService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            BybitOpenInterestService: 生成されたサービスインスタンス
+        """
         from app.services.data_collection.bybit.open_interest_service import (
             BybitOpenInterestService,
         )
@@ -97,11 +125,24 @@ def get_bybit_open_interest_service():
     return _create_service(factory, "BybitOpenInterestService")
 
 
-def get_bybit_funding_rate_service():
-    """BybitFundingRateService を取得する。"""
+def get_bybit_funding_rate_service() -> "BybitFundingRateService":
+    """BybitFundingRateServiceのインスタンスを取得（依存性注入用）。
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    Bybit取引所からのファンディングレートデータ取得サービスを提供します。
+
+    Returns:
+        BybitFundingRateService: ファンディングレートサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
+    """
+
+    def factory() -> "BybitFundingRateService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            BybitFundingRateService: 生成されたサービスインスタンス
+        """
         from app.services.data_collection.bybit.funding_rate_service import (
             BybitFundingRateService,
         )
@@ -115,13 +156,25 @@ def get_bybit_funding_rate_service():
 
 
 # Dependency factories for various orchestration services (avoid direct new() in API modules)
-def get_data_collection_orchestration_service():
-    """
-    DataCollectionOrchestrationService のインスタンスを取得（依存性注入用）
+def get_data_collection_orchestration_service() -> "DataCollectionOrchestrationService":
+    """DataCollectionOrchestrationServiceのインスタンスを取得（依存性注入用）。
+
+    OHLCVデータ、ファンディングレート、オープンインタレスト等の
+    市場データ収集プロセスを統合管理するサービスを提供します。
+
+    Returns:
+        DataCollectionOrchestrationService: データ収集オーケストレーションサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
     """
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    def factory() -> "DataCollectionOrchestrationService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            DataCollectionOrchestrationService: 生成されたサービスインスタンス
+        """
         from app.services.data_collection.orchestration.data_collection_orchestration_service import (
             DataCollectionOrchestrationService,
         )
@@ -131,13 +184,25 @@ def get_data_collection_orchestration_service():
     return _create_service(factory, "DataCollectionOrchestrationService")
 
 
-def get_data_management_orchestration_service():
-    """
-    DataManagementOrchestrationService のインスタンスを取得（依存性注入用）
+def get_data_management_orchestration_service() -> "DataManagementOrchestrationService":
+    """DataManagementOrchestrationServiceのインスタンスを取得（依存性注入用）。
+
+    データベース内の市場データの管理・削除・リセット等の
+    データ管理操作を統合管理するサービスを提供します。
+
+    Returns:
+        DataManagementOrchestrationService: データ管理オーケストレーションサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
     """
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    def factory() -> "DataManagementOrchestrationService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            DataManagementOrchestrationService: 生成されたサービスインスタンス
+        """
         from app.services.data_collection.orchestration.data_management_orchestration_service import (
             DataManagementOrchestrationService,
         )
@@ -149,13 +214,27 @@ def get_data_management_orchestration_service():
 
 def get_open_interest_orchestration_service(
     bybit_service=Depends(get_bybit_open_interest_service),
-):
-    """
-    OpenInterestOrchestrationService のインスタンスを取得（依存性注入用）
+) -> "OpenInterestOrchestrationService":
+    """OpenInterestOrchestrationServiceのインスタンスを取得（依存性注入用）。
+
+    オープンインタレストデータの収集・管理を統合管理するサービスを提供します。
+
+    Args:
+        bybit_service: BybitOpenInterestServiceインスタンス（依存性注入）
+
+    Returns:
+        OpenInterestOrchestrationService: オープンインタレストオーケストレーションサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
     """
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    def factory() -> "OpenInterestOrchestrationService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            OpenInterestOrchestrationService: 生成されたサービスインスタンス
+        """
         from app.services.data_collection.orchestration.open_interest_orchestration_service import (
             OpenInterestOrchestrationService,
         )
@@ -165,13 +244,25 @@ def get_open_interest_orchestration_service(
     return _create_service(factory, "OpenInterestOrchestrationService")
 
 
-def get_ml_training_service():
-    """
-    MLTrainingService のインスタンスを取得（依存性注入用）
+def get_ml_training_service() -> "MLTrainingService":
+    """MLTrainingServiceのインスタンスを取得（依存性注入用）。
+
+    機械学習モデルのトレーニングフローを制御し、
+    データの準備、特徴量エンジニアリング、学習、評価、保存を管理するサービスを提供します。
+
+    Returns:
+        MLTrainingService: MLトレーニングサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
     """
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    def factory() -> "MLTrainingService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            MLTrainingService: 生成されたサービスインスタンス
+        """
         from app.services.ml.orchestration.ml_training_orchestration_service import (
             MLTrainingService,
         )
@@ -181,13 +272,25 @@ def get_ml_training_service():
     return _create_service(factory, "MLTrainingService")
 
 
-def get_backtest_orchestration_service():
-    """
-    BacktestOrchestrationService のインスタンスを取得（依存性注入用）
+def get_backtest_orchestration_service() -> "BacktestOrchestrationService":
+    """BacktestOrchestrationServiceのインスタンスを取得（依存性注入用）。
+
+    バックテスト結果のCRUD操作、戦略管理、関連データの統合処理を担当する
+    オーケストレーションサービスを提供します。
+
+    Returns:
+        BacktestOrchestrationService: バックテストオーケストレーションサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
     """
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    def factory() -> "BacktestOrchestrationService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            BacktestOrchestrationService: 生成されたサービスインスタンス
+        """
         from app.services.backtest.orchestration.backtest_orchestration_service import (
             BacktestOrchestrationService,
         )
@@ -199,13 +302,27 @@ def get_backtest_orchestration_service():
 
 def get_funding_rate_orchestration_service(
     bybit_service=Depends(get_bybit_funding_rate_service),
-):
-    """
-    FundingRateOrchestrationService のインスタンスを取得（依存性注入用）
+) -> "FundingRateOrchestrationService":
+    """FundingRateOrchestrationServiceのインスタンスを取得（依存性注入用）。
+
+    ファンディングレートデータの収集・管理を統合管理するサービスを提供します。
+
+    Args:
+        bybit_service: BybitFundingRateServiceインスタンス（依存性注入）
+
+    Returns:
+        FundingRateOrchestrationService: ファンディングレートオーケストレーションサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
     """
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    def factory() -> "FundingRateOrchestrationService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            FundingRateOrchestrationService: 生成されたサービスインスタンス
+        """
         from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
             FundingRateOrchestrationService,
         )
@@ -215,13 +332,25 @@ def get_funding_rate_orchestration_service(
     return _create_service(factory, "FundingRateOrchestrationService")
 
 
-def get_ml_management_orchestration_service():
-    """
-    MLManagementOrchestrationService のインスタンスを取得（依存性注入用）
+def get_ml_management_orchestration_service() -> "MLManagementOrchestrationService":
+    """MLManagementOrchestrationServiceのインスタンスを取得（依存性注入用）。
+
+    トレーニング済みMLモデルの管理（一覧取得、削除、詳細情報取得等）を
+    統合管理するサービスを提供します。
+
+    Returns:
+        MLManagementOrchestrationService: ML管理オーケストレーションサービスインスタンス
+
+    Raises:
+        HTTPException: サービス初期化に失敗した場合（ステータスコード503）
     """
 
-    def factory():
-        """サービスのインスタンスを生成する内部ファクトリ関数です。"""
+    def factory() -> "MLManagementOrchestrationService":
+        """サービスのインスタンスを生成する内部ファクトリ関数。
+
+        Returns:
+            MLManagementOrchestrationService: 生成されたサービスインスタンス
+        """
         from app.services.ml.orchestration.ml_management_orchestration_service import (
             MLManagementOrchestrationService,
         )
@@ -235,13 +364,26 @@ def get_long_short_ratio_repository(
     db: Session = Depends(get_db),
 ) -> LongShortRatioRepository:
     """
-    LongShortRatioRepository のインスタンスを取得（依存性注入用）
+    LongShortRatioRepositoryのインスタンスを取得（依存性注入用）
+
+    ロングショート比率データのデータベース操作を担当するリポジトリを提供します。
+
+    Args:
+        db: データベースセッション（依存性注入）
+
+    Returns:
+        LongShortRatioRepository: ロングショート比率リポジトリインスタンス
     """
     return LongShortRatioRepository(db)
 
 
 def get_long_short_ratio_service() -> BybitLongShortRatioService:
     """
-    BybitLongShortRatioService のインスタンスを取得（依存性注入用）
+    BybitLongShortRatioServiceのインスタンスを取得（依存性注入用）
+
+    Bybit取引所からのロングショート比率データ取得サービスを提供します。
+
+    Returns:
+        BybitLongShortRatioService: ロングショート比率サービスインスタンス
     """
     return BybitLongShortRatioService()

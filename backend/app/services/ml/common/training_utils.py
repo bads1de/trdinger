@@ -18,7 +18,30 @@ def resolve_holdout_test_size(
     default_train_split: float = 0.8,
     default_validation_split: float = 0.2,
 ) -> float:
-    """ホールドアウト分割比率を決定する。"""
+    """
+    ホールドアウト分割比率を決定する。
+
+    複数のパラメータ（test_size、train_test_split、validation_split）から
+    テストデータの分割比率を決定します。優先順位は以下の通りです：
+    1. test_size（直接指定）
+    2. train_test_split（1 - train_test_split）
+    3. validation_split（直接使用）
+    4. default_train_split（1 - default_train_split）
+
+    Args:
+        test_size: テストデータの分割比率（0-1の範囲）
+        train_test_split: 学習データの分割比率（0-1の範囲）
+        validation_split: 検証データの分割比率（0-1の範囲）
+        default_train_split: デフォルトの学習データ分割比率（デフォルト: 0.8）
+        default_validation_split: デフォルトの検証データ分割比率（デフォルト: 0.2）
+
+    Returns:
+        float: テストデータの分割比率（0-1の範囲）
+
+    Note:
+        train_test_splitがデフォルト値から変更されている場合、
+        validation_splitよりも優先されます。
+    """
     if test_size is not None:
         return float(test_size)
 

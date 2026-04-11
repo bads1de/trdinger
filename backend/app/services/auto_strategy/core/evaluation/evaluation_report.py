@@ -110,7 +110,26 @@ class EvaluationReport:
         weights: Optional[Sequence[float]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "EvaluationReport":
-        """複数シナリオを集約したレポートを構築する。"""
+        """
+        複数の評価シナリオ（OOS、WFA、交差検証の各フォールド等）の結果を、単一の適応度セットに集約します。
+
+        このメソッドは、単純な平均だけでなく、戦略の安定性や堅牢性を評価するための高度な集約をサポートします。
+
+        Args:
+            mode (str): 評価モード（"oos", "wfa", "cv" 等）。
+            objectives (Sequence[str]): 目的関数の名前のリスト。
+            scenarios (Iterable[ScenarioEvaluation]): 集約対象となる各シナリオの評価結果。
+            aggregate_method (str): 集約手法。
+                - "mean": 全シナリオの単純平均。
+                - "median": 中央値。
+                - "worst": 最も悪いシナリオの値。
+                - "robust" (推奨): 平均値とワーストケースを組み合わせた堅牢な評価。
+            weights (Optional[Sequence[float]]): シナリオごとの重み付け（WFAでの最近接重視等）。
+            metadata (Optional[Dict]): 実験条件等の付随情報。
+
+        Returns:
+            EvaluationReport: 全シナリオの結果を統合したレポートオブジェクト。
+        """
         scenario_list = list(scenarios)
         objective_names = tuple(objectives)
 
@@ -162,7 +181,26 @@ class EvaluationReport:
         aggregate_method: str,
         weights: Optional[Sequence[float]],
     ) -> float:
-        """目的関数ごとの値を集約する。"""
+        """
+        単一の目的関数（指標）に対して、複数のシナリオから得られた値を一つにまとめます。
+
+        各集約手法のロジック：
+        - **robust** (推奨): 安定性を評価するために、中央値とワーストケースを組み合わせます。
+          $Aggregated = CentralValue \\cdot (1 - w) + WorstValue \\cdot w$
+          ここで $w$ はワーストケースの重み（`_ROBUST_WORST_CASE_WEIGHT`）です。
+        - **weighted**: 各シナリオに対して `weights` で指定された重みを用いて加重平均を算出します。
+        - **mean**: 単純な算術平均を算出します。
+        - **single**: 最初のシナリオの値をそのまま使用します。
+
+        Args:
+            values (Sequence[float]): 各シナリオでの評価値のリスト。
+            objective (str): 目的関数名（最小化すべき指標かどうかの判定に使用）。
+            aggregate_method (str): 集約手法の識別子。
+            weights (Optional[Sequence[float]]): 加重平均用のウェイト（合計が1になるよう内部で正規化されます）。
+
+        Returns:
+            float: 集約後の数値。
+        """
         if not values:
             return 0.0
 

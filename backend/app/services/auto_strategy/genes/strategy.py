@@ -26,9 +26,24 @@ logger = logging.getLogger(__name__)
 @dataclass(slots=True)
 class StrategyGene:
     """
-    戦略遺伝子
+    遺伝的アルゴリズム（GA）の進化対象となる、一つの完結した取引戦略を表す「遺伝子」です。
 
-    完全な取引戦略を表現する遺伝子です。
+    このクラスは、テクニカル指標の定義からエントリー・決済条件、リスク管理、資金管理までの
+    全パラメータを保持し、戦略の「設計図」として機能します。
+
+    Attributes:
+        id (str): 戦略の一意識別子（UUID）。
+        indicators (List[IndicatorGene]): 戦略で使用する全テクニカル指標の定義。
+        long_entry_conditions (List): ロングエントリーを許可するための論理条件。
+        short_entry_conditions (List): ショートエントリーを許可するための論理条件。
+        stateful_conditions (List): 状態（フラグ）を保持する特殊な条件。
+        risk_management (Dict): 証拠金やレバレッジ等のリスク設定。
+        tpsl_gene (Optional[TPSLGene]): 共通の利確・損切設定。
+        long_tpsl_gene (Optional[TPSLGene]): ロング専用の利確・損切設定。
+        short_tpsl_gene (Optional[TPSLGene]): ショート専用の利確・損切設定。
+        position_sizing_gene (Optional[PositionSizingGene]): 資金管理（ロットサイズ決定）ロジックの設定。
+        tool_genes (List[ToolGene]): 週末フィルタや時間帯制限等の補助ツールの設定。
+        metadata (Dict): 生成日時や親のID等の付随情報。
     """
 
     id: str = ""
@@ -53,7 +68,14 @@ class StrategyGene:
 
     @classmethod
     def create_default(cls) -> "StrategyGene":
-        """デフォルトの戦略遺伝子を作成。"""
+        """デフォルトの戦略遺伝子を作成する。
+
+        安全なデフォルト値を持つStrategyGeneインスタンスを生成します。
+        GAの初期集団生成やテスト用途に使用されます。
+
+        Returns:
+            StrategyGene: デフォルト値で初期化された戦略遺伝子。
+        """
         from .strategy_factory import create_default_strategy_gene
 
         return create_default_strategy_gene(cls)
@@ -75,7 +97,30 @@ class StrategyGene:
         risk_management: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> "StrategyGene":
-        """パーツから戦略遺伝子を組み立てる。"""
+        """
+        個別の遺伝子パーツから、一つの完結した `StrategyGene` オブジェクトを組み立てます。
+
+        このメソッドは主に、交叉（Crossover）や突然変異（Mutation）によって
+        新しく生成された属性セットから個体を再構成する際に使用されます。
+
+        Args:
+            indicators: テクニカル指標のリスト。
+            long_entry_conditions: ロングのエントリー条件。
+            short_entry_conditions: ショートのエントリー条件。
+            tpsl_gene: 共通のTP/SL設定。
+            position_sizing_gene: 資金管理設定。
+            long_tpsl_gene: ロング専用のTP/SL設定。
+            short_tpsl_gene: ショート専用のTP/SL設定。
+            entry_gene: 共通のエントリー管理設定。
+            long_entry_gene: ロング専用のエントリー管理。
+            short_entry_gene: ショート専用のエントリー管理。
+            tool_genes: 補助ツールの設定リスト。
+            risk_management: リスク管理の詳細設定辞書。
+            metadata: 実験ID等のメタデータ。
+
+        Returns:
+            StrategyGene: 組み立てられた新しい戦略個体。
+        """
         from .strategy_factory import assemble_strategy_gene
 
         return assemble_strategy_gene(

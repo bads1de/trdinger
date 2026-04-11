@@ -85,19 +85,33 @@ class EvolutionRunner:
         should_stop: Optional[Callable[[], bool]] = None,
     ) -> tuple[List[Any], Any]:
         """
-        進化アルゴリズムの実行（単一・多目的 統一版）
+        設定された世代数分、進化計算アルゴリズムを実行します。
 
-        単一目的・多目的を問わず、toolboxに登録された演算子と
-        渡されたhalloffameオブジェクト（HallOfFame または ParetoFront）を使用して
-        進化計算を実行します。
+        このメソッドはGAのメインループを管理し、以下のライフサイクルを繰り返します：
+        1. **初期評価**: 第0世代（初期集団）の適応度を評価。
+        2. **世代ループ**:
+           - **停止チェック**: ユーザーからの停止リクエスト（`should_stop`）を確認。
+           - **GC制御**: メモリリーク防止のため、各世代の開始時にガベージコレクションを明示的に実行。
+           - **適応度共有 (Fitness Sharing)**: 個体の多様性を維持するため、密集した個体の適応度を調整。
+           - **親選択 (Selection)**: 適応度に基づき、次世代の親となる個体を抽出（トーナメント等）。
+           - **交叉 (Crossover)**: 二つの個体を組み合わせて新しい個体（子）を生成。
+           - **突然変異 (Mutation)**: 確率的に遺伝子を書き換え、局所最適解からの脱出を図る。
+           - **子個体の評価**: 新しく生成された個体の適応度を計算（並列実行をサポート）。
+           - **エリート保存**: ホール・オブ・フェイム（殿堂）を最新の優良個体で更新。
+        3. **結果の集計**: 最終世代の集団と、全世代の統計ログを返却。
 
         Args:
-            population: 初期個体群
-            config: GA設定
-            halloffame: 殿堂入り個体リスト（HallOfFame または ParetoFront）
+            population (List[Any]): 進化を開始する初期個体群のリスト。
+            config (Any): 世代数、交叉率、突然変異率等のハイパーパラメータを含む設定オブジェクト。
+            halloffame (Optional[Any]): 最良個体を保持するDEAPの HallOfFame または ParetoFront オブジェクト。
+            should_stop (Optional[Callable[[], bool]]): 外部から中断を指示するためのコールバック関数。
 
         Returns:
-            (最終個体群, 進化ログ)
+            tuple[List[Any], tools.Logbook]: (最終世代の個体群, 各世代の統計情報を含むログブック)。
+
+        Raises:
+            EvolutionStoppedError: `should_stop()` が True を返し、進化が途中で中断された場合。
+            Exception: 評価中または進化計算プロセス中に発生した予期しないエラー。
         """
         if should_stop and should_stop():
             raise EvolutionStoppedError("進化処理は開始前に停止されました")
@@ -188,7 +202,22 @@ class EvolutionRunner:
         return population, logbook
 
     def _apply_crossover_batch(self, offspring: List[Any], config: Any) -> List[Any]:
-        """交叉のバッチ処理。"""
+        """
+        交叉のバッチ処理
+
+        個体群に対して交叉操作をバッチで適用します。
+        交叉率に基づいて、隣接するペアを交叉します。
+
+        Args:
+            offspring: 子個体リスト
+            config: GA設定オブジェクト
+
+        Returns:
+            List[Any]: 交叉後の子個体リスト
+
+        Note:
+            交叉後の個体のキャッシュは無効化されます。
+        """
         for i in range(0, len(offspring) - 1, 2):
             if random.random() < config.crossover_rate:
                 child1, child2 = offspring[i], offspring[i + 1]
@@ -201,7 +230,22 @@ class EvolutionRunner:
         return offspring
 
     def _apply_mutation_batch(self, offspring: List[Any], config: Any) -> List[Any]:
-        """突然変異のバッチ処理。"""
+        """
+        突然変異のバッチ処理
+
+        個体群に対して突然変異操作をバッチで適用します。
+        突然変異率に基づいて、各個体を突然変異させます。
+
+        Args:
+            offspring: 子個体リスト
+            config: GA設定オブジェクト
+
+        Returns:
+            List[Any]: 突然変異後の子個体リスト
+
+        Note:
+            突然変異後の個体のキャッシュは無効化されます。
+        """
         for i in range(len(offspring)):
             if random.random() < config.mutation_rate:
                 mutant = offspring[i]
@@ -213,7 +257,18 @@ class EvolutionRunner:
         return offspring
 
     def _get_crossover_cache_key(self, parent1: Any, parent2: Any) -> str:
-        """交叉キャッシュキーを生成する。"""
+        """
+        交叉キャッシュキーを生成する
+
+        親個体のIDに基づいて交叉キャッシュキーを生成します。
+
+        Args:
+            parent1: 親個体1
+            parent2: 親個体2
+
+        Returns:
+            str: キャッシュキー（"id1:id2"形式）
+        """
         try:
             p1_id = getattr(parent1, "id", "") or str(id(parent1))
             p2_id = getattr(parent2, "id", "") or str(id(parent2))
@@ -222,7 +277,17 @@ class EvolutionRunner:
             return str(id(parent1)) + ":" + str(id(parent2))
 
     def _get_mutation_cache_key(self, individual: Any) -> str:
-        """突然変異キャッシュキーを生成する。"""
+        """
+        突然変異キャッシュキーを生成する
+
+        個体のIDに基づいて突然変異キャッシュキーを生成します。
+
+        Args:
+            individual: 個体
+
+        Returns:
+            str: キャッシュキー（個体ID）
+        """
         try:
             ind_id = getattr(individual, "id", "") or str(id(individual))
             return ind_id
@@ -230,7 +295,11 @@ class EvolutionRunner:
             return str(id(individual))
 
     def clear_caches(self) -> None:
-        """バッチ互換のキャッシュ領域をクリアする。"""
+        """
+        バッチ互換のキャッシュ領域をクリアする
+
+        交叉キャッシュと突然変異キャッシュをクリアしてメモリを解放します。
+        """
         self._crossover_cache.clear()
         self._mutation_cache.clear()
 
@@ -296,7 +365,24 @@ class EvolutionRunner:
         individuals: List[Any],
         config: Optional[Any],
     ) -> List[tuple[float, ...]]:
-        """設定に応じて個体列を評価する。"""
+        """
+        設定に応じて個体列を評価する
+
+        個体リストを評価して適応度値を返します。
+        並列評価器が利用可能な場合は並列評価を行います。
+
+        Args:
+            individuals: 評価対象の個体リスト
+            config: GA設定オブジェクト（オプション）
+
+        Returns:
+            List[tuple[float, ...]]: 適応度値のリスト
+
+        Note:
+            - 並列評価器が優先的に使用されます
+            - 個別評価器が使用可能な場合はそれを使用
+            - それ以外はツールボックスの評価関数を使用
+        """
         if not individuals:
             return []
 
@@ -316,7 +402,19 @@ class EvolutionRunner:
         candidate_population: List[Any],
         config: Optional[Any],
     ) -> None:
-        """粗評価上位だけ full fidelity で再評価する。"""
+        """
+        粗評価上位だけ full fidelity で再評価する
+
+        マルチフィデリティ評価が有効な場合、粗評価で上位の候補のみを
+        完全忠実度で再評価します。
+
+        Args:
+            candidate_population: 候補個体群
+            config: GA設定オブジェクト（オプション）
+
+        Note:
+            既に完全忠実度で評価された個体はスキップされます。
+        """
         if (
             not candidate_population
             or not is_multi_fidelity_enabled(config)
@@ -344,7 +442,18 @@ class EvolutionRunner:
         individuals: List[Any],
         fidelity: str,
     ) -> None:
-        """個体へ現在の評価粒度を付与する。"""
+        """
+        個体へ現在の評価粒度を付与する
+
+        個体に評価粒度（coarseまたはfull）のメタデータを設定します。
+
+        Args:
+            individuals: 個体リスト
+            fidelity: 評価粒度（"coarse"または"full"）
+
+        Note:
+            メタデータ設定に失敗した場合はログを出力してスキップします。
+        """
         for individual in individuals:
             try:
                 setattr(individual, "_evaluation_fidelity", fidelity)
@@ -405,7 +514,23 @@ class EvolutionRunner:
         population_size: int,
         config: Any,
     ) -> List[Any]:
-        """粗選抜後に report ベースでエリートを差し替える。"""
+        """
+        粗選抜後に report ベースでエリートを差し替える
+
+        二段階選抜を適用します。まず通常の選択を行い、
+        その後上位候補をreportベースで再ランクしてエリートを差し替えます。
+
+        Args:
+            candidate_population: 候補個体群
+            population_size: 集団サイズ
+            config: GA設定オブジェクト
+
+        Returns:
+            List[Any]: 選択された個体群
+
+        Note:
+            個別評価器がない場合は通常の選択のみ行います。
+        """
         selected = list(self.toolbox.select(candidate_population, population_size))
         self._clear_two_stage_metadata(selected)
 
@@ -437,7 +562,21 @@ class EvolutionRunner:
         candidate_population: List[Any],
         limit: int,
     ) -> List[Any]:
-        """単一目的 fitness の上位候補を返す。"""
+        """
+        単一目的 fitness の上位候補を返す
+
+        プライマリフィットネスに基づいて上位候補を選択します。
+
+        Args:
+            candidate_population: 候補個体群
+            limit: 取得する候補数
+
+        Returns:
+            List[Any]: 上位候補リスト
+
+        Note:
+            limitが0以下の場合は空リストを返します。
+        """
         if limit <= 0:
             return []
         ranked = sorted(
@@ -453,7 +592,22 @@ class EvolutionRunner:
         elite_count: int,
         config: Any,
     ) -> List[tuple[Any, tuple[float, ...]]]:
-        """候補を report ベースで再ランクしてエリートを返す。"""
+        """
+        候補を report ベースで再ランクしてエリートを返す
+
+        評価レポートに基づいて候補を再ランクし、上位エリートを返します。
+
+        Args:
+            candidates: 候補リスト
+            elite_count: エリート数
+            config: GA設定オブジェクト
+
+        Returns:
+            List[tuple[Any, tuple[float, ...]]]: (個体, ランクキー)のタプルリスト
+
+        Note:
+            重複する候補はスキップされます。
+        """
         ranked_candidates = []
         seen_keys = set()
 
@@ -483,7 +637,22 @@ class EvolutionRunner:
         candidate: Any,
         config: Any,
     ) -> Optional[Any]:
-        """候補の report を取得し、必要なら主プロセスで再評価する。"""
+        """
+        候補の report を取得し、必要なら主プロセスで再評価する
+
+        候補の評価レポートを取得します。キャッシュにない場合は
+        必要に応じて再評価を行います。
+
+        Args:
+            candidate: 候補個体
+            config: GA設定オブジェクト
+
+        Returns:
+            Optional[Any]: 評価レポート、取得失敗時はNone
+
+        Note:
+            個別評価器がない場合はNoneを返します。
+        """
         if self.individual_evaluator is None:
             return None
 
@@ -541,7 +710,17 @@ class EvolutionRunner:
         return report
 
     def _clear_two_stage_metadata(self, individuals: List[Any]) -> None:
-        """前世代の二段階選抜メタデータをクリアする。"""
+        """
+        前世代の二段階選抜メタデータをクリアする
+
+        個体群から前世代の二段階選抜メタデータをクリアします。
+
+        Args:
+            individuals: 個体リスト
+
+        Note:
+            重複する個体は一度のみ処理されます。
+        """
         seen_keys = set()
         for individual in individuals:
             candidate_key = get_individual_identity(individual)
@@ -554,7 +733,14 @@ class EvolutionRunner:
         self,
         reranked_elites: List[tuple[Any, tuple[float, ...]]],
     ) -> None:
-        """二段階選抜で確定したエリートへ順位を付与する。"""
+        """
+        二段階選抜で確定したエリートへ順位を付与する
+
+        再ランクされたエリートに順位とスコアのメタデータを設定します。
+
+        Args:
+            reranked_elites: (個体, ランクキー)のタプルリスト
+        """
         for rank, (individual, score) in enumerate(reranked_elites):
             self._set_two_stage_metadata(individual, rank, score)
 
@@ -564,7 +750,19 @@ class EvolutionRunner:
         rank: Optional[int],
         score: Optional[Any],
     ) -> None:
-        """個体へ二段階選抜のメタデータを付与する。"""
+        """
+        個体へ二段階選抜のメタデータを付与する
+
+        個体に二段階選抜の順位とスコアを設定します。
+
+        Args:
+            individual: 個体
+            rank: 順位（オプション）
+            score: スコア（オプション）
+
+        Note:
+            メタデータ設定に失敗した場合はログを出力してスキップします。
+        """
         try:
             set_two_stage_metadata(individual, rank, score)
         except Exception:

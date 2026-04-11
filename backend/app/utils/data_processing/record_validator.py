@@ -34,14 +34,23 @@ class RecordValidator:
 
     @classmethod
     def validate_ohlcv_records_simple(cls, ohlcv_records: List[Dict[str, Any]]) -> bool:
-        """
-        OHLCVデータの妥当性を検証
+        """OHLCVデータの妥当性を検証する。
+
+        各レコードが必須フィールド（timestamp, open, high, low, close, volume）
+        を持ち、数値フィールドが有効な数値であることを確認します。
+
+        検証項目:
+            - 必須フィールドの存在（OHLCV_REQUIRED_FIELDS）
+            - 数値フィールドの妥当性（OHLCV_NUMERIC_FIELDS）
+            - タイムスタンプの有効性
 
         Args:
-            ohlcv_records: 検証するOHLCVデータのリスト
+            ohlcv_records: 検証するOHLCVデータのリスト。
+                各要素は辞書形式で、OHLCVレコードを表す。
 
         Returns:
-            データが有効な場合True、無効な場合False
+            bool: 全てのレコードが有効な場合はTrue、
+                1つでも無効なレコードがある場合はFalse。
         """
         if not ohlcv_records or not isinstance(ohlcv_records, list):
             return False
@@ -76,17 +85,24 @@ class RecordValidator:
     def sanitize_ohlcv_data(
         cls, ohlcv_records: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """
-        OHLCVデータをサニタイズ
+        """OHLCVデータをサニタイズ（正規化・検証）する。
+
+        入力レコードの各フィールドを以下の通り正規化します:
+            - シンボル: 大文字に変換、空白を除去
+            - 時間軸: 小文字に変換、空白を除去
+            - タイムスタンプ: パースして datetime オブジェクトに変換
+            - 数値フィールド（open, high, low, close, volume）: floatに変換
 
         Args:
-            ohlcv_records: サニタイズするOHLCVデータのリスト
+            ohlcv_records: サニタイズするOHLCVデータのリスト。
 
         Returns:
-            サニタイズされたOHLCVデータのリスト
+            List[Dict[str, Any]]: サニタイズされたOHLCVデータのリスト。
+                正規化されたフィールドを持つ辞書のリスト。
 
         Raises:
-            ValueError: サニタイズに失敗した場合
+            ValueError: タイムスタンプのパースに失敗した場合、
+                または数値フィールドの変換に失敗した場合。
         """
         sanitized_records = []
 

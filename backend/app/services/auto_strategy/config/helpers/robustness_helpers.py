@@ -18,7 +18,16 @@ from app.utils.datetime_utils import (
 
 @dataclass(frozen=True)
 class RobustnessRegimeWindow:
-    """正規化済み robustness regime window。"""
+    """
+    正規化済み robustness regime window
+
+    robustness検証用の期間設定を正規化して保持するデータクラスです。
+
+    Attributes:
+        name: 期間名
+        start_date: 開始日
+        end_date: 終了日
+    """
 
     name: str
     start_date: str
@@ -26,19 +35,44 @@ class RobustnessRegimeWindow:
 
     @property
     def signature(self) -> tuple[str, str, str]:
-        """キャッシュキー向けの安定したシグネチャを返す。"""
+        """
+        キャッシュキー向けの安定したシグネチャを返す
+
+        Returns:
+            tuple[str, str, str]: (name, start_date, end_date)のタプル
+        """
         return self.name, self.start_date, self.end_date
 
 
 def _coerce_window_text(window: Mapping[str, Any], key: str) -> str:
-    """window の値を文字列化して前後空白を除去する。"""
+    """
+    window の値を文字列化して前後空白を除去する
+
+    Args:
+        window: window設定辞書
+        key: 取得するキー名
+
+    Returns:
+        str: 文字列化された値（前後空白除去済み）
+    """
     return str(window.get(key, "") or "").strip()
 
 
 def normalize_robustness_regime_window(
     window: Any,
 ) -> Optional[RobustnessRegimeWindow]:
-    """regime window をシナリオ生成向けに正規化する。"""
+    """
+    regime window をシナリオ生成向けに正規化する
+
+    window設定を正規化してRobustnessRegimeWindowオブジェクトに変換します。
+
+    Args:
+        window: window設定（辞書形式）
+
+    Returns:
+        Optional[RobustnessRegimeWindow]: 正規化されたwindowオブジェクト
+                                       不正な形式の場合はNone
+    """
     if not isinstance(window, Mapping):
         return None
 
@@ -58,7 +92,21 @@ def normalize_robustness_regime_window(
 def normalize_robustness_regime_windows(
     windows: Any,
 ) -> list[RobustnessRegimeWindow]:
-    """regime window のリストを正規化する。"""
+    """
+    regime window のリストを正規化する
+
+    windowリストを正規化してRobustnessRegimeWindowオブジェクトのリストに変換します。
+
+    Args:
+        windows: windowリスト
+
+    Returns:
+        list[RobustnessRegimeWindow]: 正規化されたwindowオブジェクトのリスト
+
+    Note:
+        - 文字列、バイト列、辞書の場合は空リストを返します
+        - Iterableでない場合は空リストを返します
+    """
     if isinstance(windows, (str, bytes)) or isinstance(windows, Mapping):
         return []
     if not isinstance(windows, Iterable):
@@ -73,7 +121,24 @@ def normalize_robustness_regime_windows(
 
 
 def validate_robustness_regime_window(window: Any) -> list[str]:
-    """regime window の妥当性を検証する。"""
+    """
+    regime window の妥当性を検証する
+
+    window設定の妥当性を検証してエラーメッセージリストを返します。
+
+    Args:
+        window: window設定（辞書形式）
+
+    Returns:
+        list[str]: エラーメッセージのリスト（妥当な場合は空リスト）
+
+    検証項目:
+        - 辞書形式であること
+        - nameが存在すること
+        - start_dateとend_dateが存在すること
+        - 日付形式が正しいこと
+        - start_date < end_dateであること
+    """
     if not isinstance(window, Mapping):
         return ["robustness の regime window は辞書である必要があります"]
 

@@ -39,10 +39,17 @@ logger = logging.getLogger(__name__)
 
 class BaseMLTrainer(BaseResourceManager, ABC):
     """
-    ML学習基盤クラス
+    機械学習モデルの学習および推論プロセスを標準化するための基底抽象クラスです。
 
-    共通の学習ロジックを提供し、具体的な実装は継承クラスで行います。
-    単一責任原則に従い、学習に関する責任のみを持ちます。
+    このクラスは「テンプレートメソッドパターン」を採用しており、以下の共通ワークフローを提供します：
+    1. 特徴量エンジニアリング（生データからの特徴量算出）
+    2. ラベル生成（教師データの作成）
+    3. 特徴量選択（次元削減とノイズ除去）
+    4. データのスケーリングと分割（時系列を考慮した分割）
+    5. モデルの学習（具体的なアルゴリズムはサブクラスで実装）
+    6. モデルの評価と保存
+
+    サブクラスは `_train_model_impl` および `predict` を実装する必要があります。
     """
 
     def __init__(
@@ -50,10 +57,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         trainer_config: Optional[Dict[str, Any]] = None,
     ):
         """
-        初期化
+        トレーナーを初期化し、共通サービス（特徴量計算、ラベル生成等）を準備します。
 
         Args:
-            trainer_config: トレーナー設定
+            trainer_config (Optional[Dict]): トレーナー固有の設定。
         """
         # BaseResourceManagerの初期化
         super().__init__()

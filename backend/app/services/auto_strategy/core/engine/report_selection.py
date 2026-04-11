@@ -20,7 +20,19 @@ _DEFAULT_RERANK_MARGIN = 2
 
 
 def get_two_stage_elite_count(config: Any, population_size: int) -> int:
-    """二段階選抜に回すエリート数を返す。"""
+    """二段階選抜に回すエリート数を返す。
+
+    GA設定と集団サイズから、二段階選抜（Two-Stage Selection）で
+    エリートとして直接選抜される個体数を計算します。
+
+    Args:
+        config: GA設定オブジェクト。two_stage_selection_config、elite_sizeなどを含む。
+        population_size: 現在の集団サイズ。
+
+    Returns:
+        int: エリートとして直接選抜される個体数。
+            無効な設定の場合は0。
+    """
     two_stage_config = getattr(config, "two_stage_selection_config", None)
     if (
         population_size <= 0
@@ -47,7 +59,19 @@ def get_two_stage_elite_count(config: Any, population_size: int) -> int:
 
 
 def get_two_stage_pool_size(candidate_count: int, elite_count: int, config: Any) -> int:
-    """二段階選抜で再ランクする候補数を返す。"""
+    """二段階選抜で再ランクする候補数を返す。
+
+    エリート数と設定から、再ランク（再評価）対象となる候補数を計算します。
+
+    Args:
+        candidate_count: 候補となる個体数。
+        elite_count: エリートとして選抜された個体数。
+        config: GA設定オブジェクト。two_stage_selection_config.candidate_pool_sizeを含む。
+
+    Returns:
+        int: 再ランク対象となる個体数。
+            無効な設定の場合は0。
+    """
     if candidate_count <= 0 or elite_count <= 0:
         return 0
     two_stage_config = getattr(config, "two_stage_selection_config", None)
@@ -69,7 +93,20 @@ def build_report_rank_key(
     report: Optional[EvaluationReport],
     min_pass_rate: float = 0.0,
 ) -> Tuple[float, float, float, float]:
-    """report を利用した単一目的向けの再ランクキーを構築する。"""
+    """report を利用した単一目的向けの再ランクキーを構築する。
+
+    評価レポートの合格率と個体のフィットネス値を組み合わせて、
+    二段階選抜用のソートキーを生成します。
+
+    Args:
+        individual: 評価対象の個体。
+        report: 評価レポート（オプション）。Noneの場合はフィットネス値のみ使用。
+        min_pass_rate: 最低合格率。これ未満の個体はソートで不利になる。
+
+    Returns:
+        Tuple[float, float, float, float]: 再ランク用のソートキータプル。
+            値が小さいほど上位に来る（ソート昇順で上位）。
+    """
     base_fitness = extract_primary_fitness(individual)
     return build_report_rank_key_from_primary_fitness(
         base_fitness,
@@ -83,7 +120,21 @@ def build_report_rank_key_from_primary_fitness(
     report: Optional[EvaluationReport],
     min_pass_rate: float = 0.0,
 ) -> Tuple[float, float, float, float]:
-    """主 fitness 値と report から再ランクキーを構築する。"""
+    """主fitness値とreportから再ランクキーを構築する。
+
+    評価レポートの合格率、ワーストケーススコア、集約フィットネスなどを
+    組み合わせて、二段階選抜用のソートキーを生成します。
+
+    Args:
+        primary_fitness: 個体の主フィットネス値。
+        report: 評価レポート（オプション）。
+        min_pass_rate: 最低合格率。
+
+    Returns:
+        Tuple[float, float, float, float]: 再ランク用のソートキータプル。
+            (pass_gate, pass_rate, worst_case, aggregated)の順で、
+            値が小さいほど上位に来る。
+    """
     base_fitness = float(primary_fitness)
 
     if not report or not report.aggregated_fitness:
@@ -117,7 +168,17 @@ def extract_primary_fitness(individual: Any) -> float:
 
 
 def get_individual_identity(individual: Any) -> Any:
-    """個体比較用の安定キーを返す。"""
+    """個体比較用の安定キーを返す。
+
+    個体のid属性を優先して使用し、存在しない場合は
+    PythonのオブジェクトIDをフォールバックとして使用します。
+
+    Args:
+        individual: 比較対象の個体。
+
+    Returns:
+        Any: 個体を一意に識別するキー（文字列のidまたはintのオブジェクトID）。
+    """
     individual_id = getattr(individual, "id", None)
     return individual_id if individual_id not in (None, "") else id(individual)
 
@@ -161,7 +222,21 @@ def merge_reranked_elites(
     reranked_elites: Sequence[tuple[Any, Any]],
     population_size: int,
 ) -> list[Any]:
-    """昇格エリートを先頭へ反映しつつ集団サイズを維持する。"""
+    """昇格エリートを先頭へ反映しつつ集団サイズを維持する。
+
+    再ランクされたエリート個体を先頭に配置し、残りの個体を
+    後ろに続けることで、新しい集団を構築します。
+    重複する個体は除去され、集団サイズが維持されます。
+
+    Args:
+        selected: 一段階目で選抜された個体のシーケンス。
+        reranked_elites: 再ランクされたエリート個体のリスト。
+            各要素は（個体、スコア）のタプル。
+        population_size: 目標とする集団サイズ。
+
+    Returns:
+        list[Any]: マージ後の新しい集団。population_size以下に切り詰められる。
+    """
     remaining = list(selected)
     for elite, _ in reranked_elites:
         elite_key = get_individual_identity(elite)

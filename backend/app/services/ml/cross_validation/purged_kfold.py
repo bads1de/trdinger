@@ -55,7 +55,25 @@ class PurgedKFold(_BaseKFold):
         y: Optional[pd.Series] = None,
         groups: Optional[Any] = None,
     ):
-        """データを訓練セットとテストセットに分割するためのインデックスを生成"""
+        """
+        データを訓練セットとテストセットに分割するためのインデックスを生成します。
+
+        このメソッドは、単純なK分割とは異なり、以下のステップで時系列データの整合性を保ちます：
+        1. **テスト期間の決定**: 通常通りデータをK分割し、特定の区間をテストセットとして抽出。
+        2. **パージング (Purging)**: 訓練セットから、テストセットの予測に未来情報を含んでいる可能性のあるサンプルを削除。
+           - 「テストセットの開始時刻」以前に終了していない訓練サンプルを除去します。
+        3. **エンバーゴ (Embargo)**: テストセット直後の一定期間の訓練データを、時系列の相関（オーバーラップ）によるリークを防ぐために削除。
+           - `pct_embargo` 設定に基づき、テスト期間末尾からさらに未来方向へ保護期間を設けます。
+        4. **高速化処理**: 全ての時刻比較をナノ秒単位の整数ベクトルとして計算し、大規模データセットでも高速にマスクを生成します。
+
+        Args:
+            X (pd.DataFrame): 特徴量データ。`t1` と同一のインデックスが必要です。
+            y (Optional[pd.Series]): ターゲットラベル。
+            groups (Optional[Any]): 未使用（scikit-learn互換性のため）。
+
+        Yields:
+            tuple[np.ndarray, np.ndarray]: (訓練インデックス, テストインデックス) のペア。
+        """
         _ = groups
         if not isinstance(X, pd.DataFrame) or not X.index.equals(self.t1.index):
             raise ValueError("X must be a DataFrame and have the same index as t1.")

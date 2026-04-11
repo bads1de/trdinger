@@ -11,7 +11,18 @@ import pandas as pd
 
 
 def _is_missing_value(value: Any) -> bool:
-    """pandas の missing 値判定を安全に行う。"""
+    """
+    pandas の missing 値判定を安全に行う。
+
+    pd.isna() を使用して値が欠損値かどうかを判定します。
+    型エラーが発生した場合は False を返します。
+
+    Args:
+        value: 判定対象の値（任意の型）
+
+    Returns:
+        bool: 値が欠損値（NaN、Noneなど）の場合はTrue、そうでない場合はFalse
+    """
     try:
         return bool(pd.isna(value))
     except (TypeError, ValueError):
@@ -19,7 +30,21 @@ def _is_missing_value(value: Any) -> bool:
 
 
 def parse_datetime_value(value: Any) -> datetime:
-    """datetime や ISO8601 文字列を datetime に変換する。"""
+    """
+    datetime や ISO8601 文字列を datetime に変換する。
+
+    pandas.Timestamp、datetime、ISO8601形式の文字列を
+    Pythonのdatetimeオブジェクトに変換します。
+
+    Args:
+        value: 変換対象の値（pd.Timestamp、datetime、ISO8601文字列）
+
+    Returns:
+        datetime: 変換されたdatetimeオブジェクト
+
+    Raises:
+        ValueError: 変換できない形式の値が渡された場合、または値がNone/欠損値の場合
+    """
     if value is None or _is_missing_value(value):
         raise ValueError(f"サポートされていない日付形式: {type(value)}")
 
@@ -39,7 +64,18 @@ def parse_datetime_value(value: Any) -> datetime:
 
 
 def parse_datetime_optional(value: Any) -> Optional[datetime]:
-    """値を datetime に変換し、失敗時は None を返す。"""
+    """
+    値を datetime に変換し、失敗時は None を返す。
+
+    parse_datetime_value の例外をキャッチする安全なバージョンです。
+    変換に失敗した場合や値がNone/空文字の場合はNoneを返します。
+
+    Args:
+        value: 変換対象の値（任意の型）
+
+    Returns:
+        Optional[datetime]: 変換されたdatetimeオブジェクト、失敗時はNone
+    """
     if value is None:
         return None
 
@@ -56,7 +92,20 @@ def parse_datetime_range_optional(
     start_date: Any,
     end_date: Any,
 ) -> Optional[Tuple[datetime, datetime]]:
-    """開始・終了日時をまとめて変換し、比較可能な形で返す。"""
+    """
+    開始・終了日時をまとめて変換し、比較可能な形で返す。
+
+    両方の日時を変換し、タイムゾーンの正規化を行った上で
+    開始日時 < 終了日時であることを確認します。
+
+    Args:
+        start_date: 開始日時（datetime、ISO8601文字列など）
+        end_date: 終了日時（datetime、ISO8601文字列など）
+
+    Returns:
+        Optional[Tuple[datetime, datetime]]: 正規化された(開始日時, 終了日時)のタプル。
+                                             変換失敗時または開始>=終了の場合はNone
+    """
     parsed_start = parse_datetime_optional(start_date)
     parsed_end = parse_datetime_optional(end_date)
 
@@ -74,7 +123,23 @@ def parse_datetime_range_optional(
 
 
 def parse_timestamp_safe(value: Any) -> Optional[datetime]:
-    """ミリ秒 timestamp や日時表現を安全に datetime へ変換する。"""
+    """
+    ミリ秒 timestamp や日時表現を安全に datetime へ変換する。
+
+    以下の形式をサポートします：
+    - pandas.Timestamp
+    - datetime
+    - ISO8601形式の文字列
+    - ミリ秒単位の数値（UNIXタイムスタンプ）
+
+    不正な値（None、NaN、負の値など）はNoneを返します。
+
+    Args:
+        value: 変換対象の値（任意の型）
+
+    Returns:
+        Optional[datetime]: 変換されたdatetimeオブジェクト（UTCタイムゾーン）、失敗時はNone
+    """
     if value is None or _is_missing_value(value):
         return None
 
@@ -108,7 +173,20 @@ def parse_timestamp_safe(value: Any) -> Optional[datetime]:
 def normalize_datetimes_for_comparison(
     start_date: datetime, end_date: datetime
 ) -> Tuple[datetime, datetime]:
-    """aware / naive が混在しても比較できるように正規化する。"""
+    """
+    aware / naive が混在しても比較できるように正規化する。
+
+    タイムゾーン情報（aware）とタイムゾーン情報なし（naive）の
+    datetimeオブジェクトが混在している場合、全てUTCのawareに変換して
+    比較可能な状態にします。
+
+    Args:
+        start_date: 開始日時
+        end_date: 終了日時
+
+    Returns:
+        Tuple[datetime, datetime]: UTCタイムゾーンに正規化された(開始日時, 終了日時)のタプル
+    """
     if start_date.tzinfo is None and end_date.tzinfo is None:
         return start_date, end_date
 
@@ -121,7 +199,18 @@ def normalize_datetimes_for_comparison(
 
 
 def current_datetime_like(reference: datetime) -> datetime:
-    """reference の timezone に合わせた現在時刻を返す。"""
+    """
+    reference の timezone に合わせた現在時刻を返す。
+
+    参照用のdatetimeオブジェクトと同じタイムゾーン設定で
+    現在時刻を取得します。referenceがnaiveの場合はnaiveな現在時刻を返します。
+
+    Args:
+        reference: タイムゾーン設定の参照元datetimeオブジェクト
+
+    Returns:
+        datetime: referenceと同じタイムゾーン設定の現在時刻
+    """
     if reference.tzinfo is None:
         return datetime.now()
     return datetime.now(reference.tzinfo)

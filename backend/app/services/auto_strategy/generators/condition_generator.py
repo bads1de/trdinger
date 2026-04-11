@@ -73,9 +73,24 @@ class ConditionGenerator:
         indicators: List[IndicatorGene],
     ) -> List[Union[Condition, ConditionGroup]]:
         """
-        条件の正規化/組立ヘルパー：
-        - フォールバック（価格 vs トレンド or open）の注入
-        - 1件なら素条件のまま、2件以上なら OR グルーピング
+        生成された生の条件リストを、戦略として実行可能な形式に正規化し、堅牢性を高めるフォールバックを注入します。
+
+        主な処理ステップ：
+        1. **トレンドフォールバックの生成**: 指標リストから移動平均（SMA/EMA）等のトレンド系指標を自動選定し、
+           「価格がトレンドの上/下にあること」という基本的な条件（フォールバック）を作成します。
+        2. **冗長性の排除**: 既に同一の条件が存在する場合、重複を避けます。
+        3. **論理構造の最適化**: 
+           - 条件が0件の場合：フォールバックのみを返します。
+           - 条件が複数ある場合：それらを `OR` グループとしてまとめ、成立性を高めます。
+        4. **トップレベル統合**: 正規化された `OR` グループとフォールバック条件を組み合わせたリストを返却します。
+
+        Args:
+            conds (List[Union[Condition, ConditionGroup]]): 生成された元の条件リスト。
+            side (str): "long" または "short"。
+            indicators (List[IndicatorGene]): 戦略で使用可能な全指標のリスト（フォールバック選定用）。
+
+        Returns:
+            List[Union[Condition, ConditionGroup]]: 正規化・補強された論理条件のリスト。
         """
         # トレンド系指標の優先順位
         trend_pref = ("SMA", "EMA")
@@ -149,7 +164,19 @@ class ConditionGenerator:
         List[Condition],
     ]:
         """
-        バランスの取れたロング・ショート条件を生成
+        与えられたテクニカル指標群から、統計的にバランスの取れたロング・ショート条件を「スマートに」生成します。
+
+        このメソッドは単純なランダム生成ではなく、以下の高度な戦略を組み合わせて「意味のある」条件を構築します：
+        1. **複合条件戦略 (`ComplexConditionsStrategy`)**: RSIの過熱感とMACDのクロス等、異なる性質の指標を組み合わせた論理式を生成。
+        2. **マルチタイムフレーム戦略 (`MTFStrategy`)**: 上位足（1h足での日足トレンド判定等）を条件に含め、相場環境に沿ったエントリーを可能にします。
+        3. **スケールマッチング**: 価格 vs 移動平均（価格スケール）、RSI vs 70（0-100スケール）等、比較対象のスケールが一致するようにオペランドを選定。
+        4. **自動正規化**: 生成された条件を `normalize_conditions` に通し、論理的な成立性とフォールバックを保証。
+
+        Args:
+            indicators (List[IndicatorGene]): 戦略の構成要素となる指標遺伝子のリスト。
+
+        Returns:
+            Tuple[List, List, List]: (ロング条件リスト, ショート条件リスト, 共通/メタ条件リスト) のタプル。
         """
         if not indicators:
             return self.generate_fallback_conditions(indicators)

@@ -23,7 +23,23 @@ def _build_sample_ohlcv_frame(
     walk_close: bool = False,
     with_datetime_index: bool = False,
 ) -> Any:
-    """pandas-ta の検証用サンプル OHLCV DataFrame を作る。"""
+    """
+    pandas-ta の検証用サンプル OHLCV DataFrame を作る
+
+    インジケーターの検証やイントロスペクション用のサンプルデータを生成します。
+
+    Args:
+        rows: 行数（データポイント数）
+        walk_close: Trueの場合、close価格をランダムウォークで生成（デフォルト: False）
+        with_datetime_index: Trueの場合、datetimeインデックスを設定（デフォルト: False）
+
+    Returns:
+        Any: サンプルOHLCV DataFrame
+
+    Note:
+        walk_close=Falseの場合、乱数で生成された価格を使用します。
+        walk_close=Trueの場合、累積和でトレンドを持つ価格を生成します。
+    """
     import numpy as np
     import pandas as pd
 
@@ -67,7 +83,26 @@ def _build_indicator_call_kwargs(
     frame: Any,
     default_params: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """検証用の DataFrame から、関数呼び出し用 kwargs を作る。"""
+    """
+    検証用の DataFrame から、関数呼び出し用 kwargs を作る
+
+    関数のシグネチャを解析して、DataFrameから適切なデータカラムを抽出し、
+    関数呼び出し用のkwargs辞書を構築します。
+
+    Args:
+        func: インジケーター関数
+        frame: OHLCV DataFrame
+        default_params: デフォルトパラメータ（オプション）
+
+    Returns:
+        Dict[str, Any]: 関数呼び出し用kwargs辞書
+
+    マッピングルール:
+        - close/high/low/open/volume → 対応するカラム
+        - open_ → openカラム
+        - data/series → closeカラム
+        - その他 → default_paramsから取得
+    """
     sig = inspect.signature(func)
     kwargs: Dict[str, Any] = {}
     default_params = default_params or {}
@@ -102,7 +137,24 @@ def _run_indicator_on_sample_frame(
     walk_close: bool = False,
     with_datetime_index: bool = False,
 ) -> Any:
-    """サンプル OHLCV DataFrame で指標を実行する共通処理。"""
+    """
+    サンプル OHLCV DataFrame で指標を実行する共通処理
+
+    サンプルDataFrameを生成し、インジケーター関数を実行して結果を返します。
+
+    Args:
+        func: インジケーター関数
+        rows: サンプルデータの行数
+        default_params: デフォルトパラメータ（オプション）
+        walk_close: close価格をランダムウォークで生成するか（デフォルト: False）
+        with_datetime_index: datetimeインデックスを設定するか（デフォルト: False）
+
+    Returns:
+        Any: インジケーターの実行結果
+
+    Note:
+        FutureWarningを抑制して実行します。
+    """
     sample_frame = _build_sample_ohlcv_frame(
         rows,
         walk_close=walk_close,
@@ -123,7 +175,19 @@ def _run_indicator_on_sample_frame(
 @lru_cache(maxsize=256)
 def extract_min_length_expression(indicator_name: str) -> Optional[str]:
     """
-    pandas-taのソースコードからmin_length計算式を抽出します。
+    pandas-taのソースコードからmin_length計算式を抽出します
+
+    インジケーターのソースコードを解析して、verify_series関数の
+    第二引数（最小データ長）の計算式を抽出します。
+
+    Args:
+        indicator_name: インジケーター名
+
+    Returns:
+        Optional[str]: min_length計算式、抽出失敗時はNone
+
+    Note:
+        中間変数（_length等）を使用している場合、その定義も抽出します。
     """
     func = getattr(ta, indicator_name.lower(), None)
 
@@ -163,7 +227,21 @@ def extract_min_length_expression(indicator_name: str) -> Optional[str]:
 
 def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
     """
-    pandas-taの指標からデフォルトパラメータ値を取得します。
+    pandas-taの指標からデフォルトパラメータ値を取得します
+
+    ソースコードを解析して、条件分岐によるデフォルト値を抽出します。
+    シグネチャに含まれないデフォルト値を補完するために使用します。
+
+    Args:
+        indicator_name: インジケーター名
+
+    Returns:
+        Dict[str, Any]: デフォルトパラメータ辞書
+
+    抽出パターン:
+        - int(param) if param and param > 0 else default
+        - param if param and param > 0 else default
+        - float(param) if param ... else default
     """
     func = getattr(ta, indicator_name.lower(), None)
 
@@ -202,7 +280,19 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
 
 def _evaluate_expression(expr: str, params: Dict[str, Any]) -> Optional[int]:
     """
-    min_length式を評価して数値を返します。
+    min_length式を評価して数値を返します
+
+    抽出されたmin_length計算式をパラメータ値で評価します。
+
+    Args:
+        expr: 計算式（例: 'max(length, period)'）
+        params: パラメータ辞書
+
+    Returns:
+        Optional[int]: 評価結果、失敗時はNone
+
+    Note:
+        安全な評価のため、許可された関数（max, min）のみ使用可能です。
     """
     try:
         # 安全な評価のため、許可された関数のみを使用
@@ -223,7 +313,20 @@ def _evaluate_expression(expr: str, params: Dict[str, Any]) -> Optional[int]:
 
 def calculate_min_length(indicator_name: str, params: Dict[str, Any]) -> int:
     """
-    指標の最小必要データ長を計算します。
+    指標の最小必要データ長を計算します
+
+    ソースコードから抽出したmin_length式を評価して、
+    インジケーターの最小必要データ長を計算します。
+
+    Args:
+        indicator_name: インジケーター名
+        params: パラメータ辞書
+
+    Returns:
+        int: 最小必要データ長
+
+    Note:
+        式の抽出に失敗した場合、lengthまたはperiodパラメータを返します。
     """
     # デフォルト値を取得してマージ
     defaults = _get_indicator_defaults(indicator_name)
@@ -249,7 +352,21 @@ def calculate_min_length(indicator_name: str, params: Dict[str, Any]) -> int:
 @lru_cache(maxsize=256)
 def is_multi_column_indicator(indicator_name: str) -> bool:
     """
-    指標が複数カラム（DataFrame）を返すかどうかを判定します。
+    指標が複数カラム（DataFrame）を返すかどうかを判定します
+
+    docstringとソースコードを解析して、インジケーターが
+    複数カラムを返すかどうかを判定します。
+
+    Args:
+        indicator_name: インジケーター名
+
+    Returns:
+        bool: 複数カラムを返す場合はTrue、単一カラムの場合はFalse
+
+    判定方法:
+        1. 既知のマルチカラムインジケーターのホワイトリスト
+        2. docstringのReturnsセクション
+        3. ソースコードのDataFrame返却パターン
     """
     name_lower = indicator_name.lower()
     func = getattr(ta, name_lower, None)
@@ -297,7 +414,18 @@ def is_multi_column_indicator(indicator_name: str) -> bool:
 @lru_cache(maxsize=256)
 def get_return_column_count(indicator_name: str) -> int:
     """
-    指標が返すカラム数を取得します。
+    指標が返すカラム数を取得します
+
+    マルチカラムインジケーターのカラム数を取得します。
+
+    Args:
+        indicator_name: インジケーター名
+
+    Returns:
+        int: カラム数
+
+    Note:
+        推測失敗時のデフォルトは2です。
     """
     if not is_multi_column_indicator(indicator_name):
         return 1
@@ -315,7 +443,19 @@ def get_return_column_count(indicator_name: str) -> int:
 @lru_cache(maxsize=256)
 def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
     """
-    指標が返すカラム名のリストを取得します。
+    指標が返すカラム名のリストを取得します
+
+    サンプル実行により、マルチカラムインジケーターの
+    実際のカラム名を取得します。
+
+    Args:
+        indicator_name: インジケーター名
+
+    Returns:
+        Optional[List[str]]: カラム名リスト、単一カラムまたは失敗時はNone
+
+    Note:
+        サンプル実行に失敗した場合はNoneを返します。
     """
     import pandas as pd
 
@@ -350,7 +490,22 @@ def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
 @lru_cache(maxsize=256)
 def get_indicator_category(indicator_name: str) -> Optional[str]:
     """
-    指標のカテゴリ名 (momentum, trend, volatility, etc.) を取得します。
+    指標のカテゴリ名 (momentum, trend, volatility, etc.) を取得します
+
+    pandas-taのCategory辞書からインジケーターのカテゴリを取得します。
+
+    Args:
+        indicator_name: インジケーター名
+
+    Returns:
+        Optional[str]: カテゴリ名、見つからない場合はNone
+
+    カテゴリ例:
+        - momentum: モメンタム系
+        - trend: トレンド系
+        - volatility: ボラティリティ系
+        - volume: ボリューム系
+        - overlap: オーバーラップ系
     """
     name_lower = indicator_name.lower()
 
@@ -363,7 +518,19 @@ def get_indicator_category(indicator_name: str) -> Optional[str]:
 
 def extract_default_parameters(indicator_name: str) -> Dict[str, Any]:
     """
-    指標のデフォルトパラメータを抽出します。
+    指標のデフォルトパラメータを抽出します
+
+    シグネチャとソースコードからデフォルトパラメータを抽出します。
+
+    Args:
+        indicator_name: インジケーター名
+
+    Returns:
+        Dict[str, Any]: デフォルトパラメータ辞書
+
+    抽出方法:
+        1. シグネチャからのデフォルト値抽出
+        2. ソースコードからの補完（条件分岐によるデフォルト値）
     """
     func = getattr(ta, indicator_name.lower(), None)
 
@@ -394,7 +561,15 @@ def extract_default_parameters(indicator_name: str) -> Dict[str, Any]:
 
 def get_all_pandas_ta_indicators() -> List[str]:
     """
-    pandas-taの全指標名を動的に取得します。
+    pandas-taの全指標名を動的に取得します
+
+    pandas-taのCategory辞書からすべてのインジケーター名を取得します。
+
+    Returns:
+        List[str]: 全インジケーター名のリスト（ソート済み、重複なし）
+
+    Note:
+        ライブラリの更新に自動追従します。
     """
     indicators = []
 

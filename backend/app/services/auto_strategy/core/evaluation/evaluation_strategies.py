@@ -60,7 +60,20 @@ class EvaluationStrategy:
     def execute_report(
         self, gene: Any, base_backtest_config: Dict[str, Any], config: GAConfig
     ) -> EvaluationReport:
-        """設定に応じた評価戦略を評価レポートとして実行する。"""
+        """
+        GA設定で定義された評価戦略（OOS、WFA、K-Fold、単一評価等）を選択・実行し、
+        集約された評価レポートを生成します。
+
+        このメソッドは、個体評価の「ルーティング」を担当します。
+
+        Args:
+            gene (StrategyGene): 評価対象の戦略遺伝子。
+            base_backtest_config (Dict[str, Any]): 基本となるバックテスト条件（銘柄、全期間等）。
+            config (GAConfig): 評価モードや期間分割の詳細を含むGA設定。
+
+        Returns:
+            EvaluationReport: 実行された全シナリオの結果と、それらを集約した適応度を保持するオブジェクト。
+        """
         evaluation_config = getattr(config, "evaluation_config", None)
 
         # PurgedKFold評価（過学習対策）

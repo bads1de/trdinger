@@ -36,7 +36,21 @@ class MLManagementOrchestrationService:
         pass
 
     async def get_formatted_models(self) -> Dict[str, List[Dict[str, Any]]]:
-        """学習済みモデルの一覧を取得し、整形する"""
+        """
+        ファイルシステム上の全学習済みモデルをスキャンし、詳細な統計情報を含むリストを返します。
+
+        このメソッドは、ブロッキングが発生する I/O 操作（ファイル一覧取得、メタデータ読み込み）を
+        スレッドプール（`run_in_threadpool`）で並列実行し、APIの応答性を維持します。
+
+        各モデルに対して以下の情報を統合します：
+        1. 基本属性: 名前、パス、ファイルサイズ、更新日時。
+        2. メタデータ: アルゴリズム、使用された特徴量数、学習サンプル数。
+        3. パフォーマンス: 精度（Accuracy）、F1スコア等の評価メトリクス。
+        4. ステータス: 現在システムに読み込まれて推論可能な状態（Active）かどうか。
+
+        Returns:
+            Dict[str, List[Dict]]: "models" キーに整形済みモデル情報のリストを保持する辞書。
+        """
         models = await run_in_threadpool(model_manager.list_models, "*")
         formatted = []
         for m in models:

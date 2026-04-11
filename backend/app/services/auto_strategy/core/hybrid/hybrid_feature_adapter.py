@@ -117,24 +117,28 @@ class HybridFeatureAdapter:
         sentiment_scores: Optional[pd.Series] = None,
     ) -> pd.DataFrame:
         """
-        戦略遺伝子と市場データを統合して、MLモデル用の特徴量DataFrameを生成します。
+        取引戦略の「設計図」（遺伝子）と「市場環境」（価格・OI・FR等）を統合し、
+        機械学習モデルが理解可能な平坦な数値特徴量セット（DataFrame）へ変換します。
 
-        工程:
-        1. 遺伝子の構造（指標数、条件数、TP/SL設定等）を数値化
-        2. イベントラベル（HRHP等）を統合
-        3. 市場データ（OI/FR）の統計量を計算
-        4. ウェーブレット変換や派生統計量を付与
-        5. スケーリングやフィリング等の前処理を適用
+        このプロセスは、GAの各個体が「どのような相場で機能しやすいか」をMLモデルが判定するために重要です。
+
+        主なステップ：
+        1. **遺伝子構造の数値化**: `_extract_gene_features` により、指標の数、エントリー条件の複雑さ、
+           TP/SLの比率、資金管理手法等の「戦略の性質」を特徴量として抽出します。
+        2. **市場統計の統合**: OHLCVから算出されるボラティリティや、外部の OI/FR、センチメントスコアを結合。
+        3. **高度な変換**: オプションでウェーブレット変換や、同一データに対する計算済み特徴量のキャッシュ取得を実行。
+        4. **前処理**: スケーリング、欠損値補完、無限値のクレンジングを行い、推論に適した形式へ整えます。
 
         Args:
-            gene: 変換対象の戦略遺伝子
-            ohlcv_data: 特徴量抽出のベースとなるOHLCVデータ
-            apply_preprocessing: スケーリング等の前処理を適用するか
-            label_data: 外部から提供される正解ラベルや市場環境データ
-            sentiment_scores: SNS等のセンチメントスコア
+            gene (StrategyGene): 変換対象の戦略遺伝子。
+            ohlcv_data (pd.DataFrame): 基準となる時系列市場データ。
+            apply_preprocessing (bool): スケーリング等の最終的なクレンジングを適用するかどうか。
+            label_data (Optional[pd.DataFrame]): 市場環境ラベル等の追加情報。
+            sentiment_scores (Optional[pd.Series]): SNS等の外部センチメントデータ。
 
         Returns:
-            統合された特徴量DataFrame
+            pd.DataFrame: 統合された全特徴量を含むDataFrame。
+                インデックスは `ohlcv_data` と一致します。
         """
         try:
             if gene is None or ohlcv_data is None or ohlcv_data.empty:

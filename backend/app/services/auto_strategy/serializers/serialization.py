@@ -190,8 +190,10 @@ class DictConverter:
                 "type": indicator_gene.type,
                 "parameters": indicator_gene.parameters,
                 "enabled": indicator_gene.enabled,
-                "timeframe": indicator_gene.timeframe,
             }
+            # timeframe が None の場合はシリアライズに含めない（後方互換性）
+            if indicator_gene.timeframe is not None:
+                result["timeframe"] = indicator_gene.timeframe
             return result
 
         except Exception as e:

@@ -79,7 +79,21 @@ class BacktestResultRepository(BaseRepository):
             return str(obj)
 
     def _normalize_result_data(self, result_data: Dict[str, Any]) -> Dict[str, Any]:
-        """入力データを正規化し、BacktestResultモデルの形式に変換する"""
+        """
+        生のバックテスト結果データを、データベースモデル `BacktestResult` が要求する形式に正規化します。
+
+        このメソッドは、以下のデータクレンジングと変換を自動的に行います：
+        1. 日時文字列（ISO形式）から Python `datetime` オブジェクトへの変換。
+        2. パフォーマンスメトリクスの階層構造の平坦化（後方互換性のため）。
+        3. 資産曲線やトレード履歴といった巨大なリストデータの JSON シリアライズ（`_to_json_safe` による安全な変換）。
+        4. 欠損しているパラメータ（手数料率等）へのデフォルト値設定。
+
+        Args:
+            result_data (Dict[str, Any]): バックテストエンジンから出力された生の結果辞書。
+
+        Returns:
+            Dict[str, Any]: `BacktestResult` モデルのコンストラクタに直接渡せる形式の辞書。
+        """
 
         # 日付の処理
         start_date = result_data.get("start_date")

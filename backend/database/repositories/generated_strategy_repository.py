@@ -24,7 +24,16 @@ class GeneratedStrategyRepository(BaseRepository):
         super().__init__(db, GeneratedStrategy)
 
     def _query_with_backtest_result(self):
-        """backtest_result を eager load 済みのクエリを返す。"""
+        """
+        backtest_result を eager load 済みのクエリを返す。
+
+        戦略とバックテスト結果のリレーションを事前にロードしたクエリを返します。
+        N+1クエリ問題を回避するために、selectinloadを使用して関連データを
+        一度のクエリで取得します。
+
+        Returns:
+            Query: backtest_resultをeager load済みのSQLAlchemy Queryオブジェクト
+        """
         return self.db.query(GeneratedStrategy).join(
             GeneratedStrategy.backtest_result
         ).options(selectinload(GeneratedStrategy.backtest_result))
@@ -229,6 +238,26 @@ class GeneratedStrategyRepository(BaseRepository):
     ) -> Tuple[int, List[GeneratedStrategy]]:
         """
         フィルタリングとソートを適用して戦略を取得
+
+        複数のフィルター条件とソート条件を適用して戦略を取得します。
+        リスクレベルによるフィルタリングもサポートします。
+
+        Args:
+            limit: 取得件数（デフォルト: 50）
+            offset: オフセット（デフォルト: 0）
+            risk_level: リスクレベル（'low', 'medium', 'high'のいずれか、オプション）
+            experiment_id: 実験IDフィルター（オプション）
+            min_fitness: 最小フィットネススコア（オプション）
+            sort_by: ソート対象カラム名（デフォルト: 'fitness_score'）
+            sort_order: ソート順（'desc'または'asc'、デフォルト: 'desc'）
+
+        Returns:
+            Tuple[int, List[GeneratedStrategy]]: (総数, 戦略リスト)のタプル
+
+        リスクレベルフィルター:
+            - low: max_drawdown <= 0.05
+            - medium: 0.05 < max_drawdown <= 0.15
+            - high: max_drawdown > 0.15
         """
         from app.utils.error_handler import safe_operation
         from database.models import BacktestResult

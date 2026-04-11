@@ -31,23 +31,16 @@ logger = logging.getLogger(__name__)
 
 class FeatureSelector(SelectorMixin, BaseEstimator):
     """
-    scikit-learn互換の特徴量選択器
+    機械学習モデルの汎化性能を向上させるために、最適な特徴量のサブセットを選択するカスタムセレクターです。
 
-    Pipeline内での使用を想定し、以下の機能を提供:
-    - fit(X, y): 特徴量選択ルールを学習
-    - transform(X): 選択された特徴量のみを返す
-    - get_support(): 選択マスクを取得
-    - get_feature_names_out(): 選択された特徴量名を取得
+    `scikit-learn` の `BaseEstimator` と `SelectorMixin` を継承しており、
+    `Pipeline` 内で他の推定器（Estimator）とシームレスに連携できます。
 
-    Example:
-        >>> from sklearn.pipeline import Pipeline
-        >>> from sklearn.ensemble import RandomForestClassifier
-        >>>
-        >>> pipe = Pipeline([
-        ...     ('selector', FeatureSelector(method='staged')),
-        ...     ('clf', RandomForestClassifier())
-        ... ])
-        >>> pipe.fit(X, y)
+    主な選択プロセス:
+    1. **低分散除去**: 情報量の極めて少ない（ほぼ定数の）特徴量を除外。
+    2. **多重共線性除去**: 互いに相関が極めて高い特徴量ペアのうち、一方を除外して冗長性を削減。
+    3. **戦略的選択**: 指定された手法（RFECV, Boruta, 重要度ベース等）を用いて、目的変数に対して有効な特徴量を特定。
+    4. **段階的削減（Staged）**: 複数の手法を順次適用し、最終的に最適な `k` 個の特徴量まで絞り込みます。
     """
 
     def __init__(
@@ -68,6 +61,20 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         shadow_iterations: int = 20,
         staged_methods: Optional[List[str]] = None,
     ):
+        """
+        特徴量選択器を初期化します。
+
+        Args:
+            method (Union[str, SelectionMethod]): 選択手法。"staged" (推奨), "rfecv", "boruta", "importance" 等。
+            variance_threshold (float): 除外する分散の閾値。
+            correlation_threshold (float): 除外する相関係数の閾値（絶対値）。
+            target_k (Optional[int]): 最終的に残したい特徴量数。
+            min_features (int): 最小限残す特徴量数。
+            max_features (Optional[int]): 最大限残す特徴量数。
+            cv_folds (int): 交差検証の分割数（RFECV等で使用）。
+            random_state (int): 再現性のための乱数シード。
+            staged_methods (Optional[List[str]]): "staged" 手法で順次適用する手法のリスト。
+        """
         self.method = method
         self.variance_threshold = variance_threshold
         self.correlation_threshold = correlation_threshold
@@ -87,6 +94,18 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
     def fit(
         self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]
     ) -> "FeatureSelector":
+        """
+        与えられたデータから最適な特徴量を選択するルールを学習します。
+
+        このメソッドを実行すると、内部的に `support_` マスク（選択された特徴量は True）が生成されます。
+
+        Args:
+            X (Union[pd.DataFrame, np.ndarray]): 入力特徴量。
+            y (Union[pd.Series, np.ndarray]): ターゲットラベル。
+
+        Returns:
+            FeatureSelector: 学習済みの自身を返します。
+        """
         if isinstance(X, pd.DataFrame):
             self.feature_names_in_ = X.columns.tolist()
             X = np.asarray(X)
@@ -123,13 +142,23 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         return self
 
     def _get_support_mask(self) -> np.ndarray:  # type: ignore[override]
+        """SelectorMixinの要求する選択マスクを返します。"""
         check_is_fitted(self, "support_")
         return self.support_
 
     def transform(
         self, X: Union[pd.DataFrame, np.ndarray]
     ) -> Union[pd.DataFrame, np.ndarray]:
-        """選択された特徴量を抽出する"""
+        """
+        学習されたルールに基づき、選択された特徴量のみを抽出したデータを返します。
+
+        Args:
+            X (Union[pd.DataFrame, np.ndarray]): 入力データ。
+
+        Returns:
+            Union[pd.DataFrame, np.ndarray]: 特徴量削減後のデータ。
+                入力が DataFrame の場合は、適切なカラム名を持つ DataFrame を返します。
+        """
         X_selected = np.asarray(super().transform(X))
 
         if isinstance(X, pd.DataFrame):

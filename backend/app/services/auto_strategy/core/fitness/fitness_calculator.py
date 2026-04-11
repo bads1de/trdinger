@@ -49,14 +49,36 @@ class FitnessCalculator:
 
     @staticmethod
     def _json_default(value: Any) -> Any:
-        """JSON キー生成時の非標準値を文字列または素値に落とす。"""
+        """JSONキー生成時の非標準値を文字列または素値に落とす。
+
+        NumPyのスカラー型など、JSONに変換できない値を
+        Pythonの標準型に変換します。
+
+        Args:
+            value: 変換対象の値。
+
+        Returns:
+            Any: JSONに変換可能な値。NumPyスカラーの場合は.item()で変換、
+                それ以外はstr()変換。
+        """
         if isinstance(value, np.generic):
             return value.item()
         return str(value)
 
     @staticmethod
     def _normalize_signature_value(value: Any) -> Any:
-        """直近 result 判定用に値を軽量に正規化する。"""
+        """直近result判定用に値を軽量に正規化する。
+
+        NumPyスカラー、floatの特殊値（NaN、Inf）、
+        その他の非標準値を比較可能な形式に変換します。
+
+        Args:
+            value: 正規化する値。
+
+        Returns:
+            Any: 正規化された値。NaN/Infの場合は特殊タプル、
+                それ以外はそのまま、またはrepr()変換。
+        """
         if isinstance(value, np.generic):
             value = value.item()
 
@@ -71,7 +93,19 @@ class FitnessCalculator:
         return repr(value)
 
     def _sample_sequence_signature(self, value: Any) -> tuple[Any, ...]:
-        """大きいシーケンスの軽量シグネチャを作る。"""
+        """大きいシーケンスの軽量シグネチャを作る。
+
+        長大なリストやタプルの全要素をハッシュするのではなく、
+        代表点（先頭、中央、末尾）を抽出することで
+        高速な同一性判定を実現します。
+
+        Args:
+            value: シーケンス（listまたはtuple）。
+
+        Returns:
+            tuple[Any, ...]: 代表点の値を正規化したタプル。
+                空シーケンスの場合は空タプル。
+        """
         if not isinstance(value, (list, tuple)) or not value:
             return ()
 
@@ -84,7 +118,19 @@ class FitnessCalculator:
         return tuple(self._normalize_signature_value(value[idx]) for idx in indices)
 
     def _build_recent_result_signature(self, backtest_result: Dict[str, Any]) -> Any:
-        """同一 result の直近再利用判定に使う軽量シグネチャを作る。"""
+        """同一resultの直近再利用判定に使う軽量シグネチャを作る。
+
+        バックテスト結果の主要メトリクス、資産曲線、取引履歴の
+        代表点を抽出して、高速な同一性比較が可能な形式を生成します。
+
+        Args:
+            backtest_result: バックテスト結果の辞書。
+                performance_metrics、equity_curve、trade_historyなどを含む。
+
+        Returns:
+            Any: シグネチャタプル。バックテスト結果の内容を
+                軽量に比較可能な形式で表現。
+        """
         performance_metrics = backtest_result.get("performance_metrics") or {}
         equity_curve = backtest_result.get("equity_curve") or []
         trade_history = backtest_result.get("trade_history") or []
@@ -477,18 +523,23 @@ class FitnessCalculator:
         self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
     ) -> Tuple[float, ...]:
         """
-        多目的適応度の計算
+        複数の目的関数（利益、リスク、安定性等）に基づいて個体の多次元適応度を計算します。
 
-        バックテスト結果からパフォーマンスメトリクスを抽出し、
-        GA設定で定義された各目的関数に対応する値を算出してタプルとして返します。
+        このメソッドは、NSGA-II 等の多目的最適化アルゴリズムで使用される適応度タプルを生成します：
+        1. **メトリクスの抽出**: バックテスト結果から収益率、シャープレシオ、最大ドローダウン等の統計データを取得。
+        2. **制約チェック**: 取引回数が設定された最小回数（`min_trades`）を下回る場合、即座にペナルティ値を返却。
+        3. **目的関数の構成**: `config.objectives` に指定された順序で各指標（weighted_score, total_return, sharpe_ratio 等）を抽出。
+        4. **動的スケーリング**: `objective_dynamic_scalars` が存在する場合、集団の統計に基づいて各指標のスケールを調整。
+        5. **正規化**: 最小化すべき指標（ドローダウン等）は、DEAPの仕様に合わせて適切に処理されます。
 
         Args:
-            backtest_result: バックテスト実行結果
-            config: GA設定
-            **kwargs: 追加の評価コンテキスト
+            backtest_result (Dict[str, Any]): シミュレーターから出力された全統計データ。
+            config (GAConfig): 最適化対象とする目的関数リスト、制約、重みを含む統合設定。
+            **kwargs: 追加の評価コンテキスト。
 
         Returns:
-            各目的関数の評価値を含むタプル
+            Tuple[float, ...]: 各目的関数に対応する評価値のタプル。
+                DEAPの `Fitness` クラスにより、この値を用いてパレート優位性が判定されます。
         """
         try:
             metrics = self.extract_performance_metrics(backtest_result)

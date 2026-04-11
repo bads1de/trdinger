@@ -63,23 +63,32 @@ class OptimizationService:
         **training_params,
     ) -> Dict[str, Any]:
         """
-        アンサンブルモデルのハイパーパラメータ最適化を実行
+        MLモデル（単一またはアンサンブル）のハイパーパラメータ最適化を実行します。
 
-        Optuna を用いて、指定された試行回数（n_calls）の中で
-        最も高い F1 スコア（マクロ平均）を出すパラメータの組み合わせを探索します。
-        内部で一時的なトレーナーを生成し、評価を行います。
+        このメソッドは、Optunaを使用して指定された試行回数内で目的関数を最大化するパラメータを探索します。
+        内部プロセス：
+        1. パラメータ探索空間の構築（`_prepare_parameter_space`）。
+        2. 学習と評価を繰り返す目的関数の生成（`_create_objective_function`）。
+        3. 指定された試行回数（`n_calls`）に基づく最適化の実行。
 
         Args:
-            trainer: ベースとなるトレーナーインスタンス
-            training_data: 学習用データ
-            optimization_settings: 最適化の設定（有効化、試行回数、探索空間）
-            funding_rate_data: オプションの FR データ
-            open_interest_data: オプションの OI データ
-            model_name: 保存時のモデル名（最適化中は保存されません）
-            **training_params: 追加の学習パラメータ
+            trainer (Any): 最適化対象のトレーナーインスタンス。
+            training_data (pd.DataFrame): 学習・検証に使用するOHLCVデータ。
+            optimization_settings (OptimizationSettings): 最適化の設定（有効化、試行回数、カスタム探索空間）。
+            funding_rate_data (Optional[pd.DataFrame]): 追加の市場データ。
+            open_interest_data (Optional[pd.DataFrame]): 追加の市場データ。
+            model_name (Optional[str]): 最適化プロセス中には保存されませんが、ログ出力等で使用される識別名。
+            **training_params: トレーナーの `train_model` メソッドに渡される追加のパラメータ。
 
         Returns:
-            最適パラメータ、ベストスコア、評価時間等を含む結果辞書
+            Dict[str, Any]: 最適化結果のサマリー。
+                主なキー：
+                - "best_params" (Dict): 発見された最適なパラメータセット。
+                - "best_score" (float): 達成された最高評価値（通常はF1スコア）。
+                - "optimization_time" (float): 最適化に要した時間（秒）。
+
+        Note:
+            最適化プロセスは計算負荷が高いため、APIリクエストとは独立したワーカープロセスで実行されることを想定しています。
         """
         try:
             logger.info("🚀 最適化プロセスを開始")
@@ -126,24 +135,36 @@ class OptimizationService:
         n_trials: int = 50,
         test_ratio: float = 0.2,
         frac_diff_d_values: Optional[list] = None,
-        fixed_label_params: Optional[Dict[str, Any]] = None,  # Added
+        fixed_label_params: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        特徴量エンジニアリング + 特徴量選択 + モデル学習の同時最適化（CASH）
+        特徴量エンジニアリング、特徴量選択、およびモデル学習を同時に最適化（CASH）します。
 
-        スーパーセットから特定のd値のカラムを選択し、特徴量選択とモデル学習を
-        パイプラインとして評価することで、最適なパラメータ組み合わせを探索します。
+        このメソッドは、単なるモデルのハイパーパラメータ探索を超え、パイプライン全体の最適化を行います：
+        1. **特徴量抽出**: 分数次差分（FracDiff）の次数 `d` を探索パラメータに含め、最適な `d` のカラムをスーパーセットから選択。
+        2. **特徴量選択**: 生成された数百〜数千の特徴量から、性能に寄与する上位 `k` 個を抽出する手法やパラメータを最適化。
+        3. **モデル選択と学習**: ベースモデル（LightGBM, XGBoost, CatBoost等）の選択と、それぞれのハイパーパラメータを探索。
+        4. **評価**: ホールドアウト検証または交差検証により、汎化性能を最大化する組み合わせを特定。
 
         Args:
-            feature_superset: create_feature_superset で生成した全パターン特徴量
-            labels: ターゲットラベル
-            n_trials: Optuna試行回数
-            test_ratio: テストデータの割合（最終評価用）
-            frac_diff_d_values: 探索する分数次差分のd値リスト
-            fixed_label_params: ラベル生成パラメータを固定する場合の辞書 (例: {"tbm_horizon": 24})
+            feature_superset (pd.DataFrame): create_feature_superset で生成した全パターン特徴量。
+            labels (pd.Series): 目的変数（ターゲットラベル）。
+            ohlcv_data (pd.DataFrame): 市場データ（期間計算用）。
+            n_trials (int): Optunaの試行回数。デフォルトは50。
+            test_ratio (float): 最終的なモデル評価に使用するテストデータの割合。
+            frac_diff_d_values (Optional[list]): 探索対象とする分数次差分の `d` 値のリスト。
+            fixed_label_params (Optional[Dict]): ラベル生成に関連する固定パラメータ（例: {"tbm_horizon": 24}）。
 
         Returns:
-            ベストパラメータ、ベストスコア、比較結果などを含む辞書
+            Dict[str, Any]: 最適化されたパイプライン構成。
+                主なキー：
+                - "best_pipeline_params" (Dict): 最適な特徴量 `d`、選択手法、モデル設定。
+                - "performance_metrics" (Dict): テストデータでの評価メトリクス。
+                - "feature_importance" (Dict): 最終的に選択された特徴量の重要度。
+
+        Note:
+            この「全方位最適化」は、特徴量とモデルの間の隠れた相互作用（例: 特定のモデルは特定の `d` 値で性能が出る等）を
+            捉えることができ、手動での調整に比べて大幅な精度向上が期待できます。
         """
         if frac_diff_d_values is None:
             frac_diff_d_values = [0.3, 0.4, 0.5, 0.6]

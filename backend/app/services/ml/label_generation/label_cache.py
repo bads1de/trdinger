@@ -67,7 +67,35 @@ class LabelCache:
         window_step: int = 1,
         **kwargs,
     ) -> pd.Series:
-        """キャッシュを使ってラベルを取得"""
+        """キャッシュを使ってラベルを取得する。
+
+        指定されたパラメータ组合せがキャッシュに存在する場合は
+        再計算せずにキャッシュを返します。存在しない場合は
+        適切なラベル生成メソッドを呼び出して結果をキャッシュします。
+
+        Args:
+            horizon_n: ラベリング期間（バーの本数）。
+            threshold_method: 閾値計算方法（ThresholdMethod列挙型の名前）。
+            threshold: 閾値値。
+            timeframe: 時間足（例: "1h", "4h"）。
+            price_column: 使用する価格カラム名。
+            pt_factor: Take Profit係数。
+            sl_factor: Stop Loss係数。
+            use_atr: ATR（Average True Range）を使用するかどうか。
+            atr_period: ATR計算期間。
+            t_events: イベント時点のインデックス（オプション）。
+                指定された場合はキャッシュ不使用。
+            min_window: Trend Scanning用の最小ウィンドウ。
+            window_step: Trend Scanning用のウィンドウステップ。
+            **kwargs: 追加パラメータ（現在は使用されません）。
+
+        Returns:
+            pd.Series: 生成されたラベル。インデックスは時間軸、値はラベル。
+
+        Raises:
+            ValueError: サポートされていないthreshold_methodが指定された場合。
+            NotImplementedError: 指定された手法が実装されていない場合。
+        """
         use_cache = t_events is None
         cache_key = (
             horizon_n,
@@ -131,7 +159,20 @@ class LabelCache:
     def get_t1(
         self, indices: pd.DatetimeIndex, horizon_n: int, timeframe: str = "1h"
     ) -> pd.Series:
-        """各観測点のラベル終了時刻 (t1) を取得"""
+        """各観測点のラベル終了時刻（t1）を取得する。
+
+        Triple Barrier Methodなどで使用する、各サンプルの
+        ラベリング終了時刻を計算します。
+
+        Args:
+            indices: 観測点のDatetimeIndex。
+            horizon_n: ラベリング期間（バーの本数）。
+            timeframe: 時間足（例: "1h", "4h"）。
+
+        Returns:
+            pd.Series: 各観測点に対応するt1（ラベル終了時刻）。
+                インデックスは元のindicesと同じ。
+        """
         return get_t1_series(indices, horizon_n, timeframe=timeframe)
 
     def get_hit_rate(self) -> float:

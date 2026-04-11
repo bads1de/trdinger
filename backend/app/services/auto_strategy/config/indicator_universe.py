@@ -11,7 +11,15 @@ from typing import Any, Iterable, List
 
 
 class IndicatorUniverseMode(str, Enum):
-    """GA が使うインジケーターユニバースのモード。"""
+    """
+    GA が使うインジケーターユニバースのモード。
+
+    遺伝的アルゴリズムが探索するインジケーターの範囲を定義します。
+
+    モード:
+        - CURATED: 検証済みの固定カタログを使用（デフォルト）
+        - EXPERIMENTAL_ALL: 実装済みの全インジケーターを使用
+    """
 
     CURATED = "curated"
     EXPERIMENTAL_ALL = "experimental_all"
@@ -63,7 +71,24 @@ _CONDITION_INCOMPATIBLE_CURATED_INDICATORS = frozenset(
 
 
 def normalize_indicator_universe_mode(value: Any) -> str:
-    """ユニバースモードを正規化する。"""
+    """
+    ユニバースモードを正規化する。
+
+    様々な形式（Enum、文字列、None）の入力を
+    標準的なモード文字列に変換します。
+
+    Args:
+        value: モード値（IndicatorUniverseMode、文字列、またはNone）
+
+    Returns:
+        str: 正規化されたモード文字列（'curated' または 'experimental_all'）
+
+    Raises:
+        ValueError: サポートされていないモード値が指定された場合
+
+    Note:
+        Noneまたは空文字の場合は'curated'を返します。
+    """
     if isinstance(value, IndicatorUniverseMode):
         return value.value
     if value is None or value == "":
@@ -122,8 +147,19 @@ def get_indicator_universe_names(config_or_mode: Any = None) -> List[str]:
     """
     指定モードで利用可能なインジケータ名一覧を返す。
 
-    curated は固定 catalog を起点に、実装有無・データ可用性・条件生成互換を検証する。
-    experimental_all は実装済みの全インジケーターを返す。
+    curatedモードは固定カタログを起点に、実装有無・データ可用性・条件生成互換を検証します。
+    experimental_allモードは実装済みの全インジケーターを返します。
+
+    Args:
+        config_or_mode: モード値または設定オブジェクト（オプション）
+
+    Returns:
+        List[str]: 利用可能なインジケータ名のリスト（アルファベット順）
+
+    curatedモードの検証条件:
+        - インジケーターが実装されている
+        - 標準バックテストデータ（OHLCV+OI+FR）で計算可能
+        - 条件生成と互換性がある
     """
     mode = _extract_mode(config_or_mode)
     supported_names = _get_supported_indicator_names()
@@ -145,12 +181,37 @@ def get_indicator_universe_names(config_or_mode: Any = None) -> List[str]:
 
 
 def is_indicator_in_universe(indicator_name: str, config_or_mode: Any = None) -> bool:
-    """指標名が指定ユニバースに含まれるかを返す。"""
+    """
+    指標名が指定ユニバースに含まれるかを返す。
+
+    指定されたインジケーター名が、指定されたモードの
+    ユニバースに含まれているかどうかを確認します。
+
+    Args:
+        indicator_name: インジケーター名
+        config_or_mode: モード値または設定オブジェクト（オプション）
+
+    Returns:
+        bool: ユニバースに含まれる場合はTrue、含まれない場合はFalse
+
+    Note:
+        インジケーター名の大文字小文字は区別されません。
+    """
     if not indicator_name:
         return False
     return indicator_name.upper() in set(get_indicator_universe_names(config_or_mode))
 
 
 def iter_indicator_universe_names(config_or_mode: Any = None) -> Iterable[str]:
-    """ユニバース名一覧の iterable を返す。"""
+    """
+    ユニバース名一覧の iterable を返す。
+
+    インジケーターユニーバースの名前を反復可能な形式で返します。
+
+    Args:
+        config_or_mode: モード値または設定オブジェクト（オプション）
+
+    Returns:
+        Iterable[str]: インジケーター名のイテレータ（タプルとして返されます）
+    """
     return tuple(get_indicator_universe_names(config_or_mode))

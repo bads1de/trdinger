@@ -18,7 +18,26 @@ T = TypeVar("T")
 
 
 def _convert_value(value: Any) -> Any:
-    """単一値を JSON シリアライズ可能な型に再帰変換する。"""
+    """単一値をJSONシリアライズ可能な型に再帰変換する。
+
+    Enum、datetime、dataclass、dict、listなどの複雑なオブジェクトを
+    JSONに変換可能な基本型（str、int、float、bool、list、dict）に
+    再帰的に変換します。
+
+    変換ルール:
+        - Enum → .value
+        - datetime → .isoformat()
+        - dataclass → dataclass_to_dict()で再帰変換
+        - dict → 各値を再帰変換
+        - list/tuple → 各要素を再帰変換
+        - その他のオブジェクト → str()変換
+
+    Args:
+        value: 変換対象の値。任意のPythonオブジェクト。
+
+    Returns:
+        Any: JSONシリアライズ可能な型に変換された値。
+    """
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, datetime):
@@ -63,7 +82,21 @@ def dataclass_to_dict(obj: Any) -> Dict[str, Any]:
 
 
 def dataclass_to_json(obj: Any, *, indent: int = 2) -> str:
-    """dataclass インスタンスを JSON 文字列に変換する。"""
+    """dataclassインスタンスをJSON文字列に変換する。
+
+    dataclass_to_dict()で辞書に変換した後、json.dumps()で
+    JSON文字列にシリアライズします。
+
+    Args:
+        obj: dataclassインスタンス。
+        indent: JSONのインデント数（デフォルト: 2）。
+
+    Returns:
+        str: JSONフォーマットの文字列。変換に失敗した場合は"{}"を返します。
+
+    Raises:
+        なし: エラー時はログ出力後、空のJSONオブジェクト文字列を返します。
+    """
     try:
         return json.dumps(dataclass_to_dict(obj), ensure_ascii=False, indent=indent)
     except Exception as e:

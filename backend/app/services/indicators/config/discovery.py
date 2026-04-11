@@ -183,14 +183,27 @@ class DynamicIndicatorDiscovery:
     def _calculate_param_range(
         cls, param_name: str, default_val: Any
     ) -> tuple[float, float]:
-        """パラメータの min/max 範囲を動的に計算
+        """
+        パラメータの min/max 範囲を動的に計算
+
+        パラメータ名とデフォルト値に基づいて、GA探索用の適切な範囲を動的に計算します。
+        パラメータのタイプ（期間、係数、比率など）に応じて異なる範囲を適用します。
 
         Args:
-            param_name: パラメータ名
+            param_name: パラメータ名（例: 'length', 'std', 'multiplier'）
             default_val: デフォルト値
 
         Returns:
-            (min_value, max_value) のタプル
+            tuple[float, float]: (min_value, max_value) のタプル
+
+        範囲計算ルール:
+            - distribution_offset: (0.0, 1.0)
+            - std/factor: (max(0.1, default*0.1), default*3.0)
+            - multiplier: (0.5, 5.0)
+            - offset: (-50, 50)
+            - drift: (1, 20)
+            - 小数値パラメータ: (max(0.01, default*0.5), max(default*2.0, default+0.1))
+            - 一般的な期間パラメータ: (max(2, int(default*0.2)), max(int(default*5), 50))
         """
         if not isinstance(default_val, (int, float)) or isinstance(default_val, bool):
             return (1, 100)  # フォールバック
@@ -251,10 +264,17 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _is_indicator_function(cls, func: Any) -> bool:
-        """指標関数かユーティリティ関数かを判定
+        """
+        指標関数かユーティリティ関数かを判定
 
-        シグネチャに価格データ引数（close/high/low/open/volume）が
-        含まれていれば指標関数とみなす
+        関数のシグネチャを解析して、価格データ引数（close/high/low/open/volume）が
+        含まれているかどうかを判定します。指標関数であればTrueを返します。
+
+        Args:
+            func: 判定対象の関数オブジェクト
+
+        Returns:
+            bool: 指標関数の場合はTrue、ユーティリティ関数の場合はFalse
         """
         try:
             sig = inspect.signature(func)
@@ -267,16 +287,30 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _is_data_argument(cls, param: inspect.Parameter) -> bool:
-        """引数がデータ引数かどうかを判定"""
+        """
+        引数がデータ引数かどうかを判定
+
+        型ヒント、デフォルト値、引数名の3つの基準を順に判定して、
+        引数がデータ引数（Series/DataFrame等）かどうかを決定します。
+
+        Args:
+            param: inspect.Parameterオブジェクト
+
+        Returns:
+            bool: データ引数の場合はTrue、パラメータ引数の場合はFalse
+
+        判定基準:
+            1. 型ヒントに'Series'または'DataFrame'が含まれる場合 → True
+            2. 型ヒントに'int'または'float'が含まれる場合 → False
+            3. デフォルト値が数値の場合 → False
+            4. 引数名が標準データ引数名（open, high, low, close, volume等）の場合 → True
+        """
         # 1. 型ヒントによる判定 (最優先)
         if param.annotation != inspect.Parameter.empty:
             type_str = str(param.annotation)
             # 文字列でSeriesやDataFrameを含むかチェック
             if "Series" in type_str or "DataFrame" in type_str:
                 return True
-            # 数値型ならFalse
-            if "int" in type_str or "float" in type_str:
-                return False
 
         # 2. デフォルト値による判定
         if param.default != inspect.Parameter.empty and param.default is not None:
@@ -307,7 +341,29 @@ class DynamicIndicatorDiscovery:
     def _guess_scale_type(
         cls, name: str, func: Any, default_params: dict
     ) -> IndicatorScaleType:
-        """サンプルデータを用いて指標のスケールタイプを推測"""
+        """
+        サンプルデータを用いて指標のスケールタイプを推測
+
+        サンプルOHLCVデータを使用してインジケーターを実行し、
+        出力値の範囲からスケールタイプを推測します。
+
+        Args:
+            name: インジケーター名
+            func: インジケーター関数
+            default_params: デフォルトパラメータ辞書
+
+        Returns:
+            IndicatorScaleType: 推測されたスケールタイプ
+
+        推測ロジック:
+            - 0-100の範囲で変動 → OSCILLATOR_0_100
+            - 0付近で変動（正負両方） → MOMENTUM_ZERO_CENTERED
+            - 50以上の絶対値で変動 → PRICE_ABSOLUTE
+            - 上記以外 → PRICE_RATIO
+
+        Note:
+            判定失敗時はPRICE_ABSOLUTEを返します。
+        """
         try:
             # 実行（FutureWarningを抑制）
             result = _run_indicator_on_sample_frame(
@@ -359,7 +415,23 @@ class DynamicIndicatorDiscovery:
         func: Any,
         default_params: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        """エンジンで扱える時系列出力を返す関数だけを対象にする。"""
+        """
+        エンジンで扱える時系列出力を返す関数だけを対象にする
+
+        サンプルデータでインジケーターを実行し、出力が時系列データとして
+        エンジンで扱える形式かどうかを判定します。
+
+        Args:
+            indicator_name: インジケーター名
+            func: インジケーター関数
+            default_params: デフォルトパラメータ（オプション）
+
+        Returns:
+            bool: 時系列出力をサポートする場合はTrue、そうでない場合はFalse
+
+        Note:
+            出力が入力時系列と整合する場合のみTrueを返します。
+        """
         expected_length = 120
         sample_frame = _build_sample_ohlcv_frame(
             expected_length,
@@ -384,7 +456,24 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _is_timeseries_compatible_result(cls, result: Any, expected_index: Any) -> bool:
-        """出力がサンプル入力長と整合する時系列結果かどうかを判定する。"""
+        """
+        出力がサンプル入力長と整合する時系列結果かどうかを判定する
+
+        出力の型と形状を確認して、入力時系列と整合する時系列結果かどうかを判定します。
+
+        Args:
+            result: インジケーターの出力（Series, DataFrame, ndarray, tuple等）
+            expected_index: 期待される入力時系列のインデックス
+
+        Returns:
+            bool: 時系列互換性がある場合はTrue、そうでない場合はFalse
+
+        判定対象:
+            - pd.Series: インデックスが整合するか
+            - pd.DataFrame: カラムが存在し、インデックスが整合するか
+            - np.ndarray: 配列形状が入力長と一致するか
+            - tuple: 全要素が時系列互換か
+        """
         if isinstance(result, pd.Series):
             return cls._has_compatible_timeseries_index(result.index, expected_index)
 
@@ -406,7 +495,23 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _has_compatible_timeseries_index(cls, result_index: Any, expected_index: Any) -> bool:
-        """出力 index が入力時系列と整合しているかを判定する。"""
+        """
+        出力 index が入力時系列と整合しているかを判定する
+
+        出力インデックスと入力インデックスの長さと内容を比較して、
+        整合性を判定します。
+
+        Args:
+            result_index: 出力のインデックス
+            expected_index: 期待される入力インデックス
+
+        Returns:
+            bool: 整合している場合はTrue、そうでない場合はFalse
+
+        判定条件:
+            - インデックスが空でない
+            - 長さが一致する、またはインデックスが単調増加で全要素が含まれる
+        """
         if len(result_index) == 0:
             return False
 
@@ -422,7 +527,23 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _has_compatible_array_shape(cls, result: np.ndarray, expected_index: Any) -> bool:
-        """index を持たない ndarray は入力長と一致する場合のみ許容する。"""
+        """
+        index を持たない ndarray は入力長と一致する場合のみ許容する
+
+        ndarrayの形状を確認して、入力長と一致するかどうかを判定します。
+
+        Args:
+            result: 出力のnumpy配列
+            expected_index: 期待される入力インデックス
+
+        Returns:
+            bool: 形状が一致する場合はTrue、そうでない場合はFalse
+
+        判定条件:
+            - 配列が空でない
+            - 配列の次元が0でない
+            - 配列のサイズが入力長と一致する
+        """
         if result.ndim == 0 or result.size == 0:
             return False
 
@@ -430,7 +551,25 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _can_probe_with_sample(cls, required_data: List[str]) -> bool:
-        """標準 OHLCV サンプルだけで関数を実行できるかを判定する。"""
+        """
+        標準 OHLCV サンプルだけで関数を実行できるかを判定する
+
+        必要なデータカラムがすべて標準OHLCVカラム（open, high, low, close, volume）
+        に含まれているかどうかを判定します。
+
+        Args:
+            required_data: 必要なデータカラム名のリスト
+
+        Returns:
+            bool: 標準OHLCVだけで実行可能な場合はTrue、そうでない場合はFalse
+
+        標準カラム:
+            - open, open_
+            - high
+            - low
+            - close
+            - volume
+        """
         return all(
             data_key.lower() in cls._SAMPLE_PROBE_DATA_COLUMNS
             for data_key in required_data
@@ -444,7 +583,24 @@ class DynamicIndicatorDiscovery:
         required_data: List[str],
         default_params: Optional[Dict[str, Any]] = None,
     ) -> Optional[Any]:
-        """標準 OHLCV だけで評価できる指標はサンプル実行結果を返す。"""
+        """
+        標準 OHLCV だけで評価できる指標はサンプル実行結果を返す
+
+        標準OHLCVサンプルデータを使用してインジケーターを実行し、
+        出力を返します。標準OHLCVだけで実行できない場合はNoneを返します。
+
+        Args:
+            indicator_name: インジケーター名
+            func: インジケーター関数
+            required_data: 必要なデータカラム名のリスト
+            default_params: デフォルトパラメータ（オプション）
+
+        Returns:
+            Optional[Any]: サンプル実行結果、実行できない場合はNone
+
+        Note:
+            実行失敗時はログを出力してNoneを返します。
+        """
         if not cls._can_probe_with_sample(required_data):
             return None
 
@@ -464,7 +620,25 @@ class DynamicIndicatorDiscovery:
     def _infer_result_type_from_output(
         cls, result: Any
     ) -> Optional[IndicatorResultType]:
-        """サンプル出力から result_type を推定する。"""
+        """
+        サンプル出力から result_type を推測する
+
+        サンプル実行結果の型と構造から、インジケーターの結果タイプを推定します。
+
+        Args:
+            result: サンプル実行結果
+
+        Returns:
+            Optional[IndicatorResultType]: 推定された結果タイプ
+
+        推定ルール:
+            - DataFrame（複数カラム） → COMPLEX
+            - DataFrame（単一カラム） → SINGLE
+            - tuple（複数要素） → COMPLEX
+            - tuple（単一要素） → SINGLE
+            - Series → SINGLE
+            - その他 → None
+        """
         if isinstance(result, pd.DataFrame):
             return (
                 IndicatorResultType.COMPLEX
@@ -486,7 +660,22 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _should_skip_indicator_name(cls, indicator_name: str) -> bool:
-        """discovery 対象外の関数名かどうかを軽量に判定する。"""
+        """
+        discovery 対象外の関数名かどうかを軽量に判定する
+
+        インジケーター名が検出対象外かどうかを判定します。
+        キャンドルスティック系やユーティリティ関数は除外されます。
+
+        Args:
+            indicator_name: インジケーター名
+
+        Returns:
+            bool: 検出対象外の場合はTrue、検出対象の場合はFalse
+
+        除外対象:
+            - 'cdl'または'candle'を含む名前（キャンドルスティック系）
+            - 除外リストに含まれるユーティリティ関数名
+        """
         name_lower = indicator_name.lower()
         if "cdl" in name_lower or "candle" in name_lower:
             return True
@@ -494,7 +683,24 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def discover_all(cls) -> List[IndicatorConfig]:
-        """全ての指標を検出して設定リストを返す"""
+        """
+        全ての指標を検出して設定リストを返す
+
+        pandas-taライブラリと独自実装のインジケーターを動的にスキャンし、
+        すべてのインジケーター設定を生成して返します。
+
+        Returns:
+            List[IndicatorConfig]: 検出されたすべてのインジケーター設定のリスト
+
+        検出プロセス:
+            1. pandas-taの指標をスキャン
+            2. technical_indicatorsパッケージ内の独自実装をスキャン
+            3. 特別な設定オーバーライドを適用
+            4. 重複を排除して統合
+
+        Note:
+            pandas_taサブパッケージの互換ラッパーは除外されます。
+        """
         configs = []
         discovered_names = set()
 
@@ -560,10 +766,24 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _apply_special_overrides(cls, config: IndicatorConfig):
-        """特定の指標に対する特別な設定の上書き
+        """
+        特定の指標に対する特別な設定の上書き
 
-        min_length_func と return_cols は pandas_ta_introspection を使用して
-        動的に取得します。エイリアスもルールベースで自動付与します。
+        特定のインジケーターに対して、手動で定義された特別な設定を適用します。
+        min_length_funcとreturn_colsは動的に取得し、エイリアスは自動付与します。
+
+        Args:
+            config: インジケーター設定オブジェクト
+
+        適用内容:
+            1. 最小データ長関数の動的取得（pandas_ta_introspection使用）
+            2. 戻り値カラム名の動的取得
+            3. エイリアスの自動付与（ルールベース）
+            4. 特別な設定オーバーライドの適用（scale_type, thresholds等）
+            5. 特殊なパラメータ制約の付与（例: FRAMAのeven_only）
+
+        Note:
+            _SPECIAL_CONFIG_OVERRIDES辞書に定義された設定が適用されます。
         """
         name_upper = config.indicator_name.upper()
         name_lower = config.indicator_name.lower()
@@ -613,7 +833,27 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _discover_pandas_ta(cls) -> List[IndicatorConfig]:
-        """pandas-taの関数をスキャン"""
+        """
+        pandas-taの関数をスキャン
+
+        pandas-taライブラリからインジケーター関数をスキャンし、
+        設定を生成します。
+
+        Returns:
+            List[IndicatorConfig]: 検出されたpandas-taインジケーター設定のリスト
+
+        スキャンプロセス:
+            1. 全pandas-taインジケーター名を取得
+            2. 関数が呼び出し可能か判定
+            3. 指標関数かユーティリティ関数か判定
+            4. 検出対象外の名前を除外
+            5. 時系列出力をサポートするか判定
+            6. カテゴリを抽出
+            7. 関数を解析して設定を生成
+
+        Note:
+            エラーが発生した場合はログを出力してスキップします。
+        """
         configs = []
 
         try:
@@ -651,7 +891,29 @@ class DynamicIndicatorDiscovery:
 
     @classmethod
     def _discover_custom_class(cls, klass: Type) -> List[IndicatorConfig]:
-        """独自実装クラスをスキャン"""
+        """
+        独自実装クラスをスキャン
+
+        独自実装のインジケータークラスからメソッドをスキャンし、
+        設定を生成します。
+
+        Args:
+            klass: スキャン対象のクラス
+
+        Returns:
+            List[IndicatorConfig]: 検出された独自実装インジケーター設定のリスト
+
+        スキャンプロセス:
+            1. クラス内の全メソッドを取得
+            2. プライベートメソッド（_で始まる）を除外
+            3. 指標関数か判定
+            4. 関数を解析して設定を生成
+            5. adapter_functionを設定
+            6. 時系列出力をサポートするか判定
+
+        Note:
+            calculate_で始まるメソッドは除外されます。
+        """
         configs = []
         for name, method in inspect.getmembers(klass, predicate=inspect.isfunction):
             if name.startswith("_") or name.startswith("calculate_"):
@@ -680,7 +942,33 @@ class DynamicIndicatorDiscovery:
     def _analyze_function(
         cls, name: str, func: Any, category: str
     ) -> Optional[IndicatorConfig]:
-        """関数を解析してIndicatorConfigを生成"""
+        """
+        関数を解析してIndicatorConfigを生成
+
+        関数のシグネチャを解析して、データ引数とパラメータを分離し、
+        インジケーター設定を生成します。
+
+        Args:
+            name: インジケーター名
+            func: インジケーター関数
+            category: インジケーターカテゴリ
+
+        Returns:
+            Optional[IndicatorConfig]: 生成された設定、解析失敗時はNone
+
+        解析プロセス:
+            1. 除外対象のフィルタリング
+            2. シグネチャを取得
+            3. データ引数とパラメータを分離
+            4. デフォルト値を抽出
+            5. GA用パラメータ設定を作成
+            6. 戻り値情報を推測
+            7. スケールタイプを推測
+            8. Configオブジェクトを生成
+
+        Note:
+            エラーが発生した場合はログを出力してNoneを返します。
+        """
         try:
             name_lower = name.lower()
 
@@ -736,7 +1024,7 @@ class DynamicIndicatorDiscovery:
             inferred_result_type = cls._infer_result_type_from_output(sample_result)
             if inferred_result_type is not None:
                 result_type = inferred_result_type
-            elif is_multi_column_indicator(name.lower()):
+            elif is_multi_column_indicator(name_lower):
                 result_type = IndicatorResultType.COMPLEX
 
             # 3. スケールタイプの推測 (動的判定)
@@ -764,7 +1052,22 @@ class DynamicIndicatorDiscovery:
     def _create_parameter_config(
         cls, name: str, default_val: Any
     ) -> Optional[ParameterConfig]:
-        """パラメータ名から設定を生成（動的範囲計算）"""
+        """
+        パラメータ名から設定を生成（動的範囲計算）
+
+        数値パラメータに対して、動的に範囲を計算してパラメータ設定を生成します。
+
+        Args:
+            name: パラメータ名
+            default_val: デフォルト値
+
+        Returns:
+            Optional[ParameterConfig]: 生成されたパラメータ設定、数値でない場合はNone
+
+        Note:
+            数値パラメータのみ対象です。bool型は除外されます。
+            範囲は_calculate_param_rangeで動的に計算されます。
+        """
         # 数値パラメータのみ対象
         if not isinstance(default_val, (int, float)) or isinstance(default_val, bool):
             return None

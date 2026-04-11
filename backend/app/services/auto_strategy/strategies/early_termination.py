@@ -30,13 +30,40 @@ class StrategyEarlyTermination(RuntimeError):
 
 
 class StrategyEarlyTerminationController:
-    """評価進捗と早期打ち切り判定を担当するクラス。"""
+    """評価進捗と早期打ち切り判定を担当するクラス。
+
+    バックテスト実行中に、設定された条件（最小取引数、最大損失など）
+    を満たした場合に評価を早期に終了し、リソースを節約します。
+
+    主な機能:
+    - 評価開始時刻の管理
+    - 進捗状況のトラッキング
+    - 早期終了条件の判定
+    - 取引統計の収集
+    """
 
     def __init__(self, strategy):
+        """早期終了コントローラを初期化する。
+
+        Args:
+            strategy: 戦略インスタンス。評価対象のバックテスト戦略。
+        """
         self.strategy = strategy
 
     def normalize_evaluation_start(self, value: Any) -> Optional[pd.Timestamp]:
-        """評価開始時刻を pandas.Timestamp に正規化する。"""
+        """評価開始時刻をpandas.Timestampに正規化する。
+
+        文字列やその他の形式で指定された評価開始時刻を、
+        pandas.Timestampオブジェクトに変換します。
+
+        Args:
+            value: 正規化する評価開始時刻。
+                文字列、数値、またはNone。
+
+        Returns:
+            Optional[pd.Timestamp]: 正規化された評価開始時刻。
+                変換に失敗した場合はNone。
+        """
         if value is None or value == "":
             return None
 
@@ -47,7 +74,16 @@ class StrategyEarlyTerminationController:
             return None
 
     def is_evaluation_bar(self) -> bool:
-        """現在バーが評価開始時刻以降かを返す。"""
+        """現在バーが評価開始時刻以降かを判定する。
+
+        評価開始時刻が設定されている場合、現在処理中のバーが
+        その時刻以降かどうかを確認します。設定されていない場合は
+        常にTrueを返します。
+
+        Returns:
+            bool: 現在バーが評価開始時刻以降の場合はTrue。
+                評価開始時刻が未設定の場合もTrue。
+        """
         evaluation_start_raw = getattr(self.strategy, "_evaluation_start", None)
         if evaluation_start_raw is None:
             return True
@@ -70,7 +106,20 @@ class StrategyEarlyTerminationController:
         self,
         data: Any,
     ) -> tuple[Optional[pd.DatetimeIndex], int, int]:
-        """評価進捗計算に使う評価窓の境界を初期化する。"""
+        """評価進捗計算に使う評価窓の境界を初期化する。
+
+        評価開始時刻から現在時刻までの評価対象バー数を計算し、
+        進捗率の算出に使用します。
+
+        Args:
+            data: 評価対象データ。index属性を持つ必要があります。
+
+        Returns:
+            tuple[Optional[pd.DatetimeIndex], int, int]:
+                - 評価窓のDatetimeIndex（失敗時はNone）
+                - 評価開始インデックス
+                - 評価対象総バー数
+        """
         raw_index = getattr(data, "index", None)
         total_bars = max(1, int(getattr(self.strategy, "_total_bars", 1) or 1))
         if raw_index is None or len(raw_index) == 0:
@@ -141,7 +190,15 @@ class StrategyEarlyTerminationController:
         return min(1.0, current_bar / total_bars)
 
     def calculate_closed_trade_expectancy(self) -> Optional[float]:
-        """クローズ済みトレードの平均期待値を返す。"""
+        """クローズ済みトレードの平均期待値（期待リターン）を計算する。
+
+        確定済みのトレードから平均リターン（%）を算出し、
+        戦略の期待収益性を評価します。
+
+        Returns:
+            Optional[float]: 平均トレード期待値（%）。
+                トレードが存在しない場合はNone。
+        """
         try:
             trades = list(getattr(self.strategy, "closed_trades", []) or [])
         except Exception:
@@ -168,7 +225,15 @@ class StrategyEarlyTerminationController:
         return float(sum(values) / len(values))
 
     def should_terminate_early(self) -> Optional[str]:
-        """早期打ち切りすべき理由を返す。"""
+        """早期打ち切りすべきかどうかを判定する。
+
+        設定された早期終了条件（最小取引数、最大ドローダウン、
+        進捗状況など）をチェックし、条件を満たす場合は
+        終了理由を返します。
+
+        Returns:
+            Optional[str]: 早期終了理由。条件を満たさない場合はNone。
+        """
         raw_settings = getattr(self.strategy, "early_termination_settings", None)
         if raw_settings is None:
             settings = EarlyTerminationSettings()
@@ -231,7 +296,15 @@ class StrategyEarlyTerminationController:
         return None
 
     def check_early_termination(self) -> None:
-        """早期打ち切り条件を満たした場合に例外を送出する。"""
+        """早期打ち切り条件を満たした場合に例外を送出する。
+
+        should_terminate_early() を呼び出して早期終了理由をチェックし、
+        条件が満たされている場合はStrategyEarlyTermination例外を
+        送出して評価を中断します。
+
+        Raises:
+            StrategyEarlyTermination: 早期終了条件が満たされた場合。
+        """
         reason = self.should_terminate_early()
         if reason:
             raise StrategyEarlyTermination(reason)

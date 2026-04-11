@@ -80,13 +80,31 @@ class RandomGeneGenerator:
 
     @staticmethod
     def _create_enabled_tpsl_gene(config: Any) -> TPSLGene:
-        """ランダム生成したTP/SL遺伝子を有効化して返す"""
+        """
+        ランダム生成したTP/SL遺伝子を有効化して返す
+
+        ランダムに生成されたTP/SL遺伝子のenabledフラグをTrueに設定して返します。
+
+        Args:
+            config: GA設定オブジェクト
+
+        Returns:
+            TPSLGene: 有効化されたTP/SL遺伝子
+        """
         gene = create_random_tpsl_gene(config)
         gene.enabled = True
         return gene
 
     def _initialize_caches(self) -> None:
-        """生成用キャッシュを初期化する。"""
+        """
+        生成用キャッシュを初期化する
+
+        インジケーター、TP/SL、ポジションサイジング、ツール遺伝子の
+        キャッシュを事前に生成して、ランダム生成のパフォーマンスを向上させます。
+
+        Note:
+            各キャッシュに10個のサンプルを生成します。
+        """
         for _ in range(10):
             indicators = generate_random_indicators(self.config)
             if indicators:
@@ -109,14 +127,35 @@ class RandomGeneGenerator:
         *,
         postprocess: Optional[Any] = None,
     ) -> Any:
-        """キャッシュから clone し、無ければ creator で生成する。"""
+        """
+        キャッシュから clone し、無ければ creator で生成する
+
+        キャッシュから遺伝子をクローンして返します。キャッシュが空の場合は、
+        creator関数で新しい遺伝子を生成します。
+
+        Args:
+            cache: 遺伝子キャッシュリスト
+            creator: 新規生成関数
+            postprocess: 生成後の後処理関数（オプション）
+
+        Returns:
+            Any: クローンまたは生成された遺伝子
+        """
         gene = random.choice(cache).clone() if cache else creator()
         if postprocess is not None:
             postprocess(gene)
         return gene
 
     def _generate_tool_genes_template(self) -> List[ToolGene]:
-        """ツール遺伝子テンプレートを生成する。"""
+        """
+        ツール遺伝子テンプレートを生成する
+
+        ツールレジストリから全ツールを取得し、ツール遺伝子テンプレートを生成します。
+        各ツールの有効フラグはランダムに設定されます。
+
+        Returns:
+            List[ToolGene]: ツール遺伝子テンプレートリスト
+        """
         tool_genes: List[ToolGene] = []
         for tool in tool_registry.get_all():
             tool_genes.append(
@@ -129,7 +168,19 @@ class RandomGeneGenerator:
         return tool_genes
 
     def _get_cached_indicators(self) -> List[IndicatorGene]:
-        """キャッシュからインジケーターを取得する。"""
+        """
+        キャッシュからインジケーターを取得する
+
+        キャッシュからランダムにインジケーターを取得します。
+        キャッシュが空の場合は初期化し、キャッシュサイズが不足する場合は
+        新規生成を行います。
+
+        Returns:
+            List[IndicatorGene]: インジケーター遺伝子リスト
+
+        Note:
+            インジケーター数はmin_indicatorsからmax_indicatorsの間でランダムに決定されます。
+        """
         if not self._indicator_cache:
             self._initialize_caches()
 
@@ -142,7 +193,15 @@ class RandomGeneGenerator:
         return generate_random_indicators(self.config)
 
     def _get_cached_tpsl(self) -> TPSLGene:
-        """キャッシュからTP/SL遺伝子を取得する。"""
+        """
+        キャッシュからTP/SL遺伝子を取得する
+
+        キャッシュからTP/SL遺伝子を取得します。キャッシュが空の場合は初期化します。
+        取得した遺伝子のenabledフラグはTrueに設定されます。
+
+        Returns:
+            TPSLGene: TP/SL遺伝子
+        """
         if not self._tpsl_cache:
             self._initialize_caches()
 
@@ -153,7 +212,15 @@ class RandomGeneGenerator:
         )
 
     def _get_cached_position_sizing(self) -> PositionSizingGene:
-        """キャッシュからポジションサイジング遺伝子を取得する。"""
+        """
+        キャッシュからポジションサイジング遺伝子を取得する
+
+        キャッシュからポジションサイジング遺伝子を取得します。
+        キャッシュが空の場合は初期化します。
+
+        Returns:
+            PositionSizingGene: ポジションサイジング遺伝子
+        """
         if not self._position_sizing_cache:
             self._initialize_caches()
 
@@ -163,7 +230,15 @@ class RandomGeneGenerator:
         )
 
     def _get_cached_tool_genes(self) -> List[ToolGene]:
-        """キャッシュからツール遺伝子を取得する。"""
+        """
+        キャッシュからツール遺伝子を取得する
+
+        キャッシュからツール遺伝子テンプレートを取得し、クローンして返します。
+        各ツールの有効フラグは再抽選されます。
+
+        Returns:
+            List[ToolGene]: ツール遺伝子リスト
+        """
         if self._tool_genes_template is None:
             self._initialize_caches()
 
@@ -174,7 +249,17 @@ class RandomGeneGenerator:
 
     @staticmethod
     def _clone_tool_gene_template(tool: ToolGene) -> ToolGene:
-        """ツール遺伝子テンプレートを clone し、enabled を再抽選する。"""
+        """
+        ツール遺伝子テンプレートを clone し、enabled を再抽選する
+
+        ツール遺伝子テンプレートをクローンし、有効フラグをランダムに再設定します。
+
+        Args:
+            tool: ツール遺伝子テンプレート
+
+        Returns:
+            ToolGene: クローンされたツール遺伝子
+        """
         cloned = tool.clone()
         cloned.enabled = random.random() < 0.5
         return cloned
@@ -200,14 +285,19 @@ class RandomGeneGenerator:
     )
     def generate_random_gene(self) -> StrategyGene:
         """
-        ランダムな戦略遺伝子を生成
+        ランダムなパラメータと論理構造を持つ、新しい取引戦略の「遺伝子」を生成します。
 
-        指標、TP/SL、エントリー、ポジションサイジング、ツール設定をランダムに組み合わせた
-        完全な戦略遺伝子を構築します。スマート生成が有効な場合は、
-        ConditionGeneratorを使用して意味のある取引条件を生成します。
+        このメソッドは、初期集団の生成や突然変異の際に呼び出され、以下のステップで一つの完結した戦略設計図を構築します：
+        1. **テクニカル指標の生成**: `IndicatorUniverse` から RSI, MACD, SMA 等をランダムに選択。
+        2. **TP/SL設定**: 全体用およびロング・ショート個別の利確・損切り幅を生成。
+        3. **取引条件（ロジック）の生成**: `ConditionGenerator` を使用して、指標間の比較や閾値判定等の論理式を構築。
+           - 「スマート生成」により、価格スケールと指標スケールの不一致を避けた意味のある条件を生成します。
+        4. **ポジションサイジング設定**: 固定量、資産比率、ボラティリティ比例等の資金管理手法を決定。
+        5. **エントリー管理設定**: エントリー順序や同時注文制限等の実行ルールを設定。
+        6. **補助ツール設定**: 週末フィルタやボラティリティフィルタ等の外部制約をランダムに有効化。
 
         Returns:
-            生成されたStrategyGeneオブジェクト
+            StrategyGene: 生成された戦略の全パラメータを保持する遺伝子オブジェクト。
         """
         # キャッシュを活用して指標とサブ遺伝子を生成
         indicators = self._get_cached_indicators()
@@ -265,15 +355,31 @@ class RandomGeneGenerator:
             metadata={"generated_by": "RandomGeneGenerator"},
         )
 
-    def clear_caches(self) -> None:
-        """生成キャッシュをクリアする。"""
+    def _clear_caches(self) -> None:
+        """
+        生成キャッシュをクリアする
+
+        すべてのキャッシュ（インジケーター、TP/SL、ポジションサイジング、ツール）を
+        クリアして、メモリを解放します。
+        """
         self._indicator_cache.clear()
         self._tpsl_cache.clear()
         self._position_sizing_cache.clear()
         self._tool_genes_template = None
 
     def get_cache_statistics(self) -> Dict[str, Any]:
-        """キャッシュ統計を返す。"""
+        """
+        キャッシュ統計を返す
+
+        各キャッシュのサイズを返します。
+
+        Returns:
+            Dict[str, Any]: キャッシュ統計辞書
+                - indicator_cache_size: インジケーターキャッシュサイズ
+                - tpsl_cache_size: TP/SLキャッシュサイズ
+                - position_sizing_cache_size: ポジションサイジングキャッシュサイズ
+                - tool_genes_template_size: ツール遺伝子テンプレートサイズ
+        """
         return {
             "indicator_cache_size": len(self._indicator_cache),
             "tpsl_cache_size": len(self._tpsl_cache),

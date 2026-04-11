@@ -15,11 +15,26 @@ logger = logging.getLogger(__name__)
 
 
 class DataConversionError(Exception):
-    """データ変換エラー"""
+    """
+    データ変換エラー
+
+    データ変換処理中に発生したエラーを表す例外クラスです。
+    """
 
 
 def parse_timestamp_safe(value: Any) -> Optional[datetime]:
-    """タイムスタンプを安全にパースする（警告ログ付き）。"""
+    """
+    タイムスタンプを安全にパースする（警告ログ付き）。
+
+    datetime_utils.parse_timestamp_safe のラッパー関数で、
+    変換失敗時に警告ログを出力します。
+
+    Args:
+        value: 変換対象のタイムスタンプ値（数値、文字列、datetime等）
+
+    Returns:
+        Optional[datetime]: 変換されたdatetimeオブジェクト（失敗時はNone）
+    """
     result = _parse_timestamp_safe(value)
     if result is None and value is not None:
         logger.warning("タイムスタンプ変換エラー: %s - 型: %s", value, type(value))
@@ -27,7 +42,12 @@ def parse_timestamp_safe(value: Any) -> Optional[datetime]:
 
 
 class OHLCVDataConverter:
-    """OHLCV データ変換の共通ヘルパークラス"""
+    """
+    OHLCV データ変換の共通ヘルパークラス
+
+    CCXT形式とデータベース形式の間でOHLCVデータを変換する
+    静的メソッドを提供します。
+    """
 
     @staticmethod
     def ccxt_to_db_format(
@@ -36,13 +56,22 @@ class OHLCVDataConverter:
         """
         CCXT形式のOHLCVデータをデータベース形式に変換
 
+        CCXTライブラリから取得した [timestamp, open, high, low, close, volume]
+        形式のリストを、データベース挿入用の辞書リストに変換します。
+        不正なデータはスキップされ、警告ログが出力されます。
+
         Args:
-            ohlcv_data: CCXT形式のOHLCVデータ
-            symbol: シンボル
-            timeframe: 時間軸
+            ohlcv_data: CCXT形式のOHLCVデータ（[timestamp, open, high, low, close, volume]のリスト）
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
+            timeframe: 時間軸（例: '1h', '1d'）
 
         Returns:
-            データベース挿入用の辞書リスト
+            List[Dict[str, Any]]: データベース挿入用の辞書リスト。
+                                   各辞書は以下のキーを含みます：
+                                   - symbol: シンボル
+                                   - timeframe: 時間軸
+                                   - timestamp: datetimeオブジェクト
+                                   - open, high, low, close, volume: 数値
         """
         db_records = []
 
@@ -85,11 +114,15 @@ class OHLCVDataConverter:
         """
         データベース形式のOHLCVデータをAPI形式に変換
 
+        データベースから取得したOHLCVレコードを、
+        [timestamp, open, high, low, close, volume] 形式のリストに変換します。
+        タイムスタンプはミリ秒単位の数値に変換されます。
+
         Args:
-            ohlcv_records: データベースのOHLCVレコード
+            ohlcv_records: データベースのOHLCVレコード（timestamp、open、high、low、close、volume属性を持つオブジェクトのリスト）
 
         Returns:
-            API形式のOHLCVデータ
+            List[List]: API形式のOHLCVデータ（[timestamp_ms, open, high, low, close, volume]のリスト）
         """
         api_data = []
 
@@ -111,7 +144,12 @@ class OHLCVDataConverter:
 
 
 class FundingRateDataConverter:
-    """ファンディングレートデータ変換の共通ヘルパークラス"""
+    """
+    ファンディングレートデータ変換の共通ヘルパークラス
+
+    CCXT形式とデータベース形式の間でファンディングレートデータを変換する
+    静的メソッドを提供します。
+    """
 
     @staticmethod
     def ccxt_to_db_format(
@@ -120,12 +158,22 @@ class FundingRateDataConverter:
         """
         CCXT形式のファンディングレートデータをデータベース形式に変換
 
+        CCXTライブラリから取得したファンディングレートデータを、
+        データベース挿入用の辞書リストに変換します。
+
         Args:
-            funding_rate_data: CCXT形式のファンディングレートデータ
-            symbol: シンボル
+            funding_rate_data: CCXT形式のファンディングレートデータ（辞書のリスト）
+                            各辞書は 'fundingRate', 'datetime', 'nextFundingDatetime' 等のキーを含みます
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
 
         Returns:
-            データベース挿入用の辞書リスト
+            List[Dict[str, Any]]: データベース挿入用の辞書リスト。
+                                   各辞書は以下のキーを含みます：
+                                   - symbol: シンボル
+                                   - funding_rate: ファンディングレート（数値）
+                                   - data_timestamp: データタイムスタンプ（datetime）
+                                   - timestamp: レコード挿入時のタイムスタンプ（datetime）
+                                   - next_funding_timestamp: 次回ファンディング時刻（存在する場合）
         """
         db_records = []
 
@@ -155,7 +203,12 @@ class FundingRateDataConverter:
 
 
 class OpenInterestDataConverter:
-    """オープンインタレストデータ変換の共通ヘルパークラス"""
+    """
+    オープンインタレストデータ変換の共通ヘルパークラス
+
+    CCXT形式とデータベース形式の間でオープンインタレストデータを変換する
+    静的メソッドを提供します。
+    """
 
     @staticmethod
     def ccxt_to_db_format(
@@ -164,12 +217,26 @@ class OpenInterestDataConverter:
         """
         CCXT形式のオープンインタレストデータをデータベース形式に変換
 
+        CCXTライブラリから取得したオープンインタレストデータを、
+        データベース挿入用の辞書リストに変換します。
+        取引所によってフィールド名が異なるため、複数の候補フィールドを確認します。
+
         Args:
-            open_interest_data: CCXT形式のオープンインタレストデータ
-            symbol: シンボル
+            open_interest_data: CCXT形式のオープンインタレストデータ（辞書のリスト）
+                                各辞書は 'openInterestAmount', 'openInterest', 'openInterestValue',
+                                'timestamp' 等のキーを含みます
+            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
 
         Returns:
-            データベース挿入用の辞書リスト
+            List[Dict[str, Any]]: データベース挿入用の辞書リスト。
+                                   各辞書は以下のキーを含みます：
+                                   - symbol: シンボル
+                                   - open_interest_value: オープンインタレスト値（数値）
+                                   - data_timestamp: データタイムスタンプ（datetime）
+                                   - timestamp: レコード挿入時のタイムスタンプ（datetime）
+
+        Note:
+            オープンインタレスト値が見つからないレコードはスキップされ、警告ログが出力されます。
         """
         db_records = []
 
@@ -217,6 +284,7 @@ def normalize_market_symbol(symbol: Any) -> str:
     """
     市場シンボルを正規化する
 
+    様々な形式のシンボル表記をBybitの標準形式（BTC/USDT:USDT）に正規化します。
     BybitService._normalize_symbol_for_ccxt および
     BaseDataCollectionOrchestrationService._normalize_derivative_symbol
     の共通化を目的とする。
@@ -225,7 +293,15 @@ def normalize_market_symbol(symbol: Any) -> str:
         symbol: 正規化するシンボル（例: "BTC/USDT", "BTCUSDT", "BTC/USDT:USDT"）
 
     Returns:
-        正規化されたシンボル（例: "BTC/USDT:USDT"）
+        str: 正規化されたシンボル（例: "BTC/USDT:USDT"）
+
+    変換ルール:
+        - Noneまたは空文字: 空文字を返す
+        - 非文字列: str()で文字列化
+        - 既にコロン付き（例: BTC/USDT:USDT）: そのまま返す
+        - ハイフンを含む（例: BTC-USDT）: スラッシュに変換
+        - スラッシュで終わるUSDT/USD/BUSD/USDC: コロン+同じ通貨を追加
+        - スラッシュなし（例: BTCUSDT）: コロン+USDTを追加
     """
     if symbol is None:
         return ""

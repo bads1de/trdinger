@@ -78,27 +78,39 @@ class FeatureEngineeringService:
         ohlcv_data: pd.DataFrame,
         funding_rate_data: Optional[pd.DataFrame] = None,
         open_interest_data: Optional[pd.DataFrame] = None,
-        long_short_ratio_data: Optional[pd.DataFrame] = None,  # Added
+        long_short_ratio_data: Optional[pd.DataFrame] = None,
         lookback_periods: Optional[Dict[str, int]] = None,
         profile: Optional[str] = None,
     ) -> pd.DataFrame:
         """
-        OHLCV、FR、OI データから統合された特徴量セットを効率的に算出
+        OHLCV、FR、OI、LSRデータから統合された高度な特徴量セットを算出します。
 
-        各専門分野の計算機（テクニカル、マイクロストラクチャ、OI/FR、
-        マルチタイムフレーム等）を順次実行し、最終的な特徴量
-        マトリックスを生成します。インデックスの整合性チェックや、
-        頻度の統一処理、欠損値補完などの前処理も自動的に行います。
+        このメソッドは、以下の多角的な分析カテゴリから特徴量を生成し、単一のDataFrameに結合します：
+        1. 基本価格・テクニカル指標: SMA, RSI, MACD, Bollinger Bands等。
+        2. 市場ストラクチャ: ボリュームプロファイル、価格の複雑さ（Fractal Dimension等）。
+        3. デリバティブデータ連携: 資金調達率（FR）と建玉（OI）の相関、乖離、およびロング/ショート比率。
+        4. マイクロストラクチャ: Rollモデル（スプレッド推定）、KyleのLambda（流動性）。
+        5. 時間アノマリー: 曜日、時間帯、季節性に基づく周期的な特徴。
+        6. マルチタイムフレーム（MTF）: 上位足のトレンドやボラティリティの取り込み。
 
         Args:
-            ohlcv_data: 基準となる OHLCV 価格データ
-            funding_rate_data: ファンディングレート（FR）データ（任意）
-            open_interest_data: 建玉残高（OI）データ（任意）
-            lookback_periods: 各指標の計算期間（デフォルト設定あり）
-            profile: 特徴量プロファイル（計算範囲の制御用）
+            ohlcv_data (pd.DataFrame): 基準となるOHLCV価格データ。DatetimeIndexが必須です。
+            funding_rate_data (Optional[pd.DataFrame]): ファンディングレート履歴。
+            open_interest_data (Optional[pd.DataFrame]): 建玉残高（Open Interest）履歴。
+            long_short_ratio_data (Optional[pd.DataFrame]): ロング/ショート比率データ。
+            lookback_periods (Optional[Dict[str, int]]): 指標計算の参照期間（例: {"rsi_period": 14}）。
+                未指定時は各計算機のデフォルト値が使用されます。
+            profile (Optional[str]): 特徴量セットのプロファイル。計算範囲や組み合わせを制御します。
 
         Returns:
-            インデックスが ohlcv_data と一致する、計算済みの全特徴量を含む DataFrame
+            pd.DataFrame: 計算済みの全特徴量を含むDataFrame。
+                インデックスは `ohlcv_data` と完全に一致します。
+                計算不可（期間不足等）な箇所には NaN が含まれます。
+
+        Note:
+            - 高速化: 同一入力データに対する計算は、メモリ内キャッシュ（`feature_cache`）から高速に取得されます。
+            - メモリ最適化: 生成された特徴量は、精度を維持しつつ `float32` 等の最適なデータ型にダウンキャストされます。
+            - 整合性: 異なる頻度のデータ（例: 8時間ごとのFRと1時間ごとのOHLCV）は、自動的にOHLCVの頻度にリサンプリング/補間されます。
         """
         try:
             if ohlcv_data.empty:

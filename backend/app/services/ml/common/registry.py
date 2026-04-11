@@ -19,6 +19,15 @@ class AlgorithmRegistry:
     アルゴリズム名レジストリクラス
 
     モデルクラス名と標準化されたアルゴリズム名のマッピングを一元管理します。
+    異なるライブラリ（LightGBM、XGBoost、CatBoost等）のクラス名を
+    標準化されたアルゴリズム名に変換します。
+
+    サポートされるアルゴリズム:
+        - lightgbm: LightGBM関連クラス
+        - xgboost: XGBoost関連クラス
+        - catboost: CatBoost関連クラス
+        - ensemble: アンサンブル関連クラス
+        - stacking: スタッキング関連クラス
     """
 
     _CLASS_TO_ALGORITHM_MAPPING = {
@@ -38,7 +47,24 @@ class AlgorithmRegistry:
 
     @classmethod
     def get_algorithm_name(cls, model_class_name: str) -> str:
-        """モデルクラス名から標準化されたアルゴリズム名を取得"""
+        """
+        モデルクラス名から標準化されたアルゴリズム名を取得
+
+        モデルクラス名（例: 'LGBMClassifier'、'XGBRegressor'）を
+        標準化されたアルゴリズム名（例: 'lightgbm'、'xgboost'）に変換します。
+
+        Args:
+            model_class_name: モデルクラス名
+
+        Returns:
+            str: 標準化されたアルゴリズム名（未知の場合は'unknown'）
+
+        変換ロジック:
+            1. 定義済みマッピングから完全一致を検索
+            2. 部分一致（クラス名にキーが含まれる）を検索
+            3. サフィックス（trainer、model、classifier等）を除去して検索
+            4. いずれにも一致しない場合は'unknown'を返す
+        """
         if not model_class_name:
             return "unknown"
         name = model_class_name.lower()
@@ -62,7 +88,50 @@ algorithm_registry = AlgorithmRegistry()
 
 @dataclass
 class ModelMetadata:
-    """MLモデルのメタデータを管理するdataclass"""
+    """
+    MLモデルのメタデータを管理するdataclass
+
+    モデルの性能指標、学習パラメータ、作成日時などの
+    メタデータを一元管理します。
+
+    Attributes:
+        task_type: タスクタイプ（例: 'volatility_regression'、'classification'）
+        target_kind: 目的変数の種類（例: 'log_realized_vol'、'classification_label'）
+        accuracy: 精度
+        precision: 適合率
+        recall: 再現率
+        f1_score: F1スコア
+        auc_score: AUCスコア
+        auc_roc: ROC-AUCスコア
+        auc_pr: PR-AUCスコア
+        balanced_accuracy: バランス精度
+        matthews_corrcoef: マシューズ相関係数
+        cohen_kappa: コーエンのカッパ係数
+        specificity: 特異度
+        sensitivity: 感度
+        npv: 陰性的中率
+        ppv: 陽性的中率
+        log_loss: 対数損失
+        brier_score: ブライアスコア
+        qlike: QLIKE指標
+        rmse_log_rv: 対数実現ボラティリティのRMSE
+        mae_log_rv: 対数実現ボラティリティのMAE
+        feature_count: 特徴量数
+        training_samples: 学習サンプル数
+        test_samples: テストサンプル数
+        best_iteration: 最適イテレーション
+        num_classes: クラス数
+        train_test_split: 学習/テスト分割比率
+        random_state: ランダムシード
+        model_type: モデルタイプ
+        symbol: シンボル
+        timeframe: 時間足
+        prediction_horizon: 予測ホライズン
+        gate_quantile: ゲート分位点
+        gate_cutoff_log_rv: ゲートカットオフ（対数実現ボラティリティ）
+        gate_cutoff_vol: ゲートカットオフ（ボラティリティ）
+        created_at: 作成日時（ISO形式）
+    """
 
     # タスク情報
     task_type: str = "volatility_regression"
@@ -115,6 +184,14 @@ class ModelMetadata:
             self.created_at = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        メタデータを辞書形式に変換
+
+        dataclassを辞書に変換してJSONシリアライズ可能な形式にします。
+
+        Returns:
+            Dict[str, Any]: メタデータの辞書表現
+        """
         return dataclass_to_dict(self)
 
     @classmethod
@@ -125,6 +202,20 @@ class ModelMetadata:
         model_type: str = "",
         feature_count: int = 0,
     ) -> "ModelMetadata":
+        """
+        学習結果からメタデータを生成
+
+        学習結果とパラメータからModelMetadataインスタンスを作成します。
+
+        Args:
+            training_result: 学習結果の辞書（精度、損失等の指標を含む）
+            training_params: 学習パラメータの辞書（タスクタイプ、シンボル等を含む）
+            model_type: モデルタイプ（オプション）
+            feature_count: 特徴量数（オプション）
+
+        Returns:
+            ModelMetadata: 生成されたメタデータインスタンス
+        """
         r, p = training_result, training_params
         return cls(
             task_type=p.get("task_type", "volatility_regression"),
@@ -165,6 +256,12 @@ class ModelMetadata:
         )
 
     def log_summary(self) -> None:
+        """
+        メタデータの要約をログ出力
+
+        主要なメトリクス（精度、F1スコア、特徴量数、学習サンプル数）を
+        ログに出力します。
+        """
         logger.info(
             f"モデルメタデータ: 精度={self.accuracy:.4f}, "
             f"F1={self.f1_score:.4f}, 特徴量数={self.feature_count}, "
@@ -172,6 +269,25 @@ class ModelMetadata:
         )
 
     def validate(self) -> Dict[str, Any]:
+        """メタデータの妥当性を検証
+
+        メタデータの値が合理的な範囲内にあるかを検証します。
+
+        Returns:
+            Dict[str, Any]: 検証結果を含む辞書。
+                - is_valid (bool): 全ての検証をパスした場合はTrue。
+                - errors (List[str]): エラーメッセージのリスト。1つ以上ある場合はinvalid。
+                - warnings (List[str]): 警告メッセージのリスト。検証には影響しない参考情報。
+
+        検証ルール:
+            - volatility_regressionタスク:
+              - RMSE(log_rv)、MAE(log_rv)が負でないこと
+              - QLIKEが負の場合は警告
+            - classificationタスク:
+              - 精度、F1スコアが0-1の範囲内であること
+            - 共通:
+              - 特徴量数、学習サンプル数が正であること
+        """
         errors, warnings = [], []
         if self.task_type == "volatility_regression":
             if self.rmse_log_rv < 0.0:

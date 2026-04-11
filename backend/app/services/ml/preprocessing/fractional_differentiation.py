@@ -1,3 +1,11 @@
+"""
+分数次差分（Fractional Differentiation）前処理モジュール
+
+Marcos Lopez de Prado著 "Advances in Financial Machine Learning" に基づく実装。
+時系列の定常性を確保しつつ、過去の記憶（メモリ）を最大限保持することを目的とします。
+NumPyのconvolveを用いた高速ベクトル化実装を提供します。
+"""
+
 import logging
 from typing import Union
 

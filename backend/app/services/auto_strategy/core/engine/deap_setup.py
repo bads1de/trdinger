@@ -24,7 +24,12 @@ class DEAPSetup:
     """
 
     def __init__(self):
-        """初期化"""
+        """
+        初期化
+
+        DEAP設定クラスを初期化します。
+        ツールボックスとクラス名はsetup_deapで設定されます。
+        """
         self.toolbox: Optional[base.Toolbox] = None
         self.Individual = None
         self.fitness_class_name: Optional[str] = None
@@ -38,15 +43,30 @@ class DEAPSetup:
         crossover_func,
         mutate_func,
     ):
-        """
-        DEAP環境のセットアップ（多目的最適化専用）
+        """DEAP環境のセットアップ（多目的最適化専用）
+
+        DEAPライブラリの設定を行い、ツールボックスを初期化します。
+        多目的最適化用のフィットネスクラスと個体クラスを作成し、
+        進化演算子を登録します。
 
         Args:
-            config: GA設定
+            config: GA設定オブジェクト
             create_individual_func: 個体生成関数
             evaluate_func: 評価関数
             crossover_func: 交叉関数
             mutate_func: 突然変異関数
+
+        Returns:
+            None: メソッドは副作用としてインスタンス属性を設定します。
+                - self.fitness_class_name: 作成されたフィットネスクラス名
+                - self.individual_class_name: 作成された個体クラス名
+                - self.Individual: 個体クラス（StrategyGeneを継承）
+                - self.toolbox: 設定済みのDEAPツールボックス
+
+        Note:
+            - 多目的最適化の場合はNSGA-II選択アルゴリズムを使用
+            - 単一目的の場合はトーナメント選択アルゴリズムを使用
+            - creatorはグローバルなので、実行単位ごとに一意な名前を使用
         """
         # 多目的最適化用フィットネスクラスの定義
         # DEAP creator はグローバルなので、実行単位ごとに一意な名前を使う
@@ -117,16 +137,21 @@ class DEAPSetup:
         """
         DEAPツールボックスを取得
 
+        初期化されたDEAPツールボックスを返します。
+
         Returns:
-            初期化済みのbase.Toolboxオブジェクト、未初期化の場合はNone
+            Optional[base.Toolbox]: 初期化済みのbase.Toolboxオブジェクト、未初期化の場合はNone
         """
         return self.toolbox
 
     def get_individual_class(self):
-        """
-        生成された個体クラスを取得
+        """生成された個体クラスを取得
+
+        DEAPのcreator.createによって生成された個体クラスを返します。
+        このクラスはStrategyGeneを継承し、fitness属性を持っています。
 
         Returns:
-            creator.createによって生成されたIndividualクラス、未生成の場合はNone
+            Any: 生成されたIndividualクラス。StrategyGeneを継承し、
+                fitness属性（FitnessMulti型）を持つ。未生成の場合はNone。
         """
         return self.Individual

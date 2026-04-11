@@ -36,7 +36,32 @@ def create_ml_pipeline(
     is_classification: bool = False,
     **kwargs: Any,
 ) -> Pipeline:
-    """MLパイプラインを作成（分類・回帰共通）"""
+    """MLパイプラインを作成する（分類・回帰共通）。
+
+    前処理、特徴量選択、スケーリングを順番に適用する
+    sklearn Pipelineを構築します。タスクの種類に応じて
+    適切な統計検定が自動的に選択されます。
+
+    Args:
+        feature_selection: 特徴量選択を有効にするかどうか。
+        n_features: 選択する特徴量数。feature_selection=True時のみ使用。
+        selection_method: 特徴量選択のスコアリング関数。
+            "f_regression", "f_classif", "mutual_info" がサポートされています。
+        scaling: スケーリングを有効にするかどうか。
+        scaling_method: スケーリング方法（"standard", "robust", "minmax"）。
+        preprocessing_params: 前処理ステップに渡すパラメータ（オプション）。
+            create_preprocessing_pipeline()に渡されます。
+        is_classification: 分類タスクの場合はTrue、回帰タスクの場合はFalse。
+        **kwargs: 追加のパラメータ（現在は使用されません）。
+
+    Returns:
+        Pipeline: 構築されたsklearn Pipeline。
+            fit()/predict()/predict_proba() などのメソッドをサポート。
+
+    Raises:
+        ValueError: サポートされていないselection_methodまたはscaling_method
+            が指定された場合。
+    """
     from sklearn.feature_selection import (
         f_classif,
         f_regression,
@@ -83,25 +108,54 @@ def create_ml_pipeline(
 
 
 def create_classification_pipeline(**kwargs) -> Pipeline:
-    """分類用パイプライン"""
+    """分類タスク用のMLパイプラインを作成する。
+
+    create_ml_pipeline() の分類バージョンショートカットです。
+    特徴量選択に f_classif をデフォルトで使用します。
+
+    Args:
+        **kwargs: create_ml_pipeline() に渡される追加パラメータ。
+
+    Returns:
+        Pipeline: 分類タスク用に設定されたsklearn Pipeline。
+    """
     kwargs.setdefault("selection_method", "f_classif")
     return create_ml_pipeline(is_classification=True, **kwargs)
 
 
 def create_regression_pipeline(**kwargs) -> Pipeline:
-    """回帰用パイプライン"""
+    """回帰タスク用のMLパイプラインを作成する。
+
+    create_ml_pipeline() の回帰バージョンショートカットです。
+
+    Args:
+        **kwargs: create_ml_pipeline() に渡される追加パラメータ。
+
+    Returns:
+        Pipeline: 回帰タスク用に設定されたsklearn Pipeline。
+    """
     return create_ml_pipeline(is_classification=False, **kwargs)
 
 
 def get_ml_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
-    """
-    MLパイプラインの情報を取得。
+    """MLパイプラインの構成情報を取得する。
+
+    Pipelineに含まれるステップの種類、数、名前などの
+    構成情報を辞書形式で返します。
 
     Args:
-        pipeline: 適合済みのMLパイプライン
+        pipeline: 対象のMLパイプライン（適合済みでなくても可）。
 
     Returns:
-        パイプライン情報を含む辞書
+        Dict[str, Any]: パイプライン構成情報を含む辞書。
+            - pipeline_type: パイプライン種別（常に"ml"）
+            - n_steps: ステップ数
+            - step_names: ステップ名のリスト
+            - has_preprocessing: 前処理ステップの有無
+            - has_feature_selection: 特徴量選択ステップの有無
+            - has_scaling: スケーリングステップの有無
+            - n_features_in: 入力特徴量数（適合済みの場合のみ）
+            - n_features_out: 出力特徴量数（適合済みの場合のみ）
     """
     info = {
         "pipeline_type": "ml",

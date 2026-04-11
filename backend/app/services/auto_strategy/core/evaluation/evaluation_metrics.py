@@ -61,14 +61,19 @@ def _calculate_ulcer_index_numba(dd_array: np.ndarray) -> float:
 
 def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
     """
-    Ulcer Index（ドローダウンの二乗平均平方根）を計算します。
-    標準偏差よりも下落リスクを重視するリスク指標です。
+    資産曲線から Ulcer Index（潰瘍指数）を算出します。
+
+    Ulcer Index は、単純な標準偏差（ボラティリティ）とは異なり、資産の「下落の深さ」と「下落期間」の両方を
+    考慮したリスク指標です。数式的には、資産曲線における全時点のドローダウン率の二乗平均平方根（RMS）として定義されます。
+    $UI = \\sqrt{\\frac{1}{n} \\sum_{i=1}^{n} D_i^2}$
+    ここで $D_i$ は $i$ 時点でのパーセンテージドローダウンです。
 
     Args:
-        equity_curve: バックテスト結果の資産曲線のポイント列。
+        equity_curve (Sequence[Mapping[str, Any]]): バックテスト結果の時系列資産データ。
+            各要素は "drawdown"（0.0〜1.0、または 0〜100）キーを持つ辞書であることを想定します。
 
     Returns:
-        ドローダウン率の二乗平均平方根（小数値）。
+        float: 算出された Ulcer Index。値が大きいほど、深い、あるいは長いドローダウンを経験したことを示します。
     """
     if not equity_curve:
         return 0.0
@@ -97,19 +102,23 @@ def calculate_trade_frequency_penalty(
     trade_history: Optional[Iterable[Mapping[str, Any]]] = None,
 ) -> float:
     """
-    過剰取引（高頻度取引）に対する正規化されたペナルティを返します。
+    過剰な取引（オーバートレーディング）を抑制するための、正規化されたペナルティ値を算出します。
 
-    1日あたりの平均取引回数が増えるにつれてペナルティは増加し、
-    双曲線正接（tanh）により ``[0, 1)`` の範囲に収まります。
+    この指標は、1日あたりの平均取引回数が `REFERENCE_TRADES_PER_DAY`（基準値）を超えると
+    急激に増加し、双曲線正接関数（tanh）によって `[0, 1)` の範囲に正規化されます。
+    $Penalty = \\tanh(\\frac{TradesPerDay}{ReferenceValue})$
+
+    適応度計算においてこの値を差し引くことで、GAが「手数料負け」しやすい高頻度すぎる戦略を
+    選択するのを防ぐ効果があります。
 
     Args:
-        total_trades: 総取引回数。
-        start_date: 開始日時。
-        end_date: 終了日時。
-        trade_history: 取引履歴（total_tradesが0の場合にカウントに使用）。
+        total_trades (int): バックテスト期間中の総取引回数。
+        start_date (Optional[object]): テスト開始日時。
+        end_date (Optional[object]): テスト終了日時。
+        trade_history (Optional[Iterable]): 個別のトレード詳細。`total_trades` が 0 の場合の代替カウントに使用。
 
     Returns:
-        ペナルティ値（0.0〜1.0未満）。
+        float: 0.0（ペナルティなし）から 1.0 未満（最大ペナルティ）の範囲の数値。
     """
 
     trades = int(total_trades or 0)

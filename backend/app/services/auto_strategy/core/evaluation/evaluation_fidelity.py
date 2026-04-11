@@ -57,7 +57,20 @@ def is_multi_fidelity_enabled(config: Any) -> bool:
 
 
 def build_coarse_ga_config(config: GAConfig) -> GAConfig:
-    """粗評価用に GA 設定を縮退させたコピーを返す。"""
+    """
+    GAの初期世代で使用する「粗評価（Coarse Fidelity）」用の設定オブジェクトを構築します。
+
+    目的：
+    - 進化の初期段階では個体の大まかな傾向を把握すれば十分であるため、
+      計算負荷の高い WFA（Walk-Forward Analysis）やパージング付き交差検証を無効化し、
+      全体の計算時間を大幅に短縮します。
+
+    Args:
+        config (GAConfig): 元の精密なGA設定。
+
+    Returns:
+        GAConfig: 計算負荷を下げた縮退版の設定。`_evaluation_fidelity` 属性に "coarse" が設定されます。
+    """
     coarse = deepcopy(config)
     coarse.evaluation_config.enable_walk_forward = False
     coarse.enable_purged_kfold = False
@@ -78,7 +91,20 @@ def adjust_backtest_config_for_fidelity(
     backtest_config: Dict[str, Any],
     config: Any,
 ) -> Dict[str, Any]:
-    """coarse fidelity の場合だけ評価期間を末尾側へ圧縮する。"""
+    """
+    評価精度設定に基づいて、バックテストの実行範囲（期間）を調整します。
+
+    Coarse Fidelity（粗評価）が有効な場合：
+    - 全期間のバックテストではなく、直近の `multi_fidelity_window_ratio`（デフォルト30%）
+      の期間のみを抽出して評価を行います。これにより、シミュレーション時間を劇的に短縮できます。
+
+    Args:
+        backtest_config (Dict[str, Any]): 元のバックテスト設定（銘柄、全期間等）。
+        config (Any): 現在のGA設定。粗評価フラグを確認するために使用。
+
+    Returns:
+        Dict[str, Any]: 必要に応じて期間が短縮されたバックテスト設定。
+    """
     adjusted = backtest_config.copy()
     if not is_coarse_fidelity(config):
         return adjusted

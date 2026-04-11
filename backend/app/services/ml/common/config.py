@@ -38,14 +38,22 @@ def get_default_single_model_config() -> Dict[str, Any]:
 
 class MLConfigManager:
     """
-    ML設定管理クラス
+    MLシステム全体の設定（ディレクトリパス、学習パラメータ、モデル構成等）を一括管理し、永続化を担当するクラスです。
 
-    設定の永続化、更新、リセット、バリデーション機能を提供します。
-    サービス内の `MLConfig` インスタンスを正本として扱います。
+    主な責務:
+    - 設定の正本管理: アプリケーション実行中の最新設定を `MLConfig` オブジェクトとして保持します。
+    - 永続化: 設定を JSON ファイルとして保存・読み込みし、再起動後も設定を維持します。
+    - 動的更新: 実行時に API 等を通じて設定を安全に更新し、即座にシステムへ反映させます。
+    - 安全なマージ: 部分的な設定更新（ネストされた辞書）を既存の設定と正しく統合します。
     """
 
     def __init__(self, config_file_path: str = "config/ml_config.json"):
-        """初期化"""
+        """
+        設定マネージャーを初期化します。
+
+        Args:
+            config_file_path (str): 設定ファイルの保存先パス。
+        """
         self.config_file_path = Path(config_file_path)
         self._config = MLConfig()
         if self.config_file_path.exists():
@@ -66,7 +74,15 @@ class MLConfigManager:
         return self.config.model_dump(by_alias=True)
 
     def save_config(self) -> bool:
-        """現在の設定をファイルに保存"""
+        """
+        現在のメモリ上の設定をファイルに保存します。
+
+        ディレクトリが存在しない場合は自動的に作成し、
+        保存日時やバージョン情報を含むメタデータを付与して JSON 形式で書き出します。
+
+        Returns:
+            bool: 保存に成功した場合は True。
+        """
         try:
             config_dict = self.get_config_dict()
             config_dict["_metadata"] = {
@@ -109,7 +125,17 @@ class MLConfigManager:
             return False
 
     def update_config(self, config_updates: Dict[str, Any]) -> bool:
-        """設定を更新"""
+        """
+        既存の設定を指定された更新内容で上書きし、ファイルに保存します。
+
+        辞書構造を再帰的にマージするため、一部のパラメータのみを変更することが可能です。
+
+        Args:
+            config_updates (Dict[str, Any]): 更新したい項目の辞書。
+
+        Returns:
+            bool: 更新と保存に成功した場合は True。
+        """
         try:
             current_config = self.get_config_dict()
             updated_config = self._merge_config_updates(current_config, config_updates)

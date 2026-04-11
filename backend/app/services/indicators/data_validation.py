@@ -21,18 +21,42 @@ logger = logging.getLogger(__name__)
 
 
 class PandasTAError(Exception):
-    """pandas-ta関連のエラー"""
+    """
+    pandas-ta関連のエラー
+
+    pandas-taライブラリの計算中に発生するエラーを表します。
+    """
 
 
 def _get_indicator_config(indicator_type: str):
-    """indicator_registry から設定を取得する共通 helper."""
+    """
+    indicator_registry から設定を取得する共通 helper
+
+    指標タイプに対応する設定をレジストリから取得します。
+
+    Args:
+        indicator_type: 指標タイプ（例: 'RSI', 'MACD'）
+
+    Returns:
+        IndicatorConfig: 指標設定オブジェクト（見つからない場合はNone）
+    """
     from .config.indicator_config import indicator_registry
 
     return indicator_registry.get_indicator_config(indicator_type.upper())
 
 
 def _validate_positive_length(length: Optional[int]) -> None:
-    """length 引数の正当性を共通チェックする。"""
+    """
+    length 引数の正当性を共通チェックする。
+
+    lengthが正の整数であることを検証します。
+
+    Args:
+        length: 検証する長さ（オプション）
+
+    Raises:
+        ValueError: lengthが0以下の場合
+    """
     if length is not None and length <= 0:
         raise ValueError(f"length must be positive: {length}")
 
@@ -41,7 +65,19 @@ def _return_nan_series_if_needed(
     series: pd.Series,
     min_data_length: int,
 ) -> Optional[pd.Series]:
-    """空系列または最小長不足の場合に NaN Series を返す。"""
+    """
+    空系列または最小長不足の場合に NaN Series を返す。
+
+    シリーズが空または最小データ長に満たない場合、
+    NaNで埋められたシリーズを返します。
+
+    Args:
+        series: 検証対象のSeries
+        min_data_length: 最小必要データ長
+
+    Returns:
+        Optional[pd.Series]: NaNで埋められたSeries（検証失敗時）、None（検証成功時）
+    """
     if len(series) == 0:
         return create_nan_series_like(series)
 
@@ -57,7 +93,23 @@ def _validate_series_collection(
     length: Optional[int] = None,
     min_data_length: int = 0,
 ) -> Optional[pd.Series]:
-    """単一/複数 Series の共通検証を行う。"""
+    """
+    単一/複数 Series の共通検証を行う。
+
+    複数のSeriesの型と長さを検証し、データ長チェックを行います。
+
+    Args:
+        series_items: 検証するSeriesの辞書（名前 -> Series）
+        length: 期間（オプション）
+        min_data_length: 最小必要データ長（デフォルト: 0）
+
+    Returns:
+        Optional[pd.Series]: NaNで埋められたSeries（検証失敗時）、None（検証成功時）
+
+    Raises:
+        ValueError: series_itemsが空、またはSeries長が不一致の場合
+        TypeError: Seriesがpandas.Seriesでない場合
+    """
     if not series_items:
         raise ValueError("series_dict cannot be empty")
 
@@ -88,12 +140,40 @@ def _validate_series_collection(
 
 
 def _create_nan_array(length: int, width: int = 1) -> np.ndarray:
-    """NaN で埋まった 1D/2D 配列を作る。"""
+    """
+    NaN で埋まった 1D/2D 配列を作る。
+
+    指定されたサイズのNaN配列を作成します。
+
+    Args:
+        length: 配列の長さ
+        width: 配列の幅（デフォルト: 1）
+
+    Returns:
+        np.ndarray: NaNで埋められた配列（1Dまたは2D）
+    """
     return np.full((length,) if width == 1 else (length, width), np.nan)
 
 
 def _is_missing_indicator_result(result: Any) -> bool:
-    """pandas-ta の失敗結果や空結果を判定する。"""
+    """
+    pandas-ta の失敗結果や空結果を判定する。
+
+    pandas-taの計算結果が失敗または空であるかを判定します。
+
+    Args:
+        result: 検証する結果（Series、DataFrame、配列、タプル等）
+
+    Returns:
+        bool: 結果が失敗または空の場合はTrue、そうでない場合はFalse
+
+    判定基準:
+        - None: True
+        - Series: 空または全NaNの場合はTrue
+        - DataFrame: 空または全NaNの場合はTrue
+        - ndarray: 空または全NaNの場合はTrue
+        - tuple: 空または全要素がNoneの場合はTrue
+    """
     if result is None:
         return True
 
@@ -124,7 +204,21 @@ def _run_indicator_with_validation(
     fallback_factory: Optional[Callable[[], Any]] = None,
     reference_series: Optional[pd.Series] = None,
 ) -> Any:
-    """検証と NaN フォールバックをまとめて扱う。"""
+    """
+    検証と NaN フォールバックをまとめて扱う。
+
+    検証結果に基づいてインジケーター計算を実行し、
+    失敗時にはフォールバックを適用します。
+
+    Args:
+        validation: 検証結果（NaN Seriesの場合は計算不要）
+        result_factory: インジケーター計算を実行する関数
+        fallback_factory: フォールバック用関数（オプション）
+        reference_series: 参照Series（オプション）
+
+    Returns:
+        Any: 計算結果またはフォールバック結果
+    """
     if validation is not None:
         return fallback_factory() if fallback_factory is not None else validation
 
@@ -145,7 +239,22 @@ def run_series_indicator(
     min_data_length: int = 0,
     fallback_factory: Optional[Callable[[], Any]] = None,
 ) -> Any:
-    """単一 Series 入力の指標計算を検証付きで実行する。"""
+    """
+    単一 Series 入力の指標計算を検証付きで実行する。
+
+    単一のSeriesを入力とするインジケーター計算を、
+    データ検証とフォールバック付きで実行します。
+
+    Args:
+        data: 入力Series
+        length: 期間（オプション）
+        result_factory: インジケーター計算を実行する関数
+        min_data_length: 最小必要データ長（デフォルト: 0）
+        fallback_factory: フォールバック用関数（オプション）
+
+    Returns:
+        Any: 計算結果またはフォールバック結果
+    """
     validation = validate_series_params(data, length, min_data_length=min_data_length)
     return _run_indicator_with_validation(
         validation,
@@ -163,7 +272,22 @@ def run_multi_series_indicator(
     min_data_length: int = 0,
     fallback_factory: Optional[Callable[[], Any]] = None,
 ) -> Any:
-    """複数 Series 入力の指標計算を検証付きで実行する。"""
+    """
+    複数 Series 入力の指標計算を検証付きで実行する。
+
+    複数のSeriesを入力とするインジケーター計算を、
+    データ検証とフォールバック付きで実行します。
+
+    Args:
+        series_dict: 入力Seriesの辞書（名前 -> Series）
+        length: 期間（オプション）
+        result_factory: インジケーター計算を実行する関数
+        min_data_length: 最小必要データ長（デフォルト: 0）
+        fallback_factory: フォールバック用関数（オプション）
+
+    Returns:
+        Any: 計算結果またはフォールバック結果
+    """
     validation = validate_multi_series_params(
         dict(series_dict), length, min_data_length=min_data_length
     )
@@ -177,7 +301,18 @@ def run_multi_series_indicator(
 
 
 def normalize_non_finite(series: pd.Series, fill_value: Any = np.nan) -> pd.Series:
-    """inf/-inf を NaN 経由で指定値に揃える。"""
+    """
+    inf/-inf を NaN 経由で指定値に揃える。
+
+    無限大の値をNaNに変換し、指定値で埋めます。
+
+    Args:
+        series: 入力Series
+        fill_value: 埋め値（デフォルト: NaN）
+
+    Returns:
+        pd.Series: 正規化されたSeries
+    """
     return series.replace([np.inf, -np.inf], np.nan).fillna(fill_value)
 
 
@@ -186,7 +321,19 @@ def create_nan_series_like(
     fill_value: Any = np.nan,
     name: Optional[str] = None,
 ) -> pd.Series:
-    """参照 Series と同じ index を持つ定数 Series を作る。"""
+    """
+    参照 Series と同じ index を持つ定数 Series を作る。
+
+    参照Seriesと同じインデックスを持つ定数Seriesを生成します。
+
+    Args:
+        reference: 参照Series（インデックスと長さを取得）
+        fill_value: 埋め値（デフォルト: NaN）
+        name: Series名（オプション、デフォルトは参照Seriesの名前）
+
+    Returns:
+        pd.Series: 定数値で埋められたSeries
+    """
     return pd.Series(
         np.full(len(reference), fill_value),
         index=reference.index,
@@ -199,7 +346,19 @@ def create_nan_series_bundle(
     count: int,
     fill_value: Any = np.nan,
 ) -> tuple[pd.Series, ...]:
-    """同じ形の Series を複数個まとめて作る。"""
+    """
+    同じ形の Series を複数個まとめて作る。
+
+    参照Seriesと同じ形状のSeriesを指定個数生成します。
+
+    Args:
+        reference: 参照Series（インデックスと長さを取得）
+        count: 生成するSeries数
+        fill_value: 埋め値（デフォルト: NaN）
+
+    Returns:
+    tuple[pd.Series, ...]: 定数値で埋められたSeriesのタプル
+    """
     base = create_nan_series_like(reference, fill_value=fill_value)
     return tuple(base.copy() for _ in range(count))
 
@@ -209,7 +368,19 @@ def create_nan_series_map(
     keys: list[str],
     fill_value: Any = np.nan,
 ) -> Dict[str, pd.Series]:
-    """指定キーに対応する NaN Series の辞書を作る。"""
+    """
+    指定キーに対応する NaN Series の辞書を作る。
+
+    指定されたキーに対応するSeriesを生成します。
+
+    Args:
+        reference: 参照Series（インデックスと長さを取得）
+        keys: Series名のリスト
+        fill_value: 埋め値（デフォルト: NaN）
+
+    Returns:
+        Dict[str, pd.Series]: キー -> Seriesの辞書
+    """
     return {
         key: create_nan_series_like(reference, fill_value=fill_value, name=key)
         for key in keys
@@ -223,7 +394,24 @@ def nan_result_for(
     to_numpy: bool = False,
     fallback_factory: Optional[Callable[[], Any]] = None,
 ) -> tuple[Any, ...]:
-    """入力に応じて NaN の tuple 結果を生成する。"""
+    """
+    入力に応じて NaN の tuple 結果を生成する。
+
+    入力データの形式に応じて、NaNで埋められたタプル結果を生成します。
+
+    Args:
+        data: 入力データ（Series、DataFrame、dict、tuple）
+        count: 生成する要素数
+        to_numpy: numpy配列に変換するか（デフォルト: False）
+        fallback_factory: フォールバック用関数（オプション）
+
+    Returns:
+    tuple[Any, ...]: NaNで埋められたタプル
+
+    Raises:
+        ValueError: DataFrameが空の場合
+        TypeError: サポートされていないデータ型の場合
+    """
     try:
         if isinstance(data, tuple):
             if to_numpy:
@@ -260,7 +448,27 @@ def extract_tuple_result(
     to_numpy: bool = False,
     fallback_factory: Optional[Callable[[], Any]] = None,
 ) -> tuple[Any, ...]:
-    """DataFrame や tuple の結果を tuple に正規化する。"""
+    """
+    DataFrame や tuple の結果を tuple に正規化する。
+
+    DataFrameやtupleの結果を指定された形式のタプルに変換します。
+
+    Args:
+        result: 変換対象の結果（DataFrame、tuple、Series）
+        count: 期待する要素数
+        by_index: インデックスで列を選択するか（デフォルト: False）
+        column_names: 選択する列名のリスト（オプション）
+        to_numpy: numpy配列に変換するか（デフォルト: False）
+        fallback_factory: フォールバック用関数（オプション）
+
+    Returns:
+    tuple[Any, ...]: 正規化されたタプル
+
+    Raises:
+        KeyError: 指定された列名が存在しない場合
+        ValueError: countが正でない、または列数が不足している場合
+        TypeError: サポートされていない結果型の場合
+    """
     try:
         if isinstance(result, tuple):
             if to_numpy:
@@ -311,7 +519,20 @@ def extract_tuple_result(
 
 
 def get_param_value(params: Dict[str, Any], keys: list, default: Any) -> Any:
-    """パラメータ名がlengthまたはwindowの場合の値取得をサポート"""
+    """
+    パラメータ名がlengthまたはwindowの場合の値取得をサポート
+
+    指定されたキーのリストからパラメータ値を取得します。
+    lengthやwindowなどのエイリアスをサポートします。
+
+    Args:
+        params: パラメータ辞書
+        keys: 検索するキーのリスト（優先順位順）
+        default: デフォルト値
+
+    Returns:
+        Any: 見つかったパラメータ値、またはデフォルト値
+    """
     for key in keys:
         if key in params:
             return params[key]
@@ -322,12 +543,19 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
     """
     指標の種類とパラメータから最小必要データ長を取得
 
+    指標タイプとパラメータに基づいて、計算に必要な最小データ長を取得します。
+
     Args:
-        indicator_type: 指標タイプ
+        indicator_type: 指標タイプ（例: 'RSI', 'MACD'）
         params: パラメータ辞書
 
     Returns:
-        最小必要データ長
+        int: 最小必要データ長（最低1）
+
+    Note:
+        1. 設定にmin_length_funcがある場合はそれを使用
+        2. そうでない場合はdefault_valuesからlengthまたはwindowを取得
+        3. いずれも見つからない場合は1を返す
     """
     config = _get_indicator_config(indicator_type)
     if config and config.min_length_func:
@@ -344,6 +572,19 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
 def get_absolute_minimum_length(indicator_type: str) -> int:
     """
     各指標の絶対的最小データ長を取得
+
+    指標タイプに対応する絶対的な最小データ長を取得します。
+    これはパラメータに関わらず必要な最小データ長です。
+
+    Args:
+        indicator_type: 指標タイプ（例: 'RSI', 'MACD'）
+
+    Returns:
+        int: 絶対的最小データ長（最低1）
+
+    Note:
+        設定にabsolute_min_lengthが定義されている場合はそれを使用し、
+        そうでない場合は1を返します。
     """
     config = _get_indicator_config(indicator_type)
     if (
@@ -361,13 +602,24 @@ def validate_data_length_with_fallback(
     """
     データ長検証を強化し、フォールバック可能な最小データ長を返す
 
+    データ長が十分であるかを検証し、不足している場合は
+    フォールバック可能な最小データ長を計算します。
+
     Args:
         df: OHLCV価格データ
         indicator_type: 指標タイプ
         params: パラメータ辞書
 
     Returns:
-        (データ長が十分かどうか, フォールバック可能な最小データ長)
+        Tuple[bool, int]: (データ長が十分かどうか, 推奨データ長)
+
+    検証ロジック:
+        1. 標準的な最小データ長を計算
+        2. 絶対的な最小データ長を取得
+        3. 両者の大きい方を必要データ長とする
+        4. データ長が十分であれば(True, required_length)を返す
+        5. 不足しているが緩和された最小長以上であれば(True, data_length)を返す
+        6. それ以下であれば(False, min_required)を返す
     """
     standard_length = get_minimum_data_length(indicator_type, params) or 1
     absolute_minimum = get_absolute_minimum_length(indicator_type.upper()) or 1
@@ -403,12 +655,20 @@ def create_nan_result(df: pd.DataFrame, indicator_type: str) -> np.ndarray:
     """
     データ長不足時のNaN結果生成
 
+    データ長不足時に返すNaN配列を生成します。
+    指標の戻り値タイプ（単一/複数）に応じて適切な形状を返します。
+
     Args:
-        df: 元のデータフレーム
+        df: 元のデータフレーム（長さを取得）
         indicator_type: 指標タイプ
 
     Returns:
-        NaN配列
+        np.ndarray: NaNで埋められた配列
+
+    Note:
+        - returns='single'の場合は1D配列
+        - returns='multiple'の場合はreturn_colsの数に応じた2D配列
+        - 設定が見つからない場合は1D配列
     """
     config = _get_indicator_config(indicator_type)
     data_length = len(df)
@@ -427,12 +687,15 @@ def validate_input(data: object, period: int) -> None:
     """
     入力データの基本検証（pandas.Series専用）
 
+    入力データがpandas.Seriesであることと、
+    期間パラメータの妥当性を検証します。
+
     Args:
-        data: 検証対象のデータ（pandas.Series を想定するが、検証前は任意のオブジェクトを受ける）
+        data: 検証対象のデータ（pandas.Seriesを想定）
         period: 期間パラメータ
 
     Raises:
-        PandasTAError: 入力データが無効な場合
+        PandasTAError: 入力データがNone、空、型不一致、期間無効、または無限大を含む場合
     """
     if data is None:
         raise PandasTAError("入力データがNoneです")
@@ -468,14 +731,16 @@ def validate_series_params(
     """
     指標計算用のパラメータ検証（共通化用）
 
+    単一のSeriesパラメータを検証します。
+
     Args:
         data: 入力データ
         length: 期間（オプション）
-        min_data_length: 最小必要データ長（オプション）
+        min_data_length: 最小必要データ長（デフォルト: 0）
 
     Returns:
-        pd.Series: データが空または不足している場合のNaNシリーズ（計算不要）
-        None: 検証OK、計算続行
+        Optional[pd.Series]: データが空または不足している場合のNaNシリーズ（計算不要）、
+                          検証OKで計算続行の場合はNone
 
     Raises:
         TypeError: データ型が無効な場合
@@ -494,14 +759,16 @@ def validate_multi_series_params(
     """
     複数のSeriesパラメータを検証（共通化用）
 
+    複数のSeriesパラメータを検証します。
+
     Args:
-        series_dict: 検証する名前付きシリーズの辞書。例: {"high": high, "low": low}
+        series_dict: 検証する名前付きシリーズの辞書（例: {"high": high, "low": low}）
         length: 期間（オプション）
-        min_data_length: 最小必要データ長（オプション）
+        min_data_length: 最小必要データ長（デフォルト: 0）
 
     Returns:
-        pd.Series: データが空または不足している場合のNaNシリーズ（計算不要）
-        None: 検証OK、計算続行
+        Optional[pd.Series]: データが空または不足している場合のNaNシリーズ（計算不要）、
+                          検証OKで計算続行の場合はNone
 
     Raises:
         TypeError: データ型が無効な場合
@@ -516,7 +783,22 @@ def handle_pandas_ta_errors(func):
     """
     pandas-taエラーハンドリングデコレーター
 
-    重要な異常ケースのみをチェックし、パフォーマンスを重視。
+    重要な異常ケースのみをチェックし、パフォーマンスを重視します。
+    pandas-ta関数の実行結果を検証し、異常な場合はPandasTAErrorを発生させます。
+
+    Args:
+        func: デコレートする関数
+
+    Returns:
+        Callable: デコレートされた関数
+
+    Raises:
+        PandasTAError: 計算結果がNone、空、または全NaNの場合
+
+    検証内容:
+        - Noneチェック
+        - numpy配列の空チェックと全NaNチェック
+        - tupleの各要素の検証
     """
 
     @wraps(func)

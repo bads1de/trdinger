@@ -1,3 +1,11 @@
+"""
+データ収集オーケストレーション基底サービス
+
+データ収集サービスの共通ユーティリティを提供します。
+日時パース、データベースセッション管理、レスポンス作成、
+シンボル正規化などの機能を含みます。
+"""
+
 import logging
 from contextlib import contextmanager
 from datetime import datetime
@@ -14,18 +22,24 @@ logger = logging.getLogger(__name__)
 class BaseDataCollectionOrchestrationService:
     """
     データ収集オーケストレーションサービスの基底クラス
-    共通のユーティリティメソッドを提供します。
+
+    データ収集サービスの共通のユーティリティメソッドを提供します。
+    日時パース、データベースセッション管理、レスポンス作成、
+    シンボル正規化などの機能を含みます。
     """
 
     def _parse_datetime(self, date_str: Optional[str]) -> Optional[datetime]:
         """
         文字列の日付をdatetimeオブジェクトに変換する。
 
+        ISO 8601形式の日付文字列をdatetimeオブジェクトに変換します。
+        'Z'サフィックスを'+00:00'に置換してUTCタイムゾーンとして扱います。
+
         Args:
             date_str: 日付文字列（ISO 8601 形式、例: "2023-01-01T00:00:00"）
 
         Returns:
-            datetimeオブジェクト、またはNone
+            Optional[datetime]: 変換されたdatetimeオブジェクト、失敗時または空文字時はNone
         """
         if not date_str:
             return None
@@ -89,7 +103,21 @@ class BaseDataCollectionOrchestrationService:
         context: Optional[str] = None,
         data: Optional[dict] = None,
     ) -> dict:
-        """標準化されたエラーレスポンスを作成する。"""
+        """
+        標準化されたエラーレスポンスを作成する。
+
+        app.utils.error_response.error_response のラッパー関数です。
+
+        Args:
+            message: エラーメッセージ
+            details: エラーの詳細情報（オプション）
+            error_code: エラーコード（オプション）
+            context: エラーのコンテキスト情報（オプション）
+            data: 追加データ（オプション）
+
+        Returns:
+            dict: 標準化されたエラーレスポンス辞書
+        """
         return error_response(
             message=message,
             error_code=error_code,
@@ -99,7 +127,24 @@ class BaseDataCollectionOrchestrationService:
         )
 
     def _normalize_derivative_symbol(self, symbol: str) -> str:
-        """永続化済みのデリバティブシンボル形式に正規化する。"""
+        """
+        永続化済みのデリバティブシンボル形式に正規化する。
+
+        シンボルをBybitの標準形式（BTC/USDT:USDT）に正規化します。
+        コロンが含まれていない場合は、通貨ペアに基づいて適切なサフィックスを追加します。
+
+        Args:
+            symbol: 正規化するシンボル（例: 'BTC/USDT', 'BTC/USDT:USDT'）
+
+        Returns:
+            str: 正規化されたシンボル（例: 'BTC/USDT:USDT'）
+
+        変換ルール:
+            - 既にコロン付き（例: BTC/USDT:USDT）: そのまま返す
+            - /USDTで終わる: :USDTを追加
+            - /USDで終わる: :USDを追加
+            - その他: :USDTを追加
+        """
         if ":" in symbol:
             return symbol
         if symbol.endswith("/USDT"):

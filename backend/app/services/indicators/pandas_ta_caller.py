@@ -21,6 +21,10 @@ class PandasTaCaller:
     pandas-ta呼び出しクラス
 
     pandas-taライブラリを使用してインジケーターを計算します。
+    インジケーターバリデーターと連携して、データ検証とエラーハンドリングを行います。
+
+    Attributes:
+        validator: インジケーターバリデーター
     """
 
     def __init__(self, validator: IndicatorValidator):
@@ -38,12 +42,27 @@ class PandasTaCaller:
         """
         pandas-ta用の設定辞書を取得
 
+        指標タイプに対応するpandas-ta設定をレジストリから取得し、
+        パラメータマッピングを構築します。
+
         Args:
-            indicator_type: 指標タイプ
+            indicator_type: 指標タイプ（例: 'RSI', 'MACD'）
             registry: インジケーターレジストリ
 
         Returns:
-            pandas-ta設定、またはNone
+            Optional[Dict[str, Any]]: pandas-ta設定辞書（関数名、データカラム、パラメータ等）、
+                                      設定が見つからない場合はNone
+
+        設定内容:
+            - function: pandas-ta関数名
+            - data_column: データカラム（単一カラム用）
+            - data_columns: データカラムリスト（複数カラム用）
+            - returns: 戻り値タイプ（'single' または 'multiple'）
+            - return_cols: 戻り値カラム名
+            - multi_column: マルチカラムフラグ
+            - params: パラメータマッピング
+            - default_values: デフォルト値
+            - min_length: 最小データ長関数
         """
         config = registry.get_indicator_config(indicator_type)
         if config and config.pandas_function:
@@ -78,13 +97,20 @@ class PandasTaCaller:
         """
         pandas-ta直接呼び出し
 
+        pandas-taライブラリを使用してインジケーターを計算します。
+
         Args:
-            df: データフレーム
-            config: pandas-ta設定
-            params: パラメータ
+            df: データフレーム（OHLCVデータ）
+            config: pandas-ta設定辞書
+            params: パラメータ辞書
 
         Returns:
-            計算結果、またはNone
+            Optional[Any]: 計算結果（Series、DataFrame、またはtuple）、エラー時はNone
+
+        Note:
+            - マルチカラム指標の場合は_call_multi_columnを使用
+            - シングルカラム指標の場合は_call_single_columnを使用
+            - 関数が存在しない場合は警告ログを出力してNoneを返す
         """
         try:
             if not hasattr(ta, config["function"]):
@@ -103,7 +129,25 @@ class PandasTaCaller:
     def _call_multi_column(
         self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]
     ) -> Optional[Any]:
-        """マルチカラム指標の呼び出し"""
+        """
+        マルチカラム指標の呼び出し
+
+        複数のデータカラムを必要とするインジケーターを計算します。
+        OHLCVカラムを適切にマッピングしてpandas-ta関数を呼び出します。
+
+        Args:
+            df: データフレーム
+            config: pandas-ta設定辞書
+            params: パラメータ辞書
+
+        Returns:
+            Optional[Any]: 計算結果、エラー時はNone
+
+        Note:
+            - open, high, low, close, volumeカラムは位置引数として渡す
+            - その他のカラムは位置引数として渡す
+            - パラメータはキーワード引数として渡す
+        """
         required_columns = config.get("data_columns", [])
         ta_args = {}
         positional_args = []
@@ -127,7 +171,24 @@ class PandasTaCaller:
     def _call_single_column(
         self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]
     ) -> Optional[Any]:
-        """シングルカラム指標の呼び出し"""
+        """
+        シングルカラム指標の呼び出し
+
+        単一のデータカラムを必要とするインジケーターを計算します。
+
+        Args:
+            df: データフレーム
+            config: pandas-ta設定辞書
+            params: パラメータ辞書
+
+        Returns:
+            Optional[Any]: 計算結果、エラー時はNone
+
+        Note:
+            - データカラムを第一引数として渡す
+            - 関数の第一引数名と同じ名前のパラメータは削除する
+            - データ長がlengthパラメータ未満の場合はエラー
+        """
         col_name = self.validator.resolve_column_name(df, config.get("data_column"))
         if col_name is None:
             logger.error(f"必須カラム '{config.get('data_column')}' が存在しません")

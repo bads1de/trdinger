@@ -1,5 +1,8 @@
 """
 StrategyGene の遺伝的演算ロジック。
+
+遺伝的アルゴリズムにおける交叉（crossover）、突然変異（mutation）、
+適応的突然変異（adaptive mutation）などの演算を提供します。
 """
 
 from __future__ import annotations
@@ -50,7 +53,18 @@ _MUTATION_CONFIG_CREATION_ATTR_MAP = {
 
 
 def _get_creation_probability_multiplier(config: Any, attr_name: str) -> float:
-    """突然変異で使用する生成確率倍率を安全に取得する。"""
+    """突然変異で使用する生成確率倍率を安全に取得する。
+
+    設定オブジェクトから指定された属性名の確率倍率を取得します。
+    属性が存在しない場合はデフォルト値0.0を返します。
+
+    Args:
+        config: GA設定オブジェクト。mutation_config属性を持つ。
+        attr_name: 取得する確率倍率の属性名。
+
+    Returns:
+        float: 確率倍率（0.0以上の値）。属性が存在しない場合は0.0。
+    """
     nested_attr_name = _MUTATION_CONFIG_CREATION_ATTR_MAP.get(attr_name)
     mutation_config = getattr(config, "mutation_config", None)
 
@@ -70,7 +84,18 @@ def _get_creation_probability_multiplier(config: Any, attr_name: str) -> float:
 
 
 def _create_sub_gene(creator_func: Any, config: Any) -> Any:
-    """生成関数のシグネチャに応じて設定を渡し分ける。"""
+    """生成関数のシグネチャに応じて設定を渡し分ける。
+
+    サブ遺伝子（TPSL、PositionSizing、Entryなど）の生成関数を呼び出し、
+    必要に応じて設定オブジェクトを引数として渡します。
+
+    Args:
+        creator_func: サブ遺伝子を生成する関数。
+        config: GA設定オブジェクト。
+
+    Returns:
+        生成されたサブ遺伝子インスタンス。
+    """
     try:
         signature = inspect.signature(creator_func)
     except (TypeError, ValueError):
@@ -82,8 +107,17 @@ def _create_sub_gene(creator_func: Any, config: Any) -> Any:
 
 
 def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
-    """
-    StrategyGene の定義を基準に、突然変異対象のサブ遺伝子を列挙する。
+    """StrategyGene の定義を基準に、突然変異対象のサブ遺伝子を列挙する。
+
+    StrategyGeneが持つサブ遺伝子フィールド（TPSL、PositionSizing、Entryなど）
+    を走査し、突然変異の対象となるフィールド名、生成関数、確率倍率の
+    タプルを生成します。
+
+    Args:
+        config: GA設定オブジェクト。各サブ遺伝子の生成確率倍率を含む。
+
+    Returns:
+        list[tuple[str, Any, float]]: （フィールド名、生成関数、確率倍率）のリスト。
     """
     class_map = StrategyGene.sub_gene_class_map()
     specs: list[tuple[str, Any, float]] = []
@@ -107,7 +141,15 @@ def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
 
 
 def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
-    """指標遺伝子の突然変異処理。"""
+    """指標遺伝子の突然変異処理。
+
+    指標の期間パラメータの変動、指標の追加・削除を確率的に実行します。
+
+    Args:
+        mutated: 突然変異を適用する戦略遺伝子クローン。
+        mutation_rate: 突然変異確率（0.0〜1.0）。
+        config: GA設定オブジェクト。mutation_config属性に突然変異パラメータを持つ。
+    """
     min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
     for i, indicator in enumerate(mutated.indicators):
@@ -170,7 +212,16 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
 
 
 def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
-    """条件の突然変異処理。"""
+    """条件の突然変異処理。
+
+    比較演算子の反転、閾値の微調整を確率的に実行します。
+    ConditionGroupの演算子（AND/OR）の切り替えも含みます。
+
+    Args:
+        mutated: 突然変異を適用する戦略遺伝子クローン。
+        mutation_rate: 突然変異確率（0.0〜1.0）。
+        config: GA設定オブジェクト。mutation_config属性に突然変異パラメータを持つ。
+    """
 
     def mutate_item(condition):
         if isinstance(condition, ConditionGroup):
@@ -197,7 +248,18 @@ def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
 def mutate_indicators_batch(
     individuals: List[Any], mutation_rate: float, config: Any
 ) -> List[Any]:
-    """指標遺伝子の突然変異処理（バッチ版）。"""
+    """指標遺伝子の突然変異処理（バッチ版）。
+
+    複数の個体に対して一括して指標の突然変異を適用します。
+
+    Args:
+        individuals: 突然変異を適用する個体のリスト。
+        mutation_rate: 突然変異確率（0.0〜1.0）。
+        config: GA設定オブジェクト。
+
+    Returns:
+        List[Any]: 突然変異が適用された新しい個体のリスト。
+    """
     results: List[Any] = []
     for individual in individuals:
         mutated = individual.clone() if hasattr(individual, "clone") else individual
@@ -209,7 +271,18 @@ def mutate_indicators_batch(
 def mutate_conditions_batch(
     individuals: List[Any], mutation_rate: float, config: Any
 ) -> List[Any]:
-    """条件の突然変異処理（バッチ版）。"""
+    """条件の突然変異処理（バッチ版）。
+
+    複数の個体に対して一括して条件の突然変異を適用します。
+
+    Args:
+        individuals: 突然変異を適用する個体のリスト。
+        mutation_rate: 突然変異確率（0.0〜1.0）。
+        config: GA設定オブジェクト。
+
+    Returns:
+        List[Any]: 突然変異が適用された新しい個体のリスト。
+    """
     results: List[Any] = []
     for individual in individuals:
         mutated = individual.clone() if hasattr(individual, "clone") else individual
@@ -219,7 +292,26 @@ def mutate_conditions_batch(
 
 
 def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
-    """StrategyGene の突然変異を実行する。"""
+    """
+    戦略遺伝子の「突然変異（Mutation）」を実行し、新しい個体を生成します。
+
+    この関数は、個体の多様性を維持し、局所最適解に陥るのを防ぐために、
+    確率的に以下の部位を書き換えます：
+    1. **指標（Indicators）**: 期間パラメータの変動、指標の追加・削除。
+    2. **取引条件（Conditions）**: 比較演算子の反転、閾値の微調整。
+    3. **リスク管理**: ポジションサイズ等の数値パラメータの変動。
+    4. **サブ遺伝子（TPSL, PositionSizing, Entry）**:
+       - 既存のサブ遺伝子のパラメータを微調整（ガウスノイズ等）。
+       - 低い確率で全く新しいランダムなサブ遺伝子に置き換え。
+
+    Args:
+        gene (StrategyGene): 突然変異の対象となる親個体。
+        config (Any): 突然変異率やパラメータ変動範囲を含むGA設定。
+        mutation_rate (float): 基本となる突然変異確率。
+
+    Returns:
+        StrategyGene: 突然変異が適用された後の新しい子個体。
+    """
     try:
         mutated = gene.clone()
 
@@ -290,7 +382,18 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
 def mutate_strategy_gene_batch(
     individuals: List[Any], config: Any, mutation_rate: float = 0.1
 ) -> List[Any]:
-    """StrategyGene の突然変異をバッチで実行する。"""
+    """StrategyGene の突然変異をバッチで実行する。
+
+    複数の個体に対して指標、条件、その他の突然変異を一括適用します。
+
+    Args:
+        individuals: 突然変異を適用する個体のリスト。
+        config: GA設定オブジェクト。
+        mutation_rate: 基本となる突然変異確率（0.0〜1.0）。
+
+    Returns:
+        List[Any]: 突然変異が適用された新しい個体のリスト。
+    """
     mutated = mutate_indicators_batch(individuals, mutation_rate, config)
     mutated = mutate_conditions_batch(mutated, mutation_rate, config)
     return [
@@ -305,7 +408,21 @@ def adaptive_mutate_strategy_gene(
     config: Any,
     base_mutation_rate: float = 0.1,
 ):
-    """集団分散に基づく適応的突然変異。"""
+    """集団分散に基づく適応的突然変異。
+
+    集団のフィットネス分散に応じて突然変異率を動的に調整します。
+    分散が低い（集団が収束している）場合は突然変異率を上げ、
+    分散が高い場合は下げることで、探索と活用のバランスを取ります。
+
+    Args:
+        gene: 突然変異を適用する個体。
+        population: 現在の集団全体。フィットネス分散の計算に使用。
+        config: GA設定オブジェクト。mutation_config属性に適応的突然変異パラメータを持つ。
+        base_mutation_rate: 基本となる突然変異確率（0.0〜1.0）。
+
+    Returns:
+        突然変異が適用された新しい個体。
+    """
     try:
         fitnesses = []
         for ind in population:
@@ -344,7 +461,18 @@ def crossover_tpsl_genes(
     parent1_tpsl: Optional[TPSLGene],
     parent2_tpsl: Optional[TPSLGene],
 ) -> Tuple[Optional[TPSLGene], Optional[TPSLGene]]:
-    """TPSL遺伝子の交叉を実行する。"""
+    """TPSL遺伝子の交叉を実行する。
+
+    2つの親TPSL遺伝子から、新しい2つの子TPSL遺伝子を生成します。
+    両方の親がNoneの場合は(None, None)を返します。
+
+    Args:
+        parent1_tpsl: 1番目の親TPSL遺伝子。
+        parent2_tpsl: 2番目の親TPSL遺伝子。
+
+    Returns:
+        Tuple[Optional[TPSLGene], Optional[TPSLGene]]: 交叉された2つの子TPSL遺伝子。
+    """
     return GeneticUtils.crossover_optional_gene(parent1_tpsl, parent2_tpsl, TPSLGene)
 
 
@@ -352,7 +480,17 @@ def crossover_position_sizing_genes(
     parent1_ps: Optional[PositionSizingGene],
     parent2_ps: Optional[PositionSizingGene],
 ) -> Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]:
-    """ポジションサイジング遺伝子の交叉を実行する。"""
+    """ポジションサイジング遺伝子の交叉を実行する。
+
+    2つの親ポジションサイジング遺伝子から、新しい2つの子を生成します。
+
+    Args:
+        parent1_ps: 1番目の親ポジションサイジング遺伝子。
+        parent2_ps: 2番目の親ポジションサイジング遺伝子。
+
+    Returns:
+        Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]: 交叉された2つの子遺伝子。
+    """
     return GeneticUtils.crossover_optional_gene(
         parent1_ps, parent2_ps, PositionSizingGene
     )
@@ -362,7 +500,17 @@ def crossover_entry_genes(
     parent1_entry: Optional[EntryGene],
     parent2_entry: Optional[EntryGene],
 ) -> Tuple[Optional[EntryGene], Optional[EntryGene]]:
-    """エントリー遺伝子の交叉を実行する。"""
+    """エントリー遺伝子の交叉を実行する。
+
+    2つの親エントリー遺伝子から、新しい2つの子エントリー遺伝子を生成します。
+
+    Args:
+        parent1_entry: 1番目の親エントリー遺伝子。
+        parent2_entry: 2番目の親エントリー遺伝子。
+
+    Returns:
+        Tuple[Optional[EntryGene], Optional[EntryGene]]: 交叉された2つの子エントリー遺伝子。
+    """
     return GeneticUtils.crossover_optional_gene(parent1_entry, parent2_entry, EntryGene)
 
 
@@ -373,7 +521,24 @@ def crossover_strategy_genes(
     config: Any,
     crossover_type: str = "uniform",
 ):
-    """StrategyGene の交叉処理を実行する。"""
+    """
+    2つの親個体（StrategyGene）から、新しい2つの子個体を「交叉（Crossover）」により生成します。
+
+    交叉手法：
+    - **uniform** (デフォルト): 各属性（指標リスト、条件リスト、TP/SL設定等）ごとに独立して、
+      `crossover_field_selection_probability`（通常0.5）の確率で親1または親2から遺伝子を引き継ぎます。
+    - **single_point**: 属性リストの中間に一点の切断点を設け、それ以降の属性を親同士で入れ替えます。
+
+    Args:
+        strategy_gene_class: 生成する個体のクラス（通常は StrategyGene）。
+        parent1: 1番目の親個体。
+        parent2: 2番目の親個体。
+        config: 交叉確率やフィールド選択確率を含むGA設定。
+        crossover_type: 使用する交叉アルゴリズムの識別子。
+
+    Returns:
+        Tuple[StrategyGene, StrategyGene]: 属性がシャッフルされた2つの新しい子個体のペア。
+    """
     try:
         if crossover_type == "uniform":
             return uniform_crossover(strategy_gene_class, parent1, parent2, config)
@@ -386,7 +551,19 @@ def crossover_strategy_genes(
 def crossover_strategy_genes_batch(
     individuals: List[Any], config: Any, crossover_rate: float = 0.8
 ) -> List[Tuple[Any, Any]]:
-    """StrategyGene の交叉をバッチで実行する。"""
+    """StrategyGene の交叉をバッチで実行する。
+
+    複数の個体ペアに対して一括して交叉を適用します。
+    個体を2つずつペアにして、crossover_rateの確率で交叉を実行します。
+
+    Args:
+        individuals: 交叉を適用する個体のリスト。
+        config: GA設定オブジェクト。
+        crossover_rate: 交叉を実行する確率（0.0〜1.0）。
+
+    Returns:
+        List[Tuple[Any, Any]]: 交叉された子個体のペアのリスト。
+    """
     results: List[Tuple[Any, Any]] = []
 
     for i in range(0, len(individuals) - 1, 2):
@@ -407,7 +584,20 @@ def crossover_strategy_genes_batch(
 
 
 def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
-    """ユニフォーム交叉。"""
+    """ユニフォーム交叉（一様交叉）。
+
+    各属性（フィールド）ごとに独立して、指定された確率で親1または親2から
+    遺伝子を引き継ぐ2つの子個体を生成します。
+
+    Args:
+        strategy_gene_class: 生成する個体のクラス（通常は StrategyGene）。
+        parent1: 1番目の親個体。
+        parent2: 2番目の親個体。
+        config: GA設定オブジェクト。mutation_config.crossover_field_selection_probability を使用。
+
+    Returns:
+        Tuple[StrategyGene, StrategyGene]: 属性がランダムにシャッフルされた2つの新しい子個体。
+    """
     selection_prob = config.mutation_config.crossover_field_selection_probability
 
     child1_params: Dict[str, Any] = {"id": str(uuid.uuid4())}
@@ -438,7 +628,20 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
 
 
 def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
-    """一点交叉。"""
+    """一点交叉。
+
+    指標リストの中間に一点の切断点を設け、それ以降の属性を親同士で
+    入れ替えることで2つの子個体を生成します。
+
+    Args:
+        strategy_gene_class: 生成する個体のクラス（通常は StrategyGene）。
+        parent1: 1番目の親個体。
+        parent2: 2番目の親個体。
+        config: GA設定オブジェクト。max_indicators属性を使用。
+
+    Returns:
+        Tuple[StrategyGene, StrategyGene]: 指標リストが分割されて組み換えられた2つの新しい子個体。
+    """
     min_indicators = min(len(parent1.indicators), len(parent2.indicators))
     crossover_point = 0 if min_indicators <= 1 else random.randint(1, min_indicators)
 

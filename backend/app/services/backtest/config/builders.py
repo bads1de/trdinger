@@ -9,12 +9,36 @@ _MISSING = object()
 
 
 def _copy_config_source(source: Any) -> Dict[str, Any]:
+    """
+    設定ソースを辞書にコピーする
+
+    Args:
+        source: 設定ソース（dictまたはオブジェクト）
+
+    Returns:
+        Dict[str, Any]: コピーされた辞書、Mappingでない場合は空辞書
+    """
     if isinstance(source, Mapping):
         return dict(source)
     return {}
 
 
 def _get_value(source: Any, key: str, default: Any = _MISSING) -> Any:
+    """
+    dictまたはオブジェクトから値を取得する
+
+    Args:
+        source: 設定ソース（dictまたはオブジェクト）
+        key: 取得するキー名
+        default: デフォルト値（存在しない場合に返す）
+
+    Returns:
+        Any: 取得した値
+
+    Raises:
+        KeyError: dictにキーが存在しない場合
+        AttributeError: オブジェクトに属性が存在しない場合
+    """
     if isinstance(source, Mapping):
         if key in source and source[key] is not None:
             return source[key]
@@ -32,6 +56,16 @@ def _get_value(source: Any, key: str, default: Any = _MISSING) -> Any:
 
 
 def _get_optional_value(source: Any, key: str) -> Any:
+    """
+    dictまたはオブジェクトから値を取得する（エラー時は_MISSINGを返す）
+
+    Args:
+        source: 設定ソース（dictまたはオブジェクト）
+        key: 取得するキー名
+
+    Returns:
+        Any: 取得した値、存在しない場合は_MISSING
+    """
     try:
         return _get_value(source, key)
     except (AttributeError, KeyError):
@@ -39,6 +73,18 @@ def _get_optional_value(source: Any, key: str) -> Any:
 
 
 def _normalize_strategy_config(strategy_config: Any) -> Dict[str, Any]:
+    """
+    strategy_configを辞書形式に正規化する
+
+    Args:
+        strategy_config: 戦略設定（Pydanticモデルまたはdict）
+
+    Returns:
+        Dict[str, Any]: 正規化された戦略設定辞書
+
+    Raises:
+        TypeError: mappingまたはmodel_dump対応オブジェクトでない場合
+    """
     if hasattr(strategy_config, "model_dump"):
         return strategy_config.model_dump()
     if isinstance(strategy_config, Mapping):
@@ -51,7 +97,20 @@ def _normalize_strategy_config(strategy_config: Any) -> Dict[str, Any]:
 def ensure_backtest_defaults(
     backtest_config: Mapping[str, Any], defaults: Mapping[str, Any]
 ) -> Dict[str, Any]:
-    """不足しているバックテスト設定をデフォルト値で補完する。"""
+    """
+    不足しているバックテスト設定をデフォルト値で補完する
+
+    Args:
+        backtest_config: バックテスト設定辞書
+        defaults: デフォルト値辞書
+
+    Returns:
+        Dict[str, Any]: デフォルト値で補完された設定辞書
+
+    Note:
+        - Noneの値は補完の対象外
+        - 既存の値は上書きされない
+    """
     working = dict(backtest_config)
     for key, value in defaults.items():
         if value is None:
@@ -71,9 +130,27 @@ def build_execution_config(
     default_leverage: float = 1.0,
 ) -> Dict[str, Any]:
     """
-    dict / Pydantic モデルからバックテスト実行設定を組み立てる。
+    dict / Pydantic モデルからバックテスト実行設定を組み立てる
 
-    dict の場合は元のキーを保持したまま、必要な値を補完する。
+    dictの場合は元のキーを保持したまま、必要な値を補完します。
+
+    Args:
+        source: 設定ソース（dictまたはPydanticモデル）
+        strategy_name: 戦略名（オプション）
+        strategy_config: 戦略設定（オプション）
+        defaults: デフォルト値辞書（オプション）
+        default_slippage: デフォルトのスリッページ値
+        default_leverage: デフォルトのレバレッジ値
+
+    Returns:
+        Dict[str, Any]: 組み立てられた実行設定辞書
+
+    Note:
+        - 以下のキーを補完します:
+            - strategy_name, strategy_config
+            - symbol, timeframe, start_date, end_date
+            - initial_capital, commission_rate
+            - slippage, leverage
     """
     working = _copy_config_source(source)
     if defaults:

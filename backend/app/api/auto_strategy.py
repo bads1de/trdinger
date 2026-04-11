@@ -103,21 +103,29 @@ async def generate_strategy(
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):
     """
-    GA戦略生成を開始
+    遺伝的アルゴリズム（GA）を用いた取引戦略の自動生成を開始します。
 
-    遺伝的アルゴリズムを使用して取引戦略を自動生成します。
-    バックグラウンドで実行され、進捗は `/experiments` エンドポイントで確認できます。
+    このエンドポイントは「非同期処理（Fire and Forget）」を採用しており、リクエストを受け付けると即座に応答を返します。
+    実際の戦略生成プロセスはバックグラウンドで実行されます。
+
+    ### 実行プロセス:
+    1. リクエスト設定のバリデーション。
+    2. バックグラウンドタスク（GAエンジン）のスケジューリング。
+    3. `experiment_id` を返却（クライアントはこのIDを用いて進捗を追跡）。
 
     Args:
-        request: GA戦略生成リクエスト設定（実験ID、実験名、バックテスト設定、GA設定）
-        background_tasks: FastAPIバックグラウンドタスクマネージャー
-        auto_strategy_service: 自動戦略生成サービス（依存性注入）
+        request (GAGenerationRequest): 戦略生成の設定。
+            - `experiment_id`: クライアント側で生成された一意のID。
+            - `base_config`: 市場データ、期間、初期資金等のバックテスト条件。
+            - `ga_config`: 世代数、個体数、突然変異率、目的関数等のアルゴリズム設定。
+        background_tasks (BackgroundTasks): FastAPIのバックグラウンドタスク管理。
+        auto_strategy_service (AutoStrategyService): GAプロセスを統括するサービス。
 
     Returns:
-        GAGenerationResponse: 戦略生成開始結果（実験IDを含む）
+        GAGenerationResponse: タスクの受付状態と `experiment_id` を含むレスポンス。
 
-    Raises:
-        HTTPException: 設定が無効な場合やサービスエラーが発生した場合
+    Note:
+        進捗状況や生成された最良戦略は `/api/auto-strategy/experiments/{experiment_id}` で確認可能です。
     """
 
     async def _generate_strategy():

@@ -16,6 +16,8 @@ class ParameterNormalizer:
 
     入力パラメータをpandas-taが期待する形式に正規化します。
     エイリアスの解決、デフォルト値の補完、最小値ガードを適用します。
+    ユーザーが指定したパラメータ名（例: 'length', 'period'）を
+    pandas-taが期待する標準パラメータ名に変換します。
     """
 
     def normalize_params(
@@ -24,12 +26,21 @@ class ParameterNormalizer:
         """
         入力パラメータをpandas-taが期待する形式に正規化
 
+        ユーザー指定のパラメータをエイリアス解決し、デフォルト値を補完し、
+        最小値ガードを適用して正規化します。
+
         Args:
-            params: 入力パラメータ
-            config: pandas-ta設定
+            params: ユーザー指定のパラメータ辞書（例: {'length': 20}）
+            config: pandas-ta設定（params、default_values、min_length等を含む）
 
         Returns:
-            正規化されたパラメータ
+            Dict[str, Any]: 正規化されたパラメータ辞書
+
+        処理手順:
+            1. config['params']に定義された各パラメータについて:
+               - エイリアスリストからユーザー指定の値を検索
+               - 値が見つからない場合はデフォルト値を使用
+               - min_lengthガードを適用（length/periodパラメータ）
         """
         normalized = {}
         for param_name, aliases in config["params"].items():
@@ -58,13 +69,24 @@ class ParameterNormalizer:
         """
         min_lengthガードを適用
 
+        lengthやperiodなどのパラメータに対して、
+        設定された最小値未満の場合は最小値に調整します。
+
         Args:
-            param_name: パラメータ名
+            param_name: パラメータ名（例: 'length', 'period'）
             value: パラメータ値
-            config: pandas-ta設定
+            config: pandas-ta設定（min_lengthを含む）
 
         Returns:
-            ガード適用後のパラメータ値
+            Any: ガード適用後のパラメータ値
+
+        ガード条件:
+            - param_nameが'length'または'period'
+            - configに'min_length'が定義されている
+            - valueがmin_length未満
+
+        Note:
+            min_lengthは関数または固定値として定義できます。
         """
         if param_name in ["length", "period"] and "min_length" in config:
             min_length_func = config["min_length"]

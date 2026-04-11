@@ -1,3 +1,11 @@
+"""
+市場微細構造（Microstructure）特徴量モジュール
+
+市場の流動性、マーケットインパクト、Funding Rateの歪み、
+Long/Short比率の弾性など、高頻度取引特有の微細構造に起因する
+特徴量を計算します。
+"""
+
 from typing import Optional
 
 import numpy as np
@@ -7,9 +15,16 @@ from .base_feature_calculator import sanitize_numeric_dataframe
 
 
 class MicrostructureFeatureCalculator:
-    """
-    市場の微細構造（Microstructure）に関する特徴量を計算するクラス。
-    LSレシオの弾力性、FRの歪み、流動性枯渇に特化。
+    """市場の微細構造（Microstructure）に関する特徴量を計算するクラス。
+
+    OHLCVデータに加えて、Funding Rate、Open Interest、Long/Short比率
+    などの追加データソースを使用して、以下のような特徴量を生成します:
+
+    - Amihud非流動性指標、Kyle's Lambda（流動性測定）
+    - リターンの歪度・尖度（統計的異常度）
+    - Funding Rateの異常度（Zスコア、変化率）
+    - Long/Short比率の弾性、加速度、価格との不一致
+    - LS/FRストレスインデックス
     """
 
     def calculate_features(
@@ -19,6 +34,21 @@ class MicrostructureFeatureCalculator:
         oi_df: Optional[pd.DataFrame] = None,
         ls_df: Optional[pd.DataFrame] = None,
     ) -> pd.DataFrame:
+        """市場微細構造特徴量を計算する。
+
+        OHLCVデータをベースに、オプションでFunding Rate、Open Interest、
+        Long/Short比率のデータを結合して特徴量を生成します。
+
+        Args:
+            ohlcv: OHLCVデータ。インデックスはDatetimeIndex。
+            fr_df: Funding Rateデータ（オプション）。
+            oi_df: Open Interestデータ（オプション。現在は未使用）。
+            ls_df: Long/Short Ratioデータ（オプション）。
+
+        Returns:
+            pd.DataFrame: 計算された微細構造特徴量。
+                インデックスはohlcvと同じ。NaNは0で埋められる。
+        """
         df = pd.DataFrame(index=ohlcv.index)
 
         # 1. 流動性・マーケットインパクト
@@ -89,6 +119,18 @@ class MicrostructureFeatureCalculator:
     def calculate_amihud_illiquidity(
         self, df: pd.DataFrame, window: int = 20
     ) -> pd.Series:
+        """Amihud非流動性指標を計算する。
+
+        絶対リターンをドル出来高で割った値の移動平均を計算し、
+        市場の流動性の低さを測定します。値が大きいほど流動性が低いことを示します。
+
+        Args:
+            df: OHLCVデータ。"close"と"volume"カラムが必要。
+            window: 移動平均の窓期間（デフォルト: 20）。
+
+        Returns:
+            pd.Series: Amihud非流動性指標の時系列。
+        """
         returns = df["close"].pct_change().abs()
         dollar_volume = df["volume"] * df["close"]
         return (
@@ -96,6 +138,18 @@ class MicrostructureFeatureCalculator:
         )
 
     def calculate_kyles_lambda(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
+        """Kyle's Lambda（価格インパクト指標）を計算する。
+
+        リターンと符号付き出来高の共分散を、符号付き出来高の分散で割ることで、
+        注文フローが価格に与える影響度（マーケットインパクト）を測定します。
+
+        Args:
+            df: OHLCVデータ。"close"、"open"、"volume"カラムが必要。
+            window: 共分散・分散計算の窓期間（デフォルト: 20）。
+
+        Returns:
+            pd.Series: Kyle's Lambdaの時系列。値が大きいほど価格インパクトが大きい。
+        """
         returns = df["close"].pct_change()
         sign = np.sign(df["close"] - df["open"])
         signed_volume = df["volume"] * sign

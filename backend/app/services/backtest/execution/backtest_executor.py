@@ -67,30 +67,33 @@ class BacktestExecutor:
         preloaded_data: Optional[pd.DataFrame] = None,
     ) -> Any:
         """
-        指定された戦略とパラメータでバックテスト・シミュレーションを実行
+        指定された戦略とパラメータでバックテスト・シミュレーションを実行します。
 
-        `backtesting.py` の `FractionalBacktest` をベースに、仮想通貨特有の
-        レバレッジ設定やマージン要件を緩和した状態で実行し、トレード統計
-        （勝率、ドローダウン、総利益等）を算出します。
+        このメソッドは、`backtesting.py` ライブラリのラッパーとして機能し、以下の手順を実行します：
+        1. 市場データの取得: `preloaded_data` があればそれを使用し、なければ `DataService` から取得。
+        2. バックテストインスタンスの生成: 証拠金、手数料、スリッページ、レバレッジ等の取引条件を設定。
+        3. 戦略の実行: `strategy_class` に `strategy_parameters` を渡してシミュレーションを開始。
+        4. 結果の返却: 統計データ（勝率、収益、ドローダウン等）を含むオブジェクトを返却。
 
         Args:
-            strategy_class: 実行する `backtesting.Strategy` 継承クラス
-            strategy_parameters: 指標期間等の戦略設定パラメータ
-            symbol: 取引ペア
-            timeframe: 時間軸
-            start_date: 検証開始日時
-            end_date: 検証終了日時
-            initial_capital: 初期証拠金
-            commission_rate: 手数料率（例: 0.0006 for 0.06%）
-            slippage: スリッページ率（例: 0.0001 for 0.01%）。簡易的に手数料に加算されます。
-            leverage: レバレッジ倍率（例: 1.0でレバレッジなし）。マージン率に変換されます。
-            preloaded_data: 外部から提供されたOHLCVデータがある場合に使用
+            strategy_class (Type[Strategy]): 実行する `backtesting.Strategy` 継承クラス。
+            strategy_parameters (Dict[str, Any]): 指標期間やGA生成遺伝子等の戦略設定パラメータ。
+            symbol (str): 取引ペア（例: "BTC/USDT"）。
+            timeframe (str): 時間軸（例: "1h", "15m"）。
+            start_date (datetime): 検証開始日時。
+            end_date (datetime): 検証終了日時。
+            initial_capital (float): 初期証拠金。
+            commission_rate (float): 手数料率（0.0006 = 0.06%）。
+            slippage (float): スリッページ率（0.0001 = 0.01%）。簡易的に手数料に加算されます。
+            leverage (float): レバレッジ倍率。1.0より大きい場合、マージン率に換算して適用されます。
+            preloaded_data (Optional[pd.DataFrame]): 外部でロード済みのOHLCVデータ。提供された場合はDBアクセスをスキップします。
 
         Returns:
-            パフォーマンス統計を含む `backtesting.stats` オブジェクト
+            Any: パフォーマンス統計を含む `backtesting.stats` オブジェクト（Pandas Series互換）。
 
         Raises:
-            BacktestExecutionError: シミュレーションの初期化または実行中に異常が発生した場合
+            BacktestEarlyTerminationError: 戦略内で設定された早期終了条件（大きなドローダウン等）により中断された場合。
+            BacktestExecutionError: データの欠如、シミュレーション中の例外、リソース不足等により実行に失敗した場合。
         """
         try:
             # データ取得
@@ -123,7 +126,21 @@ class BacktestExecutor:
     def _get_backtest_data(
         self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
     ) -> pd.DataFrame:
-        """バックテスト用データを取得"""
+        """
+        バックテストに使用する市場データを取得します。
+
+        Args:
+            symbol (str): 取引ペア。
+            timeframe (str): 時間軸。
+            start_date (datetime): 開始日時。
+            end_date (datetime): 終了日時。
+
+        Returns:
+            pd.DataFrame: OHLCV形式のDataFrame。カラム名は `backtesting.py` が要求する形式に正規化されます。
+
+        Raises:
+            BacktestExecutionError: データが空の場合や取得に失敗した場合。
+        """
         try:
             data = self.data_service.get_data_for_backtest(
                 symbol=symbol,

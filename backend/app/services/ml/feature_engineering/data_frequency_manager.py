@@ -53,7 +53,18 @@ class DataFrequencyManager:
         return timeframe
 
     def detect_ohlcv_timeframe(self, df: pd.DataFrame) -> str:
-        """OHLCVデータからtimeframeを自動検出"""
+        """OHLCVデータからtimeframeを自動検出する。
+
+        データのタイムスタンプ差分の中央値を計算し、
+        最も近い標準的な時間足（1m, 5m, 15m, 30m, 1h, 4h, 1d）を返します。
+
+        Args:
+            df: OHLCVデータ。"timestamp"カラムまたはDatetimeIndexが必要。
+                2行以上のデータが必要。
+
+        Returns:
+            str: 検出された時間足文字列。検出に失敗した場合は"1h"を返す。
+        """
         # len(df)で判定。カラムがなくても行があれば計算可能。
         if df is None or len(df) < 2:
             return "1h"
@@ -99,8 +110,23 @@ class DataFrequencyManager:
         open_interest_data: Optional[pd.DataFrame] = None,
         ohlcv_timeframe: Optional[str] = None,
     ) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
-        """
-        異なる頻度のデータをOHLCVのtimeframeに合わせて再サンプリング
+        """異なる頻度のデータをOHLCVのtimeframeに合わせて再サンプリングする。
+
+        Funding RateやOpen Interestなどの異なる頻度のデータを、
+        OHLCVデータの時間足に統一してリサンプリングします。
+        ダウンサンプリングの場合は1期間遅らせた平均値を使用し、
+        アップサンプリングの場合は前方充填を行います。
+
+        Args:
+            ohlcv_data: OHLCVデータ。リサンプリングの基準となる。
+            funding_rate_data: ファンディングレートデータ（オプション）。
+            open_interest_data: オープンインタレストデータ（オプション）。
+            ohlcv_timeframe: OHLCVの時間足。指定しない場合は自動検出。
+
+        Returns:
+            Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+                - リサンプリングされたFunding Rateデータ（存在する場合）
+                - リサンプリングされたOpen Interestデータ（存在する場合）
         """
         try:
             if ohlcv_data.empty:

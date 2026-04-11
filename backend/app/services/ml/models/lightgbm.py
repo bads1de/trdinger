@@ -14,9 +14,12 @@ logger = logging.getLogger(__name__)
 
 class LightGBMModel(BaseGradientBoostingModel):
     """
-    LightGBMモデルラッパー
+    LightGBM アルゴリズムを使用した勾配ブースティング決定木（GBDT）モデルのラッパーです。
 
-    BaseGradientBoostingModelを継承し、LightGBM固有の実装を提供します。
+    主な特徴:
+    - 自動タスク判定: `task_type` 設定に基づいて、分類（バイナリ/マルチクラス）と回帰を自動的に切り替えます。
+    - 効率的な学習: ヒストグラムベースのアルゴリズムにより、大規模データでも高速かつメモリ効率良く学習します。
+    - 高度な制御: 早期終了（Early Stopping）や各種正則化パラメータをサポートしています。
     """
 
     ALGORITHM_NAME = "lightgbm"
@@ -29,13 +32,13 @@ class LightGBMModel(BaseGradientBoostingModel):
         **kwargs,
     ):
         """
-        初期化
+        LightGBMモデルを初期化します。
 
         Args:
-            random_state: ランダムシード
-            n_estimators: エスティメータ数
-            learning_rate: 学習率
-            **kwargs: その他のパラメータ
+            random_state (int): 再現性のための乱数シード。
+            n_estimators (int): 構築する決定木の最大数（ブースティングラウンド数）。
+            learning_rate (float): 各ステップの更新の重み。小さいほど慎重な学習になります。
+            **kwargs: その他の LightGBM パラメータ（`num_leaves`, `feature_fraction` 等）。
         """
         super().__init__(random_state=random_state, **kwargs)
         self.n_estimators = n_estimators
@@ -48,12 +51,38 @@ class LightGBMModel(BaseGradientBoostingModel):
         sample_weight: Optional[np.ndarray] = None,
     ) -> lgb.Dataset:
         """
-        LightGBM固有のデータセットオブジェクトを作成します。
+        LightGBM 専用のデータセットオブジェクトを作成します。
+
+        Args:
+            X: 特徴量行列。
+            y: ターゲットラベル（推論時はNone）。
+            sample_weight: 各サンプルの重み。
+
+        Returns:
+            lgb.Dataset: LightGBM内部で使用される最適化されたデータ構造。
         """
         return lgb.Dataset(X, label=y, weight=sample_weight, free_raw_data=False)
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
-        """LightGBM固有のパラメータ生成"""
+        """
+        タスクタイプとクラス数に基づいて、LightGBM 固有のパラメータセットを生成します。
+
+        このメソッドは、以下の自動設定を行います：
+        - `objective`: 
+            - "regression" (回帰タスク)
+            - "binary" (2クラス分類)
+            - "multiclass" (3クラス以上の分類)
+        - `metric`:
+            - "rmse" (回帰)
+            - "binary_logloss" / "multi_logloss" (分類)
+
+        Args:
+            num_classes (int): 分類対象のクラス数。
+            **kwargs: ユーザー定義の上書きパラメータ。
+
+        Returns:
+            Dict[str, Any]: 構築されたパラメータ辞書。
+        """
         is_regression = self._is_regression_task()
         is_multi = num_classes > 2 and not is_regression
         params = {
@@ -89,7 +118,17 @@ class LightGBMModel(BaseGradientBoostingModel):
         **kwargs,
     ) -> lgb.Booster:
         """
-        LightGBM固有の学習プロセスを実行します。
+        LightGBM の学習エンジンを呼び出し、モデル（Booster）を構築します。
+
+        Args:
+            train_data (lgb.Dataset): 学習用データ。
+            valid_data (Optional[lgb.Dataset]): 検証用データ。早期終了に使用されます。
+            params (Dict[str, Any]): 学習パラメータ。
+            early_stopping_rounds (Optional[int]): 指定回数スコアが改善しない場合に学習を打ち切る設定。
+            **kwargs: その他の学習設定（`num_boost_round` 等）。
+
+        Returns:
+            lgb.Booster: 学習済みのLightGBMブースターオブジェクト。
         """
         callbacks: list[Any] = [lgb.log_evaluation(0)]
 

@@ -42,7 +42,22 @@ class DataCollectionOrchestrationService:
     """
 
     def __init__(self):
-        """初期化"""
+        """
+        DataCollectionOrchestrationServiceを初期化
+
+        データ収集プロセスの統合オーケストレーターを初期化します。
+        各データ種別（OHLCV、ファンディングレート、建玉）の収集ロジックを
+        集約し、一括差分更新、全履歴の新規取得などの高レイヤーな
+        「収集タスク」として提供します。
+
+        Note:
+            このサービスは以下のサブサービスを初期化します：
+            - DataValidator: シンボルと時間軸のバリデーション
+            - HistoricalDataOrchestrator: 履歴データ収集
+            - BulkDataOrchestrator: 一括データ収集
+            - CollectionStatusChecker: データ収集状況確認
+            - OICollectionOrchestrator: オープンインタレスト収集
+        """
         self.data_validator = DataValidator()
         self.historical_orchestrator = HistoricalDataOrchestrator()
         self.bulk_data_orchestrator = BulkDataOrchestrator()
@@ -55,20 +70,39 @@ class DataCollectionOrchestrationService:
         """
         シンボルと時間軸のバリデーション
 
+        指定されたシンボルと時間軸が有効かどうかを検証し、
+        正規化されたシンボルを返します。
+
         Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
+            symbol: 取引ペア（例: "BTC/USDT:USDT"）
+            timeframe: 時間軸（例: "1h", "1d"）
 
         Returns:
-            正規化されたシンボル
+            str: 正規化されたシンボル
 
         Raises:
-            ValueError: バリデーションエラー
+            ValueError: シンボルまたは時間軸が無効な場合
+
+        Note:
+            実際のバリデーションロジックはDataValidatorに委譲されます。
         """
         return self.data_validator.validate_symbol_and_timeframe(symbol, timeframe)
 
     def _resolve_ohlcv_repository_class(self):
-        """patch された OHLCVRepository を優先して解決する。"""
+        """
+        patchされたOHLCVRepositoryを優先して解決する
+
+        テスト時などにpatchされたOHLCVRepositoryが存在する場合、
+        それを優先的に使用します。patchがない場合はデフォルトの
+        OHLCVRepositoryを使用します。
+
+        Returns:
+            OHLCVRepository: 解決されたリポジトリクラス
+
+        Note:
+            このメソッドはテスト時のモック置換をサポートするために
+            使用されます。
+        """
         if OHLCVRepository is not _BASE_OHLCV_REPOSITORY:
             return OHLCVRepository
 
@@ -88,22 +122,30 @@ class DataCollectionOrchestrationService:
         start_date: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        特定のシンボルと時間軸の過去価格データ（OHLCV）を収集
+        特定のシンボルと時間軸の過去価格データ（OHLCV）収集を非同期で開始します。
 
-        データベースにデータが存在しない場合に、バックグラウンドタスクとして
-        Bybit等の取引所から全履歴データの取得を開始します。
-        `force_update=True` の場合は既存データをクリアして再取得します。
+        このメソッドは、以下のプロセスをオーケストレーションします：
+        1. 既にデータが存在するか、またはタスクが実行中かチェック。
+        2. `force_update=True` の場合、既存データを削除（リセット）してから再取得を予約。
+        3. FastAPIの `BackgroundTasks` に収集ジョブを登録し、即座にレスポンスを返却。
 
         Args:
-            symbol: 取引ペア（例: BTC/USDT:USDT）
-            timeframe: 時間軸（1m, 1h, 1d等）
-            background_tasks: 非同期実行のためのバックグラウンドタスク管理基盤
-            db: データベースセッション
-            force_update: Trueの場合、既存データを削除して最初から収集し直す
-            start_date: 収集開始日。未指定時はシステムデフォルト（通常 2020-03-25）
+            symbol (str): 収集対象の取引ペア（例: "BTC/USDT:USDT"）。
+            timeframe (str): 収集する時間軸（"1m", "1h" 等）。
+            background_tasks (BackgroundTasks): 非同期実行用のタスク管理オブジェクト。
+            db (Session): データベースセッション。
+            force_update (bool): Trueの場合、既存データを上書きして最初から取得し直します。デフォルトはFalse。
+            start_date (Optional[str]): 収集を開始する日付（"2023-01-01"形式）。未指定時は取引所の最大履歴またはデフォルト値が使用されます。
 
         Returns:
-            収集タスクのステータス（started, exists等）を含むレスポンス辞書
+            Dict[str, Any]: タスクの受付状態を示す辞書。
+                主なキー：
+                - "success" (bool): 予約の成否。
+                - "status" (str): "started", "already_running", "exists" 等の状態。
+                - "message" (str): ユーザー向けの進捗メッセージ。
+
+        Note:
+            実際のデータ取得はバックグラウンドで実行されるため、このメソッドの終了は「データ収集の完了」を意味しません。
         """
         repository_class = self._resolve_ohlcv_repository_class()
 
@@ -122,18 +164,27 @@ class DataCollectionOrchestrationService:
         self, symbol: str, db: Session
     ) -> Dict[str, Any]:
         """
-        市場全体のデータを最新状態に同期（差分更新オーケストレーション）
+        市場全体の最新データを一括で同期（差分更新）します。
 
-        DB 内の既存データ末尾時刻を確認し、現在時刻までの不足分を
-        Bybit API 等から取得・補完します。OHLCV の全時間足、
-        および FR、OI を一括でインクリメンタル更新します。
+        このメソッドは、システムが管理する以下の全データを最新の状態に保つために実行されます：
+        1. OHLCVデータ（全サポート時間軸）。
+        2. デリバティブ指標（ファンディングレート、建玉残高）。
+        3. その他の市場統計。
+
+        内部プロセス：
+        - 各データ種別の「最新のタイムスタンプ」をDBから取得。
+        - 取引所APIを呼び出し、DB末尾から現在時刻までの差分を取得・保存。
 
         Args:
-            symbol: 対象の取引ペア
-            db: データベースセッション
+            symbol (str): 同期対象の取引ペア。
+            db (Session): データベースセッション。
 
         Returns:
-            更新が成功した時間軸やデータ種別のサマリーを含むレスポンス
+            Dict[str, Any]: 同期結果のサマリー。
+                更新されたレコード数、スキップされた時間軸、エラーが発生した項目のリスト等を含みます。
+
+        Raises:
+            Exception: 取引所APIへの通信エラーや、DB書き込み時の致命的なエラー。
         """
         return await self.bulk_data_orchestrator.execute_bulk_incremental_update(symbol, db)
 

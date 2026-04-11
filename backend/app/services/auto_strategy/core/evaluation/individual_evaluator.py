@@ -324,7 +324,28 @@ class IndividualEvaluator(EvaluationWindowService):
         force_refresh: bool = False,
     ) -> Tuple[float, ...]:
         """
-        個体を評価し、適応度（Fitness）のタプルを返す（実体）
+        個体を評価し、適応度（Fitness）のタプルを返します（評価ロジックの実体）。
+
+        このメソッドは、以下のステップで個体を評価します：
+        1. 引数 `individual` を `StrategyGene` オブジェクトに解決（`_resolve_gene`）。
+        2. 遺伝子構造から一意なキャッシュキーを生成（`_build_cache_key`）。
+        3. `force_refresh` が False の場合、結果キャッシュ（`_result_cache`）を確認。
+        4. キャッシュミスの場合、`EvaluationStrategy` を使用してバックテストを実行し、`EvaluationReport` を生成。
+        5. 生成された適応度（`aggregated_fitness`）をキャッシュに保存して返却。
+
+        Args:
+            individual (Any): 評価対象の個体。`StrategyGene` オブジェクト、またはそのシリアライズされた辞書/リスト。
+            config (GAConfig): GAの実行設定。目的関数の定義やペナルティ、期間分割（OOS/WFA）の設定を含みます。
+            force_refresh (bool): Trueの場合、キャッシュを無視して強制的に再評価を実行します。デフォルトはFalse。
+
+        Returns:
+            Tuple[float, ...]: 設定された目的関数に対応する評価値のタプル。
+                多目的最適化の場合は複数の値、単一目的の場合は要素数1のタプルとなります。
+                バックテスト中にエラーが発生した場合は、設定に基づいたペナルティ値が返されます。
+
+        Note:
+            - スレッドセーフ: キャッシュの書き込み時およびデータ提供サービスへのアクセス時にはロック制御を行います。
+            - 効率化: LRUキャッシュを使用して同一遺伝子の重複評価を回避し、大規模な進化計算の高速化を図っています。
         """
         try:
             gene = self._resolve_gene(individual)

@@ -29,18 +29,20 @@ class GeneticAlgorithmEngineFactory:
         backtest_service: BacktestService, ga_config: GAConfig
     ) -> "GeneticAlgorithmEngine":
         """
-        GA 設定および各種サービスに基づき、GA エンジンを構築
+        指定された設定とサービス依存関係を用いて GA エンジンを構築します。
 
-        ロガーの初期化、遺伝子生成器のセットアップ、さらにハイブリッドモード
-        （ML との併用）が有効な場合は予測器やアダプターの準備を行い、
-        依存関係が注入された `GeneticAlgorithmEngine` を返します。
+        このメソッドは以下の手順でエンジンを構成します：
+        1. ログレベルの動的設定。
+        2. 遺伝子生成器（`RandomGeneGenerator`）の初期化。
+        3. ハイブリッド設定（MLフィルタの併用）が有効な場合、必要なMLコンポーネントを準備。
+        4. 全ての依存関係を注入した `GeneticAlgorithmEngine` インスタンスを生成。
 
         Args:
-            backtest_service: バックテストの実行を担うサービス
-            ga_config: GA の世代交代数、報酬設計、モデル構成等の設定
+            backtest_service (BacktestService): 個体評価に使用するバックテスト実行サービス。
+            ga_config (GAConfig): アルゴリズムのパラメータ、目的関数、ハイブリッド設定を含む統合構成。
 
         Returns:
-            初期化済みの GeneticAlgorithmEngine インスタンス
+            GeneticAlgorithmEngine: 実行準備が整ったGAエンジンインスタンス。
         """
         # ログレベルの設定
         auto_strategy_logger = logging.getLogger("app.services.auto_strategy")
@@ -80,17 +82,17 @@ class GeneticAlgorithmEngineFactory:
     @staticmethod
     def _setup_hybrid_components(ga_config: GAConfig) -> tuple:
         """
-        ハイブリッドモード（GA+ML）用コンポーネントのセットアップ
+        GAとMLを組み合わせた「ハイブリッドモード」に必要な予測・変換コンポーネントを準備します。
 
-        GA設定に基づき、予測モデル（HybridPredictor）と
-        特徴量アダプター（HybridFeatureAdapter）を初期化します。
-        複数モデルのアンサンブルや、単一モデルの選択に対応しています。
+        このメソッドは、最新の学習済みモデルを自動的に探索・ロードし、
+        GAの評価プロセス（バックテスト内）で使用される予測器を構成します。
 
         Args:
-            ga_config: GA設定情報
+            ga_config (GAConfig): ハイブリッド設定（使用モデル、アンサンブル構成等）を含む設定。
 
         Returns:
-            (predictor, adapter) のタプル
+            tuple[HybridPredictor, HybridFeatureAdapter]: 
+                (構成済みの予測器, 特徴量エンジニアリング用アダプター) のタプル。
         """
         from ..hybrid.hybrid_feature_adapter import HybridFeatureAdapter
         from ..hybrid.hybrid_predictor import HybridPredictor

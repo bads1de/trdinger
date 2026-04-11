@@ -23,7 +23,19 @@ OHLCV_COLUMNS: tuple[str, ...] = ("open", "high", "low", "close", "volume")
 
 
 def resolve_stats_object(stats: Any, warning_logger: Any = None) -> Any:
-    """statsオブジェクトの実体を取得する。callableなら呼び出す。"""
+    """
+    statsオブジェクトの実体を取得する。callableなら呼び出す。
+
+    backtesting.pyのstatsオブジェクトは遅延評価される場合があり、
+    実際の統計情報を取得するために呼び出しが必要です。
+
+    Args:
+        stats: statsオブジェクト（callableまたはdict）
+        warning_logger: 警告ログ出力用ロガー（オプション）
+
+    Returns:
+        Any: statsオブジェクトの実体（呼び出し可能な場合は呼び出し結果、そうでない場合はそのまま）
+    """
     if hasattr(stats, "__call__"):
         try:
             return stats()
@@ -35,7 +47,17 @@ def resolve_stats_object(stats: Any, warning_logger: Any = None) -> Any:
 
 
 def safe_float_conversion(value: Any) -> float:
-    """安全にfloatへ変換する。"""
+    """
+    安全にfloatへ変換する。
+
+    None、NaN、変換不可能な値を0.0に変換します。
+
+    Args:
+        value: 変換対象の値（任意の型）
+
+    Returns:
+        float: 変換されたfloat値（失敗時は0.0）
+    """
     try:
         if value is None or pd.isna(value):
             return 0.0
@@ -49,7 +71,17 @@ def safe_float_conversion(value: Any) -> float:
 
 
 def safe_int_conversion(value: Any) -> int:
-    """安全にintへ変換する。"""
+    """
+    安全にintへ変換する。
+
+    None、NaN、変換不可能な値を0に変換します。
+
+    Args:
+        value: 変換対象の値（任意の型）
+
+    Returns:
+        int: 変換されたint値（失敗時は0）
+    """
     try:
         if value is None or pd.isna(value):
             return 0
@@ -63,12 +95,35 @@ def safe_int_conversion(value: Any) -> int:
 
 
 def parse_datetime_value(value: Any) -> datetime:
-    """datetime値をパースする。"""
+    """
+    datetime値をパースする。
+
+    datetime_utils.parse_datetime_value のラッパー関数です。
+
+    Args:
+        value: 変換対象の値（datetime、ISO8601文字列等）
+
+    Returns:
+        datetime: 変換されたdatetimeオブジェクト
+
+    Raises:
+        ValueError: 変換できない形式の値が渡された場合
+    """
     return _parse_datetime_value(value)
 
 
 def safe_timestamp_conversion(value: Any) -> Optional[datetime]:
-    """timestamp値を安全にdatetimeへ変換する。"""
+    """
+    timestamp値を安全にdatetimeへ変換する。
+
+    datetime_utils.parse_timestamp_safe のラッパー関数です。
+
+    Args:
+        value: 変換対象のタイムスタンプ値（数値、文字列、datetime等）
+
+    Returns:
+        Optional[datetime]: 変換されたdatetimeオブジェクト（失敗時はNone）
+    """
     return _parse_timestamp_safe(value)
 
 
@@ -76,7 +131,19 @@ def resolve_trade_pnl_column(
     trades_df: Any,
     preferred_columns: Sequence[str] = TRADE_PNL_COLUMNS,
 ) -> Optional[str]:
-    """取引データから損益列名を解決する。"""
+    """
+    取引データから損益列名を解決する。
+
+    バックテストライブラリや戦略によって損益列の名前が異なるため、
+    優先順位付きで列名を探索します。
+
+    Args:
+        trades_df: 取引データを含むDataFrame
+        preferred_columns: 優先する列名のシーケンス（デフォルト: TRADE_PNL_COLUMNS）
+
+    Returns:
+        Optional[str]: 見つかった損益列名、見つからない場合はNone
+    """
     if trades_df is None or not hasattr(trades_df, "columns"):
         return None
 
@@ -94,7 +161,21 @@ def normalize_ohlcv_columns(
     ensure_volume: bool = False,
     volume_default: float = 0.0,
 ) -> pd.DataFrame:
-    """OHLCV列だけを正規化し、その他の列名はそのまま保持する。"""
+    """
+    OHLCV列だけを正規化し、その他の列名はそのまま保持する。
+
+    Open、High、Low、Close、Volume列の大文字小文字を統一します。
+    lowercase=Trueの場合は小文字、Falseの場合は先頭大文字に変換します。
+
+    Args:
+        data_frame: 正規化対象のDataFrame
+        lowercase: 小文字に変換するか（デフォルト: False）
+        ensure_volume: Volume列がない場合に追加するか（デフォルト: False）
+        volume_default: Volume列を追加する際のデフォルト値（デフォルト: 0.0）
+
+    Returns:
+        pd.DataFrame: OHLCV列が正規化されたDataFrame
+    """
     if not isinstance(data_frame, pd.DataFrame):
         return data_frame
 
@@ -120,10 +201,33 @@ def normalize_ohlcv_columns(
 def normalize_datetimes_for_comparison(
     start_date: datetime, end_date: datetime
 ) -> Tuple[datetime, datetime]:
-    """datetime値を比較用に正規化する。"""
+    """
+    datetime値を比較用に正規化する。
+
+    datetime_utils.normalize_datetimes_for_comparison のラッパー関数です。
+    タイムゾーンの正規化を行い、比較可能な状態にします。
+
+    Args:
+        start_date: 開始日時
+        end_date: 終了日時
+
+    Returns:
+        Tuple[datetime, datetime]: UTCタイムゾーンに正規化された(開始日時, 終了日時)のタプル
+    """
     return _normalize_datetimes_for_comparison(start_date, end_date)
 
 
 def current_datetime_like(reference: datetime) -> datetime:
-    """referenceと同じ種類の現在時刻を返す。"""
+    """
+    referenceと同じ種類の現在時刻を返す。
+
+    datetime_utils.current_datetime_like のラッパー関数です。
+    参照用のdatetimeオブジェクトと同じタイムゾーン設定で現在時刻を取得します。
+
+    Args:
+        reference: タイムゾーン設定の参照元datetimeオブジェクト
+
+    Returns:
+        datetime: referenceと同じタイムゾーン設定の現在時刻
+    """
     return _current_datetime_like(reference)

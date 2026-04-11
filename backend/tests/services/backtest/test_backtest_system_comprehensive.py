@@ -251,9 +251,11 @@ class TestBacktestSystemComprehensive:
     def test_market_data_retrieval_error_handling(self, backtest_data_service):
         """市場データ取得エラーハンドリングのテスト"""
         # データ取得でエラー
-        with patch.object(backtest_data_service, "ohlcv_repo") as mock_ohlcv:
-            mock_ohlcv.get_ohlcv_data.side_effect = Exception("Data not found")
-
+        with patch.object(
+            backtest_data_service._retrieval_service.ohlcv_repo,
+            "get_ohlcv_data",
+            side_effect=Exception("Data not found"),
+        ):
             try:
                 backtest_data_service.get_data_for_backtest(
                     "BTC/USDT:USDT", "1d", datetime(2023, 1, 1), datetime(2023, 12, 31)

@@ -44,7 +44,18 @@ class TechnicalIndicatorService:
     }
 
     def __init__(self):
-        """サービスを初期化"""
+        """
+        TechnicalIndicatorServiceを初期化
+
+        テクニカル指標計算に必要なコンポーネントを初期化します。
+        指標レジストリ、キャッシュマネージャー、パラメータ正規化器、
+        バリデーター、pandas-ta呼び出し器、後処理器、アダプターハンドラー
+        を設定します。
+
+        Note:
+            初期化時に指標レジストリが自動的に初期化され、
+            利用可能な全指標の設定が読み込まれます。
+        """
         self.registry = indicator_registry
         self.registry.ensure_initialized()
 
@@ -57,37 +68,103 @@ class TechnicalIndicatorService:
         self.adapter_handler = AdapterHandler(self.validator)
 
     def _get_indicator_config(self, indicator_type: str) -> IndicatorConfig:
-        """指標設定を取得"""
+        """
+        指標設定を取得
+
+        指標レジストリから指定された指標タイプの設定を取得します。
+
+        Args:
+            indicator_type: 指標タイプ（例: "RSI", "MACD"）
+
+        Returns:
+            IndicatorConfig: 指標設定オブジェクト
+
+        Raises:
+            ValueError: サポートされていない指標タイプが指定された場合
+        """
         config = self.registry.get_indicator_config(indicator_type)
         if not config:
             raise ValueError(f"サポートされていない指標タイプ: {indicator_type}")
         return config
 
     def _resolve_indicator_name(self, indicator_type: str) -> str:
-        """指標名を正規化（大文字変換）"""
+        """
+        指標名を正規化（大文字変換）
+
+        指標タイプ名を大文字に変換して正規化します。
+        これにより、大文字小文字を区別せずに指標を指定できます。
+
+        Args:
+            indicator_type: 正規化前の指標タイプ名
+
+        Returns:
+            str: 大文字に変換された指標タイプ名
+        """
         return indicator_type.upper()
 
     def _resolve_column_name(self, df: pd.DataFrame, data_key: Any) -> Any:
-        """カラム名解決をバリデータに委譲する。"""
+        """
+        カラム名解決をバリデータに委譲する
+
+        DataFrame内のカラム名を解決します。
+        実際の解決ロジックはIndicatorValidatorに委譲されます。
+
+        Args:
+            df: 対象のDataFrame
+            data_key: 解決するデータキー（カラム名またはエイリアス）
+
+        Returns:
+            Any: 解決されたカラム名
+        """
         return self.validator.resolve_column_name(df, data_key)
 
     def clear_cache(self) -> None:
-        """計算キャッシュをクリアする"""
+        """
+        計算キャッシュをクリアする
+
+        指標計算結果のLRUキャッシュをクリアします。
+        メモリ節約や再計算の強制が必要な場合に使用します。
+
+        Note:
+            キャッシュをクリアすると、次回の指標計算時には
+            再度計算が実行されます。
+        """
         self.cache_manager.clear_cache()
 
     def calculate_indicator(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
     ) -> Union[np.ndarray, pd.Series, tuple, tuple[pd.Series, ...]]:
         """
-        OHLCVデータから指定されたテクニカル指標を計算
+        OHLCVデータから指定されたテクニカル指標を計算します。
+
+        このメソッドは以下の手順で指標計算をオーケストレーションします：
+        1. 指標名の正規化とキャッシュキーの生成（`IndicatorCacheManager`）。
+        2. キャッシュヒット時は即座に結果を返却。
+        3. `pandas-ta` での実装が存在するか確認し、あれば以下の手順を実行：
+           - パラメータの型変換・正規化（`ParameterNormalizer`）。
+           - データのバリデーション（最小期間、欠損値チェック等）。
+           - `pandas-ta` 関数の呼び出し（`PandasTaCaller`）。
+           - 出力の後処理（単一シリーズか複数シリーズかの調整）。
+        4. `pandas-ta` に存在しない、または失敗した場合、アダプター方式の独自実装へフォールバック。
+        5. 計算結果をキャッシュに保存して返却。
 
         Args:
-            df: OHLCVデータを含むDataFrame
-            indicator_type: 指標タイプ名（例: RSI, MACD, SMA）
-            params: 指標のパラメータ
+            df (pd.DataFrame): 計算の基準となるOHLCVデータを含むDataFrame。
+            indicator_type (str): 指標の種類（例: "RSI", "MACD", "SMA"）。大文字小文字は区別されません。
+            params (Dict[str, Any]): 指標に渡すパラメータ（期間、ソース、シグナル期間等）。
 
         Returns:
-            計算結果（numpy配列またはタプル）
+            Union[np.ndarray, pd.Series, tuple]: 指標の計算結果。
+                単一指標（RSI等）の場合は1次元配列、複数指標（MACD等）の場合はタプルを返します。
+                計算不可の場合は入力と同じ長さのNaNを含む配列が返されます。
+
+        Raises:
+            ValueError: 指定された指標タイプがレジストリに存在せず、アダプターも見つからない場合。
+            Exception: 指標計算エンジン内で予期しない致命的なエラーが発生した場合。
+
+        Note:
+            - 高速化: 同一データ・同一パラメータでの再計算はLRUキャッシュにより回避されます。
+            - 堅牢性: データの不足や異常値に対してはNaNを返却し、戦略の実行を継続させます。
         """
         indicator_type = self._resolve_indicator_name(indicator_type)
 
@@ -154,7 +231,20 @@ class TechnicalIndicatorService:
             raise
 
     def _get_support_tier(self, config: IndicatorConfig) -> str:
-        """required_data からサポート水準を分類する。"""
+        """
+        required_dataからサポート水準を分類する
+
+        指標が必要とするデータ種別に基づいて、サポート水準を分類します。
+        - standard: OHLCVデータのみで計算可能
+        - extended_market: OHLCV + オープンインタレスト/ファンディングレートで計算可能
+        - experimental: その他のデータが必要（実験的）
+
+        Args:
+            config: 指標設定オブジェクト
+
+        Returns:
+            str: サポート水準（"standard", "extended_market", "experimental"のいずれか）
+        """
         normalized_required_data = {
             data_key.lower()
             for data_key in config.required_data
@@ -178,8 +268,22 @@ class TechnicalIndicatorService:
         """
         サポートされている指標の情報を取得
 
+        利用可能な全テクニカル指標の情報を取得します。
+        パラメータ範囲、結果タイプ、必要データ、スケールタイプ、
+        サポート水準などの情報を含みます。
+
         Returns:
-            サポート指標の情報辞書
+            Dict[str, Any]: サポート指標の情報辞書。
+                キーは指標名、値は以下の情報を含む辞書：
+                - parameters: パラメータ範囲
+                - result_type: 結果タイプ
+                - required_data: 必要データ
+                - scale_type: スケールタイプ
+                - support_tier: サポート水準
+
+        Note:
+            実装がない指標（adapter_functionもpandas_functionもない）は
+            含まれません。
         """
         infos = {}
         for name, config in self.registry.get_all_indicators().items():

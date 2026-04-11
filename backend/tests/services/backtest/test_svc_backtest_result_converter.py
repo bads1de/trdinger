@@ -456,8 +456,8 @@ class TestDataConversion:
             config_json={},
         )
         assert result["start_date"].year == 2024
-        assert result.month == 1
-        assert result.day == 1
+        assert result["start_date"].month == 1
+        assert result["start_date"].day == 1
 
     def test_normalize_date_invalid_type(self, converter):
         """無効な型のエラー処理"""

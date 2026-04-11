@@ -51,7 +51,28 @@ def triple_barrier_method_preset(
     atr_period: int = 14,
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
-    """TBM ラベル生成プリセット"""
+    """Triple Barrier Method（TBM）ラベル生成プリセット。
+
+    価格が指定されたバリア（Take Profit、Stop Loss）に最初に到達した時点で
+    ラベルを割り当てます。ボラティリティ（標準偏差またはATR）を基準に
+    バリア幅を設定します。
+
+    Args:
+        df: OHLCVデータ。price_column、high、lowカラムが必要。
+        timeframe: 時間足（例: "4h", "1h"）。
+        horizon_n: ラベリング期間（バーの本数）。
+        pt: Take Profit係数（ボラティリティ倍率）。
+        sl: Stop Loss係数（ボラティリティ倍率）。
+        min_ret: 最小リターン閾値。
+        price_column: 使用する価格カラム名。
+        volatility_window: ボラティリティ計算の窓期間。
+        use_atr: ATRを使用するかどうか。Falseの場合は標準偏差。
+        atr_period: ATR計算期間。
+        t_events: イベント時点のインデックス（オプション）。
+
+    Returns:
+        pd.Series: TBMラベル（1=UP、0=DOWN）。
+    """
     _validate_supported_timeframe(timeframe)
 
     logger.info(f"TBMラベル生成開始: {timeframe}, horizon={horizon_n}")
@@ -88,7 +109,25 @@ def trend_scanning_preset(
     price_column: str = "close",
     t_events: Optional[pd.DatetimeIndex] = None,
 ) -> pd.Series:
-    """Trend Scanning ラベル生成プリセット"""
+    """Trend Scanningラベル生成プリセット。
+
+    回帰分析のt統計量を使用して、指定されたウィンドウ内で有意な
+    トレンド（上昇/下降）が存在するかどうかを検出します。
+    絶対t値がthresholdを超える場合にラベルを割り当てます。
+
+    Args:
+        df: OHLCVデータ。price_columnカラムが必要。
+        timeframe: 時間足（例: "4h", "1h"）。
+        horizon_n: 最大探索ウィンドウ（バーの本数）。
+        threshold: 有意t値の閾値。
+        min_window: 最小ウィンドウ。
+        window_step: ウィンドウのステップ幅。
+        price_column: 使用する価格カラム名。
+        t_events: イベント時点のインデックス（オプション）。
+
+    Returns:
+        pd.Series: Trend Scanningラベル（1=Trend、0=Range）。
+    """
     _validate_supported_timeframe(timeframe)
 
     logger.info(f"TSラベル生成開始: {timeframe}, threshold={threshold}")

@@ -16,9 +16,22 @@ T = TypeVar("T")
 
 
 class BaseRepository(Generic[T]):
-    """リポジトリの基底クラス"""
+    """
+    データベースアクセスのための共通ロジックを提供する基底リポジトリクラスです。
+
+    `Generic[T]` を使用することで、特定の SQLAlchemy モデルクラスに対して型安全な操作を提供します。
+    SQLAlchemy 2.0 スタイルのクエリ（`select`, `delete` 等）を内部で使用しており、
+    将来的なライブラリのアップデートにも対応可能な設計となっています。
+    """
 
     def __init__(self, db: Session, model_class: Type[T]):
+        """
+        リポジトリを初期化します。
+
+        Args:
+            db (Session): データベースセッション。
+            model_class (Type[T]): このリポジトリが担当するモデルクラス。
+        """
         self.db = db
         self.model_class = model_class
 
@@ -114,6 +127,18 @@ class BaseRepository(Generic[T]):
     def _bulk_insert_sqlite_ignore(self, records: List[Dict[str, Any]]) -> int:
         """
         SQLite用のINSERT OR IGNORE一括挿入
+
+        SQLiteデータベースで重複を無視する一括挿入を実行します。
+        重複するレコードが存在する場合は挿入をスキップします。
+
+        Args:
+            records: 挿入するレコードのリスト
+
+        Returns:
+            int: 挿入されたレコード数
+
+        Note:
+            挿入に失敗した場合は個別挿入にフォールバックします。
         """
         from sqlalchemy import text
 
@@ -147,6 +172,20 @@ class BaseRepository(Generic[T]):
     ) -> int:
         """
         PostgreSQL用のon_conflict_do_nothing一括挿入
+
+        PostgreSQLデータベースで重複を無視する一括挿入を実行します。
+        on_conflict_do_nothingを使用して、重複するレコードが存在する場合は
+        挿入をスキップします。
+
+        Args:
+            records: 挿入するレコードのリスト
+            conflict_columns: 重複チェック対象のカラムリスト
+
+        Returns:
+            int: 挿入されたレコード数
+
+        Note:
+            on_conflict_do_nothingがサポートされていない場合は個別挿入にフォールバックします。
         """
         from sqlalchemy.dialects.postgresql import insert
 
@@ -166,6 +205,18 @@ class BaseRepository(Generic[T]):
     def _bulk_insert_individual(self, records: List[Dict[str, Any]]) -> int:
         """
         個別挿入処理（重複エラーを無視）
+
+        レコードを1件ずつ挿入し、重複エラーを無視します。
+        他の一括挿入メソッドが失敗した場合のフォールバックとして使用されます。
+
+        Args:
+            records: 挿入するレコードのリスト
+
+        Returns:
+            int: 挿入されたレコード数
+
+        Note:
+            重複エラーは無視され、エラーが発生したレコードはスキップされます。
         """
         from sqlalchemy import insert
 
@@ -371,7 +422,21 @@ class BaseRepository(Generic[T]):
 
     def _handle_delete_error(self, e: Exception, message_prefix: str, **kwargs):
         """
-        削除時のエラーを処理し、ログを記録する汎用メソッド。
+        削除時のエラーを処理し、ログを記録する汎用メソッド
+
+        削除操作中に発生したエラーを処理し、適切なログを記録します。
+        ロールバックを実行し、エラーを再スローします。
+
+        Args:
+            e: 発生した例外
+            message_prefix: エラーメッセージのプレフィックス
+            **kwargs: エラーメッセージに含める追加情報
+
+        Raises:
+            Exception: 元の例外を再スロー
+
+        Note:
+            このメソッドはロールバックを実行し、詳細なエラーログを記録します。
         """
         self.db.rollback()
         error_message = f"{message_prefix}エラー ({self.model_class.__name__}): {e}"

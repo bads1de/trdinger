@@ -50,39 +50,46 @@ def create_comprehensive_pipeline(
     **kwargs: Any,
 ) -> Pipeline:
     """
-    包括的なデータ処理パイプラインを作成。
+    データ品質の最適化から特徴量選択までを統合した、包括的なデータ処理パイプラインを作成します。
 
-    このパイプラインは、生産MLワークフローに適した完全な
-    エンドツーエンドのデータ準備のための利用可能なすべての処理ステップを組み合わせます。
+    このパイプラインは以下の順序で処理を適用し、生データをモデル学習に最適な形式へ変換します：
+    1. **高度な前処理 (`CustomPreprocessor`)**:
+       - 欠損値補完: 数値（中央値、平均等）およびカテゴリ（最頻値、固定値）の補完。
+       - 外れ値除去: `IsolationForest` 等を用いて異常なサンプルを除外。
+       - 型最適化: メモリ使用量を削減するためにデータ型をダウンキャスト。
+    2. **特徴量抽出 (`PolynomialFeatures`)**:
+       - オプションで特徴量間の相互作用（積）や多項式項を生成。
+    3. **機械学習パイプライン (`MLPipeline`)**:
+       - カテゴリエンコーディング: 文字列ラベルを数値に変換。
+       - 特徴量選択: 統計的検定やモデル重要度に基づいて重要な特徴量のみを保持。
+       - スケーリング: `StandardScaler` 等で特徴量のスケールを統一（NNや線形モデルで重要）。
 
     Args:
-        outlier_removal: 外れ値除去を実行するかどうか
-        outlier_method: 外れ値検出の方法
-        outlier_contamination: 外れ値の予想割合
-        numeric_strategy: 数値列の補間戦略
-        categorical_strategy: カテゴリ列の補間戦略
-        categorical_fill_value: カテゴリ欠損値の埋め値
-        categorical_encoding: カテゴリ変数のエンコーディング方法
-        optimize_dtypes: データタイプを最適化するかどうか
+        outlier_removal (bool): 外れ値除去を実行するかどうか。デフォルトはTrue。
+        outlier_method (str): 外れ値検出アルゴリズム（"isolation_forest", "ee", "lof"）。
+        outlier_contamination (float): 外れ値と見なすデータの割合（0.01〜0.2推奨）。
+        numeric_strategy (str): 数値列の補間方法（"mean", "median", "most_frequent"）。
+        categorical_strategy (str): カテゴリ列の補間方法（"most_frequent", "constant"）。
+        categorical_encoding (str): エンコーディング手法（"label", "onehot", "target"）。
+        optimize_dtypes (bool): 実行後にデータ型（float64 -> float32等）を最適化するか。
 
-        feature_selection: 特徴量選択を実行するかどうか
-        n_features: 選択する特徴量の数
-        selection_method: 特徴量選択方法
-        scaling: 特徴量スケーリングを適用するかどうか
-        scaling_method: スケーリング方法
+        feature_selection (bool): 特徴量選択（次元削減）を実行するかどうか。
+        n_features (Optional[int]): 保持する特徴量の最大数。Noneの場合は自動。
+        selection_method (str): 選択基準（"f_regression", "mutual_info", "boruta"等）。
+        scaling (bool): データの正規化/標準化を実行するか。
+        scaling_method (str): スケーリング手法（"standard", "minmax", "robust"）。
 
-        polynomial_features: 多項式特徴量を追加するかどうか
-        polynomial_degree: 多項式特徴量の次数
-        interaction_only: 相互作用特徴量のみを含めるかどうか
+        polynomial_features (bool): 多項式・相互作用特徴量を自動生成するかどうか。
+        polynomial_degree (int): 多項式の次数。
+        interaction_only (bool): 相互作用（x*y）のみを生成し、累乗（x^2）を除外するか。
 
-        preprocessing_params: カスタム前処理パラメータ
-        ml_params: カスタムMLパイプライン パラメータ
-        target_column: ターゲット列の名前（特徴量選択用）
-
-        **kwargs: 追加パラメータ
+        preprocessing_params (Optional[Dict]): 内部の `CustomPreprocessor` に渡す詳細設定。
+        ml_params (Optional[Dict]): 内部の `MLPipeline` に渡す詳細設定。
+        target_column (Optional[str]): ターゲット列の名前（特徴量選択の基準として使用）。
 
     Returns:
-        設定された包括的パイプライン
+        Pipeline: `scikit-learn` 互換のパイプラインオブジェクト。
+            `fit()` および `transform()` を通じて一貫したデータ変換を提供します。
     """
     logger.info("包括的パイプラインを作成中...")
 

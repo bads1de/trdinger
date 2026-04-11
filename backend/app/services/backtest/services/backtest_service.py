@@ -48,17 +48,34 @@ class BacktestService:
         self, config: Dict[str, Any], preloaded_data: Optional[pd.DataFrame] = None
     ) -> Dict[str, Any]:
         """
-        指定された設定とデータでバックテストを実行
+        指定された設定と市場データでバックテスト・シミュレーションを実行します。
 
-        データ取得、オーケストレーターの初期化、および実際の
-        シミュレーション実行を管理します。
+        このメソッドは、バックテスト実行の統合窓口として以下の手順を管理します：
+        1. データサービス（`BacktestDataService`）およびオーケストレーター（`BacktestOrchestrator`）の初期化。
+        2. `preloaded_data` が提供されていない場合、設定された期間のデータをDBから取得。
+        3. `BacktestOrchestrator` に処理を委譲し、実際のシミュレーションを実行。
 
         Args:
-            config: バックテストの設定（銘柄、期間、戦略パラメータ等）
-            preloaded_data: メモリ上に既にあるOHLCVデータを使用する場合に指定
+            config (Dict[str, Any]): バックテストの実行設定。
+                以下のキーを含む必要があります：
+                - "symbol" (str): 取引ペア。
+                - "timeframe" (str): 時間軸。
+                - "strategy_name" (str): 実行する戦略名。
+                - "strategy_config" (Dict): 戦略固有のパラメータ。
+                - "initial_capital" (float): 初期資産。
+                - "commission_rate" (float): 手数料率。
+            preloaded_data (Optional[pd.DataFrame]): メモリ上にロード済みのOHLCVデータ。提供された場合、DBへのデータリクエストをスキップします。
 
         Returns:
-            パフォーマンス推移、統計指標（シャープレシオ等）を含む結果辞書
+            Dict[str, Any]: シミュレーション結果を含む辞書。
+                主なキー：
+                - "success" (bool): 実行の成否。
+                - "performance_metrics" (Dict): シャープレシオ、ドローダウン、勝率等の統計。
+                - "equity_curve" (List[Dict]): 資産推移データ（チャート表示用）。
+                - "trades" (List[Dict]): 全トレード履歴。
+
+        Raises:
+            BacktestExecutionError: 設定の不備、データの欠如、または実行中の致命的なエラーが発生した場合。
         """
         try:
             # 1. データサービスの初期化
@@ -143,17 +160,25 @@ class BacktestService:
 
     def execute_and_save_backtest(self, request, db_session: Session) -> Dict[str, Any]:
         """
-        バックテストを実行し、結果を永続化（Web API向け）
+        バックテストを実行し、その結果をデータベースに永続化します（Web API向け）。
 
-        リクエストオブジェクトから設定を抽出し、バックテストを実行後、
-        その結果をデータベースの `backtest_results` テーブルに保存します。
+        このメソッドは、APIからのリクエストを受け取り、以下の手順を実行します：
+        1. リクエストオブジェクト（Pydanticモデル等）から実行用設定を構築。
+        2. `run_backtest` を呼び出してシミュレーションを実行。
+        3. 実行成功時、`BacktestResultRepository` を使用して結果を `backtest_results` テーブルに保存。
+        4. 保存されたレコードのIDを含む最終的なレスポンスを生成。
 
         Args:
-            request: バックテスト設定を含むPydanticモデルまたは辞書
-            db_session: データベースセッション
+            request (Any): APIリクエストオブジェクト（`BacktestRequest` 等）、または設定辞書。
+            db_session (Session): データベースセッション。結果の保存に使用されます。
 
         Returns:
-            {'success': bool, 'result': saved_model_data} 形式の辞書
+            Dict[str, Any]: APIレスポンス形式の辞書。
+                保存された `backtest_id` や、計算されたパフォーマンス要約を含みます。
+
+        Note:
+            - トランザクション: 提供された `db_session` を使用して、データの読み込みと結果の保存を同一セッション内で行います。
+            - エラーハンドリング: 実行失敗時はエラーメッセージを含む辞書を返し、ステータスコード 500 を示唆します。
         """
         try:
             # 外部セッションを内部にも設定してトランザクションを統一

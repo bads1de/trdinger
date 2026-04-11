@@ -20,6 +20,31 @@ class VolatilityTargetService:
         ohlcv_df: pd.DataFrame,
         **training_params: Any,
     ) -> Tuple[pd.DataFrame, pd.Series]:
+        """
+        市場データから回帰学習用のターゲット（将来の対数実現ボラティリティ）を生成し、特徴量と同期させます。
+
+        このメソッドは以下のプロセスでターゲットを算出します：
+        1. **対数リターンの算出**: 価格データの変化率を対数スケールで計算。
+        2. **将来ボラティリティの推定**: 指定された `prediction_horizon`（ホライゾン）期間内の
+           対数リターンの二乗和の平方根（実現ボラティリティ）を算出。
+        3. **対数変換**: ボラティリティ分布の歪みを抑え、モデルが学習しやすくするために対数変換を適用。
+           $Target_t = \\ln(\\sqrt{\\sum_{i=1}^{n} r_{t+i}^2} + \\epsilon)$
+        4. **インデックス同期**: 特徴量データと計算された将来ターゲットのタイムスタンプを厳密に一致させ、
+           かつ未来情報のリーク（前方参照）が発生しないようにホライゾン分だけシフトして結合。
+
+        Args:
+            features_df (pd.DataFrame): 算出済みの特徴量。
+            ohlcv_df (pd.DataFrame): ターゲット算出の基準となる価格データ（DatetimeIndex必須）。
+            **training_params: 
+                - `prediction_horizon` (int): 予測対象とする将来のバー数。
+                - `price_column` (str): 計算に使用する価格カラム名（デフォルト: "close"）。
+
+        Returns:
+            Tuple[pd.DataFrame, pd.Series]: (クリーニング済みの特徴量, 同期されたターゲットラベル) のタプル。
+
+        Raises:
+            ValueError: データが不足している場合、またはホライゾン設定が不正な場合。
+        """
         if features_df is None or features_df.empty:
             raise ValueError("特徴量データが空です")
         if ohlcv_df is None or ohlcv_df.empty:

@@ -34,24 +34,30 @@ class LabelGenerationService:
         **training_params,
     ) -> Tuple[pd.DataFrame, pd.Series]:
         """
-        学習用データセット（特徴量とそれに対応する正解ラベル）を構築
+        高度な統計手法を用いて、機械学習モデルの学習に最適な「意味のある」正解ラベルを生成します。
 
-        各種フィルター（CUSUM、SignalGenerator）により重要なマーケットイベント
-        が発生した足のみを抽出し、それらのポイントに対してトリプルバリア法で
-        バイナリラベル（1: 目標達成、0: 失敗/損切り/期限切れ）を付与します。
+        このメソッドは、単純な「n足後のリターン」ではなく、実際のトレーディングを模した
+        **イベント駆動型ラベリング**（トリプルバリア法）を採用しています。
+
+        主なプロセス：
+        1. **サンプリング（イベント検出）**: CUSUMフィルターやSignalGeneratorにより、
+           市場に統計的な変化が生じた重要なタイミングのみを学習対象として抽出します（ノイズの低減）。
+        2. **バリアの設定**: 各サンプリング点において、未来の「利食い」「損切り」「時間制限」の3つの境界線を引きます。
+        3. **ラベル確定**: 最初にどのバリアに価格が接触したかに基づいてラベル（1 or 0等）を決定します。
 
         Args:
-            features_df: 計算済みの特徴量集合（DataFrame）
-            ohlcv_df: ラベリング基準となる OHLCV データ
-            use_signal_generator: ボリンジャーバンド等の条件でイベントを絞り込むか
-            signal_config: SignalGenerator の詳細設定パラメータ
-            use_cusum: ボラティリティの変化に基づきイベントを抽出するか
-            cusum_threshold: CUSUM フィルターの固定閾値
-            cusum_vol_multiplier: ボラティリティ適応型 CUSUM の感度倍率
-            **training_params: トリプルバリアの期間(horizon_n)や、利確・損切幅の倍率(pt_factor, sl_factor)等
+            features_df (pd.DataFrame): 計算済みの特徴量集合。
+            ohlcv_df (pd.DataFrame): ラベリングの基準となる市場価格データ。
+            use_signal_generator (bool): 戦略的なシグナル（ボリンジャーバンド等）発生時のみを抽出するか。
+            use_cusum (bool): 累積偏差（CUSUM）が閾値を超えた「変化点」のみを抽出するか。
+            **training_params: 
+                - `horizon_n` (int): 決済までの最大保持期間（バー数）。
+                - `pt_factor` (float): ボラティリティに対する利確幅の倍率。
+                - `sl_factor` (float): ボラティリティに対する損切幅の倍率。
+                - `threshold_method` (str): バリア幅の決定手法（"volatility", "fixed"等）。
 
         Returns:
-            インデックスが同期され、NaN が除去された (特徴量 DataFrame, ラベル Series) のタプル
+            Tuple[pd.DataFrame, pd.Series]: 特徴量と同期され、未来リークのないクリーンな学習用データセット。
         """
         label_config = ml_config_manager.config.training.label_generation
         label_cache = LabelCache(ohlcv_df)

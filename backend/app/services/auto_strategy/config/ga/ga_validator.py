@@ -15,7 +15,20 @@ logger = logging.getLogger(__name__)
 
 
 class ConfigValidator:
-    """設定バリデーター"""
+    """GA設定バリデーター
+
+    GAConfigを含む設定オブジェクトの妥当性を検証します。
+    必須項目の存在確認、値の範囲チェック、設定間の整合性検証など、
+    遺伝的アルゴリズム実行前の設定検証を包括的に実施します。
+
+    主な検証項目:
+    - 必須フィールド（シンボル、時間軸、日付など）の存在確認
+    - 数値パラメータの範囲チェック（人口サイズ、世代数など）
+    - 日付の整合性（開始日 < 終了日）
+    - 評価関数の存在確認
+    - ロギング設定の妥当性
+    - GA固有の設定（突然変異率、交叉率など）の範囲検証
+    """
 
     VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
@@ -491,14 +504,17 @@ class ConfigValidator:
 
     @staticmethod
     def _validate_ga_two_stage_settings(config: GAConfig) -> List[str]:
-        """
-        二段階選抜設定の検証
+        """二段階選抜設定の検証
+
+        二段階選抜（Two-Stage Selection）の設定が正しいか検証します。
+        エリート数、候補プールサイズ、スクリーニングしきい値などの
+        整合性をチェックします。
 
         Args:
             config: 検証対象のGAConfigインスタンス
 
         Returns:
-            エラーメッセージのリスト
+            List[str]: エラーメッセージのリスト。問題がなければ空リスト。
         """
         errors = []
         two_stage_config = config.two_stage_selection_config
@@ -538,14 +554,17 @@ class ConfigValidator:
 
     @staticmethod
     def _validate_robustness_config_validation_symbols(config: GAConfig) -> List[str]:
-        """
-        robustness 検証用通貨ペア設定の検証
+        """ロバストネス検証用通貨ペア設定の検証
+
+        ロバストネス検証（Robustness Validation）で使用する通貨ペアの
+        設定が正しいか検証します。validation_symbolsがリスト形式であるか、
+        適切な通貨ペア名が含まれているかを確認します。
 
         Args:
             config: 検証対象のGAConfigインスタンス
 
         Returns:
-            エラーメッセージのリスト
+            List[str]: エラーメッセージのリスト。問題がなければ空リスト。
         """
         errors = []
         validation_symbols = config.robustness_config.validation_symbols
