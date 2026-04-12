@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Mapping
+from typing import Mapping, cast
 
 import numpy as np
 import pandas as pd
@@ -30,7 +30,8 @@ def _validate_series_bundle(series_map: Mapping[str, pd.Series]) -> pd.Index:
 
 def _to_float_array(series: pd.Series) -> np.ndarray:
     """Coerce a pandas Series to a float64 numpy array."""
-    return pd.to_numeric(series, errors="coerce").to_numpy(dtype=np.float64, copy=False)
+    coerced = pd.to_numeric(series, errors="coerce")
+    return cast(pd.Series, coerced).to_numpy(dtype=np.float64, copy=False)
 
 
 @njit(parallel=True, cache=True)

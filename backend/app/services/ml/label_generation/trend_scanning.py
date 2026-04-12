@@ -211,12 +211,12 @@ class TrendScanning:
             pd.DataFrame: columns=["t1", "t_value", "bin", "ret"]
                           binは離散ラベル(1, 0, -1) または t値そのもの
         """
-        t_events = (
+        t_events_resolved: pd.DatetimeIndex = (
             t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
         )
         # t_eventsがclose.indexに含まれるものだけにフィルタ
-        t_events = t_events[t_events.isin(close.index)]
-        if t_events.empty:
+        t_events_resolved = t_events_resolved[t_events_resolved.isin(close.index)]
+        if t_events_resolved.empty:
             return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
 
         # 対数価格の使用 (トレンド強度の一貫性向上のため推奨)
@@ -225,7 +225,7 @@ class TrendScanning:
         else:
             close_values = close.values.astype(np.float64)
 
-        idxs = close.index.get_indexer(t_events)
+        idxs = close.index.get_indexer(t_events_resolved)
 
         # Numbaで一括計算
         t_vals, bins, t1_idxs = _trend_scanning_loop_numba(
@@ -244,7 +244,7 @@ class TrendScanning:
         if not np.any(valid_mask):
             return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
 
-        valid_t0 = t_events[valid_mask]
+        valid_t0 = t_events_resolved[valid_mask]
         valid_t1_idxs = t1_idxs[valid_mask]
         valid_t_vals = t_vals[valid_mask]
         valid_bins = bins[valid_mask]

@@ -75,7 +75,7 @@ class BacktestResultRepository(BaseRepository):
             if isinstance(obj, (list, tuple, set)):
                 return [self._to_json_safe(v) for v in obj]
             # それ以外は文字列化の最後の手段
-            return obj
+            return str(obj)
         except Exception:
             return str(obj)
 
@@ -108,9 +108,9 @@ class BacktestResultRepository(BaseRepository):
         # パフォーマンス指標の正規化（後方互換性対応）
         performance_metrics = result_data.get("performance_metrics", {})
         if not performance_metrics:
-            performance_metrics = result_data.get("results_json", {}).get(
-                "performance_metrics", {}
-            )
+            results_json = result_data.get("results_json")
+            if isinstance(results_json, dict):
+                performance_metrics = results_json.get("performance_metrics", {})
         if not performance_metrics:
             performance_metrics = {
                 "total_return": result_data.get("total_return", 0.0),
@@ -122,12 +122,14 @@ class BacktestResultRepository(BaseRepository):
             }
 
         # その他のデータの正規化
+        results_json = result_data.get("results_json")
+        results_json_dict = results_json if isinstance(results_json, dict) else {}
         equity_curve = result_data.get(
-            "equity_curve", result_data.get("results_json", {}).get("equity_curve", [])
+            "equity_curve", results_json_dict.get("equity_curve", [])
         )
         trade_history = result_data.get(
             "trade_history",
-            result_data.get("results_json", {}).get("trade_history", []),
+            results_json_dict.get("trade_history", []),
         )
 
         # JSON列はシリアライズ可能に正規化
@@ -140,8 +142,8 @@ class BacktestResultRepository(BaseRepository):
             "strategy_name": result_data["strategy_name"],
             "symbol": result_data["symbol"],
             "timeframe": result_data["timeframe"],
-            "start_date": start_date,
-            "end_date": end_date,
+            "start_date": start_date.isoformat() if isinstance(start_date, (datetime, date)) else start_date,
+            "end_date": end_date.isoformat() if isinstance(end_date, (datetime, date)) else end_date,
             "initial_capital": result_data["initial_capital"],
             "commission_rate": result_data.get("commission_rate", 0.001),
             "config_json": config_json,

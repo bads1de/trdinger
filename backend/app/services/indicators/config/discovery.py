@@ -726,7 +726,7 @@ class DynamicIndicatorDiscovery:
             "volatility",
             "volume",
         }
-        for loader, module_name, is_pkg in pkgutil.iter_modules(
+        for _loader, module_name, _is_pkg in pkgutil.iter_modules(
             technical_indicators.__path__
         ):
             if module_name in skipped_wrapper_modules:

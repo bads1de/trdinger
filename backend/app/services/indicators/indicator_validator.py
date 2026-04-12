@@ -51,7 +51,10 @@ class IndicatorValidator:
                 if not self.resolve_column_name(df, req_col):
                     return False
         else:
-            if not self.resolve_column_name(df, config.get("data_column")):
+            data_column = config.get("data_column")
+            if data_column is not None and not self.resolve_column_name(
+                df, data_column
+            ):
                 return False
 
         return True

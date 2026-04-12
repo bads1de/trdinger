@@ -5,7 +5,7 @@
 from typing import Sequence, cast
 
 import numpy as np
-from scipy.spatial import cKDTree
+from scipy.spatial import cKDTree  # type: ignore[reportAttributeAccessIssue]
 
 
 def compute_niche_counts_vectorized(

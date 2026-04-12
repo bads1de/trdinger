@@ -23,7 +23,6 @@ from .response import error_response
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
-R = TypeVar("R")
 
 
 class TimeoutError(Exception):
@@ -438,7 +437,7 @@ class ErrorHandler:
 
 
 def safe_operation(
-    default_return: R | str = "RAISE_EXCEPTION",
+    default_return: object | str = "RAISE_EXCEPTION",
     error_handler: Callable[[Exception, str], T] | None = None,
     context: str = "統一操作",
     is_api_call: bool = False,

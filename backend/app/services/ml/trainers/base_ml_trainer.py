@@ -543,8 +543,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         )
         return X_train_scaled, X_test_scaled
 
-    def _get_model_to_save(self) -> TrainedModel | None:
-        """保存対象のモデルオブジェクトを取得"""
+    def _get_model_to_save(self) -> object:
+        """保存対象のシリアライズ可能なオブジェクトを取得"""
         return self._model
 
     def _get_model_specific_metadata(

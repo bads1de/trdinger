@@ -102,7 +102,7 @@ class TechnicalIndicatorService:
         """
         return indicator_type.upper()
 
-    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> str:
+    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> str | None:
         """
         カラム名解決をバリデータに委譲する
 
@@ -114,7 +114,7 @@ class TechnicalIndicatorService:
             data_key: 解決するデータキー（カラム名またはエイリアス）
 
         Returns:
-            Any: 解決されたカラム名
+            str | None: 解決されたカラム名、見つからない場合はNone
         """
         return self.validator.resolve_column_name(df, data_key)
 
@@ -133,7 +133,7 @@ class TechnicalIndicatorService:
 
     def calculate_indicator(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-    ) -> Union[np.ndarray, pd.Series, tuple, tuple[pd.Series, ...]]:
+    ) -> Union[np.ndarray, pd.Series, pd.DataFrame, tuple, tuple[pd.Series, ...], None]:
         """
         OHLCVデータから指定されたテクニカル指標を計算します。
 

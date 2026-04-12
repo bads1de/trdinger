@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -251,4 +251,4 @@ def harmonic_resonance(
     signal = hri_series.rolling(window=signal_length, min_periods=1).mean()
     signal.name = "HRI_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
-    return hri_series, signal
+    return cast(Tuple[pd.Series, pd.Series], (hri_series, signal))

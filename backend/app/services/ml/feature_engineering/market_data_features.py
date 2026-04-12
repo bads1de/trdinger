@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import numpy as np
 import pandas as pd
@@ -123,7 +123,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             s = roll.std(ddof=0)  # 元の実装に合わせる
             zscores = self.safe_ratio_calculation(
                 fr_series - m,
-                s,
+                cast(pd.Series, s),
                 fill_value=0.0,
             )
 
@@ -184,7 +184,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             return df
 
         # RSI (ベクトル化)
-        delta = pd.to_numeric(oi_s.diff(), errors="coerce").fillna(0.0)
+        delta = cast(pd.Series, pd.to_numeric(oi_s.diff(), errors="coerce")).fillna(0.0)
         gain = (delta.where(delta > 0, 0.0)).rolling(window=14, min_periods=1).mean()
         loss = (-delta.where(delta < 0, 0.0)).rolling(window=14, min_periods=1).mean()
         rs = gain / loss

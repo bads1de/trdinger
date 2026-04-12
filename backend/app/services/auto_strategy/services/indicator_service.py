@@ -48,7 +48,7 @@ class IndicatorCalculator:
     def calculate_indicator(
         self, data, indicator_type: str, parameters: Dict[str, Any]
     ) -> Union[
-        np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+        np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
     ]:
         """
         指標計算
@@ -65,7 +65,9 @@ class IndicatorCalculator:
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context=f"指標計算 ({indicator_type})", is_api_call=False)
-        def _calculate_indicator():
+        def _calculate_indicator() -> Union[
+            np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+        ]:
             # backtesting.pyのデータオブジェクトをDataFrameに変換
             if data is None:
                 raise ValueError(f"データオブジェクトがNoneです: {indicator_type}")
@@ -73,12 +75,23 @@ class IndicatorCalculator:
                 data.df, indicator_type, parameters
             )
 
-        return _calculate_indicator()
+        result = _calculate_indicator()
+        return cast(
+            Union[
+                np.ndarray,
+                pd.Series,
+                pd.DataFrame,
+                Tuple[np.ndarray, ...],
+                Tuple[pd.Series, ...],
+                None,
+            ],
+            result,
+        )
 
     def _calculate_indicator_from_dataframe(
         self, df: pd.DataFrame, indicator_type: str, parameters: Dict[str, Any]
     ) -> Union[
-        np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+        np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
     ]:
         """DataFrameを受けてインジケータを計算する共通処理"""
         if df is None:
@@ -95,7 +108,7 @@ class IndicatorCalculator:
     def _calculate_indicator_from_df(
         self, df: pd.DataFrame, indicator_type: str, parameters: Dict[str, Any]
     ) -> Union[
-        np.ndarray, pd.Series, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+        np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
     ]:
         """
         OHLCVのDataFrameを直接指定して指標を計算
@@ -169,8 +182,11 @@ class IndicatorCalculator:
                     base_index = strategy_instance.data.df.index
 
                     def _align_to_base(
-                        series: Union[pd.Series, np.ndarray],
+                        series: Union[pd.Series, np.ndarray, pd.DataFrame],
                     ) -> pd.Series:
+                        # DataFrameの場合は最初の列を取得
+                        if isinstance(series, pd.DataFrame):
+                            series = series.iloc[:, 0]
                         # NumPy配列の場合はSeriesに変換
                         if isinstance(series, np.ndarray):
                             # mtf_dfのインデックスを使用（長さが一致することを前提）

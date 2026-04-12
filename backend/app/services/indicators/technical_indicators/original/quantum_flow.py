@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -153,4 +153,4 @@ def quantum_flow(
     signal.name = "QUANTUM_FLOW_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
     flow_series = pd.Series(flow_values, index=close.index, name="QUANTUM_FLOW")
-    return flow_series, signal
+    return cast(Tuple[pd.Series, pd.Series], (flow_series, signal))

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -109,4 +109,4 @@ def fibonacci_cycle(
     signal = fibonacci_cycle_result.rolling(window=3).mean()
     signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"  # type: ignore[reportAttributeAccessIssue]
 
-    return fibonacci_cycle_result, signal
+    return cast(Tuple[pd.Series, pd.Series], (fibonacci_cycle_result, signal))

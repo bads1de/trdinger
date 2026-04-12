@@ -9,7 +9,7 @@ import hashlib
 import json
 import logging
 import math
-from typing import Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple, cast
 
 import numpy as np
 
@@ -35,11 +35,11 @@ class FitnessCalculator:
 
     def __init__(self) -> None:
         # メトリクスキャッシュ（同一 backtest_result の再計算を避ける）
-        self._metrics_cache: Dict[str, Dict[str, SerializableValue]] = {}
+        self._metrics_cache: Dict[str, Dict[str, float]] = {}
         self._cache_enabled = True
         self._recent_metrics_result: Optional[Dict[str, SerializableValue]] = None
         self._recent_metrics_signature: object = None
-        self._recent_metrics_value: Optional[Dict[str, SerializableValue]] = None
+        self._recent_metrics_value: Optional[Dict[str, float]] = None
 
     def clear_cache(self) -> None:
         """メトリクスキャッシュをクリアする。"""
@@ -133,6 +133,10 @@ class FitnessCalculator:
                 軽量に比較可能な形式で表現。
         """
         performance_metrics = backtest_result.get("performance_metrics") or {}
+        if isinstance(performance_metrics, dict):
+            perf_metrics_dict: Mapping[str, object] = performance_metrics
+        else:
+            perf_metrics_dict = {}
         equity_curve = backtest_result.get("equity_curve") or []
         trade_history = backtest_result.get("trade_history") or []
 
@@ -152,7 +156,7 @@ class FitnessCalculator:
             tuple(
                 (
                     key,
-                    self._normalize_signature_value(performance_metrics.get(key)),
+                    self._normalize_signature_value(perf_metrics_dict.get(key)),
                 )
                 for key in metric_keys
             ),
@@ -202,7 +206,7 @@ class FitnessCalculator:
 
     def extract_performance_metrics(
         self, backtest_result: Dict[str, SerializableValue]
-    ) -> Dict[str, SerializableValue]:
+    ) -> Dict[str, float]:
         """
         バックテスト結果からパフォーマンスメトリクスを抽出
 
@@ -230,15 +234,18 @@ class FitnessCalculator:
             return cached_metrics
 
         performance_metrics = backtest_result.get("performance_metrics") or {}
+        if not isinstance(performance_metrics, dict):
+            performance_metrics = {}
+        perf_metrics: Mapping[str, object] = performance_metrics
 
-        total_return = performance_metrics.get("total_return", 0.0)
-        sharpe_ratio = performance_metrics.get("sharpe_ratio", 0.0)
-        max_drawdown = performance_metrics.get("max_drawdown", 1.0)
-        win_rate = performance_metrics.get("win_rate", 0.0)
-        profit_factor = performance_metrics.get("profit_factor", 0.0)
-        sortino_ratio = performance_metrics.get("sortino_ratio", 0.0)
-        calmar_ratio = performance_metrics.get("calmar_ratio", 0.0)
-        total_trades = performance_metrics.get("total_trades", 0)
+        total_return = perf_metrics.get("total_return", 0.0)
+        sharpe_ratio = perf_metrics.get("sharpe_ratio", 0.0)
+        max_drawdown = perf_metrics.get("max_drawdown", 1.0)
+        win_rate = perf_metrics.get("win_rate", 0.0)
+        profit_factor = perf_metrics.get("profit_factor", 0.0)
+        sortino_ratio = perf_metrics.get("sortino_ratio", 0.0)
+        calmar_ratio = perf_metrics.get("calmar_ratio", 0.0)
+        total_trades = perf_metrics.get("total_trades", 0)
 
         def _sanitize_float(value: object, default: float) -> float:
             if value is None or not isinstance(value, (int, float)):
@@ -261,17 +268,19 @@ class FitnessCalculator:
             max_drawdown = 0.0
 
         equity_curve = backtest_result.get("equity_curve")
-        ulcer_index = calculate_ulcer_index(equity_curve) if equity_curve else 0.0
+        equity_curve_list = cast(list[dict[str, Any]], equity_curve) if isinstance(equity_curve, list) else []
+        ulcer_index = calculate_ulcer_index(equity_curve_list) if equity_curve_list else 0.0
 
         trade_history = backtest_result.get("trade_history")
+        trade_history_list = cast(list[dict[str, Any]], trade_history) if isinstance(trade_history, list) else []
         trade_penalty = (
             calculate_trade_frequency_penalty(
                 total_trades=total_trades,
                 start_date=backtest_result.get("start_date"),
                 end_date=backtest_result.get("end_date"),
-                trade_history=trade_history,
+                trade_history=trade_history_list,
             )
-            if trade_history
+            if trade_history_list
             else 0.0
         )
 
@@ -297,13 +306,13 @@ class FitnessCalculator:
         return metrics
 
     def meets_constraints(
-        self, metrics: Mapping[str, SerializableValue], config: "GAConfig"
+        self, metrics: Mapping[str, float], config: "GAConfig"
     ) -> bool:
         """単一目的評価で使う制約判定をまとめて返す。"""
         try:
             constraints = getattr(config, "fitness_constraints", {}) or {}
 
-            total_trades = int(metrics.get("total_trades", 0) or 0)
+            total_trades = int(metrics.get("total_trades", 0))
             if total_trades <= 0:
                 return False
 
@@ -312,17 +321,17 @@ class FitnessCalculator:
                 return False
 
             max_drawdown_limit = constraints.get("max_drawdown_limit", None)
-            max_drawdown = float(metrics.get("max_drawdown", 0.0) or 0.0)
+            max_drawdown = metrics.get("max_drawdown", 0.0)
             if isinstance(max_drawdown_limit, (float, int)) and max_drawdown > float(
                 max_drawdown_limit
             ):
                 return False
 
-            total_return = float(metrics.get("total_return", 0.0) or 0.0)
+            total_return = metrics.get("total_return", 0.0)
             if total_return < 0.0:
                 return False
 
-            sharpe_ratio = float(metrics.get("sharpe_ratio", 0.0) or 0.0)
+            sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
             min_sharpe_ratio = float(constraints.get("min_sharpe_ratio", 0.0) or 0.0)
             if sharpe_ratio < min_sharpe_ratio:
                 return False
@@ -351,7 +360,7 @@ class FitnessCalculator:
             sharpe_ratio = metrics["sharpe_ratio"]
             max_drawdown = metrics["max_drawdown"]
             win_rate = metrics["win_rate"]
-            total_trades = metrics["total_trades"]
+            total_trades = int(metrics["total_trades"])
             ulcer_index = metrics.get("ulcer_index", 0.0)
             trade_penalty = metrics.get("trade_frequency_penalty", 0.0)
 
@@ -367,27 +376,27 @@ class FitnessCalculator:
             fitness_weights = config.fitness_weights.copy()
 
             fitness = (
-                fitness_weights.get("total_return", 0.3) * total_return
-                + fitness_weights.get("sharpe_ratio", 0.4) * sharpe_ratio
-                + fitness_weights.get("max_drawdown", 0.2) * (1 - max_drawdown)
-                + fitness_weights.get("win_rate", 0.1) * win_rate
-                + fitness_weights.get("balance_score", 0.1) * balance_score
+                float(fitness_weights.get("total_return", 0.3)) * total_return
+                + float(fitness_weights.get("sharpe_ratio", 0.4)) * sharpe_ratio
+                + float(fitness_weights.get("max_drawdown", 0.2)) * (1 - max_drawdown)
+                + float(fitness_weights.get("win_rate", 0.1)) * win_rate
+                + float(fitness_weights.get("balance_score", 0.1)) * balance_score
             )
 
             ulcer_scale = 1.0
             trade_scale = 1.0
             if getattr(config, "dynamic_objective_reweighting", False):
                 dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
-                ulcer_scale = dynamic_scalars.get("ulcer_index", 1.0)
-                trade_scale = dynamic_scalars.get("trade_frequency_penalty", 1.0)
+                ulcer_scale = float(dynamic_scalars.get("ulcer_index", 1.0))
+                trade_scale = float(dynamic_scalars.get("trade_frequency_penalty", 1.0))
 
             fitness -= (
-                fitness_weights.get("ulcer_index_penalty", 0.0)
+                float(fitness_weights.get("ulcer_index_penalty", 0.0))
                 * ulcer_scale
                 * ulcer_index
             )
             fitness -= (
-                fitness_weights.get("trade_frequency_penalty", 0.0)
+                float(fitness_weights.get("trade_frequency_penalty", 0.0))
                 * trade_scale
                 * trade_penalty
             )
@@ -401,19 +410,19 @@ class FitnessCalculator:
     def _calculate_balance_score_fast(self, backtest_result: Dict[str, SerializableValue]) -> float:
         """ロング・ショートバランススコア計算（最適化版）。"""
         trade_history = backtest_result.get("trade_history")
-        if not trade_history:
+        if not isinstance(trade_history, list):
             return 0.5
 
         try:
             n_trades = len(trade_history)
             if n_trades < 50:
-                return self._calculate_balance_score_inline(trade_history)
-            return self._calculate_balance_score_numpy(trade_history)
+                return self._calculate_balance_score_inline(cast(list[dict[str, Any]], trade_history))
+            return self._calculate_balance_score_numpy(cast(list[dict[str, Any]], trade_history))
         except Exception as e:
             logger.debug(f"バランススコア計算エラー: {e}")
             return 0.5
 
-    def _calculate_balance_score_inline(self, trade_history: list) -> float:
+    def _calculate_balance_score_inline(self, trade_history: list[dict[str, Any]]) -> float:
         """小規模データ向けのインライン計算。"""
         long_count = 0
         short_count = 0
@@ -454,7 +463,7 @@ class FitnessCalculator:
         balance_score = 0.6 * trade_balance + 0.4 * profit_balance
         return float(max(0.0, min(1.0, balance_score)))
 
-    def _calculate_balance_score_numpy(self, trade_history: list) -> float:
+    def _calculate_balance_score_numpy(self, trade_history: list[dict[str, Any]]) -> float:
         """大規模データ向けの NumPy 版計算。"""
         trades_array = np.array(
             [
@@ -544,7 +553,7 @@ class FitnessCalculator:
         """
         try:
             metrics = self.extract_performance_metrics(backtest_result)
-            total_trades = metrics["total_trades"]
+            total_trades = int(metrics["total_trades"])
 
             min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
             if total_trades < min_trades_req:
@@ -580,7 +589,7 @@ class FitnessCalculator:
                     value = 0.0
 
                 dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
-                scale = dynamic_scalars.get(objective, 1.0)
+                scale = float(dynamic_scalars.get(objective, 1.0))
                 fitness_values.append(float(value) * scale)
 
             return tuple(fitness_values)

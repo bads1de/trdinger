@@ -16,7 +16,7 @@ Auto Strategy Config モジュール
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 # auto_strategy_settings.py は軽量（pydanticのみ）
 from .auto_strategy_settings import AutoStrategyConfig

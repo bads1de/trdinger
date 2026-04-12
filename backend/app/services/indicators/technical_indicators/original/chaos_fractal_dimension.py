@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -288,4 +288,4 @@ def chaos_fractal_dimension(
     signal = ctf_series.rolling(window=signal_length, min_periods=1).mean()
     signal.name = "CTFD_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
-    return ctf_series, signal
+    return cast(Tuple[pd.Series, pd.Series], (ctf_series, signal))

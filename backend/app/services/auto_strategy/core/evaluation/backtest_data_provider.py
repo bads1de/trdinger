@@ -48,7 +48,7 @@ class BacktestDataProvider:
         if parsed_range is None:
             return None
 
-        return pd.Timestamp(parsed_range[0]), pd.Timestamp(parsed_range[1])
+        return cast(pd.Timestamp, pd.Timestamp(parsed_range[0])), cast(pd.Timestamp, pd.Timestamp(parsed_range[1]))
 
     @staticmethod
     def _extract_worker_data(

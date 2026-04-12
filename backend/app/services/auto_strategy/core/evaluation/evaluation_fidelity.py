@@ -136,8 +136,8 @@ def adjust_backtest_config_for_fidelity(
         return adjusted
 
     coarse_start = end_ts - coarse_duration
-    adjusted["start_date"] = _format_timestamp_like_input(coarse_start, start_date)
-    adjusted["end_date"] = _format_timestamp_like_input(end_ts, end_date)
+    adjusted["start_date"] = _format_timestamp_like_input(coarse_start, start_date)  # type: ignore[arg-type]
+    adjusted["end_date"] = _format_timestamp_like_input(end_ts, end_date)  # type: ignore[arg-type]
     return adjusted
 
 

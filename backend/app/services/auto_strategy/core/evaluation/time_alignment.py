@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any
-
+from typing import Any, cast
 import pandas as pd
+
+
+def _is_nat(value: Any) -> bool:
+    """Check if a Timestamp is NaT."""
+    return bool(pd.isna(value))
 
 
 def _get_index_timezone(index: pd.Index) -> object | None:
@@ -53,16 +57,20 @@ def align_timestamp_to_tz(value: Any, target_tz: Any | None) -> pd.Timestamp:
     """
     timestamp = pd.Timestamp(value)
 
+    # NaT check
+    if _is_nat(timestamp):
+        return cast(pd.Timestamp, timestamp)  # type: ignore[return-value]
+
     if target_tz is None:
         if timestamp.tzinfo is not None:
-            return timestamp.tz_localize(None)
-        return timestamp
+            return timestamp.tz_localize(None)  # type: ignore[return-value]
+        return timestamp  # type: ignore[return-value]
 
     if timestamp.tzinfo is None:
-        return timestamp.tz_localize(target_tz)
+        return timestamp.tz_localize(target_tz)  # type: ignore[return-value]
     if timestamp.tzinfo != target_tz:
-        return timestamp.tz_convert(target_tz)
-    return timestamp
+        return timestamp.tz_convert(target_tz)  # type: ignore[return-value]
+    return timestamp  # type: ignore[return-value]
 
 
 def align_timestamp_to_reference(value: Any, reference: Any) -> pd.Timestamp:
@@ -80,6 +88,11 @@ def align_timestamp_to_reference(value: Any, reference: Any) -> pd.Timestamp:
         参照値の timezone を使用して、値の timezone を変換します。
     """
     reference_timestamp = pd.Timestamp(reference)
+
+    # NaT check
+    if _is_nat(reference_timestamp):
+        return align_timestamp_to_tz(value, None)
+
     return align_timestamp_to_tz(value, reference_timestamp.tzinfo)
 
 

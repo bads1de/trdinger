@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -114,4 +114,4 @@ def adaptive_entropy(
         name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}",
     )
 
-    return oscillator, signal, ratio
+    return cast(Tuple[pd.Series, pd.Series, pd.Series], (oscillator, signal, ratio))

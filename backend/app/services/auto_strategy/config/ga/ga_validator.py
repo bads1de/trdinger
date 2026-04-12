@@ -8,10 +8,15 @@ GAConfigを含む設定オブジェクトの妥当性を検証します。
 import logging
 from typing import Any, List, Tuple
 
-from .ga_config import GAConfig, _read_validation_rules
+from .ga_config import GAConfig
 from ..helpers import validate_robustness_regime_window
 
 logger = logging.getLogger(__name__)
+
+
+def _read_validation_rules(config: Any) -> dict:
+    """設定オブジェクトから validation_rules 辞書を取得する。"""
+    return getattr(config, "validation_rules", {})
 
 
 class ConfigValidator:

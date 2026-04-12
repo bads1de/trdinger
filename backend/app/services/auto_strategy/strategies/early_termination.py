@@ -10,6 +10,7 @@ import logging
 from math import ceil
 from typing import Any, Optional
 
+import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
@@ -68,7 +69,7 @@ class StrategyEarlyTerminationController:
             return None
 
         try:
-            return pd.Timestamp(value)
+            return pd.Timestamp(value)  # type: ignore[return-value]
         except Exception:
             logger.warning("evaluation_start の解析に失敗しました: %s", value)
             return None
@@ -100,7 +101,7 @@ class StrategyEarlyTerminationController:
             current_time,
         )
 
-        return current_time >= evaluation_start
+        return current_time >= evaluation_start  # type: ignore[operator]
 
     def initialize_evaluation_progress_bounds(
         self,
@@ -134,7 +135,7 @@ class StrategyEarlyTerminationController:
         evaluation_start = getattr(self.strategy, "_evaluation_start", None)
         if evaluation_start is not None:
             aligned_start = align_timestamp_to_index(evaluation_start, full_index)
-            start_index = int(full_index.searchsorted(aligned_start, side="left"))
+            start_index = int(full_index.searchsorted(np.array([aligned_start]), side="left"))
 
         evaluation_total_bars = max(1, len(full_index) - start_index)
         return full_index, start_index, evaluation_total_bars
@@ -161,12 +162,15 @@ class StrategyEarlyTerminationController:
             current_index = getattr(self.strategy.data, "index", None)
             if current_index is not None and len(current_index) > 0:
                 try:
+                    current_ts = pd.Timestamp(current_index[-1])
+                    if pd.isna(current_ts):
+                        raise ValueError("NaT timestamp in index")
                     current_time = self.align_timestamp_to_index_tz(
-                        pd.Timestamp(current_index[-1]),
+                        current_ts,  # type: ignore[arg-type]
                         evaluation_index,
                     )
                     current_position = int(
-                        evaluation_index.searchsorted(current_time, side="right")
+                        evaluation_index.searchsorted(np.array([current_time]), side="right")
                     )
                     evaluation_start_index = int(
                         getattr(self.strategy, "_evaluation_start_index", 0) or 0

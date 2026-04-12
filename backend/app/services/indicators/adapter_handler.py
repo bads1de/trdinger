@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import inspect
 import logging
-from typing import Dict, Optional, Tuple, Union
+from collections.abc import Callable
+from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -43,7 +44,7 @@ class AdapterHandler:
         indicator_type: str,
         params: Dict[str, object],
         config: IndicatorConfig,
-    ) -> pd.DataFrame | None:
+    ) -> np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None:
         """
         アダプター関数を使用した指標計算
 
@@ -68,7 +69,7 @@ class AdapterHandler:
                 f"Adapter function is not available for indicator {indicator_type}"
             )
 
-        adapter_function = config.adapter_function
+        adapter_function = cast(Callable[..., Any], config.adapter_function)
 
         required_data = self._prepare_adapter_data(df, config)
         converted_params, required_data = self._map_adapter_params(
@@ -76,8 +77,11 @@ class AdapterHandler:
         )
         all_args = {**required_data, **converted_params}
 
-        return self._call_adapter_function(
-            adapter_function, all_args, indicator_type, config
+        return cast(
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            self._call_adapter_function(
+                adapter_function, all_args, indicator_type, config
+            ),
         )
 
     def _prepare_adapter_data(
@@ -154,11 +158,11 @@ class AdapterHandler:
 
     def _call_adapter_function(
         self,
-        adapter_function: object,
-        all_args: Dict[str, object],
+        adapter_function: Callable[..., Any],
+        all_args: Dict[str, Any],
         indicator_type: str,
         config: IndicatorConfig,
-    ) -> object:
+    ) -> np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None:
         """
         アダプター関数を呼び出し
 
@@ -174,7 +178,7 @@ class AdapterHandler:
         Returns:
             Any: 整列・変換された計算結果
         """
-        sig = inspect.signature(adapter_function)
+        sig = inspect.signature(cast(Callable[..., Any], adapter_function))
 
         series_data = {
             k: v
@@ -199,8 +203,11 @@ class AdapterHandler:
             sig, all_args, series_data, scalar_params
         )
 
-        result = self._execute_adapter_function(
-            adapter_function, assigned_params, indicator_type, all_args
+        result = cast(
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            self._execute_adapter_function(
+                adapter_function, assigned_params, indicator_type, all_args
+            ),
         )
 
         if result is None:
@@ -210,9 +217,15 @@ class AdapterHandler:
                 fallback_input, {"function": indicator_type}
             )
 
-        result = self._align_adapter_result(result, reference_index)
+        result = cast(
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            self._align_adapter_result(result, reference_index),
+        )
 
-        return self._convert_adapter_result(result, config)
+        return cast(
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            self._convert_adapter_result(result, config),
+        )
 
     def _assign_parameters(
         self,
@@ -245,7 +258,7 @@ class AdapterHandler:
         """
         assigned_params: Dict[str, Any] = {}
 
-        for param_name, param in sig.parameters.items():
+        for param_name, _param in sig.parameters.items():
             param_lower = param_name.lower()
             val = None
 
@@ -282,7 +295,7 @@ class AdapterHandler:
             if val is not None:
                 assigned_params[param_name] = val
 
-        for k, v in all_args.items():
+        for k, v in all_args.items():  # noqa: B007
             if k not in assigned_params and k in sig.parameters:
                 assigned_params[k] = v
 
@@ -290,7 +303,7 @@ class AdapterHandler:
 
     def _execute_adapter_function(
         self,
-        adapter_function: object,
+        adapter_function: Callable[..., Any],
         assigned_params: Dict[str, object],
         indicator_type: str,
         all_args: Dict[str, object],
@@ -309,7 +322,7 @@ class AdapterHandler:
         Returns:
             Any: 実行結果（失敗時はNone）
         """
-        sig = inspect.signature(adapter_function)
+        sig = inspect.signature(cast(Callable[..., Any], adapter_function))
         try:
             valid_params = {
                 k: v for k, v in assigned_params.items() if k in sig.parameters
@@ -329,7 +342,7 @@ class AdapterHandler:
 
     def _align_adapter_result(
         self, result: object, reference_index: pd.Index | None
-    ) -> pd.DataFrame | pd.Series | None:
+    ) -> np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None:
         """
         入力 index に合わせて adapter の結果を再整列する
 
@@ -341,10 +354,13 @@ class AdapterHandler:
             reference_index: 参照インデックス（入力DataFrameのインデックス）
 
         Returns:
-            pd.DataFrame | pd.Series | None: 整列された結果（インデックスが揃えられたSeries/DataFrame）
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None: 整列された結果（インデックスが揃えられたSeries/DataFrame/タプル）
         """
         if reference_index is None:
-            return result  # type: ignore[return-value]
+            return cast(
+                np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+                result,
+            )
 
         if isinstance(result, pd.Series):
             return self._align_series_like_result(result, reference_index)
@@ -353,11 +369,21 @@ class AdapterHandler:
             return self._align_series_like_result(result, reference_index)
 
         if isinstance(result, tuple):
-            return tuple(
-                self._align_adapter_result(item, reference_index) for item in result
+            return cast(
+                tuple[np.ndarray, ...],
+                tuple(
+                    cast(
+                        np.ndarray | pd.DataFrame | pd.Series | None,
+                        self._align_adapter_result(item, reference_index),
+                    )
+                    for item in result
+                ),
             )
 
-        return result
+        return cast(
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            result,
+        )
 
     def _align_series_like_result(
         self,

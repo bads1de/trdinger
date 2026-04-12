@@ -22,7 +22,7 @@ pandas-ta の volatility カテゴリに対応。
 """
 
 import logging
-from typing import Tuple, cast
+from typing import Any, cast
 
 import pandas as pd
 import pandas_ta_classic as ta
@@ -62,11 +62,14 @@ class VolatilityIndicators:
                 logger.error("ATR: Calculation returned None - returning NaN series")
             return result
 
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            compute,
-            min_data_length=length,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                compute,
+                min_data_length=length,
+            ),
         )
 
     @staticmethod
@@ -78,36 +81,39 @@ class VolatilityIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Normalized Average True Range"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.natr(high=high, low=low, close=close, length=length),
-            min_data_length=length,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.natr(high=high, low=low, close=close, length=length),
+                min_data_length=length,
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def bbands(
         data: pd.Series, length: int = 20, std: float = 2.0
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """ボリンジャーバンド"""
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             length,
             lambda: ta.bbands(data, length=length, std=std),
             fallback_factory=lambda: cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(data, 3),
             ),
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
         if result is None:
             logger.error("BBands: Calculation returned None - returning NaN series")
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(data, 3),
             )
 
@@ -135,17 +141,17 @@ class VolatilityIndicators:
         scalar: float = 2.0,
         mamode: str = "sma",
         std_dev: bool = False,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Keltner Channels: returns (upper, middle, lower)"""
 
-        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
             """計算失敗時に NaN の Series を返すヘルパー関数"""
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(close, 3),
             )
 
-        df = run_multi_series_indicator(
+        df: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             period,
             lambda: ta.kc(
@@ -160,9 +166,9 @@ class VolatilityIndicators:
         )
 
         if isinstance(df, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], df)
+            return cast(tuple[pd.Series, pd.Series, pd.Series], df)
 
-        if df.empty:
+        if hasattr(df, "empty") and getattr(df, "empty", False):
             return nan_result()
 
         # カラム名: KC{mamode[0]}_{length}_{scalar}
@@ -192,16 +198,16 @@ class VolatilityIndicators:
         high: pd.Series,
         low: pd.Series,
         length: int = 20,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Donchian Channels: returns (upper, middle, lower)"""
 
-        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(high, 3),
             )
 
-        df = run_multi_series_indicator(
+        df: Any = run_multi_series_indicator(
             {"high": high, "low": low},
             length,
             lambda: ta.donchian(
@@ -214,9 +220,9 @@ class VolatilityIndicators:
         )
 
         if isinstance(df, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], df)
+            return cast(tuple[pd.Series, pd.Series, pd.Series], df)
 
-        if df.empty:
+        if hasattr(df, "empty") and getattr(df, "empty", False):
             return nan_result()
 
         # カラム名: DCU_{length}_{length}, DCM_{length}_{length}, DCL_{length}_{length}
@@ -236,16 +242,16 @@ class VolatilityIndicators:
         low: pd.Series,
         close: pd.Series,
         period: int = 20,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Acceleration Bands: returns (upper, middle, lower)"""
 
-        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(close, 3),
             )
 
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             period,
             lambda: ta.accbands(high=high, low=low, close=close, length=period),
@@ -253,9 +259,9 @@ class VolatilityIndicators:
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
-        if result.empty:
+        if hasattr(result, "empty") and getattr(result, "empty", False):
             return nan_result()
 
         # カラム名: ACCBU_{length}, ACCBM_{length}, ACCBL_{length}
@@ -272,7 +278,10 @@ class VolatilityIndicators:
     @handle_pandas_ta_errors
     def ui(data: pd.Series, period: int = 14) -> pd.Series:
         """Ulcer Index"""
-        return run_series_indicator(data, None, lambda: ta.ui(data, window=period))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, None, lambda: ta.ui(data, window=period)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -289,20 +298,23 @@ class VolatilityIndicators:
         offset: int | None = None,
     ) -> pd.Series:
         """Relative Volatility Index"""
-        return run_multi_series_indicator(
-            {"close": close, "high": high, "low": low},
-            length,
-            lambda: ta.rvi(
-                close=close,
-                high=high,
-                low=low,
-                length=length,
-                scalar=scalar,
-                refined=refined,
-                thirds=thirds,
-                mamode=mamode,
-                drift=drift,
-                offset=offset,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "high": high, "low": low},
+                length,
+                lambda: ta.rvi(
+                    close=close,
+                    high=high,
+                    low=low,
+                    length=length,
+                    scalar=scalar,
+                    refined=refined,
+                    thirds=thirds,
+                    mamode=mamode,
+                    drift=drift,
+                    offset=offset,
+                ),
             ),
         )
 
@@ -315,10 +327,13 @@ class VolatilityIndicators:
         drift: int = 1,
     ) -> pd.Series:
         """True Range"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            None,
-            lambda: ta.true_range(high=high, low=low, close=close, drift=drift),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                None,
+                lambda: ta.true_range(high=high, low=low, close=close, drift=drift),
+            ),
         )
 
     @staticmethod
@@ -346,10 +361,13 @@ class VolatilityIndicators:
         if fast <= 0:
             raise ValueError("fast must be positive")
 
-        return run_multi_series_indicator(
-            {"high": high, "low": low},
-            slow,
-            lambda: ta.massi(high=high, low=low, fast=fast, slow=slow),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low},
+                slow,
+                lambda: ta.massi(high=high, low=low, fast=fast, slow=slow),
+            ),
         )
 
     @staticmethod
@@ -360,26 +378,26 @@ class VolatilityIndicators:
         close: pd.Series,
         length: int = 5,
         atr_length: int = 15,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """Aberration"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             max(length, atr_length),
             lambda: ta.aberration(
                 high=high, low=low, close=close, length=length, atr_length=atr_length
             ),
             fallback_factory=lambda: cast(
-                Tuple[pd.Series, pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(close, 4),
             ),
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
 
-        if result.empty:
+        if hasattr(result, "empty") and getattr(result, "empty", False):
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(close, 4),
             )
 
@@ -398,24 +416,24 @@ class VolatilityIndicators:
         na: int = 2,
         nb: int = 3,
         nc: int = 4,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Holt-Winter Channel"""
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             close,
             max(na, nb, nc),
             lambda: ta.hwc(close=close, na=na, nb=nb, nc=nc),
             fallback_factory=lambda: cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(close, 3),
             ),
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
-        if result.empty:
+        if hasattr(result, "empty") and getattr(result, "empty", False):
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(close, 3),
             )
 
@@ -430,10 +448,13 @@ class VolatilityIndicators:
         close: pd.Series,
     ) -> pd.Series:
         """Price Distance"""
-        return run_multi_series_indicator(
-            {"open_": open_, "high": high, "low": low, "close": close},
-            None,
-            lambda: ta.pdist(open_=open_, high=high, low=low, close=close),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"open_": open_, "high": high, "low": low, "close": close},
+                None,
+                lambda: ta.pdist(open_=open_, high=high, low=low, close=close),
+            ),
         )
 
     @staticmethod
@@ -446,9 +467,9 @@ class VolatilityIndicators:
         short: int = 2,
         mamode: str = "ema",
         drift: int = 1,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """Thermo"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low},
             length,
             lambda: ta.thermo(
@@ -461,17 +482,17 @@ class VolatilityIndicators:
                 drift=drift,
             ),
             fallback_factory=lambda: cast(
-                Tuple[pd.Series, pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(high, 4),
             ),
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
 
-        if result.empty:
+        if hasattr(result, "empty") and getattr(result, "empty", False):
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(high, 4),
             )
 

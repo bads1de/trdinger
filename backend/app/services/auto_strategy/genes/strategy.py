@@ -196,6 +196,7 @@ class StrategyGene:
 
     def clone(self, keep_id: bool = False) -> "StrategyGene":
         """軽量コピーを作成。"""
+        from typing import cast
         from .genetic_utils import GeneticUtils
 
         cloned_fields = {
@@ -203,7 +204,7 @@ class StrategyGene:
             for field_name in self.clone_field_names()
         }
         cloned_fields["id"] = self.id if keep_id else str(uuid.uuid4())
-        return type(self)(**cloned_fields)
+        return type(self)(**cast(Dict[str, Any], cloned_fields))  # type: ignore[arg-type]
 
     def mutate(self, config: Any, mutation_rate: float = 0.1) -> "StrategyGene":
         """戦略遺伝子の突然変異を実行する。"""

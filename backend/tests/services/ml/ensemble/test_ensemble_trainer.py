@@ -146,6 +146,22 @@ class TestEnsembleTrainer:
             meta = trainer._get_model_specific_metadata("m")
             assert "meta_model_path" not in meta
 
+    def test_save_model_uses_ensemble_model(self, trainer):
+        """保存時に ensemble_model をそのまま渡すことを確認する"""
+        trainer.is_trained = True
+        trainer.ensemble_model = MagicMock()
+        trainer.feature_columns = ["f1", "f2"]
+        trainer._model = None
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
+            return_value="/saved/path",
+        ) as mock_save:
+            path = trainer.save_model("ensemble_model")
+
+        assert path == "/saved/path"
+        assert mock_save.call_args.kwargs["model"] is trainer.ensemble_model
+
     def test_load_model_success(self, trainer):
         """モデル読み込みのテスト"""
         with patch('app.services.ml.trainers.base_ml_trainer.BaseMLTrainer.load_model', return_value=True):

@@ -7,7 +7,7 @@ MLトレーニングの管理と自動化機能を提供します。
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .bg_task_orchestration_service import (

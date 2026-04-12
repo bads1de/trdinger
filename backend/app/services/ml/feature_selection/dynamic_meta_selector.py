@@ -49,10 +49,10 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
             linkage_matrix, 1 - self.clustering_threshold, criterion="distance"
         )
         clusters: Dict[int, List[str]] = {}
-        for i, label in enumerate(cluster_labels):
+        for _i, label in enumerate(cluster_labels):
             if label not in clusters:
                 clusters[label] = []
-            clusters[label].append(X.columns[i])
+            clusters[label].append(X.columns[_i])
         return clusters
 
     def _shadow_filtering(self, X: pd.DataFrame, y: pd.Series) -> np.ndarray:
@@ -73,7 +73,7 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
 
         rng = np.random.RandomState(self.random_state)
 
-        for i in range(self.n_shadow_iterations):
+        for _ in range(self.n_shadow_iterations):
             # シャドウ特徴量の生成（各列を独立にシャッフル）
             # Ensure a writable copy of values is created
             X_shadow = np.array(X.values, copy=True)
@@ -138,7 +138,7 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         mi_series = pd.Series(mi_scores, index=X.columns)
 
         representative_features = []
-        for cluster_id, features in clusters.items():
+        for _cluster_id, features in clusters.items():
             # primary_proba が含まれる場合は、無条件でそれを代表にする
             if "primary_proba" in features:
                 representative_features.append("primary_proba")
@@ -148,6 +148,8 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
                 representative_features.append(best_feature)
 
         X_reduced = X[representative_features]
+        if isinstance(X_reduced, pd.Series):
+            X_reduced = X_reduced.to_frame()
 
         # 3. シャドウ特徴量によるノイズ除去
         support_mask_reduced = self._shadow_filtering(X_reduced, y)
@@ -196,5 +198,5 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         # NumPy配列の場合はマスクを適用
         return X[:, self.support_mask_]
 
-    def _get_support_mask(self):
+    def _get_support_mask(self) -> np.ndarray | None:  # type: ignore[override]
         return self.support_mask_

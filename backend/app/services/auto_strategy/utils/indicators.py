@@ -21,7 +21,7 @@ def indicators_by_category(category: str) -> List[str]:
     seen = set()
     results: List[str] = []
 
-    for name, cfg in indicator_registry.get_all_indicators().items():
+    for _name, cfg in indicator_registry.get_all_indicators().items():
         try:
             if cfg and getattr(cfg, "category", None) == category:
                 # 主名称を追加

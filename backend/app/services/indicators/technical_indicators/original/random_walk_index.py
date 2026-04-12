@@ -56,9 +56,9 @@ def rwi(
         )
         return nan_high, nan_low
 
-    high_f = high.astype(float)
-    low_f = low.astype(float)
-    close_f = close.astype(float)
+    high_f = pd.Series(high.values.astype(float), index=high.index, name=high.name)
+    low_f = pd.Series(low.values.astype(float), index=low.index, name=low.name)
+    close_f = pd.Series(close.values.astype(float), index=close.index, name=close.name)
 
     true_range = _calculate_true_range(high_f, low_f, close_f)
 
@@ -66,7 +66,8 @@ def rwi(
     low_candidates: list[pd.Series] = []
 
     for period in range(1, length + 1):
-        atr = true_range.rolling(window=period, min_periods=period).mean().shift(1)
+        atr_mean = pd.Series(true_range.rolling(window=period, min_periods=period).mean(), index=true_range.index)
+        atr = atr_mean.shift(1)
         scale = np.sqrt(float(period))
 
         with np.errstate(divide="ignore", invalid="ignore"):

@@ -60,7 +60,7 @@ class FRMerger:
                     left_index=True,
                     right_index=True,
                     direction="backward",
-                    tolerance=tolerance,
+                    tolerance=tolerance,  # type: ignore[arg-type]
                 )
 
             else:

@@ -8,7 +8,6 @@ ML共通ユーティリティモジュール
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any
 
 from .base_resource_manager import BaseResourceManager, CleanupLevel
 from .exceptions import (

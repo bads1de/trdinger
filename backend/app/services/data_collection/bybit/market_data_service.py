@@ -139,7 +139,7 @@ class BybitMarketDataService(BybitService):
             if not isinstance(candle, list) or len(candle) != 6:
                 raise ValueError(f"ローソク足データ[{i}]の形式が無効です: {candle}")
 
-            timestamp, open_price, high, low, close, volume = candle
+            _timestamp, open_price, high, low, close, volume = candle
 
             # 数値型の検証
             if not all(isinstance(x, (int, float)) for x in candle):

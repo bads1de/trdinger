@@ -52,7 +52,7 @@ pandas-ta の momentum カテゴリに対応。
 - TD Sequential
 """
 
-from typing import Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -86,7 +86,10 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def rsi(data: pd.Series, period: int = 14) -> pd.Series:
         """相対力指数"""
-        return run_series_indicator(data, period, lambda: ta.rsi(data, window=period))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, period, lambda: ta.rsi(data, window=period)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -97,15 +100,18 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """MACD"""
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             None,
             lambda: ta.macd(data, fast=fast, slow=slow, signal=signal),
-            fallback_factory=lambda: create_nan_series_bundle(data, 3),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(data, 3),
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
         return (
             result.iloc[:, 0],
@@ -122,15 +128,18 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Price Oscillator"""
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             None,
             lambda: ta.ppo(data, fast=fast, slow=slow, signal=signal),
-            fallback_factory=lambda: create_nan_series_bundle(data, 3),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(data, 3),
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
         return (
             result.iloc[:, 0].to_numpy(),
@@ -149,7 +158,7 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """TRIX (Triple Exponential Average)"""
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             length,
             lambda: ta.trix(
@@ -183,7 +192,7 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> Tuple[pd.Series, pd.Series]:
         """Directional Movement"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low},
             length,
             lambda: ta.dm(
@@ -196,14 +205,18 @@ class MomentumIndicators:
                 offset=offset,
             ),
             min_data_length=length,
-            fallback_factory=lambda: create_nan_series_bundle(high, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
-        if result is None or result.empty:
-            return create_nan_series_bundle(high, 2)
+        if result is None or (
+            hasattr(result, "empty") and getattr(result, "empty", False)
+        ):
+            return cast(tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2))
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -216,10 +229,13 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Efficiency Ratio"""
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.er(close=close, length=length, drift=drift, offset=offset),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.er(close=close, length=length, drift=drift, offset=offset),
+            ),
         )
 
     @staticmethod
@@ -231,10 +247,13 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Laguerre RSI"""
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.lrsi(close=close, length=length, gamma=gamma, offset=offset),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.lrsi(close=close, length=length, gamma=gamma, offset=offset),
+            ),
         )
 
     @staticmethod
@@ -245,10 +264,13 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Projection Oscillator"""
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.po(close=close, length=length, offset=offset),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.po(close=close, length=length, offset=offset),
+            ),
         )
 
     @staticmethod
@@ -262,7 +284,7 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """TRIX Histogram"""
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             close,
             length,
             lambda: ta.trixh(
@@ -273,7 +295,10 @@ class MomentumIndicators:
                 drift=drift,
                 offset=offset,
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(close, 3),
+            ),
         )
 
         if isinstance(result, tuple):
@@ -292,7 +317,7 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Volume Weighted MACD"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"close": close, "volume": volume},
             max(fast, slow, signal),
             lambda: ta.vwmacd(
@@ -303,7 +328,10 @@ class MomentumIndicators:
                 signal=signal,
                 offset=offset,
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(close, 3),
+            ),
         )
 
         if isinstance(result, tuple):
@@ -335,17 +363,19 @@ class MomentumIndicators:
         Returns:
             Tuple[%K, %D]
         """
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             k,
             lambda: ta.stoch(
                 high=high, low=low, close=close, length=k, smoothd=d, smoothk=smooth_k
             ),
-            fallback_factory=lambda: create_nan_series_bundle(high, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -379,7 +409,7 @@ class MomentumIndicators:
         if stoch_length <= 0 or k <= 0 or d <= 0:
             raise ValueError("stoch_length, k, and d must be positive")
 
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             rsi_length,
             lambda: ta.stochrsi(
@@ -390,11 +420,13 @@ class MomentumIndicators:
                 d=d,
             ),
             min_data_length=min_required_length,
-            fallback_factory=lambda: create_nan_series_bundle(data, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(data, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
         # pandas-taの返り値は通常 STOCHRSIk_*, STOCHRSId_* の2列
         return (result.iloc[:, 0], result.iloc[:, 1])
@@ -420,10 +452,15 @@ class MomentumIndicators:
         Returns:
             Williams %R の値（-100 から 0 の範囲）
         """
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.willr(high=high, low=low, close=close, length=length, **kwargs),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.willr(
+                    high=high, low=low, close=close, length=length, **kwargs
+                ),
+            ),
         )
 
     @staticmethod
@@ -446,10 +483,13 @@ class MomentumIndicators:
         Returns:
             CCI の値
         """
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.cci(high=high, low=low, close=close, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.cci(high=high, low=low, close=close, length=length),
+            ),
         )
 
     @staticmethod
@@ -460,8 +500,11 @@ class MomentumIndicators:
         talib: bool | None = None,
     ) -> pd.Series:
         """チャンデ・モメンタム・オシレーター"""
-        return run_series_indicator(
-            data, length, lambda: ta.cmo(data, length=length, talib=talib)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data, length, lambda: ta.cmo(data, length=length, talib=talib)
+            ),
         )
 
     @staticmethod
@@ -481,7 +524,7 @@ class MomentumIndicators:
         factor_base = max(d1, d2)
         factor = max(0.1, min(factor_base / max(cycle, 1), 0.9))
 
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             cycle,
             lambda: ta.stc(
@@ -512,11 +555,13 @@ class MomentumIndicators:
         if signal <= 0:
             raise ValueError(f"signal must be positive: {signal}")
 
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low},
             length,
             lambda: ta.fisher(high=high, low=low, length=length, signal=signal),
-            fallback_factory=lambda: create_nan_series_bundle(high, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+            ),
         )
 
         if isinstance(result, tuple):
@@ -540,7 +585,7 @@ class MomentumIndicators:
     ) -> Tuple[pd.Series, pd.Series]:
         """Know Sure Thing"""
         max_period = max(roc1, roc2, roc3, roc4, sma1, sma2, sma3, sma4, signal)
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             max_period,
             lambda: ta.kst(
@@ -555,11 +600,13 @@ class MomentumIndicators:
                 sma4=sma4,
                 signal=signal,
             ),
-            fallback_factory=lambda: create_nan_series_bundle(data, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(data, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -578,13 +625,19 @@ class MomentumIndicators:
         elif data is None:
             raise ValueError("Either 'data' or 'close' must be provided")
 
-        return run_series_indicator(data, length, lambda: ta.roc(data, window=length))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, length, lambda: ta.roc(data, window=length)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def mom(data: pd.Series, length: int = 10) -> pd.Series:
         """モメンタム"""
-        return run_series_indicator(data, length, lambda: ta.mom(data, length=length))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, length, lambda: ta.mom(data, length=length)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -595,7 +648,7 @@ class MomentumIndicators:
             """
             QQE の計算ロジック。
             """
-            result = ta.qqe(data, length=length)
+            result: Any = ta.qqe(data, length=length)
 
             if isinstance(result, pd.DataFrame):
                 # QQEの主要な列を返す（通常はRSIMA列）
@@ -612,7 +665,7 @@ class MomentumIndicators:
                 rsi_result if rsi_result is not None else create_nan_series_like(data)
             )
 
-        return run_series_indicator(data, length, compute)
+        return cast(pd.Series, run_series_indicator(data, length, compute))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -622,10 +675,13 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Correlation Trend Indicator"""
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.cti(close=close, length=length, offset=offset),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.cti(close=close, length=length, offset=offset),
+            ),
         )
 
     @staticmethod
@@ -645,22 +701,25 @@ class MomentumIndicators:
         use_tr: bool = True,
     ) -> pd.Series | pd.DataFrame:
         """Squeeze Pro"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            max(bb_length, kc_length),
-            lambda: ta.squeeze_pro(
-                high=high,
-                low=low,
-                close=close,
-                bb_length=bb_length,
-                bb_std=bb_std,
-                kc_length=kc_length,
-                kc_scalar_wide=kc_scalar_wide,
-                kc_scalar_normal=kc_scalar_normal,
-                kc_scalar_narrow=kc_scalar_narrow,
-                mom_length=mom_length,
-                mom_smooth=mom_smooth,
-                use_tr=use_tr,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                max(bb_length, kc_length),
+                lambda: ta.squeeze_pro(
+                    high=high,
+                    low=low,
+                    close=close,
+                    bb_length=bb_length,
+                    bb_std=bb_std,
+                    kc_length=kc_length,
+                    kc_scalar_wide=kc_scalar_wide,
+                    kc_scalar_normal=kc_scalar_normal,
+                    kc_scalar_narrow=kc_scalar_narrow,
+                    mom_length=mom_length,
+                    mom_smooth=mom_smooth,
+                    use_tr=use_tr,
+                ),
             ),
         )
 
@@ -678,10 +737,13 @@ class MomentumIndicators:
         if fast >= slow:
             raise ValueError("fast period must be less than slow period")
 
-        return run_series_indicator(
-            data,
-            slow,
-            lambda: ta.apo(data, fast=fast, slow=slow, ma_mode=ma_mode),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                slow,
+                lambda: ta.apo(data, fast=fast, slow=slow, ma_mode=ma_mode),
+            ),
         )
 
     @staticmethod
@@ -700,7 +762,7 @@ class MomentumIndicators:
         if drift <= 0:
             raise ValueError("drift must be positive")
 
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             max_period,
             lambda: ta.tsi(
@@ -712,11 +774,13 @@ class MomentumIndicators:
                 mamode=mamode,
                 drift=drift,
             ),
-            fallback_factory=lambda: create_nan_series_bundle(data, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(data, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -729,10 +793,13 @@ class MomentumIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Pretty Good Oscillator"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.pgo(high=high, low=low, close=close, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.pgo(high=high, low=low, close=close, length=length),
+            ),
         )
 
     @staticmethod
@@ -757,11 +824,14 @@ class MomentumIndicators:
         Returns:
             PSL の値
         """
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.psl(
-                close=close, open_=open_, length=length, scalar=scalar, drift=drift
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.psl(
+                    close=close, open_=open_, length=length, scalar=scalar, drift=drift
+                ),
             ),
         )
 
@@ -780,20 +850,23 @@ class MomentumIndicators:
         use_tr: bool = True,
     ) -> pd.Series:
         """Squeeze"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            max(bb_length, kc_length),
-            lambda: ta.squeeze(
-                high=high,
-                low=low,
-                close=close,
-                bb_window=bb_length,
-                bb_std=bb_std,
-                kc_window=kc_length,
-                kc_scalar=kc_scalar,
-                mom_window=mom_length,
-                mom_smooth=mom_smooth,
-                use_tr=use_tr,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                max(bb_length, kc_length),
+                lambda: ta.squeeze(
+                    high=high,
+                    low=low,
+                    close=close,
+                    bb_window=bb_length,
+                    bb_std=bb_std,
+                    kc_window=kc_length,
+                    kc_scalar=kc_scalar,
+                    mom_window=mom_length,
+                    mom_smooth=mom_smooth,
+                    use_tr=use_tr,
+                ),
             ),
         )
 
@@ -808,11 +881,14 @@ class MomentumIndicators:
         slow: int = 28,
     ) -> pd.Series:
         """Ultimate Oscillator"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            slow,
-            lambda: ta.uo(
-                high=high, low=low, close=close, fast=fast, medium=medium, slow=slow
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                slow,
+                lambda: ta.uo(
+                    high=high, low=low, close=close, fast=fast, medium=medium, slow=slow
+                ),
             ),
         )
 
@@ -820,10 +896,13 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def ao(high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34) -> pd.Series:
         """Awesome Oscillator"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low},
-            slow,
-            lambda: ta.ao(high=high, low=low, fast=fast, slow=slow),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low},
+                slow,
+                lambda: ta.ao(high=high, low=low, fast=fast, slow=slow),
+            ),
         )
 
     @staticmethod
@@ -832,21 +911,27 @@ class MomentumIndicators:
         open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
     ) -> pd.Series:
         """Balance of Power"""
-        return run_multi_series_indicator(
-            {"open_": open_, "high": high, "low": low, "close": close},
-            None,
-            lambda: ta.bop(open_=open_, high=high, low=low, close=close),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"open_": open_, "high": high, "low": low, "close": close},
+                None,
+                lambda: ta.bop(open_=open_, high=high, low=low, close=close),
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def cg(data: pd.Series, length: int = 10) -> pd.Series:
         """Center of Gravity"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.cg(data, length=length),
-            min_data_length=length + 2,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.cg(data, length=length),
+                min_data_length=length + 2,
+            ),
         )
 
     @staticmethod
@@ -856,11 +941,14 @@ class MomentumIndicators:
     ) -> pd.Series:
         """Coppock Curve"""
         min_length = slow + fast + 5
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.coppock(close=close, length=length, fast=fast, slow=slow),
-            min_data_length=min_length,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.coppock(close=close, length=length, fast=fast, slow=slow),
+                min_data_length=min_length,
+            ),
         )
 
     @staticmethod
@@ -878,6 +966,7 @@ class MomentumIndicators:
             """
             Bias インジケーターの計算ロジック。
             """
+            result: Any = None
             try:
                 result = ta.bias(
                     close=data,
@@ -902,11 +991,14 @@ class MomentumIndicators:
 
             return result if result is not None else create_nan_series_like(data)
 
-        return run_series_indicator(
-            data,
-            length,
-            compute,
-            min_data_length=min_length,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                compute,
+                min_data_length=min_length,
+            ),
         )
 
     @staticmethod
@@ -918,7 +1010,7 @@ class MomentumIndicators:
         ER = Change / Volatility
            = |Price[t] - Price[t-N]| / Sum(|Price[i] - Price[i-1]| for i in t..t-N)
         """
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             length,
             lambda: normalize_non_finite(
@@ -939,17 +1031,19 @@ class MomentumIndicators:
         length: int = 26,
     ) -> Tuple[pd.Series, pd.Series]:
         """BRAR (Brayer)"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"open_": open_, "high": high, "low": low, "close": close},
             length,
             lambda: ta.brar(
                 open_=open_, high=high, low=low, close=close, length=length
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -957,8 +1051,11 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def cfo(close: pd.Series, length: int = 9) -> pd.Series:
         """Chande Forecast Oscillator"""
-        return run_series_indicator(
-            close, length, lambda: ta.cfo(close=close, length=length)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.cfo(close=close, length=length)
+            ),
         )
 
     @staticmethod
@@ -970,15 +1067,17 @@ class MomentumIndicators:
         length: int = 13,
     ) -> Tuple[pd.Series, pd.Series]:
         """Elder Ray Index"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
             lambda: ta.eri(high=high, low=low, close=close, length=length),
-            fallback_factory=lambda: create_nan_series_bundle(close, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -997,19 +1096,22 @@ class MomentumIndicators:
     ) -> pd.Series:
         """Inertia"""
 
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.inertia(
-                close=close,
-                high=high,
-                low=low,
-                length=length,
-                rvi_length=rvi_length,
-                scalar=scalar,
-                refined=refined,
-                thirds=thirds,
-                mamode=mamode,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.inertia(
+                    close=close,
+                    high=high,
+                    low=low,
+                    length=length,
+                    rvi_length=rvi_length,
+                    scalar=scalar,
+                    refined=refined,
+                    thirds=thirds,
+                    mamode=mamode,
+                ),
             ),
         )
 
@@ -1023,13 +1125,16 @@ class MomentumIndicators:
         signal: int = 3,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """KDJ"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
             lambda: ta.kdj(
                 high=high, low=low, close=close, length=length, signal=signal
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(close, 3),
+            ),
         )
 
         if isinstance(result, tuple):
@@ -1041,10 +1146,13 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def rsx(close: pd.Series, length: int = 14, drift: int = 1) -> pd.Series:
         """RSX"""
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.rsx(close=close, length=length, drift=drift),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.rsx(close=close, length=length, drift=drift),
+            ),
         )
 
     @staticmethod
@@ -1058,7 +1166,7 @@ class MomentumIndicators:
         swma_length: int = 4,
     ) -> Tuple[pd.Series, pd.Series]:
         """Relative Vigor Index"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"open_": open_, "high": high, "low": low, "close": close},
             length,
             lambda: ta.rvgi(
@@ -1069,11 +1177,13 @@ class MomentumIndicators:
                 length=length,
                 swma_length=swma_length,
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 2),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+            ),
         )
 
         if isinstance(result, tuple):
-            return result
+            return cast(tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -1081,8 +1191,11 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def slope(close: pd.Series, length: int = 1) -> pd.Series:
         """Slope"""
-        return run_series_indicator(
-            close, length, lambda: ta.slope(close=close, length=length)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.slope(close=close, length=length)
+            ),
         )
 
     @staticmethod
@@ -1095,13 +1208,16 @@ class MomentumIndicators:
         scalar: float = 1.0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """SMI Ergodic"""
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             close,
             slow,
             lambda: ta.smi(
                 close=close, fast=fast, slow=slow, signal=signal, scalar=scalar
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 3),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(close, 3),
+            ),
         )
 
         if isinstance(result, tuple):
@@ -1115,8 +1231,11 @@ class MomentumIndicators:
         close: pd.Series, as_bool: bool = False, show_all: bool = False
     ) -> Union[pd.Series, pd.DataFrame]:
         """TD Sequential"""
-        return run_series_indicator(
-            close,
-            13,
-            lambda: ta.td_seq(close=close, asbool=as_bool, show_all=show_all),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                13,
+                lambda: ta.td_seq(close=close, asbool=as_bool, show_all=show_all),
+            ),
         )

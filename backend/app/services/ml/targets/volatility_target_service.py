@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Tuple
+from typing import Any, cast, Tuple
 
 import numpy as np
 import pandas as pd
@@ -65,7 +65,7 @@ class VolatilityTargetService:
         if price_col not in ohlcv_norm.columns:
             raise ValueError(f"価格カラムが存在しません: {price_col}")
 
-        prices = pd.to_numeric(ohlcv_norm[price_col], errors="coerce")
+        prices: pd.Series = cast(pd.Series, pd.to_numeric(ohlcv_norm[price_col], errors="coerce"))
         # np.log(prices) の結果が Series であることを明示して .diff() を使用
         log_returns = pd.Series(np.log(prices), index=prices.index).diff()
 

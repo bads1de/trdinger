@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 # 共通定数
 from .constants import (  # noqa: F401

@@ -29,7 +29,7 @@ pandas-ta の volume カテゴリに対応。
 """
 
 import logging
-from typing import Tuple, cast
+from typing import Union, cast
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 def _dataframe_to_series_tuple(
     result: pd.DataFrame | None,
-) -> Tuple[pd.Series, ...] | None:
+) -> tuple[pd.Series, ...] | None:
     """pandas-ta の DataFrame 結果を Series のタプルに変換する。"""
     if result is None or result.empty:
         return None
@@ -117,14 +117,17 @@ class VolumeIndicators:
         volume: pd.Series,
     ) -> pd.Series:
         """チャイキンA/Dライン"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            None,
-            lambda: ta.ad(
-                high=high,
-                low=low,
-                close=close,
-                volume=volume,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                None,
+                lambda: ta.ad(
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume,
+                ),
             ),
         )
 
@@ -139,16 +142,19 @@ class VolumeIndicators:
         slow: int = 10,
     ) -> pd.Series:
         """チャイキンA/Dオシレーター"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            slow,
-            lambda: ta.adosc(
-                high=high,
-                low=low,
-                close=close,
-                volume=volume,
-                fast=fast,
-                slow=slow,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                slow,
+                lambda: ta.adosc(
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                ),
             ),
         )
 
@@ -159,10 +165,13 @@ class VolumeIndicators:
         # ゼロボリュームの処理: ゼロボリュームをNaNに変換
         volume_clean = volume.replace(0, np.nan)
 
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            period,
-            lambda: ta.obv(close=close, volume=volume_clean, length=period),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                period,
+                lambda: ta.obv(close=close, volume=volume_clean, length=period),
+            ),
         )
 
     @staticmethod
@@ -190,18 +199,21 @@ class VolumeIndicators:
         Returns:
             EOM の値
         """
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            length,
-            lambda: ta.eom(
-                high=high,
-                low=low,
-                close=close,
-                volume=volume,
-                length=length,
-                divisor=divisor,
-                drift=drift,
-                offset=offset,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                length,
+                lambda: ta.eom(
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume,
+                    length=length,
+                    divisor=divisor,
+                    drift=drift,
+                    offset=offset,
+                ),
             ),
         )
 
@@ -238,10 +250,13 @@ class VolumeIndicators:
                 typical_price
             )
 
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            None,
-            _calculate_vwap,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                None,
+                _calculate_vwap,
+            ),
         )
 
     @staticmethod
@@ -266,11 +281,14 @@ class VolumeIndicators:
         Returns:
             CMF の値
         """
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            length,
-            lambda: ta.cmf(
-                high=high, low=low, close=close, volume=volume, length=length
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                length,
+                lambda: ta.cmf(
+                    high=high, low=low, close=close, volume=volume, length=length
+                ),
             ),
         )
 
@@ -296,15 +314,18 @@ class VolumeIndicators:
         Returns:
             Elder's Force Index の値
         """
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            period,
-            lambda: ta.efi(
-                close=close,
-                volume=volume,
-                length=period,
-                mamode=mamode,
-                drift=drift,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                period,
+                lambda: ta.efi(
+                    close=close,
+                    volume=volume,
+                    length=period,
+                    mamode=mamode,
+                    drift=drift,
+                ),
             ),
         )
 
@@ -350,10 +371,13 @@ class VolumeIndicators:
                 return pd.Series(np.nan, index=close.index, dtype=float)
             return cast(pd.Series, res)
 
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            length,
-            _calculate_mfi,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                length,
+                _calculate_mfi,
+            ),
         )
 
     @staticmethod
@@ -364,34 +388,40 @@ class VolumeIndicators:
         slow: int = 26,
         signal: int = 9,
         scalar: float = 100.0,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Volume Oscillator"""
         if fast <= 0 or signal <= 0:
             raise ValueError("fast and signal must be positive")
 
-        return run_series_indicator(
-            volume,
-            slow,
-            lambda: _dataframe_to_series_tuple(
-                ta.pvo(
-                    volume=volume,
-                    fast=fast,
-                    slow=slow,
-                    signal=signal,
-                    scalar=scalar,
-                )
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_series_indicator(
+                volume,
+                slow,
+                lambda: _dataframe_to_series_tuple(
+                    ta.pvo(
+                        volume=volume,
+                        fast=fast,
+                        slow=slow,
+                        signal=signal,
+                        scalar=scalar,
+                    )
+                ),
+                fallback_factory=lambda: create_nan_series_bundle(volume, 3),
             ),
-            fallback_factory=lambda: create_nan_series_bundle(volume, 3),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvt(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Price Volume Trend"""
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            None,
-            lambda: ta.pvt(close=close, volume=volume),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                None,
+                lambda: ta.pvt(close=close, volume=volume),
+            ),
         )
 
     @staticmethod
@@ -407,38 +437,44 @@ class VolumeIndicators:
         scalar: float = 100.0,
         mamode: str = "ema",
         drift: int = 1,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """
         Klinger Volume Oscillator（クリンガー出来高オシレーター）
         """
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            max(fast, slow),
-            lambda: _dataframe_to_series_tuple(
-                ta.kvo(
-                    high=high,
-                    low=low,
-                    close=close,
-                    volume=volume,
-                    fast=fast,
-                    slow=slow,
-                    signal=signal,
-                    scalar=scalar,
-                    mamode=mamode,
-                    drift=drift,
-                )
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                max(fast, slow),
+                lambda: _dataframe_to_series_tuple(
+                    ta.kvo(
+                        high=high,
+                        low=low,
+                        close=close,
+                        volume=volume,
+                        fast=fast,
+                        slow=slow,
+                        signal=signal,
+                        scalar=scalar,
+                        mamode=mamode,
+                        drift=drift,
+                    )
+                ),
+                fallback_factory=lambda: create_nan_series_bundle(high, 2),
             ),
-            fallback_factory=lambda: create_nan_series_bundle(high, 2),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def nvi(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Negative Volume Index"""
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            None,
-            lambda: ta.nvi(close=close, volume=volume),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                None,
+                lambda: ta.nvi(close=close, volume=volume),
+            ),
         )
 
     @staticmethod
@@ -460,10 +496,13 @@ class VolumeIndicators:
             sigma = deviation.rolling(window=period).std()
             return deviation / sigma
 
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close, "volume": volume},
-            period,
-            _calculate_vwap_z_score,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close, "volume": volume},
+                period,
+                _calculate_vwap_z_score,
+            ),
         )
 
     @staticmethod
@@ -503,7 +542,7 @@ class VolumeIndicators:
             rvol = volume / avg_vol
             return normalize_non_finite(rvol)
 
-        return run_series_indicator(volume, window, _calculate_rvol)
+        return cast(pd.Series, run_series_indicator(volume, window, _calculate_rvol))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -516,12 +555,15 @@ class VolumeIndicators:
         """
         Absorption Score = RVOL / Range
         """
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "volume": volume},
-            window,
-            lambda: normalize_non_finite(
-                VolumeIndicators.rvol(volume, window=window)
-                / (high - low).replace(0, 1e-9)
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "volume": volume},
+                window,
+                lambda: normalize_non_finite(
+                    VolumeIndicators.rvol(volume, window=window)
+                    / (high - low).replace(0, 1e-9)
+                ),
             ),
         )
 
@@ -536,56 +578,76 @@ class VolumeIndicators:
         min_lookback: int = 5,
         mamode: str = "ema",
         scalar: float = 100.0,
-    ) -> Tuple[
+    ) -> tuple[
         pd.Series, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series, pd.Series
     ]:
         """Archer On-Balance Volume"""
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            slow,
-            lambda: _dataframe_to_series_tuple(
-                ta.aobv(
-                    close=close,
-                    volume=volume,
-                    fast=fast,
-                    slow=slow,
-                    max_lookback=max_lookback,
-                    min_lookback=min_lookback,
-                    mamode=mamode,
-                    scalar=scalar,
-                )
+        return cast(
+            tuple[
+                pd.Series,
+                pd.Series,
+                pd.Series,
+                pd.Series,
+                pd.Series,
+                pd.Series,
+                pd.Series,
+            ],
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                slow,
+                lambda: _dataframe_to_series_tuple(
+                    ta.aobv(
+                        close=close,
+                        volume=volume,
+                        fast=fast,
+                        slow=slow,
+                        max_lookback=max_lookback,
+                        min_lookback=min_lookback,
+                        mamode=mamode,
+                        scalar=scalar,
+                    )
+                ),
+                fallback_factory=lambda: create_nan_series_bundle(close, 7),
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 7),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvi(close: pd.Series, volume: pd.Series, length: int = 13) -> pd.Series:
         """Positive Volume Index"""
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            None,
-            lambda: ta.pvi(close=close, volume=volume, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                None,
+                lambda: ta.pvi(close=close, volume=volume, length=length),
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvol(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Price-Volume"""
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            None,
-            lambda: ta.pvol(close=close, volume=volume),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                None,
+                lambda: ta.pvol(close=close, volume=volume),
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pvr(close: pd.Series, volume: pd.Series) -> pd.Series:
         """Price Volume Rank"""
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            None,
-            lambda: ta.pvr(close=close, volume=volume),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                None,
+                lambda: ta.pvr(close=close, volume=volume),
+            ),
         )
 
     @staticmethod
@@ -615,16 +677,19 @@ class VolumeIndicators:
         Returns:
             VFI の値
         """
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            length,
-            lambda: ta.vfi(
-                close=close,
-                volume=volume,
-                length=length,
-                coef=coef,
-                vfactor=vfactor,
-                anchored=anchored,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                length,
+                lambda: ta.vfi(
+                    close=close,
+                    volume=volume,
+                    length=length,
+                    coef=coef,
+                    vfactor=vfactor,
+                    anchored=anchored,
+                ),
             ),
         )
 
@@ -652,12 +717,20 @@ class VolumeIndicators:
             Volume Profile の DataFrame（Price Level と Volume の列）
         """
 
-        def _calculate_vp() -> pd.DataFrame | None:
+        def _calculate_vp() -> Union[pd.DataFrame, pd.Series, None]:
             result = ta.vp(close=close, volume=volume, bins=bins, width=width)
-            return result
+            if isinstance(result, pd.Series):
+                return result.to_frame()
+            if isinstance(result, pd.DataFrame):
+                return result
+            return None
 
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            None,
-            _calculate_vp,
+        return cast(
+            pd.DataFrame,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                None,
+                _calculate_vp,
+                fallback_factory=lambda: None,
+            ),
         )

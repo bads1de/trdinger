@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from math import ceil
-from typing import Any, Dict
+from typing import Any, cast, Dict
 
 import numpy as np
 import pandas as pd
@@ -229,7 +229,7 @@ class EvaluationWindowService:
         if trimmed_market_data.empty:
             return backtest_result
 
-        trimmed_equity_curve = self._slice_equity_curve_for_window(
+        trimmed_equity_curve: pd.DataFrame = self._slice_equity_curve_for_window(
             raw_equity_curve,
             trimmed_market_data.index,
             start_pos,
@@ -237,10 +237,10 @@ class EvaluationWindowService:
             backtest_result.get("initial_capital", 0.0),
         )
         equity_values = (
-            pd.to_numeric(trimmed_equity_curve["Equity"], errors="coerce")
+            cast(pd.Series, pd.to_numeric(trimmed_equity_curve["Equity"], errors="coerce"))
             .fillna(float(backtest_result.get("initial_capital", 0.0)))
             .to_numpy()
-        )  # type: ignore[reportAttributeAccessIssue]
+        )
 
         trimmed_trades = self._slice_trades_for_window(
             getattr(raw_stats, "_trades", None),
@@ -329,15 +329,15 @@ class EvaluationWindowService:
 
         trimmed = trimmed.reindex(target_index).ffill()
         if "Equity" in trimmed.columns:
-            trimmed["Equity"] = pd.to_numeric(
+            trimmed["Equity"] = cast(pd.Series, pd.to_numeric(
                 trimmed["Equity"], errors="coerce"
-            ).fillna(float(initial_capital))
+            )).fillna(float(initial_capital))
         else:
             trimmed["Equity"] = float(initial_capital)
         if "DrawdownPct" in trimmed.columns:
-            trimmed["DrawdownPct"] = pd.to_numeric(
+            trimmed["DrawdownPct"] = cast(pd.Series, pd.to_numeric(
                 trimmed["DrawdownPct"], errors="coerce"
-            ).fillna(0.0)
+            )).fillna(0.0)
         else:
             trimmed["DrawdownPct"] = 0.0
         return trimmed
@@ -370,11 +370,11 @@ class EvaluationWindowService:
             return trades_df
 
         if {"EntryBar", "ExitBar"}.issubset(trades_df.columns):
-            entry_bars = pd.to_numeric(trades_df["EntryBar"], errors="coerce")
-            exit_bars = pd.to_numeric(trades_df["ExitBar"], errors="coerce")
+            entry_bars: pd.Series = cast(pd.Series, pd.to_numeric(trades_df["EntryBar"], errors="coerce"))
+            exit_bars: pd.Series = cast(pd.Series, pd.to_numeric(trades_df["ExitBar"], errors="coerce"))
             mask = (
-                entry_bars.notna()  # type: ignore[reportAttributeAccessIssue]
-                & exit_bars.notna()  # type: ignore[reportAttributeAccessIssue]
+                entry_bars.notna()
+                & exit_bars.notna()
                 & (entry_bars >= start_pos)
                 & (exit_bars < end_pos)
             )

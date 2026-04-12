@@ -223,4 +223,4 @@ class OrderManager:
             "4h": pd.Timedelta(hours=4),
             "1d": pd.Timedelta(days=1),
         }
-        return timeframe_map.get(timeframe)
+        return timeframe_map.get(timeframe)  # type: ignore[return-value]

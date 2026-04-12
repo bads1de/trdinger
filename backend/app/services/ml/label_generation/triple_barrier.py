@@ -157,8 +157,8 @@ class TripleBarrier:
                 - "side" (int): 接触したバリアの種類（1: 利食い, 2: 損切り, 3: 時間制限）。
         """
         # ターゲットのフィルタリング
-        target = target.loc[t_events]
-        target = target[target > min_ret]
+        target = cast(pd.Series, target.loc[t_events])
+        target = cast(pd.Series, target[target > min_ret])
         if target.empty:
             return pd.DataFrame(columns=["t1", "trgt", "side"])
 
@@ -167,7 +167,8 @@ class TripleBarrier:
             vertical_barrier_times = pd.Series(pd.NaT, index=target.index)
 
         # targetのインデックスに合わせてアラインメント
-        v_bar = vertical_barrier_times.reindex(target.index).fillna(cast(Any, pd.NaT))
+        v_bar_reindexed = vertical_barrier_times.reindex(target.index)
+        v_bar = pd.Series(v_bar_reindexed.values, index=target.index).fillna(cast(Any, pd.NaT))
 
         if side is None:
             side_series = pd.Series(1.0, index=target.index)
@@ -194,10 +195,10 @@ class TripleBarrier:
 
         if valid_v_mask.any():
             # 有効な垂直バリア時刻のみインデックス検索
-            valid_times = v_bar[valid_v_mask]
+            valid_times = pd.Series(v_bar[valid_v_mask].values, index=v_bar[valid_v_mask].index)
             # get_indexer requires exact match which can fail. Use searchsorted to find position.
             idx_obj = cast(pd.DatetimeIndex, close.index)
-            found_idxs = idx_obj.searchsorted(valid_times.to_numpy(), side="left")
+            found_idxs = idx_obj.searchsorted(valid_times.to_numpy(dtype="datetime64[ns]"), side="left")
             found_idxs = np.clip(found_idxs, 0, len(close))
             v_bar_idxs[valid_v_mask] = found_idxs
 
@@ -259,10 +260,8 @@ class TripleBarrier:
         px_init = close.loc[ev.index]
 
         # t1の価格取得 (ベクトル化)
-        # reindexは遅い場合があるので、mapの方が速いかもしれないが、
-        # ここではシンプルさを維持
-        px_end = close.reindex(ev["t1"], method="pad")
-        px_end.index = ev.index
+        px_end_series = close.reindex(ev["t1"], method="pad")
+        px_end = pd.Series(px_end_series.values, index=ev.index)
 
         out = pd.DataFrame(index=ev.index)
         out["ret"] = px_end / px_init - 1

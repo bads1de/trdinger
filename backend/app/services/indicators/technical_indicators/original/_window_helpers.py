@@ -15,7 +15,7 @@ def _window_sum(values: np.ndarray, start: int, end: int) -> float:
 
 
 @njit(cache=True)
-def _window_mean(values: np.ndarray, start: int, end: int) -> float:
+def _window_mean(values: np.ndarray, start: int, end: int) -> float:  # pyright: ignore[reportUnusedFunction]
     length = end - start
     if length <= 0:
         return 0.0
@@ -23,7 +23,7 @@ def _window_mean(values: np.ndarray, start: int, end: int) -> float:
 
 
 @njit(cache=True)
-def _window_mean_and_std(
+def _window_mean_and_std(  # pyright: ignore[reportUnusedFunction]
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float]:
     length = end - start
@@ -45,7 +45,7 @@ def _window_mean_and_std(
 
 
 @njit(cache=True)
-def _window_mean_and_std_finite(
+def _window_mean_and_std_finite(  # pyright: ignore[reportUnusedFunction]
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float, int]:
     total = 0.0
@@ -83,6 +83,6 @@ def _window_min_max(values: np.ndarray, start: int, end: int) -> tuple[float, fl
 
 
 @njit(cache=True)
-def _window_range(values: np.ndarray, start: int, end: int, scale: float) -> float:
+def _window_range(values: np.ndarray, start: int, end: int, scale: float) -> float:  # pyright: ignore[reportUnusedFunction]
     min_val, max_val = _window_min_max(values, start, end)
     return (max_val - min_val) / scale

@@ -30,11 +30,11 @@ def _log_distribution(name: str, labels: pd.Series) -> None:
     counts = labels.value_counts()
     total = len(labels.dropna())
     if total > 0:
-        v_pct, i_pct = (counts.get(1, 0) / total) * 100, (
-            counts.get(0, 0) / total
-        ) * 100
+        v_count = int(counts.get(1, 0) or 0)
+        i_count = int(counts.get(0, 0) or 0)
+        v_pct, i_pct = (v_count / total) * 100, (i_count / total) * 100
         logger.info(
-            f"{name}完了: Valid={counts.get(1, 0)}({v_pct:.1f}%), Invalid={counts.get(0, 0)}({i_pct:.1f}%)"
+            f"{name}完了: Valid={v_count}({v_pct:.1f}%), Invalid={i_count}({i_pct:.1f}%)"
         )
 
 
@@ -79,18 +79,19 @@ def triple_barrier_method_preset(
     try:
         close = df[price_column]
         if use_atr:
-            vol = calculate_volatility_atr(
+            vol = cast(pd.Series, calculate_volatility_atr(
                 df["high"], df["low"], close, atr_period, True
-            )
+            ))
         else:
-            vol = calculate_volatility_std(close.pct_change(), volatility_window)
+            vol = cast(pd.Series, calculate_volatility_std(close.pct_change(), volatility_window))
 
         t_ev = t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
-        v_bar = pd.Series(close.index, index=close.index).shift(-horizon_n)
+        v_bar = cast(pd.Series, pd.Series(close.index, index=close.index).shift(-horizon_n))
 
         tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret)
         events = tb.get_events(close, t_ev, [pt, sl], vol, min_ret, v_bar)
-        labels = tb.get_bins(events, close, binary_label=True)["bin"]
+        bins_df = tb.get_bins(events, close, binary_label=True)
+        labels = bins_df["bin"]
 
         _log_distribution("TBMラベル生成", labels)
         return labels

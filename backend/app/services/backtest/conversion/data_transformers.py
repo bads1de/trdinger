@@ -7,7 +7,7 @@ backtesting.py の統計結果から取引履歴やエクイティカーブを
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import pandas as pd
 
@@ -78,7 +78,7 @@ class TradeHistoryTransformer:
                 (
                     "duration",
                     "Duration",
-                    lambda s: pd.to_numeric(s, errors="coerce").fillna(0).astype(int),  # type: ignore[reportAttributeAccessIssue]
+                    lambda s: cast(pd.Series, pd.to_numeric(s, errors="coerce")).fillna(0).astype(int),
                 ),
             ]
 
@@ -144,12 +144,10 @@ class EquityCurveTransformer:
                 df = df.iloc[::step]
 
             df["timestamp"] = [self._safe_timestamp_conversion(t) for t in df.index]
-            df["equity"] = pd.to_numeric(df["Equity"], errors="coerce").fillna(0.0)  # type: ignore[reportAttributeAccessIssue]
-            df["drawdown"] = pd.to_numeric(
-                df.get("DrawdownPct", 0), errors="coerce"
-            ).fillna(
-                0.0
-            )  # type: ignore[reportAttributeAccessIssue]
+            df["equity"] = cast(pd.Series, pd.to_numeric(df["Equity"], errors="coerce")).fillna(0.0)
+            df["drawdown"] = cast(
+                pd.Series, pd.to_numeric(df.get("DrawdownPct", 0), errors="coerce")
+            ).fillna(0.0)
 
             result_cols = ["timestamp", "equity", "drawdown"]
             return df[result_cols].to_dict("records")

@@ -5,7 +5,7 @@ Multi-Timeframe Features
 上位時間足のトレンドとの一致が強力な予測因子となることが実証されています。
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -183,7 +183,9 @@ class MultiTimeframeFeatureCalculator:
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """RSIを計算"""
-        delta = pd.to_numeric(prices.diff(), errors="coerce").fillna(0.0)
+        delta = cast(pd.Series, pd.to_numeric(prices.diff(), errors="coerce")).fillna(
+            0.0
+        )
         gain = (delta.where(delta > 0, 0.0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0.0)).rolling(window=period).mean()
 

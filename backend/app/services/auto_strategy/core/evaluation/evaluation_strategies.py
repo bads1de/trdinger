@@ -173,7 +173,7 @@ class EvaluationStrategy:
 
         start_date = pd.Timestamp(parsed_range[0])
         end_date = pd.Timestamp(parsed_range[1])
-        return start_date, end_date
+        return cast(pd.Timestamp, start_date), cast(pd.Timestamp, end_date)
 
     def _build_robustness_scenarios(
         self,

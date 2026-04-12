@@ -410,7 +410,7 @@ def calculate_volatility_std(
         return pd.Series([], dtype=float)
     if min_periods is None:
         min_periods = window
-    return returns.rolling(window=window, min_periods=min_periods).std()
+    return cast(pd.Series, returns.rolling(window=window, min_periods=min_periods).std())
 
 
 def calculate_volatility_atr(
@@ -478,7 +478,7 @@ def calculate_historical_volatility(
     vol = returns.rolling(window=window).std()
     if annualize:
         vol = vol * np.sqrt(periods_per_year)
-    return vol
+    return cast(pd.Series, vol)
 
 
 def calculate_realized_volatility(

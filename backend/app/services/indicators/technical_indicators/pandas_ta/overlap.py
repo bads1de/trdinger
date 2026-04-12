@@ -39,7 +39,7 @@ pandas-ta の overlap カテゴリに対応。
 - SWMA (Symmetric Weighted Moving Average)
 """
 
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple, cast
 
 import pandas as pd
 import pandas_ta_classic as ta
@@ -66,16 +66,22 @@ class OverlapIndicators:
     @handle_pandas_ta_errors
     def sma(data: pd.Series, length: int) -> pd.Series:
         """単純移動平均"""
-        return run_series_indicator(data, length, lambda: ta.sma(data, length=length))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, length, lambda: ta.sma(data, length=length)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def ema(data: pd.Series, length: int) -> pd.Series:
         """指数移動平均"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.ema(data, length=length, adjust=False, sma=True),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.ema(data, length=length, adjust=False, sma=True),
+            ),
         )
 
     @staticmethod
@@ -95,7 +101,10 @@ class OverlapIndicators:
         if not isinstance(data, pd.Series):
             raise TypeError("data must be pandas Series")
 
-        return run_series_indicator(data, length, lambda: ta.wma(data, length=length))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, length, lambda: ta.wma(data, length=length)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -103,10 +112,13 @@ class OverlapIndicators:
         data: pd.Series, length: int = 10, talib: bool | None = None
     ) -> pd.Series:
         """三角移動平均"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.trima(data, length=length, talib=talib),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.trima(data, length=length, talib=talib),
+            ),
         )
 
     @staticmethod
@@ -118,10 +130,13 @@ class OverlapIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Zero Lag移動平均"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.zlma(data, length=length, mamode=mamode, offset=offset),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.zlma(data, length=length, mamode=mamode, offset=offset),
+            ),
         )
 
     @staticmethod
@@ -141,15 +156,18 @@ class OverlapIndicators:
                 f"distribution_offset must be between 0.0 and 1.0: {distribution_offset}"
             )
 
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.alma(
+        return cast(
+            pd.Series,
+            run_series_indicator(
                 data,
-                length=length,
-                sigma=sigma,
-                distribution_offset=distribution_offset,
-                offset=offset,
+                length,
+                lambda: ta.alma(
+                    data,
+                    length=length,
+                    sigma=sigma,
+                    distribution_offset=distribution_offset,
+                    offset=offset,
+                ),
             ),
         )
 
@@ -157,46 +175,61 @@ class OverlapIndicators:
     @handle_pandas_ta_errors
     def dema(data: pd.Series, length: int) -> pd.Series:
         """二重指数移動平均"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.dema(data, length=length),
-            min_data_length=length * 2,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.dema(data, length=length),
+                min_data_length=length * 2,
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def tema(data: pd.Series, length: int) -> pd.Series:
         """三重指数移動平均"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.tema(data, window=length),
-            min_data_length=length * 3,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.tema(data, window=length),
+                min_data_length=length * 3,
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def t3(data: pd.Series, length: int, a: float = 0.7) -> pd.Series:
         """T3移動平均"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.t3(data, window=length, a=a),
-            min_data_length=length * 6,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.t3(data, window=length, a=a),
+                min_data_length=length * 6,
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def kama(data: pd.Series, length: int = 30) -> pd.Series:
         """カウフマン適応移動平均"""
-        return run_series_indicator(data, length, lambda: ta.kama(data, window=length))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, length, lambda: ta.kama(data, window=length)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
     def hma(data: pd.Series, length: int = 20) -> pd.Series:
         """Hull移動平均"""
-        return run_series_indicator(data, length, lambda: ta.hma(data, length=length))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, length, lambda: ta.hma(data, length=length)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -206,10 +239,13 @@ class OverlapIndicators:
         length: int = 20,
     ) -> pd.Series:
         """出来高加重移動平均"""
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            length,
-            lambda: ta.vwma(close=close, volume=volume, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                length,
+                lambda: ta.vwma(close=close, volume=volume, length=length),
+            ),
         )
 
     @staticmethod
@@ -221,22 +257,28 @@ class OverlapIndicators:
         intercept: bool = False,
     ) -> pd.Series:
         """線形回帰 (pandas-ta ベクトル化版)"""
-        result = run_series_indicator(
-            data,
-            length,
-            lambda: ta.linreg(data, length=length, offset=0),
-            min_data_length=length,
+        result = cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.linreg(data, length=length, offset=0),
+                min_data_length=length,
+            ),
         )
         # interceptが必要な場合（あまり一般的ではないが元のコードにあるためサポート）
         if intercept:
             if isinstance(result, pd.Series) and result.isna().all():
                 return result * scalar
 
-            slope = run_series_indicator(
-                data,
-                length,
-                lambda: ta.linreg(data, length=length, slope=True),
-                min_data_length=length,
+            slope = cast(
+                pd.Series,
+                run_series_indicator(
+                    data,
+                    length,
+                    lambda: ta.linreg(data, length=length, slope=True),
+                    min_data_length=length,
+                ),
             )
             if isinstance(slope, pd.Series) and slope.isna().all():
                 return create_nan_series_like(data)
@@ -252,11 +294,14 @@ class OverlapIndicators:
         data: pd.Series, length: int = 14, scalar: float = 1.0
     ) -> pd.Series:
         """線形回帰スロープ (pandas-ta ベクトル化版)"""
-        result = run_series_indicator(
-            data,
-            length,
-            lambda: ta.linreg(data, length=length, slope=True),
-            min_data_length=length,
+        result = cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.linreg(data, length=length, slope=True),
+                min_data_length=length,
+            ),
         )
         return result * scalar
 
@@ -264,7 +309,10 @@ class OverlapIndicators:
     @handle_pandas_ta_errors
     def rma(data: pd.Series, length: int = 10) -> pd.Series:
         """Wilde's Moving Average"""
-        return run_series_indicator(data, length, lambda: ta.rma(data, length=length))
+        return cast(
+            pd.Series,
+            run_series_indicator(data, length, lambda: ta.rma(data, length=length)),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -297,13 +345,20 @@ class OverlapIndicators:
         if "factor" in kwargs:
             multiplier = kwargs["factor"]
 
-        result = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            period,
-            lambda: ta.supertrend(
-                high=high, low=low, close=close, length=period, multiplier=multiplier
+        result = cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                period,
+                lambda: ta.supertrend(
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=period,
+                    multiplier=multiplier,
+                ),
+                fallback_factory=lambda: create_nan_series_bundle(high, 3),
             ),
-            fallback_factory=lambda: create_nan_series_bundle(high, 3),
         )
 
         if isinstance(result, tuple):
@@ -375,7 +430,7 @@ class OverlapIndicators:
             )
 
         try:
-            result = run_multi_series_indicator(
+            result: Any = run_multi_series_indicator(
                 {"high": high, "low": low, "close": close},
                 max_period,
                 lambda: ta.ichimoku(
@@ -422,19 +477,22 @@ class OverlapIndicators:
         offset: int = 0,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
         """Gann HiLo"""
-        result = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            max(high_length, low_length),
-            lambda: ta.hilo(
-                high=high,
-                low=low,
-                close=close,
-                high_length=high_length,
-                low_length=low_length,
-                mamode=mamode,
-                offset=offset,
+        result = cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                max(high_length, low_length),
+                lambda: ta.hilo(
+                    high=high,
+                    low=low,
+                    close=close,
+                    high_length=high_length,
+                    low_length=low_length,
+                    mamode=mamode,
+                    offset=offset,
+                ),
+                fallback_factory=lambda: create_nan_series_bundle(close, 3),
             ),
-            fallback_factory=lambda: create_nan_series_bundle(close, 3),
         )
 
         if isinstance(result, tuple):
@@ -447,18 +505,24 @@ class OverlapIndicators:
     @handle_pandas_ta_errors
     def hl2(high: pd.Series, low: pd.Series) -> pd.Series:
         """High-Low Average"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low}, None, lambda: ta.hl2(high=high, low=low)
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low}, None, lambda: ta.hl2(high=high, low=low)
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def hlc3(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
         """HLC Average"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            None,
-            lambda: ta.hlc3(high=high, low=low, close=close),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                None,
+                lambda: ta.hlc3(high=high, low=low, close=close),
+            ),
         )
 
     @staticmethod
@@ -467,28 +531,37 @@ class OverlapIndicators:
         open_: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
     ) -> pd.Series:
         """OHLC Average"""
-        return run_multi_series_indicator(
-            {"open_": open_, "high": high, "low": low, "close": close},
-            None,
-            lambda: ta.ohlc4(open_=open_, high=high, low=low, close=close),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"open_": open_, "high": high, "low": low, "close": close},
+                None,
+                lambda: ta.ohlc4(open_=open_, high=high, low=low, close=close),
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def midpoint(close: pd.Series, length: int = 2) -> pd.Series:
         """Midpoint"""
-        return run_series_indicator(
-            close, length, lambda: ta.midpoint(close=close, length=length)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.midpoint(close=close, length=length)
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def midprice(high: pd.Series, low: pd.Series, length: int = 2) -> pd.Series:
         """Midprice"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low},
-            length,
-            lambda: ta.midprice(high=high, low=low, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low},
+                length,
+                lambda: ta.midprice(high=high, low=low, length=length),
+            ),
         )
 
     @staticmethod
@@ -497,28 +570,41 @@ class OverlapIndicators:
         close: pd.Series, length: int = 14, drift: int = 1, offset: int = 0
     ) -> pd.Series:
         """VIDYA"""
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.vidya(close=close, length=length, drift=drift, offset=offset),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.vidya(
+                    close=close, length=length, drift=drift, offset=offset
+                ),
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def wcp(high: pd.Series, low: pd.Series, close: pd.Series) -> pd.Series:
         """Weighted Close Price"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            None,
-            lambda: ta.wcp(high=high, low=low, close=close),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                None,
+                lambda: ta.wcp(high=high, low=low, close=close),
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def mcgd(close: pd.Series, length: int = 10, offset: int = 0) -> pd.Series:
         """McGinley Dynamic"""
-        return run_series_indicator(
-            close, length, lambda: ta.mcgd(close=close, length=length, offset=offset)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.mcgd(close=close, length=length, offset=offset),
+            ),
         )
 
     @staticmethod
@@ -527,48 +613,66 @@ class OverlapIndicators:
         close: pd.Series, length: int = 7, phase: int = 50, offset: int = 0
     ) -> pd.Series:
         """Jurik Moving Average"""
-        return run_series_indicator(
-            close,
-            length,
-            lambda: ta.jma(close=close, length=length, phase=phase, offset=offset),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                length,
+                lambda: ta.jma(close=close, length=length, phase=phase, offset=offset),
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def fwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
         """Fibonacci Weighted Moving Average"""
-        return run_series_indicator(
-            close, length, lambda: ta.fwma(close=close, length=length, asc=asc)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.fwma(close=close, length=length, asc=asc)
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def pwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
         """Pascal Weighted Moving Average"""
-        return run_series_indicator(
-            close, length, lambda: ta.pwma(close=close, length=length, asc=asc)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.pwma(close=close, length=length, asc=asc)
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def sinwma(close: pd.Series, length: int = 14) -> pd.Series:
         """Sine Weighted Moving Average"""
-        return run_series_indicator(
-            close, length, lambda: ta.sinwma(close=close, length=length)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.sinwma(close=close, length=length)
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def ssf(close: pd.Series, length: int = 10, poles: int = 2) -> pd.Series:
         """Ehlers Super Smoother Filter"""
-        return run_series_indicator(
-            close, length, lambda: ta.ssf(close=close, length=length, poles=poles)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.ssf(close=close, length=length, poles=poles)
+            ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
     def swma(close: pd.Series, length: int = 10) -> pd.Series:
         """Symmetric Weighted Moving Average"""
-        return run_series_indicator(
-            close, length, lambda: ta.swma(close=close, length=length)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.swma(close=close, length=length)
+            ),
         )

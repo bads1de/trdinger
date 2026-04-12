@@ -101,7 +101,7 @@ class MetaLabelingService:
         trend_mask = primary_preds_proba >= threshold
 
         # フィルタリングされたインデックス
-        indices = primary_preds_proba.index[trend_mask]
+        indices: pd.Index = pd.Index(primary_preds_proba.index[trend_mask])
 
         if len(indices) == 0:
             logger.warning("一次モデルがトレンドと予測したサンプルがありません。")

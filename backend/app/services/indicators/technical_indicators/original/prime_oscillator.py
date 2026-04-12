@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -139,8 +139,6 @@ def prime_oscillator(
     result[:] = np.nan
 
     primes = _get_prime_sequence(length)
-    from typing import cast
-
     if not primes:
         return cast(Tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2))
 
@@ -151,4 +149,4 @@ def prime_oscillator(
     signal = oscillator.rolling(window=signal_length).mean()
     signal.name = f"PRIME_SIGNAL_{length}_{signal_length}"  # type: ignore[reportAttributeAccessIssue]
 
-    return oscillator, signal
+    return cast(Tuple[pd.Series, pd.Series], (oscillator, signal))

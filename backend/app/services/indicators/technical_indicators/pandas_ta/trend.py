@@ -27,7 +27,7 @@ pandas-ta の trend カテゴリに対応。
 """
 
 import logging
-from typing import Tuple, cast
+from typing import Any, Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -157,7 +157,10 @@ class TrendIndicators:
 
             return pd.Series(sar_res, index=high.index).replace(0, np.nan)
 
-        return run_multi_series_indicator({"high": high, "low": low}, None, compute)
+        return cast(
+            pd.Series,
+            run_multi_series_indicator({"high": high, "low": low}, None, compute),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -167,7 +170,7 @@ class TrendIndicators:
         """Archer Moving Averages Trends"""
         # AMAT特有のデータ検証
         min_length = max(fast, slow, signal) + 10
-        result = run_series_indicator(
+        result: Any = run_series_indicator(
             data,
             None,
             lambda: ta.amat(data, fast=fast, slow=slow, signal=signal),
@@ -187,14 +190,17 @@ class TrendIndicators:
         offset: int = 0,
     ) -> pd.Series:
         """Detrended Price Oscillator"""
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.dpo(
-                close=data,
-                length=length,
-                centered=centered,
-                offset=offset,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.dpo(
+                    close=data,
+                    length=length,
+                    centered=centered,
+                    offset=offset,
+                ),
             ),
         )
 
@@ -212,7 +218,7 @@ class TrendIndicators:
         if drift <= 0:
             raise ValueError(f"drift must be positive: {drift}")
 
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
             lambda: ta.vortex(
@@ -224,11 +230,11 @@ class TrendIndicators:
                 offset=offset,
             ),
             fallback_factory=lambda: cast(
-                Tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
             ),
         )
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series], result)
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -251,7 +257,7 @@ class TrendIndicators:
                 create_nan_series_bundle(high, 3),
             )
 
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
             lambda: ta.adx(
@@ -267,9 +273,9 @@ class TrendIndicators:
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
-        if result.empty:
+        if hasattr(result, "empty") and getattr(result, "empty", False):
             return nan_result()
 
         # カラム名: ADX_{length}, DMP_{length}, DMN_{length}
@@ -298,7 +304,7 @@ class TrendIndicators:
                 create_nan_series_bundle(high, 3),
             )
 
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low},
             length,
             lambda: ta.aroon(high=high, low=low, length=length, scalar=scalar),
@@ -306,9 +312,9 @@ class TrendIndicators:
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
-        if result.empty:
+        if hasattr(result, "empty") and getattr(result, "empty", False):
             return nan_result()
 
         # カラム名: AROONU_{length}, AROOND_{length}, AROONOSC_{length}
@@ -333,17 +339,20 @@ class TrendIndicators:
         drift: int = 1,
     ) -> pd.Series:
         """Choppiness Index"""
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.chop(
-                high=high,
-                low=low,
-                close=close,
-                length=length,
-                atr_length=atr_length,
-                scalar=scalar,
-                drift=drift,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.chop(
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=length,
+                    atr_length=atr_length,
+                    scalar=scalar,
+                    drift=drift,
+                ),
             ),
         )
 
@@ -359,17 +368,20 @@ class TrendIndicators:
         """Vertical Horizontal Filter"""
         # VHF requires sufficient data length
         min_length = length * 2
-        return run_series_indicator(
-            data,
-            length,
-            lambda: ta.vhf(
-                close=data,
-                length=length,
-                scalar=scalar,
-                drift=drift,
-                offset=offset,
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                data,
+                length,
+                lambda: ta.vhf(
+                    close=data,
+                    length=length,
+                    scalar=scalar,
+                    drift=drift,
+                    offset=offset,
+                ),
+                min_data_length=min_length,
             ),
-            min_data_length=min_length,
         )
 
     @staticmethod
@@ -383,7 +395,7 @@ class TrendIndicators:
         q: int = 9,
     ) -> Tuple[pd.Series, pd.Series]:
         """Chande Kroll Stop"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             p,
             lambda: ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q),
@@ -395,7 +407,7 @@ class TrendIndicators:
         if isinstance(result, tuple):
             return cast(Tuple[pd.Series, pd.Series], result)
 
-        return result.iloc[:, 0], result.iloc[:, 1]
+        return cast(Tuple[pd.Series, pd.Series], (result.iloc[:, 0], result.iloc[:, 1]))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -405,8 +417,11 @@ class TrendIndicators:
         mode: str = "linear",
     ) -> pd.Series:
         """Decay"""
-        return run_series_indicator(
-            close, length, lambda: ta.decay(close=close, length=length, mode=mode)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.decay(close=close, length=length, mode=mode)
+            ),
         )
 
     @staticmethod
@@ -417,10 +432,13 @@ class TrendIndicators:
         length: int = 8,
     ) -> pd.Series:
         """QStick"""
-        return run_multi_series_indicator(
-            {"open_": open_, "close": close},
-            length,
-            lambda: ta.qstick(open_=open_, close=close, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"open_": open_, "close": close},
+                length,
+                lambda: ta.qstick(open_=open_, close=close, length=length),
+            ),
         )
 
     @staticmethod
@@ -432,18 +450,18 @@ class TrendIndicators:
         length: int = 6,
     ) -> pd.Series:
         """TTM Trend"""
-        result = run_multi_series_indicator(
+        result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
             lambda: ta.ttm_trend(high=high, low=low, close=close, length=length),
         )
 
-        if hasattr(result, "empty") and result.empty:
+        if hasattr(result, "empty") and getattr(result, "empty", False):
             return create_nan_series_like(close)
 
         if isinstance(result, pd.DataFrame):
             return result.iloc[:, 0]
-        return result
+        return cast(pd.Series, result)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -461,7 +479,7 @@ class TrendIndicators:
         result = ta.decreasing(close=close, length=length, strict=strict, asint=as_int)
         if result is None:
             return create_nan_series_like(close)
-        return result
+        return cast(pd.Series, result)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -489,10 +507,13 @@ class TrendIndicators:
     ) -> pd.Series:
         """Long Run"""
         # Requires len(fast) >= length
-        return run_multi_series_indicator(
-            {"fast": fast, "slow": slow},
-            length,
-            lambda: ta.long_run(fast=fast, slow=slow, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"fast": fast, "slow": slow},
+                length,
+                lambda: ta.long_run(fast=fast, slow=slow, length=length),
+            ),
         )
 
     @staticmethod
@@ -503,10 +524,13 @@ class TrendIndicators:
         length: int = 2,
     ) -> pd.Series:
         """Short Run"""
-        return run_multi_series_indicator(
-            {"fast": fast, "slow": slow},
-            length,
-            lambda: ta.short_run(fast=fast, slow=slow, length=length),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"fast": fast, "slow": slow},
+                length,
+                lambda: ta.short_run(fast=fast, slow=slow, length=length),
+            ),
         )
 
     @staticmethod
@@ -516,8 +540,11 @@ class TrendIndicators:
         length: int = 14,
     ) -> pd.Series:
         """Linear Regression Slope"""
-        return run_series_indicator(
-            close, length, lambda: ta.slope(close=close, length=length)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.slope(close=close, length=length)
+            ),
         )
 
     @staticmethod
@@ -533,6 +560,7 @@ class TrendIndicators:
         offset: int = 26,
     ) -> pd.DataFrame:
         """Ichimoku Kinko Hyo"""
+
         def nan_result() -> pd.DataFrame:
             return pd.DataFrame(
                 {
@@ -546,7 +574,7 @@ class TrendIndicators:
             )
 
         try:
-            result = run_multi_series_indicator(
+            result: Any = run_multi_series_indicator(
                 {"high": high, "low": low, "close": close},
                 senkou,
                 lambda: ta.ichimoku(
@@ -568,7 +596,9 @@ class TrendIndicators:
             if isinstance(result, pd.Series):
                 return nan_result()
 
-            if result is None or (hasattr(result, "empty") and result.empty):
+            if result is None or (
+                hasattr(result, "empty") and getattr(result, "empty", False)
+            ):
                 return nan_result()
 
             rename_map = {
@@ -591,6 +621,9 @@ class TrendIndicators:
         length: int = 10,
     ) -> pd.Series:
         """Simple Moving Average"""
-        return run_series_indicator(
-            close, length, lambda: ta.sma(close=close, length=length)
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close, length, lambda: ta.sma(close=close, length=length)
+            ),
         )

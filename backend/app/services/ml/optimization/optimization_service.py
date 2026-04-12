@@ -11,7 +11,7 @@ ML モデル最適化サービスモジュール
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, cast
 
 import pandas as pd
 
@@ -352,11 +352,11 @@ class OptimizationService:
         split_date: pd.Timestamp,
     ) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
         """時系列順に TrainVal / Test を分割する。"""
-        mask_trainval = X_aligned.index < split_date
-        X_trainval = X_aligned[mask_trainval]
-        y_trainval = y_aligned[mask_trainval]
-        X_test = X_aligned[~mask_trainval]
-        y_test = y_aligned[~mask_trainval]
+        mask_trainval: pd.Series = X_aligned.index < split_date
+        X_trainval: pd.DataFrame = cast(pd.DataFrame, X_aligned[mask_trainval])
+        y_trainval: pd.Series = cast(pd.Series, y_aligned[mask_trainval])
+        X_test: pd.DataFrame = cast(pd.DataFrame, X_aligned[~mask_trainval])
+        y_test: pd.Series = cast(pd.Series, y_aligned[~mask_trainval])
         return X_trainval, y_trainval, X_test, y_test
 
     def _evaluate_selected_model_pipeline(
@@ -398,8 +398,8 @@ class OptimizationService:
 
         exclude_cols = ["open", "high", "low", "close", "volume"]
         feature_cols = [c for c in X_train_filtered.columns if c not in exclude_cols]
-        X_train_features = X_train_filtered[feature_cols]
-        X_eval_features = X_eval_filtered[feature_cols]
+        X_train_features: pd.DataFrame = cast(pd.DataFrame, X_train_filtered[feature_cols])
+        X_eval_features: pd.DataFrame = cast(pd.DataFrame, X_eval_filtered[feature_cols])
 
         selector = FeatureSelector(
             method=selection_method,
@@ -501,7 +501,7 @@ class OptimizationService:
             c for c in X_meta.columns if any(k in c for k in micro_keywords)  # type: ignore[reportAttributeAccessIssue]
         ]
 
-        X_meta_specialized = X_meta[meta_feature_cols].copy()
+        X_meta_specialized: pd.DataFrame = cast(pd.DataFrame, X_meta[meta_feature_cols].copy())
         X_meta_specialized["primary_prob"] = primary_probs
 
         logger.info(

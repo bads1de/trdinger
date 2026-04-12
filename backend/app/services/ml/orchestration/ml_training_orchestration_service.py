@@ -10,7 +10,7 @@ import logging
 import os
 import threading
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -37,7 +37,7 @@ from database.repositories.open_interest_repository import OpenInterestRepositor
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.config import get_default_single_model_config
 from ..common.training_utils import resolve_holdout_test_size
-from ..ensemble.ensemble_trainer import EnsembleTrainer
+from ..ensemble.ensemble_trainer import EnsembleConfig, EnsembleTrainer
 from ..trainers.volatility_regression_trainer import VolatilityRegressionTrainer
 
 logger = logging.getLogger(__name__)
@@ -197,7 +197,7 @@ class MLTrainingService(BaseResourceManager):
             config = self._create_trainer_config(
                 trainer_type, ensemble_config, single_model_config
             )
-            self.trainer = EnsembleTrainer(ensemble_config=config)
+            self.trainer = EnsembleTrainer(ensemble_config=cast(EnsembleConfig, config))
         self.optimization_service = OptimizationService()
 
     def _create_trainer_config(
@@ -205,7 +205,7 @@ class MLTrainingService(BaseResourceManager):
         trainer_type: str,
         ensemble_config: Optional[Dict[str, Any]],
         single_model_config: Optional[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+    ) -> Union[EnsembleConfig, Dict[str, Any]]:
         """
         設定に基づいてトレーナー設定を作成
 
@@ -236,7 +236,7 @@ class MLTrainingService(BaseResourceManager):
                     ensemble_config["method"] = ensemble_config.pop("default_method")
                 if "algorithms" in ensemble_config:
                     ensemble_config["models"] = ensemble_config.pop("algorithms")
-            return ensemble_config
+            return cast(EnsembleConfig, ensemble_config)
 
         elif trainer_type == "single":
             if single_model_config is None:
@@ -657,7 +657,7 @@ class MLTrainingService(BaseResourceManager):
             )
         else:
             cfg = self._create_trainer_config(trainer_type, ensemble_cfg, single_cfg)
-            self.trainer = EnsembleTrainer(ensemble_config=cfg)
+            self.trainer = EnsembleTrainer(ensemble_config=cast(EnsembleConfig, cfg))
 
         opt_settings = (
             config.optimization_settings

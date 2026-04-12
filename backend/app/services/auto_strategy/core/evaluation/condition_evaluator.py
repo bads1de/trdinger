@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -191,7 +191,8 @@ class ConditionEvaluator:
                     # shift属性チェックをhasattrでなくtry-exceptで行う方がPythonicで高速
                     l_prev = l_curr.shift(1)  # type: ignore[union-attr]
                     r_prev = r_curr.shift(1)  # type: ignore[union-attr]
-                    return (l_curr > r_curr) & (l_prev <= r_prev)
+                    result = (l_curr > r_curr) & (l_prev <= r_prev)
+                    return cast(Union["pd.Series", "np.ndarray"], result)
                 except AttributeError:
                     # shiftがない場合（numpy arrayなど）
                     return None
@@ -202,7 +203,8 @@ class ConditionEvaluator:
                     r_curr = right_val
                     l_prev = l_curr.shift(1)  # type: ignore[union-attr]
                     r_prev = r_curr.shift(1)  # type: ignore[union-attr]
-                    return (l_curr < r_curr) & (l_prev >= r_prev)
+                    result = (l_curr < r_curr) & (l_prev >= r_prev)
+                    return cast(Union["pd.Series", "np.ndarray"], result)
                 except AttributeError:
                     return None
 
@@ -396,7 +398,7 @@ class ConditionEvaluator:
                     if hasattr(val, "ndim") and val.ndim == 0:
                         return float("nan")
                     if len(val) >= 2:
-                        return float(val[-2])
+                        return float(cast("float", val[-2]))
             except Exception:
                 pass
 

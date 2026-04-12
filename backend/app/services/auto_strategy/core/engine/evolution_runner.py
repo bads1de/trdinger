@@ -21,7 +21,6 @@ from ..evaluation.evaluation_fidelity import (
     is_multi_fidelity_enabled,
 )
 from ..fitness.fitness_sharing import FitnessSharing
-from .ga_utils import _invalidate_individual_cache, _set_fitness_values
 from .report_selection import (
     build_report_rank_key,
     extract_primary_fitness,
@@ -34,6 +33,24 @@ from .report_selection import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _invalidate_individual_cache(individual: Any) -> None:
+    """個体のキャッシュを無効化する。
+
+    交叉・突然変異後に呼ばれ、個体に紐づくキャッシュデータをクリアする。
+    """
+    try:
+        if hasattr(individual, "_cache"):
+            individual._cache = {}
+    except Exception:
+        pass
+
+
+def _set_fitness_values(population: List[Any], fitnesses: List[tuple[float, ...]]) -> None:
+    """個体群にフィットネス値を設定する。"""
+    for ind, fit in zip(population, fitnesses):
+        ind.fitness.values = fit
 
 
 class EvolutionStoppedError(RuntimeError):

@@ -215,7 +215,6 @@ def _njit_katz_loop(data: np.ndarray, win: int) -> np.ndarray:
     return res
 
 
-
 class AdvancedFeatures:
     """
     分数差分、清算カスケードなどを含む高度な特徴量。
@@ -282,10 +281,13 @@ class AdvancedFeatures:
             is_low_volume = (volume < vol_threshold).astype(int)
             return z_ret * is_low_volume
 
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            window,
-            _calculate_void_oscillator,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                window,
+                _calculate_void_oscillator,
+            ),
         )
 
     @staticmethod
@@ -302,17 +304,20 @@ class AdvancedFeatures:
         市場全体のレバレッジ過熱感を示す複合インデックス。
         Norm(OI Z-Score) + Norm(|FR| * sign(FR)) + Norm(L/S Divergence)
         """
-        return run_multi_series_indicator(
-            {
-                "open_interest": open_interest,
-                "funding_rate": funding_rate,
-                "ls_ratio_divergence": ls_ratio_divergence,
-            },
-            window,
-            lambda: (
-                AdvancedFeatures.z_score(open_interest, window)
-                + AdvancedFeatures.z_score(funding_rate, window)
-                + AdvancedFeatures.z_score(ls_ratio_divergence - 1.0, window)
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {
+                    "open_interest": open_interest,
+                    "funding_rate": funding_rate,
+                    "ls_ratio_divergence": ls_ratio_divergence,
+                },
+                window,
+                lambda: (
+                    AdvancedFeatures.z_score(open_interest, window)
+                    + AdvancedFeatures.z_score(funding_rate, window)
+                    + AdvancedFeatures.z_score(ls_ratio_divergence - 1.0, window)
+                ),
             ),
         )
 
@@ -337,12 +342,15 @@ class AdvancedFeatures:
             upper_shadow = high - close
             lower_shadow = close - low
             imbalance = upper_shadow / (lower_shadow + 1e-9)
-            return cast(pd.Series, np.log(imbalance + 1e-9)).fillna(0.0)
+            return pd.Series(np.log(imbalance + 1e-9), index=close.index).fillna(0.0)
 
-        return run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            None,
-            _calculate_triplet_imbalance,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"high": high, "low": low, "close": close},
+                None,
+                _calculate_triplet_imbalance,
+            ),
         )
 
     @staticmethod
@@ -380,10 +388,13 @@ class AdvancedFeatures:
             )
             return pd.Series(fakeout_score, index=close.index).fillna(0.0)
 
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            window,
-            _calculate_volume_divergence_fakeout,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                window,
+                _calculate_volume_divergence_fakeout,
+            ),
         )
 
     @staticmethod
@@ -399,13 +410,16 @@ class AdvancedFeatures:
 
         Numbaによる高速化を試みる。
         """
-        return run_series_indicator(
-            close,
-            window,
-            lambda: pd.Series(
-                _njit_hurst_loop(close.values.astype(np.float64), window),
-                index=close.index,
-            ).fillna(0.5),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                window,
+                lambda: pd.Series(
+                    _njit_hurst_loop(close.values.astype(np.float64), window),
+                    index=close.index,
+                ).fillna(0.5),
+            ),
         )
 
     @staticmethod
@@ -419,15 +433,18 @@ class AdvancedFeatures:
         時系列の複雑さと規則性を測定。低いほど規則的（トレンドの可能性）、高いほどランダム。
         Numbaによる劇的な高速化。
         """
-        return run_series_indicator(
-            close,
-            window,
-            lambda: pd.Series(
-                _njit_sample_entropy_loop(
-                    close.values.astype(np.float64), window, m, r
-                ),
-                index=close.index,
-            ).fillna(0.0),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                window,
+                lambda: pd.Series(
+                    _njit_sample_entropy_loop(
+                        close.values.astype(np.float64), window, m, r
+                    ),
+                    index=close.index,
+                ).fillna(0.0),
+            ),
         )
 
     @staticmethod
@@ -439,13 +456,16 @@ class AdvancedFeatures:
         チャートの「粗さ」を測定。1.0（直線）〜 2.0（平面を埋め尽くすほど複雑）。
         トレンドが発生すると次元が低下する傾向がある。
         """
-        return run_series_indicator(
-            close,
-            window,
-            lambda: pd.Series(
-                _njit_katz_loop(close.values.astype(np.float64), window),
-                index=close.index,
-            ).fillna(1.0),
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                close,
+                window,
+                lambda: pd.Series(
+                    _njit_katz_loop(close.values.astype(np.float64), window),
+                    index=close.index,
+                ).fillna(1.0),
+            ),
         )
 
     @staticmethod
@@ -470,16 +490,17 @@ class AdvancedFeatures:
             buy_ratio = 1 / (1 + np.exp(-z_score))
             buy_vol = volume * buy_ratio
             sell_vol = volume * (1 - buy_ratio)
-            abs_imbalance = cast(pd.Series, np.abs(buy_vol - sell_vol))
-            return (
-                abs_imbalance.rolling(window=window).sum()
-                / (volume.rolling(window=window).sum() + 1e-9)
-            ).fillna(0.0)
+            abs_imbalance = pd.Series(np.abs(buy_vol - sell_vol), index=close.index)
+            result = abs_imbalance.rolling(window=window).sum() / (volume.rolling(window=window).sum() + 1e-9)
+            return pd.Series(np.where(np.isnan(result), 0.0, result), index=close.index, dtype=float)
 
-        return run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            window,
-            _calculate_vpin,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "volume": volume},
+                window,
+                _calculate_vpin,
+            ),
         )
 
     @staticmethod
@@ -529,7 +550,9 @@ class AdvancedFeatures:
 
             return pd.Series(result, index=series.index, name=series.name)
 
-        return run_series_indicator(series, window, _calculate_frac_diff_ffd)
+        return cast(
+            pd.Series, run_series_indicator(series, window, _calculate_frac_diff_ffd)
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -546,13 +569,16 @@ class AdvancedFeatures:
             """
             清算カスケードスコアの計算ロジック。
             """
-            result = -1 * np.sign(close.diff()) * open_interest.diff() * volume
+            result = -np.sign(close.diff()) * open_interest.diff() * volume
             return pd.Series(result, index=close.index).fillna(0.0)
 
-        return run_multi_series_indicator(
-            {"close": close, "open_interest": open_interest, "volume": volume},
-            None,
-            _calculate_liquidation_cascade_score,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "open_interest": open_interest, "volume": volume},
+                None,
+                _calculate_liquidation_cascade_score,
+            ),
         )
 
     @staticmethod
@@ -579,17 +605,21 @@ class AdvancedFeatures:
             )
             delta_oi_factor = open_interest.diff().clip(lower=0.0).astype(float)
             price_location = (close - low.rolling(window=lookback).min()).astype(float)
-            return (neg_fr_factor * delta_oi_factor * price_location).fillna(0.0)
+            result = neg_fr_factor * delta_oi_factor * price_location
+            return pd.Series(np.where(np.isnan(result), 0.0, result), index=close.index, dtype=float)
 
-        return run_multi_series_indicator(
-            {
-                "close": close,
-                "funding_rate": funding_rate,
-                "open_interest": open_interest,
-                "low": low,
-            },
-            lookback,
-            _calculate_squeeze_probability,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {
+                    "close": close,
+                    "funding_rate": funding_rate,
+                    "open_interest": open_interest,
+                    "low": low,
+                },
+                lookback,
+                _calculate_squeeze_probability,
+            ),
         )
 
     @staticmethod
@@ -612,10 +642,13 @@ class AdvancedFeatures:
                 return result.iloc[:, 0].fillna(0.0)  # type: ignore
             return result.fillna(0.0)
 
-        return run_multi_series_indicator(
-            {"close": close, "open_interest": open_interest},
-            window,
-            _calculate_trend_quality,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "open_interest": open_interest},
+                window,
+                _calculate_trend_quality,
+            ),
         )
 
     @staticmethod
@@ -627,10 +660,13 @@ class AdvancedFeatures:
         """
         OI加重ファンディングレート
         """
-        return run_multi_series_indicator(
-            {"funding_rate": funding_rate, "open_interest": open_interest},
-            None,
-            lambda: funding_rate * open_interest,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"funding_rate": funding_rate, "open_interest": open_interest},
+                None,
+                lambda: funding_rate * open_interest,
+            ),
         )
 
     @staticmethod
@@ -670,10 +706,13 @@ class AdvancedFeatures:
                 dtype=int,
             )
 
-        return run_multi_series_indicator(
-            {"close": close, "open_interest": open_interest},
-            None,
-            _calculate_regime_quadrant,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "open_interest": open_interest},
+                None,
+                _calculate_regime_quadrant,
+            ),
         )
 
     @staticmethod
@@ -689,15 +728,18 @@ class AdvancedFeatures:
         > 1.0: 大口が個人より強気（スマートマネーの買い）
         < 1.0: 大口が個人より弱気（天井圏の可能性大）
         """
-        return run_multi_series_indicator(
-            {
-                "ls_ratio_positions": ls_ratio_positions,
-                "ls_ratio_accounts": ls_ratio_accounts,
-            },
-            None,
-            lambda: normalize_non_finite(
-                ls_ratio_positions / ls_ratio_accounts,
-                fill_value=1.0,
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {
+                    "ls_ratio_positions": ls_ratio_positions,
+                    "ls_ratio_accounts": ls_ratio_accounts,
+                },
+                None,
+                lambda: normalize_non_finite(
+                    ls_ratio_positions / ls_ratio_accounts,
+                    fill_value=1.0,
+                ),
             ),
         )
 
@@ -714,11 +756,14 @@ class AdvancedFeatures:
         正: トレンドはOI増加によって支持されている
         負: トレンドとOIが逆行（ダイバージェンス）
         """
-        return run_multi_series_indicator(
-            {"close": close, "open_interest": open_interest},
-            None,
-            lambda: np.sign(close.diff().fillna(0.0).astype(float))
-            * open_interest.diff().fillna(0.0).astype(float),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"close": close, "open_interest": open_interest},
+                None,
+                lambda: np.sign(close.diff().fillna(0.0).astype(float))
+                * open_interest.diff().fillna(0.0).astype(float),
+            ),
         )
 
     @staticmethod
@@ -727,10 +772,13 @@ class AdvancedFeatures:
         """
         流動性効率（Open Interest / Volume）
         """
-        return run_multi_series_indicator(
-            {"open_interest": open_interest, "volume": volume},
-            None,
-            lambda: normalize_non_finite(open_interest / volume, fill_value=0),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"open_interest": open_interest, "volume": volume},
+                None,
+                lambda: normalize_non_finite(open_interest / volume, fill_value=0),
+            ),
         )
 
     @staticmethod
@@ -739,8 +787,11 @@ class AdvancedFeatures:
         """
         推定レバレッジ比率（Total OI / Estimated Market Cap）
         """
-        return run_multi_series_indicator(
-            {"open_interest": open_interest, "market_cap": market_cap},
-            None,
-            lambda: normalize_non_finite(open_interest / market_cap, fill_value=0),
+        return cast(
+            pd.Series,
+            run_multi_series_indicator(
+                {"open_interest": open_interest, "market_cap": market_cap},
+                None,
+                lambda: normalize_non_finite(open_interest / market_cap, fill_value=0),
+            ),
         )
