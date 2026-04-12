@@ -6,7 +6,7 @@ GA戦略で複数タイムフレームの指標を使用可能にします。
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import pandas as pd
 
@@ -188,18 +188,21 @@ class MultiTimeframeDataProvider:
         if not isinstance(df.index, pd.DatetimeIndex):
             df.index = pd.to_datetime(df.index)
 
-        return (
-            df.resample(rule)
-            .agg(
-                {
-                    "Open": "first",
-                    "High": "max",
-                    "Low": "min",
-                    "Close": "last",
-                    "Volume": "sum",
-                }
-            )
-            .dropna()
+        return cast(
+            pd.DataFrame,
+            (
+                df.resample(rule)
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+            ),
         )
 
     def clear_cache(self) -> None:

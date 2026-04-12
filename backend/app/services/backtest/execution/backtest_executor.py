@@ -65,7 +65,7 @@ class BacktestExecutor:
         slippage: float = 0.0,
         leverage: float = 1.0,
         preloaded_data: Optional[pd.DataFrame] = None,
-    ) -> dict:
+    ) -> pd.Series:
         """
         指定された戦略とパラメータでバックテスト・シミュレーションを実行します。
 
@@ -202,7 +202,9 @@ class BacktestExecutor:
                 f"バックテストインスタンスの作成に失敗しました: {e}"
             )
 
-    def _run_backtest(self, bt: Backtest, strategy_parameters: Dict[str, object]) -> dict:
+    def _run_backtest(
+        self, bt: Backtest, strategy_parameters: Dict[str, object]
+    ) -> pd.Series:
         """バックテストを実行"""
         try:
             # 警告を一時的に無効化

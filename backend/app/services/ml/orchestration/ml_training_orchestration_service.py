@@ -902,11 +902,12 @@ class MLTrainingService(BaseResourceManager):
 
     def get_current_model_path(self) -> Optional[str]:
         """読み込まれているモデルのパスを取得"""
-        return (
-            self.trainer.metadata.get("model_path")
-            if hasattr(self.trainer, "metadata") and self.trainer.metadata
-            else None
-        )
+        metadata = getattr(self.trainer, "metadata", None)
+        if not metadata:
+            return None
+
+        model_path = metadata.get("model_path")
+        return model_path if isinstance(model_path, str) else None
 
     def get_current_model_info(self) -> Optional[Dict[str, Any]]:
         """読み込まれているモデルのメタデータを取得"""

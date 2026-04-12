@@ -9,6 +9,7 @@ from datetime import datetime
 from math import ceil
 from typing import Any, Dict
 
+import numpy as np
 import pandas as pd
 
 from app.services.backtest.conversion.backtest_result_converter import (
@@ -162,7 +163,9 @@ class EvaluationWindowService:
         return EvaluationWindowService._format_datetime_like(original_value, timestamp)
 
     @staticmethod
-    def _format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
+    def _format_datetime_like(
+        original_value: object, timestamp: pd.Timestamp
+    ) -> object:
         """元の入力型に合わせて Timestamp を整形する。"""
         if isinstance(original_value, pd.Timestamp):
             return timestamp
@@ -391,7 +394,7 @@ class EvaluationWindowService:
     def _compute_window_stats(
         self,
         trades_df: pd.DataFrame,
-        equity_values: object,
+        equity_values: np.ndarray,
         ohlc_data: pd.DataFrame,
     ) -> object:
         """評価窓だけを対象に backtesting.py の統計を再計算する。"""

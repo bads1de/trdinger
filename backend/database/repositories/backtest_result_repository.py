@@ -13,7 +13,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from database.models import BacktestResult
-from database.types import SerializableValue
+from app.types import SerializableValue
 
 from .base_repository import BaseRepository
 

@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -203,7 +203,7 @@ class IndicatorCalculator:
                                 except Exception as e:
                                     logger.warning(f"タイムゾーン変換失敗: {e}")
 
-                        return shifted.reindex(base_index, method="ffill")
+                        return cast(pd.Series, shifted.reindex(base_index, method="ffill"))
 
                     if isinstance(raw_result, tuple):
                         result = tuple(_align_to_base(s) for s in raw_result)

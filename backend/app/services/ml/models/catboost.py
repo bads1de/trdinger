@@ -82,7 +82,7 @@ class CatBoostModel(BaseGradientBoostingModel):
         X: Union[pd.DataFrame, np.ndarray],
         y: Optional[Union[pd.Series, np.ndarray]] = None,
         sample_weight: Optional[np.ndarray] = None,
-    ) -> catboost.Pool:
+    ) -> cb.Pool:
         """
         CatBoost固有のデータセットオブジェクトを作成します。
         CatBoostはnumpy配列を直接受け取ります。
@@ -91,8 +91,8 @@ class CatBoostModel(BaseGradientBoostingModel):
 
         if y is not None:
             y_data = self._coerce_target_series(y).values
-            return (X_data, y_data)
-        return X_data
+            return cb.Pool(data=X_data, label=y_data, weight=sample_weight)
+        return cb.Pool(data=X_data, weight=sample_weight)
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """CatBoost固有のパラメータを生成"""

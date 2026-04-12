@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from app.utils.datetime_utils import (
     normalize_datetimes_for_comparison,

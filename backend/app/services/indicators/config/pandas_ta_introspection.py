@@ -10,7 +10,7 @@ import logging
 import re
 import warnings
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 import pandas_ta_classic as ta
@@ -131,13 +131,13 @@ def _build_indicator_call_kwargs(
 
 
 def _run_indicator_on_sample_frame(
-    func: object,
+    func: Callable[..., Any],
     *,
     rows: int,
-    default_params: Optional[Dict[str, object]] = None,
+    default_params: Optional[Dict[str, Any]] = None,
     walk_close: bool = False,
     with_datetime_index: bool = False,
-) -> object:
+) -> Any:
     """
     サンプル OHLCV DataFrame で指標を実行する共通処理
 
@@ -190,7 +190,7 @@ def extract_min_length_expression(indicator_name: str) -> Optional[str]:
     Note:
         中間変数（_length等）を使用している場合、その定義も抽出します。
     """
-    func = getattr(ta, indicator_name.lower(), None)
+    func: Any = getattr(ta, indicator_name.lower(), None)
 
     if func is None or not callable(func):
         return None
@@ -244,7 +244,7 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
         - param if param and param > 0 else default
         - float(param) if param ... else default
     """
-    func = getattr(ta, indicator_name.lower(), None)
+    func: Any = getattr(ta, indicator_name.lower(), None)
 
     if func is None:
         return {}
@@ -370,7 +370,7 @@ def is_multi_column_indicator(indicator_name: str) -> bool:
         3. ソースコードのDataFrame返却パターン
     """
     name_lower = indicator_name.lower()
-    func = getattr(ta, name_lower, None)
+    func: Any = getattr(ta, name_lower, None)
 
     if func is None:
         return False
@@ -465,7 +465,7 @@ def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
     if not is_multi_column_indicator(name_lower):
         return None
 
-    func = getattr(ta, name_lower, None)
+    func: Any = getattr(ta, name_lower, None)
 
     if func is None:
         return None
@@ -533,7 +533,7 @@ def extract_default_parameters(indicator_name: str) -> Dict[str, Any]:
         1. シグネチャからのデフォルト値抽出
         2. ソースコードからの補完（条件分岐によるデフォルト値）
     """
-    func = getattr(ta, indicator_name.lower(), None)
+    func: Any = getattr(ta, indicator_name.lower(), None)
 
     if func is None:
         return {}

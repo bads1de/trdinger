@@ -11,7 +11,7 @@ import inspect
 import logging
 import random
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -83,7 +83,7 @@ def _get_creation_probability_multiplier(config: Any, attr_name: str) -> float:
     return 0.0
 
 
-def _create_sub_gene(creator_func: object, config: object) -> object:
+def _create_sub_gene(creator_func: Callable[..., object], config: object) -> object:
     """生成関数のシグネチャに応じて設定を渡し分ける。
 
     サブ遺伝子（TPSL、PositionSizing、Entryなど）の生成関数を呼び出し、

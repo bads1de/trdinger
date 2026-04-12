@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Optional, cast
+from typing import Dict, Optional, Any, cast
+
 
 import pandas as pd
 
+from app.types import SerializableValue
 from app.utils.datetime_utils import parse_datetime_range_optional
 
 from .time_alignment import align_timestamp_to_index
@@ -49,14 +51,16 @@ class BacktestDataProvider:
         return pd.Timestamp(parsed_range[0]), pd.Timestamp(parsed_range[1])
 
     @staticmethod
-    def _extract_worker_data(worker_payload: object, expected_key: tuple[object, ...]) -> object:
+    def _extract_worker_data(
+        worker_payload: object, expected_key: tuple[object, ...]
+    ) -> pd.DataFrame | None:
         """共有ワーカーデータが現在の要求期間と一致する場合のみ返す。"""
         if not isinstance(worker_payload, dict):
             return None
         worker_key = worker_payload.get("key")
         worker_data = worker_payload.get("data")
         if worker_key == expected_key:
-            return worker_data
+            return worker_data if isinstance(worker_data, pd.DataFrame) else None
         if not BacktestDataProvider._is_compatible_worker_key(worker_key, expected_key):
             return None
         if not isinstance(worker_data, pd.DataFrame) or worker_data.empty:
@@ -70,9 +74,7 @@ class BacktestDataProvider:
 
             expected_start, expected_end = expected_range
             if len(worker_index) > 0:
-                expected_start = align_timestamp_to_index(
-                    expected_start, worker_index
-                )
+                expected_start = align_timestamp_to_index(expected_start, worker_index)
                 expected_end = align_timestamp_to_index(expected_end, worker_index)
         except Exception:
             return None
@@ -102,7 +104,9 @@ class BacktestDataProvider:
         expected_start, expected_end = expected_range
         return worker_start <= expected_start <= expected_end <= worker_end
 
-    def get_cached_backtest_data(self, backtest_config: Dict[str, SerializableValue]) -> pd.DataFrame | None:
+    def get_cached_backtest_data(
+        self, backtest_config: Dict[str, SerializableValue]
+    ) -> pd.DataFrame | None:
         """メイン時間軸のバックテストデータをキャッシュ付きで取得する。"""
         symbol = backtest_config.get("symbol")
         timeframe = backtest_config.get("timeframe")
@@ -139,7 +143,9 @@ class BacktestDataProvider:
         logger.debug(f"バックテストデータをキャッシュしました: {key}")
         return data
 
-    def get_cached_minute_data(self, backtest_config: Dict[str, SerializableValue]) -> pd.DataFrame | None:
+    def get_cached_minute_data(
+        self, backtest_config: Dict[str, SerializableValue]
+    ) -> pd.DataFrame | None:
         """1分足データをキャッシュ付きで取得する。"""
         symbol = backtest_config.get("symbol")
         start_date = backtest_config.get("start_date")

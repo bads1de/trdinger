@@ -709,10 +709,12 @@ class OptimizationService:
                 training_params = {**base_training_params, **params}
 
                 # 一時的なトレーナーを作成
-                temp_trainer = self._create_temp_trainer(trainer, params)
+                temp_trainer: "EnsembleTrainer" = self._create_temp_trainer(
+                    trainer, params
+                )
 
                 # 学習実行（保存なし）
-                result = temp_trainer.train_model(
+                result: Dict[str, Any] = temp_trainer.train_model(
                     training_data=training_data,
                     funding_rate_data=funding_rate_data,
                     open_interest_data=open_interest_data,
@@ -739,8 +741,8 @@ class OptimizationService:
         return objective_function
 
     def _create_temp_trainer(
-        self, original_trainer: object, params: Dict[str, object]
-    ) -> object:
+        self, original_trainer: Any, params: Dict[str, object]
+    ) -> EnsembleTrainer:
         """一時的なトレーナーを作成（全てEnsembleTrainerで統一）"""
         # オリジナルのトレーナーがEnsembleTrainerであることを前提
         if hasattr(original_trainer, "ensemble_config"):

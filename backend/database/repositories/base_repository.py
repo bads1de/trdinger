@@ -116,15 +116,10 @@ class BaseRepository(Generic[T]):
             logger.info(f"一括挿入完了: {inserted_count}/{len(records)}件挿入")
             return inserted_count
 
-        except Exception:
-            from app.utils.error_handler import safe_operation
-
-            @safe_operation(context="データ挿入", is_api_call=False)
-            def _handle_bulk_insert_error():
-                self.db.rollback()
-                raise
-
-            _handle_bulk_insert_error()
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"一括挿入エラー ({self.model_class.__name__}): {e}")
+            raise
 
     def _bulk_insert_sqlite_ignore(self, records: List[Dict[str, Any]]) -> int:
         """
@@ -274,7 +269,9 @@ class BaseRepository(Generic[T]):
             def _handle_latest_timestamp_error():
                 raise
 
+            # 例外が再送出されるため、この行は通常実行されない
             _handle_latest_timestamp_error()
+            return None  # 型チェッカー用のフォールバック
 
     def get_oldest_timestamp(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
@@ -327,14 +324,9 @@ class BaseRepository(Generic[T]):
 
             return self.db.scalar(stmt) or 0
 
-        except Exception:
-            from app.utils.error_handler import safe_operation
-
-            @safe_operation(context="レコード数取得", is_api_call=False)
-            def _handle_record_count_error():
-                raise
-
-            _handle_record_count_error()
+        except Exception as e:
+            logger.error(f"レコード数取得エラー ({self.model_class.__name__}): {e}")
+            raise
 
     def get_date_range(
         self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
@@ -615,14 +607,9 @@ class BaseRepository(Generic[T]):
 
             return df
 
-        except Exception:
-            from app.utils.error_handler import safe_operation
-
-            @safe_operation(context="DataFrame変換", is_api_call=False)
-            def _handle_dataframe_error():
-                raise
-
-            _handle_dataframe_error()
+        except Exception as e:
+            logger.error(f"DataFrame変換エラー ({self.model_class.__name__}): {e}")
+            raise
 
     def delete_by_date_range(
         self,

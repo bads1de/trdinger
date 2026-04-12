@@ -518,7 +518,7 @@ def extract_tuple_result(
         raise
 
 
-def get_param_value(params: Dict[str, object], keys: list, default: object = None) -> object:
+def get_param_value(params: Dict[str, Any], keys: list[str], default: int = 1) -> int:
     """
     パラメータ名がlengthまたはwindowの場合の値取得をサポート
 
@@ -531,11 +531,13 @@ def get_param_value(params: Dict[str, object], keys: list, default: object = Non
         default: デフォルト値
 
     Returns:
-        Any: 見つかったパラメータ値、またはデフォルト値
+        int: 見つかったパラメータ値、またはデフォルト値
     """
     for key in keys:
         if key in params:
-            return params[key]
+            val = params[key]
+            if isinstance(val, (int, float)):
+                return int(val)
     return default
 
 
@@ -714,9 +716,7 @@ def validate_input(data: object, period: int) -> None:
         raise PandasTAError(f"期間は正の整数である必要があります: {period}")
 
     if len(series) < period:
-        raise PandasTAError(
-            f"データ長({len(series)})が期間({period})より短いです"
-        )
+        raise PandasTAError(f"データ長({len(series)})が期間({period})より短いです")
 
     # NaNや無限大の値をチェック (pandas.Series専用)
     if bool(series.isna().any()):

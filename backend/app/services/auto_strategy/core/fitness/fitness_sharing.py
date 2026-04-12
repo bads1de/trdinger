@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
@@ -39,6 +39,8 @@ from .fitness_sharing_vectorizer import (
     _count_operators,
     vectorize_gene as _vectorize_gene,
 )
+
+_FrozenKey = tuple | str | int | float | bool | None | bytes
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +85,7 @@ class FitnessSharing:
         self.sampling_ratio = (
             sampling_ratio if sampling_ratio is not None else self.SAMPLING_RATIO
         )
-        self._feature_vector_cache: dict[str, np.ndarray] = {}
+        self._feature_vector_cache: dict[_FrozenKey, np.ndarray] = {}
 
         # 指標タイプマップの初期化（ベクトル化用）
         try:
@@ -174,7 +176,7 @@ class FitnessSharing:
             logger.error(f"フィットネス共有適用エラー: {e}")
             return population
 
-    def _get_feature_vector_cache_key(self, gene: StrategyGene) -> str:
+    def _get_feature_vector_cache_key(self, gene: StrategyGene) -> _FrozenKey:
         """
         特徴ベクトルキャッシュ用の安定キーを生成する。
 
@@ -263,9 +265,7 @@ class FitnessSharing:
         """TP/SL遺伝子の類似度を計算"""
         return _calculate_tpsl_similarity(tpsl1, tpsl2)
 
-    def _calculate_position_sizing_similarity(
-        self, ps1: Any, ps2: Any
-    ) -> float:
+    def _calculate_position_sizing_similarity(self, ps1: Any, ps2: Any) -> float:
         """ポジションサイジング遺伝子の類似度を計算"""
         return _calculate_position_sizing_similarity(ps1, ps2)
 

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import numpy as np
 import pandas as pd
 
 from app.utils.error_handler import ModelError
 
+from ..models.base_gradient_boosting_model import BaseGradientBoostingModel
 from ..models.lightgbm import LightGBMModel
 from ..models.xgboost import XGBoostModel
 from .base_ml_trainer import BaseMLTrainer
@@ -39,12 +40,12 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
         self.model_type = model_type
         self.model_params = model_params or {}
 
-    def _build_model(self):
+    def _build_model(self) -> BaseGradientBoostingModel:
         """
         指定されたアルゴリズムに基づいてモデルインスタンスを構築します。
 
         Returns:
-            BaseModel: LightGBMModel または XGBoostModel のインスタンス。
+            BaseGradientBoostingModel: LightGBMModel または XGBoostModel のインスタンス。
 
         Raises:
             ModelError: 未知の `model_type` が指定された場合。
@@ -101,11 +102,12 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
                 - "rmse" / "mae" (float): 検証データでの誤差指標（モデルクラスにより提供）。
                 - "feature_count" (int): 使用された特徴量数。
         """
-        self._model = self._build_model()
+        model = cast(Any, self._build_model())
+        self._model = cast(Any, model)
         eval_set = (
             [(X_test, y_test)] if X_test is not None and len(X_test) > 0 else None
         )
-        self._model.fit(
+        model.fit(
             X_train,
             y_train,
             eval_set=eval_set,
@@ -114,9 +116,7 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
             learning_rate=training_params.get("learning_rate"),
             max_depth=training_params.get("max_depth"),
         )
-        self.feature_columns = list(
-            self._model.feature_columns or X_train.columns.tolist()
-        )
+        self.feature_columns = list(model.feature_columns or X_train.columns.tolist())
         self.is_trained = True
 
         result = dict(getattr(self._model, "last_training_result", {}) or {})
@@ -126,10 +126,16 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
         result.setdefault("feature_count", len(self.feature_columns))
         result.setdefault(
             "gate_cutoff_log_rv",
-            float(training_params.get("gate_cutoff_log_rv", 0.0)),
+            self._coerce_float_param(
+                training_params.get("gate_cutoff_log_rv", 0.0),
+                0.0,
+            ),
         )
         result.setdefault(
             "gate_cutoff_vol",
-            float(training_params.get("gate_cutoff_vol", 1.0)),
+            self._coerce_float_param(
+                training_params.get("gate_cutoff_vol", 1.0),
+                1.0,
+            ),
         )
         return result

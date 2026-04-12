@@ -272,11 +272,12 @@ class StackingEnsemble(BaseEnsemble):
         meta_features = (
             pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
         )
-        fitted_meta_model = self._create_base_model(
+        fitted_meta_model: Any = self._create_base_model(
             self._meta_model_type, meta_model_params
         )
         self._fitted_meta_model = fitted_meta_model
-        fitted_meta_model.fit(meta_features, y)
+        if fitted_meta_model is not None:
+            fitted_meta_model.fit(meta_features, y)
 
         meta_cv = self._create_cv_splitter(X)
         return np.asarray(

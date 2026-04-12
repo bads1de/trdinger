@@ -78,9 +78,7 @@ class IndicatorValidator:
             return tuple(nan_result[:, i] for i in range(nan_result.shape[1]))
         return nan_result
 
-    def resolve_column_name(
-        self, df: pd.DataFrame, data_key: str
-    ) -> str:
+    def resolve_column_name(self, df: pd.DataFrame, data_key: str) -> str | None:
         """
         データフレームから適切なカラム名を解決
 

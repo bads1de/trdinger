@@ -359,7 +359,7 @@ class PositionSizingGene(BaseGene):
             mutated_params["method"] = random.choice(allowed_methods)
 
         _ensure_position_size_bounds(mutated_params)
-        return PositionSizingGene(**mutated_params)
+        return PositionSizingGene(**mutated_params)  # type: ignore[arg-type]
 
     def clone(self) -> PositionSizingGene:
         """軽量コピーを作成"""

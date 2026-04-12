@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Optional, Sequence, Tuple
 
+import logging
 import pandas as pd
 
 from app.utils.datetime_utils import current_datetime_like as _current_datetime_like
@@ -22,7 +23,9 @@ TRADE_PNL_COLUMNS: tuple[str, ...] = ("PnL", "Pnl", "Profit", "ProfitLoss")
 OHLCV_COLUMNS: tuple[str, ...] = ("open", "high", "low", "close", "volume")
 
 
-def resolve_stats_object(stats: object, warning_logger: object = None) -> object:
+def resolve_stats_object(
+    stats: object, warning_logger: Optional[logging.Logger] = None
+) -> object:
     """
     statsオブジェクトの実体を取得する。callableなら呼び出す。
 
@@ -36,7 +39,7 @@ def resolve_stats_object(stats: object, warning_logger: object = None) -> object
     Returns:
         Any: statsオブジェクトの実体（呼び出し可能な場合は呼び出し結果、そうでない場合はそのまま）
     """
-    if hasattr(stats, "__call__"):
+    if callable(stats):
         try:
             return stats()
         except Exception as exc:

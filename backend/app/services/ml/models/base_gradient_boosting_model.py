@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ class BaseGradientBoostingModel(ABC):
     ALGORITHM_NAME: str = "base_gradient_boosting"
 
     def __init__(self, random_state: int = 42, **kwargs):
-        self.model = None
+        self.model: Any = None
         self.is_trained = False
         self.feature_columns: Optional[List[str]] = None
         self.classes_ = None  # sklearn互換性のため
@@ -252,7 +252,7 @@ class BaseGradientBoostingModel(ABC):
         X: Union[pd.DataFrame, np.ndarray],
         y: Optional[Union[pd.Series, np.ndarray]] = None,
         sample_weight: Optional[np.ndarray] = None,
-    ) -> object:
+    ) -> Any:
         """
         モデル固有のデータセットオブジェクトを作成します。
         例: lgb.Dataset, xgb.DMatrix
@@ -267,12 +267,12 @@ class BaseGradientBoostingModel(ABC):
     @abstractmethod
     def _train_internal(
         self,
-        train_data: object,
-        valid_data: Optional[object],
-        params: Dict[str, object],
+        train_data: Any,
+        valid_data: Optional[Any],
+        params: Dict[str, Any],
         early_stopping_rounds: Optional[int] = None,
-        **kwargs,
-    ) -> object:
+        **kwargs: Any,
+    ) -> Any:
         """
         モデル固有の学習プロセスを実行します。
         """
@@ -324,7 +324,7 @@ class BaseGradientBoostingModel(ABC):
         return predictions
 
     @abstractmethod
-    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> object:
+    def _prepare_input_for_prediction(self, X: pd.DataFrame) -> Any:
         """
         予測用の入力データを準備します。
         """

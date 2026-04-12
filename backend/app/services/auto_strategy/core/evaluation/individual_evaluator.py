@@ -10,6 +10,7 @@ import hashlib
 import logging
 import threading
 from typing import (
+    Any,
     Dict,
     Optional,
     Tuple,
@@ -469,11 +470,15 @@ class IndividualEvaluator(EvaluationWindowService):
         )
         return f"{base_key}:robustness:{hash(signature)}"
 
-    def _get_cached_data(self, backtest_config: Dict[str, SerializableValue]) -> object:
+    def _get_cached_data(
+        self, backtest_config: Dict[str, SerializableValue]
+    ) -> pd.DataFrame | None:
         """キャッシュされたバックテストデータを取得"""
         return self._data_provider.get_cached_backtest_data(backtest_config)
 
-    def _get_cached_minute_data(self, backtest_config: Dict[str, SerializableValue]) -> object:
+    def _get_cached_minute_data(
+        self, backtest_config: Dict[str, SerializableValue]
+    ) -> pd.DataFrame | None:
         """
         1分足データをキャッシュから取得
 

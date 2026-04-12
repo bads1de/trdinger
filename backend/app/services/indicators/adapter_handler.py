@@ -327,7 +327,9 @@ class AdapterHandler:
 
         return result
 
-    def _align_adapter_result(self, result: object, reference_index: pd.Index | None) -> pd.DataFrame | pd.Series | None:
+    def _align_adapter_result(
+        self, result: object, reference_index: pd.Index | None
+    ) -> pd.DataFrame | pd.Series | None:
         """
         入力 index に合わせて adapter の結果を再整列する
 
@@ -342,7 +344,7 @@ class AdapterHandler:
             pd.DataFrame | pd.Series | None: 整列された結果（インデックスが揃えられたSeries/DataFrame）
         """
         if reference_index is None:
-            return result
+            return result  # type: ignore[return-value]
 
         if isinstance(result, pd.Series):
             return self._align_series_like_result(result, reference_index)
@@ -432,7 +434,9 @@ class AdapterHandler:
 
         return reference_index.take(positions)
 
-    def _convert_adapter_result(self, result: object, config: IndicatorConfig) -> np.ndarray | tuple[np.ndarray, ...] | object:
+    def _convert_adapter_result(
+        self, result: object, config: IndicatorConfig
+    ) -> np.ndarray | tuple[np.ndarray, ...] | object:
         """
         アダプター結果を変換
 

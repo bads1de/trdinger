@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol, Sequence, TypeVar
 
 from app.utils.error_handler import safe_operation
 
@@ -29,6 +29,15 @@ from ..tools import tool_registry
 from .condition_generator import ConditionGenerator
 
 logger = logging.getLogger(__name__)
+
+
+class Cloneable(Protocol):
+    """clone() メソッドを持つオブジェクトのプロトコル"""
+
+    def clone(self) -> Any: ...
+
+
+T = TypeVar("T", bound=Cloneable)
 
 
 class RandomGeneGenerator:
@@ -124,11 +133,11 @@ class RandomGeneGenerator:
 
     @staticmethod
     def _clone_or_create_gene(
-        cache: List[object],
+        cache: Sequence[T],
         creator: Any,
         *,
         postprocess: Optional[Any] = None,
-    ) -> object:
+    ) -> Any:
         """
         キャッシュから clone し、無ければ creator で生成する
 

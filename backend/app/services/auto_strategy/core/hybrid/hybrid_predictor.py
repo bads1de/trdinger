@@ -100,20 +100,24 @@ class RuntimeModelPredictorAdapter:
         """モデル固有の予測関数を呼び出す。"""
         predict_volatility = getattr(self.model, "predict_volatility", None)
         if callable(predict_volatility):
-            return predict_volatility(features_df)
+            return cast(Callable[[pd.DataFrame], np.ndarray], predict_volatility)(
+                features_df
+            )
 
         if self.metadata.get("task_type") == "volatility_regression":
             predict = getattr(self.model, "predict", None)
             if callable(predict):
-                return predict(features_df)
+                return cast(Callable[[pd.DataFrame], np.ndarray], predict)(features_df)
 
         predict_proba = getattr(self.model, "predict_proba", None)
         if callable(predict_proba):
-            return predict_proba(features_df)
+            return cast(Callable[[pd.DataFrame], np.ndarray], predict_proba)(
+                features_df
+            )
 
         predict = getattr(self.model, "predict", None)
         if callable(predict):
-            return predict(features_df)
+            return cast(Callable[[pd.DataFrame], np.ndarray], predict)(features_df)
 
         raise MLPredictionError(
             "runtime predictor が predict/predict_proba を持っていません"
@@ -475,15 +479,15 @@ class HybridPredictor:
         """利用可能な予測インターフェースを順に試す。"""
         generate_forecast = getattr(service, "generate_forecast", None)
         if callable(generate_forecast):
-            return cast(
-                Callable[[pd.DataFrame], Dict[str, float]], generate_forecast
-            )(features_df)
+            return cast(Callable[[pd.DataFrame], Dict[str, float]], generate_forecast)(
+                features_df
+            )
 
         predict_volatility = getattr(service, "predict_volatility", None)
         if callable(predict_volatility):
-            return cast(
-                Callable[[pd.DataFrame], Dict[str, float]], predict_volatility
-            )(features_df)
+            return cast(Callable[[pd.DataFrame], Dict[str, float]], predict_volatility)(
+                features_df
+            )
 
         trainer = getattr(service, "trainer", None)
         trainer_predict_volatility = getattr(trainer, "predict_volatility", None)

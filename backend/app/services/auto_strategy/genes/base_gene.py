@@ -11,7 +11,8 @@ import sys
 from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
 from datetime import datetime
-from typing import Dict, List, Self, Tuple, Union, get_type_hints
+from typing import Dict, List, Tuple, Union, get_type_hints
+from typing_extensions import Self
 
 from app.utils.serialization import dataclass_to_dict
 
@@ -38,7 +39,7 @@ class BaseGene(ABC):
     NUMERIC_RANGES: Dict[str, Tuple[float, float]] = {}
     _SKIP_FIELD_CONVERSION = object()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, SerializableValue]:
         """オブジェクトを辞書形式に変換"""
         # dataclass サブクラスは汎用ユーティリティに委譲
         if is_dataclass(self):
@@ -79,7 +80,9 @@ class BaseGene(ABC):
         return param_type == datetime
 
     @staticmethod
-    def _convert_enum_value(value: object, param_type: type) -> SerializableValue | object:
+    def _convert_enum_value(
+        value: object, param_type: type
+    ) -> SerializableValue | object:
         """
         値をEnum型に変換
 
@@ -97,9 +100,7 @@ class BaseGene(ABC):
             try:
                 return param_type(value)
             except ValueError:
-                logger.warning(
-                    f"無効なEnum値 {value} を無視、既定値へフォールバック"
-                )
+                logger.warning(f"無効なEnum値 {value} を無視、既定値へフォールバック")
                 return BaseGene._SKIP_FIELD_CONVERSION
         return value
 
@@ -136,12 +137,12 @@ class BaseGene(ABC):
             return value
 
     @classmethod
-    def _get_resolved_annotations(cls) -> Dict[str, Any]:
+    def _get_resolved_annotations(cls) -> dict[str, type]:
         """継承階層を含む型注釈を解決済みで取得する。"""
-        annotations: Dict[str, Any] = {}
+        annotations: dict[str, type] = {}
         module = sys.modules.get(cls.__module__)
         globalns = vars(module) if module is not None else {}
-        localns: Dict[str, Any] = {}
+        localns: dict[str, object] = {}
 
         for base in cls.__mro__:
             try:
@@ -164,7 +165,7 @@ class BaseGene(ABC):
         return annotations
 
     @classmethod
-    def from_dict(cls, data: Dict[str, SerializableValue]) -> Self:
+    def from_dict(cls, data: dict[str, SerializableValue]) -> Self:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
         skipped_fields = set()

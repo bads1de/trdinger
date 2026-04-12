@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Union
+from typing import Any, Callable, Dict, List, Union
 
 import numpy as np
 import pandas as pd
@@ -33,7 +33,7 @@ class ConditionEvaluator:
         import operator as op_module
 
         # 演算子関数のキャッシュ
-        self._ops = {
+        self._ops: Dict[str, Callable[[Any, Any], Any]] = {
             ">": op_module.gt,
             "<": op_module.lt,
             ">=": op_module.ge,
@@ -44,7 +44,7 @@ class ConditionEvaluator:
         }
 
         # 属性アクセサのキャッシュ: "sma_20" -> operator.attrgetter("sma_20")
-        self._accessor_cache: Dict[str, object] = {}
+        self._accessor_cache: Dict[str, Callable[[Any], Any]] = {}
 
         # OHLCV名のマッピング
         self._ohlcv_map = {
@@ -55,7 +55,7 @@ class ConditionEvaluator:
             "volume": "Volume",
         }
 
-    def _get_accessor(self, attr_name: str) -> object:
+    def _get_accessor(self, attr_name: str) -> Callable[[Any], Any]:
         """属性アクセサを取得または作成"""
         if attr_name not in self._accessor_cache:
             import operator

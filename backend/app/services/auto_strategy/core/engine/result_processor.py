@@ -11,7 +11,6 @@ from deap import tools
 
 from app.services.auto_strategy.genes import StrategyGene
 
-from ..evaluation.evaluation_fidelity import is_multi_fidelity_enabled
 from .report_selection import (
     extract_primary_fitness,
     get_two_stage_best_individual,

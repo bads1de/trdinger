@@ -277,3 +277,15 @@ def test_train_in_background_closes_own_session(service, training_config, traini
     mock_backtest_cls.assert_called_once()
     mock_execute.assert_called_once()
     fake_session.close.assert_called_once()
+
+
+def test_get_current_model_path_returns_string_only(service):
+    service.trainer.metadata = {"model_path": "/tmp/model.pkl"}
+
+    assert service.get_current_model_path() == "/tmp/model.pkl"
+
+
+def test_get_current_model_path_rejects_non_string_values(service):
+    service.trainer.metadata = {"model_path": 1.23}
+
+    assert service.get_current_model_path() is None

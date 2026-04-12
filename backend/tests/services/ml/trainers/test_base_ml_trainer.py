@@ -87,6 +87,41 @@ class TestBaseMLTrainer:
                     assert "qlike" in result
                     assert result["model_path"] == "/path/to/model"
 
+    def test_train_model_coerces_invalid_gate_quantile(
+        self, trainer, sample_data
+    ):
+        """gate_quantile が壊れていても既定値へフォールバックする"""
+        with patch.object(
+            trainer.feature_service,
+            "calculate_advanced_features",
+            return_value=pd.DataFrame(
+                np.random.randn(150, 10), index=sample_data.index
+            ),
+        ):
+            with patch.object(
+                trainer.target_service,
+                "prepare_targets",
+                return_value=(
+                    pd.DataFrame(np.random.randn(140, 10)),
+                    pd.Series(np.random.randn(140)),
+                ),
+            ):
+                with patch(
+                    "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
+                    return_value="/path/to/model",
+                ):
+                    result = trainer.train_model(
+                        sample_data,
+                        save_model=True,
+                        gate_quantile={"invalid": True},
+                    )
+
+        assert result["success"] is True
+        assert trainer.current_model_metadata is not None
+        assert trainer.current_model_metadata["gate_quantile"] == pytest.approx(
+            trainer.config.training.gate_quantile
+        )
+
     def test_predict_volatility_not_trained(self, trainer, sample_data):
         """未学習状態での予測"""
         # 未学習時はデフォルト値を返すべき
@@ -115,6 +150,31 @@ class TestBaseMLTrainer:
             assert "forecast_log_rv" in result
             assert result["forecast_log_rv"] == 0.7
             assert result["gate_open"] is True
+
+    def test_predict_volatility_coerces_invalid_gate_cutoff(
+        self, trainer, sample_data
+    ):
+        """gate_cutoff_log_rv が壊れていても予測を返せる"""
+        trainer.is_trained = True
+        trainer.feature_columns = ["feat1", "feat2"]
+        trainer._model = MagicMock()
+        trainer.current_model_metadata = {"gate_cutoff_log_rv": {"invalid": True}}
+        trainer.predict = MagicMock(return_value=np.array([0.1, 0.2, 1.0]))
+
+        features = pd.DataFrame(
+            np.random.randn(3, 2),
+            columns=["feat1", "feat2"],
+            index=sample_data.index[:3],
+        )
+
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.prepare_data_for_prediction",
+            return_value=features,
+        ):
+            result = trainer.predict_volatility(features)
+
+        assert result["forecast_log_rv"] == 1.0
+        assert result["gate_open"] is True
 
     def test_predict_volatility_uses_latest_1d_prediction(self, trainer, sample_data):
         """1次元の予測配列でも最新値を使うことを確認"""
@@ -242,8 +302,14 @@ class TestBaseMLTrainer:
             result = trainer._time_series_cross_validate(X, y, cv_splits=2)
 
             assert "cv_scores" in result
+            assert "fold_results" in result
             assert len(result["cv_scores"]) == 2
+            assert isinstance(result["fold_results"], list)
+            assert len(result["fold_results"]) == 2
             assert result["mean_score"] == 0.2
+            assert all(isinstance(score, float) for score in result["cv_scores"])
+            assert isinstance(result["mean_score"], float)
+            assert isinstance(result["std_score"], float)
 
     def test_cross_validation_uses_training_params_for_t1(self, trainer, sample_data):
         """CV用のt1計算が学習パラメータを使うことを確認"""

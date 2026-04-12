@@ -11,11 +11,7 @@ from typing import Any, Dict, Optional
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.config.constants import DEFAULT_MARKET_SYMBOL
-from app.config.unified_config import unified_config
-from app.utils.error_handler import safe_operation
-from app.utils.response import api_response
-from database.repositories.open_interest_repository import OpenInterestRepository
+
 from database.repositories.ohlcv_repository import OHLCVRepository
 
 from . import historical_data_orchestrator as historical_data_orchestrator_module
@@ -186,7 +182,9 @@ class DataCollectionOrchestrationService:
         Raises:
             Exception: 取引所APIへの通信エラーや、DB書き込み時の致命的なエラー。
         """
-        return await self.bulk_data_orchestrator.execute_bulk_incremental_update(symbol, db)
+        return await self.bulk_data_orchestrator.execute_bulk_incremental_update(
+            symbol, db
+        )
 
     async def start_bitcoin_full_data_collection(
         self, background_tasks: BackgroundTasks, db: Session
@@ -256,7 +254,13 @@ class DataCollectionOrchestrationService:
             データ収集状況
         """
         return await self.collection_status_checker.get_collection_status(
-            symbol, timeframe, background_tasks, auto_fetch, db, self.data_validator, self.historical_orchestrator
+            symbol,
+            timeframe,
+            background_tasks,
+            auto_fetch,
+            db,
+            self.data_validator,
+            self.historical_orchestrator,
         )
 
     async def start_all_data_bulk_collection(
@@ -272,7 +276,9 @@ class DataCollectionOrchestrationService:
         Returns:
             収集開始レスポンス
         """
-        return await self.bulk_data_orchestrator.start_all_data_bulk_collection(background_tasks, db)
+        return await self.bulk_data_orchestrator.start_all_data_bulk_collection(
+            background_tasks, db
+        )
 
     async def start_historical_oi_collection(
         self,

@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 import pandas as pd
 
@@ -47,16 +47,16 @@ class LowerTimeframeSimulator:
 
         # カラム名の正規化（Low/low, High/high）
         cols = {c.lower(): c for c in minute_data.columns}
-        lows = minute_data[cols.get("low", "Low")]
-        highs = minute_data[cols.get("high", "High")]
+        lows = cast(pd.Series, minute_data[cols.get("low", "Low")].squeeze())
+        highs = cast(pd.Series, minute_data[cols.get("high", "High")].squeeze())
 
         if order.order_type == EntryType.LIMIT:
             if order.limit_price is None:
                 return False, None
             mask = (
-                (lows <= order.limit_price)
+                (lows <= order.limit_price)  
                 if order.is_long
-                else (highs >= order.limit_price)
+                else (highs >= order.limit_price) 
             )
             if mask.any():
                 return True, order.limit_price
@@ -65,15 +65,15 @@ class LowerTimeframeSimulator:
             if order.stop_price is None:
                 return False, None
             mask = (
-                (highs >= order.stop_price)
+                (highs >= order.stop_price)  
                 if order.is_long
-                else (lows <= order.stop_price)
+                else (lows <= order.stop_price) 
             )
             if mask.any():
                 return True, order.stop_price
 
         elif order.order_type == EntryType.STOP_LIMIT:
-            return self._check_stop_limit_fill_vectorized(order, lows, highs)
+            return self._check_stop_limit_fill_vectorized(order, lows, highs)  
 
         return False, None
 

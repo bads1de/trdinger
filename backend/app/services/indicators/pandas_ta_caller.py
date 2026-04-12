@@ -189,9 +189,14 @@ class PandasTaCaller:
             - 関数の第一引数名と同じ名前のパラメータは削除する
             - データ長がlengthパラメータ未満の場合はエラー
         """
-        col_name = self.validator.resolve_column_name(df, config.get("data_column"))
+        data_col = config.get("data_column")
+        if data_col is None:
+            logger.error("data_column が設定されていません")
+            return None
+
+        col_name = self.validator.resolve_column_name(df, data_col)
         if col_name is None:
-            logger.error(f"必須カラム '{config.get('data_column')}' が存在しません")
+            logger.error(f"必須カラム '{data_col}' が存在しません")
             return None
 
         if len(df) < params.get("length", 0):

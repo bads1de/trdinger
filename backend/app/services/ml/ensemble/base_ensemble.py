@@ -114,7 +114,7 @@ class BaseEnsemble(ABC):
         self,
         model_type: str,
         model_params: Optional[Dict[str, Any]] = None,
-    ) -> object:
+    ) -> Any:
         """ベースモデルを作成する。
 
         指定されたモデルタイプとパラメータから、機械学習モデルのインスタンスを生成します。

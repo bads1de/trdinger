@@ -12,7 +12,7 @@ import logging
 from dataclasses import fields, is_dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Dict, Type, TypeVar
+from typing import Any, Dict, Type, TypeVar, cast
 
 from ..types import SerializableValue
 
@@ -40,7 +40,7 @@ def _convert_value(value: object) -> SerializableValue:
         value: 変換対象の値。任意のPythonオブジェクト。
 
     Returns:
-        Any: JSONシリアライズ可能な型に変換された値。
+        SerializableValue: JSONシリアライズ可能な型に変換された値。
     """
     if isinstance(value, Enum):
         return value.value
@@ -55,30 +55,27 @@ def _convert_value(value: object) -> SerializableValue:
     if hasattr(value, "__dict__"):
         # dataclass 以外の複雑オブジェクト
         return str(value)
-    return value
+    if isinstance(value, (str, int, float, bool, type(None))):
+        return value
+    return str(value)
 
 
 def dataclass_to_dict(obj: object) -> dict[str, SerializableValue]:
     """
     dataclass インスタンスを JSON シリアライズ可能な辞書に変換する。
-
-    Enum          → .value
-    datetime      → .isoformat()
-    nested dataclass → 再帰変換
-    list / dict   → 要素を再帰変換
-    その他複雑オブジェクト → str()
-
-    Args:
-        obj: dataclass インスタンス（``__dataclass_fields__`` を持つこと）
-
-    Returns:
-        変換済み辞書。変換に失敗した場合は空辞書を返す。
     """
     try:
+        if not is_dataclass(obj) or isinstance(obj, type):
+            logger.warning(
+                f"dataclass_to_dict: 非dataclassまたはtypeオブジェクト ({type(obj).__name__})"
+            )
+            return {}
+
         result: dict[str, SerializableValue] = {}
-        for f in fields(obj):
+        for f in fields(cast(Any, obj)):
             value = getattr(obj, f.name)
-            result[f.name] = _convert_value(value)
+            converted = _convert_value(value)
+            result[f.name] = converted  # type: ignore[assignment]
         return result
     except Exception as e:
         logger.error(f"辞書変換エラー ({type(obj).__name__}): {e}", exc_info=True)

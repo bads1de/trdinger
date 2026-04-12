@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -109,6 +109,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """学習済みモデルを取得"""
         return self._model
 
+    @staticmethod
+    def _coerce_float_param(value: Any, default: float) -> float:
+        """float化できない値は既定値へフォールバックする。"""
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return float(default)
+
     @safe_ml_operation(
         default_return={"success": False}, context="MLモデル学習でエラーが発生しました"
     )
@@ -145,12 +153,15 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 2. データ分割（時系列ホールドアウト）
             X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
 
-            gate_quantile = float(
+            gate_quantile = self._coerce_float_param(
                 training_params.get(
                     "gate_quantile",
                     self.config.training.gate_quantile,
-                )
+                ),
+                self.config.training.gate_quantile,
             )
+            if not 0.0 < gate_quantile < 1.0:
+                gate_quantile = float(self.config.training.gate_quantile)
             gate_cutoff_log_rv = float(y_tr.quantile(gate_quantile))
             gate_cutoff_vol = float(np.exp(gate_cutoff_log_rv))
             training_params = {
@@ -268,7 +279,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 forecast_log_rv = float(latest_pred_array.reshape(-1)[-1])
 
             metadata = self.current_model_metadata or self.metadata or {}
-            gate_cutoff_log_rv = float(metadata.get("gate_cutoff_log_rv", 0.0))
+            gate_cutoff_log_rv = self._coerce_float_param(
+                metadata.get("gate_cutoff_log_rv", 0.0),
+                0.0,
+            )
             forecast_vol = float(np.exp(forecast_log_rv))
 
             return {
@@ -443,8 +457,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         pct_embargo = getattr(self.config.training, "pct_embargo", 0.01)
         splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=pct_embargo)
 
-        cv_scores = []
-        fold_results = []
+        cv_scores: List[float] = []
+        fold_results: List[Dict[str, SerializableValue]] = []
         task_type = training_params.get("task_type", self.config.training.task_type)
 
         for fold, (train_idx, test_idx) in enumerate(splitter.split(X, y)):
@@ -477,25 +491,37 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             fold_results.append(fold_result)
 
             if task_type == "volatility_regression":
-                score = fold_result.get("qlike", 0.0)
+                score = self._coerce_float_param(fold_result.get("qlike", 0.0), 0.0)
             else:
-                score = fold_result.get(
-                    "balanced_accuracy", fold_result.get("accuracy", 0.0)
+                score = self._coerce_float_param(
+                    fold_result.get(
+                        "balanced_accuracy", fold_result.get("accuracy", 0.0)
+                    ),
+                    0.0,
                 )
             cv_scores.append(score)
 
-        mean_score = np.mean(cv_scores) if cv_scores else 0.0
-        std_score = np.std(cv_scores) if cv_scores else 0.0
+        mean_score = float(np.mean(cv_scores)) if cv_scores else 0.0
+        std_score = float(np.std(cv_scores)) if cv_scores else 0.0
 
         logger.info(
             f"✅ クロスバリデーション完了: 平均スコア={mean_score:.4f} (+/- {std_score:.4f})"
         )
 
+        # `SerializableValue` は `list[float]` をそのまま受け取れないため、
+        # 戻り値直前で明示的にシリアライズ可能な要素型へ揃える。
+        cv_scores_serializable: List[SerializableValue] = [
+            cast(SerializableValue, score) for score in cv_scores
+        ]
+        fold_results_serializable: List[SerializableValue] = [
+            cast(SerializableValue, fold_result) for fold_result in fold_results
+        ]
+
         return {
-            "cv_scores": cv_scores,
+            "cv_scores": cv_scores_serializable,
             "mean_score": mean_score,
             "std_score": std_score,
-            "fold_results": fold_results,
+            "fold_results": fold_results_serializable,
         }
 
     def _preprocess_data(
@@ -521,7 +547,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """保存対象のモデルオブジェクトを取得"""
         return self._model
 
-    def _get_model_specific_metadata(self, model_name: str) -> Dict[str, SerializableValue]:
+    def _get_model_specific_metadata(
+        self, model_name: str
+    ) -> Dict[str, SerializableValue]:
         """モデル固有のメタデータを取得"""
         return {}
 
@@ -566,7 +594,10 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         return model_path
 
     def _format_training_result(
-        self, training_result: Dict[str, SerializableValue], X: pd.DataFrame, y: pd.Series
+        self,
+        training_result: Dict[str, SerializableValue],
+        X: pd.DataFrame,
+        y: pd.Series,
     ) -> Dict[str, SerializableValue]:
         """学習結果を整形"""
         result = {

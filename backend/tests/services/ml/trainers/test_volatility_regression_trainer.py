@@ -181,6 +181,32 @@ class TestVolatilityRegressionTrainer:
         assert result["gate_cutoff_vol"] == 2.0
 
     @patch("app.services.ml.trainers.volatility_regression_trainer.LightGBMModel")
+    def test_train_model_impl_coerces_invalid_gate_cutoff(self, mock_lgbm):
+        """壊れたゲートカットオフ値でも既定値へフォールバックする"""
+        mock_model = MagicMock()
+        mock_model.feature_columns = ["feature1"]
+        mock_model.last_training_result = {}
+        mock_lgbm.return_value = mock_model
+
+        trainer = VolatilityRegressionTrainer()
+        X_train = pd.DataFrame({"feature1": [1, 2]})
+        X_test = pd.DataFrame({"feature1": [3]})
+        y_train = pd.Series([0.1, 0.2])
+        y_test = pd.Series([0.3])
+
+        result = trainer._train_model_impl(
+            X_train,
+            X_test,
+            y_train,
+            y_test,
+            gate_cutoff_log_rv={"invalid": True},
+            gate_cutoff_vol={"invalid": True},
+        )
+
+        assert result["gate_cutoff_log_rv"] == 0.0
+        assert result["gate_cutoff_vol"] == 1.0
+
+    @patch("app.services.ml.trainers.volatility_regression_trainer.LightGBMModel")
     def test_train_model_impl_empty_test_data(self, mock_lgbm):
         """空のテストデータでの学習"""
         mock_model = MagicMock()

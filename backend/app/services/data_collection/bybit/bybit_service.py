@@ -9,12 +9,11 @@ import asyncio
 import logging
 from abc import ABC
 from datetime import datetime, timezone
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Any
 
 import ccxt.async_support as ccxt
 
 from app.config.unified_config import unified_config
-from app.types import SerializableValue
 from app.utils.error_handler import (
     DataError,
     ErrorHandler,
@@ -92,8 +91,12 @@ class BybitService(ABC):
         self._validate_limit(limit)
 
     async def _handle_ccxt_errors(
-        self, operation_name: str, func: Callable, *args, **kwargs
-    ) -> object:
+        self,
+        operation_name: str,
+        func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """
         CCXT操作の共通エラーハンドリング
 
@@ -122,8 +125,12 @@ class BybitService(ABC):
         )
 
     async def _handle_ccxt_errors_impl(
-        self, operation_name: str, func: Callable, *args, **kwargs
-    ) -> object:
+        self,
+        operation_name: str,
+        func: Callable[..., Any],
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
         """CCXT操作の実装"""
         logger.info(f"{operation_name}を実行中...")
 
@@ -482,7 +489,9 @@ class BybitService(ABC):
             return f"{symbol}:USD"
         return f"{symbol}:USDT"
 
-    async def _execute_with_db_session(self, func: Callable, **kwargs) -> object:
+    async def _execute_with_db_session(
+        self, func: Callable[..., Any], **kwargs: Any
+    ) -> Any:
         """
         データベースセッションを使用して関数を実行
         リポジトリが引数として渡された場合は、新しいセッションを作成しない。

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -209,14 +209,18 @@ class BaseFeatureCalculator(ABC):
                 if key in denominators:
                     num = numerators[key]
                     den = denominators[key]
-                    safe_den = den.replace(0, np.nan)
-                    result[key] = (num / safe_den).fillna(fill_value)
+                    if isinstance(den, pd.Series):
+                        safe_den = den.replace(0, np.nan)
+                        result[key] = (num / safe_den).fillna(fill_value)
             return result
 
         # Series型入力の場合
-        safe_denominators = denominators.replace(0, np.nan)
-        result = numerators / safe_denominators
-        return result.fillna(fill_value)  # type: ignore[attr-defined]
+        if isinstance(numerators, pd.Series) and isinstance(denominators, pd.Series):
+            safe_denominators = denominators.replace(0, np.nan)
+            result = numerators / safe_denominators
+            return result.fillna(fill_value)
+
+        return {} if isinstance(numerators, dict) else pd.Series(dtype=float)
 
     def safe_ratio_calculation(
         self,
@@ -230,4 +234,5 @@ class BaseFeatureCalculator(ABC):
         既存の特徴量計算クラスには `safe_ratio_calculation` を呼ぶ実装があり、
         それを Base クラス側で受けられるようにして後方互換性を保つ。
         """
-        return self.batch_calculate_ratio(numerator, denominator, fill_value)
+        result = self.batch_calculate_ratio(numerator, denominator, fill_value)
+        return cast(pd.Series, result)

@@ -5,12 +5,18 @@
 """
 
 import logging
-from typing import Dict, Type
+from typing import Dict, Protocol, Type, cast
 
 from app.types import SerializableValue
 from backtesting import Strategy
 
 logger = logging.getLogger(__name__)
+
+
+class _ValidatableGene(Protocol):
+    """validate メソッドを持つ遺伝子オブジェクトのプロトコル"""
+
+    def validate(self) -> tuple[bool, list[str]]: ...
 
 
 class AutoStrategyLoaderError(Exception):
@@ -25,7 +31,7 @@ class AutoStrategyLoader:
     遅延インポートを用いて循環参照を回避します。
     """
 
-    def _import_strategy_gene_components(self) -> tuple[object, object]:
+    def _import_strategy_gene_components(self) -> tuple[type, type]:
         """StrategyGene と GeneSerializer を遅延インポートする"""
         try:
             from app.services.auto_strategy.genes import StrategyGene
@@ -52,7 +58,9 @@ class AutoStrategyLoader:
                 f"オートストラテジーモジュールのインポートに失敗しました: {e}"
             )
 
-    def load_strategy_gene(self, strategy_config: Dict[str, object]) -> object:
+    def load_strategy_gene(
+        self, strategy_config: Dict[str, SerializableValue]
+    ) -> object:
         """
         戦略設定から戦略遺伝子オブジェクトをロード・復元
 
@@ -93,7 +101,7 @@ class AutoStrategyLoader:
             raise AutoStrategyLoaderError(f"戦略遺伝子の復元に失敗しました: {e}")
 
     def create_auto_strategy_class(
-        self, strategy_config: Dict[str, object]
+        self, strategy_config: Dict[str, SerializableValue]
     ) -> Type[Strategy]:
         """
         オートストラテジーのクラスを生成
@@ -110,7 +118,7 @@ class AutoStrategyLoader:
         UniversalStrategy = self._import_universal_strategy()
 
         # 遺伝子をロードして検証（整合性チェックのため）
-        gene = self.load_strategy_gene(strategy_config)
+        gene = cast(_ValidatableGene, self.load_strategy_gene(strategy_config))
 
         # 遺伝子のバリデーション実行
         is_valid, errors = gene.validate()
@@ -120,15 +128,20 @@ class AutoStrategyLoader:
         # UniversalStrategyクラスを返す
         return UniversalStrategy
 
-    def _extract_strategy_gene(self, strategy_config: Dict[str, SerializableValue]) -> Dict[str, SerializableValue]:
+    def _extract_strategy_gene(
+        self, strategy_config: Dict[str, SerializableValue]
+    ) -> Dict[str, SerializableValue]:
         """戦略設定から戦略遺伝子を抽出"""
         # 直接strategy_geneがある場合
-        if "strategy_gene" in strategy_config:
-            return strategy_config["strategy_gene"]
+        gene_data = strategy_config.get("strategy_gene")
+        if isinstance(gene_data, dict):
+            return gene_data
 
         # parametersの中にある場合
         parameters = strategy_config.get("parameters", {})
-        if "strategy_gene" in parameters:
-            return parameters["strategy_gene"]
+        if isinstance(parameters, dict):
+            gene_data = parameters.get("strategy_gene")
+            if isinstance(gene_data, dict):
+                return gene_data
 
         return {}

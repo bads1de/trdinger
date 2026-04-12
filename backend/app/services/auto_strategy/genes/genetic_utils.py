@@ -7,11 +7,19 @@
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional, Tuple, TypeVar
+from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
 
 from app.types import SerializableValue
 
 T = TypeVar("T")
+
+
+class Cloneable(Protocol):
+    """Protocol for objects that can be cloned."""
+
+    def clone(self) -> "Cloneable":
+        """Return a copy of this object."""
+        ...
 
 
 class GeneticUtils:
@@ -19,11 +27,11 @@ class GeneticUtils:
 
     @staticmethod
     def create_child_metadata(
-        parent1_metadata: Dict[str, Any],
-        parent2_metadata: Dict[str, Any],
+        parent1_metadata: Dict[str, SerializableValue],
+        parent2_metadata: Dict[str, SerializableValue],
         parent1_id: str,
         parent2_id: str,
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    ) -> Tuple[Dict[str, SerializableValue], Dict[str, SerializableValue]]:
         """
         交叉子のメタデータを生成
 
@@ -68,7 +76,7 @@ class GeneticUtils:
         )
 
     @staticmethod
-    def _extract_gene_params(gene) -> Dict[str, Any]:
+    def _extract_gene_params(gene) -> Dict[str, object]:
         """
         遺伝子オブジェクトからパラメータを抽出（slots/dict両対応）
 
@@ -93,7 +101,7 @@ class GeneticUtils:
         return params
 
     @staticmethod
-    def extract_gene_params(gene) -> Dict[str, Any]:
+    def extract_gene_params(gene) -> Dict[str, object]:
         """遺伝子オブジェクトから公開フィールドを抽出"""
         return GeneticUtils._extract_gene_params(gene)
 
@@ -111,8 +119,9 @@ class GeneticUtils:
         Returns:
             コピーされた値
         """
-        if hasattr(value, "clone"):
-            return value.clone()
+        clone_method = getattr(value, "clone", None)
+        if callable(clone_method):
+            return clone_method()
         if isinstance(value, list):
             return [GeneticUtils.smart_copy(item) for item in value]
         if isinstance(value, dict):
@@ -149,7 +158,9 @@ class GeneticUtils:
         return None, None
 
     @staticmethod
-    def copy_conditions(conditions: List[Any]) -> List[Any]:
+    def copy_conditions(
+        conditions: List[SerializableValue | object],
+    ) -> List[SerializableValue | object]:
         """
         条件リストをスマートコピーする。
 
@@ -162,7 +173,7 @@ class GeneticUtils:
         return [GeneticUtils.smart_copy(c) for c in conditions]
 
     @staticmethod
-    def copy_stateful_conditions(conditions: List[Any]) -> List[Any]:
+    def copy_stateful_conditions(conditions: List[Cloneable]) -> List[Cloneable]:
         """
         ステートフル条件リストをクローンする。
 
@@ -172,10 +183,10 @@ class GeneticUtils:
         Returns:
             クローンされたステートフル条件のリスト
         """
-        return [c.clone() for c in conditions]
+        return [c.clone() for c in conditions]  # type: ignore[misc]
 
     @staticmethod
-    def copy_tool_genes(tools: List[Any]) -> List[Any]:
+    def copy_tool_genes(tools: List[Cloneable]) -> List[Cloneable]:
         """
         ツール遺伝子リストをクローンする。
 
@@ -185,7 +196,7 @@ class GeneticUtils:
         Returns:
             クローンされたツール遺伝子のリスト
         """
-        return [t.clone() for t in tools]
+        return [t.clone() for t in tools]  # type: ignore[misc]
 
     @staticmethod
     def crossover_generic_genes(
@@ -335,10 +346,14 @@ class GeneticUtils:
         for field in enum_fields:
             if random.random() < mutation_rate and field in mutated_params:
                 current_enum = mutated_params[field]
-                if hasattr(current_enum, "__class__"):
+                if hasattr(current_enum, "__class__") and hasattr(
+                    current_enum.__class__, "__members__"
+                ):
                     enum_class = current_enum.__class__
                     # ランダムに別の値を選択
-                    mutated_params[field] = random.choice(list(enum_class))
+                    mutated_params[field] = random.choice(
+                        list(enum_class.__members__.values())  # type: ignore[attr-defined]
+                    )
 
         return gene_class(**mutated_params)
 

@@ -204,7 +204,7 @@ class ErrorHandler:
                 # ML関連のエラーとして処理
                 log_func = getattr(logger, log_level, logger.error)
                 log_func(f"{error_message}: {e}")
-                return default_return
+                return default_return  # type: ignore[return-value]
 
     @staticmethod
     async def safe_execute_async(
