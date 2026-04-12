@@ -131,6 +131,11 @@ class DictConverter:
         if isinstance(value, Enum):
             return value.value
 
+        # データクラスはディープコピーを作成
+        if is_dataclass(value) and not isinstance(value, type):
+            from copy import deepcopy
+            return deepcopy(value)
+
         if isinstance(value, Mapping):
             return {
                 str(self._copy_cached_value(key)): self._copy_cached_value(item_value)
@@ -145,15 +150,6 @@ class DictConverter:
 
         if isinstance(value, set):
             return [self._copy_cached_value(item) for item in value]
-
-        if is_dataclass(value) and not isinstance(value, type):
-            field_values = {
-                field_info.name: self._copy_cached_value(
-                    getattr(value, field_info.name)
-                )
-                for field_info in fields(value)
-            }
-            return field_values
 
         return repr(value)
 

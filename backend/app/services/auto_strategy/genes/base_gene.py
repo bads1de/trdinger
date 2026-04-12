@@ -140,10 +140,20 @@ class BaseGene(ABC):
     def _get_resolved_annotations(cls) -> dict[str, type]:
         """継承階層を含む型注釈を解決済みで取得する。"""
         annotations: dict[str, type] = {}
-        module = sys.modules.get(cls.__module__)
-        globalns = vars(module) if module is not None else {}
-        localns: dict[str, object] = {}
 
+        # Collect globalns from ALL modules in the MRO (not just cls.__module__)
+        # This handles cases where base classes are defined in different modules
+        # that import typing constructs (Tuple, List, Dict, etc.)
+        combined_globalns: dict[str, object] = {}
+        for base in cls.__mro__:
+            base_module = sys.modules.get(getattr(base, '__module__', ''))
+            if base_module is not None:
+                try:
+                    combined_globalns.update(vars(base_module))
+                except Exception:
+                    pass
+
+        localns: dict[str, object] = {}
         for base in cls.__mro__:
             try:
                 localns.update(vars(base))
@@ -157,10 +167,22 @@ class BaseGene(ABC):
 
             try:
                 annotations.update(
-                    get_type_hints(base, globalns=globalns, localns=localns)
+                    get_type_hints(base, globalns=combined_globalns, localns=localns)
                 )
             except Exception:
-                annotations.update(raw_annotations)
+                # Try per-annotation to salvage what we can
+                for name, raw in raw_annotations.items():
+                    if name in annotations:
+                        continue
+                    try:
+                        resolved = get_type_hints(
+                            type(name, (), {name: raw}),
+                            globalns=combined_globalns,
+                            localns=localns,
+                        )
+                        annotations[name] = resolved[name]
+                    except Exception:
+                        annotations[name] = raw  # type: ignore[assignment]
 
         return annotations
 

@@ -137,6 +137,10 @@ class AutoStrategyLoader:
         if isinstance(gene_data, dict):
             return gene_data
 
+        # StrategyGene オブジェクトが直接渡された場合（dict以外を返す）
+        if gene_data is not None:
+            return gene_data  # type: ignore[return-value]
+
         # parametersの中にある場合
         parameters = strategy_config.get("parameters", {})
         if isinstance(parameters, dict):

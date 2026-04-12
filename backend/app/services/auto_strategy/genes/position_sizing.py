@@ -176,6 +176,25 @@ class PositionSizingGene(BaseGene):
     enabled: bool = True
     priority: float = 1.0
 
+    @classmethod
+    def from_dict(cls, data: dict) -> "PositionSizingGene":
+        """辞書から復元。無効な method はデフォルトにフォールバック。"""
+        from .base_gene import BaseGene
+
+        cleaned = dict(data)
+        method_raw = cleaned.get("method")
+        if method_raw is not None:
+            if isinstance(method_raw, PositionSizingMethod):
+                pass
+            elif isinstance(method_raw, str):
+                try:
+                    cleaned["method"] = PositionSizingMethod(method_raw)
+                except ValueError:
+                    cleaned["method"] = PositionSizingMethod.VOLATILITY_BASED
+            else:
+                cleaned["method"] = PositionSizingMethod.VOLATILITY_BASED
+        return BaseGene.from_dict.__func__(cls, cleaned)  # type: ignore[return-value]
+
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
         try:

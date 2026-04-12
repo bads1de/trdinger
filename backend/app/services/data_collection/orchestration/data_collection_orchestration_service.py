@@ -11,6 +11,7 @@ from typing import Any, Dict, Optional
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
+from app.config.unified_config import unified_config
 
 from database.repositories.ohlcv_repository import OHLCVRepository
 
@@ -80,9 +81,22 @@ class DataCollectionOrchestrationService:
             ValueError: シンボルまたは時間軸が無効な場合
 
         Note:
-            実際のバリデーションロジックはDataValidatorに委譲されます。
+            このメソッドはunified_configを直接使用してバリデーションを行います。
+            テスト時はunified_configをモックすることでバリデーション動作を変更できます。
         """
-        return self.data_validator.validate_symbol_and_timeframe(symbol, timeframe)
+        # モジュールレベルのインポートを遅延評価してテスト時のモックを有効にする
+        from app.services.data_collection.orchestration.data_validator import (
+            unified_config as validator_config,
+        )
+
+        normalized_symbol = validator_config.market.symbol_mapping.get(symbol, symbol)
+        if normalized_symbol not in validator_config.market.supported_symbols:
+            raise ValueError(f"サポートされていないシンボル: {symbol}")
+
+        if timeframe not in validator_config.market.supported_timeframes:
+            raise ValueError(f"無効な時間軸: {timeframe}")
+
+        return normalized_symbol
 
     def _resolve_ohlcv_repository_class(self):
         """

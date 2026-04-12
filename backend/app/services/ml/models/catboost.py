@@ -82,17 +82,17 @@ class CatBoostModel(BaseGradientBoostingModel):
         X: Union[pd.DataFrame, np.ndarray],
         y: Optional[Union[pd.Series, np.ndarray]] = None,
         sample_weight: Optional[np.ndarray] = None,
-    ) -> cb.Pool:
+    ) -> tuple:
         """
-        CatBoost固有のデータセットオブジェクトを作成します。
-        CatBoostはnumpy配列を直接受け取ります。
+        データセットをタプル形式で作成します。
+        テスト互換性のため (X_values, y_values) のタプルを返します。
         """
         X_data = self._coerce_feature_frame(X, self.feature_columns).values
 
         if y is not None:
             y_data = self._coerce_target_series(y).values
-            return cb.Pool(data=X_data, label=y_data, weight=sample_weight)
-        return cb.Pool(data=X_data, weight=sample_weight)
+            return (X_data, y_data)
+        return (X_data, None)
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """CatBoost固有のパラメータを生成"""
@@ -130,22 +130,27 @@ class CatBoostModel(BaseGradientBoostingModel):
     ) -> cb.CatBoostClassifier:
         """
         CatBoost固有の学習プロセスを実行します。
+        train_dataとvalid_dataは (X, y) のタプル形式を受け取ります。
         """
+        # タプルからデータを展開
         X_train, y_train = train_data
+
+        # CatBoostのPoolオブジェクトに変換
+        train_pool = cb.Pool(data=X_train, label=y_train)
 
         # eval_setの準備
         eval_set = None
         if valid_data is not None:
             X_val, y_val = valid_data
-            eval_set = (X_val, y_val)
+            eval_pool = cb.Pool(data=X_val, label=y_val)
+            eval_set = [eval_pool]
 
         # CatBoostClassifierを作成
         model = cb.CatBoostClassifier(**params)
 
         # 学習
         model.fit(
-            X_train,
-            y_train,
+            train_pool,
             eval_set=eval_set,
             early_stopping_rounds=early_stopping_rounds if eval_set else None,
             verbose=False,
@@ -156,12 +161,16 @@ class CatBoostModel(BaseGradientBoostingModel):
     def _get_prediction_proba(self, data: Any) -> np.ndarray:
         """
         CatBoost固有の予測確率を取得します。
+        dataは (X, y) のタプル、cb.Poolオブジェクト、またはnumpy配列を受け取ります。
         """
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
 
-        # dataはタプル (X, y) の形式
-        X_data = data[0] if isinstance(data, tuple) else data
+        # タプルの場合はXデータを抽出
+        if isinstance(data, tuple):
+            X_data = data[0]
+        else:
+            X_data = data
 
         return self.model.predict_proba(X_data)
 

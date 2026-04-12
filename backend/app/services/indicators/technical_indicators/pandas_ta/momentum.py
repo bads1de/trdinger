@@ -54,6 +54,7 @@ pandas-ta の momentum カテゴリに対応。
 
 from typing import Any, Optional, Tuple, Union, cast
 
+import logging
 import numpy as np
 import pandas as pd
 import pandas_ta_classic as ta
@@ -66,6 +67,8 @@ from ...data_validation import (
     run_multi_series_indicator,
     run_series_indicator,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _create_nan_array_bundle(length: int, count: int) -> tuple[np.ndarray, ...]:
@@ -86,9 +89,26 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def rsi(data: pd.Series, period: int = 14) -> pd.Series:
         """相対力指数"""
+
+        def compute_rsi() -> pd.Series:
+            result = ta.rsi(data, window=period)
+            if result is None:
+                return create_nan_series_like(data)
+
+            # 一定価格など、変動がない場合のRSIは50とする
+            # pandas_ta_classicはRS=0/0のケースで0を返すことがある
+            valid_values = result.dropna()
+            if len(valid_values) > 0 and (valid_values == 0.0).all():
+                std = data.std()
+                if std == 0 or np.isnan(std):
+                    logger.info(f"RSI: 一定価格を検出、50.0を返します")
+                    return pd.Series(50.0, index=result.index)
+
+            return result
+
         return cast(
             pd.Series,
-            run_series_indicator(data, period, lambda: ta.rsi(data, window=period)),
+            run_series_indicator(data, period, compute_rsi),
         )
 
     @staticmethod
@@ -99,11 +119,33 @@ class MomentumIndicators:
         slow: int = 26,
         signal: int = 9,
     ) -> Tuple[pd.Series, pd.Series, pd.Series]:
-        """MACD"""
+        """MACD (Moving Average Convergence Divergence)
+
+        MACDライン = EMA(fast) - EMA(slow)
+        シグナルライン = EMA(MACDライン, signal)
+        ヒストグラム = MACDライン - シグナルライン
+
+        pandas_taのmacd関数は内部で独自のEMA初期化を行うため、
+         standaloneのEMA計算と結果がずれることがある。
+        一貫性のため、明示的にEMAを使用して計算する。
+        """
+        min_length = slow + signal  # 十分なウォームアップ期間
+
+        def compute_macd() -> Tuple[pd.Series, pd.Series, pd.Series]:
+            from .overlap import OverlapIndicators
+
+            ema_fast = OverlapIndicators.ema(data, length=fast)
+            ema_slow = OverlapIndicators.ema(data, length=slow)
+            macd_line = ema_fast - ema_slow
+            signal_line = OverlapIndicators.ema(macd_line, length=signal)
+            histogram = macd_line - signal_line
+            return macd_line, signal_line, histogram
+
+        # Use run_series_indicator with fallback for the full computation
         result: Any = run_series_indicator(
             data,
-            None,
-            lambda: ta.macd(data, fast=fast, slow=slow, signal=signal),
+            min_length,
+            compute_macd,
             fallback_factory=lambda: cast(
                 tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(data, 3),
@@ -113,10 +155,24 @@ class MomentumIndicators:
         if isinstance(result, tuple):
             return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
+        # Fallback: pandas_taの直接呼び出し（互換性のため）
+        raw_result: Any = run_series_indicator(
+            data,
+            None,
+            lambda: ta.macd(data, fast=fast, slow=slow, signal=signal),
+            fallback_factory=lambda: cast(
+                tuple[pd.Series, pd.Series, pd.Series],
+                create_nan_series_bundle(data, 3),
+            ),
+        )
+
+        if isinstance(raw_result, tuple):
+            return cast(tuple[pd.Series, pd.Series, pd.Series], raw_result)
+
         return (
-            result.iloc[:, 0],
-            result.iloc[:, 1],
-            result.iloc[:, 2],
+            raw_result.iloc[:, 0],
+            raw_result.iloc[:, 1],
+            raw_result.iloc[:, 2],
         )
 
     @staticmethod

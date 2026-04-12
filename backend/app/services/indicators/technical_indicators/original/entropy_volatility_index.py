@@ -74,7 +74,7 @@ def entropy_volatility_index(
 
     from typing import cast
 
-    returns = cast(pd.Series, np.log(close / close.shift(1))).to_numpy()
+    returns = cast(pd.Series, np.log(close / close.shift(1))).to_numpy(dtype=np.float64, copy=True)
     returns[0] = 0.0
     evi = _njit_entropy_volatility_loop(returns, length, m_val, r_val)
     return pd.Series(
