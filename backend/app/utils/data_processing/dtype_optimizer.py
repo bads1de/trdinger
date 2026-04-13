@@ -33,18 +33,18 @@ def _infer_integer_dtype(
             - -2147483648 < col_min < 2147483647: int32
     """
     if prefer_unsigned_integers and col_min >= 0:
-        if col_max < 255:
+        if col_max <= 255:
             return "uint8"
-        if col_max < 65535:
+        if col_max <= 65535:
             return "uint16"
-        if col_max < 4294967295:
+        if col_max <= 4294967295:
             return "uint32"
 
-    if col_min > -128 and col_max < 127:
+    if col_min >= -128 and col_max <= 127:
         return "int8"
-    if col_min > -32768 and col_max < 32767:
+    if col_min >= -32768 and col_max <= 32767:
         return "int16"
-    if col_min > -2147483648 and col_max < 2147483647:
+    if col_min >= -2147483648 and col_max <= 2147483647:
         return "int32"
     return None
 

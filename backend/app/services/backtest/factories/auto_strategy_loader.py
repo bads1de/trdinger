@@ -137,9 +137,14 @@ class AutoStrategyLoader:
         if isinstance(gene_data, dict):
             return gene_data
 
-        # StrategyGene オブジェクトが直接渡された場合（dict以外を返す）
+        # StrategyGene オブジェクトが直接渡された場合
+        # to_dict() メソッドがあればそれを使用、なければエラー
         if gene_data is not None:
-            return gene_data  # type: ignore[return-value]
+            if hasattr(gene_data, "to_dict"):
+                return gene_data.to_dict()  # type: ignore[return-value]
+            raise AutoStrategyLoaderError(
+                f"戦略遺伝子の形式が不正です。dict または to_dict() メソッドを持つオブジェクトが必要です: {type(gene_data)}"
+            )
 
         # parametersの中にある場合
         parameters = strategy_config.get("parameters", {})

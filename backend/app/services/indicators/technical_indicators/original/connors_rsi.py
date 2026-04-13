@@ -39,10 +39,13 @@ def _njit_connors_rsi_loop(
     streaks = np.zeros(n, dtype=np.float64)
     for i in range(1, n):
         if prices[i] > prices[i - 1]:
-            streaks[i] = max(streaks[i - 1] + 1.0, 1.0)
+            # 上昇連続: 前日が上昇中なら+1、そうでなければ1から開始
+            streaks[i] = streaks[i - 1] + 1.0 if streaks[i - 1] >= 0 else 1.0
         elif prices[i] < prices[i - 1]:
-            streaks[i] = min(streaks[i - 1] - 1.0, -1.0)
+            # 下降連続: 前日が下降中なら-1、そうでなければ-1から開始
+            streaks[i] = streaks[i - 1] - 1.0 if streaks[i - 1] <= 0 else -1.0
         else:
+            # 同じ価格: リセット
             streaks[i] = 0.0
 
     streak_rsi = np.full(n, np.nan, dtype=np.float64)

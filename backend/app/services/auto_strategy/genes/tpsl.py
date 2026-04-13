@@ -230,6 +230,13 @@ class TPSLGene(BaseGene):
                     child1.method_weights[key] = p2.method_weights[key]
                     child2.method_weights[key] = p2.method_weights[key]
 
+        # 正規化：合計が1.0になるよう調整
+        for child in [child1, child2]:
+            total_weight = sum(child.method_weights.values())
+            if total_weight > 0:
+                for key in child.method_weights:
+                    child.method_weights[key] /= total_weight
+
         return child1, child2
 
     def clone(self) -> TPSLGene:

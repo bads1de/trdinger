@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import fields, is_dataclass
 from datetime import datetime
 from enum import Enum
@@ -52,6 +53,8 @@ def _convert_value(value: object) -> SerializableValue:
         return {k: _convert_value(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
         return [_convert_value(v) for v in value]
+    if isinstance(value, float) and (math.isnan(value) or math.isinf(value)):
+        return None
     if hasattr(value, "__dict__"):
         # dataclass 以外の複雑オブジェクト
         return str(value)

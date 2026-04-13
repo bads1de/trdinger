@@ -85,14 +85,14 @@ class CatBoostModel(BaseGradientBoostingModel):
     ) -> tuple:
         """
         データセットをタプル形式で作成します。
-        テスト互換性のため (X_values, y_values) のタプルを返します。
+        テスト互換性のため (X_values, y_values, sample_weight) のタプルを返します。
         """
         X_data = self._coerce_feature_frame(X, self.feature_columns).values
 
         if y is not None:
             y_data = self._coerce_target_series(y).values
-            return (X_data, y_data)
-        return (X_data, None)
+            return (X_data, y_data, sample_weight)
+        return (X_data, None, sample_weight)
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """CatBoost固有のパラメータを生成"""
@@ -130,19 +130,21 @@ class CatBoostModel(BaseGradientBoostingModel):
     ) -> cb.CatBoostClassifier:
         """
         CatBoost固有の学習プロセスを実行します。
-        train_dataとvalid_dataは (X, y) のタプル形式を受け取ります。
+        train_dataとvalid_dataは (X, y, sample_weight) のタプル形式を受け取ります。
         """
         # タプルからデータを展開
-        X_train, y_train = train_data
+        X_train, y_train = train_data[0], train_data[1]
+        sample_weight_train = train_data[2] if len(train_data) > 2 else None
 
-        # CatBoostのPoolオブジェクトに変換
-        train_pool = cb.Pool(data=X_train, label=y_train)
+        # CatBoostのPoolオブジェクトに変換（sample_weightを含む）
+        train_pool = cb.Pool(data=X_train, label=y_train, weight=sample_weight_train)
 
         # eval_setの準備
         eval_set = None
         if valid_data is not None:
-            X_val, y_val = valid_data
-            eval_pool = cb.Pool(data=X_val, label=y_val)
+            X_val, y_val = valid_data[0], valid_data[1]
+            sample_weight_val = valid_data[2] if len(valid_data) > 2 else None
+            eval_pool = cb.Pool(data=X_val, label=y_val, weight=sample_weight_val)
             eval_set = [eval_pool]
 
         # CatBoostClassifierを作成

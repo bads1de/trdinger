@@ -230,8 +230,12 @@ def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
             elif condition.conditions:
                 idx = random.randint(0, len(condition.conditions) - 1)
                 mutate_item(condition.conditions[idx])
-        else:
+        elif hasattr(condition, "operator"):
+            # Condition オブジェクトの演算子を変異
             condition.operator = random.choice(config.mutation_config.valid_condition_operators)
+        else:
+            # 予期しない型はスキップ（AttributeError 防止）
+            logger.debug(f"条件変異をスキップ: 未知の型 {type(condition).__name__}")
 
     mutation_threshold = mutation_rate * config.mutation_config.condition_change_multiplier
 

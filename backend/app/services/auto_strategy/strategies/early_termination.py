@@ -135,7 +135,7 @@ class StrategyEarlyTerminationController:
         evaluation_start = getattr(self.strategy, "_evaluation_start", None)
         if evaluation_start is not None:
             aligned_start = align_timestamp_to_index(evaluation_start, full_index)
-            start_index = int(full_index.searchsorted(np.array([aligned_start]), side="left"))
+            start_index = int(full_index.searchsorted(aligned_start, side="left"))
 
         evaluation_total_bars = max(1, len(full_index) - start_index)
         return full_index, start_index, evaluation_total_bars
@@ -170,7 +170,7 @@ class StrategyEarlyTerminationController:
                         evaluation_index,
                     )
                     current_position = int(
-                        evaluation_index.searchsorted(np.array([current_time]), side="right")
+                        evaluation_index.searchsorted(current_time, side="right")
                     )
                     evaluation_start_index = int(
                         getattr(self.strategy, "_evaluation_start_index", 0) or 0

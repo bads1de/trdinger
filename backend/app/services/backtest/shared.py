@@ -12,6 +12,8 @@ from typing import Any, Optional, Sequence, Tuple
 import logging
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 from app.utils.datetime_utils import current_datetime_like as _current_datetime_like
 from app.utils.datetime_utils import (
     normalize_datetimes_for_comparison as _normalize_datetimes_for_comparison,
@@ -70,6 +72,7 @@ def safe_float_conversion(value: Any) -> float:
     try:
         return float(value)
     except (ValueError, TypeError):
+        logger.warning(f"float変換に失敗しました: {value!r}")
         return 0.0
 
 

@@ -5,6 +5,7 @@
 DB操作や永続化の責務を持たず、純粋なバックテストの実行と結果生成に集中します。
 """
 
+import copy
 import logging
 from typing import Any, Dict, Optional
 
@@ -60,7 +61,7 @@ class BacktestOrchestrator:
             バックテスト結果の辞書
         """
         try:
-            working_config = config.copy()
+            working_config = copy.deepcopy(config)
 
             # 高速化フラグの確認
             skip_validation = working_config.pop("_skip_validation", False)

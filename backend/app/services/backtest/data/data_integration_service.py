@@ -163,7 +163,8 @@ class DataIntegrationService:
         if self.oi_merger:
             df = self.oi_merger.merge_oi_data(df, symbol, start_date, end_date)
         else:
-            df["open_interest"] = pd.NA
+            # funding_rate との一貫性の為、0.0 を使用する
+            df["open_interest"] = 0.0
 
         return df
 

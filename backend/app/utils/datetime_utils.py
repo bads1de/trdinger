@@ -160,7 +160,10 @@ def parse_timestamp_safe(value: Any) -> Optional[datetime]:
             numeric_value = float(value)
             if math.isnan(numeric_value) or numeric_value < 0:
                 return None
-            return datetime.fromtimestamp(numeric_value / 1000.0, tz=timezone.utc)
+            # 秒とミリ秒を自動判別: 1e12 以上はミリ秒、未満は秒
+            if numeric_value > 1e12:
+                return datetime.fromtimestamp(numeric_value / 1000.0, tz=timezone.utc)
+            return datetime.fromtimestamp(numeric_value, tz=timezone.utc)
 
         if pd.isna(value):
             return None

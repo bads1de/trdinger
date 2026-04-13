@@ -47,13 +47,12 @@ class PostProcessor:
             2. DataFrame/Seriesの場合はインデックスをdf.indexに再編成
             3. config['returns']に応じて単一または複数形式に変換
         """
-        # タプルの場合は最初の要素を使用
-        if (
-            isinstance(result, tuple)
-            and len(result) > 0
-            and isinstance(result[0], (pd.DataFrame, pd.Series))
-        ):
-            result = result[0]
+        # タプルの場合は最初の要素を使用（pandas_ta の複数結果の最初の要素のみを使う場合）
+        # ただし、タプルの全要素が必要な場合はそのまま保持
+        if isinstance(result, tuple) and len(result) > 0:
+            if isinstance(result[0], (pd.DataFrame, pd.Series)):
+                result = result[0]
+            # ネイティブ配列のタプルはそのまま保持（後続の_convert_to_multiで処理）
 
         # NaN処理とインデックス再編成
         if isinstance(result, (pd.Series, pd.DataFrame)):

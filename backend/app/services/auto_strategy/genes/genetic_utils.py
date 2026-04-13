@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import copy
 import random
 from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
 
@@ -125,7 +126,7 @@ class GeneticUtils:
         if isinstance(value, list):
             return [GeneticUtils.smart_copy(item) for item in value]
         if isinstance(value, dict):
-            return value.copy()
+            return {k: GeneticUtils.smart_copy(v) for k, v in value.items()}
         return value
 
     @staticmethod

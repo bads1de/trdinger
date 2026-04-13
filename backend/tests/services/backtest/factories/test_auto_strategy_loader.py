@@ -53,7 +53,8 @@ class TestAutoStrategyLoader:
     def test_load_strategy_gene_direct_object(self, loader):
         # StrategyGene must be a type for isinstance check
         class MockStrategyGene:
-            pass
+            def to_dict(self):
+                return {"mock": "gene_data"}
 
         gene_instance = MockStrategyGene()
         config = {"strategy_gene": gene_instance}
@@ -69,9 +70,8 @@ class TestAutoStrategyLoader:
 
             result = loader.load_strategy_gene(config)
 
-            assert result == gene_instance
-            # Serialization should be skipped
-            MockSerializerClass.return_value.dict_to_strategy_gene.assert_not_called()
+            # to_dict() を持つ場合、serializer が呼ばれる
+            MockSerializerClass.return_value.dict_to_strategy_gene.assert_called_once()
 
     def test_load_strategy_gene_no_data(self, loader):
         with pytest.raises(AutoStrategyLoaderError) as excinfo:

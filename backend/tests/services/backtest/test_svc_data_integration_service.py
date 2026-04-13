@@ -404,7 +404,7 @@ class TestOpenInterestIntegration:
     def test_integrate_open_interest_data_without_merger(
         self, integration_service, sample_ohlcv_data
     ):
-        """OIマージャーなしでの処理"""
+        """OIマージャーなしでの処理（0.0で埋められる）"""
         integration_service.oi_merger = None
 
         result = integration_service._integrate_open_interest_data(
@@ -415,7 +415,7 @@ class TestOpenInterestIntegration:
         )
 
         assert "open_interest" in result.columns
-        assert result["open_interest"].isna().all()
+        assert (result["open_interest"] == 0.0).all()
 
 
 class TestFundingRateIntegration:

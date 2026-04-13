@@ -146,7 +146,7 @@ class DictConverter:
             return [self._copy_cached_value(item) for item in value]
 
         if isinstance(value, tuple):
-            return list(self._copy_cached_value(item) for item in value)
+            return tuple(self._copy_cached_value(item) for item in value)
 
         if isinstance(value, set):
             return [self._copy_cached_value(item) for item in value]

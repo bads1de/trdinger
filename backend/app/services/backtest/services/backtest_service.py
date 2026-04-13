@@ -150,9 +150,16 @@ class BacktestService:
     def cleanup(self) -> None:
         """リソースのクリーンアップ"""
         if self._db_session is not None:
-            self._db_session.close()
-            self._db_session = None
+            try:
+                self._db_session.close()
+            except Exception:
+                pass
+            finally:
+                self._db_session = None
             logger.info("DBセッションをクリーンアップしました")
+
+        self.data_service = None
+        self._orchestrator = None
 
     def _build_execution_config(self, request: Any) -> Dict[str, Any]:
         """dict / Pydantic モデルどちらからでもバックテスト設定を組み立てる。"""
@@ -199,7 +206,7 @@ class BacktestService:
             logger.error(f"バックテスト実行・保存エラー: {e}", exc_info=True)
             return {"success": False, "error": str(e), "status_code": 500}
         finally:
-            # 外部セッションは呼び出し側が管理するため、ここではcloseしない
+            # 内部状態のみリセット（外部セッションのライフサイクルは呼び出し側が管理）
             self._db_session = None
             self.data_service = None
             self._orchestrator = None

@@ -6,7 +6,7 @@ backtesting.pyの統計結果をデータベース保存用の形式に変換し
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 from app.services.backtest.shared import (
@@ -83,7 +83,7 @@ class BacktestResultConverter:
                 "execution_time": None,
                 "status": "completed",
                 "error_message": None,
-                "created_at": datetime.now(),
+                "created_at": datetime.now(timezone.utc),
                 "performance_metrics": self._stats_calculator.calculate_statistics(
                     actual_stats
                 ),

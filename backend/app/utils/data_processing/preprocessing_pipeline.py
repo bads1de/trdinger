@@ -328,26 +328,25 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
 
             # Apply imputation
             if self.imputer_ is not None:
-                # Impute column by column to maintain DataFrame
+                # Handle all-NaN columns first with constant values
                 for col in result.columns:
-                    # Pandas Series比較を安全に行う - boolに変換してから評価
-                    has_null = bool(result[col].isnull().any())
-                    if has_null:
-                        # Check for all NaN values in the column
-                        all_null = bool(result[col].isnull().all())
-                        if all_null:
-                            # Handle all-NaN column by filling with constant value
-                            constant_value = (
-                                0.0
-                                if self.strategy in ["mean", "median"]
-                                else "Unknown"
-                            )
-                            result[col] = result[col].fillna(constant_value)
-                        else:
-                            # Normal imputation for columns with some valid values
-                            col_data = np.asarray(result[col].values).reshape(-1, 1)
-                            imputed = self.imputer_.fit_transform(col_data)
-                            result[col] = imputed.flatten()
+                    all_null = bool(result[col].isnull().all())
+                    if all_null:
+                        constant_value = (
+                            0.0
+                            if self.strategy in ["mean", "median"]
+                            else "Unknown"
+                        )
+                        result[col] = result[col].fillna(constant_value)
+
+                # Apply fitted imputer on the full DataFrame to avoid data leakage
+                # and preserve column alignment
+                imputed_array = self.imputer_.transform(result)
+                result = pd.DataFrame(
+                    imputed_array,
+                    columns=result.columns,
+                    index=result.index,
+                )
 
             # Apply encoding
             if self.encoder_ is not None:
