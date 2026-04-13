@@ -354,16 +354,15 @@ class IndividualEvaluator(EvaluationWindowService):
         try:
             gene = self._resolve_gene(individual)
 
-            # 安定したキャッシュキーの生成
             cache_key = self._build_cache_key(gene)
 
-            # ロックフリー読み取り: キャッシュヒット時はロック不要
-            cached = None if force_refresh else self._result_cache.get(cache_key)
-            if cached is not None:
-                self._cache_hits += 1
-                self._last_evaluation_report = self._report_cache.get(cache_key)
-                return cached
-            self._cache_misses += 1
+            with self._lock:
+                cached = None if force_refresh else self._result_cache.get(cache_key)
+                if cached is not None:
+                    self._cache_hits += 1
+                    self._last_evaluation_report = self._report_cache.get(cache_key)
+                    return cached
+                self._cache_misses += 1
 
             # バックテスト設定のベースを取得
             base_backtest_config: Dict[str, Any] = (

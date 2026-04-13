@@ -43,6 +43,7 @@ class TestConfigValidator:
         }
         config.primary_metric = "total_return"
         config.objectives = ["weighted_score"]
+        config.objective_weights = [1.0]
         config.max_indicators = 5
         config.parameter_ranges = {"param1": [0, 10]}
         config.log_level = "INFO"
@@ -183,6 +184,17 @@ class TestConfigValidator:
             "プライマリメトリクス 'not_in_weights' がフィットネス重みに" in e
             for e in errors
         )
+
+    def test_validate_ga_config_objective_weights_length(self, ga_config):
+        """多目的最適化では objectives と objective_weights の数を一致させる"""
+        ga_config.enable_multi_objective = True
+        ga_config.objectives = ["total_return", "max_drawdown"]
+        ga_config.objective_weights = [1.0]
+
+        is_valid, errors = ConfigValidator.validate(ga_config)
+
+        assert is_valid is False
+        assert any("objective_weights の数は objectives と一致" in e for e in errors)
 
     def test_validate_ga_config_parameter_ranges(self, ga_config):
         # リストでない

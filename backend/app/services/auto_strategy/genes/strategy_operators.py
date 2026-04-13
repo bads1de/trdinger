@@ -43,6 +43,15 @@ _SUB_GENE_MUTATION_RULES = {
     ),
 }
 
+# ロング/ショート固有のサブ遺伝子も突然変異の対象に含める
+# これらのフィールドはTPSLGene, EntryGeneと同じ型を持つ
+_LONG_SHORT_SUB_GENE_RULES = {
+    "long_tpsl_gene": (TPSLGene, create_random_tpsl_gene, "tpsl_gene_creation_probability_multiplier"),
+    "short_tpsl_gene": (TPSLGene, create_random_tpsl_gene, "tpsl_gene_creation_probability_multiplier"),
+    "long_entry_gene": (EntryGene, create_random_entry_gene, "entry_gene_creation_probability_multiplier"),
+    "short_entry_gene": (EntryGene, create_random_entry_gene, "entry_gene_creation_probability_multiplier"),
+}
+
 _MUTATION_CONFIG_CREATION_ATTR_MAP = {
     "tpsl_gene_creation_probability_multiplier": "tpsl_gene_creation_multiplier",
     "position_sizing_gene_creation_probability_multiplier": (
@@ -113,6 +122,9 @@ def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
     を走査し、突然変異の対象となるフィールド名、生成関数、確率倍率の
     タプルを生成します。
 
+    ロング/ショート固有のサブ遺伝子（long_tpsl_gene, short_tpsl_gene, 
+    long_entry_gene, short_entry_gene）も含めて列挙します。
+
     Args:
         config: GA設定オブジェクト。各サブ遺伝子の生成確率倍率を含む。
 
@@ -124,7 +136,15 @@ def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
 
     for field_name in StrategyGene.sub_gene_field_names():
         gene_class = class_map.get(field_name)
+        
+        # 通常のサブ遺伝子ルールをチェック
         rule = _SUB_GENE_MUTATION_RULES.get(gene_class)
+        
+        # ロング/ショート固有のルールもチェック
+        if rule is None and field_name in _LONG_SHORT_SUB_GENE_RULES:
+            _, creator_func, creation_prob_attr = _LONG_SHORT_SUB_GENE_RULES[field_name]
+            rule = (creator_func, creation_prob_attr)
+        
         if rule is None:
             continue
 
@@ -152,6 +172,15 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
     """
     min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
+    # 整数パラメータ名のセット（一般的なテクニカル指標の整数パラメータ）
+    integer_param_names = {
+        "period", "signal_period", "lookback", "length", "fast_period",
+        "slow_period", "signal", "roc_period", "atr_period", "std_dev_period",
+        "mom_period", "cci_period", "willr_period", "stoch_k_period",
+        "stoch_d_period", "stoch_slowk", "stoch_slowd", "obv_period",
+        "ad_period", "adx_period", "aroon_period", "bop_period",
+    }
+
     for i, indicator in enumerate(mutated.indicators):
         if random.random() < mutation_rate:
             for param_name, param_value in indicator.parameters.items():
@@ -159,6 +188,9 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
                     isinstance(param_value, (int, float))
                     and random.random() < mutation_rate
                 ):
+                    # 値が元々整数型だったかを判定
+                    was_integer = isinstance(param_value, int)
+
                     if (
                         param_name == "period"
                         and hasattr(config, "parameter_ranges")
@@ -175,7 +207,15 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
                                 ),
                             ),
                         )
+                    elif was_integer or param_name in integer_param_names:
+                        # 整数パラメータはint型を維持
+                        new_value = int(
+                            param_value * random.uniform(min_multiplier, max_multiplier)
+                        )
+                        # 最低値を1に制限（0や負の値を防止）
+                        mutated.indicators[i].parameters[param_name] = max(1, new_value)
                     else:
+                        # floatパラメータはそのまま
                         mutated.indicators[i].parameters[param_name] = (
                             param_value * random.uniform(min_multiplier, max_multiplier)
                         )
@@ -380,7 +420,19 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
 
     except Exception as e:
         logger.error(f"戦略遺伝子突然変異エラー: {e}")
-        return gene
+        # エラー時はクローンした変異個体を返す（元の遺伝子は変更しない）
+        # クローン作成に失敗した場合は元の遺伝子をそのまま返す
+        try:
+            if 'mutated' not in locals():
+                mutated = gene.clone() if hasattr(gene, "clone") else gene
+            # 変異個体のfitnessをリセット（未評価マーク）
+            if hasattr(mutated, "fitness"):
+                mutated.fitness.valid = False
+            return mutated
+        except Exception:
+            # クローン作成にも失敗した場合は元の遺伝子をそのまま返す
+            logger.error(f"戦略遺伝子クローン作成エラー: {e}")
+            return gene
 
 
 def mutate_strategy_gene_batch(
@@ -388,7 +440,8 @@ def mutate_strategy_gene_batch(
 ) -> List[Any]:
     """StrategyGene の突然変異をバッチで実行する。
 
-    複数の個体に対して指標、条件、その他の突然変異を一括適用します。
+    mutate_strategy_gene が内部で指標・条件の突然変異も行うため、
+    ここでは重複適用を避けて各個体に直接 mutate_strategy_gene を呼び出す。
 
     Args:
         individuals: 突然変異を適用する個体のリスト。
@@ -398,11 +451,9 @@ def mutate_strategy_gene_batch(
     Returns:
         List[Any]: 突然変異が適用された新しい個体のリスト。
     """
-    mutated = mutate_indicators_batch(individuals, mutation_rate, config)
-    mutated = mutate_conditions_batch(mutated, mutation_rate, config)
     return [
         mutate_strategy_gene(individual, config, mutation_rate=mutation_rate)
-        for individual in mutated
+        for individual in individuals
     ]
 
 
@@ -549,7 +600,12 @@ def crossover_strategy_genes(
         return single_point_crossover(strategy_gene_class, parent1, parent2, config)
     except Exception as e:
         logger.error(f"戦略遺伝子交叉エラー: {e}")
-        return parent1, parent2
+        child1 = parent1.clone() if hasattr(parent1, "clone") else parent1
+        child2 = parent2.clone() if hasattr(parent2, "clone") else parent2
+        for child in (child1, child2):
+            if hasattr(child, "fitness"):
+                del child.fitness.values
+        return child1, child2
 
 
 def crossover_strategy_genes_batch(
@@ -559,6 +615,7 @@ def crossover_strategy_genes_batch(
 
     複数の個体ペアに対して一括して交叉を適用します。
     個体を2つずつペアにして、crossover_rateの確率で交叉を実行します。
+    奇数個体の場合、最後の個体は交叉せずにそのまま返します。
 
     Args:
         individuals: 交叉を適用する個体のリスト。
@@ -569,8 +626,12 @@ def crossover_strategy_genes_batch(
         List[Tuple[Any, Any]]: 交叉された子個体のペアのリスト。
     """
     results: List[Tuple[Any, Any]] = []
+    num_individuals = len(individuals)
 
-    for i in range(0, len(individuals) - 1, 2):
+    # ペア処理（奇数個体の場合は最後の個体をスキップ）
+    last_pair_index = num_individuals - 1 if num_individuals % 2 == 0 else num_individuals - 2
+
+    for i in range(0, last_pair_index, 2):
         if random.random() < crossover_rate:
             parent1 = individuals[i]
             parent2 = individuals[i + 1]
@@ -583,6 +644,11 @@ def crossover_strategy_genes_batch(
             results.append((child1, child2))
         else:
             results.append((individuals[i], individuals[i + 1]))
+
+    # 奇数個体の場合、最後の個体をそのまま追加
+    if num_individuals % 2 == 1:
+        last_individual = individuals[-1]
+        results.append((last_individual, last_individual))
 
     return results
 
@@ -636,6 +702,7 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
 
     指標リストの中間に一点の切断点を設け、それ以降の属性を親同士で
     入れ替えることで2つの子個体を生成します。
+    片親の指標数が1の場合でも、ランダムな交叉点を保証します。
 
     Args:
         strategy_gene_class: 生成する個体のクラス（通常は StrategyGene）。
@@ -646,8 +713,25 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
     Returns:
         Tuple[StrategyGene, StrategyGene]: 指標リストが分割されて組み換えられた2つの新しい子個体。
     """
-    min_indicators = min(len(parent1.indicators), len(parent2.indicators))
-    crossover_point = 0 if min_indicators <= 1 else random.randint(1, min_indicators)
+    max_indicators_parent1 = len(parent1.indicators)
+    max_indicators_parent2 = len(parent2.indicators)
+    
+    # 両方の親の最大インジケーター数を取得
+    max_indicators = config.max_indicators
+    
+    # 交叉点を決定（1以上のランダムな値）
+    # 両方の親の指標数の最小値が1の場合でも、0または1のランダムな交差点を選択
+    min_indicators = min(max_indicators_parent1, max_indicators_parent2)
+    
+    if min_indicators <= 0:
+        # 両方とも空の場合
+        crossover_point = 0
+    elif min_indicators == 1:
+        # 最小値が1の場合、0または1をランダムに選択
+        crossover_point = random.randint(0, 1)
+    else:
+        # 2以上の場合、1からmin_indicatorsの範囲でランダムに選択
+        crossover_point = random.randint(1, min_indicators)
 
     c1_ind = [ind.clone() for ind in parent1.indicators[:crossover_point]] + [
         ind.clone() for ind in parent2.indicators[crossover_point:]
@@ -656,7 +740,6 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
         ind.clone() for ind in parent1.indicators[crossover_point:]
     ]
 
-    max_indicators = config.max_indicators
     c1_ind = c1_ind[:max_indicators]
     c2_ind = c2_ind[:max_indicators]
 
@@ -667,8 +750,12 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
         val1 = parent1.risk_management.get(key, 0)
         val2 = parent2.risk_management.get(key, 0)
         if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
-            c1_risk[key] = (val1 + val2) / 2
-            c2_risk[key] = (val1 + val2) / 2
+            if random.random() < 0.5:
+                c1_risk[key] = val1
+                c2_risk[key] = val2
+            else:
+                c1_risk[key] = val2
+                c2_risk[key] = val1
         else:
             c1_risk[key] = val1 if random.random() < 0.5 else val2
             c2_risk[key] = val2 if random.random() < 0.5 else val1
@@ -719,16 +806,12 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
         c1_stateful = GeneticUtils.copy_stateful_conditions(parent2.stateful_conditions)
         c2_stateful = GeneticUtils.copy_stateful_conditions(parent1.stateful_conditions)
 
-    c1_tool = (
-        GeneticUtils.copy_tool_genes(parent1.tool_genes)
-        if random.random() < 0.5
-        else GeneticUtils.copy_tool_genes(parent2.tool_genes)
-    )
-    c2_tool = (
-        GeneticUtils.copy_tool_genes(parent2.tool_genes)
-        if random.random() < 0.5
-        else GeneticUtils.copy_tool_genes(parent1.tool_genes)
-    )
+    if random.random() < 0.5:
+        c1_tool = GeneticUtils.copy_tool_genes(parent1.tool_genes)
+        c2_tool = GeneticUtils.copy_tool_genes(parent2.tool_genes)
+    else:
+        c1_tool = GeneticUtils.copy_tool_genes(parent2.tool_genes)
+        c2_tool = GeneticUtils.copy_tool_genes(parent1.tool_genes)
 
     child1 = strategy_gene_class(
         id=str(uuid.uuid4()),

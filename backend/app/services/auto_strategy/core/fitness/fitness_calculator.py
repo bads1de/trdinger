@@ -586,7 +586,9 @@ class FitnessCalculator:
                     value = metrics.get("trade_frequency_penalty", 0.0)
                 else:
                     logger.warning(f"未知の目的: {objective}")
-                    value = 0.0
+                    penalty = self.get_penalty_values(config)
+                    penalty_idx = list(config.objectives).index(objective)
+                    value = penalty[penalty_idx] if penalty_idx < len(penalty) else 0.0
 
                 dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
                 scale = float(dynamic_scalars.get(objective, 1.0))

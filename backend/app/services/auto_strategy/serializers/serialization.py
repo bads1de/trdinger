@@ -151,7 +151,12 @@ class DictConverter:
         if isinstance(value, set):
             return [self._copy_cached_value(item) for item in value]
 
-        return repr(value)
+        try:
+            from copy import deepcopy
+
+            return deepcopy(value)
+        except Exception:
+            return repr(value)
 
     def _generate_cache_key(self, strategy_gene: object) -> _FrozenKey:
         """戦略遺伝子の構造に基づいて安定したキャッシュキーを生成する。"""

@@ -14,6 +14,15 @@ from .nested_configs import (
     TuningConfig,
     TwoStageSelectionConfig,
 )
+from ..objective_registry import is_minimize_objective
+
+
+def _build_multi_objective_weights(objectives: list[str]) -> list[float]:
+    """目的関数の向きに合わせて DEAP 用の重みを構築する。"""
+    return [
+        -1.0 if is_minimize_objective(objective) else 1.0
+        for objective in objectives
+    ]
 
 
 class GAPresets:
@@ -101,17 +110,18 @@ class GAPresets:
 
         リターン、シャープレシオ、ドローダウンを同時に最適化する。
         """
+        objectives = [
+            "total_return",
+            "sharpe_ratio",
+            "max_drawdown",
+        ]
         return GAConfig(
             population_size=150,
             generations=80,
             enable_multi_objective=True,
             evaluation_config=EvaluationConfig(enable_parallel=True),
-            objectives=[
-                "total_return",
-                "sharpe_ratio",
-                "max_drawdown",
-            ],
-            objective_weights=[1.0, 1.0, 1.0],
+            objectives=objectives,
+            objective_weights=_build_multi_objective_weights(objectives),
             tuning_config=TuningConfig(enabled=False),
             use_seed_strategies=True,
             fitness_sharing={"enable_fitness_sharing": True},

@@ -10,6 +10,7 @@ from typing import Optional
 
 from deap import base, creator, tools
 
+from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.genes import StrategyGene
 
@@ -75,7 +76,34 @@ class DEAPSetup:
         individual_class_name = f"Individual_{suffix}"
         self.fitness_class_name = fitness_class_name
         self.individual_class_name = individual_class_name
-        weights = tuple(config.objective_weights)
+
+        objectives = getattr(config, "objectives", None)
+        objective_weights = getattr(config, "objective_weights", None)
+        if not isinstance(objectives, (list, tuple)):
+            raise ValueError("objectives はリストである必要があります")
+        if not isinstance(objective_weights, (list, tuple)):
+            raise ValueError("objective_weights はリストである必要があります")
+        if len(objectives) != len(objective_weights):
+            raise ValueError(
+                "objective_weights の数は objectives と一致する必要があります "
+                f"(objectives={len(objectives)}, objective_weights={len(objective_weights)})"
+            )
+
+        normalized_weights = []
+        try:
+            for objective, weight in zip(objectives, objective_weights):
+                numeric_weight = float(weight)
+                normalized_weight = (
+                    -abs(numeric_weight)
+                    if objective_registry.is_minimize_objective(objective)
+                    else abs(numeric_weight)
+                )
+                normalized_weights.append(normalized_weight)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("objective_weights は数値である必要があります") from exc
+
+        weights = tuple(normalized_weights)
+
         logger.info(f"多目的最適化モード: 目的={config.objectives}, 重み={weights}")
 
         # フィットネスクラスを作成

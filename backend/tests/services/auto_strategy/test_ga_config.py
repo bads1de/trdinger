@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config import GAConfig, GAPresets
 from app.services.auto_strategy.config.ga.nested_configs import (
     EarlyTerminationSettings,
     EvaluationConfig,
@@ -477,3 +477,14 @@ class TestGAConfig:
         first.parameter_ranges["period"][0] = 999
 
         assert second.parameter_ranges["period"] == [5, 200]
+
+    def test_multi_objective_preset_uses_signed_objective_weights(self):
+        """多目的プリセットは最小化指標を負の重みで表現する"""
+        config = GAPresets.multi_objective()
+
+        assert config.objectives == [
+            "total_return",
+            "sharpe_ratio",
+            "max_drawdown",
+        ]
+        assert config.objective_weights == [1.0, 1.0, -1.0]

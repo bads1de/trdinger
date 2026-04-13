@@ -258,7 +258,7 @@ class PositionSizingService:
     ) -> PositionSizingResult:
         """エラー結果の作成"""
         return PositionSizingResult(
-            position_size=0.01,  # 最小サイズ
+            position_size=0.0,  # エラー時はポジションを持たない
             method_used=method,
             calculation_details={"error": error_message},
             confidence_score=0.0,
@@ -344,11 +344,15 @@ class PositionSizingService:
 
         Returns:
             ポジションサイズ（数量）
+
+        Note:
+            エラー時は0.0を返します。呼び出し元は戻り値が0.0の場合、
+            計算エラーまたは無効な入力として扱う必要があります。
         """
         try:
             # 入力値の簡易検証（フルバリデーションをスキップ）
             if not gene or account_balance <= 0 or current_price <= 0:
-                return 0.01  # デフォルトサイズ
+                return 0.0  # エラー時は0を返す
 
             # 計算機の選択と実行（市場データなしで高速実行）
             _, result = self._calculate_with_calculator(
@@ -363,4 +367,4 @@ class PositionSizingService:
 
         except Exception as e:
             self.logger.warning(f"高速ポジションサイズ計算エラー: {e}")
-            return 0.01  # デフォルトサイズ
+            return 0.0  # エラー時は0を返す

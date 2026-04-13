@@ -36,9 +36,10 @@ class TPSLGene(BaseGene):
         "priority",
         "lookback_period",
         "atr_period",
+        "trailing_step_pct",
     ]
     ENUM_FIELDS = ["method"]
-    CHOICE_FIELDS = ["enabled"]
+    CHOICE_FIELDS = ["enabled", "trailing_stop", "trailing_take_profit"]
     NUMERIC_RANGES = {
         "stop_loss_pct": (0.005, 0.15),  # 0.5%-15%
         "take_profit_pct": (0.01, 0.3),  # 1%-30%
@@ -50,6 +51,7 @@ class TPSLGene(BaseGene):
         "priority": (0.5, 1.5),
         "lookback_period": (50, 200),
         "atr_period": (10, 30),
+        "trailing_step_pct": (0.005, 0.05),
     }
 
     @classmethod
@@ -185,6 +187,7 @@ class TPSLGene(BaseGene):
         cls, parent1: BaseGene, parent2: BaseGene
     ) -> tuple["TPSLGene", "TPSLGene"]:
         """TP/SL遺伝子の交叉"""
+        import random
         from .genetic_utils import GeneticUtils
 
         # ジェネリック交叉を実行（直接呼び出し）
@@ -208,19 +211,20 @@ class TPSLGene(BaseGene):
             child2.method_weights = child2.method_weights.copy()
 
         # method_weightsの特殊処理
-        # 辞書の各キーにたいして比率の平均を取る
+        # BLX-α交叉: 親の値の範囲内でランダムに重みを生成
         p1: "TPSLGene" = parent1  # type: ignore[assignment]
         p2: "TPSLGene" = parent2  # type: ignore[assignment]
         all_keys = set(p1.method_weights.keys()) | set(p2.method_weights.keys())
+        
         for key in all_keys:
             if key in p1.method_weights and key in p2.method_weights:
-                # 両方にある場合、平均を取る
-                child1.method_weights[key] = (
-                    p1.method_weights[key] + p2.method_weights[key]
-                ) / 2
-                child2.method_weights[key] = (
-                    p1.method_weights[key] + p2.method_weights[key]
-                ) / 2
+                # 両方にある場合、BLX-α交叉で多様性を創出
+                v1, v2 = p1.method_weights[key], p2.method_weights[key]
+                min_v, max_v = min(v1, v2), max(v1, v2)
+                range_v = max_v - min_v
+                # 親の範囲内（または少し外側）でランダムに選択
+                child1.method_weights[key] = max(0.0, min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v))
+                child2.method_weights[key] = max(0.0, min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v))
             else:
                 # 片方しかない場合、そのまま継承
                 if key in p1.method_weights:

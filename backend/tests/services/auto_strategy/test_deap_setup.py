@@ -40,7 +40,7 @@ class TestDEAPSetup:
     def mock_config(self):
         """Mock GAConfig"""
         config = Mock(spec=GAConfig)
-        config.objectives = ["sharpe_ratio", "total_return"]
+        config.objectives = ["sharpe_ratio", "max_drawdown"]
         config.objective_weights = [1.0, -1.0]
         config.mutation_rate = 0.2
         return config
@@ -315,6 +315,47 @@ class TestDEAPSetup:
                 mock_functions["crossover"],
                 mock_functions["mutate"],
             )
+
+    @patch(
+        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_setup_deap_rejects_objective_weight_length_mismatch(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
+        """objective_weights の数が一致しない設定は早期に拒否する"""
+        mock_config.objectives = ["total_return", "max_drawdown"]
+        mock_config.objective_weights = [1.0]
+
+        with pytest.raises(ValueError, match="objective_weights"):
+            deap_setup.setup_deap(
+                mock_config,
+                mock_functions["create_individual"],
+                mock_functions["evaluate"],
+                mock_functions["crossover"],
+                mock_functions["mutate"],
+            )
+
+    @patch(
+        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+    )
+    def test_setup_deap_normalizes_minimize_objective_weights(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
+        """最小化目的の重みは DEAP 用に負符号へ正規化される"""
+        mock_config.objectives = ["total_return", "max_drawdown"]
+        mock_config.objective_weights = [1.0, 1.0]
+
+        deap_setup.setup_deap(
+            mock_config,
+            mock_functions["create_individual"],
+            mock_functions["evaluate"],
+            mock_functions["crossover"],
+            mock_functions["mutate"],
+        )
+
+        mock_creator.create.assert_any_call(
+            deap_setup.fitness_class_name, base.Fitness, weights=(1.0, -1.0)
+        )
 
     def test_get_toolbox_before_setup(self, deap_setup):
         """セットアップ前のツールボックス取得テスト"""

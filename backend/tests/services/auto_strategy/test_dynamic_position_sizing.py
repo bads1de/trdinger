@@ -293,7 +293,7 @@ class TestDynamicPositionSizing:
         assert gene.min_position_size <= result <= gene.max_position_size
 
     def test_calculate_position_size_fast_handles_invalid_inputs(self):
-        """高速計算メソッドが無効な入力時にデフォルト値を返すこと"""
+        """高速計算メソッドが無効な入力時に0.0を返すこと（エラー時はポジションを持たない）"""
 
         service = PositionSizingService()
         gene = self._create_gene()
@@ -302,19 +302,19 @@ class TestDynamicPositionSizing:
         result1 = service.calculate_position_size_fast(
             gene=gene, account_balance=-100.0, current_price=100.0
         )
-        assert result1 == 0.01
+        assert result1 == 0.0
 
         # 無効な価格
         result2 = service.calculate_position_size_fast(
             gene=gene, account_balance=10000.0, current_price=0.0
         )
-        assert result2 == 0.01
+        assert result2 == 0.0
 
         # 遺伝子がNone
         result3 = service.calculate_position_size_fast(
             gene=None, account_balance=10000.0, current_price=100.0
         )
-        assert result3 == 0.01
+        assert result3 == 0.0
 
     def test_calculate_position_size_fast_is_faster_than_full(self):
         """高速計算がフル計算より高速であること"""

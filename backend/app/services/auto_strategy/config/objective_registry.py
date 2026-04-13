@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Final, Literal
+
+logger = logging.getLogger(__name__)
 
 ObjectiveDirection = Literal["maximize", "minimize"]
 
@@ -54,7 +57,8 @@ OBJECTIVE_REGISTRY: Final[dict[str, ObjectiveDefinition]] = {
 }
 
 DEFAULT_OBJECTIVE_DEFINITION: Final[ObjectiveDefinition] = ObjectiveDefinition(
-    name="unknown_objective"
+    name="unknown_objective",
+    direction="minimize",  # 安全側: 未知の目的関数は最小化として扱う
 )
 
 MINIMIZE_OBJECTIVES: Final[frozenset[str]] = frozenset(
@@ -88,7 +92,15 @@ def get_objective_definition(objective: Any) -> ObjectiveDefinition:
     """
     if objective in (None, ""):
         return DEFAULT_OBJECTIVE_DEFINITION
-    return OBJECTIVE_REGISTRY.get(str(objective), DEFAULT_OBJECTIVE_DEFINITION)
+    
+    objective_str = str(objective)
+    if objective_str not in OBJECTIVE_REGISTRY:
+        logger.warning(
+            f"未知の目的関数が使用されました: '{objective_str}'. "
+            f"デフォルト設定（minimize）を使用します。"
+        )
+    
+    return OBJECTIVE_REGISTRY.get(objective_str, DEFAULT_OBJECTIVE_DEFINITION)
 
 
 def is_minimize_objective(objective: Any) -> bool:

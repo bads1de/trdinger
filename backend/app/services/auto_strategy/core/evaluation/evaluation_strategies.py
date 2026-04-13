@@ -435,7 +435,14 @@ class EvaluationStrategy:
             is_config["end_date"] = split_str
 
             oos_config = base_backtest_config.copy()
-            oos_config["start_date"] = split_str
+            # IS期間の直後のバーからOOS期間を開始し、境界でのデータリークを防ぐ
+            timeframe = base_backtest_config.get("timeframe", "1h")
+            try:
+                bar_offset = pd.Timedelta(timeframe)
+            except Exception:
+                bar_offset = pd.Timedelta(hours=1)
+            oos_start = pd.Timestamp(split_str) + bar_offset
+            oos_config["start_date"] = oos_start.strftime("%Y-%m-%d %H:%M:%S")
             oos_config["end_date"] = end_str
 
             with ThreadPoolExecutor(max_workers=2) as executor:
@@ -591,7 +598,13 @@ class EvaluationStrategy:
             train_duration = fold_period * train_ratio
 
             train_end = fold_train_start + train_duration
-            test_start = train_end
+            # トレーニング期間の直後のバーからテスト期間を開始し、境界でのデータリークを防ぐ
+            timeframe = base_backtest_config.get("timeframe", "1h")
+            try:
+                bar_offset = pd.Timedelta(timeframe)
+            except Exception:
+                bar_offset = pd.Timedelta(hours=1)
+            test_start = train_end + bar_offset
             test_end = fold_end
 
             if (train_end - fold_train_start).days < 7:

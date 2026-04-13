@@ -268,6 +268,12 @@ class StatefulCondition:
             f"{self.trigger_condition.left_operand}"
             f"{self.trigger_condition.operator}"
             f"{self.trigger_condition.right_operand}"
+            f"{self.follow_condition.left_operand}"
+            f"{self.follow_condition.operator}"
+            f"{self.follow_condition.right_operand}"
+            f"{self.lookback_bars}"
+            f"{self.cooldown_bars}"
+            f"{self.direction}"
         )
         hash_value = hashlib.md5(content.encode()).hexdigest()[:8]
         return f"stateful_trigger_{hash_value}"

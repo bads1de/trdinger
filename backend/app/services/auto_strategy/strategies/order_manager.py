@@ -37,7 +37,6 @@ class OrderManager:
         self._strategy_ref = weakref.ref(strategy)
         self.lower_tf_simulator = lower_tf_simulator
         self.pending_orders: List[PendingOrder] = []
-        self.bar_duration = self._get_bar_duration()  # 初期化時にキャッシュ
 
     @property
     def strategy(self):
@@ -69,7 +68,7 @@ class OrderManager:
             self.pending_orders.clear()
             return
 
-        bar_duration = self.bar_duration
+        bar_duration = self._get_bar_duration()
         if bar_duration is None:
             return
 
@@ -159,10 +158,18 @@ class OrderManager:
             logger.error("Execute filled order failed: strategy instance is None")
             return
 
+        had_position_before = bool(strategy.position)
+
         if order.is_long:
             strategy.buy(size=order.size)
         else:
             strategy.sell(size=order.size)
+
+        # buy/sell が拒否された場合（証拠金不足等）はポジションが開かれない
+        # その場合は内部状態を同期しない（ファントムポジションを防止）
+        if not had_position_before and not strategy.position:
+            logger.warning("注文が拒否されました: ポジションが開かれていません")
+            return
 
         self._sync_open_position_state(
             entry_price=fill_price,

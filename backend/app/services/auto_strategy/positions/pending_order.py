@@ -64,7 +64,7 @@ class PendingOrder:
         if self.validity_bars == 0:
             # 0 は無制限
             return False
-        bars_elapsed = current_bar_index - self.created_bar_index
+        bars_elapsed = max(0, current_bar_index - self.created_bar_index)
         return bars_elapsed >= self.validity_bars
 
     @property

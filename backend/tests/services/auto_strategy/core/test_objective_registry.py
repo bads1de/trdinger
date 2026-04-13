@@ -10,12 +10,14 @@ def test_minimize_objectives_are_centralized():
     )
 
 
-def test_is_minimize_objective_defaults_to_maximize():
+def test_is_minimize_objective_defaults_to_minimize_for_unknown():
+    """未知の目的関数は安全側に倒してminimizeとして扱われる"""
     assert objective_registry.is_minimize_objective("max_drawdown") is True
     assert objective_registry.is_minimize_objective("ulcer_index") is True
     assert objective_registry.is_minimize_objective("trade_frequency_penalty") is True
     assert objective_registry.is_minimize_objective("total_return") is False
-    assert objective_registry.is_minimize_objective("unknown_objective") is False
+    # 未知の目的関数はminimize（安全側）
+    assert objective_registry.is_minimize_objective("unknown_objective") is True
 
 
 def test_to_selection_space_uses_registry(monkeypatch):

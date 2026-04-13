@@ -157,20 +157,38 @@ class FitnessSharing:
             for idx, valid_idx in enumerate(valid_indices):
                 niche_counts[valid_idx] = niche_counts_vectorized[idx]
 
+            original_fitness: dict[int, tuple[float, ...]] = {}
             for i, individual in enumerate(population):
                 if hasattr(individual, "fitness") and individual.fitness.valid:
-                    original_fitness_values = individual.fitness.values
+                    original_fitness[i] = individual.fitness.values
                     shared_fitness_values = tuple(
                         fitness_val / niche_counts[i]
-                        for fitness_val in original_fitness_values
+                        for fitness_val in individual.fitness.values
                     )
                     individual.fitness.values = shared_fitness_values
 
-            return _silhouette_based_sharing(
+            result = _silhouette_based_sharing(
                 population,
                 gene_serializer=self.gene_serializer,
                 vectorize_gene=resolve_vector,
             )
+
+            # niche-count調整を元に戻し、シルエット調整のみを残す
+            for i, individual in enumerate(population):
+                if i in original_fitness and hasattr(individual, "fitness"):
+                    silhouette_ratio = (
+                        tuple(
+                            s / o if o != 0 else 0.0
+                            for s, o in zip(individual.fitness.values, original_fitness[i])
+                        )
+                        if individual.fitness.valid
+                        else original_fitness[i]
+                    )
+                    individual.fitness.values = tuple(
+                        o * r for o, r in zip(original_fitness[i], silhouette_ratio)
+                    )
+
+            return result
 
         except Exception as e:
             logger.error(f"フィットネス共有適用エラー: {e}")

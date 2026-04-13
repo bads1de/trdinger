@@ -247,6 +247,7 @@ def test_half_optimal_f_uses_trade_history_when_sufficient(
 def test_position_sizing_service_invalid_inputs_returns_error_result(
     base_gene: PositionSizingGene, balance: float, price: float
 ) -> None:
+    """無効な入力時にエラー結果を返す（position_size=0.0）"""
     gene = base_gene
     service = PositionSizingService()
 
@@ -257,9 +258,10 @@ def test_position_sizing_service_invalid_inputs_returns_error_result(
     )
 
     assert isinstance(result, PositionSizingResult)
-    assert result.position_size == pytest.approx(0.01)
+    # エラー時はポジションを持たない（0.0）
+    assert result.position_size == 0.0
     assert result.confidence_score == 0.0
-    assert result.warnings
+    assert len(result.warnings) > 0
     assert "error" in result.calculation_details
 
 
@@ -319,7 +321,7 @@ def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
     """
     異常入力に対する挙動をドキュメント化するためのテスト。
 
-    - PositionSizingService 側は負残高・ゼロ価格をエラー扱いし、PositionSizingResult(0.01, confidence_score=0.0) を返す。
+    - PositionSizingService 側は負残高・ゼロ価格をエラー扱いし、PositionSizingResult(0.0, confidence_score=0.0) を返す。
     - 各 Calculator は BaseCalculator._safe_calculate_with_price_check に依存するため、
       ここでは「min_position_size 以上の非負サイズを返す」ことのみを保証対象とする。
     """
@@ -336,7 +338,8 @@ def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
     res = service.calculate_position_size(
         gene=gene, account_balance=-1000.0, current_price=100.0
     )
-    assert res.position_size == pytest.approx(0.01)
+    # エラー時はポジションを持たない（0.0）
+    assert res.position_size == 0.0
     assert res.confidence_score == 0.0
 
     # Calculator レベルの防御的挙動（仕様を固定しすぎない）

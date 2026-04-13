@@ -262,6 +262,11 @@ class ConfigValidator:
         """
         errors = []
         evaluation_config = config.evaluation_config
+        
+        # OOSが無効な場合は検証をスキップ
+        if not getattr(evaluation_config, "enable_oos", False):
+            return errors
+            
         if (
             not isinstance(evaluation_config.oos_split_ratio, (int, float))
             or not 0.0 <= evaluation_config.oos_split_ratio < 1.0
@@ -318,6 +323,27 @@ class ConfigValidator:
         objectives = getattr(config, "objectives", None)
         if objectives is None:
             objectives = []
+        elif not isinstance(objectives, (list, tuple)):
+            errors.append("objectives はリストである必要があります")
+            objectives = []
+
+        objective_weights = getattr(config, "objective_weights", None)
+        if objective_weights is None:
+            objective_weights = []
+        elif not isinstance(objective_weights, (list, tuple)):
+            errors.append("objective_weights はリストである必要があります")
+            objective_weights = []
+
+        if len(objectives) != len(objective_weights):
+            errors.append(
+                "objective_weights の数は objectives と一致する必要があります "
+                f"(objectives={len(objectives)}, objective_weights={len(objective_weights)})"
+            )
+        elif objective_weights and not all(
+            isinstance(weight, (int, float)) for weight in objective_weights
+        ):
+            errors.append("objective_weights は数値である必要があります")
+
         if "prediction_score" in objectives:
             errors.append(
                 "prediction_score はボラ回帰化に伴い objectives ではサポートされません"
@@ -548,6 +574,15 @@ class ConfigValidator:
             errors.append(
                 "二段階選抜候補数は二段階選抜エリート数以上である必要があります"
             )
+        
+        # 新規: candidate_pool_sizeがpopulation_sizeを超えないことを検証
+        if isinstance(candidate_pool_size, (int, float)) and isinstance(
+            population_size, (int, float)
+        ):
+            if int(candidate_pool_size) > int(population_size):
+                errors.append(
+                    "二段階選抜候補数は個体数以下である必要があります"
+                )
 
         if (
             not isinstance(two_stage_config.min_pass_rate, (int, float))
