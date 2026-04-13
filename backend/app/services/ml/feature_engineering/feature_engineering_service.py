@@ -292,13 +292,25 @@ class FeatureEngineeringService:
             # データ前処理
             logger.info("統計的手法による特徴量前処理を実行中...")
             try:
+                # NaNを前方修正で埋める（ウォームアップ期間の欠損に対応）
                 result_df = sanitize_numeric_dataframe(
-                    result_df, fill_value=0.0, forward_fill=True
+                    result_df, fill_value=None, forward_fill=True
                 )
+                # それでも残るNaNのみを、指標の中央値で埋める（0埋めより安全）
+                # 0が有効な値として使われる指標（RSI等）で誤ったシグナルを防止
+                if result_df.isna().any().any():
+                    logger.warning(
+                        f"前方修正後も{result_df.isna().sum().sum()}個のNaNが残っています。"
+                        f"指標の中央値で補完します。"
+                    )
+                    result_df = result_df.fillna(result_df.median())
+                    # それでも残るNaN（全ての値がNaNの列など）のみ0埋め
+                    result_df = result_df.fillna(0.0)
                 logger.info("データ前処理完了")
             except Exception as e:
                 logger.error(f"データ前処理中にエラーが発生: {e}")
                 # エラーが発生しても処理を続行（部分的な欠損値許容）
+                # この場合、元のresult_dfをそのまま返す（NaNを含む）
 
             # キャッシュに保存
             self._save_to_cache(cache_key, result_df)
@@ -310,6 +322,11 @@ class FeatureEngineeringService:
         except Exception as e:
             logger.error(f"高度な特徴量計算中にエラーが発生: {e}")
             # エラー時は元のDataFrameを返す（最低限の動作保証）
+            # 警告レベルを上げて、呼び出し元が検知しやすくする
+            logger.warning(
+                f"特徴量計算が失敗したため、生のOHLCVデータのみを返します。"
+                f"モデルの予測性能が低下する可能性があります。"
+            )
             return ohlcv_data
 
     def aggregate_intraday_features(self, ohlcv_1m: pd.DataFrame) -> pd.DataFrame:

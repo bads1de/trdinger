@@ -82,13 +82,39 @@ class BaseGradientBoostingModel(ABC):
                 logger.info(
                     f"Early Stopping有効(rounds={early_stop}): データを分割します"
                 )
-                idx = int(len(X) * 0.8)
-                X_train, X_val, y_train, y_val = (
-                    X.iloc[:idx],
-                    X.iloc[idx:],
-                    y.iloc[:idx],
-                    y.iloc[idx:],
-                )
+                # 時系列データの場合は順序を保持した分割
+                # 分類タスクの場合は層化分割を試みる
+                is_classification = not self._is_regression_task()
+                
+                if is_classification:
+                    # 層化分割を試みる（失敗した場合は順序保持分割）
+                    try:
+                        from sklearn.model_selection import train_test_split
+                        stratify_param = y if len(np.unique(y)) <= 20 else None
+                        X_train, X_val, y_train, y_val = train_test_split(
+                            X, y, test_size=0.2, random_state=self.random_state,
+                            stratify=stratify_param, shuffle=stratify_param is not None
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            f"層化分割に失敗しました（{e}）。順序保持分割を使用します。"
+                        )
+                        idx = int(len(X) * 0.8)
+                        X_train, X_val, y_train, y_val = (
+                            X.iloc[:idx],
+                            X.iloc[idx:],
+                            y.iloc[:idx],
+                            y.iloc[idx:],
+                        )
+                else:
+                    # 回帰タスク（時系列データ）は順序を保持
+                    idx = int(len(X) * 0.8)
+                    X_train, X_val, y_train, y_val = (
+                        X.iloc[:idx],
+                        X.iloc[idx:],
+                        y.iloc[:idx],
+                        y.iloc[idx:],
+                    )
 
             self._train_model_impl(
                 cast(pd.DataFrame, X_train),

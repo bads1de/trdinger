@@ -437,7 +437,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def _time_series_cross_validate(
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Dict[str, SerializableValue]:
-        """時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行"""
+        """時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行
+        
+        各fold内で特徴量選択とスケーリングを実行することで、
+        データリークを防ぎます。
+        """
         n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
@@ -465,16 +469,22 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             X_train_cv, X_test_cv = X.iloc[train_idx], X.iloc[test_idx]
             y_train_cv, y_test_cv = y.iloc[train_idx], y.iloc[test_idx]
 
+            # 各fold内で特徴量選択を実行（データリーク防止）
+            X_train_selected, X_test_selected = self._apply_feature_selection_for_fold(
+                X_train_cv, X_test_cv, y_train_cv
+            )
+
+            # スケーリング（各fold内で実行）
             scaler = StandardScaler()
             X_train_scaled = pd.DataFrame(
-                np.asarray(scaler.fit_transform(X_train_cv)),
-                columns=X_train_cv.columns,
-                index=X_train_cv.index,
+                np.asarray(scaler.fit_transform(X_train_selected)),
+                columns=X_train_selected.columns,
+                index=X_train_selected.index,
             )
             X_test_scaled = pd.DataFrame(
-                np.asarray(scaler.transform(X_test_cv)),
-                columns=X_test_cv.columns,
-                index=X_test_cv.index,
+                np.asarray(scaler.transform(X_test_selected)),
+                columns=X_test_selected.columns,
+                index=X_test_selected.index,
             )
 
             fold_result = self._train_fold_with_error_handling(
@@ -491,7 +501,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             fold_results.append(fold_result)
 
             if task_type == "volatility_regression":
-                score = self._coerce_float_param(fold_result.get("qlike", 0.0), 0.0)
+                # 失敗時はinfを設定（0.0は完璧なスコアとして誤解釈される）
+                score = self._coerce_float_param(
+                    fold_result.get("qlike"),
+                    float("inf"),  # デフォルトをinfに変更
+                )
+                # infの場合はペナルティとして大きな値を使用
+                if np.isinf(score):
+                    score = 10.0  # 実用的なペナルティ値
             else:
                 score = self._coerce_float_param(
                     fold_result.get(
@@ -523,6 +540,47 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             "std_score": std_score,
             "fold_results": fold_results_serializable,
         }
+
+    def _apply_feature_selection_for_fold(
+        self,
+        X_train_cv: pd.DataFrame,
+        X_test_cv: pd.DataFrame,
+        y_train_cv: pd.Series,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """CVの各fold内で特徴量選択を適用する（データリーク防止）"""
+        try:
+            # foldごとに新しい特徴量選択器を作成
+            fold_selector = FeatureSelector(
+                method="staged",
+                target_k=None,
+                cumulative_importance=0.95,
+                min_relative_importance=0.02,
+                correlation_threshold=0.85,
+                min_features=10,
+                cv_folds=3,
+                n_jobs=1,
+            )
+
+            # 学習データのみでfit
+            fold_selector.fit(X_train_cv, y_train_cv)
+            selected_columns = list(fold_selector.get_feature_names_out())
+
+            # 両方のデータを変換
+            X_train_selected = pd.DataFrame(
+                fold_selector.transform(X_train_cv),
+                columns=selected_columns,
+                index=X_train_cv.index,
+            )
+            X_test_selected = pd.DataFrame(
+                fold_selector.transform(X_test_cv),
+                columns=selected_columns,
+                index=X_test_cv.index,
+            )
+
+            return X_train_selected, X_test_selected
+        except Exception as e:
+            logger.warning(f"Fold内特徴量選択エラー、全特徴量使用: {e}")
+            return X_train_cv, X_test_cv
 
     def _preprocess_data(
         self, X_train: pd.DataFrame, X_test: pd.DataFrame

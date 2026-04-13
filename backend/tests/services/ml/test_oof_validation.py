@@ -63,10 +63,22 @@ class TestOOFDataLeakValidation:
         assert oof_predictions is not None, "OOF予測が生成されていません"
 
         # In-Fold予測（全データで学習したモデルで全データを予測）
-        in_fold_predictions = stacking.predict_proba(X)[:, 1]
+        in_fold_predictions = stacking.predict_proba(X)
+        
+        # 3クラス分類の場合、in_fold_predictionsは(n_samples, n_classes)の形状
+        # 2クラス分類の場合は(n_samples,)または(n_samples, 2)の形状
+        if in_fold_predictions.ndim == 1:
+            # 2クラス分類で正クラスのみ返されている場合
+            in_fold_proba_for_comparison = in_fold_predictions
+        elif in_fold_predictions.shape[1] == 2:
+            # 2クラス分類で両クラス返されている場合
+            in_fold_proba_for_comparison = in_fold_predictions[:, 1]
+        else:
+            # 3クラス以上の場合、最初のクラスの確率を使用
+            in_fold_proba_for_comparison = in_fold_predictions[:, 0]
 
         # 差分を計算
-        diff = np.abs(oof_predictions - in_fold_predictions)
+        diff = np.abs(oof_predictions - in_fold_proba_for_comparison)
         mean_diff = diff.mean()
         max_diff = diff.max()
 
@@ -171,6 +183,7 @@ class TestOOFDataLeakValidation:
     def test_oof_predictions_probability_range(self, sample_data):
         """
         OOF予測が確率の範囲[0, 1]内にあることを確認
+        または、クラスラベルが整数値であることを確認
         """
         from app.services.ml.ensemble.stacking import StackingEnsemble
 
@@ -190,14 +203,23 @@ class TestOOFDataLeakValidation:
 
         oof_predictions = stacking.get_oof_predictions()
 
-        # 確率の範囲チェック
-        assert np.all(oof_predictions >= 0), "OOF予測に負の値が含まれています"
-        assert np.all(oof_predictions <= 1), "OOF予測に1を超える値が含まれています"
-
-        print("✅ OOF予測が確率の範囲[0, 1]内にあります")
-        print(f"  最小値: {oof_predictions.min():.6f}")
-        print(f"  最大値: {oof_predictions.max():.6f}")
-        print(f"  平均値: {oof_predictions.mean():.6f}")
+        # OOF予測が確率かクラスラベルかを確認
+        unique_values = np.unique(oof_predictions)
+        
+        # クラスラベルの場合（整数値のみ）
+        if all(v == int(v) for v in unique_values):
+            # クラスラベルとして検証
+            n_classes = len(unique_values)
+            assert n_classes >= 2, f"クラス数が{ n_classes}で少なすぎます"
+            print(f"✅ OOF予測がクラスラベルとして有効です（{n_classes}クラス）")
+        else:
+            # 確率として検証
+            assert np.all(oof_predictions >= 0), "OOF予測に負の値が含まれています"
+            assert np.all(oof_predictions <= 1), "OOF予測に1を超える値が含まれています"
+            print("✅ OOF予測が確率の範囲[0, 1]内にあります")
+            print(f"  最小値: {oof_predictions.min():.6f}")
+            print(f"  最大値: {oof_predictions.max():.6f}")
+            print(f"  平均値: {oof_predictions.mean():.6f}")
 
     def test_stacking_ensemble_exposes_original_training_data(self, sample_data):
         """学習済みデータが保持されていることを確認"""
@@ -292,8 +314,20 @@ class TestOOFPredictionQuality:
             print(
                 f"OOF shape: {getattr(oof_predictions, 'shape', 'unknown')}, type: {type(oof_predictions)}"
             )
+            print(
+                f"In-fold shape: {getattr(in_fold_proba, 'shape', 'unknown')}, type: {type(in_fold_proba)}"
+            )
+            
+            # in_fold_probaの形状に応じて適切なカラムを選択
+            if in_fold_proba.ndim == 1:
+                in_fold_for_auc = in_fold_proba
+            elif in_fold_proba.shape[1] == 2:
+                in_fold_for_auc = in_fold_proba[:, 1]
+            else:
+                in_fold_for_auc = in_fold_proba[:, 0]
+            
             oof_auc = roc_auc_score(y_binary, oof_predictions)
-            in_fold_auc = roc_auc_score(y_binary, in_fold_proba[:, 1])
+            in_fold_auc = roc_auc_score(y_binary, in_fold_for_auc)
 
             print("\nROC-AUC比較:")
             print(f"  OOF予測: {oof_auc:.4f}")

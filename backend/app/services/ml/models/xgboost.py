@@ -37,6 +37,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         self.learning_rate = learning_rate
         self.n_estimators = n_estimators
         self.feature_names: Optional[List[str]] = None
+        self.best_iteration: Optional[int] = None  # 早期停止の最適イテレーション
 
     def _create_dataset(
         self,
@@ -109,11 +110,19 @@ class XGBoostModel(BaseGradientBoostingModel):
             early_stopping_rounds=actual_early_stopping_rounds,
             verbose_eval=False,
         )
+        
+        # 早期停止の最適イテレーションを保存
+        if hasattr(model, "best_iteration"):
+            self.best_iteration = model.best_iteration
+        elif hasattr(model, "best_ntree_limit"):
+            self.best_iteration = model.best_ntree_limit
+        
         return model
 
     def _get_prediction_proba(self, data: xgb.DMatrix) -> np.ndarray:
         """
         XGBoost固有の予測確率を取得します。
+        早期停止の最適イテレーションを使用します。
         """
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
@@ -122,14 +131,44 @@ class XGBoostModel(BaseGradientBoostingModel):
     def _prepare_input_for_prediction(self, X: pd.DataFrame) -> xgb.DMatrix:
         """
         予測用の入力データを準備します。
-        XGBoostはDMatrixを使用します。
+        特徴量の順序が訓練時と一致することを保証します。
         """
+        # 特徴量名の順序検証と修正
+        if self.feature_names:
+            # 予測時に入力 DataFrame の列順序を訓練時に合わせる
+            missing_cols = set(self.feature_names) - set(X.columns)
+            extra_cols = set(X.columns) - set(self.feature_names)
+            
+            if missing_cols:
+                logger.warning(
+                    f"予測時に特徴量が不足しています: {missing_cols}。"
+                    f"0で補完します。"
+                )
+                for col in missing_cols:
+                    X[col] = 0.0
+            
+            if extra_cols:
+                logger.debug(
+                    f"予測時に不要な特徴量が含まれています: {extra_cols}。"
+                    f"削除します。"
+                )
+            
+            # 訓練時と同じ順序に列を並べ替える
+            X = X[self.feature_names]
+        
         return xgb.DMatrix(X, feature_names=self.feature_names)
 
     def _predict_raw(self, data: Any) -> np.ndarray:
         """
         モデルから生の予測値（確率）を取得します。
+        早期停止の最適イテレーションを使用します。
         """
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
+        
+        # 早期停止の最適イテレーションを使用
+        if self.best_iteration is not None:
+            # XGBoost >= 1.6.0 では iteration_range を使用
+            return self.model.predict(data, iteration_range=(0, self.best_iteration + 1))
+        
         return self.model.predict(data)
