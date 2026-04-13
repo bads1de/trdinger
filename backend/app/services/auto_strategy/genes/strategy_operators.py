@@ -429,9 +429,9 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
             if hasattr(mutated, "fitness"):
                 mutated.fitness.valid = False
             return mutated
-        except Exception:
+        except Exception as inner_e:
             # クローン作成にも失敗した場合は元の遺伝子をそのまま返す
-            logger.error(f"戦略遺伝子クローン作成エラー: {e}")
+            logger.error(f"戦略遺伝子クローン作成エラー: {inner_e}")
             return gene
 
 

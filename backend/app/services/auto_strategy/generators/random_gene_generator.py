@@ -73,7 +73,8 @@ class RandomGeneGenerator:
                 threshold_profile=smart_context.get("threshold_profile"),
                 regime_thresholds=smart_context.get("regime_thresholds"),
             )
-        except Exception:
+        except Exception as e:
+            logger.debug("スマートコンテキストの初期化に失敗しました: %s", e)
             pass
 
         # 設定値を取得（型安全）
@@ -320,7 +321,8 @@ class RandomGeneGenerator:
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
         try:
             setattr(self.smart_condition_generator, "indicators", indicators)
-        except Exception:
+        except Exception as e:
+            logger.debug("指標キャッシュの設定に失敗しました: %s", e)
             pass
         long_entry_conditions, short_entry_conditions, _ = (
             self.smart_condition_generator.generate_balanced_conditions(indicators)

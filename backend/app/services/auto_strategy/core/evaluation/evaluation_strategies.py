@@ -439,7 +439,8 @@ class EvaluationStrategy:
             timeframe = base_backtest_config.get("timeframe", "1h")
             try:
                 bar_offset = pd.Timedelta(timeframe)
-            except Exception:
+            except Exception as e:
+                logger.debug("タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s", e)
                 bar_offset = pd.Timedelta(hours=1)
             oos_start = pd.Timestamp(split_str) + bar_offset
             oos_config["start_date"] = oos_start.strftime("%Y-%m-%d %H:%M:%S")
@@ -602,7 +603,8 @@ class EvaluationStrategy:
             timeframe = base_backtest_config.get("timeframe", "1h")
             try:
                 bar_offset = pd.Timedelta(timeframe)
-            except Exception:
+            except Exception as e:
+                logger.debug("タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s", e)
                 bar_offset = pd.Timedelta(hours=1)
             test_start = train_end + bar_offset
             test_end = fold_end

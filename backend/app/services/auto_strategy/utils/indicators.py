@@ -35,7 +35,9 @@ def indicators_by_category(category: str) -> List[str]:
                         if alias not in seen:
                             seen.add(alias)
                             results.append(alias)
-        except Exception:
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.debug(f"Failed to process indicator config: {e}")
             continue
     results.sort()
     return results

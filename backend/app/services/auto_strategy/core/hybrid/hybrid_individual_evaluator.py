@@ -225,7 +225,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 )
                 if ml_filter_model.is_trained():
                     return True, ml_filter_model
-            except Exception:
+            except Exception as e:
+                logger.debug(f"MLモデルのロードまたは初期化に失敗しました: {e}")
                 return False, None
 
         if self.predictor and self.predictor.is_trained():

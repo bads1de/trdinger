@@ -4,7 +4,6 @@
 戦略遺伝子の交叉・突然変異などの遺伝的演算子を提供します。
 """
 
-import importlib as _importlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -55,21 +54,6 @@ _ATTRIBUTE_EXPORTS = {
     "operand_grouping_system": ".strategy.operand_grouping",
 }
 
-
-def _load_export(name: str):
-    module = _importlib.import_module(_ATTRIBUTE_EXPORTS[name], __name__)
-    value = getattr(module, name)
-    globals()[name] = value
-    return value
-
-
-def __getattr__(name: str):
-    """遅延インポートで循環インポートを回避"""
-    if name in _ATTRIBUTE_EXPORTS:
-        return _load_export(name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 __all__ = [
     # Engine
     "DEAPSetup",
@@ -97,3 +81,6 @@ __all__ = [
     "OperandGroupingSystem",
     "operand_grouping_system",
 ]
+
+from .._lazy_import import setup_lazy_import  # noqa: E402
+setup_lazy_import(globals(), _ATTRIBUTE_EXPORTS, __all__)

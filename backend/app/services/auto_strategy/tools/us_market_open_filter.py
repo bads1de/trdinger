@@ -5,6 +5,7 @@
 ETFフローやマクロニュースの織り込みにより、最も相場が乱高下しやすい時間帯です。
 """
 
+import logging
 import random
 from typing import Any, Dict
 
@@ -15,6 +16,8 @@ from .time_windows import (
     mutate_window_minutes,
     to_timezone_minutes,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class USMarketOpenFilter(BaseTool):
@@ -58,7 +61,8 @@ class USMarketOpenFilter(BaseTool):
             # 前後 window 分の範囲内ならスキップ
             return is_within_window(current_minutes, open_minutes, window)
 
-        except Exception:
+        except Exception as e:
+            logger.debug(f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}")
             # 変換失敗時は簡易判定（UTCベース）
             # 冬時間Open 14:30, 夏時間Open 13:30
             # 簡易的に月で判定

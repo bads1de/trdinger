@@ -155,21 +155,24 @@ class DictConverter:
             from copy import deepcopy
 
             return deepcopy(value)
-        except Exception:
+        except Exception as e:
+            logger.debug("deepcopyに失敗しました、reprにフォールバックします: %s", e)
             return repr(value)
 
     def _generate_cache_key(self, strategy_gene: object) -> _FrozenKey:
         """戦略遺伝子の構造に基づいて安定したキャッシュキーを生成する。"""
         try:
             return self._freeze_for_cache_key(strategy_gene)
-        except Exception:
+        except Exception as e:
+            logger.debug("キャッシュキー生成に失敗しました、フォールバックします: %s", e)
             return ("object_id", id(strategy_gene))
 
     def _generate_dict_cache_key(self, data: object) -> _FrozenKey:
         """辞書データ用のキャッシュキーを生成する。"""
         try:
             return self._freeze_for_cache_key(data)
-        except Exception:
+        except Exception as e:
+            logger.debug("辞書キャッシュキー生成に失敗しました、フォールバックします: %s", e)
             return ("object_id", id(data))
 
     @staticmethod

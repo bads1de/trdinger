@@ -5,7 +5,7 @@ GA実験の実行と管理を担当します。
 """
 
 import logging
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, Dict, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
 
@@ -19,6 +19,8 @@ from ..core.engine.ga_engine import GeneticAlgorithmEngine
 
 logger = logging.getLogger(__name__)
 
+_DEFAULT_ENGINE_REGISTRY = ExperimentEngineRegistry()
+
 
 class ExperimentManager:
     """
@@ -27,21 +29,19 @@ class ExperimentManager:
     GA実験の実行と管理を担当します。
     """
 
-    _engine_registry: ClassVar[ExperimentEngineRegistry] = ExperimentEngineRegistry()
-    _active_engines: ClassVar[Dict[str, "GeneticAlgorithmEngine"]] = (
-        _engine_registry.active_engines
-    )
-    _registry_lock = _engine_registry.lock
-
     def __init__(
         self,
         backtest_service: BacktestService,
         persistence_service: ExperimentPersistenceService,
+        engine_registry: Optional[ExperimentEngineRegistry] = None,
     ):
         """初期化"""
         self.backtest_service = backtest_service
         self.persistence_service = persistence_service
         self.experiment_backtest_service = ExperimentBacktestService(backtest_service)
+        self._engine_registry = engine_registry or _DEFAULT_ENGINE_REGISTRY
+        self._active_engines = self._engine_registry.active_engines
+        self._registry_lock = self._engine_registry.lock
 
     def run_experiment(
         self, experiment_id: str, ga_config: GAConfig, backtest_config: Dict[str, Any]
@@ -181,22 +181,19 @@ class ExperimentManager:
         """実験の実行コンテキストをレジストリから解放します。"""
         self._release_active_engine(experiment_id, engine)
 
-    @classmethod
     def _register_active_engine(
-        cls, experiment_id: str, engine: "GeneticAlgorithmEngine"
+        self, experiment_id: str, engine: "GeneticAlgorithmEngine"
     ) -> None:
-        cls._engine_registry.register(experiment_id, engine)
+        self._engine_registry.register(experiment_id, engine)
 
-    @classmethod
     def _get_active_engine(
-        cls, experiment_id: str
+        self, experiment_id: str
     ) -> Optional["GeneticAlgorithmEngine"]:
-        return cls._engine_registry.get(experiment_id)
+        return self._engine_registry.get(experiment_id)
 
-    @classmethod
     def _release_active_engine(
-        cls,
+        self,
         experiment_id: str,
         engine: Optional["GeneticAlgorithmEngine"] = None,
     ) -> None:
-        cls._engine_registry.release(experiment_id, engine)
+        self._engine_registry.release(experiment_id, engine)

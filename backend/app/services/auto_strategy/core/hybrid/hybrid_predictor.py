@@ -57,8 +57,8 @@ class RuntimeModelPredictorAdapter:
                 result = is_trained_attr()
                 if isinstance(result, bool):
                     return result
-            except Exception:
-                logger.debug("runtime predictor の is_trained 呼び出しに失敗しました")
+            except Exception as e:
+                logger.debug("runtime predictor の is_trained 呼び出しに失敗しました: %s", e)
 
         is_fitted_attr = getattr(self.model, "is_fitted", None)
         if isinstance(is_fitted_attr, bool):

@@ -5,11 +5,14 @@
 不規則な値動きを回避するためのフィルターです。
 """
 
+import logging
 from typing import Any, Dict
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
 from .time_windows import to_timezone_minutes
+
+logger = logging.getLogger(__name__)
 
 
 class USLunchFilter(BaseTool):
@@ -49,7 +52,8 @@ class USLunchFilter(BaseTool):
             current_minutes = to_timezone_minutes(context.timestamp, "US/Eastern")
             return current_minutes is not None and 12 * 60 <= current_minutes < 13 * 60
 
-        except Exception:
+        except Exception as e:
+            logger.debug(f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}")
             # 変換失敗時は安全側に倒してスキップしない、あるいはUTCで概算
             # UTCでの概算（冬時間17時、夏時間16時）
             hour = context.timestamp.hour

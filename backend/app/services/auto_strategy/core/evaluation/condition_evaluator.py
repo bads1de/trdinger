@@ -209,7 +209,8 @@ class ConditionEvaluator:
                     return None
 
             return None
-        except Exception:
+        except Exception as e:
+            logger.debug("条件ベクトルの計算に失敗しました: %s", e)
             return None
 
     def get_condition_vector(
@@ -335,7 +336,8 @@ class ConditionEvaluator:
         if func:
             try:
                 return bool(func(left_val, right_val))
-            except Exception:
+            except Exception as e:
+                logger.debug("条件評価に失敗しました (operator: %s): %s", op, e)
                 # 比較不能な場合（NaNなど）
                 return False
 
@@ -399,7 +401,8 @@ class ConditionEvaluator:
                         return float("nan")
                     if len(val) >= 2:
                         return float(cast("float", val[-2]))
-            except Exception:
+            except Exception as e:
+                logger.debug("前回の値の取得に失敗しました: %s", e)
                 pass
 
         return float("nan")
@@ -484,7 +487,8 @@ class ConditionEvaluator:
                     attr = self._ohlcv_map[key_lower]
                     if hasattr(data, attr):
                         return _safe_get_last(getattr(data, attr))
-            except Exception:
+            except Exception as e:
+                logger.debug("OHLCVデータの取得に失敗しました: %s", e)
                 pass
 
         # 4. Indicators (辞書アクセスは属性アクセスより速い)

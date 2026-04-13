@@ -4,7 +4,6 @@ GAエンジンコアモジュール
 遺伝的アルゴリズムエンジン、DEAP設定、進化実行を提供します。
 """
 
-import importlib as _importlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -31,21 +30,6 @@ _ATTRIBUTE_EXPORTS = {
     "mutate_strategy_gene": ".ga_utils",
 }
 
-
-def _load_export(name: str):
-    module = _importlib.import_module(_ATTRIBUTE_EXPORTS[name], __name__)
-    value = getattr(module, name)
-    globals()[name] = value
-    return value
-
-
-def __getattr__(name: str):
-    """遅延インポートで循環インポートを回避"""
-    if name in _ATTRIBUTE_EXPORTS:
-        return _load_export(name)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
 __all__ = [
     "DEAPSetup",
     "EvolutionRunner",
@@ -57,3 +41,6 @@ __all__ = [
     "crossover_strategy_genes",
     "mutate_strategy_gene",
 ]
+
+from ..._lazy_import import setup_lazy_import  # noqa: E402
+setup_lazy_import(globals(), _ATTRIBUTE_EXPORTS, __all__)

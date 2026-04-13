@@ -150,8 +150,8 @@ class BaseGene(ABC):
             if base_module is not None:
                 try:
                     combined_globalns.update(vars(base_module))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("モジュール変数の更新に失敗しました (%s): %s", base.__name__, e)
 
         localns: dict[str, object] = {}
         for base in cls.__mro__:
@@ -169,8 +169,9 @@ class BaseGene(ABC):
                 annotations.update(
                     get_type_hints(base, globalns=combined_globalns, localns=localns)
                 )
-            except Exception:
+            except Exception as e:
                 # Try per-annotation to salvage what we can
+                logger.debug("型ヒントの取得に失敗しました (%s): %s", base.__name__, e)
                 for name, raw in raw_annotations.items():
                     if name in annotations:
                         continue
@@ -181,7 +182,8 @@ class BaseGene(ABC):
                             localns=localns,
                         )
                         annotations[name] = resolved[name]
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("個別アノテーションの解決に失敗しました (%s): %s", name, e)
                         annotations[name] = raw  # type: ignore[assignment]
 
         return annotations

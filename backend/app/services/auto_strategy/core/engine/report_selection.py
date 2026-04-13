@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional, Sequence, Tuple, TypeGuard
 
 from app.services.auto_strategy.config import objective_registry
@@ -13,6 +14,8 @@ from ..evaluation.evaluation_report import EvaluationReport
 from .fitness_utils import (
     extract_individual_primary_fitness as _extract_individual_primary_fitness,
 )
+
+logger = logging.getLogger(__name__)
 
 TWO_STAGE_RANK_ATTR = "_two_stage_selection_rank"
 TWO_STAGE_SCORE_ATTR = "_two_stage_selection_score"
@@ -213,7 +216,8 @@ def set_two_stage_metadata(
     try:
         setattr(target, TWO_STAGE_RANK_ATTR, rank)
         setattr(target, TWO_STAGE_SCORE_ATTR, score)
-    except Exception:
+    except Exception as e:
+        logger.debug(f"二段階選抜メタデータの設定に失敗しました: {e}")
         pass
 
 

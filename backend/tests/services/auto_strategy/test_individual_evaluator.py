@@ -10,7 +10,9 @@ from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
 from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
 )
-from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.evaluation.individual_evaluator import (
+    IndividualEvaluator,
+)
 from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
 from app.services.backtest.execution.backtest_executor import (
     BacktestEarlyTerminationError,
@@ -83,6 +85,22 @@ class TestIndividualEvaluator:
             assert first_key == second_key
             assert serializer_cls.call_count == 1
             assert serializer_instance.strategy_gene_to_dict.call_count == 2
+
+    def test_build_robustness_cache_key_does_not_use_python_hash(self):
+        """robustness キャッシュキーが Python の hash() に依存しないことを確認する。"""
+        gene = self._create_mock_gene(gene_id="gene-123")
+        ga_config = GAConfig()
+
+        with patch(
+            "builtins.hash",
+            side_effect=AssertionError("hash() must not be used for cache keys"),
+        ):
+            first_key = self.evaluator._build_robustness_cache_key(gene, ga_config)
+            second_key = self.evaluator._build_robustness_cache_key(gene, ga_config)
+
+        assert first_key == second_key
+        assert len(first_key) == 64
+        assert all(char in "0123456789abcdef" for char in first_key)
 
     def test_getstate_setstate_recreates_gene_serializer_component(self):
         """pickle復元時にGeneSerializerコンポーネントが再生成されることを確認する。"""
@@ -157,9 +175,12 @@ class TestIndividualEvaluator:
         assert first == (0.1,)
         assert refreshed == (0.9,)
         assert self.evaluator._evaluation_strategy.execute_report.call_count == 2
-        assert self.evaluator.get_cached_evaluation_report(gene).metadata[
-            "evaluation_fidelity"
-        ] == "full"
+        assert (
+            self.evaluator.get_cached_evaluation_report(gene).metadata[
+                "evaluation_fidelity"
+            ]
+            == "full"
+        )
 
     def test_prepare_backtest_config_for_evaluation_adds_warmup_window(self):
         gene = StrategyGene(
@@ -245,7 +266,9 @@ class TestIndividualEvaluator:
         )
         assert fitness == (0.42,)
 
-    def test_perform_single_evaluation_uses_recent_tail_window_for_coarse_fidelity(self):
+    def test_perform_single_evaluation_uses_recent_tail_window_for_coarse_fidelity(
+        self,
+    ):
         mock_individual = StrategyGene(
             id="coarse-gene",
             indicators=[],
@@ -299,12 +322,14 @@ class TestIndividualEvaluator:
         assert run_config["start_date"] == "2024-01-08 00:00:00"
         assert run_config["end_date"] == "2024-01-11 00:00:00"
 
-    def test_perform_single_evaluation_report_returns_penalty_on_early_termination(self):
+    def test_perform_single_evaluation_report_returns_penalty_on_early_termination(
+        self,
+    ):
         gene = self._create_mock_gene()
         self.evaluator._get_cached_data = Mock(return_value=Mock())
         self.evaluator._get_cached_minute_data = Mock(return_value=None)
-        self.mock_backtest_service.run_backtest.side_effect = BacktestEarlyTerminationError(
-            "trade_pace"
+        self.mock_backtest_service.run_backtest.side_effect = (
+            BacktestEarlyTerminationError("trade_pace")
         )
 
         config = GAConfig()
@@ -998,7 +1023,9 @@ class TestIndividualEvaluator:
         # GA設定: OOS有効化
         ga_config = GAConfig()
         ga_config.enable_multi_objective = False
-        ga_config.evaluation_config.oos_split_ratio = 0.2  # 10日間のうち、最後の2日がOOS（8日がIS）
+        ga_config.evaluation_config.oos_split_ratio = (
+            0.2  # 10日間のうち、最後の2日がOOS（8日がIS）
+        )
         ga_config.evaluation_config.oos_fitness_weight = 0.5  # 単純平均
 
         # フィットネス重み設定（total_returnのみ）

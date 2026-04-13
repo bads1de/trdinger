@@ -2,9 +2,12 @@
 実験開始・停止の application service。
 """
 
+import logging
 from typing import Any, Dict, Protocol
 
 from ..config.ga import GAConfig
+
+logger = logging.getLogger(__name__)
 
 
 class TaskScheduler(Protocol):
@@ -77,7 +80,8 @@ class ExperimentApplicationService:
                 backtest_config,
                 task_scheduler,
             )
-        except Exception:
+        except Exception as e:
+            logger.warning(f"実験開始中にエラーが発生しました (experiment_id={experiment_id}): {e}")
             if self.experiment_manager:
                 self.experiment_manager.release_experiment(experiment_id)
             self.persistence_service.fail_experiment(experiment_id)

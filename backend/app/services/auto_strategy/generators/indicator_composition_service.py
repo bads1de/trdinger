@@ -102,7 +102,8 @@ class IndicatorCompositionService:
                 return {"period": random.choice([10, 14, 20, 30, 50])}
             else:
                 return {}
-        except Exception:
+        except Exception as e:
+            logger.debug(f"デフォルトパラメータ取得エラー: {e}")
             return {"period": 20}  # SMA用フォールバック
 
     def _get_existing_periods(self, indicators: List[IndicatorGene]) -> set:

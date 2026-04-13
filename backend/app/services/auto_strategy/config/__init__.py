@@ -67,28 +67,10 @@ if TYPE_CHECKING:
     from .ga import ConfigValidator, GAConfig, GAPresets
 
 _LAZY_EXPORTS = {
-    "GAConfig": "GAConfig",
-    "GAPresets": "GAPresets",
-    "ConfigValidator": "ConfigValidator",
+    "GAConfig": ".ga",
+    "GAPresets": ".ga",
+    "ConfigValidator": ".ga",
 }
-
-
-def __getattr__(name: str) -> type:
-    """遅延インポートで重い依存を回避"""
-    attr_name = _LAZY_EXPORTS.get(name)
-    if attr_name is None:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-    from . import ga
-
-    value = getattr(ga, attr_name)
-    globals()[name] = value
-    return value
-
-
-def __dir__() -> list[str]:
-    return sorted({*globals().keys(), *_LAZY_EXPORTS})
-
 
 __all__ = [
     "AutoStrategyConfig",
@@ -122,3 +104,6 @@ __all__ = [
     "get_objective_definition",
     "is_minimize_objective",
 ]
+
+from .._lazy_import import setup_lazy_import  # noqa: E402
+setup_lazy_import(globals(), _LAZY_EXPORTS, __all__)

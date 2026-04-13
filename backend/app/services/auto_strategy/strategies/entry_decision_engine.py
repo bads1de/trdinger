@@ -175,8 +175,8 @@ class EntryDecisionEngine:
                             atr = np.mean(tr)
                             if current_price > 0:
                                 market_data["atr_pct"] = atr / current_price
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("ATR market data calculation error: %s", e)
 
                 position_size = (
                     self.strategy.position_sizing_service.calculate_position_size_fast(

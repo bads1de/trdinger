@@ -7,16 +7,11 @@ TP/SL計算サービス
 
 import logging
 import math
+import threading
 from typing import Any, Dict, Optional, Tuple
 
 from ..genes import TPSLGene, TPSLMethod
-from .calculator import (
-    AdaptiveCalculator,
-    FixedPercentageCalculator,
-    RiskRewardCalculator,
-    StatisticalCalculator,
-    VolatilityCalculator,
-)
+from .calculator import TPSLCalculatorFactory
 
 logger = logging.getLogger(__name__)
 
@@ -30,21 +25,26 @@ class TPSLService:
 
     def __init__(self):
         """初期化"""
-        # Calculatorインスタンスを作成
-        self.fixed_percentage_calculator = FixedPercentageCalculator()
-        self.risk_reward_calculator = RiskRewardCalculator()
-        self.volatility_calculator = VolatilityCalculator()
-        self.statistical_calculator = StatisticalCalculator()
-        self.adaptive_calculator = AdaptiveCalculator()
+        # ファクトリーを使用して計算機を管理（スレッドセーフなキャッシュ）
+        self._calculator_cache: Dict[TPSLMethod, Any] = {}
+        self._cache_lock = threading.Lock()
 
-        # Calculatorマッピング
-        self.calculators = {
-            TPSLMethod.FIXED_PERCENTAGE: self.fixed_percentage_calculator,
-            TPSLMethod.RISK_REWARD_RATIO: self.risk_reward_calculator,
-            TPSLMethod.VOLATILITY_BASED: self.volatility_calculator,
-            TPSLMethod.STATISTICAL: self.statistical_calculator,
-            TPSLMethod.ADAPTIVE: self.adaptive_calculator,
-        }
+    def _get_calculator(self, method: TPSLMethod):
+        """
+        指定された方式の計算機を取得（キャッシュ付き・スレッドセーフ）
+
+        Args:
+            method: TP/SL方式
+
+        Returns:
+            計算機インスタンス
+        """
+        if method not in self._calculator_cache:
+            with self._cache_lock:
+                # 再チェック（ダブルチェックロッキング）
+                if method not in self._calculator_cache:
+                    self._calculator_cache[method] = TPSLCalculatorFactory.create_calculator(method)
+        return self._calculator_cache[method]
 
     def calculate_tpsl_prices(
         self,
@@ -125,31 +125,26 @@ class TPSLService:
         )
         def _calculate_from_gene():
             """遺伝子ベースのTP/SL価格計算の内部実行関数"""
-            # Calculatorマッピングから適切なCalculatorを取得
-            calculator = self.calculators.get(tpsl_gene.method)
+            # ファクトリーを使用して適切な計算機を取得
+            calculator = self._get_calculator(tpsl_gene.method)
 
-            if calculator:
-                # Calculatorを使用して計算
-                result = calculator.calculate(
-                    current_price=current_price,
-                    tpsl_gene=tpsl_gene,
-                    market_data=market_data,
-                    position_direction=position_direction,
-                )
+            # Calculatorを使用して計算
+            result = calculator.calculate(
+                current_price=current_price,
+                tpsl_gene=tpsl_gene,
+                market_data=market_data,
+                position_direction=position_direction,
+            )
 
-                # TPSLResultから価格を抽出
-                sl_price, tp_price = self._build_price_pair(
-                    current_price,
-                    result.stop_loss_pct,
-                    result.take_profit_pct,
-                    position_direction,
-                )
+            # TPSLResultから価格を抽出
+            sl_price, tp_price = self._build_price_pair(
+                current_price,
+                result.stop_loss_pct,
+                result.take_profit_pct,
+                position_direction,
+            )
 
-                return sl_price, tp_price
-            else:
-                # 未知の方式の場合はフォールバック
-                logger.warning(f"未知のTP/SL方式: {tpsl_gene.method}")
-                return self._calculate_fallback(current_price, position_direction)
+            return sl_price, tp_price
 
         return _calculate_from_gene()
 
@@ -311,7 +306,9 @@ class TPSLService:
         position_direction: float,
     ) -> Tuple[Optional[float], Optional[float]]:
         """割合からSL/TP価格を生成する共通処理"""
-        return self.fixed_percentage_calculator._make_prices(
+        # ファクトリーを使用して固定パーセンテージ計算機を取得
+        calculator = self._get_calculator(TPSLMethod.FIXED_PERCENTAGE)
+        return calculator._make_prices(
             current_price,
             stop_loss_pct,
             take_profit_pct,
@@ -393,7 +390,8 @@ class TPSLService:
                 min_v, max_v = 0.0, 1.0
 
             return min_v <= float(percentage) <= max_v
-        except Exception:
+        except Exception as e:
+            logger.debug(f"TPSL_LIMITSの読み込みに失敗しました、フォールバック使用: {e}")
             # フォールバック: 安全なデフォルト
             if label == "SL":
                 return 0 <= percentage <= 1.0

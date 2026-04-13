@@ -203,7 +203,8 @@ class FitnessSharing:
         """
         try:
             return self.gene_serializer._generate_cache_key(gene)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"特徴ベクトルキャッシュキーの生成に失敗しました: {e}")
             return str(id(gene))
 
     def compute_niche_counts_vectorized(self, vectors: np.ndarray) -> np.ndarray:

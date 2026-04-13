@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, cast
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def _is_nat(value: Any) -> bool:
@@ -34,7 +37,8 @@ def _get_index_timezone(index: pd.Index) -> object | None:
 
     try:
         first_value = pd.Timestamp(index[0])
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Indexの先頭値からTimestampの生成に失敗しました: {e}")
         return None
     return first_value.tzinfo
 

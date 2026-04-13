@@ -70,8 +70,8 @@ class StrategyEarlyTerminationController:
 
         try:
             return pd.Timestamp(value)  # type: ignore[return-value]
-        except Exception:
-            logger.warning("evaluation_start の解析に失敗しました: %s", value)
+        except Exception as e:
+            logger.warning("evaluation_start の解析に失敗しました: %s, エラー: %s", value, e)
             return None
 
     def is_evaluation_bar(self) -> bool:
@@ -128,7 +128,8 @@ class StrategyEarlyTerminationController:
 
         try:
             full_index = pd.DatetimeIndex(raw_index)
-        except Exception:
+        except Exception as e:
+            logger.debug("評価用インデックスの解析に失敗しました: %s", e)
             return None, 0, total_bars
 
         start_index = 0
@@ -152,7 +153,8 @@ class StrategyEarlyTerminationController:
         """現在資産を安全に取得する。"""
         try:
             return float(getattr(self.strategy, "equity", default) or default)
-        except Exception:
+        except Exception as e:
+            logger.debug("現在資産の取得に失敗しました: %s", e)
             return float(default)
 
     def get_progress_ratio(self) -> float:
@@ -181,9 +183,9 @@ class StrategyEarlyTerminationController:
                     )
                     evaluated_bars = max(0, current_position - evaluation_start_index)
                     return min(1.0, evaluated_bars / evaluation_total_bars)
-                except Exception:
+                except Exception as e:
                     logger.debug(
-                        "評価窓ベースの進捗計算に失敗したためフォールバックします"
+                        "評価窓ベースの進捗計算に失敗したためフォールバックします: %s", e
                     )
 
         total_bars = max(1, int(getattr(self.strategy, "_total_bars", 1) or 1))
@@ -205,7 +207,8 @@ class StrategyEarlyTerminationController:
         """
         try:
             trades = list(getattr(self.strategy, "closed_trades", []) or [])
-        except Exception:
+        except Exception as e:
+            logger.debug("トレード履歴の取得に失敗しました: %s", e)
             return None
 
         if not trades:
@@ -222,7 +225,8 @@ class StrategyEarlyTerminationController:
                 try:
                     values.append(float(value))
                     break
-                except Exception:
+                except Exception as e:
+                    logger.debug("トレードP&L値の変換に失敗しました: %s", e)
                     continue
             else:
                 # パーセント値がない場合、絶対値から換算を試みる
@@ -244,7 +248,8 @@ class StrategyEarlyTerminationController:
                                 f"initial_capital={initial_capital}"
                             )
                         break
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("トレードP&Lのパーセント変換に失敗しました: %s", e)
                         continue
 
         if not values:

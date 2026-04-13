@@ -6,6 +6,12 @@ from unittest.mock import MagicMock, Mock, patch
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.genes import StrategyGene
+from app.services.auto_strategy.services.experiment_engine_registry import (
+    ExperimentEngineRegistry,
+)
+from app.services.auto_strategy.services import (
+    experiment_manager as experiment_manager_module,
+)
 from app.services.auto_strategy.services.experiment_manager import ExperimentManager
 
 
@@ -14,22 +20,25 @@ class TestExperimentManager:
 
     def setup_method(self):
         """テスト前のセットアップ"""
-        ExperimentManager._active_engines.clear()
+        self.registry = ExperimentEngineRegistry()
         self.mock_backtest_service = Mock()
         self.mock_persistence_service = Mock()
         self.manager = ExperimentManager(
-            self.mock_backtest_service, self.mock_persistence_service
+            self.mock_backtest_service,
+            self.mock_persistence_service,
+            engine_registry=self.registry,
         )
 
     def teardown_method(self):
         """テスト後の後始末"""
-        ExperimentManager._active_engines.clear()
+        self.registry.clear()
 
     def test_init(self):
         """初期化のテスト"""
         assert self.manager.backtest_service == self.mock_backtest_service
         assert self.manager.persistence_service == self.mock_persistence_service
-        assert ExperimentManager._get_active_engine("missing") is None
+        assert self.manager._engine_registry is self.registry
+        assert self.manager._get_active_engine("missing") is None
 
     def test_initialize_ga_engine(self):
         """GAエンジン初期化のテスト"""
@@ -47,7 +56,7 @@ class TestExperimentManager:
             )
 
         assert returned_engine is mock_ga_engine
-        assert ExperimentManager._get_active_engine("test_exp_001") is mock_ga_engine
+        assert self.manager._get_active_engine("test_exp_001") is mock_ga_engine
 
     def test_run_experiment_success(self):
         """実験実行成功のテスト"""
@@ -129,7 +138,7 @@ class TestExperimentManager:
             "test_exp_001"
         )
         self.mock_backtest_service.run_backtest.assert_called_once()
-        assert ExperimentManager._get_active_engine("test_exp_001") is None
+        assert self.manager._get_active_engine("test_exp_001") is None
 
     def test_run_experiment_exception(self):
         """実験実行中の例外テスト"""
@@ -139,7 +148,7 @@ class TestExperimentManager:
         mock_ga_engine = MagicMock()
         mock_ga_engine.run_evolution.side_effect = Exception("Test exception")
         mock_ga_engine.is_stop_requested.return_value = False
-        ExperimentManager._register_active_engine("test_exp_001", mock_ga_engine)
+        self.manager._register_active_engine("test_exp_001", mock_ga_engine)
 
         self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
 
@@ -147,12 +156,12 @@ class TestExperimentManager:
         self.manager.persistence_service.fail_experiment.assert_called_once_with(
             "test_exp_001"
         )
-        assert ExperimentManager._get_active_engine("test_exp_001") is None
+        assert self.manager._get_active_engine("test_exp_001") is None
 
     def test_stop_experiment(self):
         """実験停止のテスト"""
         mock_ga_engine = MagicMock()
-        ExperimentManager._register_active_engine("test_exp_001", mock_ga_engine)
+        self.manager._register_active_engine("test_exp_001", mock_ga_engine)
 
         self.manager.stop_experiment("test_exp_001")
 
@@ -161,25 +170,36 @@ class TestExperimentManager:
             "test_exp_001"
         )
 
-    def test_stop_experiment_across_instances(self):
-        """別インスタンスからでも実行中の実験を停止できること"""
+    def test_stop_experiment_across_instances_with_shared_default_registry(self):
+        """デフォルト共有レジストリなら別インスタンスから停止できること"""
         ga_config = GAConfig()
         ga_config.population_size = 10
         ga_config.generations = 5
         experiment_id = "test_exp_registry"
         mock_ga_engine = MagicMock()
         other_persistence = Mock()
-        other_manager = ExperimentManager(self.mock_backtest_service, other_persistence)
+        experiment_manager_module._DEFAULT_ENGINE_REGISTRY.clear()
+        try:
+            manager_a = ExperimentManager(
+                self.mock_backtest_service, self.mock_persistence_service
+            )
+            other_manager = ExperimentManager(
+                self.mock_backtest_service, other_persistence
+            )
 
-        with patch(
-            "app.services.auto_strategy.core.engine.ga_engine_factory.GeneticAlgorithmEngineFactory.create_engine",
-            return_value=mock_ga_engine,
-        ):
-            returned_engine = self.manager.initialize_ga_engine(ga_config, experiment_id)
+            with patch(
+                "app.services.auto_strategy.core.engine.ga_engine_factory.GeneticAlgorithmEngineFactory.create_engine",
+                return_value=mock_ga_engine,
+            ):
+                returned_engine = manager_a.initialize_ga_engine(
+                    ga_config, experiment_id
+                )
 
-        result = other_manager.stop_experiment(experiment_id)
+            result = other_manager.stop_experiment(experiment_id)
 
-        assert result is True
-        assert returned_engine is mock_ga_engine
-        mock_ga_engine.stop_evolution.assert_called_once()
-        other_persistence.stop_experiment.assert_called_once_with(experiment_id)
+            assert result is True
+            assert returned_engine is mock_ga_engine
+            mock_ga_engine.stop_evolution.assert_called_once()
+            other_persistence.stop_experiment.assert_called_once_with(experiment_id)
+        finally:
+            experiment_manager_module._DEFAULT_ENGINE_REGISTRY.clear()

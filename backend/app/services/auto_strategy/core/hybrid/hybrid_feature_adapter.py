@@ -76,7 +76,8 @@ class HybridFeatureAdapter:
             from pandas.util import hash_pandas_object
 
             return int(hash_pandas_object(df, index=True).sum())  # type: ignore[call-arg]
-        except Exception:
+        except Exception as e:
+            logger.debug(f"DataFrameのハッシュ生成に失敗しました: {e}")
             return None
 
     def _get_cached_derived_features(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:

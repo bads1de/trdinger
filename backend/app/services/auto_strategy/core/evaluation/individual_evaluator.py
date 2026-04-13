@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import hashlib
 import logging
 import threading
@@ -121,7 +122,8 @@ class IndividualEvaluator(EvaluationWindowService):
             serialized = self._gene_serializer.strategy_gene_to_dict(gene)
             raw = str(sorted(serialized.items(), key=lambda x: str(x[0])))
             return hashlib.md5(raw.encode()).hexdigest()
-        except Exception:
+        except Exception as e:
+            logger.debug("キャッシュキー生成に失敗しました: %s", e)
             return str(gene)
 
     def set_backtest_config(self, backtest_config: Dict[str, Any]):
@@ -193,7 +195,8 @@ class IndividualEvaluator(EvaluationWindowService):
         try:
             gene = self._resolve_gene(individual)
             cache_key = self._build_cache_key(gene)
-        except Exception:
+        except Exception as e:
+            logger.debug("評価レポートキャッシュキー生成に失敗しました: %s", e)
             return None
 
         return self._report_cache.get(cache_key)
@@ -205,7 +208,8 @@ class IndividualEvaluator(EvaluationWindowService):
         try:
             gene = self._resolve_gene(individual)
             cache_key = self._build_robustness_cache_key(gene, config)
-        except Exception:
+        except Exception as e:
+            logger.debug("robustness レポートキャッシュキー生成に失敗しました: %s", e)
             return None
 
         return self._robustness_report_cache.get(cache_key)
@@ -442,32 +446,56 @@ class IndividualEvaluator(EvaluationWindowService):
         evaluation_config = getattr(config, "evaluation_config", None)
         two_stage_config = getattr(config, "two_stage_selection_config", None)
         robustness_config = getattr(config, "robustness_config", None)
-        signature = (
-            bool(getattr(two_stage_config, "enabled", True)),
-            float(getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0),
-            tuple(getattr(robustness_config, "validation_symbols", None) or ()),
-            tuple(
-                window.signature
-                for window in normalize_robustness_regime_windows(
-                    getattr(robustness_config, "regime_windows", [])
-                )
+        normalized_windows = normalize_robustness_regime_windows(
+            getattr(robustness_config, "regime_windows", [])
+        )
+        signature_payload = {
+            "base_key": base_key,
+            "two_stage_enabled": bool(getattr(two_stage_config, "enabled", True)),
+            "min_pass_rate": float(
+                getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0
             ),
-            tuple(getattr(robustness_config, "stress_slippage", ()) or ()),
-            tuple(
+            "validation_symbols": list(
+                getattr(robustness_config, "validation_symbols", None) or ()
+            ),
+            "regime_windows": [list(window.signature) for window in normalized_windows],
+            "stress_slippage": list(
+                getattr(robustness_config, "stress_slippage", ()) or ()
+            ),
+            "stress_commission_multipliers": list(
                 getattr(robustness_config, "stress_commission_multipliers", ()) or ()
             ),
-            str(getattr(robustness_config, "aggregate_method", "robust")),
-            bool(getattr(config, "enable_purged_kfold", False)),
-            int(getattr(config, "purged_kfold_splits", 0) or 0),
-            float(getattr(config, "purged_kfold_embargo", 0.0) or 0.0),
-            bool(getattr(evaluation_config, "enable_walk_forward", False)),
-            int(getattr(evaluation_config, "wfa_n_folds", 0) or 0),
-            float(getattr(evaluation_config, "wfa_train_ratio", 0.0) or 0.0),
-            bool(getattr(evaluation_config, "wfa_anchored", False)),
-            float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0),
-            float(getattr(evaluation_config, "oos_fitness_weight", 0.0) or 0.0),
+            "aggregate_method": str(
+                getattr(robustness_config, "aggregate_method", "robust")
+            ),
+            "enable_purged_kfold": bool(getattr(config, "enable_purged_kfold", False)),
+            "purged_kfold_splits": int(getattr(config, "purged_kfold_splits", 0) or 0),
+            "purged_kfold_embargo": float(
+                getattr(config, "purged_kfold_embargo", 0.0) or 0.0
+            ),
+            "enable_walk_forward": bool(
+                getattr(evaluation_config, "enable_walk_forward", False)
+            ),
+            "wfa_n_folds": int(getattr(evaluation_config, "wfa_n_folds", 0) or 0),
+            "wfa_train_ratio": float(
+                getattr(evaluation_config, "wfa_train_ratio", 0.0) or 0.0
+            ),
+            "wfa_anchored": bool(getattr(evaluation_config, "wfa_anchored", False)),
+            "oos_split_ratio": float(
+                getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0
+            ),
+            "oos_fitness_weight": float(
+                getattr(evaluation_config, "oos_fitness_weight", 0.0) or 0.0
+            ),
+        }
+        signature_json = json.dumps(
+            signature_payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            default=str,
         )
-        return f"{base_key}:robustness:{hash(signature)}"
+        return hashlib.sha256(signature_json.encode("utf-8")).hexdigest()
 
     def _get_cached_data(
         self, backtest_config: Dict[str, SerializableValue]
@@ -668,7 +696,8 @@ class IndividualEvaluator(EvaluationWindowService):
         try:
             metrics = self._extract_performance_metrics(backtest_result)
             return self._fitness_calculator.meets_constraints(metrics, config)
-        except Exception:
+        except Exception as e:
+            logger.debug("制約チェックに失敗しました: %s", e)
             return False
 
     def _prepare_run_config(

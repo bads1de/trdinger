@@ -76,7 +76,8 @@ class BacktestDataProvider:
             if len(worker_index) > 0:
                 expected_start = align_timestamp_to_index(expected_start, worker_index)
                 expected_end = align_timestamp_to_index(expected_end, worker_index)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Workerデータのインデックス処理エラー: {e}")
             return None
 
         sliced = worker_data.loc[

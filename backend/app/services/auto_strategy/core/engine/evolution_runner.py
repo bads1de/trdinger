@@ -43,8 +43,8 @@ def _invalidate_individual_cache(individual: Any) -> None:
     try:
         if hasattr(individual, "_cache"):
             individual._cache = {}
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("個体キャッシュのクリアに失敗しました: %s", e)
 
 
 def _set_fitness_values(population: List[Any], fitnesses: List[tuple[float, ...]]) -> None:
@@ -288,7 +288,8 @@ class EvolutionRunner:
             p1_id = getattr(parent1, "id", "") or str(id(parent1))
             p2_id = getattr(parent2, "id", "") or str(id(parent2))
             return f"{p1_id}:{p2_id}"
-        except Exception:
+        except Exception as e:
+            logger.debug("交叉キャッシュキー生成に失敗しました: %s", e)
             return str(id(parent1)) + ":" + str(id(parent2))
 
     def _get_mutation_cache_key(self, individual: Any) -> str:
@@ -306,7 +307,8 @@ class EvolutionRunner:
         try:
             ind_id = getattr(individual, "id", "") or str(id(individual))
             return ind_id
-        except Exception:
+        except Exception as e:
+            logger.debug("突然変異キャッシュキー生成に失敗しました: %s", e)
             return str(id(individual))
 
     def clear_caches(self) -> None:
@@ -471,8 +473,8 @@ class EvolutionRunner:
         for individual in individuals:
             try:
                 setattr(individual, "_evaluation_fidelity", fidelity)
-            except Exception:
-                logger.debug("評価粒度メタデータの設定をスキップしました")
+            except Exception as e:
+                logger.debug("評価粒度メタデータの設定をスキップしました: %s", e)
 
     def _update_dynamic_objective_scalars(
         self, population: List[Any], config: Any
@@ -779,5 +781,5 @@ class EvolutionRunner:
         """
         try:
             set_two_stage_metadata(individual, rank, score)
-        except Exception:
-            logger.debug("二段階選抜メタデータの設定をスキップしました")
+        except Exception as e:
+            logger.debug("二段階選抜メタデータの設定をスキップしました: %s", e)

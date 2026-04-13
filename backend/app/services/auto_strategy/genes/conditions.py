@@ -44,7 +44,8 @@ class Condition:
                 self.left_operand = float(self.left_operand)
             if isinstance(self.right_operand, int):
                 self.right_operand = float(self.right_operand)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Conditionの数値変換に失敗しました: {e}")
             pass
 
     def validate(self) -> bool:

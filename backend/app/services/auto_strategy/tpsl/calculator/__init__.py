@@ -11,6 +11,7 @@ from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator
 from .statistical_calculator import StatisticalCalculator
 from .volatility_calculator import VolatilityCalculator
+from .tpsl_calculator_factory import TPSLCalculatorFactory
 
 __all__ = [
     "BaseTPSLCalculator",
@@ -19,4 +20,5 @@ __all__ = [
     "VolatilityCalculator",
     "StatisticalCalculator",
     "AdaptiveCalculator",
+    "TPSLCalculatorFactory",
 ]
