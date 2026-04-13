@@ -145,7 +145,8 @@ class MLConfigManager:
                 logger.info(f"ML設定を更新しました: {list(config_updates.keys())}")
                 return True
             else:
-                raise Exception("設定の保存に失敗しました")
+                logger.error("ML設定の保存に失敗しました")
+                return False
         except Exception as e:
             logger.error(f"ML設定の更新に失敗しました: {e}")
             return False
@@ -158,7 +159,8 @@ class MLConfigManager:
                 logger.info("ML設定をデフォルト値にリセットしました")
                 return True
             else:
-                raise Exception("設定の保存に失敗しました")
+                logger.error("ML設定の保存に失敗しました")
+                return False
         except Exception as e:
             logger.error(f"ML設定のリセットに失敗しました: {e}")
             return False

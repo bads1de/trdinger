@@ -78,7 +78,13 @@ class TradeHistoryTransformer:
                 (
                     "duration",
                     "Duration",
-                    lambda s: cast(pd.Series, pd.to_numeric(s, errors="coerce")).fillna(0).astype(int),
+                    lambda s: (
+                        pd.to_timedelta(s).dt.total_seconds().fillna(0).astype(int)
+                        if pd.api.types.is_timedelta64_dtype(s)
+                        else cast(pd.Series, pd.to_numeric(s, errors="coerce")).fillna(
+                            0
+                        )
+                    ).astype(int),
                 ),
             ]
 
@@ -144,7 +150,18 @@ class EquityCurveTransformer:
                 df = df.iloc[::step]
 
             df["timestamp"] = [self._safe_timestamp_conversion(t) for t in df.index]
-            df["equity"] = cast(pd.Series, pd.to_numeric(df["Equity"], errors="coerce")).fillna(0.0)
+            # Equity 列が存在しない場合は最後の数値列をフォールバックとする
+            equity_col = (
+                "Equity"
+                if "Equity" in df.columns
+                else (df.columns[-1] if len(df.columns) > 0 else None)
+            )
+            if equity_col is None:
+                df["equity"] = 0.0
+            else:
+                df["equity"] = cast(
+                    pd.Series, pd.to_numeric(df[equity_col], errors="coerce")
+                ).fillna(0.0)
             df["drawdown"] = cast(
                 pd.Series, pd.to_numeric(df.get("DrawdownPct", 0), errors="coerce")
             ).fillna(0.0)

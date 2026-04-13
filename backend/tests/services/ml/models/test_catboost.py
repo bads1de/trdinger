@@ -9,7 +9,7 @@ class TestCatBoostModel:
     @pytest.fixture
     def sample_data(self):
         X = pd.DataFrame({"f1": [1, 2, 3, 4], "f2": [5, 6, 7, 8]})
-        y = pd.Series([0, 1, 0, 1])
+        y = pd.Series([0.1, 0.5, 0.3, 0.8])
         return X, y
 
     def test_handle_class_weight(self):
@@ -39,10 +39,10 @@ class TestCatBoostModel:
         X, y = sample_data
         model = CatBoostModel(iterations=10)
 
-        # cb.CatBoostClassifier をモック化
-        with patch("app.services.ml.models.catboost.cb.CatBoostClassifier") as mock_cb:
+        # cb.CatBoostRegressor をモック化
+        with patch("app.services.ml.models.catboost.cb.CatBoostRegressor") as mock_cb:
             mock_instance = mock_cb.return_value
-            mock_instance.predict_proba.return_value = np.array([[0.2, 0.8]])
+            mock_instance.predict.return_value = np.array([[0.8]])
 
             # 学習実行
             model.fit(X, y)
@@ -54,4 +54,5 @@ class TestCatBoostModel:
 
             # 予測
             probs = model.predict_proba(X.iloc[:1])
-            assert probs[0, 1] == 0.8
+            assert probs.shape == (1, 1)
+            assert probs[0, 0] == 0.8

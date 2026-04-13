@@ -70,8 +70,16 @@ class BacktestOrchestrator:
             if skip_validation:
                 # バリデーションスキップ（GAなど信頼できる内部呼び出し用）
                 # model_constructでバリデーションをスキップしつつPydanticモデルインスタンスを取得
-                # 呼出し側でstart_date/end_dateはdatetime変換済みである前提
                 backtest_config = BacktestRunConfig.model_construct(**working_config)
+                # datetime 変換を保証する（文字列の場合は変換）
+                if isinstance(backtest_config.start_date, str):
+                    backtest_config.start_date = pd.to_datetime(
+                        backtest_config.start_date
+                    ).to_pydatetime()
+                if isinstance(backtest_config.end_date, str):
+                    backtest_config.end_date = pd.to_datetime(
+                        backtest_config.end_date
+                    ).to_pydatetime()
                 strategy_config_dict = working_config["strategy_config"]
             else:
                 # 1. 設定の検証とモデル変換 (Pydantic)

@@ -120,10 +120,14 @@ class VolatilityIndicators:
         # 列名を動的に取得（pandas-taのバージョンによって異なる可能性がある）
         columns = result.columns.tolist()
 
-        # 上位、中位、下位バンドを特定
-        upper_col = [col for col in columns if "BBU" in col][0]
-        middle_col = [col for col in columns if "BBM" in col][0]
-        lower_col = [col for col in columns if "BBL" in col][0]
+        # 上位、中位、下位バンドを特定（安全なインデックスアクセス）
+        def find_column(pattern: str, fallback_index: int) -> str:
+            matches = [col for col in columns if pattern in col]
+            return matches[0] if matches else columns[fallback_index]
+
+        upper_col = find_column("BBU", 0)
+        middle_col = find_column("BBM", 1)
+        lower_col = find_column("BBL", 2)
 
         return (
             result[upper_col],

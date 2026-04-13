@@ -214,26 +214,30 @@ class BaseRepository(Generic[T]):
 
         Note:
             重複エラーは無視され、エラーが発生したレコードはスキップされます。
+            重複以外のエラー（データ型エラー、制約違反など）は警告ログを出力します。
         """
         from sqlalchemy import insert
+        from sqlalchemy.exc import IntegrityError
 
         stmt = insert(self.model_class)
         inserted_count = 0
 
         for i, record in enumerate(records):
+            savepoint = self.db.begin_nested()
             try:
                 result = self.db.execute(stmt, record)
-                # ドライバによってrowcountがない場合があるため、フォールバックを用意
-                # rowcountが-1を返すドライバもあるため、0でないことをもって成功とみなす
                 if getattr(result, "rowcount", 0) != 0:
                     inserted_count += 1
                     logger.debug(f"レコード {i + 1} 挿入成功")
                 else:
                     logger.debug(f"レコード {i + 1} 挿入失敗（挿入件数0）")
+                savepoint.commit()
+            except IntegrityError as e:
+                savepoint.rollback()
+                logger.debug(f"レコード {i + 1} 重複のためスキップ: {e}")
             except Exception as e:
-                # 重複エラーは無視
-                logger.debug(f"レコード {i + 1} 挿入エラー（無視）: {e}")
-                continue
+                savepoint.rollback()
+                logger.warning(f"レコード {i + 1} 挿入エラー（重要）: {e}")
 
         return inserted_count
 

@@ -32,7 +32,7 @@ class BaseGradientBoostingModel(ABC):
         self.feature_columns: Optional[List[str]] = None
         self.classes_ = None  # sklearn互換性のため
         self.random_state = random_state
-        self.task_type = kwargs.pop("task_type", "classification")
+        self.task_type = kwargs.pop("task_type", "regression")
         self.last_training_result: Dict[str, Any] = {}
 
         # その他のパラメータを設定
@@ -288,7 +288,7 @@ class BaseGradientBoostingModel(ABC):
         """
         sklearn互換の予測メソッド（クラス予測）
         """
-        if not self.is_trained or self.model is None:
+        if self.model is None:
             raise ModelError("学習済みモデルがありません")
 
         if self.feature_columns and not isinstance(X, pd.DataFrame):
@@ -302,11 +302,10 @@ class BaseGradientBoostingModel(ABC):
     def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
         """
         予測確率を取得。
+        回帰タスクの場合は予測値を (n_samples, 1) の形状で返します。
         """
         if not self.is_trained or self.model is None:
             raise ModelError("学習済みモデルがありません")
-        if self._is_regression_task():
-            raise ModelError("回帰タスクでは predict_proba は利用できません")
 
         # feature_columnsを使用してDataFrameを整形（常にDataFrameに変換する）
         X_df = self._coerce_feature_frame(X, self.feature_columns or None)
@@ -316,6 +315,10 @@ class BaseGradientBoostingModel(ABC):
 
         # モデル固有の予測実行
         predictions = self._predict_raw(data)
+
+        # 回帰タスクの場合は (n_samples, 1) に整形
+        if self._is_regression_task():
+            return np.asarray(predictions).reshape(-1, 1)
 
         # 形状の正規化 (1D -> 2D for binary)
         if predictions.ndim == 1:

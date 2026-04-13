@@ -9,7 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import NullPool, QueuePool
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +24,29 @@ DATABASE_URL = os.getenv(
     "sqlite:///./trdinger.db",  # 開発環境用にSQLiteを使用（デフォルトは相対パス）
 )
 
-# SQLAlchemy エンジンの作成
-engine = create_engine(
-    DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    echo=False,  # SQLログを出力する場合はTrue
-)
+# データベースの種類に応じてエンジン設定を最適化
+# SQLiteはコネクションプーリングに対応しておらず、並列書き込み時に
+# "database is locked" エラーが発生するため NullPool を使用する
+if DATABASE_URL.lower().startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=NullPool,
+        pool_pre_ping=True,
+        connect_args={"check_same_thread": False},
+        echo=False,
+    )
+    logger.info("SQLiteデータベースを使用しています（NullPool設定）")
+else:
+    # PostgreSQLなど本番環境用
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        echo=False,
+    )
+    logger.info("PostgreSQLデータベースを使用しています（QueuePool設定）")
 
 # セッションファクトリの作成
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

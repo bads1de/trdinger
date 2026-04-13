@@ -236,7 +236,7 @@ class TestGetStrategiesWithBacktestResults:
         mock_joined_query = MagicMock()
         mock_options_query = MagicMock()
         mock_filtered_query = MagicMock()
-        mock_query.join.return_value = mock_joined_query
+        mock_query.outerjoin.return_value = mock_joined_query
         mock_joined_query.options.return_value = mock_options_query
         mock_options_query.filter.return_value = mock_filtered_query
         mock_filtered_query.offset.return_value.limit.return_value.all.return_value = [
@@ -271,7 +271,7 @@ class TestGetFilteredAndSortedStrategies:
         ordered_query = MagicMock()
 
         repository.db.query.return_value = base_query
-        base_query.join.return_value = joined_query
+        base_query.outerjoin.return_value = joined_query
         joined_query.options.return_value = options_query
         options_query.order_by.return_value = ordered_query
         ordered_query.count.return_value = 1

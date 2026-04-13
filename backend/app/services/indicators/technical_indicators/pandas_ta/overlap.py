@@ -194,7 +194,7 @@ class OverlapIndicators:
             run_series_indicator(
                 data,
                 length,
-                lambda: ta.tema(data, window=length),
+                lambda: ta.tema(data, length=length),
                 min_data_length=length * 3,
             ),
         )
@@ -208,7 +208,7 @@ class OverlapIndicators:
             run_series_indicator(
                 data,
                 length,
-                lambda: ta.t3(data, window=length, a=a),
+                lambda: ta.t3(data, length=length, a=a),
                 min_data_length=length * 6,
             ),
         )
@@ -219,7 +219,7 @@ class OverlapIndicators:
         """カウフマン適応移動平均"""
         return cast(
             pd.Series,
-            run_series_indicator(data, length, lambda: ta.kama(data, window=length)),
+            run_series_indicator(data, length, lambda: ta.kama(data, length=length)),
         )
 
     @staticmethod

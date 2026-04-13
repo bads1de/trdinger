@@ -163,12 +163,21 @@ def build_execution_config(
     )
     working["strategy_name"] = resolved_strategy_name
 
-    resolved_strategy_config = (
-        strategy_config
-        if strategy_config is not None
-        else _get_value(source, "strategy_config")
-    )
-    working["strategy_config"] = _normalize_strategy_config(resolved_strategy_config)
+    try:
+        resolved_strategy_config = (
+            strategy_config
+            if strategy_config is not None
+            else _get_value(source, "strategy_config")
+        )
+    except (KeyError, AttributeError):
+        resolved_strategy_config = None
+    # strategy_config が取得できない場合は空辞書で正規化する
+    if resolved_strategy_config is None:
+        working["strategy_config"] = {}
+    else:
+        working["strategy_config"] = _normalize_strategy_config(
+            resolved_strategy_config
+        )
 
     for key in (
         "symbol",

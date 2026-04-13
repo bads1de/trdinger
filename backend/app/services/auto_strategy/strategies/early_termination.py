@@ -213,7 +213,9 @@ class StrategyEarlyTerminationController:
 
         values = []
         for trade in trades:
-            for attr_name in ("pl_pct", "pl", "pnl", "return_pct"):
+            # パーセントベースの属性を優先（pl_pct, return_pct）
+            # 絶対値（pl, pnl）は通貨単位であり、期待値閾値と比較できない
+            for attr_name in ("pl_pct", "return_pct"):
                 value = getattr(trade, attr_name, None)
                 if value is None:
                     continue
@@ -222,6 +224,28 @@ class StrategyEarlyTerminationController:
                     break
                 except Exception:
                     continue
+            else:
+                # パーセント値がない場合、絶対値から換算を試みる
+                for attr_name in ("pl", "pnl"):
+                    value = getattr(trade, attr_name, None)
+                    if value is None:
+                        continue
+                    try:
+                        initial_capital = getattr(
+                            self.strategy, "initial_capital", None
+                        )
+                        if initial_capital and initial_capital > 0:
+                            values.append(
+                                float(value) / initial_capital * 100.0
+                            )
+                        else:
+                            logger.debug(
+                                f"トレードP&Lのパーセント変換をスキップ: "
+                                f"initial_capital={initial_capital}"
+                            )
+                        break
+                    except Exception:
+                        continue
 
         if not values:
             return None

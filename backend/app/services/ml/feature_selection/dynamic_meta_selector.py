@@ -132,9 +132,9 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         clusters = self._cluster_features(X)
 
         # 2. 各クラスタから代表者を選定 (ターゲットへの相互情報量が最大のもの)
-        from sklearn.feature_selection import mutual_info_classif
+        from sklearn.feature_selection import mutual_info_regression
 
-        mi_scores = mutual_info_classif(X, y, random_state=self.random_state)
+        mi_scores = mutual_info_regression(X, y, random_state=self.random_state)
         mi_series = pd.Series(mi_scores, index=X.columns)
 
         representative_features = []

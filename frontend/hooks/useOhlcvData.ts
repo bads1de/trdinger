@@ -74,18 +74,25 @@ export const useOhlcvData = (
             return [];
           }
 
-          return ohlcvData.map((candle: number[]) => {
-            const [timestamp, open, high, low, close, volume] = candle;
+          const safeNumber = (val: unknown, fallback: number = 0): number => {
+            if (val == null || typeof val !== 'number') return fallback;
+            return Number(val.toFixed(2));
+          };
 
-            return {
-              timestamp: new Date(timestamp).toISOString(),
-              open: Number(open.toFixed(2)),
-              high: Number(high.toFixed(2)),
-              low: Number(low.toFixed(2)),
-              close: Number(close.toFixed(2)),
-              volume: Number(volume.toFixed(2)),
-            };
-          });
+          return ohlcvData
+            .map((candle: number[]) => {
+              const [timestamp, open, high, low, close, volume] = candle;
+
+              return {
+                timestamp: timestamp != null ? new Date(timestamp).toISOString() : null,
+                open: safeNumber(open),
+                high: safeNumber(high),
+                low: safeNumber(low),
+                close: safeNumber(close),
+                volume: safeNumber(volume),
+              };
+            })
+            .filter((candle): candle is typeof candle & { timestamp: string } => candle.timestamp !== null);
         },
         dependencies: [symbol, timeframe],
         errorMessage: "OHLCVデータの取得に失敗しました",

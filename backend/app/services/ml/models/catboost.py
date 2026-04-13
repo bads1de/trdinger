@@ -127,9 +127,10 @@ class CatBoostModel(BaseGradientBoostingModel):
         params: Dict[str, Any],
         early_stopping_rounds: Optional[int] = None,
         **kwargs,
-    ) -> cb.CatBoostClassifier:
+    ) -> cb.CatBoostRegressor:
         """
         CatBoost固有の学習プロセスを実行します。
+        回帰タスクのみをサポートします。
         train_dataとvalid_dataは (X, y, sample_weight) のタプル形式を受け取ります。
         """
         # タプルからデータを展開
@@ -147,8 +148,8 @@ class CatBoostModel(BaseGradientBoostingModel):
             eval_pool = cb.Pool(data=X_val, label=y_val, weight=sample_weight_val)
             eval_set = [eval_pool]
 
-        # CatBoostClassifierを作成
-        model = cb.CatBoostClassifier(**params)
+        # CatBoostRegressorを作成（回帰タスク専用）
+        model = cb.CatBoostRegressor(**params)
 
         # 学習
         model.fit(
@@ -162,7 +163,8 @@ class CatBoostModel(BaseGradientBoostingModel):
 
     def _get_prediction_proba(self, data: Any) -> np.ndarray:
         """
-        CatBoost固有の予測確率を取得します。
+        CatBoost固有の予測値を取得します。
+        回帰タスクのため、predict() を直接呼び出します。
         dataは (X, y) のタプル、cb.Poolオブジェクト、またはnumpy配列を受け取ります。
         """
         if self.model is None:
@@ -174,7 +176,9 @@ class CatBoostModel(BaseGradientBoostingModel):
         else:
             X_data = data
 
-        return self.model.predict_proba(X_data)
+        # 回帰タスク: predict() を使用し、形状を (n_samples, 1) に整える
+        predictions = self.model.predict(X_data)
+        return np.asarray(predictions).reshape(-1, 1)
 
     def _prepare_input_for_prediction(self, X: pd.DataFrame) -> np.ndarray:
         """
@@ -185,8 +189,9 @@ class CatBoostModel(BaseGradientBoostingModel):
 
     def _predict_raw(self, data: Any) -> np.ndarray:
         """
-        モデルから生の予測値（確率）を取得します。
+        モデルから生の予測値を取得します。
+        回帰タスクのため predict() を使用します。
         """
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
-        return self.model.predict_proba(data)
+        return self.model.predict(data)

@@ -15,10 +15,7 @@ from backtesting import Strategy
 from ..config.ga.nested_configs import EarlyTerminationSettings
 from ..config.helpers import normalize_ml_gate_fields
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
-from ..genes import (
-    IndicatorGene,
-    TPSLGene,
-)
+from ..genes import IndicatorGene, TPSLGene
 from ..genes.conditions import StateTracker
 from ..genes.entry import EntryGene
 from ..positions.entry_executor import EntryExecutor
@@ -399,7 +396,11 @@ class UniversalStrategy(Strategy):
         except StrategyEarlyTermination:
             raise
         except Exception as e:
-            logger.error(f"戦略実行エラー: {e}")
+            logger.error(
+                f"戦略実行エラー (bar={self._current_bar_index}): {e}", exc_info=True
+            )
+            # エラー発生時は安全な状態にリセットし、次のバーで継続できるようにする
+            self.position_manager.reset_position_state()
 
     # ===== ML フィルターメソッド =====
 

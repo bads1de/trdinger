@@ -47,18 +47,18 @@ class TestStackingMemoryCleanup:
             # モックの設定
             mock_est = MagicMock()
             mock_est.fit.return_value = mock_est
-            mock_est.predict_proba.return_value = np.zeros((len(X), 2))
+            mock_est.predict.return_value = np.zeros(len(X))
             # (name, estimator) のリストを返す
             mock_create_estimators.return_value = [("lightgbm", mock_est)]
 
             # CVの結果 (OOF予測)
-            # cross_val_predictは (n_samples, n_classes) または (n_samples,) を返す
-            mock_cv_predict.return_value = np.zeros((len(X), 2))
+            # 回帰タスクのため predict は (n_samples,) を返す
+            mock_cv_predict.return_value = np.zeros(len(X))
 
             # メタモデル
             mock_meta = MagicMock()
             mock_meta.fit.return_value = mock_meta
-            mock_meta.predict_proba.return_value = np.zeros((len(X), 2))
+            mock_meta.predict.return_value = np.zeros(len(X))
             mock_create_meta.return_value = mock_meta
 
             # 実際にfitを実行
@@ -70,18 +70,18 @@ class TestStackingMemoryCleanup:
             # モックの設定
             mock_est = MagicMock()
             mock_est.fit.return_value = mock_est
-            mock_est.predict_proba.return_value = np.zeros((len(X), 2))
+            mock_est.predict.return_value = np.zeros(len(X))
             # (name, estimator) のリストを返す
             mock_create_estimators.return_value = [("lightgbm", mock_est)]
 
             # CVの結果 (OOF予測)
-            # cross_val_predictは (n_samples, n_classes) または (n_samples,) を返す
-            mock_cv_predict.return_value = np.zeros((len(X), 2))
+            # 回帰タスクのため predict は (n_samples,) を返す
+            mock_cv_predict.return_value = np.zeros(len(X))
 
             # メタモデル
             mock_meta = MagicMock()
             mock_meta.fit.return_value = mock_meta
-            mock_meta.predict_proba.return_value = np.zeros((len(X), 2))
+            mock_meta.predict.return_value = np.zeros(len(X))
             mock_create_meta.return_value = mock_meta
 
             # 実際にfitを実行

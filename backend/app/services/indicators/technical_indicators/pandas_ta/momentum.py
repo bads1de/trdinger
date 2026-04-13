@@ -54,7 +54,6 @@ pandas-ta の momentum カテゴリに対応。
 
 from typing import Any, Optional, Tuple, Union, cast
 
-import logging
 import numpy as np
 import pandas as pd
 import pandas_ta_classic as ta
@@ -67,9 +66,6 @@ from ...data_validation import (
     run_multi_series_indicator,
     run_series_indicator,
 )
-
-logger = logging.getLogger(__name__)
-
 
 def _create_nan_array_bundle(length: int, count: int) -> tuple[np.ndarray, ...]:
     """同じ長さの NaN 配列を複数作る。"""
@@ -91,17 +87,17 @@ class MomentumIndicators:
         """相対力指数"""
 
         def compute_rsi() -> pd.Series:
-            result = ta.rsi(data, window=period)
+            result: Any = ta.rsi(data, window=period)
             if result is None:
                 return create_nan_series_like(data)
+
+            result = cast(pd.Series, result)
 
             # 一定価格など、変動がない場合のRSIは50とする
             # pandas_ta_classicはRS=0/0のケースで0を返すことがある
             valid_values = result.dropna()
-            if len(valid_values) > 0 and (valid_values == 0.0).all():
-                std = data.std()
-                if std == 0 or np.isnan(std):
-                    logger.info(f"RSI: 一定価格を検出、50.0を返します")
+            if not valid_values.empty and bool(valid_values.eq(0.0).all()):
+                if float(data.std()) == 0.0:
                     return pd.Series(50.0, index=result.index)
 
             return result
@@ -198,9 +194,9 @@ class MomentumIndicators:
             return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
         return (
-            result.iloc[:, 0].to_numpy(),
-            result.iloc[:, 1].to_numpy(),
-            result.iloc[:, 2].to_numpy(),
+            result.iloc[:, 0],
+            result.iloc[:, 1],
+            result.iloc[:, 2],
         )
 
     @staticmethod
@@ -1043,7 +1039,7 @@ class MomentumIndicators:
                 if ma_result is None or ma_result.isna().all():
                     return create_nan_series_like(data)
 
-                result = ((data - ma_result) / ma_result) * 100
+                result = ((data - ma_result) / ma_result.replace(0, np.nan)) * 100
 
             return result if result is not None else create_nan_series_like(data)
 

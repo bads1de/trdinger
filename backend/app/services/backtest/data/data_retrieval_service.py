@@ -7,11 +7,7 @@ import logging
 from datetime import datetime
 from typing import Any, Callable, List, Optional, cast
 
-from database.models import (
-    FundingRateData,
-    OHLCVData,
-    OpenInterestData,
-)
+from database.models import FundingRateData, OHLCVData, OpenInterestData
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -58,6 +54,29 @@ class DataRetrievalService:
         empty_error_message: Optional[str] = None,
     ) -> list[Any]:
         """repository 呼び出しを安全に実行する共通ラッパー。"""
+        # raise_on_empty=True の場合は safe_operation デコレータを使わず
+        # DataRetrievalError を正しく送出する
+        if raise_on_empty:
+            try:
+                data = query()
+                if data is None or not data:
+                    error_msg = (
+                        empty_error_message
+                        or f"{context}のデータが見つかりませんでした"
+                    )
+                    logger.error(error_msg)
+                    raise DataRetrievalError(error_msg)
+                return data
+            except DataRetrievalError:
+                raise
+            except Exception as e:
+                error_msg = (
+                    empty_error_message or f"{context}でエラーが発生しました: {e}"
+                )
+                logger.error(error_msg)
+                raise DataRetrievalError(error_msg) from e
+
+        # raise_on_empty=False の場合は safe_operation でエラーを抑制
         from app.utils.error_handler import safe_operation
 
         @safe_operation(
@@ -68,23 +87,7 @@ class DataRetrievalService:
         def _run_query() -> list[Any]:
             data = query()
             if data is None:
-                if raise_on_empty:
-                    logger.error(
-                        empty_error_message
-                        or f"{context}のデータが見つかりませんでした"
-                    )
-                    raise DataRetrievalError(
-                        empty_error_message
-                        or f"{context}のデータが見つかりませんでした"
-                    )
                 return default_return
-            if raise_on_empty and not data:
-                logger.error(
-                    empty_error_message or f"{context}のデータが見つかりませんでした"
-                )
-                raise DataRetrievalError(
-                    empty_error_message or f"{context}のデータが見つかりませんでした"
-                )
             return data
 
         return _run_query()

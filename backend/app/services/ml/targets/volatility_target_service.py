@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Tuple
+from typing import Any, Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,7 @@ class VolatilityTargetService:
         Args:
             features_df (pd.DataFrame): 算出済みの特徴量。
             ohlcv_df (pd.DataFrame): ターゲット算出の基準となる価格データ（DatetimeIndex必須）。
-            **training_params: 
+            **training_params:
                 - `prediction_horizon` (int): 予測対象とする将来のバー数。
                 - `price_column` (str): 計算に使用する価格カラム名（デフォルト: "close"）。
 
@@ -65,7 +65,9 @@ class VolatilityTargetService:
         if price_col not in ohlcv_norm.columns:
             raise ValueError(f"価格カラムが存在しません: {price_col}")
 
-        prices: pd.Series = cast(pd.Series, pd.to_numeric(ohlcv_norm[price_col], errors="coerce"))
+        prices: pd.Series = cast(
+            pd.Series, pd.to_numeric(ohlcv_norm[price_col], errors="coerce")
+        )
         # np.log(prices) の結果が Series であることを明示して .diff() を使用
         log_returns = pd.Series(np.log(prices), index=prices.index).diff()
 
@@ -80,7 +82,9 @@ class VolatilityTargetService:
             valid_forward_window &= shifted_returns.notna()
 
         future_rv = np.sqrt(forward_variance)
-        future_log_rv = pd.Series(np.log(future_rv + 1e-8), index=future_rv.index)  # type: ignore[reportAttributeAccessIssue]
+        future_log_rv = pd.Series(
+            np.log(np.clip(future_rv, 1e-8, None)), index=future_rv.index
+        )  # type: ignore[reportAttributeAccessIssue]
         future_log_rv = future_log_rv.where(valid_forward_window)
 
         aligned_features = features_df.copy()

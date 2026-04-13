@@ -27,8 +27,8 @@ from app.services.ml.orchestration.bg_task_orchestration_service import (
 from app.services.ml.orchestration.training_config_validator import (
     validate_training_config,
 )
-from app.utils.error_handler import safe_ml_operation
 from app.utils.datetime_utils import parse_datetime_range_optional
+from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response, ensure_response_dict
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -472,8 +472,9 @@ class MLTrainingService(BaseResourceManager):
         """
         from database.connection import get_session
 
-        db = get_session()
+        db = None
         try:
+            db = get_session()
             with background_task_manager.managed_task(
                 task_name=f"MLトレーニング_{training_id}_{config.symbol}_{config.timeframe}",
             ) as task_id:
@@ -575,12 +576,13 @@ class MLTrainingService(BaseResourceManager):
                             }
                         )
         finally:
-            try:
-                db.close()
-            except Exception as close_error:
-                logger.warning(
-                    f"バックグラウンド用DBセッションのクローズに失敗しました: {close_error}"
-                )
+            if db is not None:
+                try:
+                    db.close()
+                except Exception as close_error:
+                    logger.warning(
+                        f"バックグラウンド用DBセッションのクローズに失敗しました: {close_error}"
+                    )
 
     def _determine_trainer_config(
         self, config: Any

@@ -178,7 +178,8 @@ class StackingEnsemble(BaseEnsemble):
 
             # 学習完了・結果保存
             self.is_fitted = True
-            self.oof_predictions = meta_oof_pred[:, 1]
+            # 回帰タスクのため、OOF予測は直接値を使用
+            self.oof_predictions = meta_oof_pred.ravel()
             self.oof_base_model_predictions = oof_base_model_preds
             self.X_train_original = X_train.copy()
             self.y_train_original = y_train.copy()
@@ -211,8 +212,7 @@ class StackingEnsemble(BaseEnsemble):
         """ベースモデルのOOF（Out-Of-Fold）予測を計算する。
 
         各ベースモデルについて、CV分割を使ってOOF予測を生成します。
-        これにより、学習データへの過学習を防ぎつつ、メタモデルの
-        トレーニング用の特徴量を作成します。
+        回帰タスクのため method="predict" を使用します。
 
         Args:
             estimators: （モデル名、モデルインスタンス）のタプルリスト。
@@ -221,7 +221,7 @@ class StackingEnsemble(BaseEnsemble):
             cv: クロスバリデーション分割器。
 
         Returns:
-            pd.DataFrame: 各モデルのOOF予測確率（クラス1）を列に持つDataFrame。
+            pd.DataFrame: 各モデルのOOF予測値を列に持つDataFrame。
                 インデックスはXと同じ。
 
         Raises:
@@ -236,11 +236,11 @@ class StackingEnsemble(BaseEnsemble):
                         X,
                         y,
                         cv=cv,
-                        method="predict_proba",
+                        method="predict",
                         n_jobs=self.n_jobs,
                     )
                 )
-                oof_preds[name] = pred[:, 1]
+                oof_preds[name] = pred.ravel()
             except Exception as e:
                 logger.warning(f"  {name}のOOF予測計算エラー: {e}")
         if oof_preds.empty:
@@ -288,7 +288,7 @@ class StackingEnsemble(BaseEnsemble):
                 meta_features,
                 y,
                 cv=meta_cv,
-                method="predict_proba",
+                method="predict",
                 n_jobs=self.n_jobs,
             )
         )
@@ -356,20 +356,11 @@ class StackingEnsemble(BaseEnsemble):
         """
         スタッキングアンサンブルで予測を実行
 
-        注意: このメソッドは predict_proba を返します（確率予測）。
-        クラス予測が必要な場合は predict_proba を直接呼び出してください。
-
         Args:
             X: 特徴量DataFrame
 
         Returns:
-            予測確率
-        """
-        return self.predict_proba(X)
-
-    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
-        """
-        スタッキングアンサンブルで予測確率を取得
+            予測値（回帰）
         """
         if (
             not self.is_fitted
@@ -378,10 +369,10 @@ class StackingEnsemble(BaseEnsemble):
         ):
             raise ModelError("モデルが学習されていません")
 
-        # ベースモデルの予測確率
+        # ベースモデルの予測値
         base_preds = pd.DataFrame(
             {
-                name: model.predict_proba(X)[:, 1]
+                name: model.predict(X).ravel()
                 for name, model in self._fitted_base_models.items()
             },
             index=X.index,
@@ -391,7 +382,17 @@ class StackingEnsemble(BaseEnsemble):
         meta_features = (
             pd.concat([base_preds, X], axis=1) if self.passthrough else base_preds
         )
-        return self._fitted_meta_model.predict_proba(meta_features)
+        result = self._fitted_meta_model.predict(meta_features)
+        return np.asarray(result).ravel()
+
+    def predict_proba(self, X: pd.DataFrame) -> np.ndarray:
+        """
+        予測値を取得（回帰タスク用）。predict の別名。
+
+        基底クラスの抽象メソッド実装のため、
+        回帰タスクでは predict と同じ値を返します。
+        """
+        return self.predict(X)
 
     def _create_base_estimators(
         self, base_model_params: Optional[Dict[str, Dict[str, Any]]] = None

@@ -9,13 +9,9 @@ CPU バウンドな計算を効率化します。
 import logging
 import os
 import time
-from concurrent.futures import (
-    FIRST_COMPLETED,
-    ProcessPoolExecutor,
-    ThreadPoolExecutor,
-    wait,
-)
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
+from concurrent.futures import wait
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -261,15 +257,14 @@ class ParallelEvaluator:
             for future in expired_futures:
                 pending.discard(future)
                 index = future_to_index[future]
+                self._total_evaluations += 1
                 results[index] = default_fitness
                 self._record_timeout(index)
                 timed_out_futures = True
                 future.cancel()
 
         if timed_out_futures:
-            logger.warning(
-                "個体評価タイムアウトを検知したため、Executorを再生成します"
-            )
+            logger.warning("個体評価タイムアウトを検知したため、Executorを再生成します")
             executor.shutdown(wait=False)
             if self._executor == executor:
                 self._executor = None
@@ -304,7 +299,7 @@ class ParallelEvaluator:
     def _record_timeout(self, index: int) -> None:
         """タイムアウト統計と履歴を更新する。"""
         logger.warning(f"個体評価タイムアウト: index={index}")
-        self._total_evaluations += 1
+        # _total_evaluations は呼び出し元で既にインクリメント済み
         self._timeout_evaluations += 1
         self._error_categories["timeout"] += 1
 
@@ -453,7 +448,6 @@ def initialize_worker(data_context: Dict[str, Any]):
     Args:
         data_context: 共有データ（OHLCVデータなど）
     """
-    global _WORKER_DATA_CONTEXT
     try:
         _WORKER_DATA_CONTEXT.update(data_context)
     except Exception as e:

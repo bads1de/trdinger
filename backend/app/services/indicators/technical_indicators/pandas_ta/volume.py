@@ -161,16 +161,17 @@ class VolumeIndicators:
     @staticmethod
     @handle_pandas_ta_errors
     def obv(close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
-        """オンバランスボリューム"""
-        # ゼロボリュームの処理: ゼロボリュームをNaNに変換
-        volume_clean = volume.replace(0, np.nan)
-
+        """オンバランスボリューム
+        
+        ゼロボリュームのバーではOBVは変化させない（前の値を維持）。
+        NaNにすると累積計算が壊れるため、ゼロはそのまま渡す。
+        """
         return cast(
             pd.Series,
             run_multi_series_indicator(
                 {"close": close, "volume": volume},
                 period,
-                lambda: ta.obv(close=close, volume=volume_clean, length=period),
+                lambda: ta.obv(close=close, volume=volume, length=period),
             ),
         )
 
@@ -494,7 +495,8 @@ class VolumeIndicators:
             vwap_series = VolumeIndicators.vwap(high, low, close, volume, period=period)
             deviation = close - vwap_series
             sigma = deviation.rolling(window=period).std()
-            return deviation / sigma
+            # ゼロ除算回避: 標準偏差が0またはNaNの場合はNaNを返す
+            return deviation / sigma.replace(0, np.nan)
 
         return cast(
             pd.Series,

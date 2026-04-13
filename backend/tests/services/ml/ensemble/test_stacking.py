@@ -39,12 +39,12 @@ class TestStackingEnsemble:
         # ベースモデルの生成をモック化
         with patch.object(ensemble, "_create_base_model") as mock_create:
             mock_m = MagicMock()
-            mock_m.predict_proba.return_value = np.zeros((len(X) // 2, 2))
+            mock_m.predict.return_value = np.zeros(len(X) // 2)
             mock_create.return_value = mock_m
 
             with patch("app.services.ml.ensemble.stacking.cross_val_predict") as mock_cvp:
-                # OOF予測として 0.5 の配列を返す
-                mock_cvp.return_value = np.full((len(X), 2), 0.5)
+                # OOF予測として 0.5 の配列を返す（回帰タスク）
+                mock_cvp.return_value = np.full(len(X), 0.5)
 
                 ensemble.fit(X, y, X_test=X, y_test=y)
 
@@ -53,23 +53,23 @@ class TestStackingEnsemble:
                 assert ensemble.oof_predictions is not None
 
     def test_predict_proba(self, config, sample_data):
-        """予測確率の取得テスト"""
+        """予測値の取得テスト（回帰タスク）"""
         X, y = sample_data
         ensemble = StackingEnsemble(config)
 
         # 最小限の状態をセットアップ
         ensemble.is_fitted = True
         mock_base = MagicMock()
-        mock_base.predict_proba.return_value = np.full((5, 2), 0.7)
+        mock_base.predict.return_value = np.full(5, 0.7)
         ensemble._fitted_base_models = {"m1": mock_base}
 
         mock_meta = MagicMock()
-        mock_meta.predict_proba.return_value = np.array([[0.2, 0.8]])
+        mock_meta.predict.return_value = np.array([0.8])
         ensemble._fitted_meta_model = mock_meta
 
         probs = ensemble.predict_proba(X.iloc[:5])
-        assert probs.shape == (1, 2)
-        assert probs[0, 1] == 0.8
+        assert probs.shape == (1,)
+        assert probs[0] == 0.8
 
     def test_get_feature_importance(self, config):
         """重要度取得のテスト"""
@@ -176,9 +176,9 @@ class TestStackingEnsemble:
         )
 
         with patch("app.services.ml.ensemble.stacking.cross_val_predict") as mock_cvp:
-            mock_cvp.return_value = np.zeros((len(X), 2))
+            mock_cvp.return_value = np.zeros(len(X))
             res = ensemble._train_meta_model(oof_preds, X, y)
-            assert res.shape == (len(X), 2)
+            assert res.shape == (len(X),)
 
     def test_evaluate_ensemble(self, config, sample_data):
         """評価指標生成のテスト"""
@@ -186,11 +186,11 @@ class TestStackingEnsemble:
         ensemble = StackingEnsemble(config)
         ensemble.is_fitted = True
 
-        with patch.object(ensemble, "predict_proba"), patch.object(
-            ensemble, "_evaluate_predictions", return_value={"accuracy": 0.8}
+        with patch.object(ensemble, "predict"), patch.object(
+            ensemble, "_evaluate_predictions", return_value={"mse": 0.05}
         ):
             res = ensemble._evaluate_ensemble(X, y)
-            assert res["accuracy"] == 0.8
+            assert res["mse"] == 0.05
 
     def test_cleanup(self, config):
         """クリーンアップ処理のテスト"""
@@ -211,18 +211,22 @@ class TestStackingEnsemble:
             ensemble.predict_proba(X)
 
     def test_predict(self, config, sample_data):
-        """predict メソッドのテスト (predict_proba への委譲)"""
+        """predict メソッドのテスト"""
         X, y = sample_data
         ensemble = StackingEnsemble(config)
 
-        # predict_proba をモック化して predict の委譲を確認
+        # 最小限の状態をセットアップ
         ensemble.is_fitted = True
-        expected = np.array([[0.3, 0.7], [0.6, 0.4]])
+        mock_base = MagicMock()
+        mock_base.predict.return_value = np.array([0.3, 0.7])
+        ensemble._fitted_base_models = {"m1": mock_base}
 
-        with patch.object(ensemble, "predict_proba", return_value=expected) as mock_pp:
-            preds = ensemble.predict(X.iloc[:2])
-            mock_pp.assert_called_once()
-            np.testing.assert_array_equal(preds, expected)
+        mock_meta = MagicMock()
+        mock_meta.predict.return_value = np.array([0.5, 0.6])
+        ensemble._fitted_meta_model = mock_meta
+
+        preds = ensemble.predict(X.iloc[:2])
+        assert preds.shape == (2,)
 
     def test_properties(self, config):
         """プロパティのテスト"""
@@ -251,11 +255,11 @@ class TestStackingEnsemble:
 
         with patch.object(ensemble, "_create_base_model") as mock_create:
             mock_m = MagicMock()
-            mock_m.predict_proba.return_value = np.zeros((len(X) // 2, 2))
+            mock_m.predict.return_value = np.zeros(len(X) // 2)
             mock_create.return_value = mock_m
 
             with patch("app.services.ml.ensemble.stacking.cross_val_predict") as mock_cvp:
-                mock_cvp.return_value = np.full((len(X), 2), 0.5)
+                mock_cvp.return_value = np.full(len(X), 0.5)
                 result = ensemble.fit(X, y, X_test=X, y_test=y)
                 assert ensemble.is_fitted is True
                 assert "lightgbm" in result["fitted_base_models"]

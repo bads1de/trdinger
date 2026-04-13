@@ -48,7 +48,12 @@ class IndicatorCalculator:
     def calculate_indicator(
         self, data, indicator_type: str, parameters: Dict[str, Any]
     ) -> Union[
-        np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+        np.ndarray,
+        pd.Series,
+        pd.DataFrame,
+        Tuple[np.ndarray, ...],
+        Tuple[pd.Series, ...],
+        None,
     ]:
         """
         指標計算
@@ -66,7 +71,12 @@ class IndicatorCalculator:
 
         @safe_operation(context=f"指標計算 ({indicator_type})", is_api_call=False)
         def _calculate_indicator() -> Union[
-            np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+            np.ndarray,
+            pd.Series,
+            pd.DataFrame,
+            Tuple[np.ndarray, ...],
+            Tuple[pd.Series, ...],
+            None,
         ]:
             # backtesting.pyのデータオブジェクトをDataFrameに変換
             if data is None:
@@ -91,7 +101,12 @@ class IndicatorCalculator:
     def _calculate_indicator_from_dataframe(
         self, df: pd.DataFrame, indicator_type: str, parameters: Dict[str, Any]
     ) -> Union[
-        np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+        np.ndarray,
+        pd.Series,
+        pd.DataFrame,
+        Tuple[np.ndarray, ...],
+        Tuple[pd.Series, ...],
+        None,
     ]:
         """DataFrameを受けてインジケータを計算する共通処理"""
         if df is None:
@@ -108,7 +123,12 @@ class IndicatorCalculator:
     def _calculate_indicator_from_df(
         self, df: pd.DataFrame, indicator_type: str, parameters: Dict[str, Any]
     ) -> Union[
-        np.ndarray, pd.Series, pd.DataFrame, Tuple[np.ndarray, ...], Tuple[pd.Series, ...], None
+        np.ndarray,
+        pd.Series,
+        pd.DataFrame,
+        Tuple[np.ndarray, ...],
+        Tuple[pd.Series, ...],
+        None,
     ]:
         """
         OHLCVのDataFrameを直接指定して指標を計算
@@ -219,7 +239,7 @@ class IndicatorCalculator:
                                 except Exception as e:
                                     logger.warning(f"タイムゾーン変換失敗: {e}")
 
-                        return cast(pd.Series, shifted.reindex(base_index, method="ffill"))
+                        return cast(pd.Series, shifted.reindex(base_index).ffill())
 
                     if isinstance(raw_result, tuple):
                         result = tuple(_align_to_base(s) for s in raw_result)

@@ -1,6 +1,10 @@
 from unittest.mock import MagicMock
 from datetime import datetime
-from app.services.backtest.data.data_retrieval_service import DataRetrievalService
+import pytest
+from app.services.backtest.data.data_retrieval_service import (
+    DataRetrievalService,
+    DataRetrievalError,
+)
 
 
 class TestDataRetrievalService:
@@ -28,13 +32,11 @@ class TestDataRetrievalService:
         mock_repo.get_ohlcv_data.return_value = []
         service = DataRetrievalService(ohlcv_repo=mock_repo)
 
-        # safe_operationでラップされているため、内部で例外が出てもdefault_return([])が返る可能性がある
-        # プロダクションコードを確認すると _get_ohlcv_data 内で raise している
-        # safe_operation(default_return=[]) の設定により、例外はキャッチされて空リストが返る
-        result = service.get_ohlcv_data(
-            "BTC/USDT", "1h", datetime(2023, 1, 1), datetime(2023, 1, 2)
-        )
-        assert result == []
+        # raise_on_empty=True の場合、空データは DataRetrievalError を送出する
+        with pytest.raises(DataRetrievalError):
+            service.get_ohlcv_data(
+                "BTC/USDT", "1h", datetime(2023, 1, 1), datetime(2023, 1, 2)
+            )
 
     def test_get_open_interest_data_success(self):
         mock_repo = MagicMock()

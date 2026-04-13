@@ -31,10 +31,13 @@ class GeneratedStrategyRepository(BaseRepository):
         N+1クエリ問題を回避するために、selectinloadを使用して関連データを
         一度のクエリで取得します。
 
+        outerjoin を使用して、バックテスト結果を持たない戦略も含めます。
+        backtest_result_id が NULL の戦略も取得対象になります。
+
         Returns:
             Query: backtest_resultをeager load済みのSQLAlchemy Queryオブジェクト
         """
-        return self.db.query(GeneratedStrategy).join(
+        return self.db.query(GeneratedStrategy).outerjoin(
             GeneratedStrategy.backtest_result
         ).options(selectinload(GeneratedStrategy.backtest_result))
 
