@@ -172,6 +172,28 @@ class DictConverter:
         except Exception:
             return ("object_id", id(data))
 
+    @staticmethod
+    def _safe_serialize(
+        serialize_func, *args, error_prefix: str, **kwargs
+    ):
+        """シリアライゼーション処理を安全に実行するヘルパー。"""
+        try:
+            return serialize_func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"{error_prefix}エラー: {e}")
+            raise ValueError(f"{error_prefix}に失敗: {e}")
+
+    @staticmethod
+    def _safe_deserialize(
+        deserialize_func, *args, gene_class_name: str, **kwargs
+    ):
+        """デシリアライゼーション処理を安全に実行するヘルパー。"""
+        try:
+            return deserialize_func(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"{gene_class_name}復元エラー: {e}")
+            raise ValueError(f"{gene_class_name}の復元に失敗: {e}")
+
     def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換"""
         try:
@@ -190,64 +212,35 @@ class DictConverter:
     def indicator_gene_to_dict(self, indicator_gene) -> Dict[str, Any]:
         """
         指標遺伝子を辞書形式に変換
-
-        Args:
-            indicator_gene: 指標遺伝子オブジェクト
-
-        Returns:
-            辞書形式のデータ
         """
-        try:
+        def _serialize():
             result = {
                 "type": indicator_gene.type,
                 "parameters": indicator_gene.parameters,
                 "enabled": indicator_gene.enabled,
             }
-            # timeframe が None の場合はシリアライズに含めない（後方互換性）
             if indicator_gene.timeframe is not None:
                 result["timeframe"] = indicator_gene.timeframe
             return result
-
-        except Exception as e:
-            logger.error(f"指標遺伝子辞書変換エラー: {e}")
-            raise ValueError(f"指標遺伝子の辞書変換に失敗: {e}")
+        return self._safe_serialize(_serialize, error_prefix="指標遺伝子辞書変換")
 
     def dict_to_indicator_gene(self, data: Dict[str, Any]) -> "IndicatorGene":
         """
         辞書形式から指標遺伝子を復元
-
-        Args:
-            data: 辞書形式のデータ
-
-        Returns:
-            指標遺伝子オブジェクト
         """
-        try:
-            # IndicatorGeneクラスを動的にインポート
+        def _deserialize():
             from ..genes import IndicatorGene
-
             return IndicatorGene(
                 type=data["type"],
                 parameters=data["parameters"],
                 enabled=data.get("enabled", True),
-                timeframe=data.get("timeframe"),  # None の場合はデフォルトTFを使用
+                timeframe=data.get("timeframe"),
             )
-
-        except Exception as e:
-            logger.error(f"指標遺伝子復元エラー: {e}")
-            raise ValueError(f"指標遺伝子の復元に失敗: {e}")
+        return self._safe_deserialize(_deserialize, gene_class_name="指標遺伝子")
 
     def condition_to_dict(self, condition) -> Dict[str, Any]:
-        """
-        条件を辞書形式に変換
-
-        Args:
-            condition: 条件オブジェクト
-
-        Returns:
-            辞書形式의データ
-        """
-        try:
+        """条件を辞書形式に変換"""
+        def _serialize():
             result = {
                 "left_operand": condition.left_operand,
                 "operator": condition.operator,
@@ -256,16 +249,12 @@ class DictConverter:
             if getattr(condition, "direction", None) is not None:
                 result["direction"] = condition.direction
             return result
-
-        except Exception as e:
-            logger.error(f"条件辞書変換エラー: {e}")
-            raise ValueError(f"条件の辞書変換に失敗: {e}")
+        return self._safe_serialize(_serialize, error_prefix="条件辞書変換")
 
     def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
         """Condition または ConditionGroup を辞書に変換"""
-        try:
+        def _serialize():
             from ..genes import Condition, ConditionGroup
-
             if isinstance(obj, ConditionGroup):
                 return {
                     "type": "GROUP",
@@ -278,140 +267,62 @@ class DictConverter:
                 return self.condition_to_dict(obj)
             else:
                 raise TypeError(f"未知の条件型: {type(obj)}")
-        except Exception as e:
-            logger.error(f"条件/グループ辞書変換エラー: {e}")
-            raise ValueError(f"条件の辞書変換に失敗: {e}")
+        return self._safe_serialize(_serialize, error_prefix="条件/グループ辞書変換")
 
     def tpsl_gene_to_dict(self, tpsl_gene) -> Optional[Dict[str, Any]]:
-        """
-        TP/SL遺伝子を辞書形式に変換
-
-        Args:
-            tpsl_gene: TP/SL遺伝子オブジェクト
-
-        Returns:
-            辞書形式のデータ
-        """
-        try:
+        """TP/SL遺伝子を辞書形式に変換"""
+        def _serialize():
             if tpsl_gene is None:
                 return None
-
             return tpsl_gene.to_dict()
-
-        except Exception as e:
-            logger.error(f"TP/SL遺伝子辞書変換エラー: {e}")
-            raise ValueError(f"TP/SL遺伝子の辞書変換に失敗: {e}")
+        return self._safe_serialize(_serialize, error_prefix="TP/SL遺伝子辞書変換")
 
     def dict_to_tpsl_gene(self, data: Dict[str, Any]) -> Optional["TPSLGene"]:
-        """
-        辞書形式からTP/SL遺伝子を復元
-
-        Args:
-            data: 辞書形式のデータ
-
-        Returns:
-            TP/SL遺伝子オブジェクト
-        """
-        try:
+        """辞書形式からTP/SL遺伝子を復元"""
+        def _deserialize():
             if data is None:
                 return None
-
             from ..genes import TPSLGene
-
             return TPSLGene.from_dict(data)
-
-        except Exception as e:
-            logger.error(f"TP/SL遺伝子復元エラー: {e}")
-            raise ValueError(f"TP/SL遺伝子の復元に失敗: {e}")
+        return self._safe_deserialize(_deserialize, gene_class_name="TP/SL遺伝子")
 
     def position_sizing_gene_to_dict(
         self, position_sizing_gene
     ) -> Optional[Dict[str, Any]]:
-        """
-        ポジションサイジング遺伝子を辞書形式に変換
-
-        Args:
-            position_sizing_gene: ポジションサイジング遺伝子オブジェクト
-
-        Returns:
-            辞書形式のデータ
-        """
-        try:
+        """ポジションサイジング遺伝子を辞書形式に変換"""
+        def _serialize():
             if position_sizing_gene is None:
                 return None
-
             return position_sizing_gene.to_dict()
-
-        except Exception as e:
-            logger.error(f"ポジションサイジング遺伝子辞書変換エラー: {e}")
-            raise ValueError(f"ポジションサイジング遺伝子の辞書変換に失敗: {e}")
+        return self._safe_serialize(_serialize, error_prefix="ポジションサイジング遺伝子辞書変換")
 
     def dict_to_position_sizing_gene(
         self, data: Dict[str, Any]
     ) -> Optional["PositionSizingGene"]:
-        """
-        辞書形式からポジションサイジング遺伝子を復元
-
-        Args:
-            data: 辞書形式のデータ
-
-        Returns:
-            ポジションサイジング遺伝子オブジェクト
-        """
-        try:
+        """辞書形式からポジションサイジング遺伝子を復元"""
+        def _deserialize():
             if data is None:
                 return None
-
-            # PositionSizingGeneクラスを動的にインポート
             from ..genes import PositionSizingGene
-
             return PositionSizingGene.from_dict(data)
-
-        except Exception as e:
-            logger.error(f"ポジションサイジング遺伝子復元エラー: {e}")
-            raise ValueError(f"ポジションサイジング遺伝子の復元に失敗: {e}")
+        return self._safe_deserialize(_deserialize, gene_class_name="ポジションサイジング遺伝子")
 
     def entry_gene_to_dict(self, entry_gene) -> Optional[Dict[str, Any]]:
-        """
-        エントリー遺伝子を辞書形式に変換
-
-        Args:
-            entry_gene: エントリー遺伝子オブジェクト
-
-        Returns:
-            辞書形式のデータ
-        """
-        try:
+        """エントリー遺伝子を辞書形式に変換"""
+        def _serialize():
             if entry_gene is None:
                 return None
-
             return entry_gene.to_dict()
-
-        except Exception as e:
-            logger.error(f"エントリー遺伝子辞書変換エラー: {e}")
-            raise ValueError(f"エントリー遺伝子の辞書変換に失敗: {e}")
+        return self._safe_serialize(_serialize, error_prefix="エントリー遺伝子辞書変換")
 
     def dict_to_entry_gene(self, data: Dict[str, Any]) -> Optional["EntryGene"]:
-        """
-        辞書形式からエントリー遺伝子を復元
-
-        Args:
-            data: 辞書形式のデータ
-
-        Returns:
-            エントリー遺伝子オブジェクト
-        """
-        try:
+        """辞書形式からエントリー遺伝子を復元"""
+        def _deserialize():
             if data is None:
                 return None
-
             from ..genes import EntryGene
-
             return EntryGene.from_dict(data)
-
-        except Exception as e:
-            logger.error(f"エントリー遺伝子復元エラー: {e}")
-            raise ValueError(f"エントリー遺伝子の復元に失敗: {e}")
+        return self._safe_deserialize(_deserialize, gene_class_name="エントリー遺伝子")
 
     def _clean_risk_management(self, risk_management: Dict[str, Any]) -> Dict[str, Any]:
         """risk_managementからTP/SL関連の設定を除外"""

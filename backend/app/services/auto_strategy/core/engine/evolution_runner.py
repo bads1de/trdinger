@@ -91,8 +91,6 @@ class EvolutionRunner:
         self.population = population  # 適応的突然変異用
         self.parallel_evaluator = parallel_evaluator
         self.individual_evaluator = individual_evaluator
-        self._crossover_cache: dict[str, Any] = {}
-        self._mutation_cache: dict[str, Any] = {}
 
     def run_evolution(
         self,
@@ -315,10 +313,9 @@ class EvolutionRunner:
         """
         バッチ互換のキャッシュ領域をクリアする
 
-        交叉キャッシュと突然変異キャッシュをクリアしてメモリを解放します。
+        現在はこのメソッドは外部インターフェース互換のために残されています。
         """
-        self._crossover_cache.clear()
-        self._mutation_cache.clear()
+        pass
 
     def _evaluate_population(
         self,

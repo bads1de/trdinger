@@ -271,57 +271,6 @@ class PositionSizingService:
         """キャッシュのクリア"""
         self._market_data_handler.clear_cache()
 
-    def _create_default_gene(self, **kwargs):
-        """デフォルト遺伝子を作成"""
-        from ..genes import (
-            PositionSizingGene,
-            PositionSizingMethod,
-        )
-
-        method = kwargs.get("method", "volatility_based")
-
-        # 文字列からenumに変換
-        if isinstance(method, str):
-            try:
-                method = PositionSizingMethod(method)
-            except ValueError:
-                method = PositionSizingMethod.VOLATILITY_BASED
-
-        return PositionSizingGene(
-            method=method,
-            enabled=True,
-            risk_per_trade=kwargs.get("risk_per_trade", 0.02),
-            fixed_ratio=kwargs.get("fixed_ratio", 0.1),
-            fixed_quantity=kwargs.get("fixed_quantity", 0.01),
-            atr_multiplier=kwargs.get("atr_multiplier", 2.0),
-            optimal_f_multiplier=kwargs.get("optimal_f_multiplier", 0.5),
-            lookback_period=kwargs.get("lookback_period", 30),
-            min_position_size=kwargs.get("min_position_size", 0.001),
-            max_position_size=kwargs.get("max_position_size", 10.0),
-        )
-
-    def _calculate_fallback(
-        self, account_balance: float, current_price: float
-    ) -> PositionSizingResult:
-        """フォールバック計算（固定比率）"""
-        default_ratio = AUTO_STRATEGY_DEFAULTS["default_position_ratio"]
-        position_amount = account_balance * default_ratio
-        position_size = position_amount / current_price if current_price > 0 else 0.001
-
-        return PositionSizingResult(
-            position_size=position_size,
-            method_used="fixed_ratio_fallback",
-            calculation_details={
-                "ratio": default_ratio,
-                "position_amount": position_amount,
-                "fallback": True,
-            },
-            confidence_score=0.3,
-            risk_metrics={"position_ratio": default_ratio},
-            warnings=["フォールバック計算を使用"],
-            timestamp=datetime.now(),
-        )
-
     def calculate_position_size_fast(
         self,
         gene,

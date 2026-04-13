@@ -39,6 +39,18 @@ from ..targets.volatility_target_service import VolatilityTargetService
 
 logger = logging.getLogger(__name__)
 
+# 特徴量選択のデフォルトパラメータ
+_FEATURE_SELECTION_PARAMS = {
+    "method": "staged",
+    "target_k": None,
+    "cumulative_importance": 0.95,
+    "min_relative_importance": 0.02,
+    "correlation_threshold": 0.85,
+    "min_features": 10,
+    "cv_folds": 3,
+    "n_jobs": 1,
+}
+
 
 class BaseMLTrainer(BaseResourceManager, ABC):
     """
@@ -74,16 +86,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         # 特徴量選択器の初期化（動的ノイズ除去設定）
         # 新しい sklearn 互換 API を使用
-        self.feature_selector = FeatureSelector(
-            method="staged",  # 段階的選択（Filter → Wrapper → Embedded）
-            target_k=None,  # 数による制限を廃止
-            cumulative_importance=0.95,  # 予測力の95%を維持
-            min_relative_importance=0.02,  # 寄与が低すぎるノイズをカット
-            correlation_threshold=0.85,  # 冗長性排除
-            min_features=10,  # 最低限確保する特徴量数
-            cv_folds=3,  # クロスバリデーションフォールド数
-            n_jobs=1,  # 並列処理（メモリ安全のため1）
-        )
+        self.feature_selector = self._create_feature_selector()
 
         logger.debug(
             "特徴量エンジニアリング、ラベル生成、特徴量選択サービスを初期化しました"
@@ -116,6 +119,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             return float(value)
         except (TypeError, ValueError):
             return float(default)
+
+    @staticmethod
+    def _create_feature_selector() -> FeatureSelector:
+        """特徴量選択器のインスタンスを生成する。"""
+        return FeatureSelector(**_FEATURE_SELECTION_PARAMS)
 
     @safe_ml_operation(
         default_return={"success": False}, context="MLモデル学習でエラーが発生しました"
@@ -476,15 +484,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             # スケーリング（各fold内で実行）
             scaler = StandardScaler()
-            X_train_scaled = pd.DataFrame(
-                np.asarray(scaler.fit_transform(X_train_selected)),
-                columns=X_train_selected.columns,
-                index=X_train_selected.index,
-            )
-            X_test_scaled = pd.DataFrame(
-                np.asarray(scaler.transform(X_test_selected)),
-                columns=X_test_selected.columns,
-                index=X_test_selected.index,
+            X_train_scaled, X_test_scaled = self._scale_data(
+                X_train_selected, X_test_selected, scaler
             )
 
             fold_result = self._train_fold_with_error_handling(
@@ -550,16 +551,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """CVの各fold内で特徴量選択を適用する（データリーク防止）"""
         try:
             # foldごとに新しい特徴量選択器を作成
-            fold_selector = FeatureSelector(
-                method="staged",
-                target_k=None,
-                cumulative_importance=0.95,
-                min_relative_importance=0.02,
-                correlation_threshold=0.85,
-                min_features=10,
-                cv_folds=3,
-                n_jobs=1,
-            )
+            fold_selector = self._create_feature_selector()
 
             # 学習データのみでfit
             fold_selector.fit(X_train_cv, y_train_cv)
@@ -582,6 +574,25 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.warning(f"Fold内特徴量選択エラー、全特徴量使用: {e}")
             return X_train_cv, X_test_cv
 
+    @staticmethod
+    def _scale_data(
+        X_train: pd.DataFrame,
+        X_test: pd.DataFrame,
+        scaler: StandardScaler,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """データをスケーリングし、DataFrame形式で返す。"""
+        X_train_scaled = pd.DataFrame(
+            np.asarray(scaler.fit_transform(X_train)),
+            columns=X_train.columns,
+            index=X_train.index,
+        )
+        X_test_scaled = pd.DataFrame(
+            np.asarray(scaler.transform(X_test)),
+            columns=X_test.columns,
+            index=X_test.index,
+        )
+        return X_train_scaled, X_test_scaled
+
     def _preprocess_data(
         self, X_train: pd.DataFrame, X_test: pd.DataFrame
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -589,17 +600,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         if self.scaler is None:
             self.scaler = StandardScaler()
 
-        X_train_scaled = pd.DataFrame(
-            np.asarray(self.scaler.fit_transform(X_train)),
-            columns=X_train.columns,
-            index=X_train.index,
-        )
-        X_test_scaled = pd.DataFrame(
-            np.asarray(self.scaler.transform(X_test)),
-            columns=X_test.columns,
-            index=X_test.index,
-        )
-        return X_train_scaled, X_test_scaled
+        return self._scale_data(X_train, X_test, self.scaler)
 
     def _get_model_to_save(self) -> object:
         """保存対象のシリアライズ可能なオブジェクトを取得"""

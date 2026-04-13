@@ -200,21 +200,15 @@ class TestEvolutionRunnerAdvanced:
         assert mock_toolbox.evaluate.called
 
     def test_clear_caches(self, mock_toolbox, mock_stats):
-        """キャッシュクリアテスト"""
+        """キャッシュクリアテスト（現在は互換性のため空操作）"""
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
             stats=mock_stats,
         )
 
-        # キャッシュにデータを追加
-        runner._crossover_cache["test"] = (MagicMock(), MagicMock())
-        runner._mutation_cache["test"] = MagicMock()
-
-        # キャッシュクリア
+        # clear_cachesは現在は空操作（外部インターフェース互換のため残されている）
         runner.clear_caches()
-
-        assert len(runner._crossover_cache) == 0
-        assert len(runner._mutation_cache) == 0
+        assert True
 
     def test_get_crossover_cache_key(self, mock_toolbox, mock_stats):
         """交叉キャッシュキーテスト"""
