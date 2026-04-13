@@ -16,6 +16,7 @@ from app.utils.serialization import dataclass_to_dict
 
 from ..indicator_universe import normalize_indicator_universe_mode
 from ..constants import (
+    AUTO_STRATEGY_CONFIG_DEFAULTS,
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,
@@ -158,8 +159,8 @@ class GAConfig:
     save_intermediate_results: bool = True
 
     # フォールバック設定
-    fallback_start_date: str = "2024-01-01"
-    fallback_end_date: str = "2024-04-09"
+    fallback_start_date: str = field(default_factory=lambda: AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_start_date"])
+    fallback_end_date: str = field(default_factory=lambda: AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_end_date"])
 
     # PurgedKFold設定（過学習対策）
     enable_purged_kfold: bool = False  # PurgedKFoldを有効にするフラグ

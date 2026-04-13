@@ -208,7 +208,7 @@ class StrategyGene:
 
     def mutate(self, config: Any, mutation_rate: float = 0.1) -> "StrategyGene":
         """戦略遺伝子の突然変異を実行する。"""
-        from .strategy_operators import mutate_strategy_gene
+        from .operators import mutate_strategy_gene
 
         return mutate_strategy_gene(self, config, mutation_rate=mutation_rate)
 
@@ -216,7 +216,7 @@ class StrategyGene:
         self, population: List[Any], config: Any, base_mutation_rate: float = 0.1
     ) -> "StrategyGene":
         """集団の多様性に基づいて変異率を調整する。"""
-        from .strategy_operators import adaptive_mutate_strategy_gene
+        from .operators import adaptive_mutate_strategy_gene
 
         return adaptive_mutate_strategy_gene(
             self,
@@ -234,7 +234,7 @@ class StrategyGene:
         crossover_type: str = "uniform",
     ) -> Tuple["StrategyGene", "StrategyGene"]:
         """2つの親個体から交叉により新しい子個体を生成する。"""
-        from .strategy_operators import crossover_strategy_genes
+        from .operators import crossover_strategy_genes
 
         return crossover_strategy_genes(
             cls,
@@ -249,7 +249,7 @@ class StrategyGene:
         mutated: "StrategyGene", mutation_rate: float, config: Any
     ) -> None:
         """指標遺伝子の突然変異処理。"""
-        from .strategy_operators import mutate_indicators
+        from .operators import mutate_indicators
 
         mutate_indicators(mutated, mutation_rate, config)
 
@@ -258,7 +258,7 @@ class StrategyGene:
         mutated: "StrategyGene", mutation_rate: float, config: Any
     ) -> None:
         """取引条件の突然変異処理。"""
-        from .strategy_operators import mutate_conditions
+        from .operators import mutate_conditions
 
         mutate_conditions(mutated, mutation_rate, config)
 
@@ -268,7 +268,7 @@ class StrategyGene:
         parent2_tpsl: Optional[TPSLGene],
     ) -> Tuple[Optional[TPSLGene], Optional[TPSLGene]]:
         """TPSL 遺伝子の交叉処理。"""
-        from .strategy_operators import crossover_tpsl_genes
+        from .operators import crossover_tpsl_genes
 
         return crossover_tpsl_genes(parent1_tpsl, parent2_tpsl)
 
@@ -278,7 +278,7 @@ class StrategyGene:
         parent2_ps: Optional[PositionSizingGene],
     ) -> Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]:
         """ポジションサイズ遺伝子の交叉処理。"""
-        from .strategy_operators import crossover_position_sizing_genes
+        from .operators import crossover_position_sizing_genes
 
         return crossover_position_sizing_genes(parent1_ps, parent2_ps)
 
@@ -288,7 +288,7 @@ class StrategyGene:
         parent2_entry: Optional[EntryGene],
     ) -> Tuple[Optional[EntryGene], Optional[EntryGene]]:
         """エントリー遺伝子の交叉処理。"""
-        from .strategy_operators import crossover_entry_genes
+        from .operators import crossover_entry_genes
 
         return crossover_entry_genes(parent1_entry, parent2_entry)
 
@@ -300,7 +300,7 @@ class StrategyGene:
         config: Any,
     ) -> Tuple["StrategyGene", "StrategyGene"]:
         """ユニフォーム交叉。"""
-        from .strategy_operators import uniform_crossover
+        from .operators import uniform_crossover
 
         return uniform_crossover(cls, parent1, parent2, config)
 
@@ -312,6 +312,6 @@ class StrategyGene:
         config: Any,
     ) -> Tuple["StrategyGene", "StrategyGene"]:
         """一点交叉。"""
-        from .strategy_operators import single_point_crossover
+        from .operators import single_point_crossover
 
         return single_point_crossover(cls, parent1, parent2, config)

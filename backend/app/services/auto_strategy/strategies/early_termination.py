@@ -10,7 +10,6 @@ import logging
 from math import ceil
 from typing import Any, Optional
 
-import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings

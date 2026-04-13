@@ -1,35 +1,30 @@
 """
-StrategyGene の遺伝的演算ロジック（後方互換用）。
+StrategyGene の遺伝的演算ロジック。
 
-このモジュールは operators/ パッケージにリダイレクトします。
-新しいコードでは直接 `from .operators import ...` を使用してください。
+交叉（crossover）と突然変異（mutation）の演算を提供します。
 """
 
-from __future__ import annotations
-
-from .operators import (
+from .mutation import (
     adaptive_mutate_strategy_gene,
-    crossover_entry_genes,
-    crossover_position_sizing_genes,
-    crossover_strategy_genes,
-    crossover_strategy_genes_batch,
-    crossover_tpsl_genes,
     mutate_conditions,
     mutate_conditions_batch,
     mutate_indicators,
     mutate_indicators_batch,
     mutate_strategy_gene,
     mutate_strategy_gene_batch,
+)
+from .crossover import (
+    crossover_entry_genes,
+    crossover_position_sizing_genes,
+    crossover_strategy_genes,
+    crossover_strategy_genes_batch,
+    crossover_tpsl_genes,
     single_point_crossover,
     uniform_crossover,
 )
-from .operators.mutation import (  # noqa: F401 (テスト用)
-    _create_sub_gene,
-    _get_creation_probability_multiplier,
-    _iter_mutable_sub_gene_specs,
-)
 
 __all__ = [
+    # mutation
     "mutate_indicators",
     "mutate_conditions",
     "mutate_indicators_batch",
@@ -37,6 +32,7 @@ __all__ = [
     "mutate_strategy_gene",
     "mutate_strategy_gene_batch",
     "adaptive_mutate_strategy_gene",
+    # crossover
     "crossover_tpsl_genes",
     "crossover_position_sizing_genes",
     "crossover_entry_genes",

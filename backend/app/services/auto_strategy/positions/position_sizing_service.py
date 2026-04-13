@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional
 from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.utils.error_handler import safe_operation
 
-from ..config.constants import AUTO_STRATEGY_DEFAULTS
 from ..utils.normalization import normalize_enum_name
 from .calculators.calculator_factory import CalculatorFactory
 from .market_data_handler import MarketDataHandler

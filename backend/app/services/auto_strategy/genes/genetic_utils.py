@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import copy
 import random
 from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
 
