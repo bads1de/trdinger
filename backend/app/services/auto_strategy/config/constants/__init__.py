@@ -24,6 +24,7 @@ from .common_constants import (
 )
 from .enums import (
     EntryType,
+    ExitType,
     IndicatorType,
     OPERATORS,
     PositionSizingMethod,
@@ -103,6 +104,7 @@ __all__ = [
     "PositionSizingMethod",
     "TPSLMethod",
     "EntryType",
+    "ExitType",
     "IndicatorType",
     "OPERATORS",
     # 共通定数

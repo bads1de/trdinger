@@ -216,3 +216,17 @@ class PositionManager:
             new_sl = current_close * (1.0 + trailing_step)
             if new_sl < state.sl_price:
                 state.sl_price = new_sl
+
+    def activate_trailing_stop(self) -> None:
+        """
+        トレーリングSLを起動する。
+
+        ExitGeneのtrailing_stop_activationフラグが成立した際に呼び出される。
+        次回以降のバーでトレーリングTP/SLの更新が有効になる。
+        """
+        if not self.strategy._trailing_tp_sl:
+            current_price = self.strategy.data.Close[-1]
+            self.strategy._trailing_tp_sl = current_price
+            logger.info(
+                f"トレーリングSL起動: 基準価格={current_price}"
+            )

@@ -132,6 +132,12 @@ class MutationConfig(NestedConfigMixin):
     position_sizing_gene_creation_multiplier: float = float(
         GA_MUTATION_SETTINGS["position_sizing_gene_creation_probability_multiplier"]
     )
+    entry_gene_creation_multiplier: float = float(
+        GA_MUTATION_SETTINGS["entry_gene_creation_probability_multiplier"]
+    )
+    exit_gene_creation_multiplier: float = float(
+        GA_MUTATION_SETTINGS["exit_gene_creation_probability_multiplier"]
+    )
     adaptive_variance_threshold: float = float(
         GA_MUTATION_SETTINGS["adaptive_mutation_variance_threshold"]
     )

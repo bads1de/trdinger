@@ -15,6 +15,7 @@ from .mutation import (
 )
 from .crossover import (
     crossover_entry_genes,
+    crossover_exit_genes,
     crossover_position_sizing_genes,
     crossover_strategy_genes,
     crossover_strategy_genes_batch,
@@ -36,6 +37,7 @@ __all__ = [
     "crossover_tpsl_genes",
     "crossover_position_sizing_genes",
     "crossover_entry_genes",
+    "crossover_exit_genes",
     "crossover_strategy_genes",
     "crossover_strategy_genes_batch",
     "uniform_crossover",

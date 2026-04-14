@@ -4,7 +4,7 @@
 戦略遺伝子、GA設定、フィットネス評価などのモデルを定義します。
 """
 
-from ..config.constants import EntryType, PositionSizingMethod, TPSLMethod
+from ..config.constants import EntryType, ExitType, PositionSizingMethod, TPSLMethod
 from .conditions import (
     Condition,
     ConditionGroup,
@@ -13,6 +13,7 @@ from .conditions import (
     StateTracker,
 )
 from .entry import EntryGene, create_random_entry_gene
+from .exit import ExitGene, create_random_exit_gene
 from .indicator import (
     IndicatorGene,
     create_random_indicator_gene,
@@ -44,16 +45,19 @@ __all__ = [
     "PositionSizingGene",
     "TPSLResult",
     "EntryGene",
+    "ExitGene",
     "ToolGene",
     # Enums
     "PositionSizingMethod",
     "TPSLMethod",
     "EntryType",
+    "ExitType",
     # Validator
     "GeneValidator",
     # Utilities
     "create_random_position_sizing_gene",
     "create_random_tpsl_gene",
+    "create_random_exit_gene",
     "create_random_entry_gene",
     "generate_random_indicators",
     "create_random_indicator_gene",

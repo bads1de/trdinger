@@ -27,9 +27,16 @@ class StrategyExecutionCycle:
         if handled_open_position:
             return
 
+        # ポジションあり → イグジット条件チェック
         if self.strategy.position:
-            return
+            exit_direction = (
+                self.strategy.exit_decision_engine.determine_exit_direction()
+            )
+            if exit_direction != 0.0:
+                self.strategy.exit_decision_engine.execute_exit(exit_direction)
+                return
 
+        # ポジションなし → エントリー条件チェック
         direction = self.strategy.entry_decision_engine.determine_entry_direction()
         if direction == 0.0:
             return

@@ -327,6 +327,23 @@ class DictConverter:
             return EntryGene.from_dict(data)
         return self._safe_deserialize(_deserialize, gene_class_name="エントリー遺伝子")
 
+    def exit_gene_to_dict(self, exit_gene) -> Optional[Dict[str, Any]]:
+        """イグジット遺伝子を辞書形式に変換"""
+        def _serialize():
+            if exit_gene is None:
+                return None
+            return exit_gene.to_dict()
+        return self._safe_serialize(_serialize, error_prefix="イグジット遺伝子辞書変換")
+
+    def dict_to_exit_gene(self, data: Dict[str, Any]) -> Optional["ExitGene"]:
+        """辞書形式からイグジット遺伝子を復元"""
+        def _deserialize():
+            if data is None:
+                return None
+            from ..genes import ExitGene
+            return ExitGene.from_dict(data)
+        return self._safe_deserialize(_deserialize, gene_class_name="イグジット遺伝子")
+
     def _clean_risk_management(self, risk_management: Dict[str, Any]) -> Dict[str, Any]:
         """risk_managementからTP/SL関連の設定を除外"""
         return self._strategy_gene_codec._clean_risk_management(risk_management)

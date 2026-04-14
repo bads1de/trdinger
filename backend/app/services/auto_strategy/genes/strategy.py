@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from .conditions import Condition, ConditionGroup, StatefulCondition
 from .entry import EntryGene
+from .exit import ExitGene
 from .indicator import IndicatorGene
 from .position_sizing import PositionSizingGene
 from .tool import ToolGene
@@ -63,6 +64,13 @@ class StrategyGene:
     entry_gene: Optional[EntryGene] = None
     long_entry_gene: Optional[EntryGene] = None
     short_entry_gene: Optional[EntryGene] = None
+    exit_gene: Optional[ExitGene] = None
+    long_exit_conditions: List[Union[Condition, ConditionGroup]] = field(
+        default_factory=list
+    )
+    short_exit_conditions: List[Union[Condition, ConditionGroup]] = field(
+        default_factory=list
+    )
     tool_genes: List[ToolGene] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
@@ -93,6 +101,9 @@ class StrategyGene:
         entry_gene: Optional[EntryGene] = None,
         long_entry_gene: Optional[EntryGene] = None,
         short_entry_gene: Optional[EntryGene] = None,
+        exit_gene: Optional[ExitGene] = None,
+        long_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
+        short_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
         tool_genes: Optional[List[ToolGene]] = None,
         risk_management: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -135,6 +146,9 @@ class StrategyGene:
             entry_gene=entry_gene,
             long_entry_gene=long_entry_gene,
             short_entry_gene=short_entry_gene,
+            exit_gene=exit_gene,
+            long_exit_conditions=long_exit_conditions,
+            short_exit_conditions=short_exit_conditions,
             tool_genes=tool_genes,
             risk_management=risk_management,
             metadata=metadata,
@@ -175,12 +189,14 @@ class StrategyGene:
             "entry_gene",
             "long_entry_gene",
             "short_entry_gene",
+            "exit_gene",
         )
 
     @classmethod
     def sub_gene_class_map(cls) -> Dict[str, Any]:
         """サブ遺伝子フィールドと対応クラスの対応表を返す。"""
         from .entry import EntryGene
+        from .exit import ExitGene
         from .position_sizing import PositionSizingGene
         from .tpsl import TPSLGene
 
@@ -192,6 +208,7 @@ class StrategyGene:
             "entry_gene": EntryGene,
             "long_entry_gene": EntryGene,
             "short_entry_gene": EntryGene,
+            "exit_gene": ExitGene,
         }
 
     def clone(self, keep_id: bool = False) -> "StrategyGene":

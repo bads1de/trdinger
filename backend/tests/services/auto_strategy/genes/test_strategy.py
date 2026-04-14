@@ -4,6 +4,7 @@ from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.conditions import Condition, StatefulCondition
 from app.services.auto_strategy.genes.entry import EntryGene
+from app.services.auto_strategy.genes.exit import ExitGene
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.genes.tool import ToolGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
@@ -193,8 +194,10 @@ class TestStrategyGene:
             "entry_gene",
             "long_entry_gene",
             "short_entry_gene",
+            "exit_gene",
         )
         assert set(class_map) == set(field_names)
         assert class_map["tpsl_gene"] is TPSLGene
         assert class_map["position_sizing_gene"] is PositionSizingGene
         assert class_map["entry_gene"] is EntryGene
+        assert class_map["exit_gene"] is ExitGene

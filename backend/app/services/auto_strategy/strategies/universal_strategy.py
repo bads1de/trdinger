@@ -28,6 +28,7 @@ from .early_termination import (
     StrategyEarlyTerminationController,
 )
 from .entry_decision_engine import EntryDecisionEngine
+from .exit_decision_engine import ExitDecisionEngine
 from .execution_cycle import StrategyExecutionCycle
 from .ml_filter import MLFilter
 from .order_manager import OrderManager
@@ -140,6 +141,7 @@ class UniversalStrategy(Strategy):
         self.early_termination_controller = StrategyEarlyTerminationController(self)
         self.ml_filter = MLFilter(self)
         self.entry_decision_engine = EntryDecisionEngine(self)
+        self.exit_decision_engine = ExitDecisionEngine(self)
         self.strategy_initializer = StrategyInitializer(self)
         self.execution_cycle = StrategyExecutionCycle(self)
 
@@ -267,6 +269,13 @@ class UniversalStrategy(Strategy):
         """有効なエントリー遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         target = self._get_effective_sub_gene(direction, "entry")
         return cast(Optional[EntryGene], target)
+
+    def _get_effective_exit_gene(self, direction: float):
+        """有効なイグジット遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
+        from ..genes import ExitGene
+
+        target = self._get_effective_sub_gene(direction, "exit")
+        return cast(Optional[ExitGene], target)
 
     def _normalize_evaluation_start(self, value: Any) -> Optional[pd.Timestamp]:
         """評価開始時刻を pandas.Timestamp に正規化する。"""

@@ -35,6 +35,14 @@ class EntryType(str, Enum):
     STOP_LIMIT = "stop_limit"
 
 
+class ExitType(str, Enum):
+    """イグジット注文タイプ"""
+
+    FULL = "full"  # 全ポジション決済
+    PARTIAL = "partial"  # 部分決済
+    TRAILING = "trailing"  # トレーリングSL起動（決済しない）
+
+
 class IndicatorType(str, Enum):
     """指標分類"""
 

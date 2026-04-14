@@ -89,6 +89,7 @@ class TestGeneticOperators:
             "entry_gene",
             "long_entry_gene",
             "short_entry_gene",
+            "exit_gene",
         ]
         assert (
             multipliers["tpsl_gene"]
@@ -98,9 +99,10 @@ class TestGeneticOperators:
             multipliers["position_sizing_gene"]
             == ga_config.mutation_config.position_sizing_gene_creation_multiplier
         )
-        assert multipliers["entry_gene"] == 0.0
-        assert multipliers["long_entry_gene"] == 0.0
-        assert multipliers["short_entry_gene"] == 0.0
+        assert multipliers["entry_gene"] == 0.2
+        assert multipliers["long_entry_gene"] == 0.2
+        assert multipliers["short_entry_gene"] == 0.2
+        assert multipliers["exit_gene"] == 0.2
 
     def test_mutate_strategy_gene_mutates_existing_entry_genes(self, ga_config):
         """既存の entry_gene 系が突然変異対象に含まれることを確認"""

@@ -15,6 +15,7 @@ from typing import Any, Callable, List
 
 from ..conditions import ConditionGroup
 from ..entry import EntryGene, create_random_entry_gene
+from ..exit import ExitGene, create_random_exit_gene
 from ..position_sizing import (
     PositionSizingGene,
     create_random_position_sizing_gene,
@@ -38,6 +39,10 @@ _SUB_GENE_MUTATION_RULES = {
         create_random_entry_gene,
         "entry_gene_creation_probability_multiplier",
     ),
+    ExitGene: (
+        create_random_exit_gene,
+        "exit_gene_creation_probability_multiplier",
+    ),
 }
 
 _LONG_SHORT_SUB_GENE_RULES = {
@@ -45,6 +50,7 @@ _LONG_SHORT_SUB_GENE_RULES = {
     "short_tpsl_gene": (TPSLGene, create_random_tpsl_gene, "tpsl_gene_creation_probability_multiplier"),
     "long_entry_gene": (EntryGene, create_random_entry_gene, "entry_gene_creation_probability_multiplier"),
     "short_entry_gene": (EntryGene, create_random_entry_gene, "entry_gene_creation_probability_multiplier"),
+    "exit_gene": (ExitGene, create_random_exit_gene, "exit_gene_creation_probability_multiplier"),
 }
 
 _MUTATION_CONFIG_CREATION_ATTR_MAP = {
@@ -53,6 +59,7 @@ _MUTATION_CONFIG_CREATION_ATTR_MAP = {
         "position_sizing_gene_creation_multiplier"
     ),
     "entry_gene_creation_probability_multiplier": "entry_gene_creation_multiplier",
+    "exit_gene_creation_probability_multiplier": "exit_gene_creation_multiplier",
 }
 
 

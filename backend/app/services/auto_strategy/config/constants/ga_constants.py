@@ -92,6 +92,8 @@ GA_MUTATION_SETTINGS = {
     "risk_param_mutation_range": (0.9, 1.1),
     "tpsl_gene_creation_probability_multiplier": 0.2,
     "position_sizing_gene_creation_probability_multiplier": 0.2,
+    "entry_gene_creation_probability_multiplier": 0.2,
+    "exit_gene_creation_probability_multiplier": 0.2,
     "adaptive_mutation_variance_threshold": 0.001,
     "adaptive_mutation_rate_decrease_multiplier": 0.8,
     "adaptive_mutation_rate_increase_multiplier": 1.2,
