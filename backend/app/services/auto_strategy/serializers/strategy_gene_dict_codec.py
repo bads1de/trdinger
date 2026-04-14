@@ -84,6 +84,14 @@ class StrategyGeneDictCodec:
                     self.converter.condition_or_group_to_dict(cond)
                     for cond in strategy_gene.short_entry_conditions
                 ],
+                "long_exit_conditions": [
+                    self.converter.condition_or_group_to_dict(cond)
+                    for cond in getattr(strategy_gene, "long_exit_conditions", [])
+                ],
+                "short_exit_conditions": [
+                    self.converter.condition_or_group_to_dict(cond)
+                    for cond in getattr(strategy_gene, "short_exit_conditions", [])
+                ],
                 "risk_management": clean_risk_management,
                 "stateful_conditions": [
                     self.converter.stateful_condition_to_dict(sc)
@@ -162,6 +170,15 @@ class StrategyGeneDictCodec:
                 for c in data.get("short_entry_conditions", [])
             ]
 
+            long_exit_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get("long_exit_conditions", [])
+            ]
+            short_exit_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get("short_exit_conditions", [])
+            ]
+
             from ..genes.tool import ToolGene
 
             sub_genes = {}
@@ -188,6 +205,8 @@ class StrategyGeneDictCodec:
                 indicators=indicators,
                 long_entry_conditions=long_entry_conditions,
                 short_entry_conditions=short_entry_conditions,
+                long_exit_conditions=long_exit_conditions,
+                short_exit_conditions=short_exit_conditions,
                 stateful_conditions=stateful_conditions,
                 tool_genes=tool_genes,
                 risk_management=data.get("risk_management", {"position_size": 0.1}),

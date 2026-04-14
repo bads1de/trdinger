@@ -218,6 +218,7 @@ class UniversalStrategy(Strategy):
 
         # ベクトル化評価結果のキャッシュ
         self._precomputed_signals = {}
+        self._precomputed_exit_signals = {}
 
     def _has_mtf_indicators(self) -> bool:
         """MTF指標が存在するかチェック"""

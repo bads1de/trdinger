@@ -349,8 +349,10 @@ class GeneratedStrategyRepository(BaseRepository):
         required_fields = {
             "id": "",
             "indicators": [],
-            "entry_conditions": [],
-            "exit_conditions": [],
+            "long_entry_conditions": [],
+            "short_entry_conditions": [],
+            "long_exit_conditions": [],
+            "short_exit_conditions": [],
             "risk_management": {},
             "metadata": {},
         }
@@ -363,10 +365,14 @@ class GeneratedStrategyRepository(BaseRepository):
         # データ型の確認
         if not isinstance(validated_data["indicators"], list):
             validated_data["indicators"] = []
-        if not isinstance(validated_data["entry_conditions"], list):
-            validated_data["entry_conditions"] = []
-        if not isinstance(validated_data["exit_conditions"], list):
-            validated_data["exit_conditions"] = []
+        if not isinstance(validated_data["long_entry_conditions"], list):
+            validated_data["long_entry_conditions"] = []
+        if not isinstance(validated_data["short_entry_conditions"], list):
+            validated_data["short_entry_conditions"] = []
+        if not isinstance(validated_data["long_exit_conditions"], list):
+            validated_data["long_exit_conditions"] = []
+        if not isinstance(validated_data["short_exit_conditions"], list):
+            validated_data["short_exit_conditions"] = []
         if not isinstance(validated_data["risk_management"], dict):
             validated_data["risk_management"] = {}
         if not isinstance(validated_data["metadata"], dict):

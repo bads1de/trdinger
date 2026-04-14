@@ -63,6 +63,7 @@ class StrategyInitializer:
 
     def _precompute_condition_signals(self) -> None:
         try:
+            # Entry条件
             long_conds = getattr(self.strategy.gene, "long_entry_conditions", [])
             if long_conds:
                 self.strategy._precomputed_signals[1.0] = (
@@ -77,6 +78,25 @@ class StrategyInitializer:
                 self.strategy._precomputed_signals[-1.0] = (
                     self.strategy.condition_evaluator.calculate_conditions_vectorized(
                         short_conds,
+                        self.strategy,
+                    )
+                )
+
+            # Exit条件
+            long_exit_conds = getattr(self.strategy.gene, "long_exit_conditions", [])
+            if long_exit_conds:
+                self.strategy._precomputed_exit_signals[1.0] = (
+                    self.strategy.condition_evaluator.calculate_conditions_vectorized(
+                        long_exit_conds,
+                        self.strategy,
+                    )
+                )
+
+            short_exit_conds = getattr(self.strategy.gene, "short_exit_conditions", [])
+            if short_exit_conds:
+                self.strategy._precomputed_exit_signals[-1.0] = (
+                    self.strategy.condition_evaluator.calculate_conditions_vectorized(
+                        short_exit_conds,
                         self.strategy,
                     )
                 )

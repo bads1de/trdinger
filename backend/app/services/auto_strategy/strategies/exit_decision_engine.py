@@ -94,6 +94,14 @@ class ExitDecisionEngine:
         if not conditions:
             return False
 
+        # ベクトル化キャッシュがあればそれを使用（高速パス）
+        cached_signals = self._get_cached_exit_signals()
+        if cached_signals is not None:
+            current_bar = self.strategy._current_bar_index
+            if 0 <= current_bar < len(cached_signals):
+                return bool(cached_signals[current_bar])
+
+        # フォールバック: 逐次評価
         evaluator = self.strategy.condition_evaluator
 
         for condition_group in conditions:
@@ -105,6 +113,15 @@ class ExitDecisionEngine:
                     return True
 
         return False
+
+    def _get_cached_exit_signals(self):
+        """ベクトル化されたExit条件のキャッシュ信号を取得。"""
+        position = self.strategy.position
+        if not position:
+            return None
+        direction = 1.0 if position.size > 0 else -1.0
+        cached = getattr(self.strategy, "_precomputed_exit_signals", {})
+        return cached.get(direction)
 
     def _evaluate_condition_group(
         self, group: ConditionGroup, evaluator

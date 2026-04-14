@@ -5,6 +5,9 @@ import pytest
 
 from app.services.auto_strategy.genes import (
     Condition,
+    ConditionGroup,
+    EntryGene,
+    ExitGene,
     IndicatorGene,
     PositionSizingGene,
     PositionSizingMethod,
@@ -495,3 +498,108 @@ def test_strategy_gene_with_mtf_indicators_round_trip(
     assert restored.indicators[0].timeframe is None  # デフォルト
     assert restored.indicators[1].timeframe == "1d"  # 日足
     assert restored.indicators[2].timeframe == "4h"  # 4時間足
+
+
+def test_exit_conditions_round_trip(serializer: GeneSerializer) -> None:
+    """イグジット条件のシリアライズ/デシリアライズラウンドトリップ."""
+    indicators = [
+        IndicatorGene(type="SMA", parameters={"period": 10}, enabled=True),
+    ]
+    long_entry_conditions = [
+        Condition(left_operand="close", operator=">", right_operand="sma"),
+    ]
+    short_entry_conditions = [
+        Condition(left_operand="close", operator="<", right_operand="sma"),
+    ]
+    long_exit_conditions = [
+        Condition(left_operand="rsi", operator=">", right_operand=70),
+        ConditionGroup(
+            operator="AND",
+            conditions=[
+                Condition(left_operand="close", operator="<", right_operand="ema"),
+                Condition(left_operand="volume", operator=">", right_operand=1000000),
+            ],
+        ),
+    ]
+    short_exit_conditions = [
+        Condition(left_operand="rsi", operator="<", right_operand=30),
+    ]
+    exit_gene = ExitGene(
+        exit_type="partial",
+        partial_exit_pct=0.6,
+        partial_exit_enabled=True,
+        trailing_stop_activation=False,
+    )
+
+    strategy_gene = StrategyGene(
+        id="exit-test-strategy",
+        indicators=indicators,
+        long_entry_conditions=long_entry_conditions,
+        short_entry_conditions=short_entry_conditions,
+        long_exit_conditions=long_exit_conditions,
+        short_exit_conditions=short_exit_conditions,
+        exit_gene=exit_gene,
+        risk_management={"position_size": 0.1},
+    )
+
+    # シリアライズ
+    data = serializer.strategy_gene_to_dict(strategy_gene)
+
+    # イグジット関連フィールドが辞書に含まれていることを確認
+    assert "long_exit_conditions" in data
+    assert "short_exit_conditions" in data
+    assert "exit_gene" in data
+    assert len(data["long_exit_conditions"]) == 2
+    assert len(data["short_exit_conditions"]) == 1
+    assert data["exit_gene"]["exit_type"] == "partial"
+    assert data["exit_gene"]["partial_exit_pct"] == 0.6
+
+    # デシリアライズ
+    restored = serializer.dict_to_strategy_gene(data, StrategyGene)
+
+    assert isinstance(restored, StrategyGene)
+
+    # イグジット条件が正しく復元されていることを確認
+    assert len(restored.long_exit_conditions) == 2
+    assert len(restored.short_exit_conditions) == 1
+
+    # 最初のlong_exit_conditionは単一Condition
+    long_exit_0 = restored.long_exit_conditions[0]
+    assert isinstance(long_exit_0, Condition)
+    assert long_exit_0.left_operand == "rsi"
+    assert long_exit_0.operator == ">"
+    assert long_exit_0.right_operand == 70
+
+    # 2番目のlong_exit_conditionはConditionGroup
+    long_exit_1 = restored.long_exit_conditions[1]
+    assert isinstance(long_exit_1, ConditionGroup)
+    assert long_exit_1.operator == "AND"
+    assert len(long_exit_1.conditions) == 2
+
+    # exit_geneが正しく復元されていることを確認
+    assert restored.exit_gene is not None
+    assert restored.exit_gene.exit_type.value == "partial"
+    assert restored.exit_gene.partial_exit_pct == 0.6
+    assert restored.exit_gene.partial_exit_enabled is True
+    assert restored.exit_gene.trailing_stop_activation is False
+
+
+def test_empty_exit_conditions_round_trip(serializer: GeneSerializer) -> None:
+    """イグジット条件が空の戦略遺伝子のラウンドトリップ."""
+    strategy_gene = StrategyGene(
+        id="no-exit-strategy",
+        indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+        long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
+        short_entry_conditions=[],
+        long_exit_conditions=[],
+        short_exit_conditions=[],
+        exit_gene=None,
+        risk_management={},
+    )
+
+    data = serializer.strategy_gene_to_dict(strategy_gene)
+    restored = serializer.dict_to_strategy_gene(data, StrategyGene)
+
+    assert restored.long_exit_conditions == []
+    assert restored.short_exit_conditions == []
+    assert restored.exit_gene is None

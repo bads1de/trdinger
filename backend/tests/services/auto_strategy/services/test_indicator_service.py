@@ -3,11 +3,13 @@ IndicatorServiceのユニットテスト
 """
 
 import pytest
-from unittest.mock import Mock, MagicMock
+from datetime import datetime, timedelta
+from unittest.mock import Mock, MagicMock, patch
 import pandas as pd
 import numpy as np
 
 from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
+from app.services.auto_strategy.services.mtf_data_provider import MultiTimeframeDataProvider
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 
 
@@ -138,3 +140,99 @@ class TestIndicatorCalculator:
         calculator.init_indicator(gene, mock_strategy)
 
         assert "SMA_4h_testid12" in mock_strategy.indicators
+
+
+class TestMTFIntegration:
+    """MTFデータプロバイダーと指標計算の統合テスト"""
+
+    @pytest.fixture
+    def sample_hourly_data(self) -> pd.DataFrame:
+        """1時間足のテストデータ"""
+        start = datetime(2024, 1, 1, 0, 0, 0)
+        periods = 168  # 7日分
+        dates = [start + timedelta(hours=i) for i in range(periods)]
+        return pd.DataFrame(
+            {
+                "Open": [50000 + i * 10 for i in range(periods)],
+                "High": [50100 + i * 10 for i in range(periods)],
+                "Low": [49900 + i * 10 for i in range(periods)],
+                "Close": [50050 + i * 10 for i in range(periods)],
+                "Volume": [1000 + i for i in range(periods)],
+            },
+            index=pd.DatetimeIndex(dates),
+        )
+
+    def test_mtf_data_provider_resamples_to_4h(self, sample_hourly_data):
+        """MTFデータプロバイダーが1h→4hに正しくリサンプリングすること"""
+        provider = MultiTimeframeDataProvider(
+            base_data=sample_hourly_data,
+            base_timeframe="1h",
+        )
+
+        data_4h = provider.get_data("4h")
+
+        # 168時間 / 4時間 = 42バー
+        assert len(data_4h) == 42
+        assert "Open" in data_4h.columns
+        assert "Close" in data_4h.columns
+
+    def test_mtf_data_provider_resamples_to_1d(self, sample_hourly_data):
+        """MTFデータプロバイダーが1h→1dに正しくリサンプリングすること"""
+        provider = MultiTimeframeDataProvider(
+            base_data=sample_hourly_data,
+            base_timeframe="1h",
+        )
+
+        data_1d = provider.get_data("1d")
+
+        # 7日分
+        assert len(data_1d) == 7
+
+    def test_indicator_calculator_with_mtf_provider(self, sample_hourly_data):
+        """MTFプロバイダー経由で指標計算ができること"""
+        provider = MultiTimeframeDataProvider(
+            base_data=sample_hourly_data,
+            base_timeframe="1h",
+        )
+
+        # SMAの計算結果を返すモックサービス
+        mock_service = Mock()
+        mock_service.calculate_indicator.return_value = pd.Series(
+            [50000.0] * 42,
+            index=provider.get_data("4h").index,
+        )
+
+        calculator = IndicatorCalculator(
+            technical_indicator_service=mock_service,
+            mtf_data_provider=provider,
+        )
+
+        # MTF指標を持つ遺伝子
+        gene = IndicatorGene(type="SMA", parameters={"period": 10}, timeframe="4h")
+
+        mock_strategy = Mock()
+        mock_strategy.indicators = {}
+        mock_strategy.data = Mock()
+        mock_strategy.data.df = sample_hourly_data
+
+        calculator.init_indicator(gene, mock_strategy)
+
+        # MTFデータプロバイダーが呼び出されたことを確認
+        mock_service.calculate_indicator.assert_called_once()
+        call_args = mock_service.calculate_indicator.call_args
+        called_df = call_args[0][0]
+
+        # 4hデータが渡されていることを確認（168時間 → 42バー）
+        assert len(called_df) == 42
+
+    def test_mtf_gene_has_timeframe_attribute(self):
+        """MTF指標遺伝子がtimeframe属性を持つこと"""
+        gene = IndicatorGene(
+            type="SMA",
+            parameters={"period": 20},
+            timeframe="4h",
+            id="mtf_sma_001",
+        )
+
+        assert gene.timeframe == "4h"
+        assert gene.type == "SMA"
