@@ -432,20 +432,44 @@ class TestATRCalculationAccuracy:
         tr = VolatilityIndicators.true_range(high, low, close)
 
         # RMA（Wilder's smoothing）でATRを手動計算
-        # pandas-taの実装: tr.dropna() → 先頭にNaNを付加 → ewm(alpha=1/length, min_periods=length).mean()
+        # pandas-taの実装に合わせる:
+        # 1. tr.dropna() で有効なTR値のみ取得
+        # 2. 最初のATRは、NaNを含むTRの先頭にNaNを追加した後、ewmで計算
+        # 実際には: pandas-taは tr.dropna() した後、先頭にNaNを追加して ewm(alpha=1/length, min_periods=length)
+        
+        tr_valid = tr.dropna()
         alpha = 1.0 / length
-        tr_clean = tr.dropna()
-        tr_padded = pd.Series([np.nan] + list(tr_clean.values))
-        expected_rma = tr_padded.ewm(alpha=alpha, min_periods=length).mean()
-
-        # expected_rma[i] が ATR[i] に対応する（indices are aligned）
-        for i in range(len(atr)):
-            actual_val = atr.iloc[i]
-            expected_val = expected_rma.iloc[i] if i < len(expected_rma) else np.nan
-            if not np.isnan(actual_val) and not np.isnan(expected_val):
+        
+        # 正しい期待値: pandas-taは内部的に talibまたは同等の計算を使用
+        # 単純に最初のlength個のTRのSMAから始まり、その後Wilder's smoothing
+        if len(tr_valid) >= length:
+            expected_rma_values = []
+            # 最初のRMA値（length番目のTRまでの単純平均）
+            first_rma = tr_valid.iloc[:length].mean()
+            expected_rma_values.append(first_rma)
+            
+            # その後のRMA値
+            for i in range(length, len(tr_valid)):
+                prev_rma = expected_rma_values[-1]
+                current_tr = tr_valid.iloc[i]
+                new_rma = (prev_rma * (length - 1) + current_tr) / length
+                expected_rma_values.append(new_rma)
+            
+            # ATRのNaNでない値を取得
+            atr_valid = atr.dropna()
+            
+            # 値を比較
+            assert len(atr_valid) == len(expected_rma_values), (
+                f"ATRの有效値数が一致しない: expected={len(expected_rma_values)}, actual={len(atr_valid)}"
+            )
+            
+            for i, (actual_val, expected_val) in enumerate(zip(atr_valid, expected_rma_values)):
                 assert np.isclose(actual_val, expected_val, rtol=1e-5), (
                     f"ATR[{i}]がRMAと一致しない: expected={expected_val}, actual={actual_val}"
                 )
+        else:
+            # データが足りない場合は、すべてのATRがNaNであることを確認
+            assert atr.dropna().empty, "データが足りない場合、ATRはすべてNaNであるべき"
 
     def test_atr_positive_values(self, known_ohlcv):
         """ATRが常に正の値であることを検証"""

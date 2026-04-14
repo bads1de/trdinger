@@ -393,9 +393,12 @@ class TestGetRecentBacktestResults:
         sample_backtest_model: BacktestResult,
     ) -> None:
         """最近のバックテスト結果が取得できる"""
-        mock_scalars = MagicMock()
-        mock_scalars.all.return_value = [sample_backtest_model]
-        repository.db.scalars.return_value = mock_scalars
+        mock_query = MagicMock()
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.options.return_value = mock_query
+        mock_query.all.return_value = [sample_backtest_model]
+        repository.db.query.return_value = mock_query
 
         results = repository.get_recent_backtest_results(limit=5)
 
@@ -406,9 +409,12 @@ class TestGetRecentBacktestResults:
         self, repository: BacktestResultRepository
     ) -> None:
         """リミット指定で最近の結果が取得できる"""
-        mock_scalars = MagicMock()
-        mock_scalars.all.return_value = []
-        repository.db.scalars.return_value = mock_scalars
+        mock_query = MagicMock()
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.options.return_value = mock_query
+        mock_query.all.return_value = []
+        repository.db.query.return_value = mock_query
 
         results = repository.get_recent_backtest_results(limit=3)
 

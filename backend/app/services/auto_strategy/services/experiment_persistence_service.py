@@ -4,7 +4,8 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from contextlib import contextmanager
+from typing import Any, Dict, List, Optional, Generator
 
 from sqlalchemy.orm import Session
 
@@ -37,6 +38,44 @@ class ExperimentPersistenceService:
         """
         self.db_session_factory = db_session_factory
         self.serializer = GeneSerializer()
+        # GA実行中にセッションを再利用するためのキャッシュ
+        self._active_session: Optional[Session] = None
+
+    @contextmanager
+    def _get_db_session(self) -> Generator[Session, None, None]:
+        """
+        DBセッションを取得するコンテキストマネージャー。
+
+        GA実験実行中は既存のセッションを再利用し、
+        実験完了後に新しいセッションを作成することで、
+        多数のDB接続/切断を回避します。
+
+        Yields:
+            Session: SQLAlchemyセッション
+        """
+        if self._active_session is not None and not self._active_session.closed:
+            # 既存のセッションを再利用
+            yield self._active_session
+        else:
+            # 新しいセッションを作成
+            with self.db_session_factory() as session:
+                self._active_session = session
+                try:
+                    yield session
+                except Exception:
+                    self._active_session = None
+                    raise
+
+    def _close_active_session(self):
+        """アクティブなセッションを閉じる"""
+        if self._active_session is not None:
+            try:
+                if not self._active_session.closed:
+                    self._active_session.close()
+            except Exception:
+                pass
+            finally:
+                self._active_session = None
 
     def create_experiment(
         self,
@@ -233,25 +272,28 @@ class ExperimentPersistenceService:
         """実験を完了状態にする"""
         experiment_info = self.get_experiment_info(experiment_id)
         if experiment_info:
-            with self.db_session_factory() as db:
+            with self._get_db_session() as db:
                 repo = GAExperimentRepository(db)
                 repo.update_experiment_status(experiment_info["db_id"], "completed")
+            self._close_active_session()
 
     def fail_experiment(self, experiment_id: str):
         """実験を失敗状態にする"""
         experiment_info = self.get_experiment_info(experiment_id)
         if experiment_info:
-            with self.db_session_factory() as db:
+            with self._get_db_session() as db:
                 repo = GAExperimentRepository(db)
                 repo.update_experiment_status(experiment_info["db_id"], "failed")
+            self._close_active_session()
 
     def stop_experiment(self, experiment_id: str):
         """実験を停止状態にする"""
         experiment_info = self.get_experiment_info(experiment_id)
         if experiment_info:
-            with self.db_session_factory() as db:
+            with self._get_db_session() as db:
                 repo = GAExperimentRepository(db)
                 repo.update_experiment_status(experiment_info["db_id"], "stopped")
+            self._close_active_session()
 
     def update_experiment_progress(
         self,
@@ -264,7 +306,7 @@ class ExperimentPersistenceService:
         experiment_info = self.get_experiment_info(experiment_id)
         if not experiment_info:
             return False
-        with self.db_session_factory() as db:
+        with self._get_db_session() as db:
             repo = GAExperimentRepository(db)
             return repo.update_progress(
                 experiment_info["db_id"],

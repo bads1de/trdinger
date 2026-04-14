@@ -157,9 +157,12 @@ class EvolutionRunner:
                     f"進化処理は世代 {gen + 1} の開始前に停止されました"
                 )
 
-            # GC制御: 世代の変わり目でまとめて回収し、計算中の停止を防ぐ
+            # GC制御: 世代の変わり目でまとめて回収し、評価中の不要なGCを抑制
             gc.collect()
-            gc.disable()
+            # GCを完全に無効化するのではなく、閾値を上げて頻度を下げる
+            # デフォルト: (700, 10, 10) → 評価中は(2000, 20, 20)に変更
+            original_threshold = gc.get_threshold()
+            gc.set_threshold(2000, 20, 20)
 
             try:
                 logger.debug("世代 %s/%s を開始", gen + 1, config.generations)
@@ -224,8 +227,8 @@ class EvolutionRunner:
                         best_fitness = float(best_fitness) if best_fitness is not None else None
                     progress_callback(gen, config.generations, best_fitness)
             finally:
-                # ループ終了時にGCを有効化（エラー時も含む）
-                gc.enable()
+                # ループ終了時に元のGC閾値を復元（エラー時も含む）
+                gc.set_threshold(*original_threshold)
 
         logger.info("進化アルゴリズム完了")
         return population, logbook

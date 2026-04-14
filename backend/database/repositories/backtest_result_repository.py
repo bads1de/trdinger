@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, load_only, defer
 
 from database.models import BacktestResult
 from app.types import SerializableValue
@@ -337,15 +337,20 @@ class BacktestResultRepository(BaseRepository):
 
         return _count_results()
 
-    def get_recent_backtest_results(self, limit: int = 10) -> List[Dict[str, SerializableValue]]:
+    def get_recent_backtest_results(
+        self, limit: int = 10, include_heavy_json: bool = False
+    ) -> List[Dict[str, SerializableValue]]:
         """
         最近のバックテスト結果を取得
 
-        BaseRepositoryの汎用メソッドを利用して、最新のバックテスト結果を効率的に取得します。
-        これにより、クエリロジックの重複を防ぎ、コードの再利用性と保守性を高めています。
+        一覧表示用に軽量なカラムのみを取得します。
+        include_heavy_json=False（デフォルト）の場合、重いJSONカラム
+        （equity_curve, trade_history）は遅延読み込みになり、
+        クエリ速度とメモリ使用量が改善されます。
 
         Args:
             limit: 取得件数
+            include_heavy_json: 重いJSONカラムも含めるか（デフォルト: False）
 
         Returns:
             バックテスト結果のリスト
@@ -354,11 +359,20 @@ class BacktestResultRepository(BaseRepository):
 
         @safe_operation(context="最近バックテスト結果取得", is_api_call=False)
         def _get_recent_results():
-            # BaseRepositoryの汎用メソッドを使用
-            results = self.get_latest_records(
-                timestamp_column="created_at",
-                limit=limit,
+            query = (
+                self.db.query(BacktestResult)
+                .order_by(BacktestResult.created_at.desc())
+                .limit(limit)
             )
+            
+            # 重いJSONカラムを遅延読み込み
+            if not include_heavy_json:
+                query = query.options(
+                    defer(BacktestResult.equity_curve),
+                    defer(BacktestResult.trade_history),
+                )
+            
+            results = query.all()
             # 取得した結果を辞書形式のリストに変換して返します。
             return [self.to_dict(result) for result in results]
 

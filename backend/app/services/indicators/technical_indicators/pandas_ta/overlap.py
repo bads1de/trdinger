@@ -66,6 +66,10 @@ class OverlapIndicators:
     @handle_pandas_ta_errors
     def sma(data: pd.Series, length: int) -> pd.Series:
         """単純移動平均"""
+        # エッジケース: length=1でデータが1件の場合は、そのまま返す
+        if length == 1 and len(data) == 1:
+            return data.copy()
+        
         return cast(
             pd.Series,
             run_series_indicator(data, length, lambda: ta.sma(data, length=length)),

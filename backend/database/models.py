@@ -303,6 +303,8 @@ class BacktestResult(Base):
         Index("idx_backtest_symbol_timeframe", "symbol", "timeframe"),
         Index("idx_backtest_strategy_created", "strategy_name", "created_at"),
         Index("idx_backtest_created_at", "created_at"),
+        Index("idx_backtest_symbol", "symbol"),
+        Index("idx_backtest_strategy_name", "strategy_name"),
     )
 
     def __repr__(self):
@@ -415,6 +417,7 @@ class GeneratedStrategy(Base):
         Index("idx_generated_strategies_experiment", "experiment_id"),
         Index("idx_generated_strategies_fitness", "fitness_score"),
         Index("idx_generated_strategies_generation", "generation"),
+        Index("idx_generated_strategies_backtest_result", "backtest_result_id"),
     )
 
     def __repr__(self):
