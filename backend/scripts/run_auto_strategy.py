@@ -57,6 +57,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def apply_smoke_mode(args: argparse.Namespace) -> argparse.Namespace:
+    """高速なバグ確認向けの実行設定を反映します。
+
+    `--smoke` が有効な場合に、実行時間に直結する副作用をまとめて抑制します。
+    """
+    if not getattr(args, "smoke", False):
+        return args
+
+    # できるだけ小さい構成に固定して、GA/バックテスト本体の動作確認に集中する。
+    args.population = 2
+    args.generations = 1
+    args.elite_size = 1
+    args.no_parallel = True
+    args.no_save = True
+    if getattr(args, "min_trades", None) is None:
+        args.min_trades = 0
+
+    return args
+
+
 def parse_args() -> argparse.Namespace:
     """コマンドライン引数をパースします。"""
     parser = argparse.ArgumentParser(
@@ -78,6 +98,9 @@ def parse_args() -> argparse.Namespace:
 
   # ファイル保存をスキップ（標準出力のみ）
   python -m scripts.run_auto_strategy --no-save
+
+  # Optunaを無効化した高速なバグ確認モード
+  python -m scripts.run_auto_strategy --smoke --start-date 2024-01-01 --end-date 2024-01-31
         """,
     )
 
@@ -175,6 +198,11 @@ def parse_args() -> argparse.Namespace:
         help="ファイル保存をスキップし、標準出力のみに出力",
     )
     parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Optuna・シード注入・並列評価・詳細保存を無効化した高速なバグ確認モード",
+    )
+    parser.add_argument(
         "--min-trades",
         type=int,
         default=None,
@@ -196,14 +224,20 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
     Raises:
         ValueError: 引数が不正な場合
     """
+    smoke_mode = getattr(args, "smoke", False)
+
+    population = 2 if smoke_mode else args.population
+    generations = 1 if smoke_mode else args.generations
+    elite_size = 1 if smoke_mode else args.elite_size
+
     # 入力検証
-    if args.population < 2:
+    if population < 2:
         raise ValueError("個体数は2以上である必要があります")
-    if args.generations < 1:
+    if generations < 1:
         raise ValueError("世代数は1以上である必要があります")
-    if args.elite_size < 0:
+    if elite_size < 0:
         raise ValueError("エリート保存数は0以上である必要があります")
-    if args.elite_size >= args.population:
+    if elite_size >= population:
         raise ValueError("エリート保存数は個体数未満である必要があります")
     if not 0 <= args.crossover_rate <= 1:
         raise ValueError("交叉率は0から1の範囲である必要があります")
@@ -212,22 +246,43 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
 
     # fitness_constraints の上書き
     fitness_constraints = None
-    if args.min_trades is not None:
+    min_trades = getattr(args, "min_trades", None)
+    if min_trades is not None or smoke_mode:
         from app.services.auto_strategy.config.constants import DEFAULT_FITNESS_CONSTRAINTS
+
         fitness_constraints = DEFAULT_FITNESS_CONSTRAINTS.copy()
-        fitness_constraints["min_trades"] = args.min_trades
+        fitness_constraints["min_trades"] = (
+            min_trades if min_trades is not None else 0
+        )
 
     config_kwargs = dict(
-        population_size=args.population,
-        generations=args.generations,
+        population_size=population,
+        generations=generations,
         crossover_rate=args.crossover_rate,
         mutation_rate=args.mutation_rate,
-        elite_size=args.elite_size,
-        evaluation_config=EvaluationConfig(enable_parallel=not args.no_parallel),
+        elite_size=elite_size,
+        evaluation_config=EvaluationConfig(
+            enable_parallel=not args.no_parallel and not smoke_mode
+        ),
         log_level="DEBUG" if args.verbose else "INFO",
         fallback_start_date=args.start_date,
         fallback_end_date=args.end_date,
     )
+    if smoke_mode:
+        config_kwargs["max_indicators"] = 3
+        config_kwargs["max_conditions"] = 2
+        config_kwargs["use_seed_strategies"] = False
+        config_kwargs["seed_injection_rate"] = 0.0
+        config_kwargs["tuning_config"] = {
+            "enabled": False,
+            "n_trials": 1,
+            "elite_count": 1,
+            "use_wfa": False,
+            "include_indicators": True,
+            "include_tpsl": True,
+            "include_thresholds": False,
+        }
+        config_kwargs["two_stage_selection_config"] = {"enabled": False}
     if fitness_constraints is not None:
         config_kwargs["fitness_constraints"] = fitness_constraints
 
@@ -395,9 +450,15 @@ def _create_condition_description(cond: Dict[str, Any]) -> str:
 
 def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
     """オートストラテジーを実行します。"""
+    args = apply_smoke_mode(args)
+
     logger.info("=" * 60)
     logger.info("オートストラテジー実行開始")
     logger.info("=" * 60)
+    if getattr(args, "smoke", False):
+        logger.info(
+            "smokeモード: Optuna・シード注入・並列評価・詳細保存を無効化しています"
+        )
 
     # 設定の作成
     ga_config = create_ga_config(args)
@@ -579,6 +640,7 @@ def get_default_output_dir() -> Path:
 def main():
     """メインエントリーポイント"""
     args = parse_args()
+    args = apply_smoke_mode(args)
 
     # 詳細ログの設定
     if args.verbose:
@@ -627,4 +689,3 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
-

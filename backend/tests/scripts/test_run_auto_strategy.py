@@ -74,6 +74,39 @@ class TestCreateGaConfig:
         assert config.evaluation_config.enable_parallel is False
         assert config.log_level == "DEBUG"
 
+    def test_smoke_config_disables_heavy_features(self):
+        """smokeモードで高速実行向けの設定になる"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=50,
+            generations=100,
+            crossover_rate=0.9,
+            mutation_rate=0.1,
+            elite_size=5,
+            no_parallel=False,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            min_trades=None,
+            smoke=True,
+        )
+
+        config = run_auto_strategy.create_ga_config(args)
+
+        assert config.population_size == 2
+        assert config.generations == 1
+        assert config.elite_size == 1
+        assert config.max_indicators == 3
+        assert config.max_conditions == 2
+        assert config.evaluation_config.enable_parallel is False
+        assert config.use_seed_strategies is False
+        assert config.seed_injection_rate == 0.0
+        assert config.tuning_config.enabled is False
+        assert config.tuning_config.n_trials == 1
+        assert config.two_stage_selection_config.enabled is False
+        assert config.fitness_constraints["min_trades"] == 0
+
     def test_invalid_population_raises_error(self):
         """無効な個体数でエラーが発生する"""
         import scripts.run_auto_strategy as run_auto_strategy
@@ -171,6 +204,34 @@ class TestCreateBacktestConfig:
 
         with pytest.raises(ValueError, match="初期資本は0より大きい"):
             run_auto_strategy.create_backtest_config(args)
+
+
+class TestSmokeMode:
+    """smokeモードのテスト"""
+
+    def test_apply_smoke_mode_overrides_runtime_flags(self):
+        """smokeモードで実行関連フラグが高速向けに切り替わる"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=20,
+            generations=10,
+            elite_size=2,
+            no_parallel=False,
+            no_save=False,
+            min_trades=None,
+            smoke=True,
+        )
+
+        result = run_auto_strategy.apply_smoke_mode(args)
+
+        assert result is args
+        assert args.population == 2
+        assert args.generations == 1
+        assert args.elite_size == 1
+        assert args.no_parallel is True
+        assert args.no_save is True
+        assert args.min_trades == 0
 
 
 class TestFormatConditions:
@@ -367,6 +428,15 @@ class TestParseArgs:
 
         assert args.no_parallel is True
 
+    def test_smoke_flag(self):
+        """smokeフラグが正しくパースされる"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        with patch("sys.argv", ["run_auto_strategy.py", "--smoke"]):
+            args = run_auto_strategy.parse_args()
+
+        assert args.smoke is True
+
 
 class TestRunAutoStrategyExecution:
     """run_auto_strategy実行経路のテスト"""
@@ -449,5 +519,3 @@ class TestRunAutoStrategyExecution:
 
         assert result["success"] is True
         assert DummyBacktestService.instances[0].run_backtest_calls == []
-
-
