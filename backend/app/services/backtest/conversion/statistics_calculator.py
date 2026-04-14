@@ -12,6 +12,7 @@ import pandas as pd
 from app.services.backtest.shared import (
     resolve_stats_object,
     resolve_trade_pnl_column,
+    safe_duration_conversion as _safe_duration_conversion,
     safe_float_conversion as _safe_float_conversion,
     safe_int_conversion as _safe_int_conversion,
 )
@@ -88,10 +89,10 @@ class BacktestStatisticsCalculator:
         statistics["avg_drawdown"] = self._safe_float_conversion(
             getter("Avg. Drawdown [%]", 0.0)
         )
-        statistics["max_drawdown_duration"] = self._safe_int_conversion(
+        statistics["max_drawdown_duration"] = self._safe_duration_conversion(
             getter("Max. Drawdown Duration", 0)
         )
-        statistics["avg_drawdown_duration"] = self._safe_float_conversion(
+        statistics["avg_drawdown_duration"] = self._safe_duration_conversion(
             getter("Avg. Drawdown Duration", 0)
         )
         statistics["sharpe_ratio"] = self._safe_float_conversion(
@@ -264,3 +265,8 @@ class BacktestStatisticsCalculator:
     def _safe_int_conversion(value: Any) -> int:
         """安全なint変換"""
         return _safe_int_conversion(value)
+
+    @staticmethod
+    def _safe_duration_conversion(value: Any) -> float:
+        """安全な期間変換"""
+        return _safe_duration_conversion(value)

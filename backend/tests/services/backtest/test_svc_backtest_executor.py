@@ -474,7 +474,23 @@ class TestBacktestRun:
             )
 
             # 警告フィルタが呼ばれたことを確認
-            mock_filter.assert_called()
+            assert mock_filter.call_count >= 3
+            assert any(
+                call.args == ("ignore",) and call.kwargs.get("category") is UserWarning
+                for call in mock_filter.call_args_list
+            )
+            assert any(
+                call.args == ("ignore",)
+                and call.kwargs.get("category") is RuntimeWarning
+                and call.kwargs.get("message") == r"invalid value encountered in .*"
+                for call in mock_filter.call_args_list
+            )
+            assert any(
+                call.args == ("ignore",)
+                and call.kwargs.get("category") is RuntimeWarning
+                and call.kwargs.get("message") == r"divide by zero encountered in .*"
+                for call in mock_filter.call_args_list
+            )
 
 
 class TestSupportedStrategies:

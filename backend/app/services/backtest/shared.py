@@ -6,13 +6,12 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Optional, Sequence, Tuple
 
 import logging
 import pandas as pd
 
-logger = logging.getLogger(__name__)
 
 from app.utils.datetime_utils import current_datetime_like as _current_datetime_like
 from app.utils.datetime_utils import (
@@ -23,6 +22,8 @@ from app.utils.datetime_utils import parse_timestamp_safe as _parse_timestamp_sa
 
 TRADE_PNL_COLUMNS: tuple[str, ...] = ("PnL", "Pnl", "Profit", "ProfitLoss")
 OHLCV_COLUMNS: tuple[str, ...] = ("open", "high", "low", "close", "volume")
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_stats_object(
@@ -74,6 +75,50 @@ def safe_float_conversion(value: Any) -> float:
     except (ValueError, TypeError):
         logger.warning(f"float変換に失敗しました: {value!r}")
         return 0.0
+
+
+def safe_duration_conversion(value: Any) -> float:
+    """
+    期間値を日数ベースのfloatへ安全に変換する。
+
+    pd.Timedelta / datetime.timedelta / "5 days" のような文字列を
+    日数単位のfloatに正規化します。変換できない場合は0.0を返します。
+    """
+    try:
+        if value is None or pd.isna(value):
+            return 0.0
+    except (TypeError, ValueError):
+        pass
+
+    if isinstance(value, (pd.Timedelta, timedelta)):
+        return value.total_seconds() / 86400.0
+
+    if isinstance(value, str):
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            try:
+                parsed = pd.to_timedelta(value)
+            except (TypeError, ValueError, OverflowError):
+                logger.warning(f"duration変換に失敗しました: {value!r}")
+                return 0.0
+            if pd.isna(parsed):
+                logger.warning(f"duration変換に失敗しました: {value!r}")
+                return 0.0
+            return parsed.total_seconds() / 86400.0
+
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        try:
+            parsed = pd.to_timedelta(value)
+        except (TypeError, ValueError, OverflowError):
+            logger.warning(f"duration変換に失敗しました: {value!r}")
+            return 0.0
+        if pd.isna(parsed):
+            logger.warning(f"duration変換に失敗しました: {value!r}")
+            return 0.0
+        return parsed.total_seconds() / 86400.0
 
 
 def safe_int_conversion(value: Any) -> int:

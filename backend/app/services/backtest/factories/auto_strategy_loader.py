@@ -77,7 +77,7 @@ class AutoStrategyLoader:
 
         # 戦略遺伝子データを抽出
         gene_data = self._extract_strategy_gene(strategy_config)
-        if not gene_data:
+        if gene_data is None or (isinstance(gene_data, dict) and not gene_data):
             raise AutoStrategyLoaderError(
                 "オートストラテジーの設定に戦略遺伝子 (strategy_gene) が含まれていません。"
             )
@@ -130,15 +130,21 @@ class AutoStrategyLoader:
 
     def _extract_strategy_gene(
         self, strategy_config: Dict[str, SerializableValue]
-    ) -> Dict[str, SerializableValue]:
+    ):
         """戦略設定から戦略遺伝子を抽出"""
         # 直接strategy_geneがある場合
         gene_data = strategy_config.get("strategy_gene")
+        
+        # StrategyGene オブジェクトが直接渡された場合
+        if gene_data is not None and hasattr(gene_data, "indicators") and hasattr(
+            gene_data, "long_entry_conditions"
+        ):
+            return gene_data
+        
         if isinstance(gene_data, dict):
             return gene_data
 
-        # StrategyGene オブジェクトが直接渡された場合
-        # to_dict() メソッドがあればそれを使用、なければエラー
+        # StrategyGene オブジェクトが直接渡された場合（to_dictメソッドがある場合）
         if gene_data is not None:
             if hasattr(gene_data, "to_dict"):
                 return gene_data.to_dict()  # type: ignore[return-value]
@@ -150,6 +156,13 @@ class AutoStrategyLoader:
         parameters = strategy_config.get("parameters", {})
         if isinstance(parameters, dict):
             gene_data = parameters.get("strategy_gene")
+            
+            # StrategyGene オブジェクトがparametersの中にある場合
+            if gene_data is not None and hasattr(gene_data, "indicators") and hasattr(
+                gene_data, "long_entry_conditions"
+            ):
+                return gene_data
+            
             if isinstance(gene_data, dict):
                 return gene_data
 

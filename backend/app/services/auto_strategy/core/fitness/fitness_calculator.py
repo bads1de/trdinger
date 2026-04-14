@@ -365,7 +365,8 @@ class FitnessCalculator:
             trade_penalty = metrics.get("trade_frequency_penalty", 0.0)
 
             if total_trades == 0:
-                logger.warning("取引回数が0のため、低いフィットネス値を設定")
+                # GAの探索では zero-trade はよくある境界条件なので、警告ではなく debug に落とす。
+                logger.debug("取引回数が0のため、低いフィットネス値を設定")
                 return config.zero_trades_penalty
 
             if not self.meets_constraints(metrics, config):

@@ -22,6 +22,7 @@ pandas-ta の volatility カテゴリに対応。
 """
 
 import logging
+import warnings
 from typing import Any, cast
 
 import pandas as pd
@@ -422,15 +423,23 @@ class VolatilityIndicators:
         nc: int = 4,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Holt-Winter Channel"""
-        result: Any = run_series_indicator(
-            close,
-            max(na, nb, nc),
-            lambda: ta.hwc(close=close, na=na, nb=nb, nc=nc),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
-            ),
-        )
+        # pandas_ta_classic の HWC は実データ長によって RuntimeWarning を大量に出すため、
+        # 指標の戻り値には影響しない計算警告だけを局所的に抑制する。
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                category=RuntimeWarning,
+                module=r"pandas_ta_classic\.volatility\.hwc",
+            )
+            result: Any = run_series_indicator(
+                close,
+                max(na, nb, nc),
+                lambda: ta.hwc(close=close, na=na, nb=nb, nc=nc),
+                fallback_factory=lambda: cast(
+                    tuple[pd.Series, pd.Series, pd.Series],
+                    create_nan_series_bundle(close, 3),
+                ),
+            )
 
         if isinstance(result, tuple):
             return cast(tuple[pd.Series, pd.Series, pd.Series], result)

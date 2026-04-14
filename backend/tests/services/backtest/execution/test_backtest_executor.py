@@ -1,7 +1,10 @@
-import pytest
-from unittest.mock import MagicMock, patch
-import pandas as pd
+import warnings
 from datetime import datetime
+from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
 from app.services.backtest.execution.backtest_executor import (
     BacktestEarlyTerminationError,
     BacktestExecutor,
@@ -139,6 +142,20 @@ class TestBacktestExecutor:
         
         assert result == mock_stats
         mock_bt.run.assert_called_once_with(p1=10)
+
+    def test_run_backtest_suppresses_numpy_runtimewarnings(self, executor):
+        """numpy 由来の RuntimeWarning が外に漏れないこと"""
+
+        class WarningBacktest:
+            def run(self, **kwargs):
+                return np.sqrt(np.array([-1.0]))
+
+        with warnings.catch_warnings(record=True) as captured:
+            warnings.simplefilter("always")
+            result = executor._run_backtest(WarningBacktest(), {})
+
+        assert result is not None
+        assert captured == []
 
     def test_run_backtest_raises_early_termination_error(self, executor):
         mock_bt = MagicMock()

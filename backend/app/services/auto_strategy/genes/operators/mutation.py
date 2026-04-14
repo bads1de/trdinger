@@ -299,7 +299,7 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
                 setattr(mutated, field_name, _create_sub_gene(creator_func, config))
 
         if mutated.tool_genes:
-            from ..tools import tool_registry
+            from ...tools import tool_registry
 
             for tool_gene in mutated.tool_genes:
                 if random.random() < mutation_rate:
@@ -321,9 +321,10 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
         try:
             if 'mutated' not in locals():
                 mutated = gene.clone() if hasattr(gene, "clone") else gene
-            if hasattr(mutated, "fitness"):
-                mutated.fitness.valid = False
+            if hasattr(mutated, "fitness") and hasattr(mutated.fitness, "values"):
+                del mutated.fitness.values
             return mutated
+
         except Exception as inner_e:
             logger.error(f"戦略遺伝子クローン作成エラー: {inner_e}")
             return gene

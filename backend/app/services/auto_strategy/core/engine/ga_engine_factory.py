@@ -74,7 +74,7 @@ class GeneticAlgorithmEngineFactory:
             hybrid_feature_adapter=hybrid_feature_adapter,
         )
 
-        logger.info(
+        logger.debug(
             f"GAエンジンを初期化しました (Mode: {'Hybrid' if hybrid_config.mode else 'Standard'})"
         )
         return engine

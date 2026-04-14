@@ -73,6 +73,27 @@ class TestStrategyParameterSpace:
         # SMA の length パラメータ
         assert "ind_1_length" in result
 
+    def test_build_parameter_space_real_indicator_params_do_not_use_step(
+        self, parameter_space
+    ):
+        """実数パラメータには離散 step を付けない"""
+        gene = StrategyGene(
+            id="real-param-gene",
+            indicators=[
+                IndicatorGene(
+                    type="SUPERTREND",
+                    parameters={"period": 10, "multiplier": 2.0},
+                )
+            ],
+        )
+
+        result = parameter_space.build_parameter_space(
+            gene, include_indicators=True, include_tpsl=False
+        )
+
+        assert result["ind_0_period"].step == 1
+        assert result["ind_0_multiplier"].step is None
+
     def test_build_parameter_space_with_tpsl(self, parameter_space, sample_gene):
         """TPSL パラメータ空間の構築テスト"""
         result = parameter_space.build_parameter_space(

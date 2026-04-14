@@ -9,6 +9,7 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Dict, Optional, Type
 
+import numpy as np
 import pandas as pd
 from backtesting import Backtest, Strategy
 from backtesting.lib import FractionalBacktest
@@ -210,7 +211,18 @@ class BacktestExecutor:
             # 警告を一時的に無効化
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
-                stats = bt.run(**strategy_parameters)
+                warnings.filterwarnings(
+                    "ignore",
+                    category=RuntimeWarning,
+                    message=r"invalid value encountered in .*",
+                )
+                warnings.filterwarnings(
+                    "ignore",
+                    category=RuntimeWarning,
+                    message=r"divide by zero encountered in .*",
+                )
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    stats = bt.run(**strategy_parameters)
 
             return stats
         except StrategyEarlyTermination as e:

@@ -187,16 +187,34 @@ class EntryDecisionEngine:
                     )
                 )
                 position_size = float(position_size)
-                if not math.isfinite(position_size):
-                    return 0.01
+                if not math.isfinite(position_size) or position_size <= 0:
+                    return 0.001
 
                 gene = self.strategy.gene.position_sizing_gene
-                min_size = max(0.001, float(getattr(gene, "min_position_size", 0.001)))
-                max_size = float(getattr(gene, "max_position_size", position_size))
-                if not math.isfinite(max_size) or max_size < min_size:
-                    max_size = min_size
+                min_size_limit = max(0.001, float(getattr(gene, "min_position_size", 0.001)))
+                max_size_limit = float(getattr(gene, "max_position_size", position_size))
+                if not math.isfinite(max_size_limit) or max_size_limit < min_size_limit:
+                    max_size_limit = min_size_limit
 
-                return max(min_size, min(max_size, position_size))
+                # 最終的なユニット数（この時点ではまだ小数である可能性がある）
+                final_units = max(min_size_limit, min(max_size_limit, position_size))
+
+                # backtesting.py の仕様に合わせて変換
+                # 0 < size < 1: 証拠金比率
+                # size >= 1: 整数のユニット数
+                equity = getattr(self.strategy, "equity", 100000.0)
+                if equity > 0:
+                    fraction = (final_units * current_price) / equity
+                    if fraction < 1.0:
+                        # 1未満なら比率として返す
+                        # 0.001 などの小さな値でも OK
+                        return fraction
+                    else:
+                        # 1以上（100%以上の証拠金を使用）なら、整数ユニット数として返す
+                        # backtesting.py は 1.0 以上の float を整数でない場合に拒否する
+                        return float(math.floor(final_units))
+
+                return 0.001
             return 0.01
         except Exception as e:
             logger.warning("ポジションサイズ計算エラー、フォールバック使用: %s", e)

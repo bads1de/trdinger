@@ -7,6 +7,7 @@
 import logging
 from typing import Optional, Tuple, cast
 
+import numpy as np
 import pandas as pd
 
 from ..config.constants import EntryType
@@ -47,8 +48,14 @@ class LowerTimeframeSimulator:
 
         # カラム名の正規化（Low/low, High/high）
         cols = {c.lower(): c for c in minute_data.columns}
-        lows = cast(pd.Series, minute_data[cols.get("low", "Low")].squeeze())
-        highs = cast(pd.Series, minute_data[cols.get("high", "High")].squeeze())
+        lows = minute_data[cols.get("low", "Low")]
+        highs = minute_data[cols.get("high", "High")]
+
+        # 1行の場合でもSeriesを維持するようにsqueeze()を避ける
+        if isinstance(lows, pd.DataFrame):
+            lows = lows.iloc[:, 0]
+        if isinstance(highs, pd.DataFrame):
+            highs = highs.iloc[:, 0]
 
         if order.order_type == EntryType.LIMIT:
             if order.limit_price is None:
@@ -94,7 +101,9 @@ class LowerTimeframeSimulator:
             if stop_mask.any():
                 order.stop_triggered = True
                 # トリガーした以降のデータのみを対象に指値判定を行う必要がある
-                trigger_idx = stop_mask.idxmax()
+                # stop_mask.values.argmax() を使って確実に位置を取得
+                idx = np.argmax(stop_mask.values)
+                trigger_idx = stop_mask.index[idx]
                 lows = lows.loc[trigger_idx:]
                 highs = highs.loc[trigger_idx:]
             else:

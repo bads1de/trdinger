@@ -158,19 +158,28 @@ class OrderManager:
             logger.error("Execute filled order failed: strategy instance is None")
             return
 
-        had_position_before = bool(strategy.position)
-
-        if order.is_long:
-            strategy.buy(size=order.size)
-        else:
-            strategy.sell(size=order.size)
-
-        # buy/sell が拒否された場合（証拠金不足等）はポジションが開かれない
-        # その場合は内部状態を同期しない（ファントムポジションを防止）
-        if not had_position_before and not strategy.position:
-            logger.warning("注文が拒否されました: ポジションが開かれていません")
+        # ポジションサイズの検証
+        if order.size is None or (isinstance(order.size, (int, float)) and order.size <= 0):
+            logger.warning(
+                f"無効なポジションサイズのため注文をスキップ: size={order.size}, "
+                f"direction={'long' if order.is_long else 'short'}"
+            )
             return
 
+        try:
+            if order.is_long:
+                strategy.buy(size=order.size)
+            else:
+                strategy.sell(size=order.size)
+        except AssertionError as e:
+            logger.warning(
+                f"注文実行エラー（無効なサイズ）: size={order.size}, error={e}"
+            )
+            return
+
+        # backtesting.py の market order は次バーで約定するため、
+        # 直後の strategy.position がまだ false のことがある。
+        # 注文受付成功時点で内部状態を同期して、リスク管理を継続できるようにする。
         self._sync_open_position_state(
             entry_price=fill_price,
             sl_price=order.sl_price,

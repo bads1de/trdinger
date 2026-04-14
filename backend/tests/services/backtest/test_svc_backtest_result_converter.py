@@ -240,6 +240,26 @@ class TestPerformanceMetricsExtraction:
         assert statistics["profit_factor"] == pytest.approx(3.0, rel=0.1)
         assert statistics["sharpe_ratio"] == 1.5
 
+    def test_extract_statistics_converts_drawdown_durations(
+        self, stats_calculator
+    ):
+        """ドローダウン期間をTimedeltaから日数floatへ変換できること"""
+        stats = pd.Series(
+            {
+                "Return [%]": 0.0,
+                "# Trades": 1,
+                "Max. Drawdown Duration": pd.Timedelta(days=6, hours=22),
+                "Avg. Drawdown Duration": pd.Timedelta(days=2, hours=6),
+            }
+        )
+        stats._trades = pd.DataFrame()
+        stats._equity_curve = pd.DataFrame()
+
+        statistics = stats_calculator.calculate_statistics(stats)
+
+        assert statistics["max_drawdown_duration"] == pytest.approx(6.9166666667)
+        assert statistics["avg_drawdown_duration"] == pytest.approx(2.25)
+
     def test_extract_statistics_recompute_from_trades(
         self, stats_calculator, mock_backtest_stats
     ):
@@ -700,7 +720,6 @@ class TestErrorHandling:
 
         equity_curve = equity_transformer.transform(stats)
         assert len(equity_curve) == 0
-
 
 
 

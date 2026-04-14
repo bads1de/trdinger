@@ -108,7 +108,7 @@ class BacktestService:
                 self.data_service = BacktestDataService(
                     ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
                 )
-                logger.info("バックテストデータサービスを初期化しました")
+                logger.debug("バックテストデータサービスを初期化しました")
             except Exception as e:
                 logger.error(f"バックテストデータサービスの初期化に失敗しました: {e}")
                 raise BacktestExecutionError(
@@ -125,7 +125,7 @@ class BacktestService:
 
             try:
                 self._orchestrator = BacktestOrchestrator(self.data_service)
-                logger.info("バックテストオーケストレーターを初期化しました")
+                logger.debug("バックテストオーケストレーターを初期化しました")
             except Exception as e:
                 logger.error(
                     f"バックテストオーケストレーターの初期化に失敗しました: {e}"
@@ -156,7 +156,7 @@ class BacktestService:
                 pass
             finally:
                 self._db_session = None
-            logger.info("DBセッションをクリーンアップしました")
+            logger.debug("DBセッションをクリーンアップしました")
 
         self.data_service = None
         self._orchestrator = None

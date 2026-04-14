@@ -368,4 +368,86 @@ class TestParseArgs:
         assert args.no_parallel is True
 
 
+class TestRunAutoStrategyExecution:
+    """run_auto_strategy実行経路のテスト"""
+
+    def test_no_save_skips_detailed_backtest_save(self):
+        """no_save時に詳細バックテスト保存を呼ばないこと"""
+        import scripts.run_auto_strategy as run_auto_strategy
+        from app.services.auto_strategy.genes.strategy import StrategyGene
+
+        class DummyBacktestService:
+            instances = []
+
+            def __init__(self):
+                self.run_backtest_calls = []
+                self.cleaned = False
+                DummyBacktestService.instances.append(self)
+
+            def run_backtest(self, config):
+                self.run_backtest_calls.append(config)
+                return {"success": True, "trade_history": [], "equity_curve": []}
+
+            def cleanup(self):
+                self.cleaned = True
+
+        class DummyGeneGenerator:
+            def __init__(self, config):
+                self.config = config
+
+        class DummyEngine:
+            def __init__(self, backtest_service, gene_generator, hybrid_mode=False, **_):
+                self.backtest_service = backtest_service
+                self.gene_generator = gene_generator
+                self.hybrid_mode = hybrid_mode
+
+            def run_evolution(self, config, backtest_config, progress_callback=None):
+                return {
+                    "best_strategy": StrategyGene(),
+                    "best_fitness": 1.23,
+                    "execution_time": 0.01,
+                    "generations_completed": 1,
+                    "final_population_size": config.population_size,
+                }
+
+        class DummySerializer:
+            def strategy_gene_to_dict(self, gene):
+                return {
+                    "name": "Dummy",
+                    "indicators": [],
+                    "long_entry_conditions": [],
+                    "short_entry_conditions": [],
+                    "risk_management": {},
+                }
+
+        args = Namespace(
+            population=2,
+            generations=1,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=1,
+            no_parallel=True,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            min_trades=0,
+            symbol="BTC/USDT:USDT",
+            timeframe="4h",
+            initial_capital=100000.0,
+            output=None,
+            no_save=True,
+        )
+
+        with patch.object(run_auto_strategy, "BacktestService", DummyBacktestService), patch.object(
+            run_auto_strategy, "RandomGeneGenerator", DummyGeneGenerator
+        ), patch.object(run_auto_strategy, "GeneticAlgorithmEngine", DummyEngine), patch.object(
+            run_auto_strategy, "GeneSerializer", DummySerializer
+        ), patch("builtins.open", create=True), patch.object(
+            run_auto_strategy.Path, "mkdir", return_value=None
+        ):
+            result = run_auto_strategy.run_auto_strategy(args)
+
+        assert result["success"] is True
+        assert DummyBacktestService.instances[0].run_backtest_calls == []
+
 

@@ -1,3 +1,4 @@
+import logging
 import pytest
 from unittest.mock import MagicMock, call
 import pandas as pd
@@ -123,6 +124,32 @@ class TestOrderManagerEnhancement:
         assert strategy.runtime_state.sl_price == 90.0
         assert strategy.runtime_state.tp_price == 110.0
         assert strategy.runtime_state.position_direction == 1.0
+
+    def test_execute_filled_order_updates_runtime_state_without_immediate_position(
+        self, manager, strategy, caplog
+    ):
+        strategy.runtime_state = StrategyRuntimeState()
+        strategy.position = None
+
+        order = MagicMock(spec=PendingOrder)
+        order.is_long = True
+        order.size = 1.0
+        order.sl_price = 90.0
+        order.tp_price = 110.0
+        order.direction = 1.0
+
+        with caplog.at_level(logging.WARNING):
+            manager._execute_filled_order(order, fill_price=101.0)
+
+        strategy.buy.assert_called_once_with(size=1.0)
+        assert strategy.runtime_state.entry_price == 101.0
+        assert strategy.runtime_state.sl_price == 90.0
+        assert strategy.runtime_state.tp_price == 110.0
+        assert strategy.runtime_state.position_direction == 1.0
+        assert not any(
+            "ポジションが開かれていません" in record.message
+            for record in caplog.records
+        )
 
     def test_check_pending_order_fills_not_filled(
         self, manager, simulator, minute_data

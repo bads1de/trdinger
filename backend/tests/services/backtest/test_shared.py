@@ -4,14 +4,16 @@ backtest/shared.py のテスト
 app/services/backtest/shared.py のテストモジュール
 """
 
-import pytest
+from datetime import datetime, timedelta
+
 import pandas as pd
-from datetime import datetime
+import pytest
 from unittest.mock import MagicMock
 
 from app.services.backtest.shared import (
     resolve_stats_object,
     safe_float_conversion,
+    safe_duration_conversion,
     safe_int_conversion,
     parse_datetime_value,
     safe_timestamp_conversion,
@@ -121,6 +123,24 @@ class TestSafeIntConversion:
         """無効な文字列"""
         result = safe_int_conversion("invalid")
         assert result == 0
+
+
+class TestSafeDurationConversion:
+    """safe_duration_conversion 関数のテスト"""
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            (pd.Timedelta(days=2, hours=12), 2.5),
+            (timedelta(days=1, hours=6), 1.25),
+            ("3 days 12:00:00", 3.5),
+            ("2.5", 2.5),
+        ],
+    )
+    def test_safe_duration_conversion_valid(self, value, expected, caplog):
+        result = safe_duration_conversion(value)
+        assert result == pytest.approx(expected)
+        assert caplog.records == []
 
 
 class TestParseDatetimeValue:

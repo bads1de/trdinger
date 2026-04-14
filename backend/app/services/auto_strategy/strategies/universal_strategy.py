@@ -60,6 +60,16 @@ class UniversalStrategy(Strategy):
     volatility_model_path = None
     early_termination_settings = None
 
+    # backtesting.py のパラメータ要件を満たすためのクラス変数
+    enable_early_termination = False
+    early_termination_max_drawdown = None
+    early_termination_min_trades = None
+    early_termination_min_trade_check_progress = 0.5
+    early_termination_trade_pace_tolerance = 0.5
+    early_termination_min_expectancy = None
+    early_termination_expectancy_min_trades = 5
+    early_termination_expectancy_progress = 0.6
+
     @property
     def _sl_price(self) -> float | None:
         """ストップロス価格を取得する。"""
