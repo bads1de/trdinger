@@ -93,6 +93,10 @@ class ExperimentApplicationService:
         """実験一覧を取得する。"""
         return self.persistence_service.list_experiments()
 
+    def get_experiment_detail(self, experiment_id: str):
+        """実験詳細を取得する。"""
+        return self.persistence_service.get_experiment_detail(experiment_id)
+
     def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
         """実験停止結果を API 向け形式で返す。"""
         if not self.experiment_manager:

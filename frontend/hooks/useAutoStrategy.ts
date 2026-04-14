@@ -5,10 +5,24 @@
  * 戦略生成の実行、モーダル表示、設定検証などの機能を統合的に管理します。
  */
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import { GAConfig } from "@/types/optimization";
 import { BACKEND_API_URL } from "@/constants";
+
+/** 実験進捗情報の型 */
+export interface ExperimentProgress {
+  id: number;
+  experiment_id: string | null;
+  name: string | null;
+  status: string | null;
+  progress: number | null;
+  current_generation: number | null;
+  total_generations: number | null;
+  best_fitness: number | null;
+  created_at: string | null;
+  completed_at: string | null;
+}
 
 /**
  * オートストラテジーフック
@@ -43,9 +57,103 @@ import { BACKEND_API_URL } from "@/constants";
  */
 export const useAutoStrategy = (loadResults: () => void) => {
   const [showAutoStrategyModal, setShowAutoStrategyModal] = useState(false);
+  const [runningExperiments, setRunningExperiments] = useState<
+    Map<string, ExperimentProgress>
+  >(new Map());
 
   const { execute: runAutoStrategy, loading: autoStrategyLoading } =
     useApiCall();
+
+  // 実行中実験のポーリング（5秒間隔）
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchExperimentProgress = useCallback(
+    async (experimentId: string) => {
+      try {
+        const response = await fetch(
+          `${BACKEND_API_URL}/api/auto-strategy/experiments/${experimentId}`,
+        );
+        if (!response.ok) {
+          if (response.status === 404) {
+            // 実験が見つからない場合はポーリング対象から外す
+            setRunningExperiments((prev) => {
+              const next = new Map(prev);
+              next.delete(experimentId);
+              return next;
+            });
+          }
+          return;
+        }
+        const data: ExperimentProgress = await response.json();
+        setRunningExperiments((prev) => {
+          const next = new Map(prev);
+          next.set(experimentId, data);
+          return next;
+        });
+        // 完了または失敗したらポーリング停止
+        if (data.status === "completed" || data.status === "failed") {
+          setRunningExperiments((prev) => {
+            const next = new Map(prev);
+            next.delete(experimentId);
+            return next;
+          });
+          loadResults();
+        }
+      } catch (error) {
+        console.error("進捗取得エラー:", error);
+      }
+    },
+    [loadResults],
+  );
+
+  // ポーリングタイマーの管理
+  useEffect(() => {
+    if (runningExperiments.size === 0) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    if (!pollingIntervalRef.current) {
+      pollingIntervalRef.current = setInterval(() => {
+        runningExperiments.forEach((_, id) => {
+          fetchExperimentProgress(id);
+        });
+      }, 5000);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [runningExperiments.size, fetchExperimentProgress]);
+
+  /** 実験をポーリング対象に追加 */
+  const pollExperimentProgress = useCallback(
+    (experimentId: string) => {
+      setRunningExperiments((prev) => {
+        const next = new Map(prev);
+        next.set(experimentId, {
+          id: 0,
+          experiment_id: experimentId,
+          name: null,
+          status: "running",
+          progress: 0,
+          current_generation: 0,
+          total_generations: null,
+          best_fitness: null,
+          created_at: new Date().toISOString(),
+          completed_at: null,
+        });
+        return next;
+      });
+    },
+    [],
+  );
 
   /**
    * オートストラテジー実行
@@ -124,8 +232,8 @@ export const useAutoStrategy = (loadResults: () => void) => {
           : `🚀 戦略生成を開始しました！\n\n実験ID: ${experimentId}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`;
 
         alert(message);
-        // 結果一覧を更新（GA完了後に結果が表示される）
-        loadResults();
+        // 進捗ポーリングを開始
+        pollExperimentProgress(experimentId);
       },
       onError: (error) => {
         alert(`オートストラテジーの生成に失敗しました: ${error}`);
@@ -152,5 +260,9 @@ export const useAutoStrategy = (loadResults: () => void) => {
     openAutoStrategyModal,
     /** オートストラテジーモーダルの表示状態を設定する関数 */
     setShowAutoStrategyModal,
+    /** 実行中実験の進捗情報 */
+    runningExperiments,
+    /** 実験の進捗ポーリングを開始する関数 */
+    pollExperimentProgress,
   };
 };

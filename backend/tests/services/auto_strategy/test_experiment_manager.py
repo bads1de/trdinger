@@ -111,9 +111,11 @@ class TestExperimentManager:
         expected_backtest_config = dict(backtest_config)
         expected_backtest_config["experiment_id"] = "test_exp_001"
 
-        mock_ga_engine.run_evolution.assert_called_once_with(
-            ga_config, expected_backtest_config
-        )
+        mock_ga_engine.run_evolution.assert_called_once()
+        call_args = mock_ga_engine.run_evolution.call_args
+        assert call_args[0][0] == ga_config
+        assert call_args[0][1] == expected_backtest_config
+        assert "progress_callback" in call_args[1]
         self.manager.persistence_service.save_experiment_result.assert_called_once_with(
             "test_exp_001",
             {

@@ -91,7 +91,59 @@ class ListExperimentsResponse(BaseModel):
     experiments: List[Dict[str, Any]]
 
 
+class ExperimentDetailResponse(BaseModel):
+    """実験詳細レスポンス"""
+    id: Optional[int] = None
+    experiment_id: Optional[str] = None
+    name: Optional[str] = None
+    status: Optional[str] = None
+    progress: Optional[float] = None
+    current_generation: Optional[int] = None
+    total_generations: Optional[int] = None
+    best_fitness: Optional[float] = None
+    created_at: Optional[str] = None
+    completed_at: Optional[str] = None
+
+
 # APIエンドポイント
+@router.get(
+    "/experiments/{experiment_id}",
+    response_model=ExperimentDetailResponse,
+)
+async def get_experiment_detail(
+    experiment_id: str,
+    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+):
+    """
+    実験詳細を取得
+
+    指定された実験の進捗状況（世代数、進捗率、最高フィットネス等）を取得します。
+    フロントエンドは本エンドポイントをポーリングすることでリアルタイム進捗 monitoring を実現します。
+
+    Args:
+        experiment_id: 対象実験のID
+        auto_strategy_service: 自動戦略生成サービス（依存性注入）
+
+    Returns:
+        ExperimentDetailResponse: 実験詳細情報
+
+    Raises:
+        HTTPException: 実験が見つからない場合
+    """
+    from fastapi import HTTPException
+
+    async def _get_detail():
+        detail = auto_strategy_service.get_experiment_detail(experiment_id)
+        if not detail:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"実験が見つかりません: {experiment_id}",
+            )
+        return ExperimentDetailResponse(**detail)
+
+    return await ErrorHandler.safe_execute_async(_get_detail)
+
+
 @router.post(
     "/generate",
     response_model=GAGenerationResponse,

@@ -98,6 +98,7 @@ class EvolutionRunner:
         config: Any,
         halloffame: Optional[Any] = None,
         should_stop: Optional[Callable[[], bool]] = None,
+        progress_callback: Optional[Callable[[int, int, Optional[float]], None]] = None,
     ) -> tuple[List[Any], Any]:
         """
         設定された世代数分、進化計算アルゴリズムを実行します。
@@ -113,6 +114,7 @@ class EvolutionRunner:
            - **突然変異 (Mutation)**: 確率的に遺伝子を書き換え、局所最適解からの脱出を図る。
            - **子個体の評価**: 新しく生成された個体の適応度を計算（並列実行をサポート）。
            - **エリート保存**: ホール・オブ・フェイム（殿堂）を最新の優良個体で更新。
+           - **進捗通知**: `progress_callback` で現在の世代・総世代・最高フィットネスを通知。
         3. **結果の集計**: 最終世代の集団と、全世代の統計ログを返却。
 
         Args:
@@ -120,6 +122,9 @@ class EvolutionRunner:
             config (Any): 世代数、交叉率、突然変異率等のハイパーパラメータを含む設定オブジェクト。
             halloffame (Optional[Any]): 最良個体を保持するDEAPの HallOfFame または ParetoFront オブジェクト。
             should_stop (Optional[Callable[[], bool]]): 外部から中断を指示するためのコールバック関数。
+            progress_callback (Optional[Callable[[int, int, Optional[float]], None]]):
+                各世代終了時に呼び出される進捗通知コールバック。
+                引数: (current_generation, total_generations, best_fitness)。
 
         Returns:
             tuple[List[Any], tools.Logbook]: (最終世代の個体群, 各世代の統計情報を含むログブック)。
@@ -209,6 +214,15 @@ class EvolutionRunner:
                 # Hall of Fame / Pareto Front の更新
                 if halloffame is not None:
                     halloffame.update(population)
+
+                # 進捗通知
+                if progress_callback:
+                    best_fitness = record.get("max")
+                    if isinstance(best_fitness, (list, tuple, np.ndarray)):
+                        best_fitness = float(best_fitness[0])
+                    else:
+                        best_fitness = float(best_fitness) if best_fitness is not None else None
+                    progress_callback(gen, config.generations, best_fitness)
             finally:
                 # ループ終了時にGCを有効化（エラー時も含む）
                 gc.enable()

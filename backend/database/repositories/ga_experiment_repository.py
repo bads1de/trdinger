@@ -221,6 +221,54 @@ class GAExperimentRepository(BaseRepository):
 
         return _complete_experiment()
 
+    def update_progress(
+        self,
+        experiment_id: int,
+        current_generation: int,
+        total_generations: int,
+        best_fitness: Optional[float] = None,
+        status: Optional[str] = None,
+    ) -> bool:
+        """
+        実験の進捗状況を更新する
+
+        Args:
+            experiment_id: 実験ID
+            current_generation: 現在の世代
+            total_generations: 総世代数
+            best_fitness: 現在の最高フィットネス（オプション）
+            status: ステータス（オプション）
+
+        Returns:
+            更新処理成功フラグ
+        """
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="実験進捗更新", is_api_call=False, default_return=False)
+        def _update_progress():
+            experiment = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.id == experiment_id)
+                .first()
+            )
+
+            if not experiment:
+                logger.warning(f"指定されたIDの実験が見つかりません: {experiment_id}")
+                return False
+
+            experiment.current_generation = current_generation  # type: ignore
+            experiment.progress = (current_generation + 1) / total_generations  # type: ignore
+
+            if best_fitness is not None:
+                experiment.best_fitness = best_fitness  # type: ignore
+            if status is not None:
+                experiment.status = status  # type: ignore
+
+            self.db.commit()
+            return True
+
+        return _update_progress()
+
     def delete_all_experiments(self) -> int:
         """
         すべてのGA実験を削除

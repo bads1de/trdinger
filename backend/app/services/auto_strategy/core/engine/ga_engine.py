@@ -10,7 +10,7 @@ import logging
 import threading
 import time
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 
 from ..evaluation.evaluation_fidelity import (
@@ -160,7 +160,10 @@ class GeneticAlgorithmEngine:
         logger.info("DEAP環境のセットアップ完了")
 
     def run_evolution(
-        self, config: GAConfig, backtest_config: Dict[str, Any]
+        self,
+        config: GAConfig,
+        backtest_config: Dict[str, Any],
+        progress_callback: Optional[Callable[[int, int, Optional[float]], None]] = None,
     ) -> Dict[str, Any]:
         """
         進化計算プロセスを開始し、最適な取引戦略を探索します。
@@ -295,7 +298,7 @@ class GeneticAlgorithmEngine:
 
                 # 最適化アルゴリズムの実行
                 population, logbook, halloffame = self._run_optimization(
-                    runner, population, config
+                    runner, population, config, progress_callback=progress_callback
                 )
 
                 self._raise_if_stop_requested("最適化後")
@@ -445,13 +448,20 @@ class GeneticAlgorithmEngine:
             self.individual_evaluator,
         )
 
-    def _run_optimization(self, runner: EvolutionRunner, population, config: GAConfig):
+    def _run_optimization(
+        self,
+        runner: EvolutionRunner,
+        population,
+        config: GAConfig,
+        progress_callback: Optional[Callable[[int, int, Optional[float]], None]] = None,
+    ):
         """独立したEvolutionRunnerを使用して最適化アルゴリズムを実行します。
 
         Args:
             runner (EvolutionRunner): EvolutionRunnerインスタンス。
             population: 初期個体群。
             config (GAConfig): GA設定。
+            progress_callback: 進捗通知コールバック（オプション）。
 
         Returns:
             tuple: 最適化後の個体群、ログブック、殿堂入りオブジェクト。
@@ -468,6 +478,7 @@ class GeneticAlgorithmEngine:
             config,
             halloffame,
             should_stop=self._stop_event.is_set,
+            progress_callback=progress_callback,
         )
 
         return population, logbook, halloffame

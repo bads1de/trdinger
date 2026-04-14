@@ -35,6 +35,7 @@ import MLOverviewDashboard from "@/components/ml/MLOverviewDashboard";
 
 import { useBacktestResults } from "@/hooks/useBacktestResults";
 import { useAutoStrategy } from "@/hooks/useAutoStrategy";
+import { ExperimentProgressList } from "@/components/common/ExperimentProgress";
 import { BacktestResult } from "@/types/backtest";
 
 type BacktestTab = "backtest" | "ml";
@@ -189,6 +190,7 @@ function BacktestPageContent() {
     handleAutoStrategy,
     openAutoStrategyModal,
     setShowAutoStrategyModal,
+    runningExperiments,
   } = useAutoStrategy(loadResults);
 
   const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
@@ -260,6 +262,11 @@ function BacktestPageContent() {
               </div>
             )}
           </div>
+
+          {/* 実行中の実験進捗 */}
+          {runningExperiments.size > 0 && (
+            <ExperimentProgressList experiments={runningExperiments} />
+          )}
 
           <div className="flex gap-2">
             <TabButton

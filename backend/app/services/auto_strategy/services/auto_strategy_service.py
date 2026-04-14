@@ -252,6 +252,30 @@ class AutoStrategyService:
 
         return _list_experiments()
 
+    def get_experiment_detail(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        """
+        実験詳細を取得（進捗情報を含む）
+
+        Args:
+            experiment_id: 実験ID
+
+        Returns:
+            実験詳細情報、存在しない場合はNone
+        """
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="実験詳細取得", is_api_call=False, default_return=None
+        )
+        def _get_experiment_detail():
+            if not self.experiment_application_service:
+                return None
+            return self.experiment_application_service.get_experiment_detail(
+                experiment_id
+            )
+
+        return _get_experiment_detail()
+
     def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
         """
         実験を停止

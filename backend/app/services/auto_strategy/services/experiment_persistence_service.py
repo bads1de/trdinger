@@ -253,6 +253,26 @@ class ExperimentPersistenceService:
                 repo = GAExperimentRepository(db)
                 repo.update_experiment_status(experiment_info["db_id"], "stopped")
 
+    def update_experiment_progress(
+        self,
+        experiment_id: str,
+        current_generation: int,
+        total_generations: int,
+        best_fitness: Optional[float] = None,
+    ) -> bool:
+        """実験の進捗状況を更新する"""
+        experiment_info = self.get_experiment_info(experiment_id)
+        if not experiment_info:
+            return False
+        with self.db_session_factory() as db:
+            repo = GAExperimentRepository(db)
+            return repo.update_progress(
+                experiment_info["db_id"],
+                current_generation,
+                total_generations,
+                best_fitness,
+            )
+
     def list_experiments(self) -> List[Dict[str, Any]]:
         """実験一覧を取得"""
         with self.db_session_factory() as db:
@@ -263,6 +283,10 @@ class ExperimentPersistenceService:
                     "id": exp.id,
                     "experiment_name": exp.name,
                     "status": exp.status,
+                    "progress": exp.progress,
+                    "current_generation": exp.current_generation,
+                    "total_generations": exp.total_generations,
+                    "best_fitness": exp.best_fitness,
                     "created_at": (
                         exp.created_at.isoformat()
                         if exp.created_at is not None
@@ -276,6 +300,32 @@ class ExperimentPersistenceService:
                 }
                 for exp in experiments
             ]
+
+    def get_experiment_detail(self, experiment_id: str) -> Optional[Dict[str, Any]]:
+        """実験詳細を取得（進捗情報を含む）"""
+        with self.db_session_factory() as db:
+            repo = GAExperimentRepository(db)
+            exp = repo.get_by_experiment_id(experiment_id)
+            if not exp:
+                return None
+            return {
+                "id": exp.id,
+                "experiment_id": exp.experiment_id,
+                "name": exp.name,
+                "status": exp.status,
+                "progress": exp.progress,
+                "current_generation": exp.current_generation,
+                "total_generations": exp.total_generations,
+                "best_fitness": exp.best_fitness,
+                "created_at": (
+                    exp.created_at.isoformat() if exp.created_at is not None else None
+                ),
+                "completed_at": (
+                    exp.completed_at.isoformat()
+                    if exp.completed_at is not None
+                    else None
+                ),
+            }
 
     def get_experiment_info(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """実験情報を取得（experiment_idカラムによる高速検索）。"""

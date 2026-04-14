@@ -59,6 +59,21 @@ class ExperimentManager:
         """
         from app.utils.error_handler import safe_operation
 
+        # 進捗コールバックを定義
+        def progress_callback(
+            current_generation: int, total_generations: int, best_fitness: Optional[float]
+        ):
+            """各世代終了時に進捗をDBに更新する。"""
+            try:
+                self.persistence_service.update_experiment_progress(
+                    experiment_id,
+                    current_generation,
+                    total_generations,
+                    best_fitness,
+                )
+            except Exception as e:
+                logger.debug(f"進捗更新に失敗しました（世代 {current_generation}）: {e}")
+
         @safe_operation(context=f"GA実験実行 ({experiment_id})", is_api_call=False)
         def _execute():
             engine = self._get_active_engine(experiment_id)
@@ -71,8 +86,10 @@ class ExperimentManager:
             try:
                 logger.info(f"GA実行開始: {experiment_id}")
 
-                # GA実行
-                result = engine.run_evolution(ga_config, run_backtest_config)
+                # GA実行（進捗コールバック付き）
+                result = engine.run_evolution(
+                    ga_config, run_backtest_config, progress_callback=progress_callback
+                )
 
                 if engine.is_stop_requested() is True:
                     logger.info(
