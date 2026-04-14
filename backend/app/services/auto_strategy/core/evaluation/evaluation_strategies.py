@@ -18,7 +18,7 @@ from app.services.auto_strategy.config.helpers import (
 )
 from app.utils.datetime_utils import parse_datetime_range_optional
 
-from .evaluation_report import EvaluationReport, ScenarioEvaluation
+from .evaluation_report import EvaluationReport, ScenarioEvaluation, _safe_copy_metadata, _DATETIME_FORMAT
 
 if TYPE_CHECKING:
     from .individual_evaluator import IndividualEvaluator
@@ -395,7 +395,7 @@ class EvaluationStrategy:
                 name=scenario_name,
                 fitness=tuple(float(value) for value in fitness),
                 passed=True,
-                metadata=metadata.copy() if metadata else {},
+                metadata=_safe_copy_metadata(metadata),
             )
 
         raise AttributeError(
@@ -425,9 +425,9 @@ class EvaluationStrategy:
                 train_duration = total_duration * (1.0 - oos_ratio)
                 split_date = start_date + train_duration
 
-                start_str = start_date.strftime("%Y-%m-%d %H:%M:%S")
-                split_str = split_date.strftime("%Y-%m-%d %H:%M:%S")
-                end_str = end_date.strftime("%Y-%m-%d %H:%M:%S")
+                start_str = start_date.strftime(_DATETIME_FORMAT)
+                split_str = split_date.strftime(_DATETIME_FORMAT)
+                end_str = end_date.strftime(_DATETIME_FORMAT)
                 self._date_cache[cache_key] = (start_str, split_str, end_str)
 
             is_config = base_backtest_config.copy()
@@ -443,7 +443,7 @@ class EvaluationStrategy:
                 logger.debug("タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s", e)
                 bar_offset = pd.Timedelta(hours=1)
             oos_start = pd.Timestamp(split_str) + bar_offset
-            oos_config["start_date"] = oos_start.strftime("%Y-%m-%d %H:%M:%S")
+            oos_config["start_date"] = oos_start.strftime(_DATETIME_FORMAT)
             oos_config["end_date"] = end_str
 
             with ThreadPoolExecutor(max_workers=2) as executor:
@@ -624,8 +624,8 @@ class EvaluationStrategy:
                 continue
 
             test_config = base_backtest_config.copy()
-            test_config["start_date"] = test_start.strftime("%Y-%m-%d %H:%M:%S")
-            test_config["end_date"] = test_end.strftime("%Y-%m-%d %H:%M:%S")
+            test_config["start_date"] = test_start.strftime(_DATETIME_FORMAT)
+            test_config["end_date"] = test_end.strftime(_DATETIME_FORMAT)
             fold_configs.append((fold_idx, test_config))
 
         return fold_configs
@@ -759,9 +759,9 @@ class EvaluationStrategy:
 
             test_config = base_backtest_config.copy()
             test_config["start_date"] = effective_test_start.strftime(
-                "%Y-%m-%d %H:%M:%S"
+                _DATETIME_FORMAT
             )
-            test_config["end_date"] = effective_test_end.strftime("%Y-%m-%d %H:%M:%S")
+            test_config["end_date"] = effective_test_end.strftime(_DATETIME_FORMAT)
             fold_configs.append((fold_idx, test_config))
             current_start = effective_test_end + embargo_duration
 

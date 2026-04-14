@@ -14,6 +14,8 @@ import pandas as pd
 from app.services.auto_strategy.config.ga import GAConfig
 from app.utils.datetime_utils import parse_datetime_range_optional
 
+from .evaluation_report import _DATETIME_FORMAT
+
 
 def is_coarse_fidelity(config: Any) -> bool:
     """設定が coarse fidelity かを返す。"""
@@ -167,5 +169,5 @@ def _format_timestamp_like_input(value: pd.Timestamp, source: object) -> object:
     if isinstance(source, str):
         if "T" in source:
             return value.isoformat(sep="T")
-        return value.strftime("%Y-%m-%d %H:%M:%S")
+        return value.strftime(_DATETIME_FORMAT)
     return value.to_pydatetime()

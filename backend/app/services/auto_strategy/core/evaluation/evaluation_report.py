@@ -13,6 +13,12 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from app.services.auto_strategy.config import objective_registry
 
 _ROBUST_WORST_CASE_WEIGHT = 0.3
+_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _safe_copy_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """メタデータのコピーを安全に作成する。"""
+    return metadata.copy() if metadata else {}
 
 
 @dataclass(frozen=True)
@@ -93,7 +99,7 @@ class EvaluationReport:
             aggregated_fitness=tuple(float(value) for value in scenario.fitness),
             scenarios=[scenario],
             aggregate_method="single",
-            metadata=metadata.copy() if metadata else {},
+            metadata=_safe_copy_metadata(metadata),
         )
         report.metadata.setdefault("pass_rate", report.pass_rate)
         report.metadata.setdefault("scenario_count", 1)
@@ -140,7 +146,7 @@ class EvaluationReport:
                 aggregated_fitness=tuple(),
                 scenarios=[],
                 aggregate_method=aggregate_method,
-                metadata=metadata.copy() if metadata else {},
+                metadata=_safe_copy_metadata(metadata),
             )
 
         aggregated_fitness = []
@@ -164,7 +170,7 @@ class EvaluationReport:
             aggregated_fitness=tuple(aggregated_fitness),
             scenarios=scenario_list,
             aggregate_method=aggregate_method,
-            metadata=metadata.copy() if metadata else {},
+            metadata=_safe_copy_metadata(metadata),
         )
         report.metadata.setdefault("pass_rate", report.pass_rate)
         report.metadata.setdefault("scenario_count", len(scenario_list))

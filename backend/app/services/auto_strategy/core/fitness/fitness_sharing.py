@@ -39,6 +39,7 @@ from .fitness_sharing_vectorizer import (
     _count_operators,
     vectorize_gene as _vectorize_gene,
 )
+from .fitness_utils import has_valid_fitness
 
 _FrozenKey = tuple | str | int | float | bool | None | bytes
 
@@ -159,7 +160,7 @@ class FitnessSharing:
 
             original_fitness: dict[int, tuple[float, ...]] = {}
             for i, individual in enumerate(population):
-                if hasattr(individual, "fitness") and individual.fitness.valid:
+                if has_valid_fitness(individual):
                     original_fitness[i] = individual.fitness.values
                     shared_fitness_values = tuple(
                         fitness_val / niche_counts[i]

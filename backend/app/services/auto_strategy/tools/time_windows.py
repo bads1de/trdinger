@@ -88,3 +88,19 @@ def mutate_window_minutes(
     delta = random.randint(delta_low, delta_high)
     params[key] = max(minimum, min(maximum, current + delta))
     return params
+
+
+def is_summer_time_by_month(timestamp: pd.Timestamp) -> bool:
+    """
+    月ベースの簡易夏時間判定（UTC timestamp用）。
+
+    3月〜11月を夏時間（DST）として扱います。
+    タイムゾーン変換に失敗した際のフォールバック判定に使用します。
+
+    Args:
+        timestamp: UTCのタイムスタンプ。
+
+    Returns:
+        夏時間期間内であればTrue。
+    """
+    return 3 <= timestamp.month <= 11

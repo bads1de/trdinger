@@ -42,7 +42,7 @@ from .evaluation_metrics import (
 )
 from .backtest_data_provider import BacktestDataProvider
 from .evaluation_fidelity import adjust_backtest_config_for_fidelity, is_coarse_fidelity
-from .evaluation_report import EvaluationReport, ScenarioEvaluation
+from .evaluation_report import EvaluationReport, ScenarioEvaluation, _safe_copy_metadata
 from .evaluation_strategies import EvaluationStrategy
 from .evaluation_window_service import EvaluationWindowService
 from .run_config_builder import RunConfigBuilder
@@ -599,7 +599,7 @@ class IndividualEvaluator(EvaluationWindowService):
                     name=scenario_name,
                     fitness=tuple(0.0 for _ in config.objectives),
                     passed=False,
-                    metadata=metadata.copy() if metadata else {},
+                    metadata=_safe_copy_metadata(metadata),
                 )
 
             # 2. データの準備
@@ -646,7 +646,7 @@ class IndividualEvaluator(EvaluationWindowService):
                 result, config, **evaluation_context
             )
             performance_metrics = self._extract_performance_metrics(result)
-            scenario_metadata = metadata.copy() if metadata else {}
+            scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata.update(
                 {
                     "start_date": str(fidelity_backtest_config.get("start_date")),
@@ -668,7 +668,7 @@ class IndividualEvaluator(EvaluationWindowService):
 
         except BacktestEarlyTerminationError as e:
             logger.info("単一評価を早期終了しました: %s", e)
-            scenario_metadata = metadata.copy() if metadata else {}
+            scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata["early_terminated"] = True
             scenario_metadata["termination_reason"] = getattr(e, "reason", str(e))
             return ScenarioEvaluation(  # type: ignore[call-arg]
@@ -680,7 +680,7 @@ class IndividualEvaluator(EvaluationWindowService):
             )
         except Exception as e:
             logger.error(f"単一評価実行エラー: {e}")
-            scenario_metadata = metadata.copy() if metadata else {}
+            scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata["error"] = str(e)
             return ScenarioEvaluation(  # type: ignore[call-arg]
                 name=scenario_name,

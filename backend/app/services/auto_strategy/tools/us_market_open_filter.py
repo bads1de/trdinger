@@ -63,11 +63,8 @@ class USMarketOpenFilter(BaseTool):
 
         except Exception as e:
             logger.debug(f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}")
-            # 変換失敗時は簡易判定（UTCベース）
-            # 冬時間Open 14:30, 夏時間Open 13:30
-            # 簡易的に月で判定
-            month = context.timestamp.month
-            is_summer = 3 <= month <= 11
+            from .time_windows import is_summer_time_by_month
+            is_summer = is_summer_time_by_month(context.timestamp)
 
             target_hour = 13 if is_summer else 14
             target_minute = 30

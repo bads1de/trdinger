@@ -54,13 +54,9 @@ class USLunchFilter(BaseTool):
 
         except Exception as e:
             logger.debug(f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}")
-            # 変換失敗時は安全側に倒してスキップしない、あるいはUTCで概算
-            # UTCでの概算（冬時間17時、夏時間16時）
+            from .time_windows import is_summer_time_by_month
+            is_summer = is_summer_time_by_month(context.timestamp)
             hour = context.timestamp.hour
-            # 簡易判定
-            # 3-11月なら夏時間と仮定
-            month = context.timestamp.month
-            is_summer = 3 <= month <= 11
 
             if is_summer:
                 return hour == 16

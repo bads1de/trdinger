@@ -11,6 +11,7 @@ from sklearn.metrics import silhouette_samples
 
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
+from .fitness_utils import has_valid_fitness
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def silhouette_based_sharing(
 
         for j, idx in enumerate(valid_indices):
             individual = population[idx]
-            if hasattr(individual, "fitness") and individual.fitness.valid:
+            if has_valid_fitness(individual):
                 silhouette_score = silhouette_vals[j]
                 normalized_silhouette = (silhouette_score + 1.0) / 2.0
                 adjustment_factor = max(0.1, 1.0 - normalized_silhouette)
