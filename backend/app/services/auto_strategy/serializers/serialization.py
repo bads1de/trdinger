@@ -21,6 +21,7 @@ from .strategy_gene_dict_codec import StrategyGeneDictCodec
 from ..genes import (
     Condition,
     EntryGene,
+    ExitGene,
     IndicatorGene,
     PositionSizingGene,
     StrategyGene,
@@ -120,8 +121,13 @@ class DictConverter:
 
         return ("repr", repr(value))
 
-    def _copy_cached_value(self, value: object) -> SerializableValue:
-        """キャッシュ内容を返却用に軽量コピーする。"""
+    def _copy_cached_value(self, value: object) -> object:
+        """
+        キャッシュ内容を返却用に軽量コピーする。
+
+        直列化済みの辞書値と、復元済みの StrategyGene オブジェクトの両方を
+        扱うため、返り値は SerializableValue に固定しない。
+        """
         if value is None or isinstance(value, (str, int, float, bool)):
             return value
 
@@ -335,12 +341,11 @@ class DictConverter:
             return exit_gene.to_dict()
         return self._safe_serialize(_serialize, error_prefix="イグジット遺伝子辞書変換")
 
-    def dict_to_exit_gene(self, data: Dict[str, Any]) -> Optional["ExitGene"]:
+    def dict_to_exit_gene(self, data: Dict[str, Any]) -> Optional[ExitGene]:
         """辞書形式からイグジット遺伝子を復元"""
         def _deserialize():
             if data is None:
                 return None
-            from ..genes import ExitGene
             return ExitGene.from_dict(data)
         return self._safe_deserialize(_deserialize, gene_class_name="イグジット遺伝子")
 

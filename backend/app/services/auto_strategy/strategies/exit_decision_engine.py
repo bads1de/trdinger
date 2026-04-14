@@ -7,7 +7,6 @@ UniversalStrategy.next() に集中していた決済の責務を分離する。
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from ..config.constants import ExitType
 from ..genes import Condition, ConditionGroup

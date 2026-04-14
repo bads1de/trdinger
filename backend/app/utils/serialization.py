@@ -32,7 +32,7 @@ def _convert_value(value: object) -> SerializableValue:
     変換ルール:
         - Enum → .value
         - datetime → .isoformat()
-        - dataclass → dataclass_to_dict()で再帰変換
+        - dataclass → 各フィールドを再帰変換
         - dict → 各値を再帰変換
         - list/tuple → 各要素を再帰変換
         - その他のオブジェクト → str()変換
@@ -48,7 +48,11 @@ def _convert_value(value: object) -> SerializableValue:
     if isinstance(value, datetime):
         return value.isoformat()
     if is_dataclass(value) and not isinstance(value, type):
-        return dataclass_to_dict(value)
+        result: dict[str, SerializableValue] = {}
+        for f in fields(cast(Any, value)):
+            field_value = getattr(value, f.name)
+            result[f.name] = _convert_value(field_value)
+        return result
     if isinstance(value, dict):
         return {k: _convert_value(v) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -78,7 +82,7 @@ def dataclass_to_dict(obj: object) -> dict[str, SerializableValue]:
         for f in fields(cast(Any, obj)):
             value = getattr(obj, f.name)
             converted = _convert_value(value)
-            result[f.name] = converted  # type: ignore[assignment]
+            result[f.name] = converted
         return result
     except Exception as e:
         logger.error(f"辞書変換エラー ({type(obj).__name__}): {e}", exc_info=True)
