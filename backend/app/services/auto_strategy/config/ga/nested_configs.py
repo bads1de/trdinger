@@ -105,11 +105,11 @@ class MutationConfig(NestedConfigMixin):
     )
     indicator_param_range: List[float] = field(
         default_factory=lambda: list(
-            GA_MUTATION_SETTINGS["indicator_param_mutation_range"]  # type: ignore[arg-type]
+            GA_MUTATION_SETTINGS["indicator_param_mutation_range"]  
         )
     )
     risk_param_range: List[float] = field(
-        default_factory=lambda: list(GA_MUTATION_SETTINGS["risk_param_mutation_range"])  # type: ignore[arg-type]
+        default_factory=lambda: list(GA_MUTATION_SETTINGS["risk_param_mutation_range"])  
     )
     indicator_add_delete_probability: float = float(
         GA_MUTATION_SETTINGS["indicator_add_delete_probability"]

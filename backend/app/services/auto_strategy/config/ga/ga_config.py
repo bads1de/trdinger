@@ -61,10 +61,7 @@ def _get_default_values_from_fields(cls: type[Any]) -> Dict[str, Any]:
     return defaults
 
 
-def _read_validation_rules(config: Any) -> Dict[str, Any]:
-    """validation_rules を辞書として安全に取得する。"""
-    rules = getattr(config, "validation_rules", {})
-    return rules if isinstance(rules, dict) else {}
+
 
 
 @dataclass
@@ -75,7 +72,7 @@ class GAConfig:
     GA実行時の canonical 設定を管理する。
     """
 
-    validation_rules: Dict[str, Any] = field(default_factory=dict)
+
 
     # 基本GA設定
     population_size: int = int(GA_DEFAULT_CONFIG["population_size"])
@@ -191,15 +188,7 @@ class GAConfig:
     # 二段階選抜用 robustness 設定
     # サブ設定: robustness_config
 
-    # 階層的GA設定（サブGA）
-    hierarchical_ga_config: Dict[str, Any] = field(
-        default_factory=lambda: {
-            "population_size": 20,
-            "generations": 10,
-            "crossover_rate": 0.8,
-            "mutation_rate": 0.2,
-        }
-    )
+
 
     # サブ設定（ネスト辞書からの復元用）
     mutation_config: MutationConfig = field(default_factory=MutationConfig)

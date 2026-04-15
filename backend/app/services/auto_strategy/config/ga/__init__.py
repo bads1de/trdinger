@@ -1,11 +1,10 @@
 """
 GA設定モジュール
 
-GAConfig、GAPresets、ConfigValidator、およびネスト設定を提供します。
+GAConfig、ConfigValidator、およびネスト設定を提供します。
 """
 
 from .ga_config import GAConfig
-from .ga_presets import GAPresets
 from .ga_validator import ConfigValidator
 from .nested_configs import (
     EarlyTerminationSettings,
@@ -19,7 +18,6 @@ from .nested_configs import (
 
 __all__ = [
     "GAConfig",
-    "GAPresets",
     "ConfigValidator",
     "EarlyTerminationSettings",
     "EvaluationConfig",

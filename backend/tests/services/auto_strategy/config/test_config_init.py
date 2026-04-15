@@ -73,16 +73,12 @@ class TestAutoStrategyConfigInitExports:
                     from app.services.auto_strategy.config import (
                         ConfigValidator,
                         GAConfig,
-                        GAPresets,
                     )
 
                     def build_config() -> GAConfig:
                         config = GAConfig.from_dict({})
                         ConfigValidator.validate(config)
                         return config
-
-                    def build_preset() -> GAConfig | None:
-                        return GAPresets.get_preset("quick_scan")
                     """
                 ),
                 encoding="utf-8",

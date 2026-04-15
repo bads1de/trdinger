@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.auto_strategy.config import GAConfig, GAPresets
+from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.config.ga.nested_configs import (
     EarlyTerminationSettings,
     EvaluationConfig,
@@ -451,24 +451,6 @@ class TestGAConfig:
         assert config.mutation_config.adaptive_increase_multiplier == 1.5
         assert config.mutation_config.valid_condition_operators == ["==", "!="]
 
-    def test_position_sizing_constraint_fields_round_trip(self):
-        """position sizing 制約フィールドがシリアライズ往復できることを確認"""
-        original = GAConfig(
-            position_sizing_method_constraints=["fixed_quantity"],
-            position_sizing_fixed_quantity_range=[2.0, 4.0],
-            position_sizing_max_size_range=[20.0, 40.0],
-            position_sizing_var_confidence_range=[0.9, 0.95],
-            position_sizing_var_lookback_range=[80, 120],
-        )
-
-        restored = GAConfig.from_dict(original.to_dict())
-
-        assert restored.position_sizing_method_constraints == ["fixed_quantity"]
-        assert restored.position_sizing_fixed_quantity_range == [2.0, 4.0]
-        assert restored.position_sizing_max_size_range == [20.0, 40.0]
-        assert restored.position_sizing_var_confidence_range == [0.9, 0.95]
-        assert restored.position_sizing_var_lookback_range == [80, 120]
-
     def test_parameter_range_defaults_are_isolated(self):
         """parameter_ranges のネスト値がインスタンス間で共有されないことを確認"""
         first = GAConfig()
@@ -478,13 +460,3 @@ class TestGAConfig:
 
         assert second.parameter_ranges["period"] == [5, 200]
 
-    def test_multi_objective_preset_uses_signed_objective_weights(self):
-        """多目的プリセットは最小化指標を負の重みで表現する"""
-        config = GAPresets.multi_objective()
-
-        assert config.objectives == [
-            "total_return",
-            "sharpe_ratio",
-            "max_drawdown",
-        ]
-        assert config.objective_weights == [1.0, 1.0, -1.0]

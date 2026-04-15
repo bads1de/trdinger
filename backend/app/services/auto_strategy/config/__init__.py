@@ -64,11 +64,10 @@ from .objective_registry import (
 )
 
 if TYPE_CHECKING:
-    from .ga import ConfigValidator, GAConfig, GAPresets
+    from .ga import ConfigValidator, GAConfig
 
 _LAZY_EXPORTS = {
     "GAConfig": ".ga",
-    "GAPresets": ".ga",
     "ConfigValidator": ".ga",
 }
 
@@ -89,7 +88,6 @@ __all__ = [
     "normalize_robustness_regime_windows",
     "validate_robustness_regime_window",
     "GAConfig",
-    "GAPresets",
     "ConfigValidator",
     "CURATED_INDICATOR_CATALOG",
     "IndicatorUniverseMode",

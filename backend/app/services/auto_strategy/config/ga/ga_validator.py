@@ -14,25 +14,12 @@ from ..helpers import validate_robustness_regime_window
 logger = logging.getLogger(__name__)
 
 
-def _read_validation_rules(config: Any) -> dict:
-    """設定オブジェクトから validation_rules 辞書を取得する。"""
-    return getattr(config, "validation_rules", {})
-
-
 class ConfigValidator:
     """GA設定バリデーター
 
     GAConfigを含む設定オブジェクトの妥当性を検証します。
-    必須項目の存在確認、値の範囲チェック、設定間の整合性検証など、
+    数値パラメータの範囲チェック、設定間の整合性検証など、
     遺伝的アルゴリズム実行前の設定検証を包括的に実施します。
-
-    主な検証項目:
-    - 必須フィールド（シンボル、時間軸、日付など）の存在確認
-    - 数値パラメータの範囲チェック（人口サイズ、世代数など）
-    - 日付の整合性（開始日 < 終了日）
-    - 評価関数の存在確認
-    - ロギング設定の妥当性
-    - GA固有の設定（突然変異率、交叉率など）の範囲検証
     """
 
     VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
@@ -42,114 +29,18 @@ class ConfigValidator:
         """
         設定オブジェクトの妥当性を検証
 
-        共通のバリデーション（必須項目、範囲チェック等）に加えて、
-        クラス固有の検証（GAConfigの進化したロジック等）を実行します。
-
         Args:
             config: 検証対象の設定インスタンス
 
         Returns:
             (妥当であればTrue, エラーメッセージのリスト) のタプル
         """
-        errors = ConfigValidator._validate_base(config)
+        errors = []
 
-        # クラスごとの追加検証
         if isinstance(config, GAConfig):
             errors.extend(ConfigValidator._validate_ga_config(config))
 
-        # 将来的に GAConfig 以外の設定検証が必要になったらここに追加
-
         return len(errors) == 0, errors
-
-    @staticmethod
-    def _validate_base(config: Any) -> List[str]:
-        """
-        validation_rules に基づいた共通検証ロジック
-
-        validation_rules に定義された必須フィールド、数値範囲、
-        およびデータ型のチェックを行います。
-
-        Args:
-            config: 検証対象の設定インスタンス
-
-        Returns:
-            エラーメッセージのリスト
-        """
-        errors = []
-        try:
-            errors.extend(ConfigValidator._validate_required_fields(config))
-            errors.extend(ConfigValidator._validate_range_rules(config))
-            errors.extend(ConfigValidator._validate_type_rules(config))
-
-        except Exception as e:
-            logger.error(f"基本検証中にエラーが発生: {e}", exc_info=True)
-            errors.append(f"検証処理エラー: {e}")
-
-        return errors
-
-    @staticmethod
-    def _validate_required_fields(config: Any) -> List[str]:
-        """
-        必須フィールドの存在確認
-
-        Args:
-            config: 検証対象の設定インスタンス
-
-        Returns:
-            エラーメッセージのリスト
-        """
-        errors = []
-        required_fields = _read_validation_rules(config).get("required_fields", [])
-        for field_name in required_fields:
-            if not hasattr(config, field_name) or not getattr(config, field_name):
-                errors.append(f"必須フィールド '{field_name}' が設定されていません")
-        return errors
-
-    @staticmethod
-    def _validate_range_rules(config: Any) -> List[str]:
-        """
-        数値範囲の検証
-
-        Args:
-            config: 検証対象の設定インスタンス
-
-        Returns:
-            エラーメッセージのリスト
-        """
-        errors = []
-        range_rules = _read_validation_rules(config).get("ranges", {})
-        for field_name, (min_val, max_val) in range_rules.items():
-            if hasattr(config, field_name):
-                value = getattr(config, field_name)
-                if isinstance(value, (int, float)) and not (
-                    min_val <= value <= max_val
-                ):
-                    errors.append(
-                        f"'{field_name}' は {min_val} から {max_val} の範囲で設定してください"
-                    )
-        return errors
-
-    @staticmethod
-    def _validate_type_rules(config: Any) -> List[str]:
-        """
-        データ型の検証
-
-        Args:
-            config: 検証対象の設定インスタンス
-
-        Returns:
-            エラーメッセージのリスト
-        """
-        errors = []
-        type_rules = _read_validation_rules(config).get("types", {})
-        for field_name, expected_type in type_rules.items():
-            if hasattr(config, field_name):
-                value = getattr(config, field_name)
-                if value is not None and not isinstance(value, expected_type):
-                    errors.append(
-                        f"'{field_name}' は {expected_type.__name__} 型である必要があります"
-                    )
-        return errors
 
     @staticmethod
     def _validate_ga_config(config: GAConfig) -> List[str]:
