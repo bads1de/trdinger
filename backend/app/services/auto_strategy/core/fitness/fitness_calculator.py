@@ -30,7 +30,7 @@ class FitnessCalculator:
     フィットネス計算を担当するクラス
 
     IndividualEvaluator から委譲を受け、パフォーマンスメトリクスの抽出、
-    単一目的・多目的フィットネスの計算、ロング・ショートバランス評価を行います。
+    スカラー/ベクトルのフィットネス計算、ロング・ショートバランス評価を行います。
     """
 
     def __init__(self) -> None:
@@ -308,7 +308,7 @@ class FitnessCalculator:
     def meets_constraints(
         self, metrics: Mapping[str, float], config: "GAConfig"
     ) -> bool:
-        """単一目的評価で使う制約判定をまとめて返す。"""
+        """評価で使う制約判定をまとめて返す。"""
         try:
             constraints = getattr(config, "fitness_constraints", {}) or {}
 

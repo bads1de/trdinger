@@ -5,6 +5,7 @@
 """
 
 from importlib import import_module
+from typing import Any
 
 from .config import (
     SUPPORTED_STRATEGIES,
@@ -13,13 +14,6 @@ from .config import (
     BacktestRunConfigValidationError,
     StrategyConfig,
 )
-from .services import BacktestDataService, BacktestService
-
-# 旧 import / monkeypatch パスの互換性を維持するため、モジュールも公開する。
-backtest_data_service = import_module(".services.backtest_data_service", __name__)
-backtest_service = import_module(".services.backtest_service", __name__)
-backtest_executor = import_module(".execution.backtest_executor", __name__)
-backtest_orchestrator = import_module(".execution.backtest_orchestrator", __name__)
 
 __all__ = [
     "BacktestConfig",
@@ -34,3 +28,22 @@ __all__ = [
     "backtest_executor",
     "backtest_orchestrator",
 ]
+
+_LAZY_EXPORTS = {
+    "BacktestDataService": ".services.backtest_data_service",
+    "BacktestService": ".services.backtest_service",
+    "backtest_data_service": ".services.backtest_data_service",
+    "backtest_service": ".services.backtest_service",
+    "backtest_executor": ".execution.backtest_executor",
+    "backtest_orchestrator": ".execution.backtest_orchestrator",
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name not in _LAZY_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    module = import_module(_LAZY_EXPORTS[name], __name__)
+    value: Any = module if name.startswith("backtest_") else getattr(module, name)
+    globals()[name] = value
+    return value

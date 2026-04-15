@@ -37,10 +37,69 @@ class ConfigValidator:
         """
         errors = []
 
+        validation_rules = getattr(config, "validation_rules", None)
+        if isinstance(validation_rules, dict):
+            errors.extend(
+                ConfigValidator._validate_generic_rules(config, validation_rules)
+            )
+
         if isinstance(config, GAConfig):
             errors.extend(ConfigValidator._validate_ga_config(config))
 
         return len(errors) == 0, errors
+
+    @staticmethod
+    def _validate_generic_rules(config: Any, rules: Any) -> List[str]:
+        """validation_rules ベースの汎用検証を行う。"""
+        errors: List[str] = []
+
+        try:
+            required_fields = rules.get("required_fields", [])
+            for field_name in required_fields:
+                try:
+                    value = getattr(config, field_name)
+                except Exception as exc:  # pragma: no cover - defensive
+                    errors.append(f"検証処理エラー: {exc}")
+                    continue
+                if value is None:
+                    errors.append(f"必須フィールド '{field_name}' が不足しています")
+
+            for field_name, value_range in rules.get("ranges", {}).items():
+                try:
+                    value = getattr(config, field_name)
+                except Exception as exc:  # pragma: no cover - defensive
+                    errors.append(f"検証処理エラー: {exc}")
+                    continue
+
+                if not isinstance(value_range, (list, tuple)) or len(value_range) != 2:
+                    errors.append(
+                        f"フィールド '{field_name}' の範囲設定は [min, max] の形式である必要があります"
+                    )
+                    continue
+
+                min_v, max_v = value_range
+                if not isinstance(value, (int, float)):
+                    errors.append(f"'{field_name}' は数値である必要があります")
+                    continue
+                if not (min_v <= value <= max_v):
+                    errors.append(
+                        f"'{field_name}' は {min_v} から {max_v} の範囲である必要があります"
+                    )
+
+            for field_name, expected_type in rules.get("types", {}).items():
+                try:
+                    value = getattr(config, field_name)
+                except Exception as exc:  # pragma: no cover - defensive
+                    errors.append(f"検証処理エラー: {exc}")
+                    continue
+
+                if not isinstance(value, expected_type):
+                    type_name = getattr(expected_type, "__name__", str(expected_type))
+                    errors.append(f"'{field_name}' は {type_name} 型である必要があります")
+        except Exception as exc:  # pragma: no cover - defensive
+            errors.append(f"検証処理エラー: {exc}")
+
+        return errors
 
     @staticmethod
     def _validate_ga_config(config: GAConfig) -> List[str]:
@@ -197,14 +256,6 @@ class ConfigValidator:
         missing_metrics = required_metrics - set(fitness_weights.keys())
         if missing_metrics:
             errors.append(f"必要なメトリクスが不足しています: {missing_metrics}")
-
-        if (
-            not isinstance(config.primary_metric, str)
-            or config.primary_metric not in fitness_weights
-        ):
-            errors.append(
-                f"プライマリメトリクス '{config.primary_metric}' がフィットネス重みに含まれていません"
-            )
 
         if "prediction_score" in fitness_weights:
             errors.append(

@@ -41,7 +41,6 @@ class TestConfigValidator:
             "max_drawdown": 0.2,
             "win_rate": 0.1,
         }
-        config.primary_metric = "total_return"
         config.objectives = ["weighted_score"]
         config.objective_weights = [1.0]
         config.max_indicators = 5
@@ -170,24 +169,19 @@ class TestConfigValidator:
         assert any("フィットネス重みの合計は1.0" in e for e in errors)
         assert any("必要なメトリクスが不足" in e for e in errors)
 
-        # primary_metricが含まれていない
+        # 追加の制約が無い場合は、必須メトリクスと重みが揃っていれば有効
         ga_config.fitness_weights = {
             "total_return": 0.4,
             "sharpe_ratio": 0.3,
             "max_drawdown": 0.2,
             "win_rate": 0.1,
         }
-        ga_config.primary_metric = "not_in_weights"
         is_valid, errors = ConfigValidator.validate(ga_config)
-        assert is_valid is False
-        assert any(
-            "プライマリメトリクス 'not_in_weights' がフィットネス重みに" in e
-            for e in errors
-        )
+        assert is_valid is True
+        assert len(errors) == 0
 
     def test_validate_ga_config_objective_weights_length(self, ga_config):
         """多目的最適化では objectives と objective_weights の数を一致させる"""
-        ga_config.enable_multi_objective = True
         ga_config.objectives = ["total_return", "max_drawdown"]
         ga_config.objective_weights = [1.0]
 

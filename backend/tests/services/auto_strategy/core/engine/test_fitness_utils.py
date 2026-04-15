@@ -21,8 +21,13 @@ def test_extract_primary_fitness_from_result_handles_scalar_and_tuple():
     assert extract_primary_fitness_from_result(None) == 0.0
 
 
-def test_extract_result_fitness_supports_single_and_multi_objective():
+def test_extract_result_fitness_returns_scalar_for_single_objective():
+    best = SimpleNamespace(fitness=SimpleNamespace(values=(3.0,)))
+
+    assert extract_result_fitness(best) == 3.0
+
+
+def test_extract_result_fitness_returns_tuple_for_multi_objective():
     best = SimpleNamespace(fitness=SimpleNamespace(values=(3.0, -0.4)))
 
-    assert extract_result_fitness(best, enable_multi_objective=False) == 3.0
-    assert extract_result_fitness(best, enable_multi_objective=True) == (3.0, -0.4)
+    assert extract_result_fitness(best) == (3.0, -0.4)

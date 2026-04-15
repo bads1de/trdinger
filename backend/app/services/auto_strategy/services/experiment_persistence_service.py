@@ -130,7 +130,7 @@ class ExperimentPersistenceService:
             )
             self._save_other_strategies(db, experiment_info, result, ga_config)
 
-            if ga_config.enable_multi_objective and "pareto_front" in result:
+            if "pareto_front" in result:
                 self._save_pareto_front(db, experiment_info, result, ga_config)
 
         logger.info(f"実験結果保存完了: {experiment_id}")
@@ -163,7 +163,7 @@ class ExperimentPersistenceService:
         evaluation_summary = result.get("best_evaluation_summary")
 
         # フィットネス値の整理
-        if ga_config.enable_multi_objective and isinstance(best_fitness, (list, tuple)):
+        if isinstance(best_fitness, (list, tuple)):
             fitness_values = list(best_fitness)
             fitness_score = best_fitness[0] if best_fitness else 0.0
         else:

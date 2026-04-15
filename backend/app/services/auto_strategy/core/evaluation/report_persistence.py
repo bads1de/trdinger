@@ -34,6 +34,21 @@ def build_report_summary(
             "worst_case": float(selection_score[2]),
             "aggregated": float(selection_score[3]),
         }
+        if len(selection_score) > 4:
+            extra_components = []
+            for index in range(4, len(selection_score), 2):
+                if index + 1 >= len(selection_score):
+                    break
+                extra_components.append(
+                    {
+                        "worst_case": float(selection_score[index]),
+                        "aggregated": float(selection_score[index + 1]),
+                    }
+                )
+            if extra_components:
+                summary["selection_components"]["objective_components"] = (
+                    extra_components
+                )
 
     if fitness_score is not None:
         numeric_fitness = float(fitness_score)

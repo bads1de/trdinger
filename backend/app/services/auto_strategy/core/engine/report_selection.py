@@ -39,7 +39,6 @@ def get_two_stage_elite_count(config: Any, population_size: int) -> int:
     two_stage_config = getattr(config, "two_stage_selection_config", None)
     if (
         population_size <= 0
-        or getattr(config, "enable_multi_objective", False)
         or not getattr(two_stage_config, "enabled", True)
     ):
         return 0
@@ -95,8 +94,8 @@ def build_report_rank_key(
     individual: Any,
     report: Optional[EvaluationReport],
     min_pass_rate: float = 0.0,
-) -> Tuple[float, float, float, float]:
-    """report を利用した単一目的向けの再ランクキーを構築する。
+) -> Tuple[float, ...]:
+    """report を利用した再ランクキーを構築する。
 
     評価レポートの合格率と個体のフィットネス値を組み合わせて、
     二段階選抜用のソートキーを生成します。
@@ -107,7 +106,7 @@ def build_report_rank_key(
         min_pass_rate: 最低合格率。これ未満の個体はソートで不利になる。
 
     Returns:
-        Tuple[float, float, float, float]: 再ランク用のソートキータプル。
+        Tuple[float, ...]: 再ランク用のソートキータプル。
             値が小さいほど上位に来る（ソート昇順で上位）。
     """
     base_fitness = extract_primary_fitness(individual)
@@ -122,11 +121,12 @@ def build_report_rank_key_from_primary_fitness(
     primary_fitness: float,
     report: Optional[EvaluationReport],
     min_pass_rate: float = 0.0,
-) -> Tuple[float, float, float, float]:
+) -> Tuple[float, ...]:
     """主fitness値とreportから再ランクキーを構築する。
 
     評価レポートの合格率、ワーストケーススコア、集約フィットネスなどを
     組み合わせて、二段階選抜用のソートキーを生成します。
+    多目的の場合は目的関数の順にスコアを連結した可変長タプルを返します。
 
     Args:
         primary_fitness: 個体の主フィットネス値。
@@ -134,8 +134,9 @@ def build_report_rank_key_from_primary_fitness(
         min_pass_rate: 最低合格率。
 
     Returns:
-        Tuple[float, float, float, float]: 再ランク用のソートキータプル。
-            (pass_gate, pass_rate, worst_case, aggregated)の順で、
+        Tuple[float, ...]: 再ランク用のソートキータプル。
+            単一目的では (pass_gate, pass_rate, worst_case, aggregated) の順、
+            多目的では (pass_gate, pass_rate, worst_case_1, aggregated_1, ...) の順で、
             値が小さいほど上位に来る。
     """
     base_fitness = float(primary_fitness)
@@ -143,30 +144,49 @@ def build_report_rank_key_from_primary_fitness(
     if not report or not report.aggregated_fitness:
         return (0.0, 0.0, base_fitness, base_fitness)
 
-    objective = report.objectives[0] if report.objectives else ""
-    scenario_values = [
-        objective_registry.to_selection_space(float(scenario.fitness[0]), objective)
-        for scenario in report.scenarios
-        if scenario.fitness
-    ]
-    aggregated = objective_registry.to_selection_space(
-        float(report.aggregated_fitness[0]),
-        objective,
-    )
-    worst_case = min(scenario_values) if scenario_values else aggregated
     pass_rate = float(report.pass_rate)
     pass_gate = 1.0 if pass_rate >= float(min_pass_rate) else 0.0
 
-    return (
-        pass_gate,
-        pass_rate,
-        worst_case,
-        aggregated,
-    )
+    objective_count = len(report.aggregated_fitness)
+    if objective_count <= 1:
+        objective = report.objectives[0] if report.objectives else ""
+        scenario_values = [
+            objective_registry.to_selection_space(float(scenario.fitness[0]), objective)
+            for scenario in report.scenarios
+            if scenario.fitness
+        ]
+        aggregated = objective_registry.to_selection_space(
+            float(report.aggregated_fitness[0]),
+            objective,
+        )
+        worst_case = min(scenario_values) if scenario_values else aggregated
+        return (
+            pass_gate,
+            pass_rate,
+            worst_case,
+            aggregated,
+        )
+
+    rank_components: list[float] = [pass_gate, pass_rate]
+    for index in range(objective_count):
+        objective = report.objectives[index] if index < len(report.objectives) else ""
+        scenario_values = [
+            objective_registry.to_selection_space(float(scenario.fitness[index]), objective)
+            for scenario in report.scenarios
+            if scenario.fitness and len(scenario.fitness) > index
+        ]
+        aggregated = objective_registry.to_selection_space(
+            float(report.aggregated_fitness[index]),
+            objective,
+        )
+        worst_case = min(scenario_values) if scenario_values else aggregated
+        rank_components.extend((worst_case, aggregated))
+
+    return tuple(rank_components)
 
 
 def extract_primary_fitness(individual: Any) -> float:
-    """個体から単一目的の主 fitness を取り出す。"""
+    """個体から主 fitness を取り出す。"""
     return _extract_individual_primary_fitness(individual)
 
 

@@ -117,7 +117,6 @@ describe("GAConfigForm", () => {
     expect(mockOnSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         ga_config: expect.objectContaining({
-          enable_multi_objective: false,
           objectives: ["total_return"],
           objective_weights: [1.0],
         }),

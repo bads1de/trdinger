@@ -94,7 +94,6 @@ def sample_ga_generation_request() -> Dict[str, Any]:
             "mutation_rate": 0.1,
             "elite_size": 2,
             "max_indicators": 3,
-            "enable_multi_objective": False,
             "objectives": ["total_return"],
             "objective_weights": [1.0],
         },
@@ -199,8 +198,7 @@ class TestGenerateStrategy:
             mock_auto_strategy_service: AutoStrategyサービスモック
             sample_ga_generation_request: サンプル生成リクエスト
         """
-        # 多目的最適化設定を追加
-        sample_ga_generation_request["ga_config"]["enable_multi_objective"] = True
+        # 目的関数を複数指定する
         sample_ga_generation_request["ga_config"]["objectives"] = [
             "total_return",
             "sharpe_ratio",
@@ -684,7 +682,6 @@ class TestBackgroundTaskExecution:
         for response in responses:
             assert response.status_code == 202
             assert response.json()["success"] is True
-
 
 
 

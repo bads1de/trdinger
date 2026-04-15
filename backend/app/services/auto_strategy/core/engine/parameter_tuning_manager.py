@@ -11,7 +11,11 @@ from app.services.auto_strategy.genes import StrategyGene
 
 from ..evaluation.evaluation_fidelity import is_multi_fidelity_enabled
 from ..evaluation.evaluation_report import EvaluationReport
-from .report_selection import build_report_rank_key_from_primary_fitness, is_evaluation_report
+from .fitness_utils import normalize_fitness_values
+from .report_selection import (
+    build_report_rank_key_from_primary_fitness,
+    is_evaluation_report,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -305,13 +309,17 @@ class ParameterTuningManager:
         if current_best_gene is None:
             return current_best_gene, fallback_fitness, fallback_summary
 
-        if config.enable_multi_objective:
+        objectives = getattr(config, "objectives", ())
+        if isinstance(objectives, (list, tuple)) and len(objectives) > 1:
             tuned_gene = self.tune_elite_parameters(current_best_gene, config)
             refreshed_fitness, refreshed_summary = self.refresh_best_gene_reporting(
                 best_gene=tuned_gene,
                 config=config,
                 fallback_fitness=fallback_fitness,
                 fallback_summary=fallback_summary,
+            )
+            logger.info(
+                "[Tuning] 多目的設定のため、最良個体のみをチューニングして再評価しました"
             )
             return tuned_gene, refreshed_fitness, refreshed_summary
 
@@ -378,10 +386,7 @@ class ParameterTuningManager:
         refreshed_fitness = fallback_fitness
         try:
             evaluated = self.evaluate_individual_with_full_fidelity(best_gene, config)
-            if config.enable_multi_objective:
-                refreshed_fitness = tuple(evaluated)
-            elif isinstance(evaluated, (tuple, list)) and evaluated:
-                refreshed_fitness = float(evaluated[0])
+            refreshed_fitness = normalize_fitness_values(evaluated)
         except Exception as exc:
             logger.warning("最良遺伝子の再評価に失敗しました: %s", exc)
 
@@ -403,7 +408,7 @@ class ParameterTuningManager:
         force_robustness: bool = False,
         primary_fitness: Optional[float] = None,
         selection_rank_override: Optional[int] = None,
-        selection_score_override: Optional[Tuple[float, float, float, float]] = None,
+        selection_score_override: Optional[Tuple[float, ...]] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         個体の評価 report から保存向け summary を構築する。
@@ -456,7 +461,11 @@ class ParameterTuningManager:
             return None
 
         from math import isfinite
-        from .report_selection import extract_primary_fitness, get_two_stage_rank, get_two_stage_score
+        from .report_selection import (
+            extract_primary_fitness,
+            get_two_stage_rank,
+            get_two_stage_score,
+        )
         from ..evaluation.report_persistence import build_report_summary
 
         if primary_fitness is None:

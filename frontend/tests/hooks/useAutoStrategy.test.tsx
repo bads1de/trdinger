@@ -43,7 +43,6 @@ describe("useAutoStrategy", () => {
       crossover_rate: 0.8,
       mutation_rate: 0.2,
       elite_size: 2,
-      enable_multi_objective: false,
     },
   };
 
@@ -154,14 +153,16 @@ describe("useAutoStrategy", () => {
     expect(mockAlert).toHaveBeenCalledWith(
       expect.stringContaining("戦略生成を開始しました")
     );
-    expect(mockLoadResults).toHaveBeenCalled();
   });
 
-  it("多目的最適化の場合、アラートメッセージが変化すること", async () => {
+  it("目的関数が複数でも開始メッセージは共通であること", async () => {
     const { result } = renderHook(() => useAutoStrategy(mockLoadResults));
     const multiObjConfig = {
       ...validConfig,
-      ga_config: { ...validConfig.ga_config, enable_multi_objective: true },
+      ga_config: {
+        ...validConfig.ga_config,
+        objectives: ["total_return", "sharpe_ratio"],
+      },
     };
 
     mockExecute.mockImplementation(async (_, options) => {
@@ -174,7 +175,10 @@ describe("useAutoStrategy", () => {
     });
 
     expect(mockAlert).toHaveBeenCalledWith(
-      expect.stringContaining("多目的最適化GA戦略生成を開始しました")
+      expect.stringContaining("戦略生成を開始しました")
+    );
+    expect(mockAlert).not.toHaveBeenCalledWith(
+      expect.stringContaining("多目的最適化GA戦略生成")
     );
   });
 

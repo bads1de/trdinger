@@ -123,17 +123,13 @@ class GAConfig:
         default_factory=lambda: GA_DEFAULT_FITNESS_SHARING.copy()
     )
 
-    # 多目的最適化設定
-    enable_multi_objective: bool = False
+    # 目的関数設定
     objectives: List[str] = field(default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy())
     objective_weights: List[float] = field(
         default_factory=lambda: DEFAULT_GA_OBJECTIVE_WEIGHTS.copy()
     )
     dynamic_objective_reweighting: bool = True
     objective_dynamic_scalars: Dict[str, float] = field(default_factory=dict)
-
-    # 評価設定拡張（単一目的最適化用）
-    primary_metric: str = "sharpe_ratio"
 
     # 実行時設定
     parallel_processes: Optional[int] = None

@@ -113,10 +113,10 @@ class GeneticAlgorithmEngine:
         DEAP フレームワークのコア設定（個体定義、演算子登録）を実行します。
 
         このメソッドは、`creator.create` を使用して以下の要素を動的に定義・登録します：
-        1. 適応度クラス（`Fitness`）: 多目的または単一目的の重みを設定。
+        1. 適応度クラス（`Fitness`）: 目的関数ごとの重みを設定。
         2. 個体クラス（`Individual`）: `StrategyGene` を継承し、適応度属性を持つクラス。
-        3. 演算子（ツールボックス）: 
-           - 選択: NSGA-II（多目的）またはトーナメント選択（単一目的）。
+        3. 演算子（ツールボックス）:
+           - 選択: NSGA-II。
            - 交叉: 遺伝子構造に対応した交叉アルゴリズム。
            - 突然変異: 適応的な突然変異率制御を含むラップされた演算子。
            - 評価: `IndividualEvaluator.evaluate` メソッドを登録。
@@ -128,7 +128,6 @@ class GeneticAlgorithmEngine:
             このメソッドは `run_evolution` の内部で呼び出されますが、
             テストや特殊な実行環境で個別に設定を初期化する場合にも使用可能です。
         """
-        # 単一目的 or 多目的の設定
         # DEAP環境をセットアップ（戦略個体生成メソッドで統合）
         self.deap_setup.setup_deap(
             config,
@@ -466,11 +465,9 @@ class GeneticAlgorithmEngine:
         Returns:
             tuple: 最適化後の個体群、ログブック、殿堂入りオブジェクト。
         """
-        # 目的数に応じて適切なHallOfFameオブジェクトを作成
-        if config.enable_multi_objective:
-            halloffame = tools.ParetoFront()
-        else:
-            halloffame = tools.HallOfFame(maxsize=1)
+        # Hall of Fame は常に ParetoFront を使う。
+        # 目的関数が 1 つでも、同じ評価パイプラインで扱う。
+        halloffame = tools.ParetoFront()
 
         # 統一された進化メソッドを実行
         population, logbook = runner.run_evolution(
@@ -563,27 +560,23 @@ class GeneticAlgorithmEngine:
             "best_evaluation_summary": best_evaluation_summary,
         }
 
-        if not config.enable_multi_objective:
-            ranked_population = self.result_processor.rank_population_for_persistence(
-                population
+        ranked_population = self.result_processor.rank_population_for_persistence(
+            population
+        )
+        persisted_population = ranked_population[:100]
+        result["all_strategies"] = persisted_population
+        result["fitness_scores"] = [
+            extract_primary_fitness(individual)
+            for individual in persisted_population
+        ]
+        result["evaluation_summaries"] = (
+            self._collect_population_evaluation_summaries(
+                persisted_population,
+                config,
             )
-            persisted_population = ranked_population[:100]
-            result["all_strategies"] = persisted_population
-            result["fitness_scores"] = [
-                extract_primary_fitness(individual)
-                for individual in persisted_population
-            ]
-            result["evaluation_summaries"] = (
-                self._collect_population_evaluation_summaries(
-                    persisted_population,
-                    config,
-                )
-            )
-
-        # 多目的最適化の場合、パレート最適解を追加
-        if config.enable_multi_objective:
-            result["pareto_front"] = best_strategies
-            result["objectives"] = config.objectives
+        )
+        result["pareto_front"] = best_strategies or []
+        result["objectives"] = config.objectives
 
         return result
 
@@ -628,12 +621,9 @@ class GeneticAlgorithmEngine:
 
     def _extract_result_best_fitness(
         self, best_individual: Any, config: GAConfig
-    ) -> object:
+    ) -> Any:
         """結果出力用の best fitness を抽出する。"""
-        return extract_result_fitness(
-            best_individual,
-            enable_multi_objective=config.enable_multi_objective,
-        )
+        return extract_result_fitness(best_individual)
 
     def _collect_population_evaluation_summaries(
         self,
@@ -660,7 +650,7 @@ class GeneticAlgorithmEngine:
         force_robustness: bool = False,
         primary_fitness: Optional[float] = None,
         selection_rank_override: Optional[int] = None,
-        selection_score_override: Optional[Tuple[float, float, float, float]] = None,
+        selection_score_override: Optional[Tuple[float, ...]] = None,
     ) -> Optional[Dict[str, Any]]:
         """個体の評価 report から保存向け summary を構築する。"""
         return self.parameter_tuning_manager.build_individual_evaluation_summary(

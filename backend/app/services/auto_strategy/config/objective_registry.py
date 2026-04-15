@@ -14,9 +14,9 @@ ObjectiveDirection = Literal["maximize", "minimize"]
 @dataclass(frozen=True)
 class ObjectiveDefinition:
     """
-    Metadata for a single objective.
+    Metadata for an objective.
 
-    単一の目的関数のメタデータを定義します。
+    個別の目的関数のメタデータを定義します。
     最適化の方向（最大化・最小化）や動的スケーリングの有無を指定します。
 
     Attributes:
@@ -92,14 +92,14 @@ def get_objective_definition(objective: Any) -> ObjectiveDefinition:
     """
     if objective in (None, ""):
         return DEFAULT_OBJECTIVE_DEFINITION
-    
+
     objective_str = str(objective)
     if objective_str not in OBJECTIVE_REGISTRY:
         logger.warning(
             f"未知の目的関数が使用されました: '{objective_str}'. "
             f"デフォルト設定（minimize）を使用します。"
         )
-    
+
     return OBJECTIVE_REGISTRY.get(objective_str, DEFAULT_OBJECTIVE_DEFINITION)
 
 

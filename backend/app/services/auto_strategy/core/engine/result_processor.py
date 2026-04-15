@@ -38,14 +38,10 @@ class ResultProcessor:
         GAの実行結果（最終集団および殿堂入りリスト）から、最も優れた個体を選択し、利用可能な形式に整形します。
 
         選定ロジック：
-        1. **多目的最適化の場合**:
-           - `halloffame`（ParetoFront）から非劣解集合を取得。
-           - それらが空の場合は最終集団からパレートフロントを再計算。
-           - 上位最大10個のパレート最適解を抽出し、多様な選択肢を提供します。
-        2. **単一目的最適化の場合**:
-           - 二段階選抜（Robustness等）が有効な場合、そのランクに基づいた最良個体を取得。
-           - 無効な場合は `halloffame` の先頭（最高スコア）を取得。
-           - いずれも利用不可な場合は、単純な `selBest`（DEAP標準）を使用。
+        1. `halloffame`（ParetoFront）から非劣解集合を取得。
+        2. 二段階選抜（Robustness等）で明示的な上位個体がある場合は、それを最優先する。
+        3. 候補が空の場合は最終集団からパレートフロントを再計算する。
+        4. 上位最大10個の非劣解を抽出し、多様な選択肢を提供する。
 
         Args:
             population (List[Any]): 最終世代の全個体。
@@ -59,41 +55,31 @@ class ResultProcessor:
         best_individual = None
         best_gene = None
 
-        if config.enable_multi_objective:
-            # 多目的最適化の場合、パレート最適解を取得
-            if halloffame is None or not isinstance(halloffame, tools.ParetoFront):
-                pareto_front = tools.ParetoFront()
-                pareto_front.update(population)
-                best_individuals = list(pareto_front)
-            else:
-                best_individuals = list(halloffame)
+        two_stage_best = get_two_stage_best_individual(population)
 
-            # 空の場合のガード
-            if not best_individuals:
-                best_individuals = [tools.selBest(population, 1)[0]]
-
-            best_individual = best_individuals[0]
-
-            best_strategies = []
-            for ind in best_individuals[:10]:  # 上位10個のパレート最適解
-                if isinstance(ind, StrategyGene):
-                    gene = ind
-                else:
-                    logger.error(f"個体がStrategyGene型ではありません: {type(ind)}")
-                    continue
-
-                best_strategies.append(
-                    {"strategy": gene, "fitness_values": list(ind.fitness.values)}  # type: ignore[union-attr]
-                )
+        if halloffame is None or not isinstance(halloffame, tools.ParetoFront):
+            pareto_front = tools.ParetoFront()
+            pareto_front.update(population)
+            best_individuals = list(pareto_front)
         else:
-            # 単一目的最適化の場合
-            two_stage_best = get_two_stage_best_individual(population)
-            if two_stage_best is not None:
-                best_individual = two_stage_best
-            elif halloffame is not None and len(halloffame) > 0:
-                best_individual = halloffame[0]
+            best_individuals = list(halloffame)
+
+        if not best_individuals:
+            best_individuals = [tools.selBest(population, 1)[0]]
+
+        best_individual = two_stage_best or best_individuals[0]
+
+        best_strategies = []
+        for ind in best_individuals[:10]:
+            if isinstance(ind, StrategyGene):
+                gene = ind
             else:
-                best_individual = tools.selBest(population, 1)[0]
+                logger.error(f"個体がStrategyGene型ではありません: {type(ind)}")
+                continue
+
+            best_strategies.append(
+                {"strategy": gene, "fitness_values": list(ind.fitness.values)}  # type: ignore[union-attr]
+            )
 
         if isinstance(best_individual, StrategyGene):
             best_gene = best_individual

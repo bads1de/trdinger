@@ -44,7 +44,7 @@ class DEAPSetup:
         crossover_func,
         mutate_func,
     ):
-        """DEAP環境のセットアップ（多目的最適化専用）
+        """DEAP環境のセットアップ。
 
         DEAPライブラリの設定を行い、ツールボックスを初期化します。
         多目的最適化用のフィットネスクラスと個体クラスを作成し、
@@ -65,8 +65,6 @@ class DEAPSetup:
                 - self.toolbox: 設定済みのDEAPツールボックス
 
         Note:
-            - 多目的最適化の場合はNSGA-II選択アルゴリズムを使用
-            - 単一目的の場合はトーナメント選択アルゴリズムを使用
             - creatorはグローバルなので、実行単位ごとに一意な名前を使用
         """
         # 多目的最適化用フィットネスクラスの定義
@@ -147,17 +145,10 @@ class DEAPSetup:
 
         self.toolbox.register("mutate", _mutate_wrapper)
 
-        # 選択アルゴリズムの登録（目的数に応じて切り替え）
-        if config.enable_multi_objective:
-            self.toolbox.register("select", tools.selNSGA2)
-            logger.info("多目的最適化モード: NSGA-II選択アルゴリズムを登録")
-        else:
-            # 単一目的の場合はトーナメント選択（デフォルトサイズ3）
-            tourn_size = getattr(config, "tournament_size", 3)
-            self.toolbox.register("select", tools.selTournament, tournsize=tourn_size)
-            logger.info(
-                f"単一目的最適化モード: トーナメント選択アルゴリズム(size={tourn_size})を登録"
-            )
+        # 選択アルゴリズムは常に NSGA-II を使用する。
+        # 目的関数が 1 つでも、同じパイプラインで扱う。
+        self.toolbox.register("select", tools.selNSGA2)
+        logger.info("NSGA-II選択アルゴリズムを登録しました")
 
         logger.info("DEAP環境のセットアップ完了")
 

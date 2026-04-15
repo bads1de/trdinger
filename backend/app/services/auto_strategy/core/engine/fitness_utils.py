@@ -7,13 +7,43 @@ from __future__ import annotations
 from typing import Any
 
 
+def normalize_fitness_values(
+    values: Any,
+    *,
+    default: float = 0.0,
+) -> float | tuple[float, ...]:
+    """
+    fitness 値を公開向けの表現へ正規化する。
+
+    単一目的なら `float`、多目的なら `tuple[float, ...]` を返します。
+    評価値が取得できない場合は `default` を返します。
+    """
+    if isinstance(values, (tuple, list)):
+        if not values:
+            return float(default)
+
+        try:
+            normalized = tuple(float(value) for value in values)
+        except (TypeError, ValueError):
+            return float(default)
+
+        if len(normalized) == 1:
+            return normalized[0]
+        return normalized
+
+    if isinstance(values, (int, float)):
+        return float(values)
+
+    return float(default)
+
+
 def extract_individual_primary_fitness(
     individual: Any,
     *,
     default: float = float("-inf"),
 ) -> float:
     """
-    個体から単一目的の主 fitness を取り出す
+    個体から主 fitness を取り出す
 
     個体のfitnessオブジェクトからwvaluesまたはvaluesを取得し、
     最初の要素（主フィットネス）を返します。
@@ -71,41 +101,18 @@ def extract_primary_fitness_from_result(
     return float(default)
 
 
-def extract_result_fitness(
-    individual: Any,
-    *,
-    enable_multi_objective: bool,
-    default_single: float = 0.0,
-) -> object:
+def extract_result_fitness(individual: Any) -> float | tuple[float, ...]:
     """
-    結果出力用に個体の fitness を整形して返す
+    結果出力用に個体の fitness を整形して返す。
 
-    個体のフィットネス値を取得し、多目的最適化の場合はタプルで、
-    単一目的の場合は数値で返します。
+    単一目的なら float、多目的なら tuple[float, ...] として返します。
 
     Args:
         individual: 個体オブジェクト
-        enable_multi_objective: 多目的最適化が有効かどうか
-        default_single: 単一目的時のデフォルト値（デフォルト: 0.0）
 
     Returns:
-        Any: フィットネス値（多目的: tuple, 単一目的: float）
-
-    Note:
-        多目的最適化の場合はタプルを返します。
-        単一目的の場合は最初の要素を数値として返します。
+        float | tuple[float, ...]: fitness 値。取得できない場合は 0.0。
     """
     fitness = getattr(individual, "fitness", None)
     values = getattr(fitness, "values", ()) if fitness is not None else ()
-
-    if enable_multi_objective:
-        if isinstance(values, (tuple, list)):
-            return tuple(values)
-        return ()
-
-    if isinstance(values, (tuple, list)) and values:
-        try:
-            return float(values[0])
-        except (TypeError, ValueError):
-            return float(default_single)
-    return float(default_single)
+    return normalize_fitness_values(values)

@@ -116,9 +116,7 @@ export interface GAConfig {
     /** フィットネスシェアリング設定 */
     fitness_sharing?: FitnessSharingConfig;
 
-    // 多目的最適化設定
-    /** 多目的最適化を有効化するか */
-    enable_multi_objective?: boolean;
+    // 目的関数設定
     /** 目的関数名の配列（fitness_values の並びと一致） */
     objectives?: string[];
     /** 目的関数ごとの重み（objectives と同じ順序） */

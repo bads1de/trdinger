@@ -196,7 +196,6 @@ class TestFitnessCalculator:
 
     def test_calculate_multi_objective_fitness(self, ga_config, mock_backtest_result):
         """多目的フィットネス計算テスト"""
-        ga_config.enable_multi_objective = True
         ga_config.objectives = ["total_return", "sharpe_ratio", "max_drawdown"]
 
         fitness = self.calculator.calculate_multi_objective_fitness(

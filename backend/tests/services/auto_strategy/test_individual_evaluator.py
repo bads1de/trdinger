@@ -514,7 +514,6 @@ class TestIndividualEvaluator:
         self.mock_backtest_service.run_backtest.return_value = mock_result
 
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = False
         ga_config.fitness_constraints = {}
         ga_config.fitness_weights = {
             "total_return": 0.3,
@@ -527,7 +526,7 @@ class TestIndividualEvaluator:
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
-        assert len(result) == 1  # 単一目的最適化
+        assert len(result) == 1  # 目的関数が1件のケース
 
     def test_evaluate_individual_multi_objective(self):
         """多目的最適化評価のテスト"""
@@ -545,7 +544,6 @@ class TestIndividualEvaluator:
         self.mock_backtest_service.run_backtest.return_value = mock_result
 
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = True
         ga_config.objectives = ["total_return", "sharpe_ratio", "max_drawdown"]
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
@@ -561,7 +559,6 @@ class TestIndividualEvaluator:
         self.mock_backtest_service.run_backtest.side_effect = Exception("Test error")
 
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = False
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
@@ -574,7 +571,6 @@ class TestIndividualEvaluator:
         self.mock_backtest_service.run_backtest.side_effect = Exception("Test error")
 
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = True
         ga_config.objectives = ["total_return", "sharpe_ratio"]
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
@@ -883,7 +879,6 @@ class TestIndividualEvaluator:
 
         # GA設定 - MLフィルター無効
         ga_config_no_ml = GAConfig()
-        ga_config_no_ml.enable_multi_objective = False
         ga_config_no_ml.fitness_weights = {
             "total_return": 1.0,
             "sharpe_ratio": 0.0,
@@ -903,7 +898,6 @@ class TestIndividualEvaluator:
 
         # GA設定 - ボラティリティゲート有効
         ga_config_with_volatility = GAConfig()
-        ga_config_with_volatility.enable_multi_objective = False
         ga_config_with_volatility.fitness_weights = {
             "total_return": 1.0,
             "sharpe_ratio": 0.0,
@@ -1022,7 +1016,6 @@ class TestIndividualEvaluator:
 
         # GA設定: OOS有効化
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = False
         ga_config.evaluation_config.oos_split_ratio = (
             0.2  # 10日間のうち、最後の2日がOOS（8日がIS）
         )
@@ -1218,7 +1211,6 @@ class TestIndividualEvaluator:
         self.evaluator.set_backtest_config(config)
 
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = False
         ga_config.evaluation_config.oos_split_ratio = 0.2
         ga_config.evaluation_config.oos_fitness_weight = 0.5
         # 重み設定必須
@@ -1331,11 +1323,11 @@ class TestUnifiedEvaluationLogic:
         # 常にタプルで返される
         assert isinstance(result, tuple)
         assert len(result) == 1
-        # weighted_scoreは従来の単一目的計算と同じ結果
+        # weighted_scoreは従来のスカラー計算と同じ結果
         assert result[0] > 0
 
-    def test_single_objective_returns_tuple(self):
-        """単一目的でもタプルを返すテスト"""
+    def test_objective_count_one_returns_tuple(self):
+        """目的関数が1件でもタプルを返すテスト"""
         mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
@@ -1362,17 +1354,17 @@ class TestUnifiedEvaluationLogic:
         self.evaluator.set_backtest_config(config)
 
         ga_config = GAConfig()
-        ga_config.objectives = ["sharpe_ratio"]  # 単一目的
+        ga_config.objectives = ["sharpe_ratio"]  # 目的関数が1件
         ga_config.fitness_constraints = {}
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
         assert isinstance(result, tuple)
         assert len(result) == 1
-        assert result[0] == 1.5  # sharpe_ratioの値
+        assert result[0] == 1.5  # sharpe_ratio の値
 
-    def test_enable_multi_objective_flag_deprecated(self):
-        """enable_multi_objectiveフラグが無視されるテスト（後方互換性）"""
+    def test_multiple_objectives_return_matching_tuple(self):
+        """目的関数の数に応じたタプルが返されるテスト"""
         mock_individual = self._create_mock_gene()
         mock_result = {
             "performance_metrics": {
@@ -1398,13 +1390,12 @@ class TestUnifiedEvaluationLogic:
         self.evaluator.set_backtest_config(config)
 
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = False  # 旧フラグ（無視される）
         ga_config.objectives = ["total_return", "sharpe_ratio"]
         ga_config.fitness_constraints = {}
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
-        # enable_multi_objective=Falseでも、objectivesの数に応じたタプルが返される
+        # objectives の数に応じたタプルが返される
         assert isinstance(result, tuple)
         assert len(result) == 2
 

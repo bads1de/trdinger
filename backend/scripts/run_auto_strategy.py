@@ -273,13 +273,13 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         config_kwargs["max_conditions"] = 2
         config_kwargs["use_seed_strategies"] = False
         config_kwargs["seed_injection_rate"] = 0.0
+        # TuningConfig は現在、閾値の最適化可否だけを受け付ける。
+        # 指標/TPSL は常に最適化対象なので、古いフラグは渡さない。
         config_kwargs["tuning_config"] = {
             "enabled": False,
             "n_trials": 1,
             "elite_count": 1,
             "use_wfa": False,
-            "include_indicators": True,
-            "include_tpsl": True,
             "include_thresholds": False,
         }
         config_kwargs["two_stage_selection_config"] = {"enabled": False}

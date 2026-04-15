@@ -164,7 +164,7 @@ class TestGeneticAlgorithmEngine:
         mock_backtest_service,
         mock_gene_generator,
     ):
-        """単一目的では二段階選抜の先頭個体を最終bestとして採用する"""
+        """二段階選抜の先頭個体を最終bestとして採用する"""
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
             gene_generator=mock_gene_generator,
@@ -184,7 +184,6 @@ class TestGeneticAlgorithmEngine:
         raw_best.fitness.values = (1.2,)
 
         config = Mock()
-        config.enable_multi_objective = False
 
         best_individual, best_gene, best_strategies = engine.result_processor.extract_best_individuals(
             [raw_best, robust_leader],
@@ -194,7 +193,9 @@ class TestGeneticAlgorithmEngine:
 
         assert best_individual is robust_leader
         assert best_gene is robust_leader
-        assert best_strategies is None
+        assert best_strategies is not None
+        assert len(best_strategies) == 1
+        assert best_strategies[0]["fitness_values"] == [1.2]
 
     @patch("app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator")
     @patch("app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter")
@@ -275,7 +276,6 @@ class TestGeneticAlgorithmEngine:
 
         current_best = object()
         config = Mock()
-        config.enable_multi_objective = False
         config.two_stage_selection_config = Mock()
         config.two_stage_selection_config.enabled = False
 
@@ -302,6 +302,58 @@ class TestGeneticAlgorithmEngine:
             ["tuned"],
             config,
         )
+
+    def test_tuning_skips_single_objective_reselection_for_multi_objective(
+        self,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """多目的では tuning 後に単一スコアで候補比較しない"""
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        current_best = object()
+        config = Mock()
+        config.objectives = ["weighted_score", "max_drawdown"]
+        config.two_stage_selection_config = Mock()
+        config.two_stage_selection_config.enabled = True
+
+        engine.parameter_tuning_manager.tune_elite_parameters = Mock(
+            return_value="tuned-multi"
+        )
+        engine.parameter_tuning_manager.refresh_best_gene_reporting = Mock(
+            return_value=((1.0, -0.2), {"mode": "multi"})
+        )
+        engine.parameter_tuning_manager.select_tuning_candidates = Mock()
+        engine.parameter_tuning_manager.tune_candidate_genes = Mock()
+        engine.parameter_tuning_manager.select_best_tuned_candidate = Mock()
+        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness = Mock()
+
+        result = engine.parameter_tuning_manager.tune_and_select_best_gene(
+            population=[],
+            current_best_gene=current_best,
+            config=config,
+            fallback_fitness=(0.5, -0.1),
+            fallback_summary={"mode": "multi"},
+        )
+
+        assert result == ("tuned-multi", (1.0, -0.2), {"mode": "multi"})
+        engine.parameter_tuning_manager.tune_elite_parameters.assert_called_once_with(
+            current_best,
+            config,
+        )
+        engine.parameter_tuning_manager.refresh_best_gene_reporting.assert_called_once_with(
+            best_gene="tuned-multi",
+            config=config,
+            fallback_fitness=(0.5, -0.1),
+            fallback_summary={"mode": "multi"},
+        )
+        engine.parameter_tuning_manager.select_tuning_candidates.assert_not_called()
+        engine.parameter_tuning_manager.tune_candidate_genes.assert_not_called()
+        engine.parameter_tuning_manager.select_best_tuned_candidate.assert_not_called()
+        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness.assert_not_called()
 
     @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
     def test_run_evolution_flow(
@@ -346,7 +398,6 @@ class TestGeneticAlgorithmEngine:
         mock_config.generations = 5
         mock_config.evaluation_config.enable_parallel = False
         mock_config.fitness_sharing["enable_fitness_sharing"] = False
-        mock_config.enable_multi_objective = False
         mock_config.mutation_rate = 0.1
         mock_config.use_seed_strategies = False
         mock_config.seed_injection_rate = 0.1
@@ -409,7 +460,6 @@ class TestGeneticAlgorithmEngine:
         mock_config.evaluation_config.timeout = 60.0
         mock_config.population_size = 10
         mock_config.fitness_sharing["enable_fitness_sharing"] = False
-        mock_config.enable_multi_objective = False
         mock_config.mutation_rate = 0.1
         mock_config.use_seed_strategies = False
         mock_config.seed_injection_rate = 0.1

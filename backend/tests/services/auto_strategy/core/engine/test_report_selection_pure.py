@@ -1,7 +1,10 @@
 from types import SimpleNamespace
 
+import pytest
+
 from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.core.engine.report_selection import (
+    build_report_rank_key,
     build_report_rank_key_from_primary_fitness,
     get_two_stage_best_individual,
     get_two_stage_rank,
@@ -64,6 +67,27 @@ def test_build_report_rank_key_from_primary_fitness_uses_objective_registry(
     assert key[1] == 2 / 3
     assert key[2] == -0.5
     assert round(key[3], 6) == -0.29
+
+
+def test_build_report_rank_key_uses_all_objectives():
+    report = EvaluationReport.aggregate(
+        mode="robustness",
+        objectives=["total_return", "max_drawdown"],
+        scenarios=[
+            ScenarioEvaluation(name="base", fitness=(0.9, 0.2), passed=True),
+            ScenarioEvaluation(name="stress", fitness=(0.4, 0.5), passed=True),
+        ],
+        aggregate_method="robust",
+    )
+    individual = SimpleNamespace(fitness=SimpleNamespace(values=(1.5,)))
+
+    key = build_report_rank_key(
+        individual,
+        report,
+        min_pass_rate=0.5,
+    )
+
+    assert key == pytest.approx((1.0, 1.0, 0.4, 0.575, -0.5, -0.395))
 
 
 class _SlottedIndividual:

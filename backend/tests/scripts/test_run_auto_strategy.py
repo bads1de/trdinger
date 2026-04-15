@@ -4,6 +4,7 @@ run_auto_strategy スクリプトのテスト
 オートストラテジー実行スクリプトの各機能をテストします。
 """
 
+import logging
 import sys
 from argparse import Namespace
 from pathlib import Path
@@ -74,7 +75,7 @@ class TestCreateGaConfig:
         assert config.evaluation_config.enable_parallel is False
         assert config.log_level == "DEBUG"
 
-    def test_smoke_config_disables_heavy_features(self):
+    def test_smoke_config_disables_heavy_features(self, caplog):
         """smokeモードで高速実行向けの設定になる"""
         import scripts.run_auto_strategy as run_auto_strategy
 
@@ -92,7 +93,8 @@ class TestCreateGaConfig:
             smoke=True,
         )
 
-        config = run_auto_strategy.create_ga_config(args)
+        with caplog.at_level(logging.WARNING):
+            config = run_auto_strategy.create_ga_config(args)
 
         assert config.population_size == 2
         assert config.generations == 1
@@ -106,6 +108,10 @@ class TestCreateGaConfig:
         assert config.tuning_config.n_trials == 1
         assert config.two_stage_selection_config.enabled is False
         assert config.fitness_constraints["min_trades"] == 0
+        assert not any(
+            "TuningConfig の未対応キー" in record.message
+            for record in caplog.records
+        )
 
     def test_invalid_population_raises_error(self):
         """無効な個体数でエラーが発生する"""

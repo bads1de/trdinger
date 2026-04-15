@@ -143,11 +143,10 @@ class TestDEAPSetup:
     @patch(
         "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
     )
-    def test_setup_deap_registers_nsga2_for_multi_objective(
+    def test_setup_deap_registers_nsga2_for_any_objective_count(
         self, mock_creator, deap_setup, mock_config, mock_functions
     ):
-        """多目的最適化時の選択関数(NSGA-II)登録テスト"""
-        mock_config.enable_multi_objective = True
+        """選択関数として常に NSGA-II を登録すること"""
 
         # base.Toolboxをモック化してregister呼び出しを検証可能にする
         with patch(
@@ -170,38 +169,6 @@ class TestDEAPSetup:
                 args = mock_toolbox_instance.register.call_args_list
                 select_call = [call for call in args if call[0][0] == "select"][0]
                 assert select_call[0][1] == mock_tools.selNSGA2
-
-    @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
-    )
-    def test_setup_deap_registers_tournament_for_single_objective(
-        self, mock_creator, deap_setup, mock_config, mock_functions
-    ):
-        """単一目的最適化時の選択関数(Tournament)登録テスト"""
-        mock_config.enable_multi_objective = False
-        mock_config.tournament_size = 5
-
-        with patch(
-            "app.services.auto_strategy.core.engine.deap_setup.base.Toolbox"
-        ) as MockToolbox:
-            mock_toolbox_instance = MockToolbox.return_value
-
-            with patch(
-                "app.services.auto_strategy.core.engine.deap_setup.tools"
-            ) as mock_tools:
-                deap_setup.setup_deap(
-                    mock_config,
-                    mock_functions["create_individual"],
-                    mock_functions["evaluate"],
-                    mock_functions["crossover"],
-                    mock_functions["mutate"],
-                )
-
-                # register呼び出しを検証
-                args = mock_toolbox_instance.register.call_args_list
-                select_call = [call for call in args if call[0][0] == "select"][0]
-                assert select_call[0][1] == mock_tools.selTournament
-                assert select_call[1]["tournsize"] == 5
 
     @patch(
         "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator

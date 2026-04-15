@@ -52,8 +52,6 @@ class GAGenerationRequest(BaseModel):
                     "mutation_rate": 0.1,
                     "elite_size": 2,
                     "max_indicators": 3,
-                    # 多目的最適化設定（オプション）
-                    "enable_multi_objective": False,
                     "objectives": ["total_return"],
                     "objective_weights": [1.0],
                 },

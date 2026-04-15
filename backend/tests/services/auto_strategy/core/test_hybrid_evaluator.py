@@ -85,7 +85,6 @@ def test_hybrid_evaluator_returns_fitness_without_prediction_bonus():
 
 def test_hybrid_evaluator_multi_objective_does_not_support_prediction_score():
     config = GAConfig(
-        enable_multi_objective=True,
         objectives=["sharpe_ratio", "prediction_score"],
         objective_weights=[1.0, 1.0],
     )

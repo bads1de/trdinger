@@ -605,6 +605,11 @@ class TestGAConfigRuntime:
         assert config.crossover_rate == 0.9
         assert config.mutation_rate == 0.1
 
+    def test_deprecated_enable_multi_objective_is_rejected(self):
+        """deprecated な enable_multi_objective は受け付けない"""
+        with pytest.raises(ValueError, match="未対応の設定キーがあります"):
+            GAConfigRuntime(enable_multi_objective=True)
+
     def test_from_dict_does_not_mutate_input_data(self):
         """from_dict が入力データを破壊しないことを確認"""
         data = {
@@ -682,13 +687,11 @@ class TestGAConfigRuntime:
     def test_multi_objective_settings(self):
         """多目的最適化設定のテスト"""
         config = GAConfigRuntime(
-            enable_multi_objective=True,
             objectives=["sharpe_ratio", "total_return"],
             objective_weights=[1.0, -0.5],
         )
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is True
-        assert config.enable_multi_objective is True
         assert config.objectives == ["sharpe_ratio", "total_return"]
         assert config.objective_weights == [1.0, -0.5]
 

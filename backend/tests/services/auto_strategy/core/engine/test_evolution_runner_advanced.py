@@ -343,7 +343,7 @@ class TestEvolutionRunnerAdvanced:
     def test_two_stage_selection_promotes_report_robust_elite(
         self, mock_toolbox, mock_stats
     ):
-        """単一目的では report の通過率が高い候補をエリートへ昇格させること"""
+        """report の通過率が高い候補をエリートへ昇格させること"""
         raw_leader = MagicMock()
         raw_leader.id = "raw-leader"
         raw_leader.fitness = MagicMock(valid=True, values=(0.95,))
@@ -409,7 +409,6 @@ class TestEvolutionRunnerAdvanced:
                 candidate_pool_size=3,
                 min_pass_rate=0.0,
             ),
-            enable_multi_objective=False,
         )
 
         selected = runner._apply_two_stage_selection(
@@ -483,7 +482,6 @@ class TestEvolutionRunnerAdvanced:
                 candidate_pool_size=3,
                 min_pass_rate=0.0,
             ),
-            enable_multi_objective=False,
         )
 
         selected = runner._apply_two_stage_selection(

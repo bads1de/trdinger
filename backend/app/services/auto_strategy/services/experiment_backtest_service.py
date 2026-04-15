@@ -91,8 +91,8 @@ class ExperimentBacktestService:
         )
 
     def _normalize_fitness_score(self, best_fitness: Any, ga_config: GAConfig) -> float:
-        """GA結果から単一のフィットネススコアを抽出する"""
-        if ga_config.enable_multi_objective and isinstance(best_fitness, (list, tuple)):
+        """GA結果から保存用の代表スコアを抽出する"""
+        if isinstance(best_fitness, (list, tuple)):
             return float(best_fitness[0]) if best_fitness else 0.0
 
         if isinstance(best_fitness, (int, float)):

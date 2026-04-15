@@ -70,7 +70,6 @@ class TestExperimentBacktestService:
             "best_fitness": [2.25, 0.5],
         }
         ga_config = GAConfig()
-        ga_config.enable_multi_objective = True
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
             "timeframe": "4h",

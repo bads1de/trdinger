@@ -30,29 +30,28 @@ const initialConfig = {
       parameters: {},
     },
   },
-  ga_config: {
-    population_size: 20,
-    generations: 15,
-    mutation_rate: 0.1,
-    crossover_rate: 0.8,
-    elite_size: 5,
-    max_indicators: 5,
-    fitness_weights: {
-      total_return: 0.3,
-      sharpe_ratio: 0.4,
-      max_drawdown: 0.2,
-      win_rate: 0.1,
+    ga_config: {
+      population_size: 20,
+      generations: 15,
+      mutation_rate: 0.1,
+      crossover_rate: 0.8,
+      elite_size: 5,
+      max_indicators: 5,
+      fitness_weights: {
+        total_return: 0.3,
+        sharpe_ratio: 0.4,
+        max_drawdown: 0.2,
+        win_rate: 0.1,
+      },
+      fitness_constraints: {
+        min_trades: 10,
+        max_drawdown_limit: 0.3,
+        min_sharpe_ratio: 0.5,
+      },
+      objectives: ["win_rate", "max_drawdown"],
+      objective_weights: [1.0, -1.0],
+      regime_adaptation_enabled: false,
     },
-    fitness_constraints: {
-      min_trades: 10,
-      max_drawdown_limit: 0.3,
-      min_sharpe_ratio: 0.5,
-    },
-    enable_multi_objective: true,
-    objectives: ["win_rate", "max_drawdown"],
-    objective_weights: [1.0, -1.0],
-    regime_adaptation_enabled: false,
-  },
 };
 
 // TooltipProviderでラップしたrenderヘルパー

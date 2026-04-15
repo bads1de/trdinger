@@ -113,7 +113,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           enable_fitness_sharing:
             initialFitnessSharing.enable_fitness_sharing ?? true,
         },
-        enable_multi_objective: initialGAConfig.enable_multi_objective ?? false,
         objectives: initialGAConfig.objectives ?? ["total_return"],
         objective_weights: initialGAConfig.objective_weights ?? [1.0],
         dynamic_objective_reweighting:
@@ -911,9 +910,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             キャンセル
           </ActionButton>
           <ApiButton onClick={handleSubmit} loading={isLoading}>
-            {config.ga_config.enable_multi_objective
-              ? "多目的GA戦略を生成"
-              : "GA戦略を生成"}
+            GA戦略を生成
           </ApiButton>
         </div>
       </div>

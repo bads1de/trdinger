@@ -225,11 +225,8 @@ export const useAutoStrategy = (loadResults: () => void) => {
       body: requestBody,
       onSuccess: (data) => {
         setShowAutoStrategyModal(false);
-        const isMultiObjective = config.ga_config.enable_multi_objective;
         // フロントエンドで生成したIDを使用
-        const message = isMultiObjective
-          ? `🚀 多目的最適化GA戦略生成を開始しました！\n\n実験ID: ${experimentId}\n\n複数の目的を同時に最適化します。\n生成完了後、オートストラテジーページで結果を確認できます。\n数分お待ちください。`
-          : `🚀 戦略生成を開始しました！\n\n実験ID: ${experimentId}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`;
+        const message = `🚀 戦略生成を開始しました！\n\n実験ID: ${experimentId}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`;
 
         alert(message);
         // 進捗ポーリングを開始
