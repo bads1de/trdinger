@@ -1,18 +1,17 @@
 """
-Auto Strategy 環境変数設定
+Auto Strategy 共有設定
 
-AutoStrategyConfig は環境変数経由でアプリケーション全体の設定を提供する pydantic モデルです。
-unified_config.py 経由で使用され、主に API 層やサービス初期化時に参照されます。
+AutoStrategyConfig は戦略生成で共有する既定値をまとめた軽量な pydantic モデルです。
+環境変数は読み取らず、コード内の既定値をそのまま提供します。
 
 注意: GAConfig (ga.py) は GA 実行時のランタイム設定用 dataclass です。
-両者は役割が異なりますが、基本的なGAパラメータのデフォルト値は
+両者は役割が異なりますが、基本的な GA パラメータのデフォルト値は
 ga_constants.GA_DEFAULT_CONFIG を共有しています。
 """
 
 from typing import List
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from .constants import (
     AUTO_STRATEGY_CONFIG_DEFAULTS,
@@ -20,11 +19,10 @@ from .constants import (
 )
 
 
-class AutoStrategyConfig(BaseSettings):
-    """自動戦略生成設定（環境変数ベース）。
+class AutoStrategyConfig(BaseModel):
+    """自動戦略生成の共有設定。
 
-    遺伝的アルゴリズムによる自動戦略生成の各種パラメータを設定します。
-    環境変数 `AUTO_STRATEGY_*` から値を読み取ります。
+    遺伝的アルゴリズムによる自動戦略生成の各種パラメータをまとめます。
     """
 
     # 遺伝的アルゴリズム基本設定（デフォルト値は GA_DEFAULT_CONFIG と同期）
@@ -71,11 +69,13 @@ class AutoStrategyConfig(BaseSettings):
         description="多目的最適化を有効にするか",
     )
     objectives: List[str] = Field(
-        default=AUTO_STRATEGY_CONFIG_DEFAULTS["objectives"],
+        default_factory=lambda: AUTO_STRATEGY_CONFIG_DEFAULTS["objectives"].copy(),
         description="最適化対象の指標",
     )
     objective_weights: List[float] = Field(
-        default=AUTO_STRATEGY_CONFIG_DEFAULTS["objective_weights"],
+        default_factory=lambda: AUTO_STRATEGY_CONFIG_DEFAULTS[
+            "objective_weights"
+        ].copy(),
         description="各指標の重み",
     )
 
@@ -129,4 +129,4 @@ class AutoStrategyConfig(BaseSettings):
         description="戦略取得最大件数",
     )
 
-    model_config = SettingsConfigDict(env_prefix="AUTO_STRATEGY_", extra="ignore")
+    model_config = ConfigDict(extra="ignore")

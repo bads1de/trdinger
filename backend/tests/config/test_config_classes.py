@@ -93,21 +93,6 @@ class TestUnifiedConfig:
         assert config.database.host == "testhost"
         assert config.database.port == 3306
 
-    @patch.dict(
-        os.environ,
-        {
-            "AUTO_STRATEGY_POPULATION_SIZE": "100",
-            "AUTO_STRATEGY_GENERATIONS": "30",
-        },
-    )
-    def test_nested_environment_variables(self):
-        """ネストされた環境変数の読み込みテスト"""
-        config = AutoStrategyConfig()
-
-        assert config.population_size == 100
-        assert config.generations == 30
-
-
 class TestAppConfig:
     """AppConfigクラスのテスト"""
 
@@ -400,11 +385,11 @@ class TestEnvironmentVariableSupport:
         os.environ,
         {"AUTO_STRATEGY_POPULATION_SIZE": "200", "AUTO_STRATEGY_GENERATIONS": "100"},
     )
-    def test_auto_strategy_env_vars_loading(self):
-        """AutoStrategy環境変数の読み込みテスト"""
+    def test_auto_strategy_env_vars_are_ignored(self):
+        """AutoStrategyConfig は環境変数を読まず、既定値を返す"""
         config = AutoStrategyConfig()
-        assert config.population_size == 200
-        assert config.generations == 100
+        assert config.population_size == 100
+        assert config.generations == 50
 
     @patch.dict(os.environ, {"BACKTEST_DEFAULT_INITIAL_CAPITAL": "50000.0"})
     def test_float_env_var_parsing(self):

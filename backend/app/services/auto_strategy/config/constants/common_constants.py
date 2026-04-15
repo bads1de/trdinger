@@ -115,7 +115,7 @@ AUTO_STRATEGY_DEFAULTS = {
     "default_position_ratio": 0.1,
 }
 
-# === AutoStrategyConfig デフォルト値（環境変数ベース設定用） ===
+# === AutoStrategyConfig デフォルト値 ===
 AUTO_STRATEGY_CONFIG_DEFAULTS = {
     # 戦略生成制約
     "tournament_size": 3,

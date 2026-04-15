@@ -3,7 +3,7 @@ GA実行時設定クラス
 
 GAConfig クラスを提供します。
 GAConfig は GA エンジンのランタイム設定用 dataclass です。
-環境変数ベースの設定が必要な場合は auto_strategy_settings.AutoStrategyConfig を使用してください。
+共有の既定値が必要な場合は auto_strategy_settings.AutoStrategyConfig を参照してください。
 両者の基本パラメータのデフォルト値は constants.ga_constants.GA_DEFAULT_CONFIG を共有しています。
 """
 
