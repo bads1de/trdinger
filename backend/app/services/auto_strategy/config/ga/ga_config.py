@@ -23,22 +23,7 @@ from ..constants import (
     DEFAULT_GA_OBJECTIVES,
     GA_DEFAULT_CONFIG,
     GA_DEFAULT_FITNESS_SHARING,
-    GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS,
     GA_PARAMETER_RANGES,
-    GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE,
-    GA_POSITION_SIZING_ATR_PERIOD_RANGE,
-    GA_POSITION_SIZING_FIXED_QUANTITY_RANGE,
-    GA_POSITION_SIZING_FIXED_RATIO_RANGE,
-    GA_POSITION_SIZING_LOOKBACK_RANGE,
-    GA_POSITION_SIZING_MAX_ES_RATIO_RANGE,
-    GA_POSITION_SIZING_MAX_SIZE_RANGE,
-    GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE,
-    GA_POSITION_SIZING_MIN_SIZE_RANGE,
-    GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE,
-    GA_POSITION_SIZING_PRIORITY_RANGE,
-    GA_POSITION_SIZING_RISK_PER_TRADE_RANGE,
-    GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE,
-    GA_POSITION_SIZING_VAR_LOOKBACK_RANGE,
     GA_THRESHOLD_RANGES,
 )
 from .nested_configs import (
@@ -176,59 +161,9 @@ class GAConfig:
     strict_compatibility_score: float = 0.9
     indicator_universe_mode: str = "curated"
 
-    # TPSL関連設定拡張
-    tpsl_method_constraints: Optional[List[str]] = None
-    tpsl_sl_range: Optional[List[float]] = None
-    tpsl_tp_range: Optional[List[float]] = None
-    tpsl_rr_range: Optional[List[float]] = None
-    tpsl_atr_multiplier_range: Optional[List[float]] = None
 
-    # Position sizing 関連設定拡張
-    position_sizing_method_constraints: Optional[List[str]] = field(
-        default_factory=lambda: list(GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS)
-    )
-    position_sizing_lookback_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_LOOKBACK_RANGE)
-    )
-    position_sizing_optimal_f_multiplier_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE)
-    )
-    position_sizing_atr_period_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_ATR_PERIOD_RANGE)
-    )
-    position_sizing_atr_multiplier_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE)
-    )
-    position_sizing_risk_per_trade_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_RISK_PER_TRADE_RANGE)
-    )
-    position_sizing_fixed_ratio_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_FIXED_RATIO_RANGE)
-    )
-    position_sizing_fixed_quantity_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_FIXED_QUANTITY_RANGE)
-    )
-    position_sizing_min_size_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_MIN_SIZE_RANGE)
-    )
-    position_sizing_max_size_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_MAX_SIZE_RANGE)
-    )
-    position_sizing_priority_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_PRIORITY_RANGE)
-    )
-    position_sizing_var_confidence_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE)
-    )
-    position_sizing_max_var_ratio_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE)
-    )
-    position_sizing_max_expected_shortfall_ratio_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_MAX_ES_RATIO_RANGE)
-    )
-    position_sizing_var_lookback_range: Optional[List[float]] = field(
-        default_factory=lambda: list(GA_POSITION_SIZING_VAR_LOOKBACK_RANGE)
-    )
+
+
 
     # マルチタイムフレーム（MTF）設定
     enable_multi_timeframe: bool = False
