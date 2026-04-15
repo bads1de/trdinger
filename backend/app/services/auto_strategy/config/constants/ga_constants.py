@@ -11,8 +11,6 @@ GA_DEFAULT_CONFIG = {
     "crossover_rate": 0.8,
     "mutation_rate": 0.1,
     "elite_size": 10,
-    # バリデーション時のデフォルト上限として使用されるため、比較的緩めに設定
-    # 実際のGA実行時はフロントエンドからの設定が優先される
     "max_indicators": 10,
     "zero_trades_penalty": 0.1,
     "constraint_violation_penalty": 0.0,

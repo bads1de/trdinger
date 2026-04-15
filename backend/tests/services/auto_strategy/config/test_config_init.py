@@ -22,9 +22,9 @@ class TestAutoStrategyConfigInitExports:
         """BaseConfig は削除済みで公開しない"""
         assert hasattr(config_package, "BaseConfig") is False
 
-    def test_auto_strategy_config_exported(self):
-        """AutoStrategyConfigがエクスポートされている"""
-        assert hasattr(config_package, "AutoStrategyConfig")
+    def test_auto_strategy_config_is_not_exported(self):
+        """AutoStrategyConfig は削除済みで公開しない"""
+        assert hasattr(config_package, "AutoStrategyConfig") is False
 
     def test_mutation_config_exported(self):
         """MutationConfigがエクスポートされている"""
@@ -104,7 +104,6 @@ class TestAutoStrategyConfigInitExports:
     def test_all_contains_expected_items(self):
         """__all__に期待されるアイテムが含まれる"""
         expected_items = [
-            "AutoStrategyConfig",
             "EarlyTerminationSettings",
             "MutationConfig",
             "EvaluationConfig",
@@ -116,6 +115,13 @@ class TestAutoStrategyConfigInitExports:
 
         for item in expected_items:
             assert item in config_package.__all__, f"{item} not in __all__"
+
+    def test_auto_strategy_settings_module_is_removed(self):
+        """旧 auto_strategy_settings モジュールは削除済み"""
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module(
+                "app.services.auto_strategy.config.auto_strategy_settings"
+            )
 
     def test_all_is_list(self):
         """__all__がリストである"""

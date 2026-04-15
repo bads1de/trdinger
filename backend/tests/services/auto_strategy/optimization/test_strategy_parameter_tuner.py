@@ -67,7 +67,10 @@ class TestStrategyParameterTuner:
         assert result.metadata["optuna_tuned"] is True
         assert result.metadata["optuna_best_score"] == 2.0
 
-        tuner.parameter_space_builder.build_parameter_space.assert_called_once()
+        tuner.parameter_space_builder.build_parameter_space.assert_called_once_with(
+            mock_gene,
+            include_thresholds=False,
+        )
         tuner.optimizer.optimize.assert_called_once()
         tuner.parameter_space_builder.apply_params_to_gene.assert_called_with(
             mock_gene, {"param1": 5}
@@ -166,8 +169,6 @@ class TestStrategyParameterTuner:
             tuning_config=TuningConfig(
                 n_trials=17,
                 use_wfa=False,
-                include_indicators=False,
-                include_tpsl=False,
                 include_thresholds=True,
             ),
         )
@@ -178,6 +179,4 @@ class TestStrategyParameterTuner:
         assert tuner.config is config
         assert tuner.n_trials == 17
         assert tuner.use_wfa is False
-        assert tuner.include_indicators is False
-        assert tuner.include_tpsl is False
         assert tuner.include_thresholds is True

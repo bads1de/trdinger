@@ -11,7 +11,10 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 from app.api.dependencies import get_generated_strategy_service_with_db
-from app.services.auto_strategy.config import AutoStrategyConfig
+from app.services.auto_strategy.config.constants import (
+    DEFAULT_STRATEGIES_LIMIT,
+    MAX_STRATEGIES_LIMIT,
+)
 from app.services.auto_strategy.services.generated_strategy_service import (
     GeneratedStrategyService,
 )
@@ -21,7 +24,6 @@ from app.utils.response import now_iso
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/strategies", tags=["strategies"])
-_AUTO_STRATEGY_CONFIG = AutoStrategyConfig()
 
 
 # レスポンスモデル
@@ -48,9 +50,9 @@ class StrategyStatsResponse(BaseModel):
 @router.get("/", response_model=StrategiesResponse)
 async def get_strategies(
     limit: int = Query(
-        _AUTO_STRATEGY_CONFIG.default_strategies_limit,
+        DEFAULT_STRATEGIES_LIMIT,
         ge=1,
-        le=_AUTO_STRATEGY_CONFIG.max_strategies_limit,
+        le=MAX_STRATEGIES_LIMIT,
         description="取得件数制限",
     ),
     offset: int = Query(0, ge=0, description="オフセット"),

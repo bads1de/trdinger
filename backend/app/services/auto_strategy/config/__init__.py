@@ -8,7 +8,6 @@ Auto Strategy Config モジュール
 - constants/: 共通定数・Enum・GA固有定数を統合
 - ga/: GAConfig ランタイム設定（dataclass）、GAPresetsプリセット、ConfigValidatorバリデーション
 - ga/nested_configs.py: GAConfig ネスト設定（MutationConfig, EvaluationConfig 等）
-- auto_strategy_settings.py: AutoStrategyConfig 共有設定（pydantic）
 - helpers/: 設定ヘルパー関数（ML filter/volatility gate、robustness regime window）
 - indicator_universe.py: インジケーターユニバース定義と正規化
 - objective_registry.py: 目的関数メタデータレジストリ
@@ -17,9 +16,6 @@ Auto Strategy Config モジュール
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-
-# auto_strategy_settings.py は軽量な共有設定モデル
-from .auto_strategy_settings import AutoStrategyConfig
 
 # サブ設定クラス
 from .ga import (
@@ -72,7 +68,6 @@ _LAZY_EXPORTS = {
 }
 
 __all__ = [
-    "AutoStrategyConfig",
     "EarlyTerminationSettings",
     "MutationConfig",
     "EvaluationConfig",

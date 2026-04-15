@@ -212,14 +212,16 @@ class HybridConfig(NestedConfigMixin):
 
 @dataclass
 class TuningConfig(NestedConfigMixin):
-    """パラメータチューニング（Optuna）関連設定。"""
+    """パラメータチューニング（Optuna）関連設定。
+
+    インジケータと TPSL は常時最適化対象として扱い、
+    ここでは試行回数と閾値最適化の切り替えだけを管理する。
+    """
 
     enabled: bool = True
     n_trials: int = 30
     elite_count: int = 3
     use_wfa: bool = True
-    include_indicators: bool = True
-    include_tpsl: bool = True
     include_thresholds: bool = False
 
 

@@ -17,7 +17,12 @@ from app.config.unified_config import (
     MarketConfig,
     UnifiedConfig,
 )
-from app.services.auto_strategy.config import AutoStrategyConfig
+from app.services.auto_strategy.config.constants import (
+    DEFAULT_STRATEGIES_LIMIT,
+    GA_FALLBACK_END_DATE,
+    GA_FALLBACK_START_DATE,
+    MAX_STRATEGIES_LIMIT,
+)
 from app.services.auto_strategy.config.ga import GAConfig as GAConfigRuntime
 from app.services.backtest.config import BacktestConfig
 from app.services.ml.common.ml_config import MLConfig, MLPredictionConfig
@@ -196,41 +201,19 @@ class TestBacktestConfig:
         assert config.default_results_limit == 20
 
 
-class TestAutoStrategyConfig:
-    """AutoStrategyConfigクラスのテスト"""
+class TestAutoStrategyDefaults:
+    """AutoStrategy の公開定数テスト"""
 
-    def test_initialization_with_defaults(self):
-        """デフォルト値での初期化テスト"""
-        config = AutoStrategyConfig()
-        # デフォルト値は ga_constants.GA_DEFAULT_CONFIG と同期
-        assert config.population_size == 100
-        assert config.generations == 50
-        assert config.mutation_rate == 0.1
-        assert config.max_indicators == 10
-        assert config.min_indicators == 2
+    def test_strategy_list_limits(self):
+        """戦略一覧 API の既定値が期待値に固定されている"""
+        assert DEFAULT_STRATEGIES_LIMIT == 20
+        assert MAX_STRATEGIES_LIMIT == 100
+        assert DEFAULT_STRATEGIES_LIMIT < MAX_STRATEGIES_LIMIT
 
-    def test_new_fields_integration(self):
-        """GAConfigから移行されたフィールドのテスト"""
-        config = AutoStrategyConfig()
-        assert config.fallback_symbol == "BTC/USDT:USDT"
-        assert config.crossover_rate == 0.8
-        assert config.elite_size == 10
-        assert config.enable_multi_objective is False
-        assert config.objectives == ["total_return"]
-
-    def test_multi_objective_settings(self):
-        """多目的最適化設定のテスト"""
-        config = AutoStrategyConfig()
-        assert config.enable_multi_objective is False
-        assert config.objectives == ["total_return"]
-        assert config.objective_weights == [1.0]
-
-    def test_fitness_sharing_settings(self):
-        """フィットネス共有設定のテスト"""
-        config = AutoStrategyConfig()
-        assert config.enable_fitness_sharing is False
-        assert config.fitness_sharing_radius == 0.1
-        assert config.sharing_alpha == 1.0
+    def test_ga_fallback_dates(self):
+        """GA のフォールバック期間が期待値に固定されている"""
+        assert GA_FALLBACK_START_DATE == "2024-01-01"
+        assert GA_FALLBACK_END_DATE == "2024-04-09"
 
 
 class TestMLConfig:
@@ -311,7 +294,7 @@ class TestConfigIntegration:
         config = UnifiedConfig()
         assert config.market.default_exchange == "bybit"
         assert BacktestConfig().default_initial_capital > 0
-        assert AutoStrategyConfig().population_size > 0
+        assert DEFAULT_STRATEGIES_LIMIT <= MAX_STRATEGIES_LIMIT
         assert MLConfig().training is not None
 
 
@@ -380,16 +363,6 @@ class TestEnvironmentVariableSupport:
         assert db_config.host == "envhost"
         assert log_config.level == "WARNING"
         assert market_config.default_exchange == "binance"
-
-    @patch.dict(
-        os.environ,
-        {"AUTO_STRATEGY_POPULATION_SIZE": "200", "AUTO_STRATEGY_GENERATIONS": "100"},
-    )
-    def test_auto_strategy_env_vars_are_ignored(self):
-        """AutoStrategyConfig は環境変数を読まず、既定値を返す"""
-        config = AutoStrategyConfig()
-        assert config.population_size == 100
-        assert config.generations == 50
 
     @patch.dict(os.environ, {"BACKTEST_DEFAULT_INITIAL_CAPITAL": "50000.0"})
     def test_float_env_var_parsing(self):

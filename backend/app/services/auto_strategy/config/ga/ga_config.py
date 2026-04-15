@@ -3,8 +3,9 @@ GA実行時設定クラス
 
 GAConfig クラスを提供します。
 GAConfig は GA エンジンのランタイム設定用 dataclass です。
-共有の既定値が必要な場合は auto_strategy_settings.AutoStrategyConfig を参照してください。
-両者の基本パラメータのデフォルト値は constants.ga_constants.GA_DEFAULT_CONFIG を共有しています。
+戦略一覧 API の既定値は constants.common_constants.DEFAULT_STRATEGIES_LIMIT
+と MAX_STRATEGIES_LIMIT を参照してください。
+GA の基本パラメータは constants.ga_constants.GA_DEFAULT_CONFIG を参照します。
 """
 
 import copy
@@ -16,11 +17,12 @@ from app.utils.serialization import dataclass_to_dict
 
 from ..indicator_universe import normalize_indicator_universe_mode
 from ..constants import (
-    AUTO_STRATEGY_CONFIG_DEFAULTS,
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,
     DEFAULT_GA_OBJECTIVES,
+    GA_FALLBACK_END_DATE,
+    GA_FALLBACK_START_DATE,
     GA_DEFAULT_CONFIG,
     GA_DEFAULT_FITNESS_SHARING,
     GA_PARAMETER_RANGES,
@@ -141,8 +143,8 @@ class GAConfig:
     save_intermediate_results: bool = True
 
     # フォールバック設定
-    fallback_start_date: str = field(default_factory=lambda: AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_start_date"])
-    fallback_end_date: str = field(default_factory=lambda: AUTO_STRATEGY_CONFIG_DEFAULTS["fallback_end_date"])
+    fallback_start_date: str = GA_FALLBACK_START_DATE
+    fallback_end_date: str = GA_FALLBACK_END_DATE
 
     # PurgedKFold設定（過学習対策）
     enable_purged_kfold: bool = False  # PurgedKFoldを有効にするフラグ

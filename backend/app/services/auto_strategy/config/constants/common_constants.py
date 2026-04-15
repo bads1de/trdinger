@@ -4,10 +4,7 @@ Auto Strategy 共通定数
 システム全体で使用される共通定数を定義します。
 """
 
-from app.config.constants import (  # noqa: F401
-    DEFAULT_MARKET_SYMBOL,
-    SUPPORTED_TIMEFRAMES,
-)
+from app.config.constants import DEFAULT_MARKET_SYMBOL
 
 # === データソース定数 ===
 DATA_SOURCES = [
@@ -21,14 +18,7 @@ DATA_SOURCES = [
 ]
 
 # === 取引ペア定数 ===
-SUPPORTED_SYMBOLS = [
-    DEFAULT_MARKET_SYMBOL,
-]
-
 DEFAULT_SYMBOL = DEFAULT_MARKET_SYMBOL
-
-# === 時間軸定数 ===
-DEFAULT_TIMEFRAME = "1h"
 
 # 複合指標
 COMPOSITE_INDICATORS = [
@@ -78,24 +68,6 @@ TPSL_LIMITS = {
 # === ポジションサイジング関連定数 ===
 POSITION_SIZING_METHODS = ["half_optimal_f", "volatility_based", "fixed_ratio", "fixed_quantity"]
 
-# === エラーコード定数 ===
-ERROR_CODES = {
-    "GA_ERROR": "GA処理エラー",
-    "STRATEGY_GENERATION_ERROR": "戦略生成エラー",
-    "CALCULATION_ERROR": "計算エラー",
-    "VALIDATION_ERROR": "検証エラー",
-    "DATA_ERROR": "データエラー",
-    "CONFIG_ERROR": "設定エラー",
-}
-
-# === 取引制約定数 ===
-CONSTRAINTS = {
-    "min_trades": 10,
-    "max_drawdown_limit": 0.3,
-    "max_position_size": 9999.0,
-    "min_position_size": 0.01,
-}
-
 # === 自動戦略デフォルト値 (フォールバック用) ===
 AUTO_STRATEGY_DEFAULTS = {
     # ボラティリティTP/SL
@@ -115,29 +87,8 @@ AUTO_STRATEGY_DEFAULTS = {
     "default_position_ratio": 0.1,
 }
 
-# === AutoStrategyConfig デフォルト値 ===
-AUTO_STRATEGY_CONFIG_DEFAULTS = {
-    # 戦略生成制約
-    "tournament_size": 3,
-    "min_indicators": 2,
-    "min_conditions": 2,
-    "max_conditions": 5,
-    # 多目的最適化設定
-    "enable_multi_objective": False,
-    "objectives": ["total_return"],
-    "objective_weights": [1.0],
-    # フィットネス共有設定（GA_DEFAULT_FITNESS_SHARINGを上書き）
-    "enable_fitness_sharing": False,
-    "fitness_sharing_radius": 0.1,
-    "sharing_alpha": 1.0,
-    # フォールバック設定
-    "fallback_symbol": "BTC/USDT:USDT",
-    "fallback_timeframe": "1d",
-    "fallback_start_date": "2024-01-01",
-    "fallback_end_date": "2024-04-09",
-    "fallback_initial_capital": 100000.0,
-    "fallback_commission_rate": 0.001,
-    # 戦略API設定
-    "default_strategies_limit": 20,
-    "max_strategies_limit": 100,
-}
+# === 戦略一覧APIとGAフォールバックの既定値 ===
+DEFAULT_STRATEGIES_LIMIT = 20
+MAX_STRATEGIES_LIMIT = 100
+GA_FALLBACK_START_DATE = "2024-01-01"
+GA_FALLBACK_END_DATE = "2024-04-09"

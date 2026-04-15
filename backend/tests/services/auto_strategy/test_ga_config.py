@@ -215,8 +215,6 @@ class TestGAConfig:
                     "n_trials": 11,
                     "elite_count": 2,
                     "use_wfa": False,
-                    "include_indicators": False,
-                    "include_tpsl": False,
                     "include_thresholds": True,
                 },
             }
@@ -265,8 +263,24 @@ class TestGAConfig:
         assert restored.tuning_config.n_trials == 11
         assert restored.tuning_config.elite_count == 2
         assert restored.tuning_config.use_wfa is False
-        assert restored.tuning_config.include_indicators is False
-        assert restored.tuning_config.include_tpsl is False
+        assert restored.tuning_config.include_thresholds is True
+
+    def test_from_dict_ignores_legacy_tuning_flags(self):
+        """削除済みの tuning flags は警告付きで無視されることを確認"""
+        restored = GAConfig.from_dict(
+            {
+                "tuning_config": {
+                    "n_trials": 9,
+                    "use_wfa": False,
+                    "include_indicators": False,
+                    "include_tpsl": False,
+                    "include_thresholds": True,
+                }
+            }
+        )
+
+        assert restored.tuning_config.n_trials == 9
+        assert restored.tuning_config.use_wfa is False
         assert restored.tuning_config.include_thresholds is True
 
     def test_from_dict_rejects_legacy_flat_payload(self):

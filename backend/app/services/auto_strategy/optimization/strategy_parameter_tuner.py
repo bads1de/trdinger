@@ -33,8 +33,6 @@ class StrategyParameterTuner:
         config: GAConfig,
         n_trials: int = 30,
         use_wfa: bool = True,
-        include_indicators: bool = True,
-        include_tpsl: bool = True,
         include_thresholds: bool = False,
     ):
         """
@@ -45,16 +43,12 @@ class StrategyParameterTuner:
             config: GA設定
             n_trials: Optuna試行回数
             use_wfa: WFA評価を使用するか（過学習防止）
-            include_indicators: インジケーターパラメータを最適化するか
-            include_tpsl: TPSLパラメータを最適化するか
             include_thresholds: 条件閾値を最適化するか
         """
         self.evaluator = evaluator
         self.config = config
         self.n_trials = n_trials
         self.use_wfa = use_wfa
-        self.include_indicators = include_indicators
-        self.include_tpsl = include_tpsl
         self.include_thresholds = include_thresholds
 
         self.parameter_space_builder = StrategyParameterSpace()
@@ -72,8 +66,6 @@ class StrategyParameterTuner:
             config=config,
             n_trials=config.tuning_config.n_trials,
             use_wfa=config.tuning_config.use_wfa,
-            include_indicators=config.tuning_config.include_indicators,
-            include_tpsl=config.tuning_config.include_tpsl,
             include_thresholds=config.tuning_config.include_thresholds,
         )
 
@@ -99,7 +91,8 @@ class StrategyParameterTuner:
         logger.info("[Tuning] 戦略パラメータチューニングを開始")
 
         parameter_space = self.parameter_space_builder.build_parameter_space(
-            gene, self.include_indicators, self.include_tpsl, self.include_thresholds
+            gene,
+            include_thresholds=self.include_thresholds,
         )
 
         if not parameter_space:
