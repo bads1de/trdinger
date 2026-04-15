@@ -55,7 +55,9 @@ class ParallelEvaluator:
             worker_initargs: 初期化関数の引数
         """
         self.evaluate_func = evaluate_func
-        self.max_workers = max_workers or min(32, (os.cpu_count() or 1) * 2)
+        # CPUバウンド処理の最適値: 物理コア数 - 2, 最大8にキャップ
+        cpu_count = os.cpu_count() or 1
+        self.max_workers = max_workers or min(8, max(2, cpu_count - 2))
         self.timeout_per_individual = timeout_per_individual
         self.use_process_pool = use_process_pool
         self.worker_initializer = worker_initializer

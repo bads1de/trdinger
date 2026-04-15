@@ -5,7 +5,9 @@ backtesting.py の統計結果から各種パフォーマンス指標を計算�
 """
 
 import logging
+import warnings
 from typing import Any, Callable, Dict, Optional, cast
+
 
 import pandas as pd
 
@@ -15,6 +17,14 @@ from app.services.backtest.shared import (
     safe_duration_conversion as _safe_duration_conversion,
     safe_float_conversion as _safe_float_conversion,
     safe_int_conversion as _safe_int_conversion,
+)
+
+# backtesting.pyからのnumpy RuntimeWarningをグローバルに抑制
+warnings.filterwarnings(
+    "ignore", category=RuntimeWarning, message="invalid value encountered"
+)
+warnings.filterwarnings(
+    "ignore", category=RuntimeWarning, message="divide by zero encountered"
 )
 
 logger = logging.getLogger(__name__)
@@ -34,19 +44,35 @@ class BacktestStatisticsCalculator:
             統計情報辞書
         """
         try:
-            actual_stats = resolve_stats_object(stats, warning_logger=logger)
-            statistics: Dict[str, Any] = {}
+            # numpy RuntimeWarningを抑制 (0トレード時の除算警告など)
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=RuntimeWarning, module="backtesting"
+                )
+                warnings.filterwarnings(
+                    "ignore",
+                    category=RuntimeWarning,
+                    message="invalid value encountered",
+                )
+                warnings.filterwarnings(
+                    "ignore",
+                    category=RuntimeWarning,
+                    message="divide by zero encountered",
+                )
 
-            if isinstance(actual_stats, pd.Series) or (
-                hasattr(actual_stats, "keys") and hasattr(actual_stats, "get")
-            ):
-                statistics = self._extract_metrics(actual_stats)
+                actual_stats = resolve_stats_object(stats, warning_logger=logger)
+                statistics: Dict[str, Any] = {}
 
-            statistics = self._enrich_metrics_from_trades(statistics, actual_stats)
-            statistics = self._enrich_metrics_from_equity(statistics, actual_stats)
-            statistics = self._validate_and_fill_defaults(statistics)
+                if isinstance(actual_stats, pd.Series) or (
+                    hasattr(actual_stats, "keys") and hasattr(actual_stats, "get")
+                ):
+                    statistics = self._extract_metrics(actual_stats)
 
-            return statistics
+                statistics = self._enrich_metrics_from_trades(statistics, actual_stats)
+                statistics = self._enrich_metrics_from_equity(statistics, actual_stats)
+                statistics = self._validate_and_fill_defaults(statistics)
+
+                return statistics
         except Exception as e:
             logger.error(f"統計情報の抽出中にエラー: {e}")
             return {}

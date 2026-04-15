@@ -157,7 +157,7 @@ class EvaluationConfig(NestedConfigMixin):
     """評価・検証関連設定。"""
 
     enable_parallel: bool = True
-    max_workers: Optional[int] = None
+    max_workers: Optional[int] = None  # Noneの場合は自動で物理コア-2, 最大8に制限
     timeout: float = 300.0
     enable_multi_fidelity_evaluation: bool = False
     multi_fidelity_window_ratio: float = 0.3

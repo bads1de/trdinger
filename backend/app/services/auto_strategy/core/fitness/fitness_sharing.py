@@ -163,7 +163,7 @@ class FitnessSharing:
                 if has_valid_fitness(individual):
                     original_fitness[i] = individual.fitness.values
                     shared_fitness_values = tuple(
-                        fitness_val / niche_counts[i]
+                        float(np.divide(fitness_val, niche_counts[i], out=np.zeros_like(fitness_val), where=niche_counts[i] != 0))
                         for fitness_val in individual.fitness.values
                     )
                     individual.fitness.values = shared_fitness_values
@@ -179,7 +179,7 @@ class FitnessSharing:
                 if i in original_fitness and hasattr(individual, "fitness"):
                     silhouette_ratio = (
                         tuple(
-                            s / o if o != 0 else 0.0
+                            float(np.divide(s, o, out=np.zeros_like(s), where=o != 0))
                             for s, o in zip(individual.fitness.values, original_fitness[i])
                         )
                         if individual.fitness.valid
