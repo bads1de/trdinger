@@ -91,6 +91,49 @@ class EvolutionRunner:
         self.population = population  # 適応的突然変異用
         self.parallel_evaluator = parallel_evaluator
         self.individual_evaluator = individual_evaluator
+        self._wire_fitness_sharing_provider()
+
+    def _wire_fitness_sharing_provider(self) -> None:
+        """fitness sharing に behavior/report 取得関数を接続する。"""
+        if self.fitness_sharing is None:
+            return
+
+        set_provider = getattr(
+            self.fitness_sharing,
+            "set_evaluation_report_provider",
+            None,
+        )
+        if not callable(set_provider):
+            return
+
+        get_parallel_behavior = getattr(
+            self.parallel_evaluator,
+            "get_cached_behavior_profile",
+            None,
+        )
+        get_cached_report = getattr(
+            self.individual_evaluator,
+            "get_cached_evaluation_report",
+            None,
+        )
+
+        def resolve_behavior_or_report(individual: Any) -> Any:
+            if (
+                getattr(individual, "_evaluation_fidelity", None) == "full"
+                and callable(get_cached_report)
+            ):
+                report = get_cached_report(individual)
+                if report is not None:
+                    return report
+            if callable(get_parallel_behavior):
+                behavior_profile = get_parallel_behavior(individual)
+                if behavior_profile:
+                    return behavior_profile
+            if callable(get_cached_report):
+                return get_cached_report(individual)
+            return None
+
+        set_provider(resolve_behavior_or_report)
 
     def run_evolution(
         self,

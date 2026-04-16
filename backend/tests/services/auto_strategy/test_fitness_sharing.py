@@ -1,5 +1,6 @@
 import copy
 import time
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 import numpy as np
@@ -255,9 +256,9 @@ class TestFitnessSharing:
         vectorize_calls = {"count": 0}
         original_vectorize = fitness_sharing._vectorize_gene
 
-        def counted_vectorize(gene):
+        def counted_vectorize(gene, behavior_profile=None):
             vectorize_calls["count"] += 1
-            return original_vectorize(gene)
+            return original_vectorize(gene, behavior_profile=behavior_profile)
 
         def fake_silhouette(population, gene_serializer, vectorize_gene):
             for individual in population:
@@ -280,6 +281,83 @@ class TestFitnessSharing:
 
         assert len(result) == len(sample_population)
         assert vectorize_calls["count"] == len(sample_population)
+
+    def test_apply_fitness_sharing_reflects_behavior_report_even_for_same_genotype(
+        self,
+        monkeypatch,
+    ):
+        """同じ genotype でも report が違えば別ベクトルとして扱うこと."""
+        gene1 = StrategyGene(
+            id="gene_same_1",
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="sma")
+            ],
+            short_entry_conditions=[],
+            risk_management={"position_size": 0.1},
+            tpsl_gene=TPSLGene(),
+            position_sizing_gene=PositionSizingGene(),
+            metadata={},
+        )
+        gene2 = copy.deepcopy(gene1)
+        gene2.id = "gene_same_2"
+
+        individual1 = self._create_mock_individual(gene1, (1.0,))
+        individual2 = self._create_mock_individual(gene2, (1.0,))
+
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+        sharing.set_evaluation_report_provider(
+            lambda individual: {
+                "gene_same_1": SimpleNamespace(
+                    pass_rate=1.0,
+                    primary_aggregated_fitness=1.0,
+                    primary_worst_case_fitness=0.9,
+                    scenarios=[
+                        SimpleNamespace(
+                            performance_metrics={
+                                "total_return": 0.15,
+                                "sharpe_ratio": 1.8,
+                                "max_drawdown": 0.05,
+                                "total_trades": 24,
+                            }
+                        )
+                    ],
+                ),
+                "gene_same_2": SimpleNamespace(
+                    pass_rate=0.0,
+                    primary_aggregated_fitness=1.0,
+                    primary_worst_case_fitness=-0.4,
+                    scenarios=[
+                        SimpleNamespace(
+                            performance_metrics={
+                                "total_return": -0.05,
+                                "sharpe_ratio": -0.2,
+                                "max_drawdown": 0.32,
+                                "total_trades": 4,
+                            }
+                        )
+                    ],
+                ),
+            }[individual[0].id]
+        )
+
+        captured = {}
+
+        def capture_vectors(vectors):
+            captured["vectors"] = vectors.copy()
+            return np.ones(len(vectors))
+
+        monkeypatch.setattr(sharing, "compute_niche_counts_vectorized", capture_vectors)
+        monkeypatch.setattr(
+            "app.services.auto_strategy.core.fitness.fitness_sharing._silhouette_based_sharing",
+            lambda population, gene_serializer, vectorize_gene: population,
+        )
+
+        sharing.apply_fitness_sharing([individual1, individual2])
+
+        assert "vectors" in captured
+        assert captured["vectors"].shape[0] == 2
+        assert not np.array_equal(captured["vectors"][0], captured["vectors"][1])
 
     def test_feature_vector_cache_key_changes_after_in_place_gene_mutation(
         self,

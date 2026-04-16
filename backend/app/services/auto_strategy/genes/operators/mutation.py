@@ -223,7 +223,12 @@ def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
             idx = random.randint(0, len(conditions) - 1)
             mutate_item(conditions[idx])
 
-    for conditions in (mutated.long_entry_conditions, mutated.short_entry_conditions):
+    for conditions in (
+        mutated.long_entry_conditions,
+        mutated.short_entry_conditions,
+        mutated.long_exit_conditions,
+        mutated.short_exit_conditions,
+    ):
         if random.random() < mutation_threshold:
             maybe_mutate_branch(conditions)
 

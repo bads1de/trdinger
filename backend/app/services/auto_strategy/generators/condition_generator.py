@@ -71,6 +71,7 @@ class ConditionGenerator:
         conds: List[Union[Condition, ConditionGroup]],
         side: str,
         indicators: List[IndicatorGene],
+        purpose: str = "entry",
     ) -> List[Union[Condition, ConditionGroup]]:
         """
         生成された生の条件リストを、戦略として実行可能な形式に正規化し、堅牢性を高めるフォールバックを注入します。
@@ -92,36 +93,10 @@ class ConditionGenerator:
         Returns:
             List[Union[Condition, ConditionGroup]]: 正規化・補強された論理条件のリスト。
         """
-        # トレンド系指標の優先順位
-        trend_pref = ("SMA", "EMA")
-
-        # フォールバック候補の抽出
-        trend_categories = {"trend", "overlap", "custom"}
-        trend_pool: List[IndicatorGene] = []
-        for ind in indicators or []:
-            if not getattr(ind, "enabled", True):
-                continue
-            cfg = indicator_registry.get_indicator_config(ind.type)
-            if cfg and getattr(cfg, "category", None) in trend_categories:
-                trend_pool.append(ind)
-
-        # 優先候補の決定
-        pref = [ind for ind in trend_pool if ind.type in trend_pref]
-        selected_trend_indicator = (
-            random.choice(pref)
-            if pref
-            else (random.choice(trend_pool) if trend_pool else None)
-        )
-        trend_name = (
-            self._get_indicator_name(selected_trend_indicator)
-            if selected_trend_indicator
-            else "open"
-        )
-
-        fallback = Condition(
-            left_operand="close",
-            operator=">" if side == "long" else "<",
-            right_operand=trend_name,
+        fallback = self._build_fallback_condition(
+            side,
+            indicators,
+            purpose=purpose,
         )
 
         if not conds:
@@ -156,6 +131,58 @@ class ConditionGenerator:
         # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
         top_level.append(fallback)
         return top_level
+
+    def _select_trend_indicator(
+        self,
+        indicators: List[IndicatorGene],
+    ) -> Optional[IndicatorGene]:
+        """フォールバックに使うトレンド系指標を選ぶ。"""
+        trend_pref = ("SMA", "EMA")
+        trend_categories = {"trend", "overlap", "custom"}
+        trend_pool: List[IndicatorGene] = []
+        for ind in indicators or []:
+            if not getattr(ind, "enabled", True):
+                continue
+            cfg = indicator_registry.get_indicator_config(ind.type)
+            if cfg and getattr(cfg, "category", None) in trend_categories:
+                trend_pool.append(ind)
+
+        pref = [ind for ind in trend_pool if ind.type in trend_pref]
+        if pref:
+            return random.choice(pref)
+        if trend_pool:
+            return random.choice(trend_pool)
+        return None
+
+    @staticmethod
+    def _resolve_fallback_operator(side: str, purpose: str) -> str:
+        """entry/exit の用途に応じてフォールバック演算子を決める。"""
+        normalized_purpose = "exit" if purpose == "exit" else "entry"
+        normalized_side = "short" if side == "short" else "long"
+
+        if normalized_purpose == "exit":
+            return "<" if normalized_side == "long" else ">"
+        return ">" if normalized_side == "long" else "<"
+
+    def _build_fallback_condition(
+        self,
+        side: str,
+        indicators: List[IndicatorGene],
+        *,
+        purpose: str = "entry",
+    ) -> Condition:
+        """用途に応じたフォールバック条件を構築する。"""
+        selected_trend_indicator = self._select_trend_indicator(indicators)
+        trend_name = (
+            self._get_indicator_name(selected_trend_indicator)
+            if selected_trend_indicator
+            else "open"
+        )
+        return Condition(
+            left_operand="close",
+            operator=self._resolve_fallback_operator(side, purpose),
+            right_operand=trend_name,
+        )
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
     def generate_balanced_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
@@ -213,6 +240,71 @@ class ConditionGenerator:
 
         return _finalize(longs, "long"), _finalize(shorts, "short"), []
 
+    @safe_operation(context="イグジット条件生成", is_api_call=False)
+    def generate_exit_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
+        """
+        保有ポジションの解消を目的にした exit 条件を生成する。
+
+        entry 条件の反転コピーではなく、
+        1. トレンド破綻
+        2. 逆行クロス
+        3. 利確寄りのバンド到達 / オシレーター過熱
+        を候補として構築する。
+        """
+        if not indicators:
+            return self.generate_fallback_exit_conditions(indicators)
+
+        longs: List[Union[Condition, ConditionGroup]] = []
+        shorts: List[Union[Condition, ConditionGroup]] = []
+
+        trend_longs, trend_shorts = self._create_trend_reversal_exit_conditions(
+            indicators
+        )
+        longs.extend(trend_longs)
+        shorts.extend(trend_shorts)
+
+        cross_longs, cross_shorts = self._create_cross_exit_conditions(indicators)
+        longs.extend(cross_longs)
+        shorts.extend(cross_shorts)
+
+        tp_longs, tp_shorts = self._create_take_profit_exit_conditions(indicators)
+        longs.extend(tp_longs)
+        shorts.extend(tp_shorts)
+
+        max_conds = getattr(self.ga_config_obj, "max_conditions", 3)
+
+        def _finalize(lst, side):
+            if not lst:
+                return self.normalize_conditions(
+                    [],
+                    side,
+                    indicators,
+                    purpose="exit",
+                )
+            res = random.sample(lst, max_conds) if len(lst) > max_conds else lst
+            return self.normalize_conditions(
+                res,
+                side,
+                indicators,
+                purpose="exit",
+            )
+
+        return _finalize(longs, "long"), _finalize(shorts, "short"), []
+
+    def generate_fallback_exit_conditions(
+        self, indicators: List[IndicatorGene]
+    ) -> Tuple[List, List, List]:
+        """exit 条件が作れない場合のフォールバック。"""
+        return (
+            self.normalize_conditions([], "long", indicators, purpose="exit"),
+            self.normalize_conditions([], "short", indicators, purpose="exit"),
+            [],
+        )
+
     def generate_fallback_conditions(
         self, indicators: List[IndicatorGene]
     ) -> Tuple[List, List, List]:
@@ -225,6 +317,122 @@ class ConditionGenerator:
             longs.extend(self._create_side_conditions(ind, "long", name))
             shorts.extend(self._create_side_conditions(ind, "short", name))
         return longs, shorts, []
+
+    def _create_trend_reversal_exit_conditions(
+        self, indicators: List[IndicatorGene]
+    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]]:
+        """トレンド破綻やモメンタム反転を exit 条件として生成する。"""
+        longs: List[Union[Condition, ConditionGroup]] = []
+        shorts: List[Union[Condition, ConditionGroup]] = []
+
+        classified = self._classify_indicators(indicators)
+        trend_candidates = classified[IndicatorType.TREND]
+        momentum_candidates = classified[IndicatorType.MOMENTUM]
+
+        if trend_candidates:
+            trend = random.choice(trend_candidates)
+            trend_name = self._get_indicator_name(trend)
+            longs.append(
+                Condition(left_operand="close", operator="<", right_operand=trend_name)
+            )
+            shorts.append(
+                Condition(left_operand="close", operator=">", right_operand=trend_name)
+            )
+
+        if momentum_candidates:
+            momentum = random.choice(momentum_candidates)
+            cfg = indicator_registry.get_indicator_config(momentum.type)
+            scale_type = cfg.scale_type if cfg else None
+            momentum_name = self._get_indicator_name(momentum)
+
+            if scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
+                longs.append(
+                    Condition(left_operand=momentum_name, operator="<", right_operand=0.0)
+                )
+                shorts.append(
+                    Condition(left_operand=momentum_name, operator=">", right_operand=0.0)
+                )
+            elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
+                longs.append(
+                    Condition(left_operand=momentum_name, operator="<", right_operand=-10.0)
+                )
+                shorts.append(
+                    Condition(left_operand=momentum_name, operator=">", right_operand=10.0)
+                )
+
+        return longs, shorts
+
+    def _create_cross_exit_conditions(
+        self, indicators: List[IndicatorGene]
+    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]]:
+        """移動平均の逆行クロスを exit 条件として生成する。"""
+        longs: List[Union[Condition, ConditionGroup]] = []
+        shorts: List[Union[Condition, ConditionGroup]] = []
+
+        price_inds = [
+            indicator
+            for indicator in indicators
+            if indicator.enabled and self._is_price_scale(indicator)
+        ]
+        if len(price_inds) < 2:
+            return longs, shorts
+
+        i1, i2 = random.sample(price_inds, 2)
+        p1, p2 = i1.parameters.get("period", 0), i2.parameters.get("period", 0)
+        if abs(p1 - p2) < 1:
+            return longs, shorts
+
+        fast_ma, slow_ma = (i1, i2) if p1 < p2 else (i2, i1)
+        fast_name = self._get_indicator_name(fast_ma)
+        slow_name = self._get_indicator_name(slow_ma)
+
+        longs.append(
+            Condition(left_operand=fast_name, operator="<", right_operand=slow_name)
+        )
+        shorts.append(
+            Condition(left_operand=fast_name, operator=">", right_operand=slow_name)
+        )
+        return longs, shorts
+
+    def _create_take_profit_exit_conditions(
+        self, indicators: List[IndicatorGene]
+    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]]:
+        """利確寄りの到達条件を exit 候補として生成する。"""
+        longs: List[Union[Condition, ConditionGroup]] = []
+        shorts: List[Union[Condition, ConditionGroup]] = []
+
+        band_candidates = [
+            indicator
+            for indicator in indicators
+            if indicator.enabled and self._is_band_indicator(indicator)
+        ]
+        if band_candidates:
+            band = random.choice(band_candidates)
+            upper_name, lower_name = self._get_band_names(band)
+            longs.append(
+                Condition(left_operand="close", operator=">", right_operand=upper_name)
+            )
+            shorts.append(
+                Condition(left_operand="close", operator="<", right_operand=lower_name)
+            )
+
+        for indicator in indicators:
+            if not indicator.enabled:
+                continue
+
+            cfg = indicator_registry.get_indicator_config(indicator.type)
+            scale_type = cfg.scale_type if cfg else None
+            indicator_name = self._get_indicator_name(indicator)
+
+            if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
+                longs.append(
+                    Condition(left_operand=indicator_name, operator=">", right_operand=70.0)
+                )
+                shorts.append(
+                    Condition(left_operand=indicator_name, operator="<", right_operand=30.0)
+                )
+
+        return longs, shorts
 
     def _get_indicator_name(self, indicator: IndicatorGene) -> str:
         """IndicatorCalculatorと一致する一意な指標名を取得"""

@@ -9,9 +9,13 @@ import logging
 from typing import Any, Dict, Optional, Tuple
 
 # 遅延インポートなどで循環参照を避ける
+from app.services.auto_strategy.core.fitness.fitness_sharing_vectorizer import (
+    build_behavior_profile,
+)
 from app.services.backtest.services.backtest_service import BacktestService
 
 from .individual_evaluator import IndividualEvaluator
+from .parallel_evaluator import ParallelEvaluationResult
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +67,7 @@ def initialize_worker_process(
         raise
 
 
-def worker_evaluate_individual(individual: Any) -> Tuple[float, ...]:
+def worker_evaluate_individual(individual: Any) -> ParallelEvaluationResult:
     """
     個体評価関数（ワーカープロセス内で実行）
 
@@ -77,10 +81,19 @@ def worker_evaluate_individual(individual: Any) -> Tuple[float, ...]:
 
     if _WORKER_EVALUATOR is None or _WORKER_CONFIG is None:
         logger.error("Worker evaluator or config not initialized!")
-        return (0.0,)
+        return ParallelEvaluationResult(fitness=(0.0,))
 
     try:
-        return _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)  # type: ignore[arg-type]
+        fitness = _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)  # type: ignore[arg-type]
+        report = _WORKER_EVALUATOR.get_last_evaluation_report()
+        behavior_summary = build_behavior_profile(
+            fitness_values=fitness,
+            evaluation_report=report,
+        )
+        return ParallelEvaluationResult(
+            fitness=fitness,
+            behavior_summary=behavior_summary,
+        )
     except Exception as e:
         logger.error(f"Evaluation error in worker: {e}")
-        return (0.0,)
+        return ParallelEvaluationResult(fitness=(0.0,))

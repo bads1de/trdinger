@@ -263,6 +263,62 @@ class TestEvolutionRunner:
             mock_fitness_sharing.apply_fitness_sharing.call_count == config.generations
         )
 
+    def test_initialization_wires_behavior_provider_for_fitness_sharing(
+        self,
+        mock_toolbox,
+    ):
+        """fitness sharing が parallel evaluator と evaluator の両方を参照できること"""
+        mock_fitness_sharing = Mock()
+        mock_parallel_evaluator = Mock()
+        mock_parallel_evaluator.get_cached_behavior_profile.return_value = {
+            "pass_rate": 0.25
+        }
+        mock_individual_evaluator = Mock()
+        mock_individual_evaluator.get_cached_evaluation_report.return_value = "report"
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=None,
+            fitness_sharing=mock_fitness_sharing,
+            parallel_evaluator=mock_parallel_evaluator,
+            individual_evaluator=mock_individual_evaluator,
+        )
+
+        provider = mock_fitness_sharing.set_evaluation_report_provider.call_args.args[0]
+        individual = _DummyIndividual((1.0,))
+        individual.id = "behavior-target"
+
+        assert provider(individual) == {"pass_rate": 0.25}
+
+    def test_behavior_provider_prefers_full_report_for_full_fidelity_individual(
+        self,
+        mock_toolbox,
+    ):
+        """full fidelity 個体では coarse behavior より report を優先すること"""
+        mock_fitness_sharing = Mock()
+        mock_parallel_evaluator = Mock()
+        mock_parallel_evaluator.get_cached_behavior_profile.return_value = {
+            "pass_rate": 0.25
+        }
+        full_report = object()
+        mock_individual_evaluator = Mock()
+        mock_individual_evaluator.get_cached_evaluation_report.return_value = full_report
+
+        EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=None,
+            fitness_sharing=mock_fitness_sharing,
+            parallel_evaluator=mock_parallel_evaluator,
+            individual_evaluator=mock_individual_evaluator,
+        )
+
+        provider = mock_fitness_sharing.set_evaluation_report_provider.call_args.args[0]
+        individual = _DummyIndividual((1.0,))
+        individual.id = "full-fidelity-target"
+        individual._evaluation_fidelity = "full"
+
+        assert provider(individual) is full_report
+
     def test_dynamic_objective_scalars_emphasize_risk_metrics(self) -> None:
         """Risk metrics receive boosted scaling factors when averages are high."""
         runner = EvolutionRunner(toolbox=Mock(), stats=None)

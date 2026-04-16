@@ -68,3 +68,24 @@ class TestConditionGenerator:
 
         assert len(normalized) == 1
         assert normalized[0].right_operand == "EMA_ema12345"
+
+    def test_normalize_conditions_supports_exit_fallback_direction(self):
+        """exit 用正規化では保有方向と逆向きのトレンドフォールバックを使う"""
+        ema_indicator = IndicatorGene(
+            id="ema123456789",
+            type="EMA",
+            parameters={"period": 20},
+            enabled=True,
+        )
+
+        normalized = self.generator.normalize_conditions(
+            [],
+            "long",
+            [ema_indicator],
+            purpose="exit",
+        )
+
+        assert len(normalized) == 1
+        assert normalized[0].left_operand == "close"
+        assert normalized[0].operator == "<"
+        assert normalized[0].right_operand == "EMA_ema12345"

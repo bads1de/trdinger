@@ -6,6 +6,7 @@ ProcessPoolExecutor を使用してタイムアウト時のゾンビプロセス
 CPU バウンドな計算を効率化します。
 """
 
+from dataclasses import dataclass
 import logging
 import os
 import time
@@ -15,6 +16,14 @@ from concurrent.futures import wait
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class ParallelEvaluationResult:
+    """ワーカーから返す拡張評価結果。"""
+
+    fitness: Tuple[float, ...]
+    behavior_summary: Optional[Dict[str, float]] = None
 
 
 def _combined_initializer(init_func, init_args):
@@ -93,6 +102,7 @@ class ParallelEvaluator:
         self._evaluation_cache: Dict[str, Tuple[float, ...]] = {}
         self._cache_hits = 0
         self._cache_misses = 0
+        self._behavior_summary_cache: Dict[object, Dict[str, float]] = {}
 
     def start(self):
         """
@@ -236,12 +246,18 @@ class ParallelEvaluator:
                 self._total_evaluations += 1
 
                 try:
-                    fitness = future.result()
+                    evaluation_result = future.result()
+                    fitness = self._extract_fitness_result(evaluation_result)
                     results[index] = fitness
+                    self._cache_behavior_summary(
+                        population[index],
+                        evaluation_result,
+                    )
                     self._successful_evaluations += 1
                 except FuturesTimeoutError:
                     self._record_timeout(index)
                     results[index] = default_fitness
+                    self._clear_behavior_summary(population[index])
                     timed_out_futures = True
                 except Exception as e:
                     category = self._categorize_error(e, index)
@@ -250,6 +266,7 @@ class ParallelEvaluator:
                         f"category={category}, error={e}"
                     )
                     results[index] = default_fitness
+                    self._clear_behavior_summary(population[index])
                     self._failed_evaluations += 1
 
             expired_futures = self._collect_expired_futures(
@@ -262,6 +279,7 @@ class ParallelEvaluator:
                 self._total_evaluations += 1
                 results[index] = default_fitness
                 self._record_timeout(index)
+                self._clear_behavior_summary(population[index])
                 timed_out_futures = True
                 future.cancel()
 
@@ -272,6 +290,58 @@ class ParallelEvaluator:
                 self._executor = None
 
         return results
+
+    @staticmethod
+    def _extract_fitness_result(
+        evaluation_result: Any,
+    ) -> Tuple[float, ...]:
+        """返り値から fitness タプルを取り出す。"""
+        if isinstance(evaluation_result, ParallelEvaluationResult):
+            return tuple(evaluation_result.fitness)
+        return tuple(evaluation_result)
+
+    def _cache_behavior_summary(
+        self,
+        individual: Any,
+        evaluation_result: Any,
+    ) -> None:
+        """拡張返り値に含まれる behavior summary をキャッシュする。"""
+        if not isinstance(evaluation_result, ParallelEvaluationResult):
+            return
+        if not evaluation_result.behavior_summary:
+            self._clear_behavior_summary(individual)
+            return
+        cache_key = self._get_individual_identity(individual)
+        self._behavior_summary_cache[cache_key] = dict(evaluation_result.behavior_summary)
+
+    def _clear_behavior_summary(self, individual: Any) -> None:
+        """個体に紐づく behavior summary キャッシュを削除する。"""
+        cache_key = self._get_individual_identity(individual)
+        self._behavior_summary_cache.pop(cache_key, None)
+
+    @staticmethod
+    def _get_individual_identity(individual: Any) -> object:
+        """個体を識別する安定キーを返す。"""
+        individual_id = getattr(individual, "id", None)
+        if individual_id not in (None, ""):
+            return individual_id
+
+        try:
+            if len(individual) > 0:
+                head = individual[0]
+                head_id = getattr(head, "id", None)
+                if head_id not in (None, ""):
+                    return head_id
+        except Exception:
+            pass
+
+        return id(individual)
+
+    def get_cached_behavior_profile(self, individual: Any) -> Optional[Dict[str, float]]:
+        """個体に対応する behavior summary を返す。"""
+        cache_key = self._get_individual_identity(individual)
+        behavior_summary = self._behavior_summary_cache.get(cache_key)
+        return dict(behavior_summary) if behavior_summary is not None else None
 
     def _get_poll_timeout(self) -> float:
         """完了待機ループのポーリング間隔を返す。"""
@@ -420,6 +490,7 @@ class ParallelEvaluator:
         self._successful_evaluations = 0
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
+        self._behavior_summary_cache.clear()
         # エラー種別もリセット
         for key in self._error_categories:
             self._error_categories[key] = 0
@@ -433,6 +504,7 @@ class ParallelEvaluator:
         self._successful_evaluations = 0
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
+        self._behavior_summary_cache.clear()
 
 
 # =============================================================================

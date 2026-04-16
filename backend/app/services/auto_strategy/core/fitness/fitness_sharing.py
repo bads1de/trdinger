@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 
 import numpy as np
 
@@ -35,6 +35,7 @@ from .fitness_sharing_silhouette import (
     silhouette_based_sharing as _silhouette_based_sharing,
 )
 from .fitness_sharing_vectorizer import (
+    build_behavior_profile,
     _count_operand_types,
     _count_operators,
     vectorize_gene as _vectorize_gene,
@@ -65,6 +66,7 @@ class FitnessSharing:
         alpha: float = 1.0,
         sampling_threshold: Optional[int] = None,
         sampling_ratio: Optional[float] = None,
+        evaluation_report_provider: Optional[Callable[[Any], Any]] = None,
     ) -> None:
         """
         初期化
@@ -87,6 +89,7 @@ class FitnessSharing:
             sampling_ratio if sampling_ratio is not None else self.SAMPLING_RATIO
         )
         self._feature_vector_cache: dict[_FrozenKey, np.ndarray] = {}
+        self._evaluation_report_provider = evaluation_report_provider
 
         # 指標タイプマップの初期化（ベクトル化用）
         try:
@@ -121,11 +124,20 @@ class FitnessSharing:
             if len(population) <= 1:
                 return population
 
+            behavior_profiles = self._build_behavior_profile_map(population)
+
             def resolve_vector(gene: StrategyGene) -> np.ndarray:
-                cache_key = self._get_feature_vector_cache_key(gene)
+                behavior_profile = behavior_profiles.get(id(gene))
+                cache_key = self._get_feature_vector_cache_key(
+                    gene,
+                    behavior_profile=behavior_profile,
+                )
                 vector = self._feature_vector_cache.get(cache_key)
                 if vector is None:
-                    vector = self._vectorize_gene(gene)
+                    vector = self._vectorize_gene(
+                        gene,
+                        behavior_profile=behavior_profile,
+                    )
                     self._feature_vector_cache[cache_key] = vector
                 return vector
 
@@ -195,18 +207,82 @@ class FitnessSharing:
             logger.error(f"フィットネス共有適用エラー: {e}")
             return population
 
-    def _get_feature_vector_cache_key(self, gene: StrategyGene) -> _FrozenKey:
-        """
-        特徴ベクトルキャッシュ用の安定キーを生成する。
-
-        遺伝子の内容ベースでキーを作ることで、突然変異後の古いベクトルと
-        混ざらないようにする。
-        """
+    def _get_feature_vector_cache_key_with_behavior(
+        self,
+        gene: StrategyGene,
+        behavior_profile: Optional[Mapping[str, float]] = None,
+    ) -> _FrozenKey:
+        """behavior profile も含めた特徴ベクトルキャッシュキーを生成する。"""
         try:
-            return self.gene_serializer._generate_cache_key(gene)
+            base_key = self.gene_serializer._generate_cache_key(gene)
+            if not behavior_profile:
+                return base_key
+
+            behavior_signature = tuple(
+                (
+                    key,
+                    round(float(value), 8),
+                )
+                for key, value in sorted(behavior_profile.items())
+            )
+            return base_key, behavior_signature
         except Exception as e:
             logger.debug(f"特徴ベクトルキャッシュキーの生成に失敗しました: {e}")
             return str(id(gene))
+
+    def _get_feature_vector_cache_key(
+        self,
+        gene: StrategyGene,
+        behavior_profile: Optional[Mapping[str, float]] = None,
+    ) -> _FrozenKey:
+        """互換性維持のための公開ラッパー。"""
+        return self._get_feature_vector_cache_key_with_behavior(
+            gene,
+            behavior_profile=behavior_profile,
+        )
+
+    def set_evaluation_report_provider(
+        self,
+        provider: Optional[Callable[[Any], Any]],
+    ) -> None:
+        """behavior 特徴抽出に使う EvaluationReport 取得関数を設定する。"""
+        self._evaluation_report_provider = provider
+
+    def _get_evaluation_report(self, individual: Any) -> Optional[Any]:
+        """評価レポート取得関数を安全に呼び出す。"""
+        if not callable(self._evaluation_report_provider):
+            return None
+        try:
+            return self._evaluation_report_provider(individual)
+        except Exception as e:
+            logger.debug("evaluation report の取得に失敗しました: %s", e)
+            return None
+
+    def _build_behavior_profile(self, individual: Any) -> dict[str, float]:
+        """個体の評価結果から behavior profile を構築する。"""
+        fitness = getattr(individual, "fitness", None)
+        fitness_values = getattr(fitness, "values", None)
+        report = self._get_evaluation_report(individual)
+        return build_behavior_profile(
+            fitness_values=fitness_values,
+            evaluation_report=report,
+        )
+
+    def _build_behavior_profile_map(
+        self,
+        population: List[Any],
+    ) -> dict[int, dict[str, float]]:
+        """個体ごとの behavior profile を事前計算する。"""
+        profiles: dict[int, dict[str, float]] = {}
+        for individual in population:
+            try:
+                gene = self.gene_serializer.from_list(individual, StrategyGene)
+                if gene is None:
+                    continue
+                profiles[id(gene)] = self._build_behavior_profile(individual)
+            except Exception as e:
+                logger.debug("behavior profile 構築に失敗しました: %s", e)
+        return profiles
 
     def compute_niche_counts_vectorized(self, vectors: np.ndarray) -> np.ndarray:
         """
@@ -293,13 +369,23 @@ class FitnessSharing:
         """
         シルエットベースの共有
         """
+        behavior_profiles = self._build_behavior_profile_map(population)
+
+        def resolve_vector(gene: StrategyGene) -> np.ndarray:
+            behavior_profile = behavior_profiles.get(id(gene))
+            return self._vectorize_gene(gene, behavior_profile=behavior_profile)
+
         return _silhouette_based_sharing(
             population,
             gene_serializer=self.gene_serializer,
-            vectorize_gene=self._vectorize_gene,
+            vectorize_gene=resolve_vector,
         )
 
-    def _vectorize_gene(self, gene: StrategyGene) -> np.ndarray:
+    def _vectorize_gene(
+        self,
+        gene: StrategyGene,
+        behavior_profile: Optional[Mapping[str, float]] = None,
+    ) -> np.ndarray:
         """
         StrategyGeneを数値的な特徴ベクトルに変換します。
         """
@@ -309,6 +395,7 @@ class FitnessSharing:
             indicator_map=self.indicator_map,
             operator_types=self.operator_types,
             operator_map=self.operator_map,
+            behavior_profile=behavior_profile,
         )
 
     def _count_operators(self, conditions: List[Any], vector: np.ndarray) -> None:

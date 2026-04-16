@@ -8,6 +8,110 @@ import numpy as np
 
 from app.services.auto_strategy.genes import ConditionGroup, StrategyGene
 
+BEHAVIOR_FEATURE_NAMES: tuple[str, ...] = (
+    "objective_count",
+    "fitness_primary",
+    "fitness_mean",
+    "fitness_std",
+    "pass_rate",
+    "scenario_count",
+    "aggregated_primary",
+    "worst_case_primary",
+    "mean_total_return",
+    "std_total_return",
+    "mean_sharpe_ratio",
+    "std_sharpe_ratio",
+    "mean_max_drawdown",
+    "std_max_drawdown",
+    "mean_total_trades",
+    "std_total_trades",
+)
+
+
+def build_behavior_profile(
+    fitness_values: Sequence[float] | None = None,
+    evaluation_report: Any | None = None,
+) -> dict[str, float]:
+    """
+    評価済み個体の挙動を固定長の数値特徴へ要約する。
+
+    フィットネス値のみ利用可能な場合はその統計量を、
+    EvaluationReport が利用可能な場合は pass_rate やシナリオ別の
+    パフォーマンス安定性も取り込む。
+    """
+    profile = {name: 0.0 for name in BEHAVIOR_FEATURE_NAMES}
+
+    sanitized_fitness = _sanitize_numeric_sequence(fitness_values)
+    if sanitized_fitness:
+        profile["objective_count"] = float(len(sanitized_fitness))
+        profile["fitness_primary"] = float(sanitized_fitness[0])
+        profile["fitness_mean"] = float(np.mean(sanitized_fitness))
+        profile["fitness_std"] = float(np.std(sanitized_fitness))
+        profile["aggregated_primary"] = float(sanitized_fitness[0])
+        profile["worst_case_primary"] = float(sanitized_fitness[0])
+        profile["scenario_count"] = 1.0
+        profile["pass_rate"] = 1.0
+
+    if evaluation_report is None:
+        return profile
+
+    if isinstance(evaluation_report, Mapping) and any(
+        name in evaluation_report for name in BEHAVIOR_FEATURE_NAMES
+    ):
+        for name in BEHAVIOR_FEATURE_NAMES:
+            if name in evaluation_report:
+                profile[name] = _safe_float(
+                    evaluation_report.get(name),
+                    fallback=profile[name],
+                )
+        return profile
+
+    pass_rate = _safe_float(getattr(evaluation_report, "pass_rate", 0.0))
+    scenario_list = list(getattr(evaluation_report, "scenarios", []) or [])
+    scenario_count = float(len(scenario_list))
+    aggregated_primary = _safe_float(
+        getattr(evaluation_report, "primary_aggregated_fitness", None),
+        fallback=profile["aggregated_primary"],
+    )
+    worst_case_primary = _safe_float(
+        getattr(evaluation_report, "primary_worst_case_fitness", None),
+        fallback=aggregated_primary,
+    )
+
+    profile["pass_rate"] = pass_rate
+    profile["scenario_count"] = scenario_count
+    profile["aggregated_primary"] = aggregated_primary
+    profile["worst_case_primary"] = worst_case_primary
+
+    metric_names = (
+        "total_return",
+        "sharpe_ratio",
+        "max_drawdown",
+        "total_trades",
+    )
+    for metric_name in metric_names:
+        metric_values = _extract_scenario_metric_values(scenario_list, metric_name)
+        if not metric_values:
+            continue
+
+        metric_prefix = f"mean_{metric_name}"
+        std_prefix = f"std_{metric_name}"
+        if metric_prefix in profile:
+            profile[metric_prefix] = float(np.mean(metric_values))
+        if std_prefix in profile:
+            profile[std_prefix] = float(np.std(metric_values))
+
+    return profile
+
+
+def behavior_profile_to_vector(
+    behavior_profile: Mapping[str, float] | None,
+) -> list[float]:
+    """behavior profile を固定順のベクトルへ変換する。"""
+    if not behavior_profile:
+        return [0.0] * len(BEHAVIOR_FEATURE_NAMES)
+    return [float(behavior_profile.get(name, 0.0)) for name in BEHAVIOR_FEATURE_NAMES]
+
 
 def vectorize_gene(
     gene: StrategyGene,
@@ -15,6 +119,7 @@ def vectorize_gene(
     indicator_map: Mapping[str, int],
     operator_types: Sequence[str],
     operator_map: Mapping[str, int],
+    behavior_profile: Mapping[str, float] | None = None,
 ) -> np.ndarray:
     """
     戦略遺伝子を固定長の特徴ベクトルに変換する。
@@ -97,8 +202,49 @@ def vectorize_gene(
 
     features.append(numeric_operands)
     features.append(dynamic_operands)
+    features.extend(behavior_profile_to_vector(behavior_profile))
 
     return np.array(features)
+
+
+def _safe_float(value: Any, fallback: float = 0.0) -> float:
+    """非数値や NaN/Inf を安全に float へ落とす。"""
+    if value is None or not isinstance(value, (int, float)):
+        return fallback
+    value_float = float(value)
+    if not np.isfinite(value_float):
+        return fallback
+    return value_float
+
+
+def _sanitize_numeric_sequence(values: Sequence[float] | None) -> list[float]:
+    """数値列から有限な float のみを抽出する。"""
+    if not values:
+        return []
+    sanitized: list[float] = []
+    for value in values:
+        if not isinstance(value, (int, float)):
+            continue
+        value_float = float(value)
+        if np.isfinite(value_float):
+            sanitized.append(value_float)
+    return sanitized
+
+
+def _extract_scenario_metric_values(
+    scenarios: Sequence[Any],
+    metric_name: str,
+) -> list[float]:
+    """ScenarioEvaluation 群から metric を抽出する。"""
+    metric_values: list[float] = []
+    for scenario in scenarios:
+        metrics = getattr(scenario, "performance_metrics", None)
+        if not isinstance(metrics, dict):
+            continue
+        value = _safe_float(metrics.get(metric_name, None), fallback=np.nan)
+        if np.isfinite(value):
+            metric_values.append(value)
+    return metric_values
 
 
 def _collect_conditions(gene: StrategyGene) -> list[Any]:

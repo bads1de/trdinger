@@ -16,6 +16,7 @@ from app.services.auto_strategy.genes import (
     StrategyGene,
     TPSLGene,
 )
+from app.services.auto_strategy.genes.strategy_operators import mutate_conditions
 from app.services.auto_strategy.config.constants import (
     EntryType,
     PositionSizingMethod,
@@ -286,3 +287,22 @@ class TestGeneticOperators:
 
         # 確率的なので失敗する可能性もゼロではないが、50回ならほぼ確実に混ざる
         assert diverse, "Uniform crossover should generate diverse offspring"
+
+    def test_mutate_conditions_includes_exit_condition_branches(self, ga_config):
+        """exit 条件も mutate_conditions の対象に含まれることを確認"""
+        gene = StrategyGene(
+            long_exit_conditions=[
+                Condition(left_operand="close", operator=">", right_operand=110.0)
+            ],
+            short_exit_conditions=[
+                Condition(left_operand="close", operator="<", right_operand=90.0)
+            ],
+        )
+
+        with patch("random.random", return_value=0.0), patch(
+            "random.randint", return_value=0
+        ), patch("random.choice", return_value="!="):
+            mutate_conditions(gene, 1.0, ga_config)
+
+        assert gene.long_exit_conditions[0].operator == "!="
+        assert gene.short_exit_conditions[0].operator == "!="

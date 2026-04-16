@@ -14,6 +14,9 @@ from app.services.auto_strategy.core.evaluation.evaluation_worker import (
     _WORKER_EVALUATOR,
     _WORKER_CONFIG,
 )
+from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
+    ParallelEvaluationResult,
+)
 import app.services.auto_strategy.core.evaluation.evaluation_worker as ew_module
 
 
@@ -119,6 +122,12 @@ class TestWorkerEvaluateIndividual:
         """個体評価が正常に実行されること"""
         mock_evaluator = MagicMock()
         mock_evaluator.evaluate.return_value = (0.75, 0.5)
+        mock_evaluator.get_last_evaluation_report.return_value = MagicMock(
+            pass_rate=0.5,
+            primary_aggregated_fitness=0.75,
+            primary_worst_case_fitness=0.2,
+            scenarios=[],
+        )
         mock_config = MagicMock()
         
         ew_module._WORKER_EVALUATOR = mock_evaluator
@@ -128,7 +137,10 @@ class TestWorkerEvaluateIndividual:
             mock_individual = MagicMock()
             result = worker_evaluate_individual(mock_individual)
             
-            assert result == (0.75, 0.5)
+            assert isinstance(result, ParallelEvaluationResult)
+            assert result.fitness == (0.75, 0.5)
+            assert result.behavior_summary is not None
+            assert result.behavior_summary["pass_rate"] == pytest.approx(0.5)
             mock_evaluator.evaluate.assert_called_once_with(mock_individual, mock_config)
         finally:
             ew_module._WORKER_EVALUATOR = None
@@ -143,7 +155,9 @@ class TestWorkerEvaluateIndividual:
             mock_individual = MagicMock()
             result = worker_evaluate_individual(mock_individual)
             
-            assert result == (0.0,)
+            assert isinstance(result, ParallelEvaluationResult)
+            assert result.fitness == (0.0,)
+            assert result.behavior_summary is None
         finally:
             ew_module._WORKER_EVALUATOR = None
             ew_module._WORKER_CONFIG = None
@@ -161,7 +175,9 @@ class TestWorkerEvaluateIndividual:
             mock_individual = MagicMock()
             result = worker_evaluate_individual(mock_individual)
             
-            assert result == (0.0,)
+            assert isinstance(result, ParallelEvaluationResult)
+            assert result.fitness == (0.0,)
+            assert result.behavior_summary is None
         finally:
             ew_module._WORKER_EVALUATOR = None
             ew_module._WORKER_CONFIG = None

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
     ParallelEvaluator,
+    ParallelEvaluationResult,
 )
 
 
@@ -73,6 +74,27 @@ class TestParallelEvaluator:
         # 順序が保持されていること
         for i, fitness in enumerate(result):
             assert fitness == (float(i),)
+
+    def test_evaluate_population_caches_behavior_summary_from_rich_result(self):
+        """拡張返り値から behavior summary を回収できること"""
+        individual = MagicMock()
+        individual.id = "ind_behavior"
+
+        evaluator = ParallelEvaluator(
+            evaluate_func=lambda _: ParallelEvaluationResult(
+                fitness=(1.25,),
+                behavior_summary={"pass_rate": 0.4, "mean_total_return": 0.12},
+            ),
+            max_workers=1,
+        )
+
+        result = evaluator.evaluate_population([individual])
+
+        assert result == [(1.25,)]
+        assert evaluator.get_cached_behavior_profile(individual) == {
+            "pass_rate": 0.4,
+            "mean_total_return": 0.12,
+        }
 
     def test_evaluate_population_with_error(self):
         """評価中のエラーが適切に処理されること"""
@@ -184,6 +206,26 @@ class TestParallelEvaluator:
         evaluator.reset_statistics()
         stats = evaluator.get_statistics()
         assert stats["total_evaluations"] == 0
+
+    def test_reset_generation_stats_clears_behavior_summary_cache(self):
+        """世代リセット時に behavior summary cache も破棄すること"""
+        individual = MagicMock()
+        individual.id = "ind_behavior_reset"
+
+        evaluator = ParallelEvaluator(
+            evaluate_func=lambda _: ParallelEvaluationResult(
+                fitness=(1.0,),
+                behavior_summary={"pass_rate": 0.5},
+            ),
+            max_workers=1,
+        )
+
+        evaluator.evaluate_population([individual])
+        assert evaluator.get_cached_behavior_profile(individual) == {"pass_rate": 0.5}
+
+        evaluator._reset_generation_stats()
+
+        assert evaluator.get_cached_behavior_profile(individual) is None
 
     def test_evaluate_invalid_individuals(self):
         """適応度が無効な個体のみを評価できること"""

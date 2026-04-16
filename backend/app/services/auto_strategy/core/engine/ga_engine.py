@@ -154,6 +154,18 @@ class GeneticAlgorithmEngine:
                     "sampling_ratio", FitnessSharing.SAMPLING_RATIO
                 ),
             )
+            set_report_provider = getattr(
+                self.fitness_sharing,
+                "set_evaluation_report_provider",
+                None,
+            )
+            get_cached_report = getattr(
+                self.individual_evaluator,
+                "get_cached_evaluation_report",
+                None,
+            )
+            if callable(set_report_provider) and callable(get_cached_report):
+                set_report_provider(get_cached_report)
         else:
             self.fitness_sharing = None
 

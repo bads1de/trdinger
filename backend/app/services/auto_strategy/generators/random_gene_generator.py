@@ -14,12 +14,14 @@ from typing import Any, Dict, List, Optional, Protocol, Sequence, TypeVar
 from app.utils.error_handler import safe_operation
 
 from ..genes import (
+    ExitGene,
     IndicatorGene,
     PositionSizingGene,
     PositionSizingMethod,
     StrategyGene,
     TPSLGene,
     create_random_entry_gene,
+    create_random_exit_gene,
     create_random_position_sizing_gene,
     create_random_tpsl_gene,
     generate_random_indicators,
@@ -87,6 +89,7 @@ class RandomGeneGenerator:
         # 最適化: キャッシュ
         self._indicator_cache: List[IndicatorGene] = []
         self._tpsl_cache: List[TPSLGene] = []
+        self._exit_gene_cache: List[ExitGene] = []
         self._position_sizing_cache: List[PositionSizingGene] = []
         self._tool_genes_template: Optional[List[ToolGene]] = None
 
@@ -124,6 +127,9 @@ class RandomGeneGenerator:
 
         for _ in range(10):
             self._tpsl_cache.append(create_random_tpsl_gene(self.config))
+
+        for _ in range(10):
+            self._exit_gene_cache.append(create_random_exit_gene(self.config))
 
         for _ in range(10):
             self._position_sizing_cache.append(
@@ -241,6 +247,21 @@ class RandomGeneGenerator:
             lambda: create_random_position_sizing_gene(self.config),
         )
 
+    def _get_cached_exit_gene(self) -> ExitGene:
+        """
+        キャッシュから exit_gene を取得する
+
+        Returns:
+            ExitGene: イグジット遺伝子
+        """
+        if not self._exit_gene_cache:
+            self._initialize_caches()
+
+        return self._clone_or_create_gene(
+            self._exit_gene_cache,
+            lambda: create_random_exit_gene(self.config),
+        )
+
     def _get_cached_tool_genes(self) -> List[ToolGene]:
         """
         キャッシュからツール遺伝子を取得する
@@ -285,10 +306,13 @@ class RandomGeneGenerator:
             ],
             long_entry_conditions=[],
             short_entry_conditions=[],
+            long_exit_conditions=[],
+            short_exit_conditions=[],
             risk_management={},
             tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
             long_tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
             short_tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
+            exit_gene=ExitGene(),
             position_sizing_gene=PositionSizingGene(
                 method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
             ),
@@ -316,6 +340,7 @@ class RandomGeneGenerator:
         tpsl_gene = self._get_cached_tpsl()
         long_tpsl_gene = self._get_cached_tpsl()
         short_tpsl_gene = self._get_cached_tpsl()
+        exit_gene = self._get_cached_exit_gene()
 
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
@@ -334,6 +359,11 @@ class RandomGeneGenerator:
         )
         short_entry_conditions = self.smart_condition_generator.normalize_conditions(
             short_entry_conditions, "short", indicators
+        )
+        long_exit_conditions, short_exit_conditions, _ = (
+            self.smart_condition_generator.generate_exit_conditions(
+                indicators
+            )
         )
 
         # リスク管理設定（従来方式）
@@ -363,6 +393,9 @@ class RandomGeneGenerator:
             entry_gene=entry_gene,
             long_entry_gene=long_entry_gene,
             short_entry_gene=short_entry_gene,
+            exit_gene=exit_gene,
+            long_exit_conditions=long_exit_conditions,
+            short_exit_conditions=short_exit_conditions,
             tool_genes=tool_genes,
             risk_management=risk_management,
             metadata={"generated_by": "RandomGeneGenerator"},
@@ -377,6 +410,7 @@ class RandomGeneGenerator:
         """
         self._indicator_cache.clear()
         self._tpsl_cache.clear()
+        self._exit_gene_cache.clear()
         self._position_sizing_cache.clear()
         self._tool_genes_template = None
 
@@ -390,12 +424,14 @@ class RandomGeneGenerator:
             Dict[str, Any]: キャッシュ統計辞書
                 - indicator_cache_size: インジケーターキャッシュサイズ
                 - tpsl_cache_size: TP/SLキャッシュサイズ
+                - exit_gene_cache_size: ExitGeneキャッシュサイズ
                 - position_sizing_cache_size: ポジションサイジングキャッシュサイズ
                 - tool_genes_template_size: ツール遺伝子テンプレートサイズ
         """
         return {
             "indicator_cache_size": len(self._indicator_cache),
             "tpsl_cache_size": len(self._tpsl_cache),
+            "exit_gene_cache_size": len(self._exit_gene_cache),
             "position_sizing_cache_size": len(self._position_sizing_cache),
             "tool_genes_template_size": len(self._tool_genes_template or []),
         }

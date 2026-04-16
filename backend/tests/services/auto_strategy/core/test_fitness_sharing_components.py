@@ -14,6 +14,8 @@ from app.services.auto_strategy.core.fitness.fitness_sharing_similarity import (
 )
 from app.services.auto_strategy.core.fitness import fitness_sharing_silhouette
 from app.services.auto_strategy.core.fitness.fitness_sharing_vectorizer import (
+    BEHAVIOR_FEATURE_NAMES,
+    build_behavior_profile,
     vectorize_gene,
 )
 from app.services.auto_strategy.genes import (
@@ -82,13 +84,58 @@ class TestFitnessSharingComponents:
         )
 
         assert isinstance(vector, np.ndarray)
-        assert len(vector) == 7 + len(indicator_types) + len(operator_types) + 4
+        assert len(vector) == (
+            7
+            + len(indicator_types)
+            + len(operator_types)
+            + 4
+            + len(BEHAVIOR_FEATURE_NAMES)
+        )
 
         operator_start = 7 + len(indicator_types)
         assert vector[operator_start + operator_map["AND"]] == 1.0
         assert vector[operator_start + operator_map["OR"]] == 1.0
-        assert vector[-2] == pytest.approx(2.0)
-        assert vector[-1] == pytest.approx(1.0)
+        behavior_offset = len(BEHAVIOR_FEATURE_NAMES)
+        assert vector[-(behavior_offset + 2)] == pytest.approx(2.0)
+        assert vector[-(behavior_offset + 1)] == pytest.approx(1.0)
+
+    def test_build_behavior_profile_uses_report_metrics(self) -> None:
+        report = SimpleNamespace(
+            pass_rate=0.5,
+            primary_aggregated_fitness=1.25,
+            primary_worst_case_fitness=0.75,
+            scenarios=[
+                SimpleNamespace(
+                    performance_metrics={
+                        "total_return": 0.12,
+                        "sharpe_ratio": 1.4,
+                        "max_drawdown": 0.08,
+                        "total_trades": 18,
+                    }
+                ),
+                SimpleNamespace(
+                    performance_metrics={
+                        "total_return": 0.06,
+                        "sharpe_ratio": 0.8,
+                        "max_drawdown": 0.15,
+                        "total_trades": 10,
+                    }
+                ),
+            ],
+        )
+
+        profile = build_behavior_profile(
+            fitness_values=(1.0, 0.6),
+            evaluation_report=report,
+        )
+
+        assert profile["objective_count"] == pytest.approx(2.0)
+        assert profile["pass_rate"] == pytest.approx(0.5)
+        assert profile["scenario_count"] == pytest.approx(2.0)
+        assert profile["aggregated_primary"] == pytest.approx(1.25)
+        assert profile["worst_case_primary"] == pytest.approx(0.75)
+        assert profile["mean_total_return"] == pytest.approx(0.09)
+        assert profile["mean_total_trades"] == pytest.approx(14.0)
 
     def test_compute_niche_counts_sampling_preserves_global_rng_state(self) -> None:
         np.random.seed(123)
