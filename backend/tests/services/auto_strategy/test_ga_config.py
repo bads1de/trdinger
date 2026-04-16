@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
@@ -466,6 +468,42 @@ class TestGAConfig:
         assert config.mutation_config.adaptive_decrease_multiplier == 0.6
         assert config.mutation_config.adaptive_increase_multiplier == 1.5
         assert config.mutation_config.valid_condition_operators == ["==", "!="]
+
+    def test_mutation_rate_assignment_syncs_nested_config(self):
+        """mutation_rate を後から更新しても nested config と一致することを確認"""
+        config = GAConfig()
+
+        config.mutation_rate = 0.2
+
+        assert config.mutation_rate == 0.2
+        assert config.mutation_config.rate == 0.2
+
+        restored = GAConfig.from_dict(config.to_dict())
+        assert restored.mutation_rate == 0.2
+        assert restored.mutation_config.rate == 0.2
+
+    def test_nested_mutation_rate_assignment_syncs_top_level(self):
+        """mutation_config.rate を直接更新しても top-level と一致することを確認"""
+        config = GAConfig()
+
+        config.mutation_config.rate = 0.25
+
+        assert config.mutation_rate == 0.25
+        assert config.mutation_config.rate == 0.25
+
+        restored = GAConfig.from_dict(config.to_dict())
+        assert restored.mutation_rate == 0.25
+        assert restored.mutation_config.rate == 0.25
+
+    def test_deepcopy_preserves_mutation_rate_sync(self):
+        """deepcopy 後も mutation_rate と nested config が同期されることを確認"""
+        config = GAConfig()
+        copied = copy.deepcopy(config)
+
+        copied.mutation_config.rate = 0.33
+
+        assert copied.mutation_rate == 0.33
+        assert copied.mutation_config.rate == 0.33
 
     def test_parameter_range_defaults_are_isolated(self):
         """parameter_ranges のネスト値がインスタンス間で共有されないことを確認"""

@@ -3,6 +3,7 @@
 GAConfig にぶら下がる設定 dataclass 群を定義する。
 """
 
+import copy
 import logging
 from dataclasses import dataclass, field, fields
 from typing import Any, Dict, List, Mapping, Optional
@@ -150,6 +151,37 @@ class MutationConfig(NestedConfigMixin):
     valid_condition_operators: List[str] = field(
         default_factory=lambda: OPERATORS.copy()
     )
+
+    def bind_parent(self, parent: Any) -> None:
+        """GAConfig の mutation_rate と同期するための親参照を設定する。"""
+        object.__setattr__(self, "_parent_ga_config", parent)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        object.__setattr__(self, name, value)
+        if name == "rate":
+            self._sync_parent_rate(value)
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> "MutationConfig":
+        """親参照を持ち込まずに deepcopy する。"""
+        copied = type(self)(
+            **{
+                field_info.name: copy.deepcopy(getattr(self, field_info.name), memo)
+                for field_info in fields(type(self))
+            }
+        )
+        memo[id(self)] = copied
+        return copied
+
+    def _sync_parent_rate(self, value: Any) -> None:
+        """親の mutation_rate を直接更新する。"""
+        parent = getattr(self, "_parent_ga_config", None)
+        if parent is None:
+            return
+
+        try:
+            object.__setattr__(parent, "mutation_rate", value)
+        except Exception as exc:
+            logger.debug("mutation_rate の親同期に失敗しました: %s", exc)
 
 
 @dataclass

@@ -219,13 +219,32 @@ class GAConfig:
 
     def __setattr__(self, name: str, value: Any) -> None:
         """既知フィールドのみ代入を許可する。"""
-        if name.startswith("_") or name in type(self).__dataclass_fields__:
+        if name.startswith("_"):
             object.__setattr__(self, name, value)
             return
 
-        raise AttributeError(
-            f"{type(self).__name__!r} object has no attribute {name!r}"
-        )
+        if name not in type(self).__dataclass_fields__:
+            raise AttributeError(
+                f"{type(self).__name__!r} object has no attribute {name!r}"
+            )
+
+        if name == "mutation_rate":
+            object.__setattr__(self, name, value)
+            mutation_config = getattr(self, "mutation_config", None)
+            if isinstance(mutation_config, MutationConfig):
+                object.__setattr__(mutation_config, "rate", value)
+            return
+
+        if name == "mutation_config":
+            if isinstance(value, dict):
+                value = MutationConfig.from_dict(value)
+            object.__setattr__(self, name, value)
+            if isinstance(value, MutationConfig):
+                value.bind_parent(self)
+                object.__setattr__(self, "mutation_rate", value.rate)
+            return
+
+        object.__setattr__(self, name, value)
 
     def _sync_runtime_fields(self) -> None:
         """派生フィールドを同期する。"""
@@ -280,6 +299,9 @@ class GAConfig:
             )
 
         mutation_config = self.mutation_config
+        if isinstance(mutation_config, MutationConfig):
+            mutation_config.bind_parent(self)
+
         provided_keys = getattr(self, "_provided_keys", set())
         if "mutation_config" in provided_keys:
             object.__setattr__(self, "mutation_rate", mutation_config.rate)
@@ -296,6 +318,12 @@ class GAConfig:
             設定値を含む辞書
         """
         return cast(Dict[str, Any], dataclass_to_dict(self))
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> "GAConfig":
+        """deepcopy 後も mutation_rate と mutation_config を同期したままにする。"""
+        copied = type(self).from_dict(copy.deepcopy(self.to_dict(), memo))
+        memo[id(self)] = copied
+        return copied
 
     @classmethod
     def _from_dict_defaults(cls) -> Dict[str, Any]:
