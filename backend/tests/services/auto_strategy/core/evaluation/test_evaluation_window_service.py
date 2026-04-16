@@ -41,6 +41,48 @@ class TestEvaluationWindowService:
         assert prepared["end_date"] == "2024-01-12 00:00:00"
         assert prepared["start_date"] == "2024-01-09 03:00:00"
 
+    def test_public_and_private_helpers_share_same_implementation(self):
+        assert (
+            self.service.prepare_backtest_config_for_evaluation.__func__
+            is self.service._prepare_backtest_config_for_evaluation.__func__
+        )
+        assert (
+            self.service.estimate_required_warmup_bars.__func__
+            is self.service._estimate_required_warmup_bars.__func__
+        )
+        assert (
+            self.service.apply_evaluation_window_to_result.__func__
+            is self.service._apply_evaluation_window_to_result.__func__
+        )
+        assert (
+            EvaluationWindowService.extract_lookback_from_parameters
+            is EvaluationWindowService._extract_lookback_from_parameters
+        )
+        assert (
+            EvaluationWindowService.timeframe_to_minutes
+            is EvaluationWindowService._timeframe_to_minutes
+        )
+        assert (
+            EvaluationWindowService.format_datetime_like
+            is EvaluationWindowService._format_datetime_like
+        )
+        assert (
+            EvaluationWindowService.normalize_timestamp_to_index
+            is EvaluationWindowService._normalize_timestamp_to_index
+        )
+        assert (
+            EvaluationWindowService.normalize_ohlc_data_for_stats
+            is EvaluationWindowService._normalize_ohlc_data_for_stats
+        )
+        assert (
+            EvaluationWindowService.slice_equity_curve_for_window
+            is EvaluationWindowService._slice_equity_curve_for_window
+        )
+        assert (
+            EvaluationWindowService.slice_trades_for_window
+            is EvaluationWindowService._slice_trades_for_window
+        )
+
     def test_apply_evaluation_window_to_result_recomputes_trimmed_window(self):
         market_data = pd.DataFrame(
             {

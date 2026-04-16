@@ -178,6 +178,17 @@ def test_list_experiments(auto_strategy_service, mock_persistence_service):
     mock_persistence_service.list_experiments.assert_called_once()
 
 
+def test_get_experiment_detail_returns_none_on_error(auto_strategy_service):
+    """異常系: 詳細取得で例外が出た場合はNoneを返すこと"""
+    auto_strategy_service.experiment_application_service.get_experiment_detail = (
+        MagicMock(side_effect=RuntimeError("boom"))
+    )
+
+    result = auto_strategy_service.get_experiment_detail("exp-detail")
+
+    assert result is None
+
+
 def test_stop_experiment_success(auto_strategy_service, mock_experiment_manager):
     """正常系: 実験が正常に停止できること"""
     # 準備
@@ -217,6 +228,22 @@ def test_stop_experiment_manager_not_initialized(auto_strategy_service):
     assert result == {
         "success": False,
         "message": "実験管理マネージャーが初期化されていません",
+    }
+
+
+def test_stop_experiment_returns_default_error_response_on_exception(
+    auto_strategy_service,
+):
+    """異常系: 停止処理で例外が出た場合は既定のエラーレスポンスを返すこと"""
+    auto_strategy_service.experiment_application_service.stop_experiment = MagicMock(
+        side_effect=RuntimeError("boom")
+    )
+
+    result = auto_strategy_service.stop_experiment("exp-stop")
+
+    assert result == {
+        "success": False,
+        "message": "実験停止でエラーが発生しました",
     }
 
 

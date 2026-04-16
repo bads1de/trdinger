@@ -28,12 +28,6 @@ class EvaluationWindowService:
     def prepare_backtest_config_for_evaluation(
         self, gene: Any, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """公開用ラッパー。"""
-        return self._prepare_backtest_config_for_evaluation(gene, backtest_config)
-
-    def _prepare_backtest_config_for_evaluation(
-        self, gene: Any, backtest_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
         """指標 warmup 用に評価開始前の履歴を含む実行設定へ変換する。"""
         prepared_config = backtest_config.copy()
         start_date = backtest_config.get("start_date")
@@ -42,29 +36,27 @@ class EvaluationWindowService:
         if not start_date or not timeframe:
             return prepared_config
 
-        warmup_bars = self._estimate_required_warmup_bars(gene, timeframe)
+        warmup_bars = self.estimate_required_warmup_bars(gene, timeframe)
         if warmup_bars <= 0:
             return prepared_config
 
         start_timestamp = pd.Timestamp(start_date)
-        base_minutes = self._timeframe_to_minutes(timeframe)
+        base_minutes = self.timeframe_to_minutes(timeframe)
         adjusted_start = start_timestamp - pd.to_timedelta(
             warmup_bars * base_minutes, unit="m"
         )
 
         prepared_config["_evaluation_start"] = start_date
-        prepared_config["start_date"] = self._format_datetime_like(
+        prepared_config["start_date"] = self.format_datetime_like(
             start_date, adjusted_start
         )
         return prepared_config
 
-    def estimate_required_warmup_bars(self, gene: Any, base_timeframe: str) -> int:
-        """公開用ラッパー。"""
-        return self._estimate_required_warmup_bars(gene, base_timeframe)
+    _prepare_backtest_config_for_evaluation = prepare_backtest_config_for_evaluation
 
-    def _estimate_required_warmup_bars(self, gene: Any, base_timeframe: str) -> int:
+    def estimate_required_warmup_bars(self, gene: Any, base_timeframe: str) -> int:
         """戦略実行前に必要な warmup バー数を推定する。"""
-        base_minutes = self._timeframe_to_minutes(base_timeframe)
+        base_minutes = self.timeframe_to_minutes(base_timeframe)
         max_bars = 0
 
         indicators = getattr(gene, "indicators", []) or []
@@ -72,14 +64,14 @@ class EvaluationWindowService:
             if not getattr(indicator, "enabled", True):
                 continue
 
-            lookback = self._extract_lookback_from_parameters(
+            lookback = self.extract_lookback_from_parameters(
                 getattr(indicator, "parameters", {}) or {}
             )
             indicator_timeframe = (
                 getattr(indicator, "timeframe", None) or base_timeframe
             )
             timeframe_scale = max(
-                1, ceil(self._timeframe_to_minutes(indicator_timeframe) / base_minutes)
+                1, ceil(self.timeframe_to_minutes(indicator_timeframe) / base_minutes)
             )
             max_bars = max(max_bars, (lookback + 1) * timeframe_scale)
 
@@ -112,13 +104,10 @@ class EvaluationWindowService:
 
         return int(max_bars)
 
-    @staticmethod
-    def extract_lookback_from_parameters(parameters: Dict[str, Any]) -> int:
-        """公開用ラッパー。"""
-        return EvaluationWindowService._extract_lookback_from_parameters(parameters)
+    _estimate_required_warmup_bars = estimate_required_warmup_bars
 
     @staticmethod
-    def _extract_lookback_from_parameters(parameters: Dict[str, Any]) -> int:
+    def extract_lookback_from_parameters(parameters: Dict[str, Any]) -> int:
         """インディケーターパラメータから lookback 長を推定する。"""
         if not isinstance(parameters, dict):
             return 0
@@ -138,13 +127,10 @@ class EvaluationWindowService:
 
         return lookback
 
-    @staticmethod
-    def timeframe_to_minutes(timeframe: str) -> int:
-        """公開用ラッパー。"""
-        return EvaluationWindowService._timeframe_to_minutes(timeframe)
+    _extract_lookback_from_parameters = extract_lookback_from_parameters
 
     @staticmethod
-    def _timeframe_to_minutes(timeframe: str) -> int:
+    def timeframe_to_minutes(timeframe: str) -> int:
         """timeframe 文字列を分単位へ変換する。"""
         timeframe_map = {
             "1m": 1,
@@ -157,15 +143,10 @@ class EvaluationWindowService:
         }
         return timeframe_map.get(str(timeframe), 60)
 
-    @staticmethod
-    def format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
-        """公開用ラッパー。"""
-        return EvaluationWindowService._format_datetime_like(original_value, timestamp)
+    _timeframe_to_minutes = timeframe_to_minutes
 
     @staticmethod
-    def _format_datetime_like(
-        original_value: object, timestamp: pd.Timestamp
-    ) -> object:
+    def format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
         """元の入力型に合わせて Timestamp を整形する。"""
         if isinstance(original_value, pd.Timestamp):
             return timestamp
@@ -175,24 +156,9 @@ class EvaluationWindowService:
             return str(timestamp)
         return timestamp
 
-    def apply_evaluation_window_to_result(
-        self,
-        backtest_result: Dict[str, Any],
-        raw_stats: Any,
-        market_data: pd.DataFrame,
-        evaluation_start: Any,
-        evaluation_end: Any,
-    ) -> Dict[str, Any]:
-        """公開用ラッパー。"""
-        return self._apply_evaluation_window_to_result(
-            backtest_result,
-            raw_stats,
-            market_data,
-            evaluation_start,
-            evaluation_end,
-        )
+    _format_datetime_like = format_datetime_like
 
-    def _apply_evaluation_window_to_result(
+    def apply_evaluation_window_to_result(
         self,
         backtest_result: Dict[str, Any],
         raw_stats: Any,
@@ -211,8 +177,10 @@ class EvaluationWindowService:
         market_df = market_data.copy()
         market_df = market_df.sort_index()
 
-        start_ts = self._normalize_timestamp_to_index(evaluation_start, market_df.index)
-        end_ts = self._normalize_timestamp_to_index(evaluation_end, market_df.index)
+        start_ts = self.normalize_timestamp_to_index(
+            evaluation_start, market_df.index
+        )
+        end_ts = self.normalize_timestamp_to_index(evaluation_end, market_df.index)
 
         start_pos = int(market_df.index.searchsorted(start_ts, side="left"))
         end_pos = int(market_df.index.searchsorted(end_ts, side="right"))
@@ -229,7 +197,7 @@ class EvaluationWindowService:
         if trimmed_market_data.empty:
             return backtest_result
 
-        trimmed_equity_curve: pd.DataFrame = self._slice_equity_curve_for_window(
+        trimmed_equity_curve: pd.DataFrame = self.slice_equity_curve_for_window(
             raw_equity_curve,
             trimmed_market_data.index,
             start_pos,
@@ -242,13 +210,13 @@ class EvaluationWindowService:
             .to_numpy()
         )
 
-        trimmed_trades = self._slice_trades_for_window(
+        trimmed_trades = self.slice_trades_for_window(
             getattr(raw_stats, "_trades", None),
             start_pos,
             end_pos,
         )
 
-        normalized_market_data = self._normalize_ohlc_data_for_stats(
+        normalized_market_data = self.normalize_ohlc_data_for_stats(
             trimmed_market_data
         )
         window_stats = self._compute_window_stats(
@@ -271,45 +239,24 @@ class EvaluationWindowService:
         adjusted_result["_raw_stats"] = window_stats
         return adjusted_result
 
-    @staticmethod
-    def normalize_timestamp_to_index(value: Any, index: pd.Index) -> pd.Timestamp:
-        """公開用ラッパー。"""
-        return EvaluationWindowService._normalize_timestamp_to_index(value, index)
+    _apply_evaluation_window_to_result = apply_evaluation_window_to_result
 
     @staticmethod
-    def _normalize_timestamp_to_index(value: Any, index: pd.Index) -> pd.Timestamp:
+    def normalize_timestamp_to_index(value: Any, index: pd.Index) -> pd.Timestamp:
         """インデックスのタイムゾーンに合わせて Timestamp を正規化する。"""
         return align_timestamp_to_index(value, index)
 
-    @staticmethod
-    def normalize_ohlc_data_for_stats(market_data: pd.DataFrame) -> pd.DataFrame:
-        """公開用ラッパー。"""
-        return EvaluationWindowService._normalize_ohlc_data_for_stats(market_data)
+    _normalize_timestamp_to_index = normalize_timestamp_to_index
 
     @staticmethod
-    def _normalize_ohlc_data_for_stats(market_data: pd.DataFrame) -> pd.DataFrame:
+    def normalize_ohlc_data_for_stats(market_data: pd.DataFrame) -> pd.DataFrame:
         """backtesting.py が期待する大文字 OHLCV カラムへ正規化する。"""
         return normalize_ohlcv_columns(market_data, ensure_volume=True)
 
-    def slice_equity_curve_for_window(
-        self,
-        raw_equity_curve: pd.DataFrame,
-        target_index: pd.Index,
-        start_pos: int,
-        end_pos: int,
-        initial_capital: float,
-    ) -> pd.DataFrame:
-        """公開用ラッパー。"""
-        return self._slice_equity_curve_for_window(
-            raw_equity_curve,
-            target_index,
-            start_pos,
-            end_pos,
-            initial_capital,
-        )
+    _normalize_ohlc_data_for_stats = normalize_ohlc_data_for_stats
 
     @staticmethod
-    def _slice_equity_curve_for_window(
+    def slice_equity_curve_for_window(
         raw_equity_curve: pd.DataFrame,
         target_index: pd.Index,
         start_pos: int,
@@ -342,21 +289,10 @@ class EvaluationWindowService:
             trimmed["DrawdownPct"] = 0.0
         return trimmed
 
-    @staticmethod
-    def slice_trades_for_window(
-        raw_trades: Any,
-        start_pos: int,
-        end_pos: int,
-    ) -> pd.DataFrame:
-        """公開用ラッパー。"""
-        return EvaluationWindowService._slice_trades_for_window(
-            raw_trades,
-            start_pos,
-            end_pos,
-        )
+    _slice_equity_curve_for_window = slice_equity_curve_for_window
 
     @staticmethod
-    def _slice_trades_for_window(
+    def slice_trades_for_window(
         raw_trades: Any,
         start_pos: int,
         end_pos: int,
@@ -390,6 +326,8 @@ class EvaluationWindowService:
                 - start_pos
             )
         return trades_df
+
+    _slice_trades_for_window = slice_trades_for_window
 
     def _compute_window_stats(
         self,

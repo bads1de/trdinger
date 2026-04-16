@@ -109,34 +109,25 @@ class EvaluationStrategy:
         if len(scenario_definitions) <= 1:
             return self.execute_report(gene, base_backtest_config, config)
 
-        scenario_reports: list[ScenarioEvaluation] = []
-        with ThreadPoolExecutor(
-            max_workers=min(self._max_workers, len(scenario_definitions))
-        ) as executor:
-            future_to_order = {}
-            for order, scenario_name, scenario_config, metadata in scenario_definitions:
-                future = executor.submit(
-                    self._evaluate_robustness_scenario_report,
-                    gene,
-                    scenario_name,
-                    scenario_config,
-                    config,
-                    metadata,
+        scenario_reports = self._run_parallel_scenario_tasks(
+            [
+                (
+                    order,
+                    lambda scenario_name=scenario_name,
+                    scenario_config=scenario_config,
+                    metadata=metadata: self._evaluate_robustness_scenario_report(
+                        gene,
+                        scenario_name,
+                        scenario_config,
+                        config,
+                        metadata,
+                    ),
                 )
-                future_to_order[future] = order
-
-            for future in as_completed(future_to_order):
-                order = future_to_order[future]
-                try:
-                    scenario = future.result()
-                    scenario.metadata.setdefault("scenario_order", order)
-                    scenario_reports.append(scenario)
-                except Exception as scenario_error:
-                    logger.warning(
-                        "robustness scenario %s 評価エラー: %s",
-                        order,
-                        scenario_error,
-                    )
+                for order, scenario_name, scenario_config, metadata in scenario_definitions
+            ],
+            error_context="robustness scenario",
+            order_metadata_key="scenario_order",
+        )
 
         if not scenario_reports:
             return self.execute_report(gene, base_backtest_config, config)
@@ -328,6 +319,41 @@ class EvaluationStrategy:
             passed=scenario_report.pass_rate >= min_pass_rate,
             metadata=scenario_metadata,
         )
+
+    def _run_parallel_scenario_tasks(
+        self,
+        tasks: list[tuple[int, Any]],
+        *,
+        error_context: str,
+        order_metadata_key: Optional[str] = None,
+    ) -> list[ScenarioEvaluation]:
+        """ScenarioEvaluation を返すタスク群を並列実行し、完了順に依らず回収する。"""
+        if not tasks:
+            return []
+
+        scenario_reports: list[ScenarioEvaluation] = []
+        with ThreadPoolExecutor(max_workers=min(self._max_workers, len(tasks))) as executor:
+            future_to_order = {
+                executor.submit(task): order
+                for order, task in tasks
+            }
+
+            for future in as_completed(future_to_order):
+                order = future_to_order[future]
+                try:
+                    scenario = future.result()
+                    if order_metadata_key is not None:
+                        scenario.metadata.setdefault(order_metadata_key, order)
+                    scenario_reports.append(scenario)
+                except Exception as scenario_error:
+                    logger.warning(
+                        "%s %s 評価エラー: %s",
+                        error_context,
+                        order,
+                        scenario_error,
+                    )
+
+        return scenario_reports
 
     def _evaluate_single_report(
         self, gene: Any, backtest_config: Dict[str, Any], config: GAConfig
@@ -521,28 +547,22 @@ class EvaluationStrategy:
                 )
                 return self._evaluate_single_report(gene, base_backtest_config, config)
 
-            scenario_reports: list[ScenarioEvaluation] = []
-            with ThreadPoolExecutor(
-                max_workers=min(self._max_workers, len(fold_configs))
-            ) as executor:
-                future_to_fold = {}
-                for fold_idx, test_config in fold_configs:
-                    future = executor.submit(
-                        self._evaluate_scenario,
-                        gene,
-                        test_config,
-                        config,
-                        scenario_name=f"fold_{fold_idx}",
-                        metadata={"fold_index": fold_idx},
+            scenario_reports = self._run_parallel_scenario_tasks(
+                [
+                    (
+                        fold_idx,
+                        lambda fold_idx=fold_idx, test_config=test_config: self._evaluate_scenario(
+                            gene,
+                            test_config,
+                            config,
+                            scenario_name=f"fold_{fold_idx}",
+                            metadata={"fold_index": fold_idx},
+                        ),
                     )
-                    future_to_fold[future] = fold_idx
-
-                for future in as_completed(future_to_fold):
-                    fold_idx = future_to_fold[future]
-                    try:
-                        scenario_reports.append(future.result())
-                    except Exception as fold_error:
-                        logger.warning(f"WFA Fold {fold_idx} 評価エラー: {fold_error}")
+                    for fold_idx, test_config in fold_configs
+                ],
+                error_context="WFA Fold",
+            )
 
             if not scenario_reports:
                 logger.warning(
@@ -663,30 +683,22 @@ class EvaluationStrategy:
                 )
                 return self._evaluate_single_report(gene, base_backtest_config, config)
 
-            scenario_reports: list[ScenarioEvaluation] = []
-            with ThreadPoolExecutor(
-                max_workers=min(self._max_workers, len(fold_configs))
-            ) as executor:
-                future_to_fold = {}
-                for fold_idx, test_config in fold_configs:
-                    future = executor.submit(
-                        self._evaluate_scenario,
-                        gene,
-                        test_config,
-                        config,
-                        scenario_name=f"fold_{fold_idx}",
-                        metadata={"fold_index": fold_idx},
+            scenario_reports = self._run_parallel_scenario_tasks(
+                [
+                    (
+                        fold_idx,
+                        lambda fold_idx=fold_idx, test_config=test_config: self._evaluate_scenario(
+                            gene,
+                            test_config,
+                            config,
+                            scenario_name=f"fold_{fold_idx}",
+                            metadata={"fold_index": fold_idx},
+                        ),
                     )
-                    future_to_fold[future] = fold_idx
-
-                for future in as_completed(future_to_fold):
-                    fold_idx = future_to_fold[future]
-                    try:
-                        scenario_reports.append(future.result())
-                    except Exception as fold_error:
-                        logger.warning(
-                            f"PurgedKFold Fold {fold_idx} 評価エラー: {fold_error}"
-                        )
+                    for fold_idx, test_config in fold_configs
+                ],
+                error_context="PurgedKFold Fold",
+            )
 
             if not scenario_reports:
                 logger.warning(

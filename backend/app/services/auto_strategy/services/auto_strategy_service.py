@@ -8,6 +8,7 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
+from app.utils.error_handler import ErrorHandler
 from database.connection import SessionLocal
 
 from ..config import GAConfig
@@ -67,20 +68,12 @@ class AutoStrategyService:
         """
         必要な内部サービスを遅延初期化します。
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="サービス初期化", is_api_call=False)
-        def _init_services_impl():
-            # バックテストサービスの初期化
+        try:
             # 引数なしで初期化することで、BacktestServiceが実行時に自らセッションを管理するようにする
             self.backtest_service = BacktestService()
-
-            # 永続化サービスの初期化
             self.persistence_service = ExperimentPersistenceService(
                 self.db_session_factory
             )
-
-            # 実験管理マネージャーの初期化
             self.experiment_manager = ExperimentManager(
                 self.backtest_service, self.persistence_service
             )
@@ -88,8 +81,9 @@ class AutoStrategyService:
                 self.experiment_manager,
                 self.persistence_service,
             )
-
-        _init_services_impl()
+        except Exception as e:
+            logger.error("エラー in サービス初期化: %s", e)
+            raise
 
     def start_strategy_generation(
         self,
@@ -151,10 +145,7 @@ class AutoStrategyService:
         Returns:
             初期化されたGAConfig
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="GA設定構築と検証", is_api_call=True)
-        def _validate_ga_config():
+        try:
             ga_config = GAConfig.from_dict(settings)
             from ..config import ConfigValidator
 
@@ -162,8 +153,8 @@ class AutoStrategyService:
             if not is_valid:
                 raise ValueError(f"無効なGA設定です: {', '.join(errors)}")
             return ga_config
-
-        return _validate_ga_config()
+        except Exception as e:
+            raise ErrorHandler.handle_api_error(e, context="GA設定構築と検証")
 
     def _prepare_backtest_config(
         self, backtest_config_dict: Dict[str, Any]
@@ -198,9 +189,7 @@ class AutoStrategyService:
             backtest_config: バックテスト設定
         """
         # フロントエンドから送信されたexperiment_idを使用
-        if not self.experiment_application_service:
-            raise RuntimeError("実験 application service が初期化されていません。")
-        self.experiment_application_service.create_experiment(
+        self._get_experiment_application_service().create_experiment(
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
@@ -212,9 +201,7 @@ class AutoStrategyService:
             experiment_id: 実験ID
             ga_config: 実験で使用するGA設定
         """
-        if not self.experiment_application_service:
-            raise RuntimeError("実験 application service が初期化されていません。")
-        self.experiment_application_service.initialize_ga_engine(
+        self._get_experiment_application_service().initialize_ga_engine(
             experiment_id, ga_config
         )
 
@@ -226,14 +213,18 @@ class AutoStrategyService:
         task_scheduler: TaskScheduler,
     ):
         """実験をバックグラウンドタスクで開始する"""
-        if not self.experiment_application_service:
-            raise RuntimeError("実験 application service が初期化されていません。")
-        self.experiment_application_service.schedule_experiment(
+        self._get_experiment_application_service().schedule_experiment(
             experiment_id,
             ga_config,
             backtest_config,
             task_scheduler,
         )
+
+    def _get_experiment_application_service(self) -> ExperimentApplicationService:
+        """初期化済みの ExperimentApplicationService を返す。"""
+        if not self.experiment_application_service:
+            raise RuntimeError("実験 application service が初期化されていません。")
+        return self.experiment_application_service
 
     def list_experiments(self) -> List[Dict[str, Any]]:
         """
@@ -242,15 +233,13 @@ class AutoStrategyService:
         Returns:
             実験一覧のリスト
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(context="実験一覧取得", is_api_call=False, default_return=[])
-        def _list_experiments():
+        try:
             if not self.experiment_application_service:
                 return []
             return self.experiment_application_service.list_experiments()
-
-        return _list_experiments()
+        except Exception as e:
+            logger.error("エラー in 実験一覧取得: %s", e)
+            return []
 
     def get_experiment_detail(self, experiment_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -262,19 +251,15 @@ class AutoStrategyService:
         Returns:
             実験詳細情報、存在しない場合はNone
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="実験詳細取得", is_api_call=False, default_return=None
-        )
-        def _get_experiment_detail():
+        try:
             if not self.experiment_application_service:
                 return None
             return self.experiment_application_service.get_experiment_detail(
                 experiment_id
             )
-
-        return _get_experiment_detail()
+        except Exception as e:
+            logger.error("エラー in 実験詳細取得: %s", e)
+            return None
 
     def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
         """
@@ -286,22 +271,16 @@ class AutoStrategyService:
         Returns:
             停止結果
         """
-        from app.utils.error_handler import safe_operation
-
-        @safe_operation(
-            context="実験停止",
-            is_api_call=False,
-            default_return={
-                "success": False,
-                "message": "実験停止でエラーが発生しました",
-            },
-        )
-        def _stop_experiment():
+        try:
             if not self.experiment_application_service:
                 return {
                     "success": False,
                     "message": "実験 application service が初期化されていません",
                 }
             return self.experiment_application_service.stop_experiment(experiment_id)
-
-        return _stop_experiment()
+        except Exception as e:
+            logger.error("エラー in 実験停止: %s", e)
+            return {
+                "success": False,
+                "message": "実験停止でエラーが発生しました",
+            }

@@ -240,3 +240,23 @@ class TestGeneSerializerCacheIntegration:
         restored_second = serializer.dict_to_strategy_gene(data, StrategyGene)
 
         assert restored_second.long_entry_conditions[0].left_operand["source"]["name"] == "close"
+
+
+class TestGeneSerializerErrorHandling:
+    """単体 helper のエラーハンドリングを固定する。"""
+
+    @pytest.fixture
+    def serializer(self):
+        return GeneSerializer()
+
+    def test_indicator_gene_to_dict_wraps_attribute_error(self, serializer):
+        with pytest.raises(ValueError, match="指標遺伝子辞書変換に失敗"):
+            serializer.indicator_gene_to_dict(object())
+
+    def test_dict_to_indicator_gene_wraps_missing_required_field(self, serializer):
+        with pytest.raises(ValueError, match="指標遺伝子の復元に失敗"):
+            serializer.dict_to_indicator_gene({})
+
+    def test_condition_or_group_to_dict_wraps_unknown_type(self, serializer):
+        with pytest.raises(ValueError, match="条件/グループ辞書変換に失敗"):
+            serializer.condition_or_group_to_dict(object())

@@ -323,3 +323,129 @@ class TestEvaluationStrategy:
         ]
         assert report.pass_rate == 1.0
         assert report.aggregated_fitness[0] == pytest.approx(0.6525)
+
+    def test_execute_robustness_report_falls_back_when_all_scenarios_fail(self):
+        self.strategy.execute_report = Mock(
+            return_value=Mock(mode="single", aggregated_fitness=(0.25,))
+        )
+        self.strategy._evaluate_robustness_scenario_report = Mock(
+            side_effect=RuntimeError("scenario failed")
+        )
+
+        config = SimpleNamespace(
+            enable_purged_kfold=False,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.0,
+            ),
+            objectives=["weighted_score"],
+            fitness_constraints={},
+            two_stage_selection_config=SimpleNamespace(min_pass_rate=0.5),
+            robustness_config=SimpleNamespace(
+                validation_symbols=["ETHUSDT"],
+                stress_slippage=[],
+                stress_commission_multipliers=[],
+                regime_windows=[],
+                aggregate_method="robust",
+            ),
+        )
+
+        report = self.strategy.execute_robustness_report(
+            object(),
+            {
+                "symbol": "BTCUSDT",
+                "commission_rate": 0.001,
+                "slippage": 0.001,
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-01-11 00:00:00",
+            },
+            config,
+        )
+
+        assert report.mode == "single"
+        assert report.aggregated_fitness == (0.25,)
+        self.strategy.execute_report.assert_called_once()
+
+    def test_walk_forward_report_falls_back_when_all_fold_evaluations_fail(self):
+        self.strategy._evaluate_single_report = Mock(
+            return_value=Mock(mode="single", aggregated_fitness=(0.15,))
+        )
+        self.strategy._precompute_fold_configs = Mock(
+            return_value=[
+                (
+                    1,
+                    {
+                        "start_date": "2024-01-01 00:00:00",
+                        "end_date": "2024-01-11 00:00:00",
+                    },
+                )
+            ]
+        )
+        self.strategy._evaluate_scenario = Mock(side_effect=RuntimeError("fold failed"))
+
+        config = SimpleNamespace(
+            enable_purged_kfold=False,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=True,
+                wfa_n_folds=3,
+                wfa_train_ratio=0.8,
+                wfa_anchored=False,
+            ),
+            objectives=["weighted_score"],
+            fitness_constraints={},
+        )
+
+        report = self.strategy._evaluate_with_walk_forward_report(
+            object(),
+            {
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-02-01 00:00:00",
+            },
+            config,
+        )
+
+        assert report.mode == "single"
+        assert report.aggregated_fitness == (0.15,)
+        self.strategy._evaluate_single_report.assert_called_once()
+
+    def test_purged_kfold_report_falls_back_when_all_fold_evaluations_fail(self):
+        self.strategy._evaluate_single_report = Mock(
+            return_value=Mock(mode="single", aggregated_fitness=(0.18,))
+        )
+        self.strategy._precompute_purged_kfold_configs = Mock(
+            return_value=[
+                (
+                    0,
+                    {
+                        "start_date": "2024-01-01 00:00:00",
+                        "end_date": "2024-01-11 00:00:00",
+                    },
+                )
+            ]
+        )
+        self.strategy._evaluate_scenario = Mock(side_effect=RuntimeError("fold failed"))
+
+        config = SimpleNamespace(
+            enable_purged_kfold=True,
+            purged_kfold_splits=3,
+            purged_kfold_embargo=0.0,
+            evaluation_config=SimpleNamespace(
+                enable_walk_forward=False,
+                oos_split_ratio=0.0,
+            ),
+            objectives=["weighted_score"],
+            fitness_constraints={},
+        )
+
+        report = self.strategy._evaluate_with_purged_kfold_report(
+            object(),
+            {
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-02-01 00:00:00",
+            },
+            config,
+        )
+
+        assert report.mode == "single"
+        assert report.aggregated_fitness == (0.18,)
+        self.strategy._evaluate_single_report.assert_called_once()

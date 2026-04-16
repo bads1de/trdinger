@@ -270,29 +270,23 @@ class ExperimentPersistenceService:
 
     def complete_experiment(self, experiment_id: str):
         """実験を完了状態にする"""
-        experiment_info = self.get_experiment_info(experiment_id)
-        if experiment_info:
-            with self._get_db_session() as db:
-                repo = GAExperimentRepository(db)
-                repo.update_experiment_status(experiment_info["db_id"], "completed")
-            self._close_active_session()
+        self._update_experiment_status(experiment_id, "completed")
 
     def fail_experiment(self, experiment_id: str):
         """実験を失敗状態にする"""
-        experiment_info = self.get_experiment_info(experiment_id)
-        if experiment_info:
-            with self._get_db_session() as db:
-                repo = GAExperimentRepository(db)
-                repo.update_experiment_status(experiment_info["db_id"], "failed")
-            self._close_active_session()
+        self._update_experiment_status(experiment_id, "failed")
 
     def stop_experiment(self, experiment_id: str):
         """実験を停止状態にする"""
+        self._update_experiment_status(experiment_id, "stopped")
+
+    def _update_experiment_status(self, experiment_id: str, status: str) -> None:
+        """実験ステータス更新の共通処理。"""
         experiment_info = self.get_experiment_info(experiment_id)
         if experiment_info:
             with self._get_db_session() as db:
                 repo = GAExperimentRepository(db)
-                repo.update_experiment_status(experiment_info["db_id"], "stopped")
+                repo.update_experiment_status(experiment_info["db_id"], status)
             self._close_active_session()
 
     def update_experiment_progress(
