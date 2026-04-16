@@ -10,8 +10,8 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.services.mtf_data_provider import (
-    MultiTimeframeDataProvider,
     TIMEFRAME_TO_MINUTES,
+    MultiTimeframeDataProvider,
 )
 
 
@@ -190,7 +190,3 @@ class TestTimeframeToMinutes:
         assert TIMEFRAME_TO_MINUTES["4h"] == 240
         assert TIMEFRAME_TO_MINUTES["1d"] == 1440
         assert TIMEFRAME_TO_MINUTES["1w"] == 10080
-
-
-
-

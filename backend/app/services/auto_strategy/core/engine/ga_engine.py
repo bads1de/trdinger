@@ -10,14 +10,7 @@ import logging
 import random
 import threading
 import time
-
 from typing import Any, Callable, Dict, List, Optional, Tuple
-
-
-from ..evaluation.evaluation_fidelity import (
-    build_coarse_ga_config,
-    is_multi_fidelity_enabled,
-)
 
 import numpy as np
 from deap import tools
@@ -28,19 +21,23 @@ from app.services.auto_strategy.generators.random_gene_generator import (
 )
 from app.services.backtest.services.backtest_service import BacktestService
 
+from ..evaluation.evaluation_fidelity import (
+    build_coarse_ga_config,
+    is_multi_fidelity_enabled,
+)
 from ..evaluation.individual_evaluator import IndividualEvaluator
 from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..fitness.fitness_sharing import FitnessSharing
 from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner, EvolutionStoppedError
+from .fitness_utils import (
+    extract_result_fitness,
+)
 from .ga_utils import (
     _gene_kwargs,
     create_deap_mutate_wrapper,
     crossover_strategy_genes,
     mutate_strategy_gene,
-)
-from .fitness_utils import (
-    extract_result_fitness,
 )
 from .parameter_tuning_manager import ParameterTuningManager
 from .report_selection import (

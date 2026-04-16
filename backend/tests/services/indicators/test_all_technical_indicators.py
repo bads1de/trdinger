@@ -23,7 +23,11 @@ class TestAllTechnicalIndicators:
 
     # 指標リストを動的に取得
     try:
-        from app.services.indicators.config.indicator_config import indicator_registry, initialize_all_indicators
+        from app.services.indicators.config.indicator_config import (
+            indicator_registry,
+            initialize_all_indicators,
+        )
+
         initialize_all_indicators()
         INDICATORS = sorted(indicator_registry.list_indicators())
     except Exception:
@@ -57,10 +61,13 @@ class TestAllTechnicalIndicators:
                 resolved_name = indicator_service._resolve_indicator_name(indicator)
                 # 各インジケーターの設定を取得できるか確認
                 config = indicator_service.registry.get_indicator_config(resolved_name)
-                assert config is not None, f"{indicator} ({resolved_name}) の設定が見つかりません"
-                assert (config.adapter_function is not None or config.pandas_function is not None), (
-                    f"{indicator}に実装（アダプターまたはpandas-ta関数）がありません"
-                )
+                assert (
+                    config is not None
+                ), f"{indicator} ({resolved_name}) の設定が見つかりません"
+                assert (
+                    config.adapter_function is not None
+                    or config.pandas_function is not None
+                ), f"{indicator}に実装（アダプターまたはpandas-ta関数）がありません"
             except Exception as e:
                 pytest.fail(f"{indicator}の初期化に失敗: {e}")
 
@@ -85,7 +92,9 @@ class TestAllTechnicalIndicators:
             if not self._has_required_data(
                 indicator_service, sample_ohlcv, config.required_data
             ):
-                pytest.skip(f"{indicator} は sample_ohlcv にない列を要求するためスキップ")
+                pytest.skip(
+                    f"{indicator} は sample_ohlcv にない列を要求するためスキップ"
+                )
 
             # デフォルトパラメータでテスト
             default_params = config.default_values or {}
@@ -93,7 +102,7 @@ class TestAllTechnicalIndicators:
 
             # 指標ごとの主要パラメータ名を特定
             supported_params = set(config.parameters.keys())
-            
+
             # テスト用パラメータを設定（サポートされている場合のみ）
             def set_param(test_key, value, aliases=None):
                 actual_key = None
@@ -115,9 +124,8 @@ class TestAllTechnicalIndicators:
 
                     if isinstance(current_value, (int, float)):
                         safe_value = max(safe_value, current_value)
-                    if (
-                        param_config is not None
-                        and isinstance(param_config.min_value, (int, float))
+                    if param_config is not None and isinstance(
+                        param_config.min_value, (int, float)
                     ):
                         safe_value = max(safe_value, param_config.min_value)
 
@@ -152,39 +160,41 @@ class TestAllTechnicalIndicators:
             result = indicator_service.calculate_indicator(
                 sample_ohlcv, indicator, final_params
             )
-            support_info = indicator_service.get_supported_indicators().get(indicator, {})
+            support_info = indicator_service.get_supported_indicators().get(
+                indicator, {}
+            )
 
             # 結果の形式を検証
             if config.result_type == IndicatorResultType.SINGLE:
-                assert isinstance(result, np.ndarray), (
-                    f"{indicator}の結果がndarrayではありません"
-                )
-                assert result.shape[0] == len(sample_ohlcv), (
-                    f"{indicator}の結果の長さが不正"
-                )
+                assert isinstance(
+                    result, np.ndarray
+                ), f"{indicator}の結果がndarrayではありません"
+                assert result.shape[0] == len(
+                    sample_ohlcv
+                ), f"{indicator}の結果の長さが不正"
                 # NaNを含む場合があるが、最後の数ポイントは有効な場合がある
                 assert result.shape[0] > 0, f"{indicator}の結果が空"
 
             elif config.result_type == IndicatorResultType.COMPLEX:
-                assert isinstance(result, tuple), (
-                    f"{indicator}の結果がtupleではありません"
-                )
+                assert isinstance(
+                    result, tuple
+                ), f"{indicator}の結果がtupleではありません"
                 assert len(result) > 0, f"{indicator}の結果が空のtuple"
                 for i, series in enumerate(result):
-                    assert isinstance(series, np.ndarray), (
-                        f"{indicator}の結果[{i}]がndarrayではありません"
-                    )
-                    assert series.shape[0] == len(sample_ohlcv), (
-                        f"{indicator}の結果[{i}]の長さが不正{indicator}"
-                    )
+                    assert isinstance(
+                        series, np.ndarray
+                    ), f"{indicator}の結果[{i}]がndarrayではありません"
+                    assert series.shape[0] == len(
+                        sample_ohlcv
+                    ), f"{indicator}の結果[{i}]の長さが不正{indicator}"
 
             if (
                 support_info.get("support_tier") == "standard"
                 and indicator not in self._SPARSE_STANDARD_INDICATORS
             ):
-                assert self._count_finite_values(result) > 0, (
-                    f"{indicator} は標準 OHLCV 指標なのに有限値を返していません"
-                )
+                assert (
+                    self._count_finite_values(result) > 0
+                ), f"{indicator} は標準 OHLCV 指標なのに有限値を返していません"
 
         except Exception as e:
             pytest.fail(f"{indicator}のテストでエラー: {e}")
@@ -264,24 +274,31 @@ class TestAllTechnicalIndicators:
         except Exception as e:
             # "データ長"や"長さ"に関するエラーは許容（バリデーションによるもの）
             error_msg = str(e)
-            if "データ長" not in error_msg and "長さ" not in error_msg and "length" not in error_msg.lower():
+            if (
+                "データ長" not in error_msg
+                and "長さ" not in error_msg
+                and "length" not in error_msg.lower()
+            ):
                 pytest.fail(f"{indicator}で予期しないエラー: {e}")
 
     @pytest.mark.parametrize("indicator", ["RSI", "MFI", "CCI", "WILLR", "UO"])
     def test_indicator_returns_valid_values(
-        self, indicator: str, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+        self,
+        indicator: str,
+        indicator_service: TechnicalIndicatorService,
+        sample_ohlcv: pd.DataFrame,
     ):
         """特定のインジケーターが有効な値を返すか検証"""
         try:
             params = {"length": 14}
             # UOはパラメータが異なる
             if indicator == "UO":
-                params = {} 
-            
+                params = {}
+
             result = indicator_service.calculate_indicator(
                 sample_ohlcv, indicator, params
             )
-            
+
             if not isinstance(result, np.ndarray):
                 pytest.skip(f"{indicator}の結果がndarrayでないためスキップ")
 
@@ -290,18 +307,27 @@ class TestAllTechnicalIndicators:
                 pytest.skip(f"{indicator}の有効な値がないためスキップ")
 
             if indicator == "RSI":
-                assert all(0 <= val <= 100 for val in valid_values), f"{indicator}の値が範囲外"
+                assert all(
+                    0 <= val <= 100 for val in valid_values
+                ), f"{indicator}の値が範囲外"
             elif indicator == "MFI":
-                assert all(0 <= val <= 100 for val in valid_values), f"{indicator}の値が範囲外"
+                assert all(
+                    0 <= val <= 100 for val in valid_values
+                ), f"{indicator}の値が範囲外"
             elif indicator == "WILLR":
-                assert all(-100 <= val <= 0 for val in valid_values), f"{indicator}の値が範囲外"
+                assert all(
+                    -100 <= val <= 0 for val in valid_values
+                ), f"{indicator}の値が範囲外"
 
         except Exception as e:
             pytest.fail(f"{indicator}の範囲チェックでエラー: {e}")
 
     @pytest.mark.parametrize("indicator", ["EMA", "SMA", "WMA", "DEMA", "TEMA"])
     def test_indicator_with_custom_parameters(
-        self, indicator: str, indicator_service: TechnicalIndicatorService, sample_ohlcv: pd.DataFrame
+        self,
+        indicator: str,
+        indicator_service: TechnicalIndicatorService,
+        sample_ohlcv: pd.DataFrame,
     ):
         """カスタムパラメータでの動作をテスト"""
         try:
@@ -351,14 +377,15 @@ class TestAllTechnicalIndicators:
     ):
         """レジストリ内の全指標が正しい形式で登録されているか確認"""
         supported = indicator_service.get_supported_indicators()
-    
+
         # 最低限いくつかの主要指標があることを確認
         assert len(supported) > 50
-        
+
         for name, config in supported.items():
             assert "parameters" in config, f"{name}にparametersがありません"
             assert "result_type" in config, f"{name}にresult_typeがありません"
             assert "required_data" in config, f"{name}にrequired_dataがありません"
+
 
 if __name__ == "__main__":
     # コマンドラインからの実行用

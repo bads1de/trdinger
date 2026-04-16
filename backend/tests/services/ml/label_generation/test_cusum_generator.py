@@ -1,6 +1,7 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.label_generation.cusum_generator import CusumSignalGenerator
 
 
@@ -116,7 +117,3 @@ class TestCusumSignalGenerator:
         assert len(vol) == len(sample_data)
         # 最初のほうはNaNになる
         assert pd.isna(vol.iloc[0])
-
-
-
-

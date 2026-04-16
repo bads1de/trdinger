@@ -17,7 +17,11 @@ from app.services.indicators.data_validation import (
 @pytest.fixture
 def sample_df() -> pd.DataFrame:
     return pd.DataFrame(
-        {"MACD_12_26_9": [1.0, 2.0, 3.0], "MACDs_12_26_9": [0.5, 1.5, 2.5], "MACDh_12_26_9": [0.5, 0.5, 0.5]},
+        {
+            "MACD_12_26_9": [1.0, 2.0, 3.0],
+            "MACDs_12_26_9": [0.5, 1.5, 2.5],
+            "MACDh_12_26_9": [0.5, 0.5, 0.5],
+        },
         index=pd.date_range("2024-01-01", periods=3, freq="h"),
     )
 
@@ -34,6 +38,7 @@ def sample_series() -> pd.Series:
 # ---------------------------------------------------------------------------
 # extract_tuple_result
 # ---------------------------------------------------------------------------
+
 
 class TestExtractTupleResult:
     def test_tuple_passthrough(self):
@@ -67,7 +72,10 @@ class TestExtractTupleResult:
         """存在しないcolumn名はfallbackを返す"""
         fallback = (pd.Series([99, 99, 99]), pd.Series([88, 88, 88]))
         result = extract_tuple_result(
-            sample_df, 2, column_names=["NONEXISTENT"], fallback_factory=lambda: fallback
+            sample_df,
+            2,
+            column_names=["NONEXISTENT"],
+            fallback_factory=lambda: fallback,
         )
         assert result is fallback
 
@@ -83,6 +91,7 @@ class TestExtractTupleResult:
 # ---------------------------------------------------------------------------
 # nan_result_for
 # ---------------------------------------------------------------------------
+
 
 class TestNanResultFor:
     def test_single_series(self, sample_series):

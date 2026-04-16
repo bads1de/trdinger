@@ -447,9 +447,7 @@ class DynamicIndicatorDiscovery:
                 with_datetime_index=True,
             )
         except Exception as exc:
-            logger.debug(
-                "時系列互換性チェックに失敗: %s (%s)", indicator_name, exc
-            )
+            logger.debug("時系列互換性チェックに失敗: %s (%s)", indicator_name, exc)
             return False
 
         return cls._is_timeseries_compatible_result(result, sample_frame.index)
@@ -494,7 +492,9 @@ class DynamicIndicatorDiscovery:
         return False
 
     @classmethod
-    def _has_compatible_timeseries_index(cls, result_index: Any, expected_index: Any) -> bool:
+    def _has_compatible_timeseries_index(
+        cls, result_index: Any, expected_index: Any
+    ) -> bool:
         """
         出力 index が入力時系列と整合しているかを判定する
 
@@ -526,7 +526,9 @@ class DynamicIndicatorDiscovery:
             return False
 
     @classmethod
-    def _has_compatible_array_shape(cls, result: np.ndarray, expected_index: Any) -> bool:
+    def _has_compatible_array_shape(
+        cls, result: np.ndarray, expected_index: Any
+    ) -> bool:
         """
         index を持たない ndarray は入力長と一致する場合のみ許容する
 
@@ -923,7 +925,9 @@ class DynamicIndicatorDiscovery:
 
             config = cls._analyze_function(name, method, category="custom")
             if config:
-                if cls._can_probe_with_sample(config.required_data) and not cls._supports_timeseries_output(
+                if cls._can_probe_with_sample(
+                    config.required_data
+                ) and not cls._supports_timeseries_output(
                     name,
                     getattr(klass, name),
                     default_params=config.default_values,

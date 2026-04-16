@@ -512,6 +512,3 @@ class TestEdgeCases:
             # レスポンス形式変更に伴う修正
             assert result["success"] is True
             assert result["data"]["count"] == 2
-
-
-

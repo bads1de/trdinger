@@ -12,11 +12,11 @@ import pandas as pd
 import pytest
 from backtesting import Strategy
 
-from app.services.backtest.services.backtest_data_service import BacktestDataService
 from app.services.backtest.execution.backtest_executor import (
     BacktestExecutionError,
     BacktestExecutor,
 )
+from app.services.backtest.services.backtest_data_service import BacktestDataService
 
 logger = logging.getLogger(__name__)
 

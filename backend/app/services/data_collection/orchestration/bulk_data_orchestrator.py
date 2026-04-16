@@ -75,7 +75,10 @@ class BulkDataOrchestrator:
             raise
 
     async def start_bitcoin_full_data_collection(
-        self, background_tasks: BackgroundTasks, db: Session, historical_orchestrator: Any = None
+        self,
+        background_tasks: BackgroundTasks,
+        db: Session,
+        historical_orchestrator: Any = None,
     ) -> Dict[str, Any]:
         """
         ビットコイン（BTC/USDT）の全時間軸、全期間データの収集を予約
@@ -327,7 +330,9 @@ class BulkDataOrchestrator:
                     )
 
             except Exception as e:
-                logger.error(f"Open Interest収集エラー: {symbol} {timeframe}", exc_info=True)
+                logger.error(
+                    f"Open Interest収集エラー: {symbol} {timeframe}", exc_info=True
+                )
 
             logger.info(f"全データ収集完了: {symbol} {timeframe}")
 

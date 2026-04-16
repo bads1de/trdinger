@@ -130,7 +130,3 @@ if __name__ == "__main__":
     test_price_feature_columns()
     test_base_feature_calculator()
     print("手動テスト完了！")
-
-
-
-

@@ -1,23 +1,24 @@
-import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
+
 import numpy as np
 import pandas as pd
+import pytest
 
-from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
-from app.services.auto_strategy.strategies.universal_strategy import (
-    StrategyEarlyTermination,
-)
-from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
-from app.services.auto_strategy.genes import (
-    StrategyGene,
-    IndicatorGene,
-    TPSLGene,
-    TPSLMethod,
-    PositionSizingGene,
-)
-from app.services.auto_strategy.genes.conditions import Condition, StatefulCondition
 from app.services.auto_strategy.config.constants import PositionSizingMethod
 from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
+from app.services.auto_strategy.genes import (
+    IndicatorGene,
+    PositionSizingGene,
+    StrategyGene,
+    TPSLGene,
+    TPSLMethod,
+)
+from app.services.auto_strategy.genes.conditions import Condition, StatefulCondition
+from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
+from app.services.auto_strategy.strategies.universal_strategy import (
+    StrategyEarlyTermination,
+    UniversalStrategy,
+)
 
 
 class TestUniversalStrategyAll:
@@ -286,7 +287,9 @@ class TestUniversalStrategyAll:
             },
         )
 
-        with patch.object(strategy, "_should_terminate_early", return_value="max_drawdown"):
+        with patch.object(
+            strategy, "_should_terminate_early", return_value="max_drawdown"
+        ):
             with pytest.raises(StrategyEarlyTermination):
                 strategy._check_early_termination()
 

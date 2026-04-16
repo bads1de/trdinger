@@ -2,14 +2,15 @@
 HalfOptimalFCalculator のテスト
 """
 
-import pytest
 from unittest.mock import patch
 
+import pytest
+
+from app.services.auto_strategy.config.constants import PositionSizingMethod
+from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.positions.calculators.half_optimal_f_calculator import (
     HalfOptimalFCalculator,
 )
-from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
-from app.services.auto_strategy.config.constants import PositionSizingMethod
 
 
 class TestHalfOptimalFCalculator:

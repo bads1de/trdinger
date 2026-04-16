@@ -17,29 +17,41 @@ from app.services.auto_strategy.utils.indicators import get_valid_indicator_type
 
 from .fitness_sharing_niche import (
     compute_niche_counts_sampling as _compute_niche_counts_sampling,
+)
+from .fitness_sharing_niche import (
     compute_niche_counts_vectorized as _compute_niche_counts_vectorized,
-    find_neighbors_kdtree as _find_neighbors_kdtree,
-    normalize_vectors as _normalize_vectors,
+)
+from .fitness_sharing_niche import find_neighbors_kdtree as _find_neighbors_kdtree
+from .fitness_sharing_niche import normalize_vectors as _normalize_vectors
+from .fitness_sharing_silhouette import (
+    _collect_gene_vectors,
+)
+from .fitness_sharing_silhouette import (
+    silhouette_based_sharing as _silhouette_based_sharing,
 )
 from .fitness_sharing_similarity import (
     calculate_condition_similarity as _calculate_condition_similarity,
+)
+from .fitness_sharing_similarity import (
     calculate_indicator_similarity as _calculate_indicator_similarity,
+)
+from .fitness_sharing_similarity import (
     calculate_position_sizing_similarity as _calculate_position_sizing_similarity,
+)
+from .fitness_sharing_similarity import (
     calculate_risk_management_similarity as _calculate_risk_management_similarity,
-    calculate_similarity as _calculate_similarity,
+)
+from .fitness_sharing_similarity import calculate_similarity as _calculate_similarity
+from .fitness_sharing_similarity import (
     calculate_tpsl_similarity as _calculate_tpsl_similarity,
-    check_none_similarity as _check_none_similarity,
 )
-from .fitness_sharing_silhouette import (
-    _collect_gene_vectors,
-    silhouette_based_sharing as _silhouette_based_sharing,
-)
+from .fitness_sharing_similarity import check_none_similarity as _check_none_similarity
 from .fitness_sharing_vectorizer import (
-    build_behavior_profile,
     _count_operand_types,
     _count_operators,
-    vectorize_gene as _vectorize_gene,
+    build_behavior_profile,
 )
+from .fitness_sharing_vectorizer import vectorize_gene as _vectorize_gene
 from .fitness_utils import has_valid_fitness
 
 _FrozenKey = tuple | str | int | float | bool | None | bytes
@@ -167,7 +179,14 @@ class FitnessSharing:
                 if has_valid_fitness(individual):
                     original_fitness[i] = individual.fitness.values
                     shared_fitness_values = tuple(
-                        float(np.divide(fitness_val, niche_counts[i], out=np.zeros_like(fitness_val), where=niche_counts[i] != 0))
+                        float(
+                            np.divide(
+                                fitness_val,
+                                niche_counts[i],
+                                out=np.zeros_like(fitness_val),
+                                where=niche_counts[i] != 0,
+                            )
+                        )
                         for fitness_val in individual.fitness.values
                     )
                     individual.fitness.values = shared_fitness_values
@@ -184,7 +203,9 @@ class FitnessSharing:
                     silhouette_ratio = (
                         tuple(
                             float(np.divide(s, o, out=np.zeros_like(s), where=o != 0))
-                            for s, o in zip(individual.fitness.values, original_fitness[i])
+                            for s, o in zip(
+                                individual.fitness.values, original_fitness[i]
+                            )
                         )
                         if individual.fitness.valid
                         else original_fitness[i]

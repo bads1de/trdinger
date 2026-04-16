@@ -39,4 +39,5 @@ def __getattr__(name: str) -> type:
 def __dir__() -> list[str]:
     return sorted({*globals().keys(), *_ATTRIBUTE_EXPORTS})
 
+
 __all__ = ["BaseMLTrainer", "VolatilityRegressionTrainer"]

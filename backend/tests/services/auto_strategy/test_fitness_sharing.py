@@ -16,6 +16,7 @@ from app.services.auto_strategy.genes import (
     TPSLGene,
 )
 
+
 class TestFitnessSharing:
     """フィットネス共有の包括的なテスト (基本動作、最適化、サンプリング)"""
 
@@ -94,12 +95,14 @@ class TestFitnessSharing:
 
     def _create_mock_individual(self, gene: StrategyGene, fitness_values: tuple):
         """モック個体を作成"""
+
         class MockIndividual(list):
             def __init__(self, gene, fitness_values):
                 super().__init__([gene])
                 self.fitness = Mock()
                 self.fitness.values = fitness_values
                 self.fitness.valid = True
+
         return MockIndividual(gene, fitness_values)
 
     def _create_large_population(self, base_gene: StrategyGene, size: int) -> list:
@@ -132,7 +135,9 @@ class TestFitnessSharing:
         """空の個体群に対する処理"""
         assert fitness_sharing.apply_fitness_sharing([]) == []
 
-    def test_apply_fitness_sharing_single_individual(self, fitness_sharing, sample_strategy_gene):
+    def test_apply_fitness_sharing_single_individual(
+        self, fitness_sharing, sample_strategy_gene
+    ):
         """単一個体に対する処理"""
         population = self._create_large_population(sample_strategy_gene, 1)
         result = fitness_sharing.apply_fitness_sharing(population)
@@ -157,12 +162,16 @@ class TestFitnessSharing:
                     IndicatorGene(type="SMA", parameters={"period": 10}),
                     IndicatorGene(type="RSI", parameters={"period": 14}),
                 ],
-                long_entry_conditions=[], short_entry_conditions=[],
-                risk_management={}, tpsl_gene=None, position_sizing_gene=None, metadata={},
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
             )
             vec1 = fitness_sharing._vectorize_gene(gene1)
             assert len(vec1) >= 15
-            
+
             # 指標部分の確認 (SMA=1, RSI=1)
             indicator_start_idx = 7
             assert vec1[indicator_start_idx + 2] == 1.0  # RSI
@@ -178,22 +187,36 @@ class TestFitnessSharing:
                 ConditionGroup(
                     operator="AND",
                     conditions=[
-                        Condition(left_operand="close", operator=">", right_operand="sma"),
+                        Condition(
+                            left_operand="close", operator=">", right_operand="sma"
+                        ),
                         ConditionGroup(
                             operator="OR",
                             conditions=[
-                                Condition(left_operand="rsi", operator="<", right_operand="30"),
-                                Condition(left_operand="adx", operator=">", right_operand="25"),
+                                Condition(
+                                    left_operand="rsi", operator="<", right_operand="30"
+                                ),
+                                Condition(
+                                    left_operand="adx", operator=">", right_operand="25"
+                                ),
                             ],
                         ),
                     ],
                 )
             ],
-            short_entry_conditions=[], risk_management={}, tpsl_gene=None, position_sizing_gene=None, metadata={},
+            short_entry_conditions=[],
+            risk_management={},
+            tpsl_gene=None,
+            position_sizing_gene=None,
+            metadata={},
         )
         vec = fitness_sharing._vectorize_gene(gene)
-        
-        op_start_idx = 7 + (len(fitness_sharing.indicator_types) if fitness_sharing.indicator_types else 0)
+
+        op_start_idx = 7 + (
+            len(fitness_sharing.indicator_types)
+            if fitness_sharing.indicator_types
+            else 0
+        )
         and_idx = fitness_sharing.operator_map["AND"]
         or_idx = fitness_sharing.operator_map["OR"]
         assert vec[op_start_idx + and_idx] >= 1.0
@@ -203,11 +226,15 @@ class TestFitnessSharing:
     # 最適化 & ベクトル化計算テスト
     # ---------------------------------------------------------------------------
 
-    def test_compute_niche_counts_vectorized_consistency(self, fitness_sharing, sample_strategy_gene):
+    def test_compute_niche_counts_vectorized_consistency(
+        self, fitness_sharing, sample_strategy_gene
+    ):
         """ベクトル化ニッチカウント計算の整合性確認"""
         population = self._create_large_population(sample_strategy_gene, 10)
-        vectors = np.array([fitness_sharing._vectorize_gene(ind[0]) for ind in population])
-        
+        vectors = np.array(
+            [fitness_sharing._vectorize_gene(ind[0]) for ind in population]
+        )
+
         niche_counts = fitness_sharing.compute_niche_counts_vectorized(vectors)
         assert len(niche_counts) == len(vectors)
         assert all(nc >= 1.0 for nc in niche_counts)
@@ -228,21 +255,27 @@ class TestFitnessSharing:
         """サンプリング閾値設定と大規模個体群での動作"""
         fitness_sharing.sampling_threshold = 10
         population = self._create_large_population(sample_strategy_gene, 20)
-        vectors = np.array([fitness_sharing._vectorize_gene(ind[0]) for ind in population])
-        
+        vectors = np.array(
+            [fitness_sharing._vectorize_gene(ind[0]) for ind in population]
+        )
+
         niche_counts = fitness_sharing.compute_niche_counts_vectorized(vectors)
         assert len(niche_counts) == 20
         assert all(nc >= 1.0 for nc in niche_counts)
 
-    def test_apply_fitness_sharing_performance(self, fitness_sharing, sample_strategy_gene):
+    def test_apply_fitness_sharing_performance(
+        self, fitness_sharing, sample_strategy_gene
+    ):
         """パフォーマンス計測 (100個体)"""
         population_size = 100
-        population = self._create_large_population(sample_strategy_gene, population_size)
-        
+        population = self._create_large_population(
+            sample_strategy_gene, population_size
+        )
+
         start_time = time.time()
         result = fitness_sharing.apply_fitness_sharing(population)
         elapsed_time = time.time() - start_time
-        
+
         assert len(result) == population_size
         assert elapsed_time < 5.0  # 5秒以内を期待
 

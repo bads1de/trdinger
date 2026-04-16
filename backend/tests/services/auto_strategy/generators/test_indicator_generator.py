@@ -7,23 +7,27 @@ including multi-timeframe (MTF) functionality.
 
 from dataclasses import dataclass, field
 from typing import List, Optional
+
 import pytest
 
 from app.services.auto_strategy.genes import (
-    IndicatorGene, 
-    generate_random_indicators, 
-    create_random_indicator_gene
+    IndicatorGene,
+    create_random_indicator_gene,
+    generate_random_indicators,
 )
+
 
 @dataclass
 class MockGAConfig:
     """テスト用のモックGA設定"""
+
     min_indicators: int = 2
     max_indicators: int = 5
     enable_multi_timeframe: bool = False
     available_timeframes: Optional[List[str]] = None
     mtf_indicator_probability: float = 0.3
     parameter_range_preset: Optional[str] = None
+
 
 class TestIndicatorGenerationMTF:
     """マルチタイムフレーム（MTF）機能のテスト"""
@@ -78,6 +82,7 @@ class TestIndicatorGenerationMTF:
         assert indicator.type == "SMA"
         assert indicator.timeframe == "4h"
         assert indicator.enabled is True
+
 
 class TestIndicatorGenerationBasic:
     """基本機能テスト"""

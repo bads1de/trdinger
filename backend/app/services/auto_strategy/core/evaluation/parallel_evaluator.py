@@ -6,13 +6,13 @@ ProcessPoolExecutor を使用してタイムアウト時のゾンビプロセス
 CPU バウンドな計算を効率化します。
 """
 
-from dataclasses import dataclass
 import logging
 import os
 import time
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from concurrent.futures import wait
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -312,7 +312,9 @@ class ParallelEvaluator:
             self._clear_behavior_summary(individual)
             return
         cache_key = self._get_individual_identity(individual)
-        self._behavior_summary_cache[cache_key] = dict(evaluation_result.behavior_summary)
+        self._behavior_summary_cache[cache_key] = dict(
+            evaluation_result.behavior_summary
+        )
 
     def _clear_behavior_summary(self, individual: Any) -> None:
         """個体に紐づく behavior summary キャッシュを削除する。"""
@@ -337,7 +339,9 @@ class ParallelEvaluator:
 
         return id(individual)
 
-    def get_cached_behavior_profile(self, individual: Any) -> Optional[Dict[str, float]]:
+    def get_cached_behavior_profile(
+        self, individual: Any
+    ) -> Optional[Dict[str, float]]:
         """個体に対応する behavior summary を返す。"""
         cache_key = self._get_individual_identity(individual)
         behavior_summary = self._behavior_summary_cache.get(cache_key)

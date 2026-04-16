@@ -637,7 +637,3 @@ class TestPipelineIntegration:
         # テストデータが正常に処理される
         assert test_result is not None
         assert len(test_result) == len(test_data)
-
-
-
-

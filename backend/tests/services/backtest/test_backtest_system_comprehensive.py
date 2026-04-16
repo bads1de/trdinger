@@ -10,13 +10,16 @@ import pandas as pd
 import pytest
 from sqlalchemy.orm import Session
 
-from app.services.backtest.services.backtest_data_service import BacktestDataService
-from app.services.backtest.services.backtest_service import BacktestService
+from app.services.backtest.config.backtest_config import (
+    BacktestRunConfig,
+    BacktestRunConfigValidationError,
+)
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
-from app.services.backtest.config.backtest_config import BacktestRunConfig, BacktestRunConfigValidationError
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
+from app.services.backtest.services.backtest_data_service import BacktestDataService
+from app.services.backtest.services.backtest_service import BacktestService
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -90,7 +93,10 @@ class TestBacktestSystemComprehensive:
             "end_date": "2023-12-31",
             "initial_capital": 10000,
             "commission_rate": 0.001,
-            "strategy_config": {"strategy_type": "MANUAL", "parameters": {"period": 20}},
+            "strategy_config": {
+                "strategy_type": "MANUAL",
+                "parameters": {"period": 20},
+            },
         }
 
     def test_backtest_data_service_initialization(self, backtest_data_service):
@@ -599,7 +605,3 @@ class TestBacktestSystemComprehensive:
 
         # システムが整合している
         assert True
-
-
-
-

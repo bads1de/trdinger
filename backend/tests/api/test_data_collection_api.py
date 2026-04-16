@@ -136,7 +136,9 @@ class TestHistoricalDataCollection:
             sample_collection_response: サンプルレスポンス
         """
         # モックの設定
-        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = sample_collection_response
+        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = (
+            sample_collection_response
+        )
 
         # APIリクエスト
         response = test_client.post(
@@ -173,7 +175,9 @@ class TestHistoricalDataCollection:
             sample_collection_response: サンプルレスポンス
         """
         # モックの設定
-        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = sample_collection_response
+        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = (
+            sample_collection_response
+        )
 
         # APIリクエスト
         response = test_client.post(
@@ -387,7 +391,9 @@ class TestCollectionStatus:
             sample_collection_status: サンプル状態
         """
         # モックの設定
-        mock_data_collection_orchestration_service.get_collection_status.return_value = sample_collection_status
+        mock_data_collection_orchestration_service.get_collection_status.return_value = (
+            sample_collection_status
+        )
 
         # APIリクエスト
         response = test_client.get(
@@ -420,7 +426,9 @@ class TestCollectionStatus:
             sample_collection_status: サンプル状態
         """
         # モックの設定
-        mock_data_collection_orchestration_service.get_collection_status.return_value = sample_collection_status
+        mock_data_collection_orchestration_service.get_collection_status.return_value = (
+            sample_collection_status
+        )
 
         # APIリクエスト
         response = test_client.get(
@@ -630,7 +638,3 @@ class TestEdgeCases:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-
-
-
-

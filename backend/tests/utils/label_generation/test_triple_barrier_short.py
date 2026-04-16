@@ -1,6 +1,7 @@
-import pandas as pd
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
@@ -87,6 +88,3 @@ class TestTripleBarrierShort:
 
         assert labels.loc[self.close.index[0], "bin"] == -1.0
         assert events.loc[self.close.index[0], "side"] == "sl"
-
-
-

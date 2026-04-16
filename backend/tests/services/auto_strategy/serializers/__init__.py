@@ -1,5 +1,1 @@
 """Serializers tests package."""
-
-
-
-

@@ -3,15 +3,14 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from app.services.auto_strategy.config.constants import EntryType
-from app.services.auto_strategy.genes.entry import EntryGene
+from app.services.auto_strategy.config.constants import EntryType, PositionSizingMethod
 from app.services.auto_strategy.genes import PositionSizingGene, TPSLGene, TPSLMethod
 from app.services.auto_strategy.genes.conditions import Condition
+from app.services.auto_strategy.genes.entry import EntryGene
 from app.services.auto_strategy.strategies.entry_decision_engine import (
     EntryDecisionEngine,
 )
 from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
-from app.services.auto_strategy.config.constants import PositionSizingMethod
 
 
 class TestEntryDecisionEngine:
@@ -52,7 +51,9 @@ class TestEntryDecisionEngine:
     def engine(self, strategy):
         return EntryDecisionEngine(strategy)
 
-    def test_determine_entry_direction_prioritizes_regular_signals(self, engine, strategy):
+    def test_determine_entry_direction_prioritizes_regular_signals(
+        self, engine, strategy
+    ):
         engine.tools_block_entry = MagicMock(return_value=False)
         engine.check_entry_conditions = MagicMock(side_effect=[True, True])
 
@@ -72,7 +73,9 @@ class TestEntryDecisionEngine:
 
         assert direction == -1.0
 
-    def test_execute_entry_updates_runtime_state_for_market_order(self, engine, strategy):
+    def test_execute_entry_updates_runtime_state_for_market_order(
+        self, engine, strategy
+    ):
         strategy._get_effective_entry_gene.return_value = None
         strategy.entry_executor.calculate_entry_params.return_value = {}
         engine.calculate_position_size = MagicMock(return_value=0.25)
@@ -164,7 +167,9 @@ class TestEntryDecisionEngine:
         assert engine.calculate_position_size() == pytest.approx(0.0255)
         assert engine.calculate_position_size() == pytest.approx(0.0408)
 
-    def test_calculate_position_size_preserves_gene_sized_quantity(self, engine, strategy):
+    def test_calculate_position_size_preserves_gene_sized_quantity(
+        self, engine, strategy
+    ):
         position_sizing_gene = PositionSizingGene(
             enabled=True,
             method=PositionSizingMethod.FIXED_QUANTITY,
@@ -173,7 +178,9 @@ class TestEntryDecisionEngine:
         )
         strategy.gene.position_sizing_gene = position_sizing_gene
         strategy.equity = 100000.0
-        strategy.position_sizing_service.calculate_position_size_fast.return_value = 250.0
+        strategy.position_sizing_service.calculate_position_size_fast.return_value = (
+            250.0
+        )
         strategy.data.Close = [50000.0, 51000.0]
         strategy.data.High = np.array([50500.0, 51500.0])
         strategy.data.Low = np.array([49500.0, 50500.0])
@@ -181,7 +188,9 @@ class TestEntryDecisionEngine:
 
         assert engine.calculate_position_size() == pytest.approx(250.0)
 
-    def test_calculate_effective_tpsl_prices_uses_precomputed_atr(self, engine, strategy):
+    def test_calculate_effective_tpsl_prices_uses_precomputed_atr(
+        self, engine, strategy
+    ):
         tpsl_gene = TPSLGene(
             enabled=True,
             method=TPSLMethod.VOLATILITY_BASED,

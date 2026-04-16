@@ -80,7 +80,7 @@ class ConditionGenerator:
         1. **トレンドフォールバックの生成**: 指標リストから移動平均（SMA/EMA）等のトレンド系指標を自動選定し、
            「価格がトレンドの上/下にあること」という基本的な条件（フォールバック）を作成します。
         2. **冗長性の排除**: 既に同一の条件が存在する場合、重複を避けます。
-        3. **論理構造の最適化**: 
+        3. **論理構造の最適化**:
            - 条件が0件の場合：フォールバックのみを返します。
            - 条件が複数ある場合：それらを `OR` グループとしてまとめ、成立性を高めます。
         4. **トップレベル統合**: 正規化された `OR` グループとフォールバック条件を組み合わせたリストを返却します。
@@ -320,7 +320,9 @@ class ConditionGenerator:
 
     def _create_trend_reversal_exit_conditions(
         self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]
+    ]:
         """トレンド破綻やモメンタム反転を exit 条件として生成する。"""
         longs: List[Union[Condition, ConditionGroup]] = []
         shorts: List[Union[Condition, ConditionGroup]] = []
@@ -347,24 +349,34 @@ class ConditionGenerator:
 
             if scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
                 longs.append(
-                    Condition(left_operand=momentum_name, operator="<", right_operand=0.0)
+                    Condition(
+                        left_operand=momentum_name, operator="<", right_operand=0.0
+                    )
                 )
                 shorts.append(
-                    Condition(left_operand=momentum_name, operator=">", right_operand=0.0)
+                    Condition(
+                        left_operand=momentum_name, operator=">", right_operand=0.0
+                    )
                 )
             elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
                 longs.append(
-                    Condition(left_operand=momentum_name, operator="<", right_operand=-10.0)
+                    Condition(
+                        left_operand=momentum_name, operator="<", right_operand=-10.0
+                    )
                 )
                 shorts.append(
-                    Condition(left_operand=momentum_name, operator=">", right_operand=10.0)
+                    Condition(
+                        left_operand=momentum_name, operator=">", right_operand=10.0
+                    )
                 )
 
         return longs, shorts
 
     def _create_cross_exit_conditions(
         self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]
+    ]:
         """移動平均の逆行クロスを exit 条件として生成する。"""
         longs: List[Union[Condition, ConditionGroup]] = []
         shorts: List[Union[Condition, ConditionGroup]] = []
@@ -396,7 +408,9 @@ class ConditionGenerator:
 
     def _create_take_profit_exit_conditions(
         self, indicators: List[IndicatorGene]
-    ) -> Tuple[List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]]:
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]], List[Union[Condition, ConditionGroup]]
+    ]:
         """利確寄りの到達条件を exit 候補として生成する。"""
         longs: List[Union[Condition, ConditionGroup]] = []
         shorts: List[Union[Condition, ConditionGroup]] = []
@@ -426,10 +440,14 @@ class ConditionGenerator:
 
             if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
                 longs.append(
-                    Condition(left_operand=indicator_name, operator=">", right_operand=70.0)
+                    Condition(
+                        left_operand=indicator_name, operator=">", right_operand=70.0
+                    )
                 )
                 shorts.append(
-                    Condition(left_operand=indicator_name, operator="<", right_operand=30.0)
+                    Condition(
+                        left_operand=indicator_name, operator="<", right_operand=30.0
+                    )
                 )
 
         return longs, shorts

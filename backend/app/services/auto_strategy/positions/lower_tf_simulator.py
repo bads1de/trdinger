@@ -61,9 +61,9 @@ class LowerTimeframeSimulator:
             if order.limit_price is None:
                 return False, None
             mask = (
-                (lows <= order.limit_price)  
+                (lows <= order.limit_price)
                 if order.is_long
-                else (highs >= order.limit_price) 
+                else (highs >= order.limit_price)
             )
             if mask.any():
                 return True, order.limit_price
@@ -72,15 +72,15 @@ class LowerTimeframeSimulator:
             if order.stop_price is None:
                 return False, None
             mask = (
-                (highs >= order.stop_price)  
+                (highs >= order.stop_price)
                 if order.is_long
-                else (lows <= order.stop_price) 
+                else (lows <= order.stop_price)
             )
             if mask.any():
                 return True, order.stop_price
 
         elif order.order_type == EntryType.STOP_LIMIT:
-            return self._check_stop_limit_fill_vectorized(order, lows, highs)  
+            return self._check_stop_limit_fill_vectorized(order, lows, highs)
 
         return False, None
 

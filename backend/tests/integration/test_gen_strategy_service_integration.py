@@ -257,13 +257,13 @@ class TestGeneratedStrategyService:
 
         assert "tpsl_gene" in parameters
         assert parameters["tpsl_gene"]["stop_loss_pct"] == 0.01
-        
+
         assert "long_tpsl_gene" in parameters
         assert parameters["long_tpsl_gene"]["stop_loss_pct"] == 0.02
-        
+
         assert "short_tpsl_gene" in parameters
         assert parameters["short_tpsl_gene"]["stop_loss_pct"] == 0.03
-        
+
         assert "position_sizing_gene" in parameters
         assert parameters["position_sizing_gene"]["risk_per_trade"] == 0.01
 

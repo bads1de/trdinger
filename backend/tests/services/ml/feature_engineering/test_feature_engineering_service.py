@@ -4,10 +4,11 @@ FeatureEngineeringService のテスト
 特徴量計算のパフォーマンスと正確性を検証します。
 """
 
-import pytest
-import pandas as pd
-import numpy as np
 import time
+
+import numpy as np
+import pandas as pd
+import pytest
 
 from app.services.ml.common.exceptions import MLFeatureError
 
@@ -227,7 +228,9 @@ class TestFeatureEngineeringServiceQuality:
         print(f"Trend Volume MA: {trend_vol_ma:.2f}")
         print(f"Range Volume MA: {range_vol_ma:.2f}")
 
-        assert trend_vol_ma > range_vol_ma, "トレンド区間の出来高移動平均が増加していません"
+        assert (
+            trend_vol_ma > range_vol_ma
+        ), "トレンド区間の出来高移動平均が増加していません"
 
     def test_fakeout_detection_features_existence(self, sample_market_data):
         """ダマシ検知用特徴量が正しく計算されているか検証"""
@@ -250,10 +253,6 @@ class TestFeatureEngineeringServiceQuality:
             if any(pattern in col for col in features.columns):
                 found_count += 1
 
-        assert found_count >= 2, (
-            f"ダマシ検知系特徴量が見つかりません。Columns: {features.columns.tolist()}"
-        )
-
-
-
-
+        assert (
+            found_count >= 2
+        ), f"ダマシ検知系特徴量が見つかりません。Columns: {features.columns.tolist()}"

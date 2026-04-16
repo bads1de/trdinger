@@ -1,21 +1,22 @@
 from unittest.mock import patch
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
+
 from app.services.indicators.data_validation import (
+    PandasTAError,
     create_nan_result,
     create_nan_series_bundle,
     create_nan_series_like,
     create_nan_series_map,
+    handle_pandas_ta_errors,
     run_multi_series_indicator,
     run_series_indicator,
-    validate_input,
-    handle_pandas_ta_errors,
-    validate_series_params,
-    validate_multi_series_params,
     validate_data_length_with_fallback,
-    PandasTAError,
+    validate_input,
+    validate_multi_series_params,
+    validate_series_params,
 )
 
 
@@ -39,7 +40,9 @@ class TestIndicatorUtils:
             validate_input(pd.Series([1, 2, 3]), 0)
 
     def test_validate_input_length_short(self):
-        with pytest.raises(PandasTAError, match=r"データ長\(3\)が期間\(10\)より短いです"):
+        with pytest.raises(
+            PandasTAError, match=r"データ長\(3\)が期間\(10\)より短いです"
+        ):
             validate_input(pd.Series([1, 2, 3]), 10)
 
     def test_validate_input_inf(self):

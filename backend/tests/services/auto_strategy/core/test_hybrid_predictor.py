@@ -304,7 +304,9 @@ class TestRuntimeModelPredictorAdapter:
     def test_predict_uses_loaded_model_artifacts(self):
         """model/scaler/feature_columns から forecast を推論できる"""
         model = Mock()
-        model.predict_volatility = None  # prevent Mock auto-attr from intercepting _run_model
+        model.predict_volatility = (
+            None  # prevent Mock auto-attr from intercepting _run_model
+        )
         model.predict.return_value = np.array([0.6, 0.8])
         model.is_trained = True
 

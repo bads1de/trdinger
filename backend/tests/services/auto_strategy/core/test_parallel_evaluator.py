@@ -6,8 +6,8 @@ import time
 from unittest.mock import MagicMock, patch
 
 from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
-    ParallelEvaluator,
     ParallelEvaluationResult,
+    ParallelEvaluator,
 )
 
 

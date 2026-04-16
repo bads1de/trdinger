@@ -3,11 +3,11 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
+from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 from app.services.auto_strategy.strategies.early_termination import (
     StrategyEarlyTermination,
     StrategyEarlyTerminationController,
 )
-from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 
 
 class TestStrategyEarlyTerminationController:

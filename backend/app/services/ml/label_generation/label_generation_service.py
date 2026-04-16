@@ -50,7 +50,7 @@ class LabelGenerationService:
             ohlcv_df (pd.DataFrame): ラベリングの基準となる市場価格データ。
             use_signal_generator (bool): 戦略的なシグナル（ボリンジャーバンド等）発生時のみを抽出するか。
             use_cusum (bool): 累積偏差（CUSUM）が閾値を超えた「変化点」のみを抽出するか。
-            **training_params: 
+            **training_params:
                 - `horizon_n` (int): 決済までの最大保持期間（バー数）。
                 - `pt_factor` (float): ボラティリティに対する利確幅の倍率。
                 - `sl_factor` (float): ボラティリティに対する損切幅の倍率。

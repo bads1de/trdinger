@@ -5,6 +5,7 @@ from typing import Any, cast
 import numpy as np
 import pytest
 
+from app.services.auto_strategy.core.fitness import fitness_sharing_silhouette
 from app.services.auto_strategy.core.fitness.fitness_sharing import FitnessSharing
 from app.services.auto_strategy.core.fitness.fitness_sharing_niche import (
     compute_niche_counts_vectorized,
@@ -12,7 +13,6 @@ from app.services.auto_strategy.core.fitness.fitness_sharing_niche import (
 from app.services.auto_strategy.core.fitness.fitness_sharing_similarity import (
     calculate_similarity,
 )
-from app.services.auto_strategy.core.fitness import fitness_sharing_silhouette
 from app.services.auto_strategy.core.fitness.fitness_sharing_vectorizer import (
     BEHAVIOR_FEATURE_NAMES,
     build_behavior_profile,
@@ -141,9 +141,7 @@ class TestFitnessSharingComponents:
         sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
         sharing.set_evaluation_report_provider(
             lambda individual: (
-                {"pass_rate": 0.2}
-                if individual.id == "gene1"
-                else {"pass_rate": 0.8}
+                {"pass_rate": 0.2} if individual.id == "gene1" else {"pass_rate": 0.8}
             )
         )
 
@@ -174,7 +172,9 @@ class TestFitnessSharingComponents:
 
         assert set(vectors) == {id(population[0]), id(population[1])}
         assert vectors[id(population[0])].shape == vectors[id(population[1])].shape
-        assert not np.array_equal(vectors[id(population[0])], vectors[id(population[1])])
+        assert not np.array_equal(
+            vectors[id(population[0])], vectors[id(population[1])]
+        )
         assert np.all(vectors[id(population[0])] >= 0.0)
         assert np.all(vectors[id(population[0])] <= 1.0)
 

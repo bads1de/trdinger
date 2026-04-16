@@ -1,7 +1,8 @@
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import MagicMock, patch
 
 from app.services.ml.common.exceptions import MLModelError
 from app.services.ml.ensemble.base_ensemble import BaseEnsemble
@@ -92,19 +93,18 @@ class TestBaseEnsemble:
         # 関数内 import のため、グローバルな glob.glob をパッチ
         with patch("glob.glob", return_value=[]):
             assert ensemble.load_models("/non/existent/path") is False
-            
+
     def test_load_models_success_legacy(self, ensemble):
         """旧形式モデルの読み込み成功テスト"""
-        with patch("glob.glob") as mock_glob, \
-             patch("joblib.load") as mock_load:
+        with patch("glob.glob") as mock_glob, patch("joblib.load") as mock_load:
             mock_glob.return_value = ["/mock/model_stacking_classifier_v1.pkl"]
             mock_load.return_value = {
                 "ensemble_classifier": MagicMock(),
                 "config": {"test": True},
                 "feature_columns": ["f1"],
-                "is_fitted": True
+                "is_fitted": True,
             }
-            
+
             success = ensemble.load_models("/mock/model")
             assert success is True
             assert ensemble.is_fitted is True

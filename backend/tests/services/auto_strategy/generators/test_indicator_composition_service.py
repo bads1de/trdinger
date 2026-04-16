@@ -2,8 +2,9 @@
 IndicatorCompositionService Tests
 """
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 
 from app.services.auto_strategy.generators.indicator_composition_service import (
     IndicatorCompositionService,

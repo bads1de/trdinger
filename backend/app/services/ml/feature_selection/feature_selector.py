@@ -21,10 +21,10 @@ from sklearn.feature_selection import SelectorMixin
 from sklearn.utils.validation import check_is_fitted
 
 from .config import FeatureSelectionConfig, SelectionMethod
-from .strategy_registry import default_staged_methods, get_selection_strategy
 from .strategies import (
     BaseSelectionStrategy,
 )
+from .strategy_registry import default_staged_methods, get_selection_strategy
 
 logger = logging.getLogger(__name__)
 

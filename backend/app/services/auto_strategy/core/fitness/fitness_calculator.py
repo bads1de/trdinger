@@ -13,9 +13,9 @@ from typing import Any, Dict, Mapping, Optional, Tuple, cast
 
 import numpy as np
 
-from app.types import SerializableValue
-from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.config.ga import GAConfig
+from app.types import SerializableValue
 
 from ..evaluation.evaluation_metrics import (
     calculate_trade_frequency_penalty,
@@ -118,7 +118,9 @@ class FitnessCalculator:
 
         return tuple(self._normalize_signature_value(value[idx]) for idx in indices)
 
-    def _build_recent_result_signature(self, backtest_result: Dict[str, SerializableValue]) -> object:
+    def _build_recent_result_signature(
+        self, backtest_result: Dict[str, SerializableValue]
+    ) -> object:
         """同一resultの直近再利用判定に使う軽量シグネチャを作る。
 
         バックテスト結果の主要メトリクス、資産曲線、取引履歴の
@@ -268,11 +270,21 @@ class FitnessCalculator:
             max_drawdown = 0.0
 
         equity_curve = backtest_result.get("equity_curve")
-        equity_curve_list = cast(list[dict[str, Any]], equity_curve) if isinstance(equity_curve, list) else []
-        ulcer_index = calculate_ulcer_index(equity_curve_list) if equity_curve_list else 0.0
+        equity_curve_list = (
+            cast(list[dict[str, Any]], equity_curve)
+            if isinstance(equity_curve, list)
+            else []
+        )
+        ulcer_index = (
+            calculate_ulcer_index(equity_curve_list) if equity_curve_list else 0.0
+        )
 
         trade_history = backtest_result.get("trade_history")
-        trade_history_list = cast(list[dict[str, Any]], trade_history) if isinstance(trade_history, list) else []
+        trade_history_list = (
+            cast(list[dict[str, Any]], trade_history)
+            if isinstance(trade_history, list)
+            else []
+        )
         trade_penalty = (
             calculate_trade_frequency_penalty(
                 total_trades=total_trades,
@@ -408,7 +420,9 @@ class FitnessCalculator:
             logger.error(f"フィットネス計算エラー: {e}", exc_info=True)
             return config.constraint_violation_penalty
 
-    def _calculate_balance_score_fast(self, backtest_result: Dict[str, SerializableValue]) -> float:
+    def _calculate_balance_score_fast(
+        self, backtest_result: Dict[str, SerializableValue]
+    ) -> float:
         """ロング・ショートバランススコア計算（最適化版）。"""
         trade_history = backtest_result.get("trade_history")
         if not isinstance(trade_history, list):
@@ -417,13 +431,19 @@ class FitnessCalculator:
         try:
             n_trades = len(trade_history)
             if n_trades < 50:
-                return self._calculate_balance_score_inline(cast(list[dict[str, Any]], trade_history))
-            return self._calculate_balance_score_numpy(cast(list[dict[str, Any]], trade_history))
+                return self._calculate_balance_score_inline(
+                    cast(list[dict[str, Any]], trade_history)
+                )
+            return self._calculate_balance_score_numpy(
+                cast(list[dict[str, Any]], trade_history)
+            )
         except Exception as e:
             logger.debug(f"バランススコア計算エラー: {e}")
             return 0.5
 
-    def _calculate_balance_score_inline(self, trade_history: list[dict[str, Any]]) -> float:
+    def _calculate_balance_score_inline(
+        self, trade_history: list[dict[str, Any]]
+    ) -> float:
         """小規模データ向けのインライン計算。"""
         long_count = 0
         short_count = 0
@@ -464,7 +484,9 @@ class FitnessCalculator:
         balance_score = 0.6 * trade_balance + 0.4 * profit_balance
         return float(max(0.0, min(1.0, balance_score)))
 
-    def _calculate_balance_score_numpy(self, trade_history: list[dict[str, Any]]) -> float:
+    def _calculate_balance_score_numpy(
+        self, trade_history: list[dict[str, Any]]
+    ) -> float:
         """大規模データ向けの NumPy 版計算。"""
         trades_array = np.array(
             [
@@ -513,7 +535,9 @@ class FitnessCalculator:
         balance_score = float(0.6 * trade_balance + 0.4 * profit_balance)
         return max(0.0, min(1.0, balance_score))
 
-    def calculate_long_short_balance(self, backtest_result: Dict[str, SerializableValue]) -> float:
+    def calculate_long_short_balance(
+        self, backtest_result: Dict[str, SerializableValue]
+    ) -> float:
         """
         ロング・ショートバランススコアを計算
 

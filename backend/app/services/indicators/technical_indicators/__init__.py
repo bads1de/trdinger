@@ -15,11 +15,13 @@
 
 from .advanced_features import AdvancedFeatures
 from .original import OriginalIndicators
-from .pandas_ta import MomentumIndicators
-from .pandas_ta import OverlapIndicators
-from .pandas_ta import TrendIndicators
-from .pandas_ta import VolatilityIndicators
-from .pandas_ta import VolumeIndicators
+from .pandas_ta import (
+    MomentumIndicators,
+    OverlapIndicators,
+    TrendIndicators,
+    VolatilityIndicators,
+    VolumeIndicators,
+)
 
 __all__ = [
     "TrendIndicators",

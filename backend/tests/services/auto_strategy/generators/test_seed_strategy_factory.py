@@ -6,14 +6,12 @@ SeedStrategyFactory のユニットテスト
 
 import pytest
 
-
 from app.services.auto_strategy.generators.seed_strategy_factory import (
     SeedStrategyFactory,
     inject_seeds_into_population,
 )
-from app.services.auto_strategy.genes.strategy import StrategyGene
-
 from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
+from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 
 
@@ -181,14 +179,12 @@ class TestBollingerBreakout:
         """バンド参照が実行時の登録名を使うこと"""
         strategy = SeedStrategyFactory.create_bollinger_breakout()
 
-        assert (
-            strategy.long_entry_conditions[0].right_operand["name"]
-            == _multi_output_ref_name(strategy, "BBANDS", 0)
-        )
-        assert (
-            strategy.short_entry_conditions[0].right_operand["name"]
-            == _multi_output_ref_name(strategy, "BBANDS", 2)
-        )
+        assert strategy.long_entry_conditions[0].right_operand[
+            "name"
+        ] == _multi_output_ref_name(strategy, "BBANDS", 0)
+        assert strategy.short_entry_conditions[0].right_operand[
+            "name"
+        ] == _multi_output_ref_name(strategy, "BBANDS", 2)
 
 
 class TestKAMAADXHybrid:
@@ -233,17 +229,15 @@ class TestWAE:
         assert long_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
             strategy, "MACD", 0
         )
-        assert (
-            long_group.conditions[0].right_operand["name"]
-            == _multi_output_ref_name(strategy, "MACD", 1)
+        assert long_group.conditions[0].right_operand["name"] == _multi_output_ref_name(
+            strategy, "MACD", 1
         )
         assert short_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
             strategy, "MACD", 0
         )
-        assert (
-            short_group.conditions[0].right_operand["name"]
-            == _multi_output_ref_name(strategy, "MACD", 1)
-        )
+        assert short_group.conditions[0].right_operand[
+            "name"
+        ] == _multi_output_ref_name(strategy, "MACD", 1)
 
 
 class TestTrendilo:
@@ -285,8 +279,7 @@ class TestInjectSeedsIntoPopulation:
         """既定のシード注入率が30%であること"""
         population = [f"dummy_{i}" for i in range(10)]
         seeds = [
-            StrategyGene(metadata={"seed_strategy": f"seed_{i}"})
-            for i in range(10)
+            StrategyGene(metadata={"seed_strategy": f"seed_{i}"}) for i in range(10)
         ]
 
         monkeypatch.setattr(

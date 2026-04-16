@@ -63,7 +63,9 @@ async def reset_ohlcv_data(
 
 
 @router.delete("/funding-rates")
-@ErrorHandler.api_endpoint("ファンディングレートデータのリセット中にエラーが発生しました")
+@ErrorHandler.api_endpoint(
+    "ファンディングレートデータのリセット中にエラーが発生しました"
+)
 async def reset_funding_rate_data(
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(
@@ -80,7 +82,9 @@ async def reset_funding_rate_data(
 
 
 @router.delete("/open-interest")
-@ErrorHandler.api_endpoint("オープンインタレストデータのリセット中にエラーが発生しました")
+@ErrorHandler.api_endpoint(
+    "オープンインタレストデータのリセット中にエラーが発生しました"
+)
 async def reset_open_interest_data(
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(

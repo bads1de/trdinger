@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from app.services.backtest.services.backtest_data_service import BacktestDataService
 from app.services.backtest.data.data_integration_service import DataIntegrationError
+from app.services.backtest.services.backtest_data_service import BacktestDataService
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import OpenInterestRepository
@@ -543,7 +543,3 @@ class TestErrorHandling:
                     start_date=datetime(2024, 1, 5),
                     end_date=datetime(2024, 1, 1),
                 )
-
-
-
-

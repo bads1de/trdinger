@@ -589,7 +589,9 @@ def test_empty_exit_conditions_round_trip(serializer: GeneSerializer) -> None:
     strategy_gene = StrategyGene(
         id="no-exit-strategy",
         indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
-        long_entry_conditions=[Condition(left_operand="close", operator=">", right_operand="sma")],
+        long_entry_conditions=[
+            Condition(left_operand="close", operator=">", right_operand="sma")
+        ],
         short_entry_conditions=[],
         long_exit_conditions=[],
         short_exit_conditions=[],

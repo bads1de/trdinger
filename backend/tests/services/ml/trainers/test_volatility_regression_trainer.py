@@ -4,12 +4,15 @@ volatility_regression_trainer.py のテスト
 app/services/ml/trainers/volatility_regression_trainer.py のテストモジュール
 """
 
-import pytest
-import numpy as np
-import pandas as pd
 from unittest.mock import MagicMock, patch
 
-from app.services.ml.trainers.volatility_regression_trainer import VolatilityRegressionTrainer
+import numpy as np
+import pandas as pd
+import pytest
+
+from app.services.ml.trainers.volatility_regression_trainer import (
+    VolatilityRegressionTrainer,
+)
 from app.utils.error_handler import ModelError
 
 

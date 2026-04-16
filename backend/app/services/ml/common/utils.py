@@ -410,7 +410,9 @@ def calculate_volatility_std(
         return pd.Series([], dtype=float)
     if min_periods is None:
         min_periods = window
-    return cast(pd.Series, returns.rolling(window=window, min_periods=min_periods).std())
+    return cast(
+        pd.Series, returns.rolling(window=window, min_periods=min_periods).std()
+    )
 
 
 def calculate_volatility_atr(

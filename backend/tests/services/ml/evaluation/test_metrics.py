@@ -4,13 +4,13 @@ metrics.py のテスト
 app/services/ml/evaluation/metrics.py のテストモジュール
 """
 
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 from app.services.ml.evaluation.metrics import (
-    MetricsConfig,
     MetricsCalculator,
+    MetricsConfig,
     get_default_metrics,
     metrics_collector,
 )
@@ -202,9 +202,7 @@ class TestMetricsCalculator:
         y_pred = np.array([0, 1, 0, 1])
         class_names = ["negative", "positive"]
 
-        result = calc._calculate_confusion_matrix_metrics(
-            y_true, y_pred, class_names
-        )
+        result = calc._calculate_confusion_matrix_metrics(y_true, y_pred, class_names)
 
         assert "class_names" in result
 

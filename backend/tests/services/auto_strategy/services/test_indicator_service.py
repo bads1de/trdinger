@@ -2,15 +2,18 @@
 IndicatorServiceのユニットテスト
 """
 
-import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, MagicMock, patch
-import pandas as pd
-import numpy as np
+from unittest.mock import MagicMock, Mock, patch
 
-from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
-from app.services.auto_strategy.services.mtf_data_provider import MultiTimeframeDataProvider
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.auto_strategy.genes.indicator import IndicatorGene
+from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
+from app.services.auto_strategy.services.mtf_data_provider import (
+    MultiTimeframeDataProvider,
+)
 
 
 class TestIndicatorCalculator:

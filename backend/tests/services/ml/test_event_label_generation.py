@@ -5,13 +5,13 @@ import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
+    HybridFeatureAdapter,
+)
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
-    HybridFeatureAdapter,
-)
 from app.services.backtest.services.backtest_data_service import BacktestDataService
 from app.services.ml.label_generation import EventDrivenLabelGenerator
 

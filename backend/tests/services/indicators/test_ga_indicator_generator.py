@@ -4,10 +4,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from app.services.auto_strategy.genes import IndicatorGene
 from app.services.auto_strategy.genes.indicator import (
     generate_random_indicators,
 )
-from app.services.auto_strategy.genes import IndicatorGene
 
 
 class TestIndicatorGenerator:
@@ -40,7 +40,10 @@ class TestIndicatorGenerator:
     def test_fallback_behavior(self, mock_config):
         """フォールバック動作テスト"""
         # 利用可能な指標が全くない場合
-        with patch("app.services.indicators.TechnicalIndicatorService.get_supported_indicators", return_value={}):
+        with patch(
+            "app.services.indicators.TechnicalIndicatorService.get_supported_indicators",
+            return_value={},
+        ):
             indicators = generate_random_indicators(mock_config)
 
             # 少なくとも1つの指標が返る

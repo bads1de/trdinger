@@ -60,9 +60,7 @@ class BaseTool(ABC):
     def _get_tool_definition(cls) -> ToolDefinition:
         definition = cls.tool_definition
         if definition is None:
-            raise NotImplementedError(
-                f"{cls.__name__} must define tool_definition"
-            )
+            raise NotImplementedError(f"{cls.__name__} must define tool_definition")
         return definition
 
     @property

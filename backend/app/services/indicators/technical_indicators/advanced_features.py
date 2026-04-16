@@ -491,8 +491,12 @@ class AdvancedFeatures:
             buy_vol = volume * buy_ratio
             sell_vol = volume * (1 - buy_ratio)
             abs_imbalance = pd.Series(np.abs(buy_vol - sell_vol), index=close.index)
-            result = abs_imbalance.rolling(window=window).sum() / (volume.rolling(window=window).sum() + 1e-9)
-            return pd.Series(np.where(np.isnan(result), 0.0, result), index=close.index, dtype=float)
+            result = abs_imbalance.rolling(window=window).sum() / (
+                volume.rolling(window=window).sum() + 1e-9
+            )
+            return pd.Series(
+                np.where(np.isnan(result), 0.0, result), index=close.index, dtype=float
+            )
 
         return cast(
             pd.Series,
@@ -606,7 +610,9 @@ class AdvancedFeatures:
             delta_oi_factor = open_interest.diff().clip(lower=0.0).astype(float)
             price_location = (close - low.rolling(window=lookback).min()).astype(float)
             result = neg_fr_factor * delta_oi_factor * price_location
-            return pd.Series(np.where(np.isnan(result), 0.0, result), index=close.index, dtype=float)
+            return pd.Series(
+                np.where(np.isnan(result), 0.0, result), index=close.index, dtype=float
+            )
 
         return cast(
             pd.Series,

@@ -1,11 +1,15 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
 import pandas as pd
+import pytest
+
+from app.services.auto_strategy.core.evaluation.condition_evaluator import (
+    ConditionEvaluator,
+)
 from app.services.auto_strategy.genes.conditions import Condition, ConditionGroup
-from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
-from app.services.auto_strategy.genes.validator import GeneValidator
-from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.indicator import IndicatorGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.auto_strategy.genes.validator import GeneValidator
 
 
 class MockStrategy:

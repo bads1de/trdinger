@@ -166,7 +166,3 @@ class TestGlobalInterface:
         instance1 = operand_grouping_system
         instance2 = operand_grouping_system
         assert instance1 is instance2
-
-
-
-

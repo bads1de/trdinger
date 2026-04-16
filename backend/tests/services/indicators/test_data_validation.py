@@ -53,6 +53,7 @@ def nan_series() -> pd.Series:
 # PandasTAError
 # ---------------------------------------------------------------------------
 
+
 class TestPandasTAError:
     def test_is_exception(self):
         assert issubclass(PandasTAError, Exception)
@@ -65,6 +66,7 @@ class TestPandasTAError:
 # ---------------------------------------------------------------------------
 # _validate_positive_length
 # ---------------------------------------------------------------------------
+
 
 class TestValidatePositiveLength:
     def test_none_passes(self):
@@ -85,6 +87,7 @@ class TestValidatePositiveLength:
 # ---------------------------------------------------------------------------
 # _return_nan_series_if_needed
 # ---------------------------------------------------------------------------
+
 
 class TestReturnNanSeriesIfNeeded:
     def test_empty_series_returns_nan(self, sample_series):
@@ -107,6 +110,7 @@ class TestReturnNanSeriesIfNeeded:
 # _validate_series_collection
 # ---------------------------------------------------------------------------
 
+
 class TestValidateSeriesCollection:
     def test_empty_dict_raises(self):
         with pytest.raises(ValueError, match="cannot be empty"):
@@ -126,9 +130,7 @@ class TestValidateSeriesCollection:
         assert result is None
 
     def test_short_data_returns_nan(self, sample_series):
-        result = _validate_series_collection(
-            {"a": sample_series}, min_data_length=100
-        )
+        result = _validate_series_collection({"a": sample_series}, min_data_length=100)
         assert result is not None
         assert result.isna().all()
 
@@ -140,6 +142,7 @@ class TestValidateSeriesCollection:
 # ---------------------------------------------------------------------------
 # _create_nan_array
 # ---------------------------------------------------------------------------
+
 
 class TestCreateNanArray:
     def test_1d(self):
@@ -156,6 +159,7 @@ class TestCreateNanArray:
 # ---------------------------------------------------------------------------
 # _is_missing_indicator_result
 # ---------------------------------------------------------------------------
+
 
 class TestIsMissingIndicatorResult:
     def test_none_is_missing(self):
@@ -204,6 +208,7 @@ class TestIsMissingIndicatorResult:
 # create_nan_series_like
 # ---------------------------------------------------------------------------
 
+
 class TestCreateNanSeriesLike:
     def test_same_length_and_index(self, sample_series):
         result = create_nan_series_like(sample_series)
@@ -227,6 +232,7 @@ class TestCreateNanSeriesLike:
 # ---------------------------------------------------------------------------
 # create_nan_series_bundle / create_nan_series_map
 # ---------------------------------------------------------------------------
+
 
 class TestCreateNanSeriesBundle:
     def test_count(self, sample_series):
@@ -255,6 +261,7 @@ class TestCreateNanSeriesMap:
 # normalize_non_finite
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeNonFinite:
     def test_inf_replaced(self):
         s = pd.Series([1.0, np.inf, -np.inf, np.nan, 2.0])
@@ -270,6 +277,7 @@ class TestNormalizeNonFinite:
 # ---------------------------------------------------------------------------
 # run_series_indicator / run_multi_series_indicator
 # ---------------------------------------------------------------------------
+
 
 class TestRunSeriesIndicator:
     def test_calls_factory_when_valid(self, sample_series):
@@ -331,6 +339,7 @@ class TestRunMultiSeriesIndicator:
 # validate_series_params / validate_multi_series_params
 # ---------------------------------------------------------------------------
 
+
 class TestValidateSeriesParams:
     def test_valid_returns_none(self, sample_series):
         assert validate_series_params(sample_series, length=3) is None
@@ -359,6 +368,7 @@ class TestValidateMultiSeriesParams:
 # ---------------------------------------------------------------------------
 # validate_input
 # ---------------------------------------------------------------------------
+
 
 class TestValidateInput:
     def test_valid_data(self, sample_series):
@@ -393,6 +403,7 @@ class TestValidateInput:
 # ---------------------------------------------------------------------------
 # handle_pandas_ta_errors
 # ---------------------------------------------------------------------------
+
 
 class TestHandlePandasTaErrors:
     def test_passes_valid_result(self, sample_series):
@@ -463,6 +474,7 @@ class TestHandlePandasTaErrors:
 # get_param_value
 # ---------------------------------------------------------------------------
 
+
 class TestGetParamValue:
     def test_finds_length(self):
         assert get_param_value({"length": 10}, ["length", "window"], 5) == 10
@@ -474,12 +486,15 @@ class TestGetParamValue:
         assert get_param_value({"other": 1}, ["length", "window"], 5) == 5
 
     def test_length_takes_priority_over_window(self):
-        assert get_param_value({"length": 10, "window": 20}, ["length", "window"], 5) == 10
+        assert (
+            get_param_value({"length": 10, "window": 20}, ["length", "window"], 5) == 10
+        )
 
 
 # ---------------------------------------------------------------------------
 # _run_indicator_with_validation
 # ---------------------------------------------------------------------------
+
 
 class TestRunWithIndicatorValidation:
     def test_returns_validation_when_present(self, sample_series):

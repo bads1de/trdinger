@@ -4,12 +4,13 @@ MarketDataHandlerのテスト
 市場データの準備、キャッシュ管理のテスト
 """
 
-import pytest
 from datetime import datetime, timedelta
+
+import pandas as pd
+import pytest
 
 # unittest.mockは現在未使用だが、将来のテスト拡張用に残す
 
-import pandas as pd
 
 
 class TestMarketDataCache:
@@ -227,8 +228,8 @@ class TestUpdateCache:
     def test_updates_cache_with_new_values(self):
         """新しい値でキャッシュを更新"""
         from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
             MarketDataCache,
+            MarketDataHandler,
         )
 
         handler = MarketDataHandler()
@@ -278,8 +279,8 @@ class TestGetCache:
     def test_returns_cache_when_exists(self):
         """キャッシュが存在する場合はキャッシュを返す"""
         from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
             MarketDataCache,
+            MarketDataHandler,
         )
 
         handler = MarketDataHandler()
@@ -301,8 +302,8 @@ class TestClearCache:
     def test_clears_existing_cache(self):
         """既存のキャッシュをクリア"""
         from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
             MarketDataCache,
+            MarketDataHandler,
         )
 
         handler = MarketDataHandler()
@@ -343,8 +344,8 @@ class TestIsCacheValid:
     def test_returns_true_for_fresh_cache(self):
         """新鮮なキャッシュの場合はTrue"""
         from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
             MarketDataCache,
+            MarketDataHandler,
         )
 
         handler = MarketDataHandler()
@@ -360,8 +361,8 @@ class TestIsCacheValid:
     def test_returns_false_for_expired_cache(self):
         """期限切れのキャッシュの場合はFalse"""
         from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
             MarketDataCache,
+            MarketDataHandler,
         )
 
         handler = MarketDataHandler()
@@ -374,7 +375,3 @@ class TestIsCacheValid:
         )
 
         assert handler.is_cache_valid() is False
-
-
-
-

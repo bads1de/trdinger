@@ -140,7 +140,3 @@ if __name__ == "__main__":
     test_nan_handling()
     test_preprocessing_pipeline()
     print("\nNaN値テスト完了！")
-
-
-
-

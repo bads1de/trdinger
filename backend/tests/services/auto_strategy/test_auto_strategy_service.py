@@ -5,11 +5,11 @@ from fastapi import BackgroundTasks
 from fastapi.exceptions import HTTPException
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.services.experiment_application_service import (
-    ExperimentApplicationService,
-)
 from app.services.auto_strategy.services.auto_strategy_service import (
     AutoStrategyService,
+)
+from app.services.auto_strategy.services.experiment_application_service import (
+    ExperimentApplicationService,
 )
 
 

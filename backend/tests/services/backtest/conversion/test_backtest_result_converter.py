@@ -1,13 +1,17 @@
-import pytest
-import pandas as pd
 from datetime import datetime
+
+import pandas as pd
+import pytest
+
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
-from app.services.backtest.conversion.statistics_calculator import BacktestStatisticsCalculator
 from app.services.backtest.conversion.data_transformers import (
-    TradeHistoryTransformer,
     EquityCurveTransformer,
+    TradeHistoryTransformer,
+)
+from app.services.backtest.conversion.statistics_calculator import (
+    BacktestStatisticsCalculator,
 )
 from app.services.backtest.shared import (
     safe_float_conversion,
@@ -84,8 +88,13 @@ class TestBacktestResultConverter:
         dt = datetime(2023, 1, 1)
         result = converter.convert_backtest_results(
             stats=pd.Series({"Return [%]": 10.0}),
-            strategy_name="S", symbol="S", timeframe="1h", initial_capital=100,
-            start_date=dt, end_date=datetime(2023, 1, 2), config_json={}
+            strategy_name="S",
+            symbol="S",
+            timeframe="1h",
+            initial_capital=100,
+            start_date=dt,
+            end_date=datetime(2023, 1, 2),
+            config_json={},
         )
         assert result["start_date"] == dt
 

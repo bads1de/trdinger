@@ -1,6 +1,7 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi import HTTPException
-from unittest.mock import MagicMock, patch
 
 from app.services.ml.orchestration.ml_management_orchestration_service import (
     MLManagementOrchestrationService,

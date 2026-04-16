@@ -111,8 +111,8 @@ class TestCollectOpenInterestData:
             mock_db_session: DBセッションモック
         """
         # モックの設定
-        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
-            return_value={"success": True, "saved_count": 10}
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = (
+            AsyncMock(return_value={"success": True, "saved_count": 10})
         )
 
         with patch(
@@ -145,8 +145,8 @@ class TestCollectOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
-            return_value={"success": True, "saved_count": 100}
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = (
+            AsyncMock(return_value={"success": True, "saved_count": 100})
         )
 
         with patch(
@@ -175,12 +175,14 @@ class TestCollectOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
-            return_value={
-                "success": False,
-                "error": "API error",
-                "saved_count": 0,
-            }
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = (
+            AsyncMock(
+                return_value={
+                    "success": False,
+                    "error": "API error",
+                    "saved_count": 0,
+                }
+            )
         )
 
         with patch(
@@ -226,7 +228,7 @@ class TestGetOpenInterestData:
                 record.data_timestamp = data["data_timestamp"]
                 record.timestamp = data["timestamp"]
                 mock_records.append(record)
-            
+
             mock_repo.get_open_interest_data.return_value = mock_records
             mock_repo_class.return_value = mock_repo
 
@@ -316,8 +318,8 @@ class TestCollectBulkOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
-            return_value={"success": True, "saved_count": 10}
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = (
+            AsyncMock(return_value={"success": True, "saved_count": 10})
         )
 
         with patch(
@@ -345,8 +347,8 @@ class TestCollectBulkOpenInterestData:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
-            side_effect=Exception("API error")
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = (
+            AsyncMock(side_effect=Exception("API error"))
         )
 
         with patch(
@@ -379,8 +381,8 @@ class TestErrorHandling:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
-            side_effect=Exception("Service error")
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = (
+            AsyncMock(side_effect=Exception("Service error"))
         )
 
         result = await orchestration_service.collect_open_interest_data(
@@ -434,8 +436,8 @@ class TestEdgeCases:
             orchestration_service: オーケストレーションサービス
             mock_db_session: DBセッションモック
         """
-        orchestration_service.bybit_service.fetch_and_save_open_interest_data = AsyncMock(
-            return_value={"success": True, "saved_count": 0}
+        orchestration_service.bybit_service.fetch_and_save_open_interest_data = (
+            AsyncMock(return_value={"success": True, "saved_count": 0})
         )
 
         with patch(
@@ -530,6 +532,3 @@ class TestSymbolNormalization:
                     db_session=mock_db_session,
                 )
                 assert result["success"] is True
-
-
-

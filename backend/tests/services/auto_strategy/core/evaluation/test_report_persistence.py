@@ -63,12 +63,12 @@ def test_build_report_summary_keeps_extra_objective_components():
     assert selection_components["worst_case"] == pytest.approx(0.4)
     assert selection_components["aggregated"] == pytest.approx(0.575)
     assert len(selection_components["objective_components"]) == 1
-    assert selection_components["objective_components"][0]["worst_case"] == pytest.approx(
-        -0.5
-    )
-    assert selection_components["objective_components"][0]["aggregated"] == pytest.approx(
-        -0.395
-    )
+    assert selection_components["objective_components"][0][
+        "worst_case"
+    ] == pytest.approx(-0.5)
+    assert selection_components["objective_components"][0][
+        "aggregated"
+    ] == pytest.approx(-0.395)
 
 
 def test_attach_evaluation_summary_merges_into_metadata():

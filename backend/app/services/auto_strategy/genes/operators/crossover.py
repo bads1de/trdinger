@@ -82,7 +82,9 @@ def crossover_strategy_genes_batch(
     """StrategyGene の交叉をバッチで実行する。"""
     results: List[Tuple[Any, Any]] = []
     num_individuals = len(individuals)
-    last_pair_index = num_individuals - 1 if num_individuals % 2 == 0 else num_individuals - 2
+    last_pair_index = (
+        num_individuals - 1 if num_individuals % 2 == 0 else num_individuals - 2
+    )
 
     for i in range(0, last_pair_index, 2):
         if random.random() < crossover_rate:

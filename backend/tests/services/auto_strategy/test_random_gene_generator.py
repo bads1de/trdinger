@@ -71,12 +71,20 @@ class TestRandomGeneGenerator:
             )
         ]
         entry_long = [Condition(left_operand="close", operator=">", right_operand=1.0)]
-        entry_short = [Condition(left_operand="close", operator="<", right_operand=-1.0)]
-        exit_long = [Condition(left_operand="close", operator="<", right_operand="exit_long")]
-        exit_short = [Condition(left_operand="close", operator=">", right_operand="exit_short")]
+        entry_short = [
+            Condition(left_operand="close", operator="<", right_operand=-1.0)
+        ]
+        exit_long = [
+            Condition(left_operand="close", operator="<", right_operand="exit_long")
+        ]
+        exit_short = [
+            Condition(left_operand="close", operator=">", right_operand="exit_short")
+        ]
 
         with (
-            patch.object(self.generator, "_get_cached_indicators", return_value=indicators),
+            patch.object(
+                self.generator, "_get_cached_indicators", return_value=indicators
+            ),
             patch.object(
                 self.generator.smart_condition_generator,
                 "generate_balanced_conditions",

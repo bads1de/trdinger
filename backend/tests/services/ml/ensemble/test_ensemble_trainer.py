@@ -1,9 +1,12 @@
-import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch, AsyncMock
+import pytest
+
 from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
 from app.utils.error_handler import ModelError
+
 
 class TestEnsembleTrainer:
     @pytest.fixture
@@ -14,8 +17,8 @@ class TestEnsembleTrainer:
             "strict_error_mode": True,
             "stacking_params": {
                 "cv_folds": 2,
-                "meta_model_type": "logistic_regression"
-            }
+                "meta_model_type": "logistic_regression",
+            },
         }
 
     @pytest.fixture
@@ -35,7 +38,7 @@ class TestEnsembleTrainer:
         t1 = EnsembleTrainer({"models": ["lgb", "xgb"]})
         assert t1.is_single_model is False
         assert t1.model_type == "EnsembleModel"
-        
+
         # 2. 単一モデルモード
         t2 = EnsembleTrainer({"models": ["lightgbm"]})
         assert t2.is_single_model is True
@@ -48,10 +51,10 @@ class TestEnsembleTrainer:
             "xgb_max_depth": 5,
             "stacking_cv": 3,
             "stacking_meta_C": 1.0,
-            "other_param": "val"
+            "other_param": "val",
         }
         params = trainer._extract_optimized_parameters(training_params)
-        
+
         assert params["base_models"]["lightgbm"]["learning_rate"] == 0.1
         assert params["base_models"]["xgboost"]["max_depth"] == 5
         assert params["stacking"]["cv"] == 3
@@ -60,9 +63,11 @@ class TestEnsembleTrainer:
     def test_train_model_impl_success(self, trainer, sample_data):
         """アンサンブル学習の実行テスト"""
         X, y = sample_data
-        
+
         # StackingEnsemble をモック化
-        with patch('app.services.ml.ensemble.ensemble_trainer.StackingEnsemble') as mock_stacking:
+        with patch(
+            "app.services.ml.ensemble.ensemble_trainer.StackingEnsemble"
+        ) as mock_stacking:
             mock_instance = mock_stacking.return_value
             mock_instance.fit.return_value = {"status": "success", "score": 0.9}
             mock_instance.predict_proba.return_value = np.zeros((len(X), 2))
@@ -71,12 +76,12 @@ class TestEnsembleTrainer:
             mock_instance.get_oof_base_model_predictions.return_value = pd.DataFrame()
             mock_instance.get_X_train_original.return_value = X
             mock_instance.get_y_train_original.return_value = y
-            
+
             # メタラベリングも学習されるパスを通す
             trainer.ensemble_config["meta_labeling_params"] = {"enabled": True}
-            
+
             result = trainer._train_model_impl(X, X, y, y)
-            
+
             assert trainer.is_trained is True
             assert result["ensemble_method"] == "stacking"
             assert "feature_importance" in result
@@ -93,7 +98,7 @@ class TestEnsembleTrainer:
         # 未学習
         with pytest.raises(ModelError):
             trainer.predict_proba(pd.DataFrame())
-            
+
         # 正常
         trainer.ensemble_model = MagicMock(is_fitted=True)
         trainer.ensemble_model.predict_proba.return_value = np.array([[0.5, 0.5]])
@@ -105,7 +110,7 @@ class TestEnsembleTrainer:
         trainer.ensemble_model = MagicMock(is_fitted=True)
         trainer.ensemble_model.predict_proba.return_value = np.array([[0.3, 0.7]])
         trainer.meta_labeling_service = None
-        
+
         res = trainer.predict(X.iloc[:1])
         # メタラベリングなしの場合は確率配列が返る
         assert res.shape == (1, 2)
@@ -115,11 +120,13 @@ class TestEnsembleTrainer:
         """メタラベリングありの予測 (正常系)"""
         trainer.ensemble_model = MagicMock(is_fitted=True)
         trainer.ensemble_model.predict_proba.return_value = np.array([[0.2, 0.8]])
-        trainer.ensemble_model.predict_base_models_proba.return_value = pd.DataFrame({"l": [0.8]})
-        
+        trainer.ensemble_model.predict_base_models_proba.return_value = pd.DataFrame(
+            {"l": [0.8]}
+        )
+
         trainer.meta_labeling_service = MagicMock(is_trained=True)
         trainer.meta_labeling_service.predict.return_value = pd.Series([1])
-        
+
         res = trainer.predict(pd.DataFrame({"f": [1]}))
         assert res[0] == 1
 
@@ -129,7 +136,7 @@ class TestEnsembleTrainer:
         trainer.ensemble_model.predict_proba.return_value = np.array([[0.5, 0.5]])
         # ベースモデルの確率取得で失敗させる
         trainer.ensemble_model.predict_base_models_proba.side_effect = Exception("Fail")
-        
+
         trainer.meta_labeling_service = MagicMock(is_trained=True)
         trainer.strict_error_mode = False
         res = trainer.predict(pd.DataFrame({"f": [1]}))
@@ -142,7 +149,10 @@ class TestEnsembleTrainer:
         trainer.ensemble_model = MagicMock(best_algorithm="lgb")
         trainer.meta_labeling_service = MagicMock(is_trained=True)
         # 保存エラー
-        with patch("app.services.ml.models.model_manager.model_manager.save_model", side_effect=Exception("Err")):
+        with patch(
+            "app.services.ml.models.model_manager.model_manager.save_model",
+            side_effect=Exception("Err"),
+        ):
             meta = trainer._get_model_specific_metadata("m")
             assert "meta_model_path" not in meta
 
@@ -164,15 +174,21 @@ class TestEnsembleTrainer:
 
     def test_load_model_success(self, trainer):
         """モデル読み込みのテスト"""
-        with patch('app.services.ml.trainers.base_ml_trainer.BaseMLTrainer.load_model', return_value=True):
+        with patch(
+            "app.services.ml.trainers.base_ml_trainer.BaseMLTrainer.load_model",
+            return_value=True,
+        ):
             trainer._model = MagicMock()
             trainer.current_model_metadata = {
                 "ensemble_config": {"method": "stacking"},
                 "ensemble_method": "stacking",
-                "meta_model_path": None
+                "meta_model_path": None,
             }
             # メタモデル読み込みもパッチ
-            with patch("app.services.ml.models.model_manager.model_manager.load_model", return_value=MagicMock()):
+            with patch(
+                "app.services.ml.models.model_manager.model_manager.load_model",
+                return_value=MagicMock(),
+            ):
                 assert trainer.load_model("/path") is True
                 assert trainer.ensemble_model is not None
 

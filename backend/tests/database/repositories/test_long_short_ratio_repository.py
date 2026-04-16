@@ -4,6 +4,7 @@ LongShortRatioRepositoryのテスト
 
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
+
 import pytest
 from sqlalchemy.orm import Session
 

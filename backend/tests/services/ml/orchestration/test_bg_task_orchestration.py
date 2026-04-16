@@ -27,6 +27,7 @@ def manager() -> BackgroundTaskManager:
 # register_task
 # ---------------------------------------------------------------------------
 
+
 class TestRegisterTask:
     def test_auto_generates_task_id(self, manager: BackgroundTaskManager):
         task_id = manager.register_task(task_name="test")
@@ -40,16 +41,12 @@ class TestRegisterTask:
 
     def test_registers_resources(self, manager: BackgroundTaskManager):
         resource = MagicMock()
-        manager.register_task(
-            task_id="r1", task_name="test", resources=[resource]
-        )
+        manager.register_task(task_id="r1", task_name="test", resources=[resource])
         assert resource in manager._task_resources["r1"]
 
     def test_registers_callbacks(self, manager: BackgroundTaskManager):
         cb = MagicMock()
-        manager.register_task(
-            task_id="c1", task_name="test", cleanup_callbacks=[cb]
-        )
+        manager.register_task(task_id="c1", task_name="test", cleanup_callbacks=[cb])
         assert cb in manager._cleanup_callbacks["c1"]
 
     def test_default_task_name(self, manager: BackgroundTaskManager):
@@ -64,6 +61,7 @@ class TestRegisterTask:
 # ---------------------------------------------------------------------------
 # unregister_task
 # ---------------------------------------------------------------------------
+
 
 class TestUnregisterTask:
     def test_removes_task(self, manager: BackgroundTaskManager):
@@ -90,12 +88,12 @@ class TestUnregisterTask:
         manager.unregister_task(tid)
         resource.close.assert_called_once()
 
-    def test_callback_error_does_not_break_unregister(self, manager: BackgroundTaskManager):
+    def test_callback_error_does_not_break_unregister(
+        self, manager: BackgroundTaskManager
+    ):
         bad_cb = MagicMock(side_effect=Exception("boom"))
         good_cb = MagicMock()
-        tid = manager.register_task(
-            task_name="t", cleanup_callbacks=[bad_cb, good_cb]
-        )
+        tid = manager.register_task(task_name="t", cleanup_callbacks=[bad_cb, good_cb])
 
         manager.unregister_task(tid)
         bad_cb.assert_called_once()
@@ -114,6 +112,7 @@ class TestUnregisterTask:
 # ---------------------------------------------------------------------------
 # managed_task
 # ---------------------------------------------------------------------------
+
 
 class TestManagedTask:
     def test_yields_task_id(self, manager: BackgroundTaskManager):
@@ -160,6 +159,7 @@ class TestManagedTask:
 # cleanup_all_tasks
 # ---------------------------------------------------------------------------
 
+
 class TestCleanupAllTasks:
     def test_clears_all_tasks(self, manager: BackgroundTaskManager):
         manager.register_task(task_id="t1", task_name="task1")
@@ -189,6 +189,7 @@ class TestCleanupAllTasks:
 # _cleanup_task_resources
 # ---------------------------------------------------------------------------
 
+
 class TestCleanupTaskResources:
     def test_calls_clear_on_resource(self, manager: BackgroundTaskManager):
         resource = MagicMock(spec=["clear"])
@@ -209,9 +210,11 @@ class TestCleanupTaskResources:
 # グローバルインスタンス
 # ---------------------------------------------------------------------------
 
+
 class TestGlobalInstance:
     def test_background_task_manager_exists(self):
         from app.services.ml.orchestration.bg_task_orchestration_service import (
             background_task_manager,
         )
+
         assert isinstance(background_task_manager, BackgroundTaskManager)

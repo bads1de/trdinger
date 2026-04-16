@@ -53,6 +53,7 @@ class TestEnsureResponseDict:
 
     def test_extracts_from_pydantic_model(self):
         """Pydanticモデルの場合はmodel_dump()を呼び出す"""
+
         class MockModel:
             def model_dump(self):
                 return {"name": "test", "value": 42}
@@ -63,6 +64,7 @@ class TestEnsureResponseDict:
 
     def test_extracts_from_dict_method(self):
         """dict()メソッドを持つオブジェクトの場合は呼び出す"""
+
         class OldStyleModel:
             def dict(self):
                 return {"legacy": True}
@@ -80,6 +82,7 @@ class TestEnsureResponseDict:
 
     def test_prefers_model_dump_over_dict(self):
         """model_dump()が存在する場合はdict()より優先する"""
+
         class BothMethods:
             def model_dump(self):
                 return {"method": "model_dump"}
@@ -93,6 +96,7 @@ class TestEnsureResponseDict:
 
     def test_handles_model_dump_returning_non_dict(self):
         """model_dump()が辞書以外を返す場合は次の方法を試す"""
+
         class BadModel:
             def model_dump(self):
                 return "not a dict"
@@ -178,11 +182,14 @@ class TestBuildResponse:
 
     def test_preserves_zero_and_false_values(self):
         """0やFalseなどのfalsyだが有効な値を保持する"""
-        result = _build_response(True, {
-            "count": 0,
-            "active": False,
-            "empty_list": [],
-        })
+        result = _build_response(
+            True,
+            {
+                "count": 0,
+                "active": False,
+                "empty_list": [],
+            },
+        )
 
         assert result["count"] == 0
         assert result["active"] is False

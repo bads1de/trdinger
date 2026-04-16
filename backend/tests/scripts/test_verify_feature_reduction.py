@@ -63,9 +63,11 @@ def test_prepare_model_data_with_none_ohlcv_1m(
     """ohlcv_1m が None の場合にクラッシュせず動作することを確認"""
     module = verify_feature_reduction_module
 
-    with patch.object(module, "fetch_all_data") as mock_fetch, patch.object(
-        module, "FeatureEngineeringService"
-    ) as mock_fe_service_cls, patch.object(module, "FeatureSelector") as mock_selector_cls:
+    with (
+        patch.object(module, "fetch_all_data") as mock_fetch,
+        patch.object(module, "FeatureEngineeringService") as mock_fe_service_cls,
+        patch.object(module, "FeatureSelector") as mock_selector_cls,
+    ):
 
         # ohlcv_1m を None に設定
         mock_fetch.return_value = (mock_data, None, None, None, None)
@@ -129,11 +131,11 @@ def test_run_analysis_pipeline(verify_feature_reduction_module):
         ),
     }
 
-    with patch.object(module, "prepare_model_data", return_value=prepared_data), patch.object(
-        module, "LGBMClassifier"
-    ) as mock_lgbm_cls, patch.object(
-        module, "MetaLabelingService"
-    ) as mock_meta_service_cls:
+    with (
+        patch.object(module, "prepare_model_data", return_value=prepared_data),
+        patch.object(module, "LGBMClassifier") as mock_lgbm_cls,
+        patch.object(module, "MetaLabelingService") as mock_meta_service_cls,
+    ):
         mock_model = mock_lgbm_cls.return_value
         mock_model.fit.return_value = None
         mock_model.predict_proba.side_effect = lambda data: np.column_stack(

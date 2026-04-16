@@ -4,16 +4,16 @@ Indicator Utils Tests
 指標関連ユーティリティとYAML設定ユーティリティの統合テスト
 """
 
-import pytest
 from unittest.mock import patch
 
-from app.services.auto_strategy.utils.indicators import (
-    indicators_by_category,
-    get_all_indicators,
-    get_all_indicator_ids,
-    get_valid_indicator_types,
-)
+import pytest
 
+from app.services.auto_strategy.utils.indicators import (
+    get_all_indicator_ids,
+    get_all_indicators,
+    get_valid_indicator_types,
+    indicators_by_category,
+)
 
 # =============================================================================
 # 指標リスト取得関連テスト

@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from enum import Enum
 from unittest.mock import MagicMock
 
-
 from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 

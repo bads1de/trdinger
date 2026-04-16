@@ -62,7 +62,9 @@ class EntryDecisionEngine:
             return False
 
         current_price = self.strategy.data.Close[-1]
-        sl_price, tp_price = self.calculate_effective_tpsl_prices(direction, current_price)
+        sl_price, tp_price = self.calculate_effective_tpsl_prices(
+            direction, current_price
+        )
 
         entry_gene = self.strategy._get_effective_entry_gene(direction)
         entry_params = self.strategy.entry_executor.calculate_entry_params(
@@ -220,8 +222,12 @@ class EntryDecisionEngine:
                     return 0.001
 
                 gene = self.strategy.gene.position_sizing_gene
-                min_size_limit = max(0.001, float(getattr(gene, "min_position_size", 0.001)))
-                max_size_limit = float(getattr(gene, "max_position_size", position_size))
+                min_size_limit = max(
+                    0.001, float(getattr(gene, "min_position_size", 0.001))
+                )
+                max_size_limit = float(
+                    getattr(gene, "max_position_size", position_size)
+                )
                 if not math.isfinite(max_size_limit) or max_size_limit < min_size_limit:
                     max_size_limit = min_size_limit
 
@@ -306,7 +312,10 @@ class EntryDecisionEngine:
         """ツールがエントリーをブロックするかチェックする。"""
         if not self.strategy.gene:
             return False
-        if not hasattr(self.strategy.gene, "tool_genes") or not self.strategy.gene.tool_genes:
+        if (
+            not hasattr(self.strategy.gene, "tool_genes")
+            or not self.strategy.gene.tool_genes
+        ):
             return False
 
         from ..tools import ToolContext, tool_registry

@@ -1,9 +1,9 @@
-import time
-
-import pandas as pd
-import numpy as np
 import sys
+import time
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
@@ -165,9 +165,9 @@ class TestTripleBarrier:
                     hit_pt = future_prices[future_prices <= lower]
                     hit_sl = future_prices[future_prices >= upper]
 
-                assert hit_pt.empty and hit_sl.empty, (
-                    f"Numba missed a hit at {t0}. Side={side_val}"
-                )
+                assert (
+                    hit_pt.empty and hit_sl.empty
+                ), f"Numba missed a hit at {t0}. Side={side_val}"
                 return
 
             p0 = close.iloc[idx_check]
@@ -189,9 +189,9 @@ class TestTripleBarrier:
                 )
 
             first_event = min(valid_events)
-            assert first_event == numba_t1, (
-                f"Timing mismatch at {t0}. Numba={numba_t1}, Python={first_event}"
-            )
+            assert (
+                first_event == numba_t1
+            ), f"Timing mismatch at {t0}. Numba={numba_t1}, Python={first_event}"
 
             ret_at_hit = close.loc[first_event] / p0 - 1
             if side_val == 1:

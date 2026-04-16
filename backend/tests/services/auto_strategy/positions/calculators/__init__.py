@@ -1,5 +1,1 @@
 """Position calculators tests package."""
-
-
-
-

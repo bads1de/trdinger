@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import MagicMock
-from app.services.auto_strategy.genes.indicator import IndicatorGene
-from app.services.auto_strategy.genes import Condition, ConditionGroup
+
+import pytest
+
+from app.services.auto_strategy.config.constants import IndicatorType
 from app.services.auto_strategy.generators.mtf_strategy import (
     MTFStrategy,
 )
-from app.services.auto_strategy.config.constants import IndicatorType
+from app.services.auto_strategy.genes import Condition, ConditionGroup
+from app.services.auto_strategy.genes.indicator import IndicatorGene
 
 
 class TestMTFStrategy:

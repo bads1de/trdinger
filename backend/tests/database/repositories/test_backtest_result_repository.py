@@ -3,6 +3,7 @@ BacktestResultRepositoryのテストモジュール
 
 バックテスト結果リポジトリの機能をテストします。
 """
+
 # pyright: reportAttributeAccessIssue=none
 
 from datetime import datetime, timezone
@@ -519,7 +520,3 @@ class TestJsonSafeConversion:
 
         assert isinstance(result, list)
         assert isinstance(result[0], str)
-
-
-
-

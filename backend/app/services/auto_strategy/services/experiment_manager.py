@@ -11,11 +11,10 @@ from app.services.backtest.services.backtest_service import BacktestService
 
 from ..config.ga import GAConfig
 from ..core.engine.evolution_runner import EvolutionStoppedError
+from ..core.engine.ga_engine import GeneticAlgorithmEngine
 from .experiment_backtest_service import ExperimentBacktestService
 from .experiment_engine_registry import ExperimentEngineRegistry
 from .experiment_persistence_service import ExperimentPersistenceService
-
-from ..core.engine.ga_engine import GeneticAlgorithmEngine
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,9 @@ class ExperimentManager:
 
         # 進捗コールバックを定義
         def progress_callback(
-            current_generation: int, total_generations: int, best_fitness: Optional[float]
+            current_generation: int,
+            total_generations: int,
+            best_fitness: Optional[float],
         ):
             """各世代終了時に進捗をDBに更新する。"""
             try:
@@ -72,7 +73,9 @@ class ExperimentManager:
                     best_fitness,
                 )
             except Exception as e:
-                logger.debug(f"進捗更新に失敗しました（世代 {current_generation}）: {e}")
+                logger.debug(
+                    f"進捗更新に失敗しました（世代 {current_generation}）: {e}"
+                )
 
         @safe_operation(context=f"GA実験実行 ({experiment_id})", is_api_call=False)
         def _execute():

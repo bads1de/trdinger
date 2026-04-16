@@ -5,9 +5,9 @@ ML Models パッケージのテスト
 import pytest
 
 from app.services.ml.models import (
+    CatBoostModel,
     LightGBMModel,
     XGBoostModel,
-    CatBoostModel,
     algorithm_registry,
     get_available_models,
 )

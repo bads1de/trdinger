@@ -394,9 +394,7 @@ class ParameterTuningManager:
             best_gene,
             config,
             force_robustness=bool(config.two_stage_selection_config.enabled),
-            primary_fitness=self.extract_primary_fitness_from_result(
-                refreshed_fitness
-            ),
+            primary_fitness=self.extract_primary_fitness_from_result(refreshed_fitness),
         )
         return refreshed_fitness, refreshed_summary or fallback_summary
 
@@ -461,12 +459,13 @@ class ParameterTuningManager:
             return None
 
         from math import isfinite
+
+        from ..evaluation.report_persistence import build_report_summary
         from .report_selection import (
             extract_primary_fitness,
             get_two_stage_rank,
             get_two_stage_score,
         )
-        from ..evaluation.report_persistence import build_report_summary
 
         if primary_fitness is None:
             fitness_score = extract_primary_fitness(individual)

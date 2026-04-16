@@ -117,6 +117,3 @@ class DataConversionService:
             df["volume"] = df["volume"].astype("float64")  # 小数点以下がある場合を考慮
 
         return df
-
-
-

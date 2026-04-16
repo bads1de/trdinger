@@ -1,18 +1,26 @@
-import pytest
 from unittest.mock import MagicMock
-from app.services.auto_strategy.tpsl.calculator.base_calculator import BaseTPSLCalculator
+
+import pytest
+
 from app.services.auto_strategy.genes.tpsl import TPSLResult
+from app.services.auto_strategy.tpsl.calculator.base_calculator import (
+    BaseTPSLCalculator,
+)
+
 
 class MockTPSLCalculator(BaseTPSLCalculator):
     def __init__(self):
         super().__init__("mock_tpsl")
         self.should_fail = False
 
-    def _do_calculate(self, current_price, tpsl_gene, market_data, position_direction, **kwargs):
+    def _do_calculate(
+        self, current_price, tpsl_gene, market_data, position_direction, **kwargs
+    ):
         if self.should_fail:
             raise Exception("Calculation Failed")
         # sl_pct, tp_pct, confidence, metrics
         return 0.01, 0.02, 0.8, {"test": True}
+
 
 class TestBaseTPSLCalculator:
     @pytest.fixture
@@ -53,7 +61,7 @@ class TestBaseTPSLCalculator:
         sl, tp = calculator._make_prices(100.0, 0.0, 0.0, 1.0)
         assert sl == 100.0
         assert tp == 100.0
-        
+
         sl, tp = calculator._make_prices(100.0, None, None, 1.0)
         assert sl is None
         assert tp is None

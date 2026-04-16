@@ -1,11 +1,13 @@
 import logging
-import pytest
 from unittest.mock import MagicMock, call
+
 import pandas as pd
-from app.services.auto_strategy.strategies.order_manager import OrderManager
-from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
+import pytest
+
 from app.services.auto_strategy.config.constants import EntryType
 from app.services.auto_strategy.positions.pending_order import PendingOrder
+from app.services.auto_strategy.strategies.order_manager import OrderManager
+from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
 
 
 class TestOrderManagerEnhancement:
@@ -105,9 +107,11 @@ class TestOrderManagerEnhancement:
         self, manager, strategy
     ):
         strategy.runtime_state = StrategyRuntimeState()
+
         # buy後にポジションが開されることをシミュレート
         def mock_buy(size=None):
             strategy.position = MagicMock()
+
         strategy.buy.side_effect = mock_buy
 
         order = MagicMock(spec=PendingOrder)

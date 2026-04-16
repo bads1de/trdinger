@@ -67,6 +67,7 @@ from ...data_validation import (
     run_series_indicator,
 )
 
+
 def _create_nan_array_bundle(length: int, count: int) -> tuple[np.ndarray, ...]:
     """同じ長さの NaN 配列を複数作る。"""
     base = np.full(length, np.nan)

@@ -513,7 +513,3 @@ class TestErrorHandling:
 
         # アサーション
         assert response.status_code in [200, 400]
-
-
-
-

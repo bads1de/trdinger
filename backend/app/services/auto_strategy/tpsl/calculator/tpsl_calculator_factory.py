@@ -7,8 +7,8 @@ TPSL計算機ファクトリ
 from typing import Any, Dict
 
 from ...utils.normalization import normalize_enum_name
-from .base_calculator import BaseTPSLCalculator
 from .adaptive_calculator import AdaptiveCalculator
+from .base_calculator import BaseTPSLCalculator
 from .fixed_percentage_calculator import FixedPercentageCalculator
 from .risk_reward_calculator import RiskRewardCalculator
 from .statistical_calculator import StatisticalCalculator
@@ -63,7 +63,9 @@ class TPSLCalculatorFactory:
         }
 
     @classmethod
-    def register_calculator(cls, method_name: str, calculator_class: type[BaseTPSLCalculator]) -> None:
+    def register_calculator(
+        cls, method_name: str, calculator_class: type[BaseTPSLCalculator]
+    ) -> None:
         """
         カスタム計算機を登録
 

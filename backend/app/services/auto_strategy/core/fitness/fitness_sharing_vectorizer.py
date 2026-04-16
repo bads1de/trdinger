@@ -148,7 +148,9 @@ def vectorize_gene(
         features.append(0.1)
 
     # ポジションサイジングパラメータ
-    if gene.position_sizing_gene and hasattr(gene.position_sizing_gene, "risk_per_trade"):
+    if gene.position_sizing_gene and hasattr(
+        gene.position_sizing_gene, "risk_per_trade"
+    ):
         features.append(float(gene.position_sizing_gene.risk_per_trade or 0.01))
     else:
         features.append(0.01)

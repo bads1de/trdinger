@@ -68,9 +68,7 @@ MINIMIZE_OBJECTIVES: Final[frozenset[str]] = frozenset(
 )
 
 DYNAMIC_SCALAR_OBJECTIVES: Final[frozenset[str]] = frozenset(
-    name
-    for name, definition in OBJECTIVE_REGISTRY.items()
-    if definition.dynamic_scalar
+    name for name, definition in OBJECTIVE_REGISTRY.items() if definition.dynamic_scalar
 )
 
 

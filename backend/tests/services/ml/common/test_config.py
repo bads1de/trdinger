@@ -4,16 +4,17 @@ config.py のテスト
 app/services/ml/common/config.py のテストモジュール
 """
 
-import pytest
 import json
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import tempfile
+
+import pytest
 
 from app.services.ml.common.config import (
+    MLConfigManager,
     get_default_ensemble_config,
     get_default_single_model_config,
-    MLConfigManager,
     ml_config_manager,
 )
 
@@ -189,6 +190,7 @@ class TestMLConfigManager:
 
             # 設定を変更
             from app.services.ml.common.ml_config import MLConfig
+
             manager.config = MLConfig(model_type="xgboost")
 
             # リセット
@@ -238,7 +240,6 @@ class TestMLConfigManager:
         result = manager._merge_config_updates(current, updates)
 
         assert result["new_key"] == "new_value"
-
 
 
 class TestGlobalMLConfigManager:

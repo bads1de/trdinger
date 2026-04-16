@@ -46,11 +46,31 @@ _SUB_GENE_MUTATION_RULES = {
 }
 
 _LONG_SHORT_SUB_GENE_RULES = {
-    "long_tpsl_gene": (TPSLGene, create_random_tpsl_gene, "tpsl_gene_creation_probability_multiplier"),
-    "short_tpsl_gene": (TPSLGene, create_random_tpsl_gene, "tpsl_gene_creation_probability_multiplier"),
-    "long_entry_gene": (EntryGene, create_random_entry_gene, "entry_gene_creation_probability_multiplier"),
-    "short_entry_gene": (EntryGene, create_random_entry_gene, "entry_gene_creation_probability_multiplier"),
-    "exit_gene": (ExitGene, create_random_exit_gene, "exit_gene_creation_probability_multiplier"),
+    "long_tpsl_gene": (
+        TPSLGene,
+        create_random_tpsl_gene,
+        "tpsl_gene_creation_probability_multiplier",
+    ),
+    "short_tpsl_gene": (
+        TPSLGene,
+        create_random_tpsl_gene,
+        "tpsl_gene_creation_probability_multiplier",
+    ),
+    "long_entry_gene": (
+        EntryGene,
+        create_random_entry_gene,
+        "entry_gene_creation_probability_multiplier",
+    ),
+    "short_entry_gene": (
+        EntryGene,
+        create_random_entry_gene,
+        "entry_gene_creation_probability_multiplier",
+    ),
+    "exit_gene": (
+        ExitGene,
+        create_random_exit_gene,
+        "exit_gene_creation_probability_multiplier",
+    ),
 }
 
 _MUTATION_CONFIG_CREATION_ATTR_MAP = {
@@ -128,11 +148,28 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
     min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
     integer_param_names = {
-        "period", "signal_period", "lookback", "length", "fast_period",
-        "slow_period", "signal", "roc_period", "atr_period", "std_dev_period",
-        "mom_period", "cci_period", "willr_period", "stoch_k_period",
-        "stoch_d_period", "stoch_slowk", "stoch_slowd", "obv_period",
-        "ad_period", "adx_period", "aroon_period", "bop_period",
+        "period",
+        "signal_period",
+        "lookback",
+        "length",
+        "fast_period",
+        "slow_period",
+        "signal",
+        "roc_period",
+        "atr_period",
+        "std_dev_period",
+        "mom_period",
+        "cci_period",
+        "willr_period",
+        "stoch_k_period",
+        "stoch_d_period",
+        "stoch_slowk",
+        "stoch_slowd",
+        "obv_period",
+        "ad_period",
+        "adx_period",
+        "aroon_period",
+        "bop_period",
     }
 
     for i, indicator in enumerate(mutated.indicators):
@@ -170,11 +207,15 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
                             param_value * random.uniform(min_multiplier, max_multiplier)
                         )
 
-    if random.random() < mutation_rate * config.mutation_config.indicator_add_delete_probability:
+    if (
+        random.random()
+        < mutation_rate * config.mutation_config.indicator_add_delete_probability
+    ):
         max_indicators = config.max_indicators
         if (
             len(mutated.indicators) < max_indicators
-            and random.random() < config.mutation_config.indicator_add_vs_delete_probability
+            and random.random()
+            < config.mutation_config.indicator_add_vs_delete_probability
         ):
             from ..indicator import generate_random_indicators
             from ..validator import GeneValidator
@@ -206,20 +247,30 @@ def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
 
     def mutate_item(condition):
         if isinstance(condition, ConditionGroup):
-            if random.random() < config.mutation_config.condition_operator_switch_probability:
+            if (
+                random.random()
+                < config.mutation_config.condition_operator_switch_probability
+            ):
                 condition.operator = "AND" if condition.operator == "OR" else "OR"
             elif condition.conditions:
                 idx = random.randint(0, len(condition.conditions) - 1)
                 mutate_item(condition.conditions[idx])
         elif hasattr(condition, "operator"):
-            condition.operator = random.choice(config.mutation_config.valid_condition_operators)
+            condition.operator = random.choice(
+                config.mutation_config.valid_condition_operators
+            )
         else:
             logger.debug(f"条件変異をスキップ: 未知の型 {type(condition).__name__}")
 
-    mutation_threshold = mutation_rate * config.mutation_config.condition_change_multiplier
+    mutation_threshold = (
+        mutation_rate * config.mutation_config.condition_change_multiplier
+    )
 
     def maybe_mutate_branch(conditions):
-        if conditions and random.random() < config.mutation_config.condition_selection_probability:
+        if (
+            conditions
+            and random.random() < config.mutation_config.condition_selection_probability
+        ):
             idx = random.randint(0, len(conditions) - 1)
             mutate_item(conditions[idx])
 
@@ -265,7 +316,9 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
         mutate_indicators(mutated, mutation_rate, config)
         mutate_conditions(mutated, mutation_rate, config)
 
-        min_risk_multiplier, max_risk_multiplier = config.mutation_config.risk_param_range
+        min_risk_multiplier, max_risk_multiplier = (
+            config.mutation_config.risk_param_range
+        )
         for key, value in mutated.risk_management.items():
             if isinstance(value, (int, float)) and random.random() < mutation_rate:
                 if key == "position_size":
@@ -286,20 +339,15 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
                         max_risk_multiplier,
                     )
 
-        for field_name, creator_func, creation_prob_mult in _iter_mutable_sub_gene_specs(
-            config
-        ):
+        for (
+            field_name,
+            creator_func,
+            creation_prob_mult,
+        ) in _iter_mutable_sub_gene_specs(config):
             sub_gene = getattr(mutated, field_name)
             if sub_gene:
                 if random.random() < mutation_rate:
-                    if isinstance(sub_gene, PositionSizingGene):
-                        setattr(
-                            mutated,
-                            field_name,
-                            sub_gene.mutate(mutation_rate, config=config),
-                        )
-                    else:
-                        setattr(mutated, field_name, sub_gene.mutate(mutation_rate))
+                    setattr(mutated, field_name, sub_gene.mutate(mutation_rate))
             elif random.random() < mutation_rate * creation_prob_mult:
                 setattr(mutated, field_name, _create_sub_gene(creator_func, config))
 
@@ -324,7 +372,7 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
     except Exception as e:
         logger.error(f"戦略遺伝子突然変異エラー: {e}")
         try:
-            if 'mutated' not in locals():
+            if "mutated" not in locals():
                 mutated = gene.clone() if hasattr(gene, "clone") else gene
             if hasattr(mutated, "fitness") and hasattr(mutated.fitness, "values"):
                 del mutated.fitness.values
@@ -362,6 +410,7 @@ def adaptive_mutate_strategy_gene(
             adaptive_rate = base_mutation_rate
         else:
             import numpy as np
+
             variance = np.var(fitnesses)
             variance_threshold = config.mutation_config.adaptive_variance_threshold
 

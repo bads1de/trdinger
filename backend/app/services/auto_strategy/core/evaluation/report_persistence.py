@@ -46,9 +46,9 @@ def build_report_summary(
                     }
                 )
             if extra_components:
-                summary["selection_components"]["objective_components"] = (
-                    extra_components
-                )
+                summary["selection_components"][
+                    "objective_components"
+                ] = extra_components
 
     if fitness_score is not None:
         numeric_fitness = float(fitness_score)

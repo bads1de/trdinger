@@ -79,14 +79,22 @@ def triple_barrier_method_preset(
     try:
         close = df[price_column]
         if use_atr:
-            vol = cast(pd.Series, calculate_volatility_atr(
-                df["high"], df["low"], close, atr_period, True
-            ))
+            vol = cast(
+                pd.Series,
+                calculate_volatility_atr(
+                    df["high"], df["low"], close, atr_period, True
+                ),
+            )
         else:
-            vol = cast(pd.Series, calculate_volatility_std(close.pct_change(), volatility_window))
+            vol = cast(
+                pd.Series,
+                calculate_volatility_std(close.pct_change(), volatility_window),
+            )
 
         t_ev = t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
-        v_bar = cast(pd.Series, pd.Series(close.index, index=close.index).shift(-horizon_n))
+        v_bar = cast(
+            pd.Series, pd.Series(close.index, index=close.index).shift(-horizon_n)
+        )
 
         tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret)
         events = tb.get_events(close, t_ev, [pt, sl], vol, min_ret, v_bar)

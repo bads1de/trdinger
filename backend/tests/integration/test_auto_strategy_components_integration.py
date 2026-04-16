@@ -9,30 +9,36 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-import pytest
 import time
 from unittest.mock import MagicMock, Mock
 
 import numpy as np
 import pandas as pd
+import pytest
 
+from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
-from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
+from app.services.auto_strategy.core.evaluation.condition_evaluator import (
+    ConditionEvaluator,
+)
+from app.services.auto_strategy.core.evaluation.individual_evaluator import (
+    IndividualEvaluator,
+)
 from app.services.auto_strategy.core.fitness.fitness_calculator import FitnessCalculator
-from app.services.auto_strategy.generators.random_gene_generator import RandomGeneGenerator
+from app.services.auto_strategy.generators.random_gene_generator import (
+    RandomGeneGenerator,
+)
 from app.services.auto_strategy.genes import (
     Condition,
     IndicatorGene,
     StrategyGene,
     TPSLGene,
 )
-from app.services.auto_strategy.config.constants import TPSLMethod
-
 
 # =============================================================================
 # フィクスチャ
 # =============================================================================
+
 
 @pytest.fixture
 def ga_config():
@@ -120,6 +126,7 @@ def calculate_rsi(prices, period):
 # 結合テスト
 # =============================================================================
 
+
 class TestAutoStrategyComponentsIntegration:
     """Auto Strategy コンポーネントの結合テスト"""
 
@@ -131,12 +138,14 @@ class TestAutoStrategyComponentsIntegration:
         mock_backtest_service.run_backtest.return_value = mock_backtest_result
 
         evaluator = IndividualEvaluator(mock_backtest_service, max_cache_size=100)
-        evaluator.set_backtest_config({
-            "symbol": "BTC/USDT",
-            "timeframe": "1h",
-            "start_date": "2024-01-01",
-            "end_date": "2024-04-01",
-        })
+        evaluator.set_backtest_config(
+            {
+                "symbol": "BTC/USDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-04-01",
+            }
+        )
 
         gene = StrategyGene(
             id="test_gene",
@@ -145,7 +154,9 @@ class TestAutoStrategyComponentsIntegration:
                 Condition(left_operand="sma_20", operator=">", right_operand="close")
             ],
             short_entry_conditions=[],
-            tpsl_gene=TPSLGene(method=TPSLMethod.VOLATILITY_BASED, atr_multiplier_sl=2.0),
+            tpsl_gene=TPSLGene(
+                method=TPSLMethod.VOLATILITY_BASED, atr_multiplier_sl=2.0
+            ),
         )
 
         # 評価実行
@@ -198,12 +209,14 @@ class TestAutoStrategyComponentsIntegration:
         }
 
         evaluator = IndividualEvaluator(mock_backtest_service, max_cache_size=100)
-        evaluator.set_backtest_config({
-            "symbol": "BTC/USDT",
-            "timeframe": "1h",
-            "start_date": "2024-01-01",
-            "end_date": "2024-04-01",
-        })
+        evaluator.set_backtest_config(
+            {
+                "symbol": "BTC/USDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-04-01",
+            }
+        )
 
         generator = RandomGeneGenerator(ga_config)
 
@@ -244,12 +257,14 @@ class TestAutoStrategyComponentsIntegration:
         }
 
         evaluator = IndividualEvaluator(mock_backtest_service, max_cache_size=100)
-        evaluator.set_backtest_config({
-            "symbol": "BTC/USDT",
-            "timeframe": "1h",
-            "start_date": "2024-01-01",
-            "end_date": "2024-04-01",
-        })
+        evaluator.set_backtest_config(
+            {
+                "symbol": "BTC/USDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-04-01",
+            }
+        )
 
         generator = RandomGeneGenerator(ga_config)
 
@@ -291,12 +306,14 @@ class TestAutoStrategyComponentsIntegration:
         }
 
         evaluator = IndividualEvaluator(mock_backtest_service, max_cache_size=100)
-        evaluator.set_backtest_config({
-            "symbol": "BTC/USDT",
-            "timeframe": "1h",
-            "start_date": "2024-01-01",
-            "end_date": "2024-04-01",
-        })
+        evaluator.set_backtest_config(
+            {
+                "symbol": "BTC/USDT",
+                "timeframe": "1h",
+                "start_date": "2024-01-01",
+                "end_date": "2024-04-01",
+            }
+        )
 
         gene = StrategyGene(
             id="cache_test_gene",
@@ -305,7 +322,9 @@ class TestAutoStrategyComponentsIntegration:
                 Condition(left_operand="sma_20", operator=">", right_operand="close")
             ],
             short_entry_conditions=[],
-            tpsl_gene=TPSLGene(method=TPSLMethod.VOLATILITY_BASED, atr_multiplier_sl=2.0),
+            tpsl_gene=TPSLGene(
+                method=TPSLMethod.VOLATILITY_BASED, atr_multiplier_sl=2.0
+            ),
         )
 
         # 初回評価

@@ -102,7 +102,9 @@ class BacktestOrchestrationService:
             バックテスト結果
         """
 
-        @safe_operation(context=f"バックテスト結果取得 (ID: {result_id})", is_api_call=True)
+        @safe_operation(
+            context=f"バックテスト結果取得 (ID: {result_id})", is_api_call=True
+        )
         def _get_backtest_result_by_id():
             backtest_repo = BacktestResultRepository(db)
             result = backtest_repo.get_backtest_result_by_id(result_id)
@@ -130,7 +132,9 @@ class BacktestOrchestrationService:
             削除結果
         """
 
-        @safe_operation(context=f"バックテスト結果削除 (ID: {result_id})", is_api_call=True)
+        @safe_operation(
+            context=f"バックテスト結果削除 (ID: {result_id})", is_api_call=True
+        )
         def _delete_backtest_result():
             # 関連する戦略のリンクを解除
             strategy_repo = GeneratedStrategyRepository(db)

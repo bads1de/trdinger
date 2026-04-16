@@ -1,5 +1,6 @@
-import pytest
 from typing import Any, Dict
+
+import pytest
 
 from app.services.auto_strategy.tools.base import (
     BaseTool,

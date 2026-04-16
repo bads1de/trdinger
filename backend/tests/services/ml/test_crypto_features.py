@@ -1,6 +1,7 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.feature_engineering.crypto_features import (
     CryptoFeatureCalculator,
 )

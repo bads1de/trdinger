@@ -5,8 +5,9 @@ StatefulCondition のテスト
 のモデルと評価ロジックをテストします。
 """
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.services.auto_strategy.genes.conditions import (
     Condition,
@@ -604,7 +605,3 @@ class TestStatefulConditionIntegration:
         assert sc.trigger_condition.left_operand == "RSI"
         assert sc.follow_condition.right_operand == "SMA_20"
         assert sc.lookback_bars == 5
-
-
-
-

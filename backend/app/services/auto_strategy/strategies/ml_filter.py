@@ -74,9 +74,7 @@ class MLFilter:
         Returns:
             True: エントリー許可, False: エントリー拒否
         """
-        gate_enabled = bool(
-            getattr(self.strategy, "volatility_gate_enabled", False)
-        )
+        gate_enabled = bool(getattr(self.strategy, "volatility_gate_enabled", False))
         if not gate_enabled:
             return True
 

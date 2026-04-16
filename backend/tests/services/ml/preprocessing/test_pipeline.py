@@ -36,6 +36,7 @@ def sample_xy() -> tuple:
 # create_ml_pipeline
 # ---------------------------------------------------------------------------
 
+
 class TestCreateMlPipeline:
     def test_basic_pipeline_has_preprocessing(self):
         pipe = create_ml_pipeline()
@@ -132,6 +133,7 @@ class TestCreateMlPipeline:
 # create_classification_pipeline / create_regression_pipeline
 # ---------------------------------------------------------------------------
 
+
 class TestConveniencePipelines:
     def test_classification_pipeline(self):
         pipe = create_classification_pipeline(feature_selection=True, n_features=3)
@@ -151,6 +153,7 @@ class TestConveniencePipelines:
 # ---------------------------------------------------------------------------
 # get_ml_pipeline_info
 # ---------------------------------------------------------------------------
+
 
 class TestGetMlPipelineInfo:
     def test_returns_dict(self):
@@ -190,6 +193,7 @@ class TestGetMlPipelineInfo:
 # ---------------------------------------------------------------------------
 # optimize_ml_pipeline
 # ---------------------------------------------------------------------------
+
 
 class TestOptimizeMlPipeline:
     def test_regression_optimization(self, sample_xy):

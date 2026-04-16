@@ -7,15 +7,16 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
 
-import pytest
 from unittest.mock import MagicMock, Mock
 
-from app.services.auto_strategy.config.ga import GAConfig
+import pytest
 
+from app.services.auto_strategy.config.ga import GAConfig
 
 # =============================================================================
 # フィクスチャ
 # =============================================================================
+
 
 @pytest.fixture
 def ga_config():
@@ -38,6 +39,7 @@ def ga_config():
 # =============================================================================
 # OptimizedHybridIndividualEvaluator のテスト
 # =============================================================================
+
 
 class TestHybridIndividualEvaluator:
     """ハイブリッドGA個体評価器のテスト"""
@@ -102,6 +104,7 @@ class TestHybridIndividualEvaluator:
 # OptimizedDictConverter のテスト
 # =============================================================================
 
+
 class TestGeneSerializer:
     """GeneSerializer のテスト"""
 
@@ -153,15 +156,20 @@ class TestGeneSerializer:
 # 最適化された交叉・突然変異演算子のテスト
 # =============================================================================
 
+
 class TestStrategyOperators:
     """交叉・突然変異演算子のテスト"""
 
     def test_mutate_strategy_gene_batch(self, ga_config):
         """突然変異バッチ処理テスト"""
+        from app.services.auto_strategy.genes import (
+            Condition,
+            IndicatorGene,
+            StrategyGene,
+        )
         from app.services.auto_strategy.genes.strategy_operators import (
             mutate_strategy_gene_batch,
         )
-        from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
 
         # テスト用遺伝子を生成
         individuals = []
@@ -170,7 +178,9 @@ class TestStrategyOperators:
                 id=f"gene_{i}",
                 indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
                 long_entry_conditions=[
-                    Condition(left_operand="sma_20", operator=">", right_operand="close")
+                    Condition(
+                        left_operand="sma_20", operator=">", right_operand="close"
+                    )
                 ],
                 short_entry_conditions=[],
             )
@@ -185,10 +195,14 @@ class TestStrategyOperators:
 
     def test_crossover_strategy_genes_batch(self, ga_config):
         """交叉バッチ処理テスト"""
+        from app.services.auto_strategy.genes import (
+            Condition,
+            IndicatorGene,
+            StrategyGene,
+        )
         from app.services.auto_strategy.genes.strategy_operators import (
             crossover_strategy_genes_batch,
         )
-        from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
 
         # テスト用遺伝子を生成
         individuals = []
@@ -197,14 +211,18 @@ class TestStrategyOperators:
                 id=f"gene_{i}",
                 indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
                 long_entry_conditions=[
-                    Condition(left_operand="sma_20", operator=">", right_operand="close")
+                    Condition(
+                        left_operand="sma_20", operator=">", right_operand="close"
+                    )
                 ],
                 short_entry_conditions=[],
             )
             individuals.append(gene)
 
         # 交叉を実行
-        results = crossover_strategy_genes_batch(individuals, ga_config, crossover_rate=0.8)
+        results = crossover_strategy_genes_batch(
+            individuals, ga_config, crossover_rate=0.8
+        )
 
         assert len(results) == len(individuals) // 2
         for child1, child2 in results:
@@ -216,6 +234,7 @@ class TestStrategyOperators:
 # 統合テスト
 # =============================================================================
 
+
 class TestHybridSerializationOperators:
     """ハイブリッド個体評価、シリアライザー、演算子の統合テスト"""
 
@@ -224,13 +243,17 @@ class TestHybridSerializationOperators:
         from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
             HybridIndividualEvaluator,
         )
-        from app.services.auto_strategy.serializers.serialization import (
-            GeneSerializer,
+        from app.services.auto_strategy.genes import (
+            Condition,
+            IndicatorGene,
+            StrategyGene,
         )
         from app.services.auto_strategy.genes.strategy_operators import (
             mutate_strategy_gene_batch,
         )
-        from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
+        from app.services.auto_strategy.serializers.serialization import (
+            GeneSerializer,
+        )
 
         # ハイブリッド評価器
         mock_backtest_service = MagicMock()
@@ -249,7 +272,9 @@ class TestHybridSerializationOperators:
                 id=f"gene_{i}",
                 indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
                 long_entry_conditions=[
-                    Condition(left_operand="sma_20", operator=">", right_operand="close")
+                    Condition(
+                        left_operand="sma_20", operator=">", right_operand="close"
+                    )
                 ],
                 short_entry_conditions=[],
             )

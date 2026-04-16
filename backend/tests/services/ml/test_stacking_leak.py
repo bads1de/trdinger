@@ -1,11 +1,9 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
-from app.services.ml.ensemble.stacking import StackingEnsemble
-
-
 from app.services.ml.cross_validation.purged_kfold import PurgedKFold
+from app.services.ml.ensemble.stacking import StackingEnsemble
 
 
 class TestStackingLeak:
@@ -88,7 +86,3 @@ class TestStackingLeak:
         assert isinstance(
             cv, StratifiedKFold
         ), f"StratifiedKFold must be used when specified. Got: {type(cv)}"
-
-
-
-

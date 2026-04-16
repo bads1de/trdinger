@@ -18,7 +18,12 @@ from app.services.auto_strategy.config.helpers import (
 )
 from app.utils.datetime_utils import parse_datetime_range_optional
 
-from .evaluation_report import EvaluationReport, ScenarioEvaluation, _safe_copy_metadata, _DATETIME_FORMAT
+from .evaluation_report import (
+    _DATETIME_FORMAT,
+    EvaluationReport,
+    ScenarioEvaluation,
+    _safe_copy_metadata,
+)
 
 if TYPE_CHECKING:
     from .individual_evaluator import IndividualEvaluator
@@ -113,9 +118,7 @@ class EvaluationStrategy:
             [
                 (
                     order,
-                    lambda scenario_name=scenario_name,
-                    scenario_config=scenario_config,
-                    metadata=metadata: self._evaluate_robustness_scenario_report(
+                    lambda scenario_name=scenario_name, scenario_config=scenario_config, metadata=metadata: self._evaluate_robustness_scenario_report(
                         gene,
                         scenario_name,
                         scenario_config,
@@ -234,7 +237,9 @@ class EvaluationStrategy:
             },
         )
 
-        for symbol in getattr(config.robustness_config, "validation_symbols", None) or []:
+        for symbol in (
+            getattr(config.robustness_config, "validation_symbols", None) or []
+        ):
             symbol_str = str(symbol or "")
             if not symbol_str or symbol_str == base_symbol:
                 continue
@@ -275,7 +280,9 @@ class EvaluationStrategy:
                 },
             )
 
-        for slippage_delta in getattr(config.robustness_config, "stress_slippage", []) or []:
+        for slippage_delta in (
+            getattr(config.robustness_config, "stress_slippage", []) or []
+        ):
             scenario_config = base_backtest_config.copy()
             stressed_spread = base_spread + float(slippage_delta)
             self._set_execution_spread(scenario_config, stressed_spread)
@@ -356,11 +363,10 @@ class EvaluationStrategy:
             return []
 
         scenario_reports: list[ScenarioEvaluation] = []
-        with ThreadPoolExecutor(max_workers=min(self._max_workers, len(tasks))) as executor:
-            future_to_order = {
-                executor.submit(task): order
-                for order, task in tasks
-            }
+        with ThreadPoolExecutor(
+            max_workers=min(self._max_workers, len(tasks))
+        ) as executor:
+            future_to_order = {executor.submit(task): order for order, task in tasks}
 
             for future in as_completed(future_to_order):
                 order = future_to_order[future]
@@ -490,7 +496,10 @@ class EvaluationStrategy:
             try:
                 bar_offset = pd.Timedelta(timeframe)
             except Exception as e:
-                logger.debug("タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s", e)
+                logger.debug(
+                    "タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s",
+                    e,
+                )
                 bar_offset = pd.Timedelta(hours=1)
             oos_start = pd.Timestamp(split_str) + bar_offset
             oos_config["start_date"] = oos_start.strftime(_DATETIME_FORMAT)
@@ -547,7 +556,9 @@ class EvaluationStrategy:
         try:
             date_range = self._resolve_backtest_date_range(base_backtest_config)
             if date_range is None:
-                logger.warning("WFA: 期間が不明または無効なため通常評価にフォールバック")
+                logger.warning(
+                    "WFA: 期間が不明または無効なため通常評価にフォールバック"
+                )
                 return self._evaluate_single_report(gene, base_backtest_config, config)
             start_date, end_date = date_range
 
@@ -648,7 +659,10 @@ class EvaluationStrategy:
             try:
                 bar_offset = pd.Timedelta(timeframe)
             except Exception as e:
-                logger.debug("タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s", e)
+                logger.debug(
+                    "タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s",
+                    e,
+                )
                 bar_offset = pd.Timedelta(hours=1)
             test_start = train_end + bar_offset
             test_end = fold_end
@@ -794,9 +808,7 @@ class EvaluationStrategy:
                 continue
 
             test_config = base_backtest_config.copy()
-            test_config["start_date"] = effective_test_start.strftime(
-                _DATETIME_FORMAT
-            )
+            test_config["start_date"] = effective_test_start.strftime(_DATETIME_FORMAT)
             test_config["end_date"] = effective_test_end.strftime(_DATETIME_FORMAT)
             fold_configs.append((fold_idx, test_config))
             current_start = effective_test_end + embargo_duration

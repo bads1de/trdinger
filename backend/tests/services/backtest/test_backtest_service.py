@@ -8,12 +8,12 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
-from app.services.backtest.services.backtest_data_service import BacktestDataService
-from app.services.backtest.services.backtest_service import BacktestService
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
 from app.services.backtest.execution.backtest_executor import BacktestExecutor
+from app.services.backtest.services.backtest_data_service import BacktestDataService
+from app.services.backtest.services.backtest_service import BacktestService
 from database.repositories.backtest_result_repository import BacktestResultRepository
 
 

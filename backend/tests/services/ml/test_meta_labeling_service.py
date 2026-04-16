@@ -1,6 +1,7 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.ensemble.meta_labeling import MetaLabelingService
 
 
@@ -83,7 +84,3 @@ def test_evaluate(sample_data):
     assert "improvement_precision" in metrics
     assert metrics["meta_precision"] >= 0.0
     assert metrics["meta_precision"] <= 1.0
-
-
-
-

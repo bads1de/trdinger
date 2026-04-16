@@ -1,4 +1,3 @@
-
 from datetime import datetime
 
 import numpy as np
@@ -144,10 +143,14 @@ class TestDataFrequencyManager:
     def test_detect_ohlcv_timeframe_thresholds(self, manager):
         # 各時間軸の境界値をテスト
         # 1m (<= 1.5)
-        df_1m = pd.DataFrame(index=pd.date_range("2023-01-01", periods=2, freq="1.5min"))
+        df_1m = pd.DataFrame(
+            index=pd.date_range("2023-01-01", periods=2, freq="1.5min")
+        )
         assert manager.detect_ohlcv_timeframe(df_1m) == "1m"
         # 5m (<= 7.5)
-        df_5m = pd.DataFrame(index=pd.date_range("2023-01-01", periods=2, freq="7.5min"))
+        df_5m = pd.DataFrame(
+            index=pd.date_range("2023-01-01", periods=2, freq="7.5min")
+        )
         assert manager.detect_ohlcv_timeframe(df_5m) == "5m"
         # 15m (<= 22.5)
         df_15m = pd.DataFrame(
@@ -155,16 +158,24 @@ class TestDataFrequencyManager:
         )
         assert manager.detect_ohlcv_timeframe(df_15m) == "15m"
         # 30m (<= 45)
-        df_30m = pd.DataFrame(index=pd.date_range("2023-01-01", periods=2, freq="45min"))
+        df_30m = pd.DataFrame(
+            index=pd.date_range("2023-01-01", periods=2, freq="45min")
+        )
         assert manager.detect_ohlcv_timeframe(df_30m) == "30m"
         # 1h (<= 120)
-        df_1h = pd.DataFrame(index=pd.date_range("2023-01-01", periods=2, freq="120min"))
+        df_1h = pd.DataFrame(
+            index=pd.date_range("2023-01-01", periods=2, freq="120min")
+        )
         assert manager.detect_ohlcv_timeframe(df_1h) == "1h"
         # 4h (<= 360)
-        df_4h = pd.DataFrame(index=pd.date_range("2023-01-01", periods=2, freq="360min"))
+        df_4h = pd.DataFrame(
+            index=pd.date_range("2023-01-01", periods=2, freq="360min")
+        )
         assert manager.detect_ohlcv_timeframe(df_4h) == "4h"
         # 1d (> 360)
-        df_1d = pd.DataFrame(index=pd.date_range("2023-01-01", periods=2, freq="1440min"))
+        df_1d = pd.DataFrame(
+            index=pd.date_range("2023-01-01", periods=2, freq="1440min")
+        )
         assert manager.detect_ohlcv_timeframe(df_1d) == "1d"
 
     def test_resample_full_branches(self, manager):

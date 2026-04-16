@@ -1,22 +1,41 @@
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import MagicMock, patch
-from app.services.ml.models.base_gradient_boosting_model import BaseGradientBoostingModel
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from app.services.ml.models.base_gradient_boosting_model import (
+    BaseGradientBoostingModel,
+)
 from app.utils.error_handler import ModelError
+
 
 # テスト用の具象クラス
 class MockGBDT(BaseGradientBoostingModel):
     ALGORITHM_NAME = "mock_gbdt"
-    def _create_dataset(self, X, y=None, sample_weight=None): return MagicMock()
-    def _get_model_params(self, num_classes, **kwargs): return {"param": 1}
-    def _train_internal(self, train_data, valid_data, params, early_stopping_rounds=None, **kwargs):
+
+    def _create_dataset(self, X, y=None, sample_weight=None):
+        return MagicMock()
+
+    def _get_model_params(self, num_classes, **kwargs):
+        return {"param": 1}
+
+    def _train_internal(
+        self, train_data, valid_data, params, early_stopping_rounds=None, **kwargs
+    ):
         m = MagicMock()
         m.best_iteration = 10
         return m
-    def _get_prediction_proba(self, data): return np.array([0.5])
-    def _prepare_input_for_prediction(self, X): return X
-    def _predict_raw(self, data): return np.array([0.7]) # 回帰予測値
+
+    def _get_prediction_proba(self, data):
+        return np.array([0.5])
+
+    def _prepare_input_for_prediction(self, X):
+        return X
+
+    def _predict_raw(self, data):
+        return np.array([0.7])  # 回帰予測値
+
 
 class TestBaseGradientBoostingModel:
     @pytest.fixture
@@ -49,12 +68,12 @@ class TestBaseGradientBoostingModel:
         X = pd.DataFrame(np.random.randn(20, 2))
         y = pd.Series(np.random.randn(20))  # 回帰用の連続値
 
-        with patch.object(model, '_train_model_impl') as mock_train:
+        with patch.object(model, "_train_model_impl") as mock_train:
             model.fit(X, y, early_stopping_rounds=5)
             # 引数を確認
             args, kwargs = mock_train.call_args
             # X_train, X_val, y_train, y_val が渡されているはず
-            assert args[0].shape[0] == 16 # 80%
+            assert args[0].shape[0] == 16  # 80%
             assert args[1].shape[0] == 4  # 20%
 
     def test_predict_and_proba(self, model, sample_data):
@@ -76,7 +95,10 @@ class TestBaseGradientBoostingModel:
         X, y = sample_data
         model.fit(X, y)
 
-        with patch('app.services.ml.models.base_gradient_boosting_model.get_feature_importance_unified', return_value={"f1": 10.0}) as mock_util:
+        with patch(
+            "app.services.ml.models.base_gradient_boosting_model.get_feature_importance_unified",
+            return_value={"f1": 10.0},
+        ) as mock_util:
             res = model.get_feature_importance()
             assert res["f1"] == 10.0
             mock_util.assert_called_once()
@@ -84,6 +106,8 @@ class TestBaseGradientBoostingModel:
     def test_fit_error_handling(self, model, sample_data):
         """エラー発生時のModelErrorへのラップ"""
         X, y = sample_data
-        with patch.object(model, '_train_model_impl', side_effect=ValueError("Internal error")):
+        with patch.object(
+            model, "_train_model_impl", side_effect=ValueError("Internal error")
+        ):
             with pytest.raises(ModelError, match="fit失敗"):
                 model.fit(X, y)

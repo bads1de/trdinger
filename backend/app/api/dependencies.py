@@ -132,20 +132,24 @@ def create_service_factory_with_deps(
     display_name = service_display_name or class_name
 
     if dep_factory is not None:
+
         def wrapper_with_deps(dep=Depends(dep_factory)) -> object:
             def inner_factory() -> object:
                 service_class = _lazy_import_service(module_path, class_name)
                 return service_class(dep)
 
             return _create_service(inner_factory, display_name)
+
         return wrapper_with_deps
     else:
+
         def wrapper_without_deps() -> object:
             def inner_factory() -> object:
                 service_class = _lazy_import_service(module_path, class_name)
                 return service_class()
 
             return _create_service(inner_factory, display_name)
+
         return wrapper_without_deps
 
 

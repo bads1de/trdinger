@@ -578,7 +578,3 @@ class TestIntegration:
 
         with pytest.raises(HTTPException):
             ErrorHandler.safe_execute(api_operation, is_api_call=True)
-
-
-
-

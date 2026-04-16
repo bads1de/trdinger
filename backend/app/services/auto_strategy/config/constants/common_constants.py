@@ -52,7 +52,13 @@ MA_INDICATORS_NEEDING_PERIOD = {
 }
 
 # === TP/SL関連定数 ===
-TPSL_METHODS = ["fixed_percentage", "risk_reward_ratio", "volatility_based", "statistical", "adaptive"]
+TPSL_METHODS = [
+    "fixed_percentage",
+    "risk_reward_ratio",
+    "volatility_based",
+    "statistical",
+    "adaptive",
+]
 
 TPSL_LIMITS = {
     "stop_loss_pct": (0.005, 0.15),
@@ -66,7 +72,12 @@ TPSL_LIMITS = {
 }
 
 # === ポジションサイジング関連定数 ===
-POSITION_SIZING_METHODS = ["half_optimal_f", "volatility_based", "fixed_ratio", "fixed_quantity"]
+POSITION_SIZING_METHODS = [
+    "half_optimal_f",
+    "volatility_based",
+    "fixed_ratio",
+    "fixed_quantity",
+]
 
 # === 自動戦略デフォルト値 (フォールバック用) ===
 AUTO_STRATEGY_DEFAULTS = {

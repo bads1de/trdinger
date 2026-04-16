@@ -55,7 +55,9 @@ class VolumeFilter(BaseTool):
         min_volume_ratio = params.get("min_volume_ratio", 0.5)
 
         # extra_data に出来高関連データがあるかチェック
-        current_volume = context.extra_data.get("current_volume", context.current_volume)
+        current_volume = context.extra_data.get(
+            "current_volume", context.current_volume
+        )
         avg_volume = context.extra_data.get("avg_volume")
 
         if current_volume is not None and avg_volume is not None and avg_volume > 0:
@@ -78,11 +80,19 @@ class VolumeFilter(BaseTool):
 
         if random.random() < 0.3:
             new_params["min_volume_ratio"] = max(
-                0.1, min(1.5, new_params.get("min_volume_ratio", 0.5) * random.uniform(0.8, 1.2))
+                0.1,
+                min(
+                    1.5,
+                    new_params.get("min_volume_ratio", 0.5) * random.uniform(0.8, 1.2),
+                ),
             )
         if random.random() < 0.2:
             new_params["volume_period"] = max(
-                5, min(60, int(new_params.get("volume_period", 20) * random.uniform(0.8, 1.2)))
+                5,
+                min(
+                    60,
+                    int(new_params.get("volume_period", 20) * random.uniform(0.8, 1.2)),
+                ),
             )
 
         return new_params

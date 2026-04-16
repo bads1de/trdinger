@@ -13,8 +13,8 @@ import pytest
 from sklearn.pipeline import Pipeline
 
 from app.services.ml.preprocessing.pipeline import (
-    create_ml_pipeline,
     create_classification_pipeline,
+    create_ml_pipeline,
     create_regression_pipeline,
     get_ml_pipeline_info,
     optimize_ml_pipeline,
@@ -590,7 +590,3 @@ class TestPipelineIntegration:
         # すべての処理が正常に実行される
         assert result is not None
         assert not np.isnan(result).any()
-
-
-
-

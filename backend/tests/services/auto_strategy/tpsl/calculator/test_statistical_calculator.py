@@ -2,14 +2,15 @@
 StatisticalCalculator のテスト (修正版)
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from app.services.auto_strategy.genes import TPSLResult
+from app.services.auto_strategy.genes.tpsl import TPSLGene
 from app.services.auto_strategy.tpsl.calculator.statistical_calculator import (
     StatisticalCalculator,
 )
-from app.services.auto_strategy.genes.tpsl import TPSLGene
-from app.services.auto_strategy.genes import TPSLResult
 
 
 class TestStatisticalCalculator:
@@ -103,7 +104,3 @@ class TestStatisticalCalculator:
 
         assert result.stop_loss_pct == 0.01
         assert result.take_profit_pct == 0.02
-
-
-
-

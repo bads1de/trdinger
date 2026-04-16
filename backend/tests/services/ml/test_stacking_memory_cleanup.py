@@ -1,9 +1,11 @@
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import MagicMock, patch
-from app.services.ml.ensemble.stacking import StackingEnsemble
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
+from app.services.ml.ensemble.stacking import StackingEnsemble
 
 
 class TestStackingMemoryCleanup:
@@ -164,7 +166,3 @@ class TestStackingMemoryCleanup:
 
                 # clear_training_dataが呼ばれたことを確認
                 mock_instance.clear_training_data.assert_called_once()
-
-
-
-

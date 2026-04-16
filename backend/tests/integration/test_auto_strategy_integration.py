@@ -530,5 +530,3 @@ class TestAutoStrategyPerformance:
         assert duration < 10  # 10秒以内（実際のGAではもっと長い）
         assert config.population_size == 100  # デフォルト値
         assert config.generations == 50  # デフォルト値
-
-

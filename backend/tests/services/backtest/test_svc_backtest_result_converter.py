@@ -16,10 +16,12 @@ from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConversionError,
     BacktestResultConverter,
 )
-from app.services.backtest.conversion.statistics_calculator import BacktestStatisticsCalculator
 from app.services.backtest.conversion.data_transformers import (
-    TradeHistoryTransformer,
     EquityCurveTransformer,
+    TradeHistoryTransformer,
+)
+from app.services.backtest.conversion.statistics_calculator import (
+    BacktestStatisticsCalculator,
 )
 from app.services.backtest.shared import (
     safe_float_conversion,
@@ -229,7 +231,9 @@ class TestResultConversion:
 class TestPerformanceMetricsExtraction:
     """パフォーマンス指標抽出テスト"""
 
-    def test_extract_statistics_from_series(self, stats_calculator, mock_backtest_stats):
+    def test_extract_statistics_from_series(
+        self, stats_calculator, mock_backtest_stats
+    ):
         """pandas.Seriesから統計情報を抽出できること"""
         statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
@@ -240,9 +244,7 @@ class TestPerformanceMetricsExtraction:
         assert statistics["profit_factor"] == pytest.approx(3.0, rel=0.1)
         assert statistics["sharpe_ratio"] == 1.5
 
-    def test_extract_statistics_converts_drawdown_durations(
-        self, stats_calculator
-    ):
+    def test_extract_statistics_converts_drawdown_durations(self, stats_calculator):
         """ドローダウン期間をTimedeltaから日数floatへ変換できること"""
         stats = pd.Series(
             {
@@ -354,7 +356,9 @@ class TestPerformanceMetricsExtraction:
 class TestTradeHistoryConversion:
     """取引履歴変換テスト"""
 
-    def test_convert_trade_history_success(self, trade_transformer, mock_backtest_stats):
+    def test_convert_trade_history_success(
+        self, trade_transformer, mock_backtest_stats
+    ):
         """取引履歴を正常に変換できること"""
         trades = trade_transformer.transform(mock_backtest_stats)
 
@@ -363,7 +367,9 @@ class TestTradeHistoryConversion:
         assert all("exit_time" in trade for trade in trades)
         assert all("pnl" in trade for trade in trades)
 
-    def test_convert_trade_history_structure(self, trade_transformer, mock_backtest_stats):
+    def test_convert_trade_history_structure(
+        self, trade_transformer, mock_backtest_stats
+    ):
         """取引履歴の構造が正しいこと"""
         trades = trade_transformer.transform(mock_backtest_stats)
 
@@ -397,7 +403,9 @@ class TestTradeHistoryConversion:
 class TestEquityCurveConversion:
     """エクイティカーブ変換テスト"""
 
-    def test_convert_equity_curve_success(self, equity_transformer, mock_backtest_stats):
+    def test_convert_equity_curve_success(
+        self, equity_transformer, mock_backtest_stats
+    ):
         """エクイティカーブを正常に変換できること"""
         equity_curve = equity_transformer.transform(mock_backtest_stats)
 
@@ -720,6 +728,3 @@ class TestErrorHandling:
 
         equity_curve = equity_transformer.transform(stats)
         assert len(equity_curve) == 0
-
-
-

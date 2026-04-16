@@ -75,11 +75,18 @@ class VolatilityFilter(BaseTool):
 
         if random.random() < 0.3:
             new_params["min_atr_pct"] = max(
-                0.0001, min(0.01, new_params.get("min_atr_pct", 0.001) * random.uniform(0.8, 1.2))
+                0.0001,
+                min(
+                    0.01,
+                    new_params.get("min_atr_pct", 0.001) * random.uniform(0.8, 1.2),
+                ),
             )
         if random.random() < 0.2:
             new_params["atr_period"] = max(
-                5, min(50, int(new_params.get("atr_period", 14) * random.uniform(0.8, 1.2)))
+                5,
+                min(
+                    50, int(new_params.get("atr_period", 14) * random.uniform(0.8, 1.2))
+                ),
             )
 
         return new_params

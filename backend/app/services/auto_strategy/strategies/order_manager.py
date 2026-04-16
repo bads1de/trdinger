@@ -159,7 +159,9 @@ class OrderManager:
             return
 
         # ポジションサイズの検証
-        if order.size is None or (isinstance(order.size, (int, float)) and order.size <= 0):
+        if order.size is None or (
+            isinstance(order.size, (int, float)) and order.size <= 0
+        ):
             logger.warning(
                 f"無効なポジションサイズのため注文をスキップ: size={order.size}, "
                 f"direction={'long' if order.is_long else 'short'}"

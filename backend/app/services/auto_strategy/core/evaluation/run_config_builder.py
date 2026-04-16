@@ -29,7 +29,9 @@ class RunConfigBuilder:
     ) -> Optional[Dict[str, Any]]:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
-            early_termination_settings = config.evaluation_config.early_termination_settings
+            early_termination_settings = (
+                config.evaluation_config.early_termination_settings
+            )
             strategy_parameters = {
                 "strategy_gene": gene,
             }

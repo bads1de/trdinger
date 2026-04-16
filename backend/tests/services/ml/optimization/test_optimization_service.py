@@ -4,10 +4,11 @@ OptimizationService のテスト
 app/services/ml/optimization/optimization_service.py のテストモジュール
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-import pandas as pd
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import numpy as np
+import pandas as pd
+import pytest
 
 from app.services.ml.optimization.optimization_service import (
     OptimizationService,
@@ -118,9 +119,7 @@ class TestOptimizeParameters:
         self, mock_trainer, sample_data, optimization_settings
     ):
         """追加データ（funding_rate, open_interest）を使用したテスト"""
-        funding_data = pd.DataFrame(
-            {"funding_rate": np.random.randn(100) * 0.01}
-        )
+        funding_data = pd.DataFrame({"funding_rate": np.random.randn(100) * 0.01})
         oi_data = pd.DataFrame({"open_interest": np.random.randn(100) * 1000})
 
         service = OptimizationService()
@@ -147,9 +146,7 @@ class TestPrepareParameterSpace:
     def test_with_custom_parameter_space(self, service):
         """カスタムパラメータ空間を使用する場合"""
         mock_trainer = MagicMock()
-        custom_space = {
-            "learning_rate": {"type": "real", "low": 0.001, "high": 0.1}
-        }
+        custom_space = {"learning_rate": {"type": "real", "low": 0.001, "high": 0.1}}
         settings = OptimizationSettings(enabled=True, parameter_space=custom_space)
 
         result = service._prepare_parameter_space(mock_trainer, settings)
@@ -214,7 +211,9 @@ class TestConvertParameterSpaceConfig:
 
     def test_convert_categorical_parameter(self, service):
         """categorical型パラメータの変換"""
-        config = {"boosting_type": {"type": "categorical", "categories": ["gbdt", "dart"]}}
+        config = {
+            "boosting_type": {"type": "categorical", "categories": ["gbdt", "dart"]}
+        }
         result = service._convert_parameter_space_config(config)
 
         assert "boosting_type" in result
@@ -245,15 +244,11 @@ class TestCreateObjectiveFunction:
             }
         )
 
-    def test_objective_function_returns_score(
-        self, service, mock_trainer, sample_data
-    ):
+    def test_objective_function_returns_score(self, service, mock_trainer, sample_data):
         """目的関数がスコアを返すこと"""
         settings = OptimizationSettings(enabled=True, n_calls=5)
 
-        with patch.object(
-            service, "_create_temp_trainer"
-        ) as mock_create_temp:
+        with patch.object(service, "_create_temp_trainer") as mock_create_temp:
             mock_temp_trainer = MagicMock()
             mock_temp_trainer.train_model.return_value = {
                 "f1_score": 0.8,
@@ -351,9 +346,7 @@ class TestOptimizeFullPipeline:
     def sample_superset(self):
         """サンプル特徴量スーパーセット"""
         dates = pd.date_range("2023-01-01", periods=500, freq="h")
-        data = {
-            f"feature_{d}": np.random.randn(500) for d in [0.3, 0.4, 0.5, 0.6]
-        }
+        data = {f"feature_{d}": np.random.randn(500) for d in [0.3, 0.4, 0.5, 0.6]}
         return pd.DataFrame(data, index=dates)
 
     @pytest.fixture
@@ -380,9 +373,7 @@ class TestOptimizeFullPipeline:
         self, service, sample_superset, sample_labels, sample_ohlcv
     ):
         """パイプライン最適化の基本テスト"""
-        with patch.object(
-            service, "_generate_pipeline_labels"
-        ) as mock_generate_labels:
+        with patch.object(service, "_generate_pipeline_labels") as mock_generate_labels:
             mock_generate_labels.return_value = sample_labels
 
             with patch.object(
@@ -409,9 +400,7 @@ class TestOptimizeFullPipeline:
         """固定パラメータを使用したパイプライン最適化"""
         fixed_params = {"tbm_horizon": 24}
 
-        with patch.object(
-            service, "_generate_pipeline_labels"
-        ) as mock_generate_labels:
+        with patch.object(service, "_generate_pipeline_labels") as mock_generate_labels:
             mock_generate_labels.return_value = sample_labels
 
             with patch.object(
@@ -443,9 +432,7 @@ class TestHelperMethods:
         superset = pd.DataFrame(
             {"feature1": [1, 2, 3]}, index=pd.date_range("2023-01-01", periods=3)
         )
-        labels = pd.Series(
-            [0, 1, 0], index=pd.date_range("2023-01-01", periods=3)
-        )
+        labels = pd.Series([0, 1, 0], index=pd.date_range("2023-01-01", periods=3))
 
         X_aligned, y_aligned = service._align_feature_superset_and_labels(
             superset, labels

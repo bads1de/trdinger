@@ -56,8 +56,7 @@ class TPSLGene(BaseGene):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> TPSLGene:
-        """辞書形式からTPSLGeneオブジェクトを復元
-        """
+        """辞書形式からTPSLGeneオブジェクトを復元"""
         return BaseGene.from_dict.__func__(cls, data)
 
     method: TPSLMethod = TPSLMethod.RISK_REWARD_RATIO
@@ -188,6 +187,7 @@ class TPSLGene(BaseGene):
     ) -> tuple["TPSLGene", "TPSLGene"]:
         """TP/SL遺伝子の交叉"""
         import random
+
         from .genetic_utils import GeneticUtils
 
         # ジェネリック交叉を実行（直接呼び出し）
@@ -215,7 +215,7 @@ class TPSLGene(BaseGene):
         p1: "TPSLGene" = parent1  # type: ignore[assignment]
         p2: "TPSLGene" = parent2  # type: ignore[assignment]
         all_keys = set(p1.method_weights.keys()) | set(p2.method_weights.keys())
-        
+
         for key in all_keys:
             if key in p1.method_weights and key in p2.method_weights:
                 # 両方にある場合、BLX-α交叉で多様性を創出
@@ -223,8 +223,14 @@ class TPSLGene(BaseGene):
                 min_v, max_v = min(v1, v2), max(v1, v2)
                 range_v = max_v - min_v
                 # 親の範囲内（または少し外側）でランダムに選択
-                child1.method_weights[key] = max(0.0, min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v))
-                child2.method_weights[key] = max(0.0, min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v))
+                child1.method_weights[key] = max(
+                    0.0,
+                    min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v),
+                )
+                child2.method_weights[key] = max(
+                    0.0,
+                    min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v),
+                )
             else:
                 # 片方しかない場合、そのまま継承
                 if key in p1.method_weights:
@@ -328,39 +334,5 @@ def create_random_tpsl_gene(config: Any = None) -> TPSLGene:
         enabled=True,
         priority=random.uniform(0.5, 1.5),
     )
-
-    if config:
-        # Anyの制約を適用（設定されている場合）
-        if hasattr(config, "tpsl_method_constraints"):
-            # 許可されたメソッドのみを使用
-            allowed_methods = config.tpsl_method_constraints
-            if allowed_methods:
-                tpsl_gene.method = random.choice(
-                    [TPSLMethod(m) for m in allowed_methods]
-                )
-
-        if hasattr(config, "tpsl_sl_range") and config.tpsl_sl_range is not None:
-            sl_min, sl_max = config.tpsl_sl_range
-            tpsl_gene.stop_loss_pct = random.uniform(sl_min, sl_max)
-            tpsl_gene.base_stop_loss = random.uniform(sl_min, sl_max)
-
-        if hasattr(config, "tpsl_tp_range") and config.tpsl_tp_range is not None:
-            # TP範囲制約
-            tp_min, tp_max = config.tpsl_tp_range
-            tpsl_gene.take_profit_pct = random.uniform(tp_min, tp_max)
-
-        if hasattr(config, "tpsl_rr_range") and config.tpsl_rr_range is not None:
-            # リスクリワード比範囲制約
-            rr_min, rr_max = config.tpsl_rr_range
-            tpsl_gene.risk_reward_ratio = random.uniform(rr_min, rr_max)
-
-        if (
-            hasattr(config, "tpsl_atr_multiplier_range")
-            and config.tpsl_atr_multiplier_range is not None
-        ):
-            # ATR倍率範囲制約
-            atr_min, atr_max = config.tpsl_atr_multiplier_range
-            tpsl_gene.atr_multiplier_sl = random.uniform(atr_min, atr_max)
-            tpsl_gene.atr_multiplier_tp = random.uniform(atr_min * 1.5, atr_max * 2.0)
 
     return tpsl_gene

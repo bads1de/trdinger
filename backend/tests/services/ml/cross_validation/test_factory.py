@@ -31,6 +31,7 @@ def daily_index() -> pd.DatetimeIndex:
 # infer_timeframe
 # ---------------------------------------------------------------------------
 
+
 class TestInferTimeframe:
     def test_hourly(self, hourly_index):
         assert infer_timeframe(hourly_index) == "1h"
@@ -69,6 +70,7 @@ class TestInferTimeframe:
 # get_t1_series
 # ---------------------------------------------------------------------------
 
+
 class TestGetT1Series:
     def test_hourly(self, hourly_index):
         t1 = get_t1_series(hourly_index, horizon_n=12, timeframe="1h")
@@ -105,6 +107,7 @@ class TestGetT1Series:
 # create_temporal_cv_splitter
 # ---------------------------------------------------------------------------
 
+
 class TestCreateTemporalCvSplitter:
     def test_kfold(self, hourly_index):
         splitter = create_temporal_cv_splitter("kfold", 5, hourly_index)
@@ -116,9 +119,7 @@ class TestCreateTemporalCvSplitter:
 
     def test_purged_kfold_with_t1(self, hourly_index):
         t1 = get_t1_series(hourly_index, horizon_n=12, timeframe="1h")
-        splitter = create_temporal_cv_splitter(
-            "purged_kfold", 5, hourly_index, t1=t1
-        )
+        splitter = create_temporal_cv_splitter("purged_kfold", 5, hourly_index, t1=t1)
         assert isinstance(splitter, PurgedKFold)
 
     def test_purged_kfold_with_horizon(self, hourly_index):
@@ -143,9 +144,7 @@ class TestCreateTemporalCvSplitter:
 
     def test_splits_data(self, hourly_index):
         """分割が正しく行われる"""
-        splitter = create_temporal_cv_splitter(
-            "kfold", 5, hourly_index
-        )
+        splitter = create_temporal_cv_splitter("kfold", 5, hourly_index)
         y = pd.Series(np.random.randint(0, 2, len(hourly_index)), index=hourly_index)
         splits = list(splitter.split(hourly_index, y))
         assert len(splits) == 5

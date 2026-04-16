@@ -254,7 +254,9 @@ class TestEdgeCases:
         start_date = datetime(2021, 1, 1, 0, 0)
         end_date = datetime(2021, 1, 2, 0, 0)
 
-        result = merger.merge_fr_data(single_row_df, "BTC/USDT:USDT", start_date, end_date)
+        result = merger.merge_fr_data(
+            single_row_df, "BTC/USDT:USDT", start_date, end_date
+        )
 
         assert "funding_rate" in result.columns
         assert len(result) == 1
@@ -326,7 +328,3 @@ class TestEdgeCases:
 
         assert "funding_rate" in result.columns
         # merge_asof with backward direction should handle this
-
-
-
-

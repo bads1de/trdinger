@@ -9,7 +9,7 @@ import asyncio
 import logging
 from abc import ABC
 from datetime import datetime, timezone
-from typing import Callable, Dict, List, Optional, Any
+from typing import Any, Callable, Dict, List, Optional
 
 import ccxt.async_support as ccxt
 

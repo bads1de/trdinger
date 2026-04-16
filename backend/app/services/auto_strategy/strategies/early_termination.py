@@ -70,7 +70,9 @@ class StrategyEarlyTerminationController:
         try:
             return pd.Timestamp(value)  # type: ignore[return-value]
         except Exception as e:
-            logger.warning("evaluation_start の解析に失敗しました: %s, エラー: %s", value, e)
+            logger.warning(
+                "evaluation_start の解析に失敗しました: %s, エラー: %s", value, e
+            )
             return None
 
     def is_evaluation_bar(self) -> bool:
@@ -184,7 +186,8 @@ class StrategyEarlyTerminationController:
                     return min(1.0, evaluated_bars / evaluation_total_bars)
                 except Exception as e:
                     logger.debug(
-                        "評価窓ベースの進捗計算に失敗したためフォールバックします: %s", e
+                        "評価窓ベースの進捗計算に失敗したためフォールバックします: %s",
+                        e,
                     )
 
         total_bars = max(1, int(getattr(self.strategy, "_total_bars", 1) or 1))
@@ -238,9 +241,7 @@ class StrategyEarlyTerminationController:
                             self.strategy, "initial_capital", None
                         )
                         if initial_capital and initial_capital > 0:
-                            values.append(
-                                float(value) / initial_capital * 100.0
-                            )
+                            values.append(float(value) / initial_capital * 100.0)
                         else:
                             logger.debug(
                                 f"トレードP&Lのパーセント変換をスキップ: "

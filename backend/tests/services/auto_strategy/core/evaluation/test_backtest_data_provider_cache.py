@@ -64,7 +64,10 @@ class TestBacktestDataProviderCache:
 
         with patch(
             "app.services.auto_strategy.core.evaluation.parallel_evaluator.get_worker_data",
-            return_value={"key": ("BTC/USDT:USDT", "1h", "2024-01-01", "2024-01-02"), "data": mock_df},
+            return_value={
+                "key": ("BTC/USDT:USDT", "1h", "2024-01-01", "2024-01-02"),
+                "data": mock_df,
+            },
         ):
             result = provider.get_cached_backtest_data(config)
 
@@ -104,9 +107,7 @@ class TestBacktestDataProviderCache:
             result = provider.get_cached_backtest_data(config)
 
         expected = worker_df.loc[
-            pd.Timestamp("2024-01-03", tz="UTC") : pd.Timestamp(
-                "2024-01-04", tz="UTC"
-            )
+            pd.Timestamp("2024-01-03", tz="UTC") : pd.Timestamp("2024-01-04", tz="UTC")
         ]
 
         pd.testing.assert_frame_equal(result, expected)

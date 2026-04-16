@@ -14,7 +14,6 @@ from app.services.ml.orchestration.ml_training_orchestration_service import (
     training_status_lock,
 )
 
-
 BASE_TRAINING_STATUS = {
     "is_training": False,
     "progress": 0,
@@ -198,9 +197,7 @@ def test_execute_actual_training_marks_error_when_train_model_fails(
             }
         )
 
-    service.train_model = MagicMock(
-        return_value={"success": False, "message": "boom"}
-    )
+    service.train_model = MagicMock(return_value={"success": False, "message": "boom"})
 
     with patch.object(orchestration_module, "EnsembleTrainer") as mock_trainer_cls:
         mock_trainer_cls.return_value = MagicMock()
@@ -222,7 +219,9 @@ def test_execute_actual_training_marks_error_when_train_model_fails(
         assert training_status["model_info"] == {"success": False, "message": "boom"}
 
 
-def test_train_in_background_closes_own_session(service, training_config, training_data):
+def test_train_in_background_closes_own_session(
+    service, training_config, training_data
+):
     fake_session = MagicMock()
     mock_data_service = MagicMock()
     mock_data_service.get_ml_training_data.return_value = training_data

@@ -168,7 +168,9 @@ class TripleBarrier:
 
         # targetのインデックスに合わせてアラインメント
         v_bar_reindexed = vertical_barrier_times.reindex(target.index)
-        v_bar = pd.Series(v_bar_reindexed.values, index=target.index).fillna(cast(Any, pd.NaT))
+        v_bar = pd.Series(v_bar_reindexed.values, index=target.index).fillna(
+            cast(Any, pd.NaT)
+        )
 
         if side is None:
             side_series = pd.Series(1.0, index=target.index)
@@ -195,10 +197,14 @@ class TripleBarrier:
 
         if valid_v_mask.any():
             # 有効な垂直バリア時刻のみインデックス検索
-            valid_times = pd.Series(v_bar[valid_v_mask].values, index=v_bar[valid_v_mask].index)
+            valid_times = pd.Series(
+                v_bar[valid_v_mask].values, index=v_bar[valid_v_mask].index
+            )
             # get_indexer requires exact match which can fail. Use searchsorted to find position.
             idx_obj = cast(pd.DatetimeIndex, close.index)
-            found_idxs = idx_obj.searchsorted(valid_times.to_numpy(dtype="datetime64[ns]"), side="left")
+            found_idxs = idx_obj.searchsorted(
+                valid_times.to_numpy(dtype="datetime64[ns]"), side="left"
+            )
             found_idxs = np.clip(found_idxs, 0, len(close))
             v_bar_idxs[valid_v_mask] = found_idxs
 
@@ -253,7 +259,7 @@ class TripleBarrier:
         self, events: pd.DataFrame, close: pd.Series, binary_label: bool = False
     ) -> pd.DataFrame:
         """バリア接触イベントに基づいてラベルを生成
-        
+
         インデックスの整合性を確保し、特徴量とラベルのズレを防ぎます。
         """
         ev = events.dropna(subset=["t1"])
@@ -273,10 +279,10 @@ class TripleBarrier:
             )
             ev = ev[valid_price_mask]
             px_init_series = px_init_series[valid_price_mask]
-        
+
         if ev.empty:
             return pd.DataFrame(columns=["ret", "bin", "trgt"])
-        
+
         px_init = px_init_series
 
         # t1の価格取得（ベクトル化）
@@ -292,10 +298,10 @@ class TripleBarrier:
             ev = ev[valid_end_price_mask]
             px_end_series = px_end_series[valid_end_price_mask]
             px_init = px_init[valid_end_price_mask]
-        
+
         if ev.empty:
             return pd.DataFrame(columns=["ret", "bin", "trgt"])
-        
+
         # インデックスをevに明示的に設定（位置合わせの保証）
         px_end = pd.Series(px_end_series.values, index=ev.index)
 

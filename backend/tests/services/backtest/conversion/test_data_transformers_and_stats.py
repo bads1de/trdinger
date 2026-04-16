@@ -17,10 +17,10 @@ from app.services.backtest.conversion.statistics_calculator import (
     BacktestStatisticsCalculator,
 )
 
-
 # ---------------------------------------------------------------------------
 # TradeHistoryTransformer
 # ---------------------------------------------------------------------------
+
 
 class TestTradeHistoryTransformer:
     @pytest.fixture
@@ -38,16 +38,18 @@ class TestTradeHistoryTransformer:
         assert transformer.transform(stats) == []
 
     def test_normal_trades(self, transformer):
-        trades = pd.DataFrame({
-            "EntryTime": [datetime(2024, 1, 1), datetime(2024, 1, 2)],
-            "ExitTime": [datetime(2024, 1, 2), datetime(2024, 1, 3)],
-            "EntryPrice": [100.0, 101.0],
-            "ExitPrice": [102.0, 100.0],
-            "Size": [1.0, 1.0],
-            "PnL": [2.0, -1.0],
-            "ReturnPct": [0.02, -0.01],
-            "Duration": [24, 24],
-        })
+        trades = pd.DataFrame(
+            {
+                "EntryTime": [datetime(2024, 1, 1), datetime(2024, 1, 2)],
+                "ExitTime": [datetime(2024, 1, 2), datetime(2024, 1, 3)],
+                "EntryPrice": [100.0, 101.0],
+                "ExitPrice": [102.0, 100.0],
+                "Size": [1.0, 1.0],
+                "PnL": [2.0, -1.0],
+                "ReturnPct": [0.02, -0.01],
+                "Duration": [24, 24],
+            }
+        )
         stats = MagicMock()
         stats._trades = trades
 
@@ -57,16 +59,18 @@ class TestTradeHistoryTransformer:
         assert result[0]["pnl"] == 2.0
 
     def test_pnl_alias_columns_are_supported(self, transformer):
-        trades = pd.DataFrame({
-            "EntryTime": [datetime(2024, 1, 1)],
-            "ExitTime": [datetime(2024, 1, 1, 1)],
-            "EntryPrice": [100.0],
-            "ExitPrice": [102.0],
-            "Size": [1.0],
-            "Pnl": [2.5],
-            "ReturnPct": [0.025],
-            "Duration": [1],
-        })
+        trades = pd.DataFrame(
+            {
+                "EntryTime": [datetime(2024, 1, 1)],
+                "ExitTime": [datetime(2024, 1, 1, 1)],
+                "EntryPrice": [100.0],
+                "ExitPrice": [102.0],
+                "Size": [1.0],
+                "Pnl": [2.5],
+                "ReturnPct": [0.025],
+                "Duration": [1],
+            }
+        )
         stats = MagicMock()
         stats._trades = trades
 
@@ -94,6 +98,7 @@ class TestTradeHistoryTransformer:
 # ---------------------------------------------------------------------------
 # EquityCurveTransformer
 # ---------------------------------------------------------------------------
+
 
 class TestEquityCurveTransformer:
     @pytest.fixture
@@ -127,7 +132,10 @@ class TestEquityCurveTransformer:
     def test_downsampling(self, transformer):
         dates = pd.date_range("2024-01-01", periods=5000, freq="h")
         curve = pd.DataFrame(
-            {"Equity": np.random.randn(5000).cumsum() + 10000, "DrawdownPct": np.zeros(5000)},
+            {
+                "Equity": np.random.randn(5000).cumsum() + 10000,
+                "DrawdownPct": np.zeros(5000),
+            },
             index=dates,
         )
         stats = MagicMock()
@@ -154,22 +162,25 @@ class TestEquityCurveTransformer:
 # BacktestStatisticsCalculator
 # ---------------------------------------------------------------------------
 
+
 class TestBacktestStatisticsCalculator:
     @pytest.fixture
     def calculator(self):
         return BacktestStatisticsCalculator()
 
     def test_calculate_from_series(self, calculator):
-        stats = pd.Series({
-            "Return [%]": 15.0,
-            "Win Rate [%]": 60.0,
-            "Profit Factor": 1.5,
-            "# Trades": 100,
-            "Best Trade [%]": 5.0,
-            "Worst Trade [%]": -3.0,
-            "Sharpe Ratio": 1.2,
-            "Equity Final [$]": 11500.0,
-        })
+        stats = pd.Series(
+            {
+                "Return [%]": 15.0,
+                "Win Rate [%]": 60.0,
+                "Profit Factor": 1.5,
+                "# Trades": 100,
+                "Best Trade [%]": 5.0,
+                "Worst Trade [%]": -3.0,
+                "Sharpe Ratio": 1.2,
+                "Equity Final [$]": 11500.0,
+            }
+        )
         result = calculator.calculate_statistics(stats)
         assert result["total_return"] == 15.0
         assert result["win_rate"] == 60.0
@@ -197,10 +208,12 @@ class TestBacktestStatisticsCalculator:
 
     def test_with_trades_df(self, calculator):
         stats = pd.Series({"Return [%]": 5.0, "# Trades": 0})
-        trades = pd.DataFrame({
-            "PnL": [100, -50, 200, -30],
-            "ReturnPct": [0.01, -0.005, 0.02, -0.003],
-        })
+        trades = pd.DataFrame(
+            {
+                "PnL": [100, -50, 200, -30],
+                "ReturnPct": [0.01, -0.005, 0.02, -0.003],
+            }
+        )
         stats._trades = trades
 
         result = calculator.calculate_statistics(stats)

@@ -1,12 +1,19 @@
-import pytest
 from unittest.mock import MagicMock
-from app.services.auto_strategy.utils.normalization import NormalizationUtils, normalize_parameter, create_default_strategy_gene
+
+import pytest
+
+from app.services.auto_strategy.utils.normalization import (
+    NormalizationUtils,
+    create_default_strategy_gene,
+    normalize_parameter,
+)
+
 
 class TestNormalizationUtils:
     def test_normalize_parameter_basic(self):
         # 範囲内: 100 in [1, 200] -> 約0.5
         assert normalize_parameter(100, 1, 200) == pytest.approx(0.497, 0.01)
-        
+
         # 正確な計算: (50-0)/(100-0) = 0.5
         assert normalize_parameter(50, 0, 100) == 0.5
 
@@ -31,9 +38,9 @@ class TestNormalizationUtils:
         mock_class = MagicMock()
         mock_instance = MagicMock()
         mock_class.create_default.return_value = mock_instance
-        
+
         result = create_default_strategy_gene(mock_class)
-        
+
         assert result == mock_instance
         mock_class.create_default.assert_called_once()
 

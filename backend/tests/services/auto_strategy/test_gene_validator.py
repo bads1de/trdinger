@@ -63,9 +63,9 @@ class TestGeneValidatorTPSLSplit:
 
     def _create_base_strategy(self, long_tpsl=None, short_tpsl=None):
         from app.services.auto_strategy.genes import (
-            StrategyGene,
-            IndicatorGene,
             Condition,
+            IndicatorGene,
+            StrategyGene,
         )
 
         # 最小限の有効な戦略
@@ -105,7 +105,7 @@ class TestGeneValidatorTPSLSplit:
         # デバッグ用: エラーを表示
         if not is_valid:
             print(f"Validation errors: {errors}")
-        
+
         assert is_valid is True
         assert len(errors) == 0
 

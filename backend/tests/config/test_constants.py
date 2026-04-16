@@ -144,7 +144,11 @@ class TestDataLimitConstants:
 
     def test_limits_are_ordered(self):
         """制限値の順序が正しい"""
-        assert constants.MIN_DATA_LIMIT <= constants.DEFAULT_DATA_LIMIT <= constants.MAX_DATA_LIMIT
+        assert (
+            constants.MIN_DATA_LIMIT
+            <= constants.DEFAULT_DATA_LIMIT
+            <= constants.MAX_DATA_LIMIT
+        )
 
     def test_min_limit_is_one(self):
         """MIN_DATA_LIMITは1"""

@@ -2,10 +2,11 @@
 Meta-Labeling評価ユーティリティのテスト
 """
 
+from unittest.mock import patch
+
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import patch
 
 from app.services.ml.evaluation.meta_labeling_utils import (
     evaluate_meta_labeling,

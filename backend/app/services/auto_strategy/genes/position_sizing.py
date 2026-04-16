@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from ..config.constants import (
-    GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS,
     GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE,
     GA_POSITION_SIZING_ATR_PERIOD_RANGE,
     GA_POSITION_SIZING_FIXED_QUANTITY_RANGE,
@@ -27,23 +26,6 @@ from ..config.constants import (
 )
 from .base_gene import BaseGene
 
-_POSITION_SIZING_NUMERIC_RANGE_ATTRS = {
-    "lookback_period": "position_sizing_lookback_range",
-    "optimal_f_multiplier": "position_sizing_optimal_f_multiplier_range",
-    "atr_period": "position_sizing_atr_period_range",
-    "atr_multiplier": "position_sizing_atr_multiplier_range",
-    "risk_per_trade": "position_sizing_risk_per_trade_range",
-    "fixed_ratio": "position_sizing_fixed_ratio_range",
-    "fixed_quantity": "position_sizing_fixed_quantity_range",
-    "min_position_size": "position_sizing_min_size_range",
-    "max_position_size": "position_sizing_max_size_range",
-    "var_confidence": "position_sizing_var_confidence_range",
-    "max_var_ratio": "position_sizing_max_var_ratio_range",
-    "max_expected_shortfall_ratio": "position_sizing_max_expected_shortfall_ratio_range",
-    "var_lookback": "position_sizing_var_lookback_range",
-    "priority": "position_sizing_priority_range",
-}
-
 _DEFAULT_POSITION_SIZING_NUMERIC_RANGES = {
     "lookback_period": tuple(GA_POSITION_SIZING_LOOKBACK_RANGE),
     "optimal_f_multiplier": tuple(GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE),
@@ -60,65 +42,6 @@ _DEFAULT_POSITION_SIZING_NUMERIC_RANGES = {
     "var_lookback": tuple(GA_POSITION_SIZING_VAR_LOOKBACK_RANGE),
     "priority": tuple(GA_POSITION_SIZING_PRIORITY_RANGE),
 }
-
-
-def _coerce_numeric_range(
-    configured_range: Any,
-    fallback_range: tuple[float, float],
-) -> tuple[float, float]:
-    """設定レンジを検証し、不正値はデフォルトへフォールバックする。"""
-    if not isinstance(configured_range, (list, tuple)) or len(configured_range) != 2:
-        return fallback_range
-
-    lower, upper = configured_range
-    if not isinstance(lower, (int, float)) or not isinstance(upper, (int, float)):
-        return fallback_range
-    if lower > upper:
-        return fallback_range
-
-    return (lower, upper)
-
-
-def resolve_position_sizing_numeric_ranges(
-    config: Any = None,
-) -> Dict[str, tuple[float, float]]:
-    """PositionSizingGene の探索レンジを config 付きで解決する。"""
-    ranges = dict(_DEFAULT_POSITION_SIZING_NUMERIC_RANGES)
-    if config is None:
-        return ranges
-
-    for field_name, attr_name in _POSITION_SIZING_NUMERIC_RANGE_ATTRS.items():
-        configured_range = getattr(config, attr_name, None)
-        if configured_range is None:
-            continue
-        ranges[field_name] = _coerce_numeric_range(
-            configured_range,
-            ranges[field_name],
-        )
-
-    return ranges
-
-
-def resolve_position_sizing_methods(
-    config: Any = None,
-) -> List[PositionSizingMethod]:
-    """PositionSizingGene の許可メソッド一覧を config から解決する。"""
-    configured_methods = getattr(config, "position_sizing_method_constraints", None)
-    if not isinstance(configured_methods, (list, tuple, set)) or not configured_methods:
-        configured_methods = GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS
-
-    methods: List[PositionSizingMethod] = []
-    for method in configured_methods:
-        try:
-            methods.append(
-                method
-                if isinstance(method, PositionSizingMethod)
-                else PositionSizingMethod(method)
-            )
-        except ValueError:
-            continue
-
-    return methods or list(PositionSizingMethod)
 
 
 def _ensure_position_size_bounds(params: Dict[str, Any]) -> None:
@@ -201,9 +124,7 @@ class PositionSizingGene(BaseGene):
             from ..config.constants import POSITION_SIZING_LIMITS
 
             if not isinstance(self.method, PositionSizingMethod):
-                errors.append(
-                    "methodは有効なPositionSizingMethodである必要があります"
-                )
+                errors.append("methodは有効なPositionSizingMethodである必要があります")
 
             lb_min, lb_max = POSITION_SIZING_LIMITS["lookback_period"]
             if not (lb_min <= self.lookback_period <= lb_max):
@@ -304,9 +225,7 @@ class PositionSizingGene(BaseGene):
         except ImportError:
             # 定数が利用できない場合の基本検証
             if not isinstance(self.method, PositionSizingMethod):
-                errors.append(
-                    "methodは有効なPositionSizingMethodである必要があります"
-                )
+                errors.append("methodは有効なPositionSizingMethodである必要があります")
 
             if not (50 <= self.lookback_period <= 200):
                 errors.append("lookback_periodは50-200の範囲である必要があります")
@@ -348,15 +267,12 @@ class PositionSizingGene(BaseGene):
     def mutate(
         self,
         mutation_rate: float = 0.1,
-        config: Any = None,
     ) -> PositionSizingGene:
-        """config 連動の探索レンジを使って突然変異する。"""
+        """突然変異する。パラメータはGAが自動的に最適化する。"""
         import random
 
         from .genetic_utils import GeneticUtils
 
-        numeric_ranges = resolve_position_sizing_numeric_ranges(config)
-        allowed_methods = resolve_position_sizing_methods(config)
         mutated_params = GeneticUtils.extract_gene_params(self)
 
         for field_name in self.NUMERIC_FIELDS:
@@ -367,15 +283,10 @@ class PositionSizingGene(BaseGene):
             if not isinstance(current_value, (int, float)):
                 continue
 
-            min_val, max_val = numeric_ranges.get(field_name, (0.0, 100.0))
             new_value = current_value * random.uniform(0.8, 1.2)
-            new_value = max(min_val, min(max_val, new_value))
             if isinstance(current_value, int):
                 new_value = int(new_value)
             mutated_params[field_name] = new_value
-
-        if random.random() < mutation_rate:
-            mutated_params["method"] = random.choice(allowed_methods)
 
         _ensure_position_size_bounds(mutated_params)
         return PositionSizingGene(**mutated_params)  # type: ignore[arg-type]
@@ -402,12 +313,12 @@ class PositionSizingGene(BaseGene):
         )
 
 
-def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
+def create_random_position_sizing_gene() -> PositionSizingGene:
     """ランダムなポジションサイジング遺伝子を生成"""
     import random
 
-    method = random.choice(resolve_position_sizing_methods(config))
-    ranges = resolve_position_sizing_numeric_ranges(config)
+    method = random.choice(list(PositionSizingMethod))
+    ranges = _DEFAULT_POSITION_SIZING_NUMERIC_RANGES
 
     gene_params = {
         "method": method,
@@ -468,6 +379,4 @@ def create_random_position_sizing_gene(config=None) -> PositionSizingGene:
     }
 
     _ensure_position_size_bounds(gene_params)
-    return PositionSizingGene(
-        **gene_params
-    )
+    return PositionSizingGene(**gene_params)

@@ -2,13 +2,14 @@
 Risk Reward Calculator Tests
 """
 
-import pytest
 from unittest.mock import Mock
 
+import pytest
+
+from app.services.auto_strategy.genes import TPSLGene
 from app.services.auto_strategy.tpsl.calculator.risk_reward_calculator import (
     RiskRewardCalculator,
 )
-from app.services.auto_strategy.genes import TPSLGene
 
 
 class TestRiskRewardCalculator:
@@ -60,7 +61,3 @@ class TestRiskRewardCalculator:
         # Defaults: sl=0.03, ratio=2.0
         assert result.stop_loss_pct == 0.03
         assert result.take_profit_pct == 0.06
-
-
-
-

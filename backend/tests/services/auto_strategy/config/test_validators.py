@@ -3,8 +3,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config import ConfigValidator
+from app.services.auto_strategy.config.ga import GAConfig
 
 
 class TestConfigValidator:
@@ -68,7 +68,9 @@ class TestConfigValidator:
         config.evaluation_config.early_termination_settings.enabled = False
         config.evaluation_config.early_termination_settings.max_drawdown = None
         config.evaluation_config.early_termination_settings.min_trades = None
-        config.evaluation_config.early_termination_settings.min_trade_check_progress = 0.5
+        config.evaluation_config.early_termination_settings.min_trade_check_progress = (
+            0.5
+        )
         config.evaluation_config.early_termination_settings.trade_pace_tolerance = 0.5
         config.evaluation_config.early_termination_settings.min_expectancy = None
         config.evaluation_config.early_termination_settings.expectancy_min_trades = 5
@@ -252,8 +254,7 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any(
-            "evaluation_config.early_termination_settings.expectancy_min_trades"
-            in e
+            "evaluation_config.early_termination_settings.expectancy_min_trades" in e
             for e in errors
         )
 
@@ -291,9 +292,7 @@ class TestConfigValidator:
         ga_config.robustness_config.aggregate_method = "unsupported"
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
-        assert any(
-            "robustness_config.aggregate_method" in e for e in errors
-        )
+        assert any("robustness_config.aggregate_method" in e for e in errors)
 
     def test_validate_robustness_window_supports_z_suffix(self):
         errors = ConfigValidator._validate_robustness_window(

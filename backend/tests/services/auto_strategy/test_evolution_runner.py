@@ -10,10 +10,10 @@ from unittest.mock import MagicMock, Mock, call, patch
 import numpy as np
 import pytest
 
-from app.services.auto_strategy.core.engine.ga_engine import EvolutionRunner
 from app.services.auto_strategy.core.engine.evolution_runner import (
     EvolutionStoppedError,
 )
+from app.services.auto_strategy.core.engine.ga_engine import EvolutionRunner
 
 
 class _DummyFitness:
@@ -66,7 +66,9 @@ class TestEvolutionRunner:
             )
         )
         # mate returns (child1, child2)
-        toolbox.mate = Mock(side_effect=lambda ind1, ind2: (_DummyIndividual(), _DummyIndividual()))
+        toolbox.mate = Mock(
+            side_effect=lambda ind1, ind2: (_DummyIndividual(), _DummyIndividual())
+        )
         # mutate returns (mutant,)
         toolbox.mutate = Mock(side_effect=lambda ind: (_DummyIndividual(),))
         toolbox.select = Mock(side_effect=lambda pop, k: pop[:k])
@@ -302,7 +304,9 @@ class TestEvolutionRunner:
         }
         full_report = object()
         mock_individual_evaluator = Mock()
-        mock_individual_evaluator.get_cached_evaluation_report.return_value = full_report
+        mock_individual_evaluator.get_cached_evaluation_report.return_value = (
+            full_report
+        )
 
         EvolutionRunner(
             toolbox=mock_toolbox,

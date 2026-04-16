@@ -110,8 +110,7 @@ class TestCreateGaConfig:
         assert config.two_stage_selection_config.enabled is False
         assert config.fitness_constraints["min_trades"] == 0
         assert not any(
-            "TuningConfig の未対応キー" in record.message
-            for record in caplog.records
+            "TuningConfig の未対応キー" in record.message for record in caplog.records
         )
 
     def test_invalid_population_raises_error(self):
@@ -473,7 +472,9 @@ class TestRunAutoStrategyExecution:
                 self.config = config
 
         class DummyEngine:
-            def __init__(self, backtest_service, gene_generator, hybrid_mode=False, **_):
+            def __init__(
+                self, backtest_service, gene_generator, hybrid_mode=False, **_
+            ):
                 self.backtest_service = backtest_service
                 self.gene_generator = gene_generator
                 self.hybrid_mode = hybrid_mode
@@ -515,12 +516,13 @@ class TestRunAutoStrategyExecution:
             no_save=True,
         )
 
-        with patch.object(run_auto_strategy, "BacktestService", DummyBacktestService), patch.object(
-            run_auto_strategy, "RandomGeneGenerator", DummyGeneGenerator
-        ), patch.object(run_auto_strategy, "GeneticAlgorithmEngine", DummyEngine), patch.object(
-            run_auto_strategy, "GeneSerializer", DummySerializer
-        ), patch("builtins.open", create=True), patch.object(
-            run_auto_strategy.Path, "mkdir", return_value=None
+        with (
+            patch.object(run_auto_strategy, "BacktestService", DummyBacktestService),
+            patch.object(run_auto_strategy, "RandomGeneGenerator", DummyGeneGenerator),
+            patch.object(run_auto_strategy, "GeneticAlgorithmEngine", DummyEngine),
+            patch.object(run_auto_strategy, "GeneSerializer", DummySerializer),
+            patch("builtins.open", create=True),
+            patch.object(run_auto_strategy.Path, "mkdir", return_value=None),
         ):
             result = run_auto_strategy.run_auto_strategy(args)
 

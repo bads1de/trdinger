@@ -12,14 +12,15 @@ from typing import Any, Callable, List, Optional
 
 import numpy as np
 from deap import tools
+
 from app.services.auto_strategy.config import objective_registry
 
-from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
     get_multi_fidelity_candidate_limit,
     is_multi_fidelity_enabled,
 )
+from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..fitness.fitness_sharing import FitnessSharing
 from .report_selection import (
     build_report_rank_key,
@@ -47,7 +48,9 @@ def _invalidate_individual_cache(individual: Any) -> None:
         logger.debug("個体キャッシュのクリアに失敗しました: %s", e)
 
 
-def _set_fitness_values(population: List[Any], fitnesses: List[tuple[float, ...]]) -> None:
+def _set_fitness_values(
+    population: List[Any], fitnesses: List[tuple[float, ...]]
+) -> None:
     """個体群にフィットネス値を設定する。"""
     for ind, fit in zip(population, fitnesses):
         ind.fitness.values = fit
@@ -118,9 +121,8 @@ class EvolutionRunner:
         )
 
         def resolve_behavior_or_report(individual: Any) -> Any:
-            if (
-                getattr(individual, "_evaluation_fidelity", None) == "full"
-                and callable(get_cached_report)
+            if getattr(individual, "_evaluation_fidelity", None) == "full" and callable(
+                get_cached_report
             ):
                 report = get_cached_report(individual)
                 if report is not None:
@@ -267,7 +269,9 @@ class EvolutionRunner:
                     if isinstance(best_fitness, (list, tuple, np.ndarray)):
                         best_fitness = float(best_fitness[0])
                     else:
-                        best_fitness = float(best_fitness) if best_fitness is not None else None
+                        best_fitness = (
+                            float(best_fitness) if best_fitness is not None else None
+                        )
                     progress_callback(gen, config.generations, best_fitness)
             finally:
                 # ループ終了時に元のGC閾値を復元（エラー時も含む）
@@ -399,7 +403,9 @@ class EvolutionRunner:
         """
         if config is not None and is_multi_fidelity_enabled(config):
             coarse_config = build_coarse_ga_config(config)
-            fitnesses = self._evaluate_individuals_with_config(population, coarse_config)
+            fitnesses = self._evaluate_individuals_with_config(
+                population, coarse_config
+            )
             _set_fitness_values(population, fitnesses)
             self._mark_evaluation_fidelity(population, "coarse")
             self._promote_top_candidates_with_full_fidelity(population, config)
@@ -427,7 +433,9 @@ class EvolutionRunner:
 
         if config is not None and is_multi_fidelity_enabled(config):
             coarse_config = build_coarse_ga_config(config)
-            fitnesses = self._evaluate_individuals_with_config(invalid_ind, coarse_config)
+            fitnesses = self._evaluate_individuals_with_config(
+                invalid_ind, coarse_config
+            )
             _set_fitness_values(invalid_ind, fitnesses)
             self._mark_evaluation_fidelity(invalid_ind, "coarse")
             return
@@ -808,9 +816,13 @@ class EvolutionRunner:
                     candidate_vector_array - np.asarray(selected_vector, dtype=float)
                 )
             )
-            min_distance = distance if min_distance is None else min(
-                min_distance,
-                distance,
+            min_distance = (
+                distance
+                if min_distance is None
+                else min(
+                    min_distance,
+                    distance,
+                )
             )
 
         if min_distance is None:

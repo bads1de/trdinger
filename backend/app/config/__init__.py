@@ -27,8 +27,8 @@ if TYPE_CHECKING:
     # 実行時は __getattr__ による遅延 import を維持する。
     from .unified_config import (
         AppConfig,
-        DataCollectionConfig,
         DatabaseConfig,
+        DataCollectionConfig,
         LoggingConfig,
         MarketConfig,
         UnifiedConfig,

@@ -8,8 +8,8 @@ GAConfigを含む設定オブジェクトの妥当性を検証します。
 import logging
 from typing import Any, List, Tuple
 
-from .ga_config import GAConfig
 from ..helpers import validate_robustness_regime_window
+from .ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,9 @@ class ConfigValidator:
 
                 if not isinstance(value, expected_type):
                     type_name = getattr(expected_type, "__name__", str(expected_type))
-                    errors.append(f"'{field_name}' は {type_name} 型である必要があります")
+                    errors.append(
+                        f"'{field_name}' は {type_name} 型である必要があります"
+                    )
         except Exception as exc:  # pragma: no cover - defensive
             errors.append(f"検証処理エラー: {exc}")
 
@@ -212,11 +214,11 @@ class ConfigValidator:
         """
         errors = []
         evaluation_config = config.evaluation_config
-        
+
         # OOSが無効な場合は検証をスキップ
         if not getattr(evaluation_config, "enable_oos", False):
             return errors
-            
+
         if (
             not isinstance(evaluation_config.oos_split_ratio, (int, float))
             or not 0.0 <= evaluation_config.oos_split_ratio < 1.0
@@ -404,7 +406,9 @@ class ConfigValidator:
             )
 
         if (
-            not isinstance(evaluation_config.multi_fidelity_candidate_ratio, (int, float))
+            not isinstance(
+                evaluation_config.multi_fidelity_candidate_ratio, (int, float)
+            )
             or not 0.0 < float(evaluation_config.multi_fidelity_candidate_ratio) <= 1.0
         ):
             errors.append(
@@ -412,7 +416,9 @@ class ConfigValidator:
             )
 
         if (
-            not isinstance(evaluation_config.multi_fidelity_min_candidates, (int, float))
+            not isinstance(
+                evaluation_config.multi_fidelity_min_candidates, (int, float)
+            )
             or int(evaluation_config.multi_fidelity_min_candidates) <= 0
         ):
             errors.append(
@@ -516,15 +522,13 @@ class ConfigValidator:
             errors.append(
                 "二段階選抜候補数は二段階選抜エリート数以上である必要があります"
             )
-        
+
         # 新規: candidate_pool_sizeがpopulation_sizeを超えないことを検証
         if isinstance(candidate_pool_size, (int, float)) and isinstance(
             population_size, (int, float)
         ):
             if int(candidate_pool_size) > int(population_size):
-                errors.append(
-                    "二段階選抜候補数は個体数以下である必要があります"
-                )
+                errors.append("二段階選抜候補数は個体数以下である必要があります")
 
         if (
             not isinstance(two_stage_config.min_pass_rate, (int, float))

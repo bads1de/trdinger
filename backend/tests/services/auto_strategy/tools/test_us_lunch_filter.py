@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
 import pandas as pd
-from app.services.auto_strategy.tools.us_lunch_filter import USLunchFilter
+import pytest
+
 from app.services.auto_strategy.tools.base import ToolContext
+from app.services.auto_strategy.tools.us_lunch_filter import USLunchFilter
 
 
 class TestUSLunchFilter:

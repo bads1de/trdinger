@@ -1,7 +1,11 @@
-import pytest
-import pandas as pd
 import numpy as np
-from app.services.ml.preprocessing.fractional_differentiation import FractionalDifferentiation
+import pandas as pd
+import pytest
+
+from app.services.ml.preprocessing.fractional_differentiation import (
+    FractionalDifferentiation,
+)
+
 
 class TestFractionalDifferentiation:
     def test_get_weights(self):
@@ -18,7 +22,7 @@ class TestFractionalDifferentiation:
         # d=1.0 ならば通常の1次差分と同じになる（w0=1, w1=-1, w2=0...）
         fd = FractionalDifferentiation(d=1.0, window_size=2)
         s = pd.Series([10, 12, 15, 14])
-        
+
         res = fd.transform(s)
         # rolling dot [10, 12] * [-1, 1] = 2
         # rolling dot [12, 15] * [-1, 1] = 3
@@ -31,15 +35,12 @@ class TestFractionalDifferentiation:
     def test_transform_dataframe(self):
         """DataFrameに対する変換テスト"""
         fd = FractionalDifferentiation(d=0.5, window_size=5)
-        df = pd.DataFrame({
-            "A": np.random.randn(20),
-            "B": np.random.randn(20)
-        })
-        
+        df = pd.DataFrame({"A": np.random.randn(20), "B": np.random.randn(20)})
+
         res = fd.transform(df)
         assert isinstance(res, pd.DataFrame)
         assert res.shape == df.shape
-        assert res["A"].isnull().sum() == 4 # window_size-1
+        assert res["A"].isnull().sum() == 4  # window_size-1
 
     def test_insufficient_data(self):
         """データ不足時のテスト"""

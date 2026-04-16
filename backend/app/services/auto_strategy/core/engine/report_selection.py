@@ -10,6 +10,7 @@ import logging
 from typing import Any, Optional, Sequence, Tuple, TypeGuard
 
 from app.services.auto_strategy.config import objective_registry
+
 from ..evaluation.evaluation_report import EvaluationReport
 from .fitness_utils import (
     extract_individual_primary_fitness as _extract_individual_primary_fitness,
@@ -37,10 +38,7 @@ def get_two_stage_elite_count(config: Any, population_size: int) -> int:
             無効な設定の場合は0。
     """
     two_stage_config = getattr(config, "two_stage_selection_config", None)
-    if (
-        population_size <= 0
-        or not getattr(two_stage_config, "enabled", True)
-    ):
+    if population_size <= 0 or not getattr(two_stage_config, "enabled", True):
         return 0
 
     elite_size = _safe_int(getattr(config, "elite_size", 0))
@@ -171,7 +169,9 @@ def build_report_rank_key_from_primary_fitness(
     for index in range(objective_count):
         objective = report.objectives[index] if index < len(report.objectives) else ""
         scenario_values = [
-            objective_registry.to_selection_space(float(scenario.fitness[index]), objective)
+            objective_registry.to_selection_space(
+                float(scenario.fitness[index]), objective
+            )
             for scenario in report.scenarios
             if scenario.fitness and len(scenario.fitness) > index
         ]

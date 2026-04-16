@@ -89,6 +89,7 @@ def test_hybrid_evaluator_multi_objective_does_not_support_prediction_score():
         objective_weights=[1.0, 1.0],
     )
     from app.services.auto_strategy.config import ConfigValidator
+
     is_valid, errors = ConfigValidator.validate(config)
 
     assert is_valid is False

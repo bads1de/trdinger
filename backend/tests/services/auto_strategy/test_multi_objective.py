@@ -152,7 +152,9 @@ class TestEvolutionRunnerMultiObjective:
 
         mock_toolbox.select = mock_select
 
-        with patch("app.services.auto_strategy.core.engine.evolution_runner.tools.Logbook"):
+        with patch(
+            "app.services.auto_strategy.core.engine.evolution_runner.tools.Logbook"
+        ):
             runner.run_evolution(mock_population, mock_config)
 
         # 適応度共有が適用されたことを確認
@@ -283,6 +285,3 @@ class TestEvolutionRunnerMultiObjective:
         # 交叉と突然変異が呼ばれたことを確認
         assert mock_toolbox.mate.called
         assert mock_toolbox.mutate.called
-
-
-

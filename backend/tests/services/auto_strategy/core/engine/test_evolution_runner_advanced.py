@@ -16,16 +16,16 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", "..", ".."))
 sys.path.insert(0, backend_dir)
 
-from app.services.auto_strategy.core.evaluation.evaluation_report import (
-    EvaluationReport,
-    ScenarioEvaluation,
-)
 from app.services.auto_strategy.core.engine.evolution_runner import (
     EvolutionRunner,
     EvolutionStoppedError,
 )
 from app.services.auto_strategy.core.engine.report_selection import (
     get_two_stage_rank,
+)
+from app.services.auto_strategy.core.evaluation.evaluation_report import (
+    EvaluationReport,
+    ScenarioEvaluation,
 )
 
 
@@ -96,7 +96,9 @@ class TestEvolutionRunnerAdvanced:
         assert runner.fitness_sharing is None
         assert runner.parallel_evaluator is None
 
-    def test_run_evolution_basic(self, mock_toolbox, mock_stats, mock_config, mock_population):
+    def test_run_evolution_basic(
+        self, mock_toolbox, mock_stats, mock_config, mock_population
+    ):
         """基本的な進化実行テスト"""
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -111,7 +113,9 @@ class TestEvolutionRunnerAdvanced:
         assert result_population is not None
         assert logbook is not None
 
-    def test_run_evolution_with_halloffame(self, mock_toolbox, mock_stats, mock_config, mock_population):
+    def test_run_evolution_with_halloffame(
+        self, mock_toolbox, mock_stats, mock_config, mock_population
+    ):
         """殿堂入り個体リスト付き進化実行テスト"""
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -130,7 +134,9 @@ class TestEvolutionRunnerAdvanced:
         assert result_population is not None
         assert halloffame.update.called
 
-    def test_run_evolution_stopped_before_start(self, mock_toolbox, mock_stats, mock_config, mock_population):
+    def test_run_evolution_stopped_before_start(
+        self, mock_toolbox, mock_stats, mock_config, mock_population
+    ):
         """開始前に停止した場合のテスト"""
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -147,7 +153,9 @@ class TestEvolutionRunnerAdvanced:
                 should_stop=should_stop,
             )
 
-    def test_crossover_batch(self, mock_toolbox, mock_stats, mock_config, mock_population):
+    def test_crossover_batch(
+        self, mock_toolbox, mock_stats, mock_config, mock_population
+    ):
         """交叉バッチ処理テスト"""
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -159,7 +167,9 @@ class TestEvolutionRunnerAdvanced:
         assert offspring is not None
         assert len(offspring) == len(mock_population)
 
-    def test_mutation_batch(self, mock_toolbox, mock_stats, mock_config, mock_population):
+    def test_mutation_batch(
+        self, mock_toolbox, mock_stats, mock_config, mock_population
+    ):
         """突然変異バッチ処理テスト"""
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -183,7 +193,9 @@ class TestEvolutionRunnerAdvanced:
         assert result is not None
         assert len(result) == len(mock_population)
 
-    def test_evaluate_invalid_individuals(self, mock_toolbox, mock_stats, mock_population):
+    def test_evaluate_invalid_individuals(
+        self, mock_toolbox, mock_stats, mock_population
+    ):
         """未評価個体評価テスト"""
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -335,9 +347,9 @@ class TestEvolutionRunnerAdvanced:
 
         assert config.objective_dynamic_scalars["max_drawdown"] == pytest.approx(1.15)
         assert config.objective_dynamic_scalars["ulcer_index"] == pytest.approx(1.1)
-        assert config.objective_dynamic_scalars["trade_frequency_penalty"] == pytest.approx(
-            1.3
-        )
+        assert config.objective_dynamic_scalars[
+            "trade_frequency_penalty"
+        ] == pytest.approx(1.3)
         assert config.objective_dynamic_scalars.get("total_return", 1.0) == 1.0
 
     def test_two_stage_selection_promotes_report_robust_elite(
@@ -358,43 +370,31 @@ class TestEvolutionRunnerAdvanced:
 
         mock_toolbox.select.return_value = [raw_leader, filler]
         mock_evaluator = MagicMock()
-        mock_evaluator.get_cached_evaluation_report.side_effect = (
-            lambda individual: {
-                "raw-leader": EvaluationReport.aggregate(
-                    mode="walk_forward",
-                    objectives=["weighted_score"],
-                    aggregate_method="robust",
-                    scenarios=[
-                        ScenarioEvaluation(
-                            name="fold_1", fitness=(1.0,), passed=True
-                        ),
-                        ScenarioEvaluation(
-                            name="fold_2", fitness=(0.1,), passed=False
-                        ),
-                    ],
-                ),
-                "robust-candidate": EvaluationReport.aggregate(
-                    mode="walk_forward",
-                    objectives=["weighted_score"],
-                    aggregate_method="robust",
-                    scenarios=[
-                        ScenarioEvaluation(
-                            name="fold_1", fitness=(0.88,), passed=True
-                        ),
-                        ScenarioEvaluation(
-                            name="fold_2", fitness=(0.82,), passed=True
-                        ),
-                    ],
-                ),
-                "filler": EvaluationReport.single(
-                    mode="single",
-                    objectives=["weighted_score"],
-                    scenario=ScenarioEvaluation(
-                        name="full", fitness=(0.50,), passed=True
-                    ),
-                ),
-            }[individual.id]
-        )
+        mock_evaluator.get_cached_evaluation_report.side_effect = lambda individual: {
+            "raw-leader": EvaluationReport.aggregate(
+                mode="walk_forward",
+                objectives=["weighted_score"],
+                aggregate_method="robust",
+                scenarios=[
+                    ScenarioEvaluation(name="fold_1", fitness=(1.0,), passed=True),
+                    ScenarioEvaluation(name="fold_2", fitness=(0.1,), passed=False),
+                ],
+            ),
+            "robust-candidate": EvaluationReport.aggregate(
+                mode="walk_forward",
+                objectives=["weighted_score"],
+                aggregate_method="robust",
+                scenarios=[
+                    ScenarioEvaluation(name="fold_1", fitness=(0.88,), passed=True),
+                    ScenarioEvaluation(name="fold_2", fitness=(0.82,), passed=True),
+                ],
+            ),
+            "filler": EvaluationReport.single(
+                mode="single",
+                objectives=["weighted_score"],
+                scenario=ScenarioEvaluation(name="full", fitness=(0.50,), passed=True),
+            ),
+        }[individual.id]
 
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -439,35 +439,31 @@ class TestEvolutionRunnerAdvanced:
 
         mock_toolbox.select.return_value = [robust_candidate, robust_candidate]
         mock_evaluator = MagicMock()
-        mock_evaluator.get_cached_evaluation_report.side_effect = (
-            lambda individual: {
-                "raw-leader": EvaluationReport.aggregate(
-                    mode="walk_forward",
-                    objectives=["weighted_score"],
-                    aggregate_method="robust",
-                    scenarios=[
-                        ScenarioEvaluation(name="fold_1", fitness=(1.0,), passed=True),
-                        ScenarioEvaluation(name="fold_2", fitness=(0.1,), passed=False),
-                    ],
-                ),
-                "robust-candidate": EvaluationReport.aggregate(
-                    mode="walk_forward",
-                    objectives=["weighted_score"],
-                    aggregate_method="robust",
-                    scenarios=[
-                        ScenarioEvaluation(name="fold_1", fitness=(0.88,), passed=True),
-                        ScenarioEvaluation(name="fold_2", fitness=(0.82,), passed=True),
-                    ],
-                ),
-                "filler": EvaluationReport.single(
-                    mode="single",
-                    objectives=["weighted_score"],
-                    scenario=ScenarioEvaluation(
-                        name="full", fitness=(0.50,), passed=True
-                    ),
-                ),
-            }[individual.id]
-        )
+        mock_evaluator.get_cached_evaluation_report.side_effect = lambda individual: {
+            "raw-leader": EvaluationReport.aggregate(
+                mode="walk_forward",
+                objectives=["weighted_score"],
+                aggregate_method="robust",
+                scenarios=[
+                    ScenarioEvaluation(name="fold_1", fitness=(1.0,), passed=True),
+                    ScenarioEvaluation(name="fold_2", fitness=(0.1,), passed=False),
+                ],
+            ),
+            "robust-candidate": EvaluationReport.aggregate(
+                mode="walk_forward",
+                objectives=["weighted_score"],
+                aggregate_method="robust",
+                scenarios=[
+                    ScenarioEvaluation(name="fold_1", fitness=(0.88,), passed=True),
+                    ScenarioEvaluation(name="fold_2", fitness=(0.82,), passed=True),
+                ],
+            ),
+            "filler": EvaluationReport.single(
+                mode="single",
+                objectives=["weighted_score"],
+                scenario=ScenarioEvaluation(name="full", fitness=(0.50,), passed=True),
+            ),
+        }[individual.id]
 
         runner = EvolutionRunner(
             toolbox=mock_toolbox,
@@ -560,10 +556,14 @@ class TestEvolutionRunnerAdvanced:
 class TestEvolutionRunnerWithParallelEvaluator:
     """並列評価器付き進化エンジンのテスト"""
 
-    def test_run_evolution_with_parallel_evaluator(self, mock_toolbox, mock_stats, mock_config, mock_population):
+    def test_run_evolution_with_parallel_evaluator(
+        self, mock_toolbox, mock_stats, mock_config, mock_population
+    ):
         """並列評価器付き進化実行テスト"""
         mock_parallel_evaluator = MagicMock()
-        mock_parallel_evaluator.evaluate_population.return_value = [(0.5,) for _ in range(10)]
+        mock_parallel_evaluator.evaluate_population.return_value = [
+            (0.5,) for _ in range(10)
+        ]
 
         runner = EvolutionRunner(
             toolbox=mock_toolbox,

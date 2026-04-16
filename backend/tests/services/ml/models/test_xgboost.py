@@ -1,8 +1,11 @@
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.models.xgboost import XGBoostModel
+
 
 class TestXGBoostModel:
     @pytest.fixture
@@ -19,8 +22,8 @@ class TestXGBoostModel:
         X, y = sample_data
         model = XGBoostModel(n_estimators=10)
 
-        with patch('app.services.ml.models.xgboost.xgb.train') as mock_train:
-            with patch('app.services.ml.models.xgboost.xgb.DMatrix'):
+        with patch("app.services.ml.models.xgboost.xgb.train") as mock_train:
+            with patch("app.services.ml.models.xgboost.xgb.DMatrix"):
                 mock_booster = mock_train.return_value
                 # 回帰なので1次元の連続値
                 mock_booster.predict.return_value = np.array([0.5])
@@ -38,8 +41,8 @@ class TestXGBoostModel:
         X, y = sample_data
         model = XGBoostModel(n_estimators=50)
 
-        with patch('app.services.ml.models.xgboost.xgb.train') as mock_train:
-            with patch('app.services.ml.models.xgboost.xgb.DMatrix'):
+        with patch("app.services.ml.models.xgboost.xgb.train") as mock_train:
+            with patch("app.services.ml.models.xgboost.xgb.DMatrix"):
                 mock_booster = mock_train.return_value
                 mock_booster.best_iteration = 10
                 # 回帰なので1次元の連続値を返す

@@ -3,8 +3,10 @@ GeneSerializerのテスト
 """
 
 import json
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
+
 from app.services.auto_strategy.genes import Condition, IndicatorGene, StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
@@ -221,7 +223,9 @@ class TestGeneSerializerCacheIntegration:
     ):
         data = {
             "id": "gene-condition-dict",
-            "indicators": [{"type": "SMA", "parameters": {"period": 20}, "enabled": True}],
+            "indicators": [
+                {"type": "SMA", "parameters": {"period": 20}, "enabled": True}
+            ],
             "long_entry_conditions": [
                 {
                     "left_operand": {"source": {"name": "close"}},
@@ -235,11 +239,16 @@ class TestGeneSerializerCacheIntegration:
         }
 
         restored_first = serializer.dict_to_strategy_gene(data, StrategyGene)
-        restored_first.long_entry_conditions[0].left_operand["source"]["name"] = "changed"
+        restored_first.long_entry_conditions[0].left_operand["source"][
+            "name"
+        ] = "changed"
 
         restored_second = serializer.dict_to_strategy_gene(data, StrategyGene)
 
-        assert restored_second.long_entry_conditions[0].left_operand["source"]["name"] == "close"
+        assert (
+            restored_second.long_entry_conditions[0].left_operand["source"]["name"]
+            == "close"
+        )
 
 
 class TestGeneSerializerErrorHandling:

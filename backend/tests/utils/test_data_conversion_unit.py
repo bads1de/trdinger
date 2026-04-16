@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
+
 from app.utils.data_conversion import (
-    parse_timestamp_safe,
-    OHLCVDataConverter,
     FundingRateDataConverter,
+    OHLCVDataConverter,
     OpenInterestDataConverter,
+    parse_timestamp_safe,
 )
 
 

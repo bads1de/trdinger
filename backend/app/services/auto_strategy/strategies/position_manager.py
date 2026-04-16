@@ -227,6 +227,4 @@ class PositionManager:
         if not self.strategy._trailing_tp_sl:
             current_price = self.strategy.data.Close[-1]
             self.strategy._trailing_tp_sl = current_price
-            logger.info(
-                f"トレーリングSL起動: 基準価格={current_price}"
-            )
+            logger.info(f"トレーリングSL起動: 基準価格={current_price}")

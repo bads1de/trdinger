@@ -14,13 +14,13 @@ import pandas as pd
 from backtesting import Backtest, Strategy
 from backtesting.lib import FractionalBacktest
 
-from ..config.constants import SUPPORTED_STRATEGIES
-from ..shared import normalize_ohlcv_columns
 from app.services.auto_strategy.strategies.universal_strategy import (
     StrategyEarlyTermination,
 )
 
+from ..config.constants import SUPPORTED_STRATEGIES
 from ..services.backtest_data_service import BacktestDataService
+from ..shared import normalize_ohlcv_columns
 
 logger = logging.getLogger(__name__)
 

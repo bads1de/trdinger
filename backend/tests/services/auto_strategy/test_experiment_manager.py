@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, Mock, patch
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.genes import StrategyGene
-from app.services.auto_strategy.services.experiment_engine_registry import (
-    ExperimentEngineRegistry,
-)
 from app.services.auto_strategy.services import (
     experiment_manager as experiment_manager_module,
+)
+from app.services.auto_strategy.services.experiment_engine_registry import (
+    ExperimentEngineRegistry,
 )
 from app.services.auto_strategy.services.experiment_manager import ExperimentManager
 

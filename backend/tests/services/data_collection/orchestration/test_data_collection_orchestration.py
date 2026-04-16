@@ -328,7 +328,7 @@ class TestExecuteBulkIncrementalUpdate:
                 "ohlcv_updates": 100,
                 "funding_rate_updates": 50,
                 "open_interest_updates": 75,
-            }
+            },
         }
 
         with (
@@ -342,8 +342,8 @@ class TestExecuteBulkIncrementalUpdate:
                 "app.services.data_collection.orchestration.bulk_data_orchestrator.OpenInterestRepository"
             ),
         ):
-            orchestration_service.bulk_data_orchestrator.execute_bulk_incremental_update = (
-                AsyncMock(return_value=mock_result)
+            orchestration_service.bulk_data_orchestrator.execute_bulk_incremental_update = AsyncMock(
+                return_value=mock_result
             )
 
             result = await orchestration_service.execute_bulk_incremental_update(
@@ -378,8 +378,8 @@ class TestExecuteBulkIncrementalUpdate:
                 "app.services.data_collection.orchestration.bulk_data_orchestrator.OpenInterestRepository"
             ),
         ):
-            orchestration_service.bulk_data_orchestrator.execute_bulk_incremental_update = (
-                AsyncMock(side_effect=Exception("Update failed"))
+            orchestration_service.bulk_data_orchestrator.execute_bulk_incremental_update = AsyncMock(
+                side_effect=Exception("Update failed")
             )
 
             with pytest.raises(Exception, match="Update failed"):
@@ -810,7 +810,3 @@ class TestErrorHandling:
                     background_tasks=mock_background_tasks,
                     db=mock_db_session,
                 )
-
-
-
-

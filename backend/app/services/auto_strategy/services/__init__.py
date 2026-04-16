@@ -10,14 +10,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from ..positions.position_sizing_service import PositionSizingService
+    from ..tpsl.tpsl_service import TPSLService
     from .auto_strategy_service import AutoStrategyService
     from .experiment_application_service import ExperimentApplicationService
     from .experiment_backtest_service import ExperimentBacktestService
     from .experiment_engine_registry import ExperimentEngineRegistry
     from .experiment_manager import ExperimentManager
     from .experiment_persistence_service import ExperimentPersistenceService
-    from ..positions.position_sizing_service import PositionSizingService
-    from ..tpsl.tpsl_service import TPSLService
 
 _ATTRIBUTE_EXPORTS = {
     "AutoStrategyService": ".auto_strategy_service",
@@ -42,4 +42,5 @@ __all__ = [
 ]
 
 from .._lazy_import import setup_lazy_import  # noqa: E402
+
 setup_lazy_import(globals(), _ATTRIBUTE_EXPORTS, __all__)

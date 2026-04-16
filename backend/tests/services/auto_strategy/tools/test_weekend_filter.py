@@ -1,9 +1,12 @@
-import pytest
-from unittest.mock import MagicMock
 from datetime import datetime
+from unittest.mock import MagicMock
+
 import pandas as pd
-from app.services.auto_strategy.tools.weekend_filter import WeekendFilter
+import pytest
+
 from app.services.auto_strategy.tools.base import ToolContext
+from app.services.auto_strategy.tools.weekend_filter import WeekendFilter
+
 
 class TestWeekendFilter:
     @pytest.fixture
@@ -55,19 +58,21 @@ class TestWeekendFilter:
     def test_mutate_params(self, filter_tool):
         # 乱数を固定して変異を確認
         import random
+
         random.seed(42)
-        
+
         # 乱数の出方によっては変わらないこともあるので、何度か試行して変化を確認する
         # あるいはrandom.randomをモックする
-        
+
         from unittest.mock import patch
-        with patch('random.random') as mock_random:
+
+        with patch("random.random") as mock_random:
             # 0.2未満 -> 変異する
             mock_random.return_value = 0.1
             params = {"enabled": True}
             new_params = filter_tool.mutate_params(params)
             assert new_params["enabled"] is False
-            
+
             # 0.2以上 -> 変異しない
             mock_random.return_value = 0.5
             params = {"enabled": True}

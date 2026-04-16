@@ -12,11 +12,11 @@ from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
 from datetime import datetime
 from typing import Dict, List, Tuple, Union, get_type_hints
+
 from typing_extensions import Self
 
-from app.utils.serialization import dataclass_to_dict
-
 from app.types import SerializableValue
+from app.utils.serialization import dataclass_to_dict
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +146,14 @@ class BaseGene(ABC):
         # that import typing constructs (Tuple, List, Dict, etc.)
         combined_globalns: dict[str, object] = {}
         for base in cls.__mro__:
-            base_module = sys.modules.get(getattr(base, '__module__', ''))
+            base_module = sys.modules.get(getattr(base, "__module__", ""))
             if base_module is not None:
                 try:
                     combined_globalns.update(vars(base_module))
                 except Exception as e:
-                    logger.debug("モジュール変数の更新に失敗しました (%s): %s", base.__name__, e)
+                    logger.debug(
+                        "モジュール変数の更新に失敗しました (%s): %s", base.__name__, e
+                    )
 
         localns: dict[str, object] = {}
         for base in cls.__mro__:
@@ -183,7 +185,9 @@ class BaseGene(ABC):
                         )
                         annotations[name] = resolved[name]
                     except Exception as e:
-                        logger.debug("個別アノテーションの解決に失敗しました (%s): %s", name, e)
+                        logger.debug(
+                            "個別アノテーションの解決に失敗しました (%s): %s", name, e
+                        )
                         annotations[name] = raw  # type: ignore[assignment]
 
         return annotations

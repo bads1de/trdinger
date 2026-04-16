@@ -5,24 +5,24 @@ app/services/backtest/shared.py のテストモジュール
 """
 
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
-from unittest.mock import MagicMock
 
 from app.services.backtest.shared import (
-    resolve_stats_object,
-    safe_float_conversion,
-    safe_duration_conversion,
-    safe_int_conversion,
-    parse_datetime_value,
-    safe_timestamp_conversion,
-    resolve_trade_pnl_column,
-    normalize_ohlcv_columns,
-    normalize_datetimes_for_comparison,
-    current_datetime_like,
-    TRADE_PNL_COLUMNS,
     OHLCV_COLUMNS,
+    TRADE_PNL_COLUMNS,
+    current_datetime_like,
+    normalize_datetimes_for_comparison,
+    normalize_ohlcv_columns,
+    parse_datetime_value,
+    resolve_stats_object,
+    resolve_trade_pnl_column,
+    safe_duration_conversion,
+    safe_float_conversion,
+    safe_int_conversion,
+    safe_timestamp_conversion,
 )
 
 

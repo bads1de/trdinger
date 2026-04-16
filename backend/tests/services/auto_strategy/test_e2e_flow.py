@@ -3,8 +3,9 @@ AutoStrategyServiceのエンドツーエンドフローテスト
 API呼び出しからバックグラウンド実行、結果保存までのフローを確認する
 """
 
-import pytest
 from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from fastapi import BackgroundTasks
 
 from app.services.auto_strategy.config import GAConfig
@@ -148,11 +149,13 @@ class TestE2EFlow:
 
         # インジケーター生成をモック化（パラメータ生成エラー回避のため）
         from app.services.auto_strategy.genes import IndicatorGene
-        sma_gene = IndicatorGene(
-            type="SMA", parameters={"period": 14}, enabled=True
-        )
 
-        with patch("app.services.auto_strategy.generators.random_gene_generator.generate_random_indicators", return_value=[sma_gene]):
+        sma_gene = IndicatorGene(type="SMA", parameters={"period": 14}, enabled=True)
+
+        with patch(
+            "app.services.auto_strategy.generators.random_gene_generator.generate_random_indicators",
+            return_value=[sma_gene],
+        ):
             # 実験実行（同期的に実行されるはず）
             try:
                 manager.run_experiment(experiment_id, ga_config, backtest_config)

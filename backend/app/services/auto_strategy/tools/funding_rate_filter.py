@@ -70,7 +70,12 @@ class FundingRateFilter(BaseTool):
 
         if random.random() < 0.3:
             new_params["max_funding_rate"] = max(
-                0.0001, min(0.01, new_params.get("max_funding_rate", 0.001) * random.uniform(0.5, 2.0))
+                0.0001,
+                min(
+                    0.01,
+                    new_params.get("max_funding_rate", 0.001)
+                    * random.uniform(0.5, 2.0),
+                ),
             )
 
         return new_params

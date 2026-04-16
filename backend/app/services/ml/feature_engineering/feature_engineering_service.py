@@ -70,7 +70,9 @@ class FeatureEngineeringService:
         self.frequency_manager = DataFrequencyManager()
 
         # 暗号通貨特化特徴量エンジニアリング（デフォルトで有効）
-        self.crypto_features: Optional[CryptoFeatureCalculator] = CryptoFeatureCalculator()
+        self.crypto_features: Optional[CryptoFeatureCalculator] = (
+            CryptoFeatureCalculator()
+        )
         logger.debug("暗号通貨特化特徴量を有効化しました")
 
     def calculate_advanced_features(
@@ -361,15 +363,17 @@ class FeatureEngineeringService:
         ).sum() / (cast(pd.Series, hour_grouped_vol.sum()) + 1e-9)
 
         # 吸収力 (Absorption): 1価格単位を動かすのに必要な出来高
-        price_range = cast(pd.Series, (ohlcv_1m["high"] - ohlcv_1m["low"]).groupby(hour_labels).sum())
-        agg_features["Intraday_Absorption"] = cast(pd.Series, hour_grouped_vol.sum()) / (
-            price_range + 1e-9
+        price_range = cast(
+            pd.Series, (ohlcv_1m["high"] - ohlcv_1m["low"]).groupby(hour_labels).sum()
         )
+        agg_features["Intraday_Absorption"] = cast(
+            pd.Series, hour_grouped_vol.sum()
+        ) / (price_range + 1e-9)
 
         # 出来高の集中度 (CV)
-        agg_features["Intraday_Volume_Concentration"] = cast(pd.Series, hour_grouped_vol.std()) / (
-            cast(pd.Series, hour_grouped_vol.mean()) + 1e-9
-        )
+        agg_features["Intraday_Volume_Concentration"] = cast(
+            pd.Series, hour_grouped_vol.std()
+        ) / (cast(pd.Series, hour_grouped_vol.mean()) + 1e-9)
 
         # 最大逆行幅 (Intraday Max Pullback) - ベクトル化
         # 1時間ごとの区切りで最高値を更新しつつ、安値との乖離を計算
@@ -519,7 +523,9 @@ class FeatureEngineeringService:
         ]
 
         selected_cols = non_frac_cols + target_frac_cols
-        return cast(pd.DataFrame, df[selected_cols] if selected_cols else df.iloc[:, :0])
+        return cast(
+            pd.DataFrame, df[selected_cols] if selected_cols else df.iloc[:, :0]
+        )
 
     def expand_features(
         self, df: pd.DataFrame, top_n_for_interaction: int = 30

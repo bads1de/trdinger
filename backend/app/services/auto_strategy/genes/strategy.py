@@ -214,6 +214,7 @@ class StrategyGene:
     def clone(self, keep_id: bool = False) -> "StrategyGene":
         """軽量コピーを作成。"""
         from typing import cast
+
         from .genetic_utils import GeneticUtils
 
         cloned_fields = {

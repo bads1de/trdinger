@@ -2,9 +2,9 @@
 StrategyGene の dict encode/decode helper。
 """
 
-from collections.abc import Iterable, Mapping
 import logging
 import uuid
+from collections.abc import Iterable, Mapping
 from typing import Any, Dict, Tuple, cast
 
 logger = logging.getLogger(__name__)

@@ -457,9 +457,7 @@ class TestDatabaseSessionManagement:
                     mock_repo_class, "get_latest_timestamp", "BTC/USDT:USDT"
                 )
 
-    async def test_get_latest_timestamp_from_db_with_custom_repository(
-        self, service
-    ):
+    async def test_get_latest_timestamp_from_db_with_custom_repository(self, service):
         """リポジトリ注入時は get_db を使わず最新タイムスタンプを取得する"""
         mock_repo_class = MagicMock()
         mock_repository = MagicMock()
@@ -482,5 +480,3 @@ class TestDatabaseSessionManagement:
         assert result == expected_timestamp
         mock_repo_class.assert_not_called()
         mock_repository.get_latest_timestamp.assert_called_once_with("BTC/USDT:USDT")
-
-

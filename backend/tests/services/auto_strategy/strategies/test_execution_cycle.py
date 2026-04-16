@@ -57,7 +57,9 @@ class FakeStrategy:
     _is_evaluation_bar: CallRecorder = field(
         default_factory=lambda: CallRecorder(return_value=True)
     )
-    _check_early_termination: CallRecorder = field(default_factory=lambda: CallRecorder())
+    _check_early_termination: CallRecorder = field(
+        default_factory=lambda: CallRecorder()
+    )
     position: object | None = None
     data: object | None = None
     order_manager: FakeManager = field(default_factory=FakeManager)

@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
+from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.optimization.strategy_parameter_tuner import (
     StrategyParameterTuner,
 )
-from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
 
 
 class TestStrategyParameterTuner:

@@ -44,13 +44,9 @@ def validate_split_ratios(
         ValueError: 分割比率が不正な場合
     """
     if not 0 < train_test_split < 1:
-        raise ValueError(
-            "train_test_split は 0 より大きく 1 未満である必要があります"
-        )
+        raise ValueError("train_test_split は 0 より大きく 1 未満である必要があります")
     if not 0 < validation_split < 1:
-        raise ValueError(
-            "validation_split は 0 より大きく 1 未満である必要があります"
-        )
+        raise ValueError("validation_split は 0 より大きく 1 未満である必要があります")
 
 
 def validate_model_parameters(
@@ -141,9 +137,7 @@ def validate_training_config(config) -> None:
     """
     validate_date_range(config.start_date, config.end_date)
     validate_split_ratios(config.train_test_split, config.validation_split)
-    validate_model_parameters(
-        config.prediction_horizon, config.cross_validation_folds
-    )
+    validate_model_parameters(config.prediction_horizon, config.cross_validation_folds)
     validate_task_type(config.task_type)
     validate_target_kind(config.target_kind)
     validate_ensemble_config(config.task_type, config.ensemble_config)

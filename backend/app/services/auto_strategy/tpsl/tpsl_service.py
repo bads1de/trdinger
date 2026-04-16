@@ -43,7 +43,9 @@ class TPSLService:
             with self._cache_lock:
                 # 再チェック（ダブルチェックロッキング）
                 if method not in self._calculator_cache:
-                    self._calculator_cache[method] = TPSLCalculatorFactory.create_calculator(method)
+                    self._calculator_cache[method] = (
+                        TPSLCalculatorFactory.create_calculator(method)
+                    )
         return self._calculator_cache[method]
 
     def calculate_tpsl_prices(
@@ -391,7 +393,9 @@ class TPSLService:
 
             return min_v <= float(percentage) <= max_v
         except Exception as e:
-            logger.debug(f"TPSL_LIMITSの読み込みに失敗しました、フォールバック使用: {e}")
+            logger.debug(
+                f"TPSL_LIMITSの読み込みに失敗しました、フォールバック使用: {e}"
+            )
             # フォールバック: 安全なデフォルト
             if label == "SL":
                 return 0 <= percentage <= 1.0

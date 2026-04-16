@@ -498,7 +498,9 @@ class TestIntervalHandling:
 
             mock_exchange.fetch_open_interest_history.return_value = expected_data
 
-            result = await service.fetch_open_interest_history("BTC/USDT:USDT", limit=100)
+            result = await service.fetch_open_interest_history(
+                "BTC/USDT:USDT", limit=100
+            )
 
             assert result == expected_data
 
@@ -589,6 +591,3 @@ class TestEdgeCases:
             )
 
             assert result == expected_data
-
-
-

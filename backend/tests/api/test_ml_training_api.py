@@ -46,9 +46,7 @@ def override_dependencies(mock_db_session, mock_ml_training_service):
         mock_ml_training_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_ml_training_service] = (
-        lambda: mock_ml_training_service
-    )
+    app.dependency_overrides[get_ml_training_service] = lambda: mock_ml_training_service
     yield
     app.dependency_overrides.clear()
 

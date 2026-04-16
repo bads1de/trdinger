@@ -51,12 +51,13 @@ def setup_lazy_import(
     # 既存の__getattr__を上書きしない（既に定義されている場合）
     if "__getattr__" in module_globals:
         import warnings
+
         warnings.warn(
             f"Module {module_name} already has __getattr__. "
             f"setup_lazy_import will not override it."
         )
         return
-    
+
     def __getattr__(name: str) -> Any:
         """
         遅延インポートによる属性アクセスを提供

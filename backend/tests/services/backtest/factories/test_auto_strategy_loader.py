@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from app.services.backtest.factories.auto_strategy_loader import (
     AutoStrategyLoader,
     AutoStrategyLoaderError,

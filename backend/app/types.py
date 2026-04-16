@@ -13,9 +13,9 @@ import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
+    from catboost import CatBoost as CatBoostModel
     from lightgbm import Booster as LGBMBooster
     from xgboost import Booster as XGBBooster
-    from catboost import CatBoost as CatBoostModel
 
 # ─────────────────────────────────────────────
 # シリアライズ可能なプリミティブ型

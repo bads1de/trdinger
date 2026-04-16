@@ -1,8 +1,8 @@
+from app.services.auto_strategy.config import ConfigValidator
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config.helpers import (
     normalize_robustness_regime_windows,
 )
-from app.services.auto_strategy.config import ConfigValidator
 
 
 def test_from_dict_expands_robustness_regime_windows():

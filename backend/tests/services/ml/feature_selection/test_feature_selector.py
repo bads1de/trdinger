@@ -11,21 +11,20 @@ import numpy as np
 import pandas as pd
 import pytest
 
-
 from app.services.ml.feature_selection.feature_selector import (
-    FeatureSelector,
     FeatureSelectionConfig,
+    FeatureSelector,
     SelectionMethod,
 )
 from app.services.ml.feature_selection.strategies import (
-    VarianceStrategy,
-    UnivariateStrategy,
     LassoStrategy,
-    TreeBasedStrategy,
     PermutationStrategy,
+    RFECVStrategy,
     ShadowFeatureStrategy,
     StagedStrategy,
-    RFECVStrategy,
+    TreeBasedStrategy,
+    UnivariateStrategy,
+    VarianceStrategy,
 )
 
 

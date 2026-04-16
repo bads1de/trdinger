@@ -7,8 +7,9 @@
 import logging
 from typing import Dict, Protocol, Type, cast
 
-from app.types import SerializableValue
 from backtesting import Strategy
+
+from app.types import SerializableValue
 
 logger = logging.getLogger(__name__)
 
@@ -128,19 +129,19 @@ class AutoStrategyLoader:
         # UniversalStrategyクラスを返す
         return UniversalStrategy
 
-    def _extract_strategy_gene(
-        self, strategy_config: Dict[str, SerializableValue]
-    ):
+    def _extract_strategy_gene(self, strategy_config: Dict[str, SerializableValue]):
         """戦略設定から戦略遺伝子を抽出"""
         # 直接strategy_geneがある場合
         gene_data = strategy_config.get("strategy_gene")
-        
+
         # StrategyGene オブジェクトが直接渡された場合
-        if gene_data is not None and hasattr(gene_data, "indicators") and hasattr(
-            gene_data, "long_entry_conditions"
+        if (
+            gene_data is not None
+            and hasattr(gene_data, "indicators")
+            and hasattr(gene_data, "long_entry_conditions")
         ):
             return gene_data
-        
+
         if isinstance(gene_data, dict):
             return gene_data
 
@@ -156,13 +157,15 @@ class AutoStrategyLoader:
         parameters = strategy_config.get("parameters", {})
         if isinstance(parameters, dict):
             gene_data = parameters.get("strategy_gene")
-            
+
             # StrategyGene オブジェクトがparametersの中にある場合
-            if gene_data is not None and hasattr(gene_data, "indicators") and hasattr(
-                gene_data, "long_entry_conditions"
+            if (
+                gene_data is not None
+                and hasattr(gene_data, "indicators")
+                and hasattr(gene_data, "long_entry_conditions")
             ):
                 return gene_data
-            
+
             if isinstance(gene_data, dict):
                 return gene_data
 

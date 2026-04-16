@@ -187,12 +187,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         constraint_violation_penalty:
           initialGAConfig.constraint_violation_penalty,
 
-        // TPSL設定
-        tpsl_method_constraints: initialGAConfig.tpsl_method_constraints,
-        tpsl_sl_range: initialGAConfig.tpsl_sl_range,
-        tpsl_tp_range: initialGAConfig.tpsl_tp_range,
-        tpsl_rr_range: initialGAConfig.tpsl_rr_range,
-        tpsl_atr_multiplier_range: initialGAConfig.tpsl_atr_multiplier_range,
+
 
         // MTF
         enable_multi_timeframe: initialGAConfig.enable_multi_timeframe ?? false,

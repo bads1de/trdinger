@@ -63,10 +63,13 @@ class HistoricalDataOrchestrator:
 
         # シンボルと時間軸のバリデーション
         if data_validator:
-            normalized_symbol = data_validator.validate_symbol_and_timeframe(symbol, timeframe)
+            normalized_symbol = data_validator.validate_symbol_and_timeframe(
+                symbol, timeframe
+            )
         else:
             # デフォルトのバリデーション（テスト用）
             from app.config.unified_config import unified_config
+
             normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
             if normalized_symbol not in unified_config.market.supported_symbols:
                 raise ValueError(f"サポートされていないシンボル: {symbol}")

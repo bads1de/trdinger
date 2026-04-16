@@ -5,8 +5,8 @@ Test-Driven Development (TDD) アプローチでメタラベリング用の
 シグナル生成ロジックをテストします。
 """
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
 
 from app.services.ml.label_generation.signal_generator import SignalGenerator
@@ -319,7 +319,3 @@ class TestCombinedSignals:
 
         # BB + Volume の方が多いか同じイベント数を持つ
         assert len(bb_volume) >= len(bb_only)
-
-
-
-

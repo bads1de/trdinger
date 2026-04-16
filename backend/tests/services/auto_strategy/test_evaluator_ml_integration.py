@@ -39,6 +39,7 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
 
         # テスト用GA設定（MLフィルター有効）
         from app.services.auto_strategy.config.ga.nested_configs import HybridConfig
+
         self.ga_config = GAConfig(
             hybrid_config=HybridConfig(
                 volatility_gate_enabled=True,
@@ -59,7 +60,9 @@ class TestEvaluatorMLIntegration(unittest.TestCase):
         """
         # MLモデルのロードをモック
         mock_model = MagicMock()
-        mock_model.predict_volatility = None  # prevent MagicMock auto-attr from intercepting _run_model
+        mock_model.predict_volatility = (
+            None  # prevent MagicMock auto-attr from intercepting _run_model
+        )
         mock_model.predict.return_value = np.array([0.9])
         mock_model.is_trained = True
         mock_model_manager.load_model.return_value = {

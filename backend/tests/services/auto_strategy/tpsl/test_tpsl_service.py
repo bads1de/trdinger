@@ -2,13 +2,14 @@
 TPSLService のテスト
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
-from app.services.auto_strategy.tpsl.tpsl_service import TPSLService
-from app.services.auto_strategy.genes.tpsl import TPSLGene
+import pytest
+
 from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.genes import TPSLResult
+from app.services.auto_strategy.genes.tpsl import TPSLGene
+from app.services.auto_strategy.tpsl.tpsl_service import TPSLService
 
 
 class TestTPSLService:

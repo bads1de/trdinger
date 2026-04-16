@@ -1,7 +1,12 @@
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
 from pydantic import ValidationError
-from app.services.backtest.config.backtest_config import BacktestRunConfig, BacktestRunConfigValidationError
+
+from app.services.backtest.config.backtest_config import (
+    BacktestRunConfig,
+    BacktestRunConfigValidationError,
+)
 
 
 class TestBacktestRunConfig:
@@ -44,7 +49,9 @@ class TestBacktestRunConfig:
     def test_validate_dates_reversed(self, valid_config):
         valid_config["start_date"] = datetime(2023, 1, 2)
         valid_config["end_date"] = datetime(2023, 1, 1)
-        with pytest.raises(BacktestRunConfigValidationError, match="start_dateはend_dateより前"):
+        with pytest.raises(
+            BacktestRunConfigValidationError, match="start_dateはend_dateより前"
+        ):
             BacktestRunConfig(**valid_config)
 
     def test_validate_dates_future(self, valid_config):

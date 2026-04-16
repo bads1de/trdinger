@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.auto_strategy.genes.indicator import IndicatorGene
+
+import pytest
+
 from app.services.auto_strategy.genes.conditions import Condition, StatefulCondition
 from app.services.auto_strategy.genes.entry import EntryGene
 from app.services.auto_strategy.genes.exit import ExitGene
+from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tool import ToolGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 
@@ -18,6 +20,7 @@ class TestStrategyGene:
     @pytest.fixture
     def mock_config(self):
         from app.services.auto_strategy.config import GAConfig
+
         config = GAConfig()
         return config
 

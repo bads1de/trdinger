@@ -15,19 +15,19 @@ from typing import Any, Dict, List, Optional, cast
 
 from app.utils.serialization import dataclass_to_dict
 
-from ..indicator_universe import normalize_indicator_universe_mode
 from ..constants import (
     DEFAULT_FITNESS_CONSTRAINTS,
     DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,
     DEFAULT_GA_OBJECTIVES,
-    GA_FALLBACK_END_DATE,
-    GA_FALLBACK_START_DATE,
     GA_DEFAULT_CONFIG,
     GA_DEFAULT_FITNESS_SHARING,
+    GA_FALLBACK_END_DATE,
+    GA_FALLBACK_START_DATE,
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
 )
+from ..indicator_universe import normalize_indicator_universe_mode
 from .nested_configs import (
     EvaluationConfig,
     HybridConfig,
@@ -36,7 +36,6 @@ from .nested_configs import (
     TuningConfig,
     TwoStageSelectionConfig,
 )
-
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +62,6 @@ def _get_default_values_from_fields(cls: type[Any]) -> Dict[str, Any]:
     return defaults
 
 
-
-
-
 @dataclass
 class GAConfig:
     """
@@ -73,8 +69,6 @@ class GAConfig:
 
     GA実行時の canonical 設定を管理する。
     """
-
-
 
     # 基本GA設定
     population_size: int = int(GA_DEFAULT_CONFIG["population_size"])
@@ -156,10 +150,6 @@ class GAConfig:
     strict_compatibility_score: float = 0.9
     indicator_universe_mode: str = "curated"
 
-
-
-
-
     # マルチタイムフレーム（MTF）設定
     enable_multi_timeframe: bool = False
     available_timeframes: Optional[List[str]] = (
@@ -185,8 +175,6 @@ class GAConfig:
 
     # 二段階選抜用 robustness 設定
     # サブ設定: robustness_config
-
-
 
     # サブ設定（ネスト辞書からの復元用）
     mutation_config: MutationConfig = field(default_factory=MutationConfig)

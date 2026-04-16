@@ -1,5 +1,5 @@
-import pytest
 import pandas as pd
+import pytest
 from fastapi import HTTPException
 
 from app.utils.error_handler import ErrorHandler, ensure_db_initialized, safe_operation
@@ -68,9 +68,7 @@ class TestUtilsExtra:
         assert ensure_response_dict(object()) == {}
 
     def test_extract_response_data(self):
-        assert extract_response_data({"data": {"key": "value"}}) == {
-            "key": "value"
-        }
+        assert extract_response_data({"data": {"key": "value"}}) == {"key": "value"}
         assert extract_response_data({"data": None}) == {}
 
     def test_ensure_db_initialized_success(self, monkeypatch):

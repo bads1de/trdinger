@@ -173,9 +173,7 @@ class TestInitDb:
 
     @patch("database.connection.test_connection")
     @patch("database.connection.check_db_initialized")
-    def test_returns_true_when_already_initialized(
-        self, mock_check, mock_test_conn
-    ):
+    def test_returns_true_when_already_initialized(self, mock_check, mock_test_conn):
         """既に初期化されている場合Trueを返す"""
         mock_test_conn.return_value = True
         mock_check.return_value = True
@@ -267,4 +265,7 @@ class TestModuleLevelVariables:
     def test_database_url_default_value(self, mock_logger):
         """DATABASE_URLのデフォルト値を確認"""
         # デフォルト値はSQLite
-        assert "sqlite" in connection.DATABASE_URL.lower() or connection.DATABASE_URL is not None
+        assert (
+            "sqlite" in connection.DATABASE_URL.lower()
+            or connection.DATABASE_URL is not None
+        )

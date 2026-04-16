@@ -1,23 +1,24 @@
 import logging
-import sys
 import os
-
+import sys
 
 # プロジェクトルートをパスに追加
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+from deap import base, creator
+
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
-from app.services.auto_strategy.core.evaluation.parallel_evaluator import ParallelEvaluator
 from app.services.auto_strategy.core.evaluation.evaluation_worker import (
     initialize_worker_process,
     worker_evaluate_individual,
 )
+from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
+    ParallelEvaluator,
+)
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-
-from deap import creator, base
 
 # ログ設定
 logging.basicConfig(level=logging.INFO)

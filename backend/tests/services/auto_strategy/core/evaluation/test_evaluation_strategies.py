@@ -4,11 +4,11 @@ from unittest.mock import Mock
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
-    EvaluationStrategy,
-)
 from app.services.auto_strategy.core.evaluation.evaluation_report import (
     ScenarioEvaluation,
+)
+from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
+    EvaluationStrategy,
 )
 
 

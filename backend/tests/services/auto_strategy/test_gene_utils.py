@@ -5,7 +5,6 @@ BaseGeneクラスのテスト
 from datetime import datetime
 from enum import Enum
 
-
 from app.services.auto_strategy.genes.base_gene import BaseGene
 
 
@@ -158,8 +157,10 @@ class TestGeneUtils:
         data = {"field1": "value1", "field2": 42, "field3": {"nested": "data"}}
 
         # クラスの状態を確認
-        print(f"DEBUG: Annotations: {getattr(MockGeneWithoutAnnotations, '__annotations__', 'N/A')}")
-        
+        print(
+            f"DEBUG: Annotations: {getattr(MockGeneWithoutAnnotations, '__annotations__', 'N/A')}"
+        )
+
         gene = MockGeneWithoutAnnotations.from_dict(data)
 
         # 生成されたオブジェクトの状態を確認
@@ -250,5 +251,3 @@ class TestGeneUtils:
         assert BaseGene._is_datetime_type(datetime) is True
         assert BaseGene._is_datetime_type(str) is False
         assert BaseGene._is_datetime_type(MockEnum) is False
-
-

@@ -42,6 +42,7 @@ def valid_records(valid_record) -> list:
 # validate_ohlcv_records_simple
 # ---------------------------------------------------------------------------
 
+
 class TestValidateOhlcvRecordsSimple:
     def test_valid_records(self, valid_records):
         assert RecordValidator.validate_ohlcv_records_simple(valid_records) is True
@@ -100,6 +101,7 @@ class TestValidateOhlcvRecordsSimple:
 # sanitize_ohlcv_data
 # ---------------------------------------------------------------------------
 
+
 class TestSanitizeOhlcvData:
     def test_basic_sanitization(self, valid_records):
         result = RecordValidator.sanitize_ohlcv_data(valid_records)
@@ -146,6 +148,7 @@ class TestSanitizeOhlcvData:
 # ---------------------------------------------------------------------------
 # DataValidator エイリアス
 # ---------------------------------------------------------------------------
+
 
 class TestDataValidatorAlias:
     def test_alias_points_to_record_validator(self):

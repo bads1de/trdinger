@@ -1,8 +1,7 @@
+from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.constants import TPSLMethod
 from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
-from app.services.auto_strategy.config.constants import TPSLMethod
-
-from app.services.auto_strategy.config import GAConfig
 
 
 class TestTPSLSplit:

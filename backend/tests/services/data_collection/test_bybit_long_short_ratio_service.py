@@ -2,15 +2,16 @@
 BybitLongShortRatioServiceのテスト
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from app.services.data_collection.bybit.long_short_ratio_service import (
     BybitLongShortRatioService,
 )
-from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 from database.models import LongShortRatioData
+from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 
 
 @pytest.fixture

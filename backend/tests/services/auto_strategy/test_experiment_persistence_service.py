@@ -193,13 +193,16 @@ class TestExperimentPersistenceService:
             "config": {"experiment_id": experiment_id},
         }
 
-        with patch(
-            "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
-        ) as mock_strat_repo_cls, patch.object(
-            self.persistence_service.serializer,
-            "strategy_gene_to_dict",
-            return_value={"serialized": True},
-        ) as mock_strategy_to_dict:
+        with (
+            patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
+            ) as mock_strat_repo_cls,
+            patch.object(
+                self.persistence_service.serializer,
+                "strategy_gene_to_dict",
+                return_value={"serialized": True},
+            ) as mock_strategy_to_dict,
+        ):
 
             mock_strat_repo = mock_strat_repo_cls.return_value
             mock_strat_repo.save_strategy.return_value = Mock(id=555)
@@ -247,5 +250,3 @@ class TestExperimentPersistenceService:
             self.persistence_service.save_backtest_result(result_data)
 
             mock_bt_repo.save_backtest_result.assert_called_once_with(result_data)
-
-

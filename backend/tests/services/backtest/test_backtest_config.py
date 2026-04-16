@@ -13,8 +13,8 @@ from pydantic import ValidationError
 # 実装予定のモジュール（まだ存在しない）
 from app.services.backtest.config.backtest_config import (
     BacktestRunConfig,
-    StrategyConfig,
     GeneratedGAParameters,
+    StrategyConfig,
 )
 
 
@@ -130,6 +130,3 @@ def test_serialization(valid_backtest_config_dict):
     assert data["slippage"] == 0.0
     # 日付はdatetimeオブジェクトのまま（json化する際は別途対応が必要だがdumpでは維持）
     assert isinstance(data["start_date"], datetime)
-
-
-

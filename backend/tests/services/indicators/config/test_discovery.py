@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+
 from app.services.indicators.config import discovery as discovery_module
 from app.services.indicators.config.discovery import DynamicIndicatorDiscovery
 from app.services.indicators.config.indicator_config import (
@@ -228,17 +229,18 @@ class TestDiscoverAll:
         }
 
         for indicator_name, expected_module in expected_modules.items():
-            config = next(
-                c for c in configs if c.indicator_name == indicator_name
-            )
+            config = next(c for c in configs if c.indicator_name == indicator_name)
             assert config.adapter_function is not None
             assert config.adapter_function.__module__ == expected_module
 
-    @pytest.mark.parametrize(("indicator_name", "expected_default"), [
-        ("EMA", 10),
-        ("DEMA", 10),
-        ("TEMA", 10),
-    ])
+    @pytest.mark.parametrize(
+        ("indicator_name", "expected_default"),
+        [
+            ("EMA", 10),
+            ("DEMA", 10),
+            ("TEMA", 10),
+        ],
+    )
     def test_required_length_defaults_are_inferred_for_overlap_wrappers(
         self, indicator_name: str, expected_default: int
     ):
@@ -276,24 +278,30 @@ class TestDiscoverAll:
 
         probed: list[str] = []
 
-        with patch.object(
-            discovery_module, "get_all_pandas_ta_indicators", return_value=["cdl_fake", "rsi_fake"]
-        ), patch.object(
-            discovery_module, "extract_default_parameters", return_value={}
-        ), patch.object(
-            discovery_module.ta, "cdl_fake", fake_indicator, create=True
-        ), patch.object(
-            discovery_module.ta, "rsi_fake", fake_indicator, create=True
-        ), patch.object(
-            DynamicIndicatorDiscovery, "_is_indicator_function", return_value=True
-        ), patch.object(
-            DynamicIndicatorDiscovery,
-            "_supports_timeseries_output",
-            side_effect=lambda name, *args, **kwargs: probed.append(name) or True,
-        ), patch.object(
-            DynamicIndicatorDiscovery,
-            "_analyze_function",
-            side_effect=lambda name, func, category: fake_config(name),
+        with (
+            patch.object(
+                discovery_module,
+                "get_all_pandas_ta_indicators",
+                return_value=["cdl_fake", "rsi_fake"],
+            ),
+            patch.object(
+                discovery_module, "extract_default_parameters", return_value={}
+            ),
+            patch.object(discovery_module.ta, "cdl_fake", fake_indicator, create=True),
+            patch.object(discovery_module.ta, "rsi_fake", fake_indicator, create=True),
+            patch.object(
+                DynamicIndicatorDiscovery, "_is_indicator_function", return_value=True
+            ),
+            patch.object(
+                DynamicIndicatorDiscovery,
+                "_supports_timeseries_output",
+                side_effect=lambda name, *args, **kwargs: probed.append(name) or True,
+            ),
+            patch.object(
+                DynamicIndicatorDiscovery,
+                "_analyze_function",
+                side_effect=lambda name, func, category: fake_config(name),
+            ),
         ):
             configs = DynamicIndicatorDiscovery._discover_pandas_ta()
 

@@ -111,9 +111,7 @@ class TestMomentumIndicatorsLogic:
         assert result.dropna().between(0, 100).all()
         assert result.iloc[:13].isna().all()
 
-    def test_rsi_constant_zero_output_is_normalized_to_50(
-        self, sample_df, monkeypatch
-    ):
+    def test_rsi_constant_zero_output_is_normalized_to_50(self, sample_df, monkeypatch):
         close = pd.Series([100.0] * len(sample_df), index=sample_df.index)
         zero_rsi = pd.Series(0.0, index=close.index)
 

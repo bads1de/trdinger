@@ -135,7 +135,7 @@ class DEAPSetup:
         # 突然変異の登録（DEAP互換の返り値 (ind,) を保証するラッパー）
         def _mutate_wrapper(individual):
             """突然変異処理のラッパー。
-            
+
             DEAPの要件に合わせて、突然変異後の個体をタプルでラップして返す。
             """
             res = mutate_func(individual, mutation_rate=config.mutation_rate)

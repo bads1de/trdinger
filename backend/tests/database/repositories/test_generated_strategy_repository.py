@@ -3,6 +3,7 @@ GeneratedStrategyRepositoryのテストモジュール
 
 生成戦略リポジトリの機能をテストします。
 """
+
 # pyright: reportAttributeAccessIssue=none
 
 from typing import Any, Dict, cast
@@ -282,7 +283,7 @@ class TestGetFilteredAndSortedStrategies:
         ]
         # countクエリ用のスカラー値
         mock_query.scalar.return_value = 1
-        
+
         repository.db.query.return_value = mock_query
 
         total_count, strategies = repository.get_filtered_and_sorted_strategies()
@@ -380,5 +381,3 @@ class TestErrorHandling:
                 gene_data={"id": "test"},
                 generation=10,
             )
-
-

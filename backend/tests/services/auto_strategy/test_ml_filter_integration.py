@@ -11,13 +11,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.genes import (
     IndicatorGene,
     StrategyGene,
     TPSLGene,
     TPSLMethod,
 )
+from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 
 
@@ -199,13 +199,19 @@ class TestMLFilterIntegration:
                     side_effect=lambda d: d == 1.0,
                 ):
                     with patch.object(
-                        strategy.entry_decision_engine, "tools_block_entry", return_value=False
+                        strategy.entry_decision_engine,
+                        "tools_block_entry",
+                        return_value=False,
                     ):
                         with patch.object(
-                            strategy.order_manager, "check_pending_order_fills", return_value=None
+                            strategy.order_manager,
+                            "check_pending_order_fills",
+                            return_value=None,
                         ):
                             with patch.object(
-                                strategy.order_manager, "expire_pending_orders", return_value=None
+                                strategy.order_manager,
+                                "expire_pending_orders",
+                                return_value=None,
                             ):
                                 with patch.object(
                                     strategy,
@@ -266,13 +272,19 @@ class TestMLFilterIntegration:
                     side_effect=lambda d: d == 1.0,
                 ):
                     with patch.object(
-                        strategy.entry_decision_engine, "tools_block_entry", return_value=False
+                        strategy.entry_decision_engine,
+                        "tools_block_entry",
+                        return_value=False,
                     ):
                         with patch.object(
-                            strategy.order_manager, "check_pending_order_fills", return_value=None
+                            strategy.order_manager,
+                            "check_pending_order_fills",
+                            return_value=None,
                         ):
                             with patch.object(
-                                strategy.order_manager, "expire_pending_orders", return_value=None
+                                strategy.order_manager,
+                                "expire_pending_orders",
+                                return_value=None,
                             ):
                                 with patch.object(
                                     strategy,
@@ -283,29 +295,29 @@ class TestMLFilterIntegration:
                                         strategy,
                                         "_get_stateful_entry_direction",
                                         return_value=None,
+                                    ):
+                                        with patch.object(
+                                            strategy.entry_decision_engine,
+                                            "calculate_position_size",
+                                            return_value=0.01,
                                         ):
                                             with patch.object(
                                                 strategy.entry_decision_engine,
-                                                "calculate_position_size",
-                                                return_value=0.01,
+                                                "calculate_effective_tpsl_prices",
+                                                return_value=(None, None),
                                             ):
                                                 with patch.object(
-                                                    strategy.entry_decision_engine,
-                                                    "calculate_effective_tpsl_prices",
-                                                    return_value=(None, None),
+                                                    strategy,
+                                                    "_get_effective_entry_gene",
+                                                    return_value=None,
                                                 ):
                                                     with patch.object(
-                                                        strategy,
-                                                        "_get_effective_entry_gene",
+                                                        type(strategy),
+                                                        "position",
+                                                        new_callable=PropertyMock,
                                                         return_value=None,
                                                     ):
-                                                        with patch.object(
-                                                            type(strategy),
-                                                            "position",
-                                                            new_callable=PropertyMock,
-                                                            return_value=None,
-                                                        ):
-                                                            strategy.next()
+                                                        strategy.next()
 
             # MLフィルターがチェックされたことを確認
             mock_ml_check.assert_called_once_with(1.0)

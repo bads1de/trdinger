@@ -15,10 +15,10 @@ import pytest
 
 from app.utils.serialization import (
     _convert_value,
+    dataclass_from_dict,
+    dataclass_from_json,
     dataclass_to_dict,
     dataclass_to_json,
-    dataclass_from_json,
-    dataclass_from_dict,
 )
 
 
@@ -45,6 +45,7 @@ class SimpleDataclass:
 @dataclass
 class DefaultDataclass:
     """デフォルト値を持つdataclass（from_dictフォールバックテスト用）"""
+
     name: str = ""
     value: int = 0
     price: float = 100.0
@@ -114,10 +115,11 @@ class TestConvertValue:
 
     def test_complex_object_value(self):
         """複雑オブジェクトが文字列に変換されること"""
+
         class CustomObj:
             def __str__(self):
                 return "CustomObject"
-        
+
         obj = CustomObj()
         result = _convert_value(obj)
         assert isinstance(result, str)
@@ -143,9 +145,7 @@ class TestDataclassToDict:
     def test_nested_dataclass(self):
         """ネストされたdataclassが再帰変換されること"""
         obj = NestedDataclass(
-            id=1,
-            inner=SimpleDataclass(name="inner", value=10),
-            tags=["a", "b"]
+            id=1, inner=SimpleDataclass(name="inner", value=10), tags=["a", "b"]
         )
         result = dataclass_to_dict(obj)
         assert result["id"] == 1
@@ -158,7 +158,7 @@ class TestDataclassToDict:
             color=Color.GREEN,
             status=Status.ACTIVE,
             created_at=datetime(2024, 1, 1),
-            metadata={"key": "value"}
+            metadata={"key": "value"},
         )
         result = dataclass_to_dict(obj)
         assert result["color"] == "green"
@@ -238,10 +238,11 @@ class TestDataclassFromDict:
 
     def test_from_dict_error_raises_value_error(self):
         """エラー時にValueErrorが発生すること"""
+
         # from_dictメソッドを持たないクラスでエラーを発生させる
         class NoFromDict:
             def __init__(self, required_arg):
                 pass
-        
+
         with pytest.raises(ValueError, match="辞書からの復元に失敗しました"):
             dataclass_from_dict(NoFromDict, {"key": "value"})

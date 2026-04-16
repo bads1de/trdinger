@@ -65,7 +65,10 @@ class TestGAConfig:
         assert config.evaluation_config.enable_multi_fidelity_evaluation is False
         assert config.evaluation_config.multi_fidelity_window_ratio == 0.3
         assert config.evaluation_config.early_termination_settings.enabled is False
-        assert config.evaluation_config.early_termination_settings.expectancy_min_trades == 5
+        assert (
+            config.evaluation_config.early_termination_settings.expectancy_min_trades
+            == 5
+        )
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
         """二段階選抜/robustness 設定がシリアライズされることを確認"""
@@ -135,11 +138,26 @@ class TestGAConfig:
         assert restored.evaluation_config.early_termination_settings.enabled is True
         assert restored.evaluation_config.early_termination_settings.max_drawdown == 0.2
         assert restored.evaluation_config.early_termination_settings.min_trades == 12
-        assert restored.evaluation_config.early_termination_settings.min_trade_check_progress == 0.45
-        assert restored.evaluation_config.early_termination_settings.trade_pace_tolerance == 0.6
-        assert restored.evaluation_config.early_termination_settings.min_expectancy == -0.02
-        assert restored.evaluation_config.early_termination_settings.expectancy_min_trades == 6
-        assert restored.evaluation_config.early_termination_settings.expectancy_progress == 0.7
+        assert (
+            restored.evaluation_config.early_termination_settings.min_trade_check_progress
+            == 0.45
+        )
+        assert (
+            restored.evaluation_config.early_termination_settings.trade_pace_tolerance
+            == 0.6
+        )
+        assert (
+            restored.evaluation_config.early_termination_settings.min_expectancy
+            == -0.02
+        )
+        assert (
+            restored.evaluation_config.early_termination_settings.expectancy_min_trades
+            == 6
+        )
+        assert (
+            restored.evaluation_config.early_termination_settings.expectancy_progress
+            == 0.7
+        )
 
     def test_from_dict_expands_nested_two_stage_and_robustness_config(self):
         """ネスト設定が正しく復元されることを確認"""
@@ -237,7 +255,11 @@ class TestGAConfig:
         assert restored.mutation_config.adaptive_variance_threshold == 0.02
         assert restored.mutation_config.adaptive_decrease_multiplier == 0.75
         assert restored.mutation_config.adaptive_increase_multiplier == 1.4
-        assert restored.mutation_config.valid_condition_operators == [">", "<", "CROSS_UP"]
+        assert restored.mutation_config.valid_condition_operators == [
+            ">",
+            "<",
+            "CROSS_UP",
+        ]
 
         assert restored.evaluation_config.enable_parallel is False
         assert restored.evaluation_config.max_workers == 3
@@ -513,4 +535,3 @@ class TestGAConfig:
         first.parameter_ranges["period"][0] = 999
 
         assert second.parameter_ranges["period"] == [5, 200]
-

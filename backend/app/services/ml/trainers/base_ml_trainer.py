@@ -15,6 +15,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 
 from app.types import SerializableValue, TrainedModel
+
 from ....utils.error_handler import (
     DataError,
     ml_operation_context,
@@ -446,7 +447,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self, X: pd.DataFrame, y: pd.Series, **training_params
     ) -> Dict[str, SerializableValue]:
         """時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行
-        
+
         各fold内で特徴量選択とスケーリングを実行することで、
         データリークを防ぎます。
         """

@@ -9,21 +9,24 @@ from types import SimpleNamespace
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
+from unittest.mock import MagicMock, Mock
+
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import MagicMock, Mock
 
-from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config import objective_registry
-from app.services.auto_strategy.core.evaluation.condition_evaluator import ConditionEvaluator
+from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.core.evaluation.condition_evaluator import (
+    ConditionEvaluator,
+)
 from app.services.auto_strategy.core.fitness.fitness_calculator import FitnessCalculator
 from app.services.auto_strategy.genes import Condition, ConditionGroup
-
 
 # =============================================================================
 # フィクスチャ
 # =============================================================================
+
 
 @pytest.fixture
 def ga_config():
@@ -107,6 +110,7 @@ def calculate_rsi(prices, period):
 # FitnessCalculator のテスト
 # =============================================================================
 
+
 class TestFitnessCalculator:
     """フィットネス計算のテスト"""
 
@@ -140,7 +144,9 @@ class TestFitnessCalculator:
         }
 
         fitness = self.calculator.calculate_fitness(backtest_result, ga_config)
-        assert fitness == ga_config.zero_trades_penalty, "取引ゼロの場合はペナルティ値を返すべき"
+        assert (
+            fitness == ga_config.zero_trades_penalty
+        ), "取引ゼロの場合はペナルティ値を返すべき"
 
     def test_calculate_fitness_negative_return(self, ga_config):
         """負のリターンの場合のテスト"""
@@ -156,11 +162,14 @@ class TestFitnessCalculator:
                 "total_trades": 50,
             },
             "equity_curve": [{"drawdown": 0.15} for _ in range(50)],
-            "trade_history": [{"size": 1, "pnl": -10} for _ in range(25)] + [{"size": -1, "pnl": 5} for _ in range(25)],
+            "trade_history": [{"size": 1, "pnl": -10} for _ in range(25)]
+            + [{"size": -1, "pnl": 5} for _ in range(25)],
         }
 
         fitness = self.calculator.calculate_fitness(backtest_result, ga_config)
-        assert fitness == ga_config.constraint_violation_penalty, "負のリターンの場合はペナルティ値を返すべき"
+        assert (
+            fitness == ga_config.constraint_violation_penalty
+        ), "負のリターンの場合はペナルティ値を返すべき"
 
     def test_calculate_fitness_consistency(self, ga_config, mock_backtest_result):
         """フィットネス計算の一貫性テスト"""
@@ -303,6 +312,7 @@ class TestFitnessCalculator:
 # ConditionEvaluator のテスト
 # =============================================================================
 
+
 class TestConditionEvaluator:
     """条件評価器のテスト"""
 
@@ -366,7 +376,9 @@ class TestConditionEvaluator:
     def test_get_condition_value_indicator(self, mock_strategy):
         """インジケーター値取得テスト"""
         value = self.evaluator.get_condition_value("sma_20", mock_strategy)
-        assert isinstance(value, (int, float, np.ndarray, pd.Series)), "値は数値型であるべき"
+        assert isinstance(
+            value, (int, float, np.ndarray, pd.Series)
+        ), "値は数値型であるべき"
 
     def test_get_condition_value_numeric(self, mock_strategy):
         """数値オペランド取得テスト"""
@@ -387,7 +399,9 @@ class TestConditionEvaluator:
         result = self.evaluator.evaluate_single_condition_vectorized(
             condition, mock_strategy
         )
-        assert isinstance(result, (bool, np.ndarray, pd.Series)), "結果はbool、ndarray、またはSeriesであるべき"
+        assert isinstance(
+            result, (bool, np.ndarray, pd.Series)
+        ), "結果はbool、ndarray、またはSeriesであるべき"
 
     def test_calculate_conditions_vectorized_returns_none_for_scalar_only(self):
         """スカラーしかない条件はベクトル化キャッシュしない"""
@@ -419,12 +433,15 @@ class TestConditionEvaluator:
             condition, mock_strategy
         )
 
-        assert isinstance(result, (np.ndarray, pd.Series)), "結果は配列またはSeriesであるべき"
+        assert isinstance(
+            result, (np.ndarray, pd.Series)
+        ), "結果は配列またはSeriesであるべき"
 
 
 # =============================================================================
 # インジケーター計算の正確性テスト
 # =============================================================================
+
 
 class TestIndicatorCalculation:
     """インジケーター計算のテスト"""
@@ -439,7 +456,9 @@ class TestIndicatorCalculation:
         sma = OverlapIndicators.sma(prices, length=3)
 
         # 手計算: SMA[2] = (100 + 102 + 101) / 3 = 101.0
-        assert np.isclose(sma.iloc[2], 101.0, rtol=1e-10), "SMA[2]が手計算値と一致すべき"
+        assert np.isclose(
+            sma.iloc[2], 101.0, rtol=1e-10
+        ), "SMA[2]が手計算値と一致すべき"
 
     def test_ema_calculation_accuracy(self):
         """EMA計算の正確性テスト"""
@@ -461,7 +480,26 @@ class TestIndicatorCalculation:
         )
 
         # 全て上昇
-        prices = pd.Series([100.0, 101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 107.0, 108.0, 109.0, 110.0, 111.0, 112.0, 113.0, 114.0, 115.0])
+        prices = pd.Series(
+            [
+                100.0,
+                101.0,
+                102.0,
+                103.0,
+                104.0,
+                105.0,
+                106.0,
+                107.0,
+                108.0,
+                109.0,
+                110.0,
+                111.0,
+                112.0,
+                113.0,
+                114.0,
+                115.0,
+            ]
+        )
         rsi = MomentumIndicators.rsi(prices, period=14)
 
         valid_rsi = rsi.dropna()
@@ -475,13 +513,17 @@ class TestIndicatorCalculation:
             VolatilityIndicators,
         )
 
-        prices = pd.Series([100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0, 108.0, 107.0, 109.0])
+        prices = pd.Series(
+            [100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0, 108.0, 107.0, 109.0]
+        )
         upper, middle, lower = VolatilityIndicators.bbands(prices, length=5, std=2.0)
 
         # 中間線はSMAと一致すべき
         sma = OverlapIndicators.sma(prices, length=5)
         valid = ~np.isnan(middle)
-        assert np.allclose(middle[valid], sma[valid], rtol=1e-10), "BB中間線はSMAと一致すべき"
+        assert np.allclose(
+            middle[valid], sma[valid], rtol=1e-10
+        ), "BB中間線はSMAと一致すべき"
 
         # upper >= middle >= lower
         assert (upper[valid] >= middle[valid] - 1e-10).all(), "upper >= middle"
@@ -494,13 +536,50 @@ class TestIndicatorCalculation:
         )
 
         # より多くのデータを使用
-        data = pd.DataFrame({
-            "high": [102.0, 104.0, 103.0, 105.0, 107.0, 106.0, 108.0, 110.0, 109.0, 111.0],
-            "low": [99.0, 101.0, 100.0, 102.0, 104.0, 103.0, 105.0, 107.0, 106.0, 108.0],
-            "close": [100.0, 102.0, 101.0, 103.0, 105.0, 104.0, 106.0, 108.0, 107.0, 109.0],
-        })
+        data = pd.DataFrame(
+            {
+                "high": [
+                    102.0,
+                    104.0,
+                    103.0,
+                    105.0,
+                    107.0,
+                    106.0,
+                    108.0,
+                    110.0,
+                    109.0,
+                    111.0,
+                ],
+                "low": [
+                    99.0,
+                    101.0,
+                    100.0,
+                    102.0,
+                    104.0,
+                    103.0,
+                    105.0,
+                    107.0,
+                    106.0,
+                    108.0,
+                ],
+                "close": [
+                    100.0,
+                    102.0,
+                    101.0,
+                    103.0,
+                    105.0,
+                    104.0,
+                    106.0,
+                    108.0,
+                    107.0,
+                    109.0,
+                ],
+            }
+        )
 
-        atr = VolatilityIndicators.atr(data["high"], data["low"], data["close"], length=3)
+        atr = VolatilityIndicators.atr(
+            data["high"], data["low"], data["close"], length=3
+        )
 
         valid_atr = atr.dropna()
         # ATR計算が成功するか確認（データが不足している場合はスキップ）
@@ -509,6 +588,7 @@ class TestIndicatorCalculation:
         else:
             # データが不足している場合は警告を出力してスキップ
             import warnings
+
             warnings.warn("ATR計算に必要なデータが不足しています")
 
     def test_macd_calculation(self):
@@ -519,7 +599,9 @@ class TestIndicatorCalculation:
         )
 
         prices = pd.Series([100.0 + i + np.random.randn() * 2 for i in range(50)])
-        macd_line, signal, histogram = MomentumIndicators.macd(prices, fast=12, slow=26, signal=9)
+        macd_line, signal, histogram = MomentumIndicators.macd(
+            prices, fast=12, slow=26, signal=9
+        )
 
         # MACDラインがEMA12-EMA26と一致するか
         ema12 = OverlapIndicators.ema(prices, length=12)
@@ -529,9 +611,9 @@ class TestIndicatorCalculation:
         valid = ~np.isnan(macd_line)
         for i in range(len(prices)):
             if valid.iloc[i] and not np.isnan(expected_macd.iloc[i]):
-                assert np.isclose(macd_line.iloc[i], expected_macd.iloc[i], rtol=1e-5), (
-                    f"MACD[{i}]がEMA12-EMA26と一致しない"
-                )
+                assert np.isclose(
+                    macd_line.iloc[i], expected_macd.iloc[i], rtol=1e-5
+                ), f"MACD[{i}]がEMA12-EMA26と一致しない"
 
     def test_stochastic_calculation(self):
         """ストキャスティクス計算テスト"""
@@ -539,22 +621,29 @@ class TestIndicatorCalculation:
             MomentumIndicators,
         )
 
-        data = pd.DataFrame({
-            "high": [float(i) for i in range(100, 125)],
-            "low": [float(i) for i in range(99, 124)],
-            "close": [float(i) for i in range(100, 125)],
-        })
+        data = pd.DataFrame(
+            {
+                "high": [float(i) for i in range(100, 125)],
+                "low": [float(i) for i in range(99, 124)],
+                "close": [float(i) for i in range(100, 125)],
+            }
+        )
 
-        k, d = MomentumIndicators.stoch(data["high"], data["low"], data["close"], k=5, d=3, smooth_k=3)
+        k, d = MomentumIndicators.stoch(
+            data["high"], data["low"], data["close"], k=5, d=3, smooth_k=3
+        )
 
         valid_k = k.dropna()
         assert len(valid_k) > 0, "%Kは有効な値を持つべき"
-        assert (valid_k >= 0).all() and (valid_k <= 100).all(), "%Kは0-100の範囲であるべき"
+        assert (valid_k >= 0).all() and (
+            valid_k <= 100
+        ).all(), "%Kは0-100の範囲であるべき"
 
 
 # =============================================================================
 # エッジケーステスト
 # =============================================================================
+
 
 class TestEdgeCases:
     """エッジケースのテスト"""
@@ -579,8 +668,12 @@ class TestEdgeCases:
         }
 
         fitness = calculator.calculate_fitness(backtest_result, ga_config)
-        assert isinstance(fitness, float), "NaNメトリクスでもフィットネスはfloatであるべき"
-        assert not np.isnan(fitness), "NaNメトリクスでもフィットネスはNaNであってはならない"
+        assert isinstance(
+            fitness, float
+        ), "NaNメトリクスでもフィットネスはfloatであるべき"
+        assert not np.isnan(
+            fitness
+        ), "NaNメトリクスでもフィットネスはNaNであってはならない"
 
     def test_fitness_with_infinite_metrics(self, ga_config):
         """無限大メトリクスでのフィットネス計算テスト"""
@@ -602,8 +695,12 @@ class TestEdgeCases:
         }
 
         fitness = calculator.calculate_fitness(backtest_result, ga_config)
-        assert isinstance(fitness, float), "無限大メトリクスでもフィットネスはfloatであるべき"
-        assert not np.isinf(fitness), "無限大メトリクスでもフィットネスは無限大であってはならない"
+        assert isinstance(
+            fitness, float
+        ), "無限大メトリクスでもフィットネスはfloatであるべき"
+        assert not np.isinf(
+            fitness
+        ), "無限大メトリクスでもフィットネスは無限大であってはならない"
 
     def test_condition_with_nan_indicator(self, mock_strategy):
         """NaNインジケーター値での条件評価テスト"""

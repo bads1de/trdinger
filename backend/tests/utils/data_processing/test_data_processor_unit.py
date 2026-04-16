@@ -1,6 +1,7 @@
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
+
 from app.utils.data_processing.data_processor import DataProcessor
 
 

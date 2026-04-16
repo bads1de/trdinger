@@ -68,7 +68,7 @@ class LightGBMModel(BaseGradientBoostingModel):
         タスクタイプとクラス数に基づいて、LightGBM 固有のパラメータセットを生成します。
 
         このメソッドは、以下の自動設定を行います：
-        - `objective`: 
+        - `objective`:
             - "regression" (回帰タスク)
             - "binary" (2クラス分類)
             - "multiclass" (3クラス以上の分類)

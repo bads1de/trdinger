@@ -530,8 +530,8 @@ class TestErrorHandling:
             mock_strategy_integration_service: 戦略統合サービスモック
         """
         # モックの設定
-        mock_strategy_integration_service.get_strategies.side_effect = (
-            Exception("Database error")
+        mock_strategy_integration_service.get_strategies.side_effect = Exception(
+            "Database error"
         )
 
         # APIリクエスト
@@ -562,6 +562,3 @@ class TestErrorHandling:
 
         # アサーション
         assert response.status_code == 422
-
-
-

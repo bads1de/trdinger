@@ -4,15 +4,16 @@ meta_labeling_utils.py のテスト
 app/services/ml/evaluation/meta_labeling_utils.py のテストモジュール
 """
 
-import pytest
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch
+import pytest
 
 from app.services.ml.evaluation.meta_labeling_utils import (
     evaluate_meta_labeling,
-    print_meta_labeling_report,
     find_optimal_threshold,
+    print_meta_labeling_report,
 )
 
 
@@ -69,7 +70,7 @@ class TestEvaluateMetaLabeling:
         y_pred = np.array([1, 1, 0, 1, 0, 1])  # 4/6 = 0.666...
         result = evaluate_meta_labeling(y_true, y_pred)
 
-        assert result["signal_adoption_rate"] == pytest.approx(4/6, rel=1e-6)
+        assert result["signal_adoption_rate"] == pytest.approx(4 / 6, rel=1e-6)
 
     def test_evaluate_meta_labeling_expected_value(self):
         """期待値の計算"""

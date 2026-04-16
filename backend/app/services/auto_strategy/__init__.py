@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .config import GAConfig
     from .genes import StrategyGene
-    from .services.auto_strategy_service import AutoStrategyService
     from .positions.position_sizing_service import PositionSizingService
+    from .services.auto_strategy_service import AutoStrategyService
     from .tpsl import TPSLService
 
 _ATTRIBUTE_EXPORTS = {
@@ -32,4 +32,5 @@ __all__ = [
 ]
 
 from ._lazy_import import setup_lazy_import  # noqa: E402
+
 setup_lazy_import(globals(), _ATTRIBUTE_EXPORTS, __all__)

@@ -5,7 +5,7 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Dict, List, Optional, Generator
+from typing import Any, Dict, Generator, List, Optional
 
 from sqlalchemy.orm import Session
 

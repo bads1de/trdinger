@@ -55,9 +55,7 @@ class ParameterNormalizer:
 
             if value is not None:
                 # min_lengthガードの適用
-                value = self._apply_min_length_guard(
-                    param_name, value, config
-                )
+                value = self._apply_min_length_guard(param_name, value, config)
 
                 normalized[param_name] = value
 

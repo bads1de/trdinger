@@ -11,11 +11,11 @@ from fastapi import HTTPException
 
 from app.api.dependencies import (
     _create_service,
-    get_market_data_orchestration_service,
     get_auto_strategy_service,
     get_generated_strategy_service_with_db,
     get_long_short_ratio_repository,
     get_long_short_ratio_service,
+    get_market_data_orchestration_service,
 )
 
 
@@ -32,10 +32,10 @@ class TestCreateService:
     def test_factory_error_raises_http_exception(self):
         """ファクトリエラー時にHTTPExceptionが発生すること"""
         mock_factory = MagicMock(side_effect=RuntimeError("Connection failed"))
-        
+
         with pytest.raises(HTTPException) as exc_info:
             _create_service(mock_factory, "TestService")
-        
+
         assert exc_info.value.status_code == 503
         assert "TestService" in exc_info.value.detail
 
@@ -49,9 +49,9 @@ class TestGetMarketDataOrchestrationService:
         mock_db = MagicMock()
         mock_service = MagicMock()
         mock_service_cls.return_value = mock_service
-        
+
         result = get_market_data_orchestration_service(mock_db)
-        
+
         assert result is mock_service
         mock_service_cls.assert_called_once_with(mock_db)
 
@@ -64,9 +64,9 @@ class TestGetAutoStrategyService:
         """サービスインスタンスが返されること"""
         mock_service = MagicMock()
         mock_service_cls.return_value = mock_service
-        
+
         result = get_auto_strategy_service()
-        
+
         assert result is mock_service
         mock_service_cls.assert_called_once()
 
@@ -74,10 +74,10 @@ class TestGetAutoStrategyService:
     def test_error_raises_http_exception(self, mock_service_cls):
         """エラー時にHTTPExceptionが発生すること"""
         mock_service_cls.side_effect = RuntimeError("Init failed")
-        
+
         with pytest.raises(HTTPException) as exc_info:
             get_auto_strategy_service()
-        
+
         assert exc_info.value.status_code == 503
 
 
@@ -90,9 +90,9 @@ class TestGetGeneratedStrategyServiceWithDb:
         mock_db = MagicMock()
         mock_service = MagicMock()
         mock_service_cls.return_value = mock_service
-        
+
         result = get_generated_strategy_service_with_db(mock_db)
-        
+
         assert result is mock_service
         mock_service_cls.assert_called_once_with(mock_db)
 
@@ -118,9 +118,9 @@ class TestGetLongShortRatioRepository:
         mock_db = MagicMock()
         mock_repo = MagicMock()
         mock_repo_cls.return_value = mock_repo
-        
+
         result = get_long_short_ratio_repository(mock_db)
-        
+
         assert result is mock_repo
         mock_repo_cls.assert_called_once_with(mock_db)
 
@@ -133,8 +133,8 @@ class TestGetLongShortRatioService:
         """サービスインスタンスが返されること"""
         mock_service = MagicMock()
         mock_service_cls.return_value = mock_service
-        
+
         result = get_long_short_ratio_service()
-        
+
         assert result is mock_service
         mock_service_cls.assert_called_once()

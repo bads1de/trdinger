@@ -71,7 +71,9 @@ class TestWarningFilters:
             # 警告フィルターが設定されていることを確認
             filter_warnings = warnings.filters
             # FutureWarningが無視設定されているか
-            future_warnings = [f for f in filter_warnings if f[0] == "ignore" and f[2] == FutureWarning]
+            future_warnings = [
+                f for f in filter_warnings if f[0] == "ignore" and f[2] == FutureWarning
+            ]
             assert len(future_warnings) > 0
 
     @patch("warnings.filterwarnings")
@@ -106,7 +108,9 @@ class TestUvicornConfiguration:
         import importlib.util
         import sys
 
-        spec = importlib.util.spec_from_file_location("main_test", Path(__file__).parent.parent / "main.py")
+        spec = importlib.util.spec_from_file_location(
+            "main_test", Path(__file__).parent.parent / "main.py"
+        )
         main_module = importlib.util.module_from_spec(spec)
 
         # __name__を'__main__'に設定

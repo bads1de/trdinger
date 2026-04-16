@@ -17,6 +17,7 @@ from app.config.unified_config import (
     MarketConfig,
     UnifiedConfig,
 )
+from app.services.auto_strategy.config import ConfigValidator
 from app.services.auto_strategy.config.constants import (
     DEFAULT_STRATEGIES_LIMIT,
     GA_FALLBACK_END_DATE,
@@ -26,7 +27,6 @@ from app.services.auto_strategy.config.constants import (
 from app.services.auto_strategy.config.ga import GAConfig as GAConfigRuntime
 from app.services.backtest.config import BacktestConfig
 from app.services.ml.common.ml_config import MLConfig, MLPredictionConfig
-from app.services.auto_strategy.config import ConfigValidator
 
 
 class TestUnifiedConfig:
@@ -97,6 +97,7 @@ class TestUnifiedConfig:
         assert config.app.app_version == "2.0.0"
         assert config.database.host == "testhost"
         assert config.database.port == 3306
+
 
 class TestAppConfig:
     """AppConfigクラスのテスト"""
@@ -508,13 +509,17 @@ class TestGAConfigRuntime:
         )
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
-        assert any("二段階選抜エリート数は個体数未満である必要があります" in e for e in errors)
         assert any(
-            "二段階選抜候補数は二段階選抜エリート数以上である必要があります"
-            in e
+            "二段階選抜エリート数は個体数未満である必要があります" in e for e in errors
+        )
+        assert any(
+            "二段階選抜候補数は二段階選抜エリート数以上である必要があります" in e
             for e in errors
         )
-        assert any("二段階選抜 pass rate は0.0-1.0の範囲である必要があります" in e for e in errors)
+        assert any(
+            "二段階選抜 pass rate は0.0-1.0の範囲である必要があります" in e
+            for e in errors
+        )
 
     @pytest.mark.parametrize(
         ("regime_window", "expected_message"),
@@ -537,13 +542,9 @@ class TestGAConfigRuntime:
             ),
         ],
     )
-    def test_validate_robustness_regime_windows(
-        self, regime_window, expected_message
-    ):
+    def test_validate_robustness_regime_windows(self, regime_window, expected_message):
         """robustness の regime window を検証"""
-        config = GAConfigRuntime(
-            robustness_config={"regime_windows": [regime_window]}
-        )
+        config = GAConfigRuntime(robustness_config={"regime_windows": [regime_window]})
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
         assert any(expected_message in e for e in errors)
@@ -561,8 +562,7 @@ class TestGAConfigRuntime:
         is_valid, errors = ConfigValidator.validate(config)
         assert is_valid is False
         assert any(
-            "robustness_config.validation_symbols はリストである必要があります"
-            in e
+            "robustness_config.validation_symbols はリストである必要があります" in e
             for e in errors
         )
         assert any(
@@ -570,8 +570,7 @@ class TestGAConfigRuntime:
             for e in errors
         )
         assert any(
-            "robustness の commission multiplier は正の数値である必要があります"
-            in e
+            "robustness の commission multiplier は正の数値である必要があります" in e
             for e in errors
         )
         assert any(

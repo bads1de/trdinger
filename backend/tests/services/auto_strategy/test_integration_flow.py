@@ -2,8 +2,8 @@ from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
-from app.services.auto_strategy.genes.validator import GeneValidator
 from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.auto_strategy.genes.validator import GeneValidator
 
 
 class TestAutoStrategyFlow:

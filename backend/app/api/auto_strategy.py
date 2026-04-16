@@ -80,17 +80,20 @@ class GAResultResponse(BaseModel):
 
 class StopExperimentResponse(BaseModel):
     """実験停止レスポンス"""
+
     success: bool
     message: str
 
 
 class ListExperimentsResponse(BaseModel):
     """実験一覧レスポンス"""
+
     experiments: List[Dict[str, Any]]
 
 
 class ExperimentDetailResponse(BaseModel):
     """実験詳細レスポンス"""
+
     id: Optional[int] = None
     experiment_id: Optional[str] = None
     name: Optional[str] = None

@@ -9,6 +9,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from app.services.auto_strategy.config.ga.nested_configs import (
+    EvaluationConfig,
+    HybridConfig,
+)
 from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.core.engine.ga_engine_factory import (
     GeneticAlgorithmEngineFactory,
@@ -23,10 +27,6 @@ from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )
 from app.services.backtest.services.backtest_service import BacktestService
-from app.services.auto_strategy.config.ga.nested_configs import (
-    EvaluationConfig,
-    HybridConfig,
-)
 
 
 class TestGeneticAlgorithmEngine:
@@ -137,8 +137,8 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """random_state があれば seed の注入順が deterministic に並び替わる"""
-        from app.services.auto_strategy.genes import StrategyGene
         from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.genes import StrategyGene
 
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
@@ -177,8 +177,8 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """random_state がない場合は実行時の shuffle を使う"""
-        from app.services.auto_strategy.genes import StrategyGene
         from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.genes import StrategyGene
 
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,

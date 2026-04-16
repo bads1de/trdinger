@@ -1,10 +1,12 @@
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import MagicMock
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from app.services.ml.models.catboost import CatBoostModel
 from app.services.ml.models.lightgbm import LightGBMModel
 from app.services.ml.models.xgboost import XGBoostModel
-from app.services.ml.models.catboost import CatBoostModel
 
 
 class TestGradientBoostingModels:
@@ -93,6 +95,3 @@ class TestGradientBoostingModels:
         preds = model.predict(X)
         assert preds.shape == (10,)
         assert np.allclose(preds, mock_preds)
-
-
-

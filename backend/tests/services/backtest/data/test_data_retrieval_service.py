@@ -1,9 +1,11 @@
-from unittest.mock import MagicMock
 from datetime import datetime
+from unittest.mock import MagicMock
+
 import pytest
+
 from app.services.backtest.data.data_retrieval_service import (
-    DataRetrievalService,
     DataRetrievalError,
+    DataRetrievalService,
 )
 
 

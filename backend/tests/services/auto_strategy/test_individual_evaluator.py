@@ -3,6 +3,7 @@ IndividualEvaluatorのテスト
 """
 
 from unittest.mock import Mock, patch
+
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
@@ -13,7 +14,7 @@ from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
 from app.services.auto_strategy.core.evaluation.individual_evaluator import (
     IndividualEvaluator,
 )
-from app.services.auto_strategy.genes import StrategyGene, IndicatorGene, Condition
+from app.services.auto_strategy.genes import Condition, IndicatorGene, StrategyGene
 from app.services.backtest.execution.backtest_executor import (
     BacktestEarlyTerminationError,
 )

@@ -4,10 +4,11 @@ LabelGenerationService のユニットテスト（メタラベリング対応）
 SignalGenerator を使ってイベントに基づいたラベリングをテストします。
 """
 
-import pandas as pd
-import numpy as np
-import pytest
 from unittest.mock import patch
+
+import numpy as np
+import pandas as pd
+import pytest
 
 from app.services.ml.common.config import ml_config_manager
 from app.services.ml.label_generation.label_generation_service import (
@@ -280,12 +281,16 @@ class TestTrendScanningIntegration:
         df["feature_1"] = df["close"].pct_change().fillna(0)
         return df[["feature_1"]]
 
-    def test_trend_scanning_integration(self, trend_sample_features, trend_sample_ohlcv):
+    def test_trend_scanning_integration(
+        self, trend_sample_features, trend_sample_ohlcv
+    ):
         service = LabelGenerationService()
 
         original_config = ml_config_manager.config.model_copy(deep=True)
         try:
-            ml_config_manager.config.training.label_generation.threshold_method = "TREND_SCANNING"
+            ml_config_manager.config.training.label_generation.threshold_method = (
+                "TREND_SCANNING"
+            )
             ml_config_manager.config.training.label_generation.horizon_n = 20
             ml_config_manager.config.training.label_generation.threshold = 2.0
             ml_config_manager.config.training.label_generation.timeframe = "1h"

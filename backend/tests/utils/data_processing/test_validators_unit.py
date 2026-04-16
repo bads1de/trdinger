@@ -1,9 +1,10 @@
-import pytest
 import pandas as pd
+import pytest
+
 from app.utils.data_processing.data_validator import (
-    validate_ohlcv_data,
-    validate_extended_data,
     validate_data_integrity,
+    validate_extended_data,
+    validate_ohlcv_data,
 )
 from app.utils.data_processing.record_validator import RecordValidator
 

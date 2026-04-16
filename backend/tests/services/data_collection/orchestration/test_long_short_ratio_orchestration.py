@@ -61,10 +61,13 @@ def sample_lsr_data() -> List[MagicMock]:
 # サービス初期化
 # ---------------------------------------------------------------------------
 
+
 class TestServiceInitialization:
     """サービス初期化テスト"""
 
-    def test_service_creation(self, orchestration_service: LongShortRatioOrchestrationService):
+    def test_service_creation(
+        self, orchestration_service: LongShortRatioOrchestrationService
+    ):
         assert orchestration_service is not None
         assert isinstance(orchestration_service, LongShortRatioOrchestrationService)
         assert orchestration_service.bybit_service is not None
@@ -73,6 +76,7 @@ class TestServiceInitialization:
 # ---------------------------------------------------------------------------
 # get_long_short_ratio_data
 # ---------------------------------------------------------------------------
+
 
 class TestGetLongShortRatioData:
     """データ取得テスト"""
@@ -161,6 +165,7 @@ class TestGetLongShortRatioData:
 # ---------------------------------------------------------------------------
 # collect_long_short_ratio_data
 # ---------------------------------------------------------------------------
+
 
 class TestCollectLongShortRatioData:
     """データ収集テスト"""
@@ -290,6 +295,7 @@ class TestCollectLongShortRatioData:
 # ---------------------------------------------------------------------------
 # collect_bulk_long_short_ratio_data
 # ---------------------------------------------------------------------------
+
 
 class TestCollectBulkLongShortRatioData:
     """一括データ収集テスト"""

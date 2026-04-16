@@ -6,8 +6,8 @@
 
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import logging
 import threading
 from typing import (
@@ -21,8 +21,6 @@ import pandas as pd
 from cachetools import LRUCache
 from pydantic import ValidationError
 
-from app.types import SerializableValue
-
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.config.helpers import (
     normalize_robustness_regime_windows,
@@ -34,14 +32,15 @@ from app.services.backtest.execution.backtest_executor import (
     BacktestEarlyTerminationError,
 )
 from app.services.backtest.services.backtest_service import BacktestService
+from app.types import SerializableValue
 
 from ..fitness.fitness_calculator import FitnessCalculator
+from .backtest_data_provider import BacktestDataProvider
+from .evaluation_fidelity import adjust_backtest_config_for_fidelity, is_coarse_fidelity
 from .evaluation_metrics import (
     calculate_trade_frequency_penalty,
     calculate_ulcer_index,
 )
-from .backtest_data_provider import BacktestDataProvider
-from .evaluation_fidelity import adjust_backtest_config_for_fidelity, is_coarse_fidelity
 from .evaluation_report import EvaluationReport, ScenarioEvaluation, _safe_copy_metadata
 from .evaluation_strategies import EvaluationStrategy
 from .evaluation_window_service import EvaluationWindowService

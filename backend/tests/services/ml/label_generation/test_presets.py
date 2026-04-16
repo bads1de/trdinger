@@ -1,10 +1,11 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.label_generation.presets import (
-    triple_barrier_method_preset,
-    trend_scanning_preset,
     apply_preset_by_name,
+    trend_scanning_preset,
+    triple_barrier_method_preset,
 )
 
 

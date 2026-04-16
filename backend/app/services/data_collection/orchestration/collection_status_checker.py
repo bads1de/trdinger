@@ -51,10 +51,13 @@ class CollectionStatusChecker:
             データ収集状況
         """
         if data_validator:
-            normalized_symbol = data_validator.validate_symbol_and_timeframe(symbol, timeframe)
+            normalized_symbol = data_validator.validate_symbol_and_timeframe(
+                symbol, timeframe
+            )
         else:
             # デフォルトのバリデーション（テスト用）
             from app.config.unified_config import unified_config
+
             normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
             if normalized_symbol not in unified_config.market.supported_symbols:
                 raise ValueError(f"サポートされていないシンボル: {symbol}")
@@ -71,7 +74,11 @@ class CollectionStatusChecker:
             if auto_fetch and background_tasks and historical_orchestrator:
                 # 自動フェッチを開始
                 await historical_orchestrator.start_historical_data_collection(
-                    normalized_symbol, timeframe, background_tasks, db, data_validator=data_validator
+                    normalized_symbol,
+                    timeframe,
+                    background_tasks,
+                    db,
+                    data_validator=data_validator,
                 )
                 logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
 

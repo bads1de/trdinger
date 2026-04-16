@@ -1,7 +1,9 @@
-import pytest
-import pandas as pd
-import numpy as np
 from unittest.mock import MagicMock, patch
+
+import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.trainers.base_ml_trainer import BaseMLTrainer
 
 
@@ -87,9 +89,7 @@ class TestBaseMLTrainer:
                     assert "qlike" in result
                     assert result["model_path"] == "/path/to/model"
 
-    def test_train_model_coerces_invalid_gate_quantile(
-        self, trainer, sample_data
-    ):
+    def test_train_model_coerces_invalid_gate_quantile(self, trainer, sample_data):
         """gate_quantile が壊れていても既定値へフォールバックする"""
         with patch.object(
             trainer.feature_service,
@@ -151,9 +151,7 @@ class TestBaseMLTrainer:
             assert result["forecast_log_rv"] == 0.7
             assert result["gate_open"] is True
 
-    def test_predict_volatility_coerces_invalid_gate_cutoff(
-        self, trainer, sample_data
-    ):
+    def test_predict_volatility_coerces_invalid_gate_cutoff(self, trainer, sample_data):
         """gate_cutoff_log_rv が壊れていても予測を返せる"""
         trainer.is_trained = True
         trainer.feature_columns = ["feat1", "feat2"]
@@ -228,7 +226,9 @@ class TestBaseMLTrainer:
             assert trainer.is_trained is True
             assert trainer.feature_columns == ["f1", "f2"]
 
-    def test_load_model_rejects_incompatible_metadata_without_mutating_state(self, trainer):
+    def test_load_model_rejects_incompatible_metadata_without_mutating_state(
+        self, trainer
+    ):
         """互換性のないモデルは拒否し、内部状態を汚さない"""
         trainer._model = None
         trainer.feature_columns = None
@@ -447,7 +447,9 @@ class TestBaseMLTrainer:
         y_te = y.iloc[120:].copy()
 
         with patch.object(trainer, "_calculate_features", return_value=X_all):
-            with patch.object(trainer, "_prepare_training_data", return_value=(X_all, y)):
+            with patch.object(
+                trainer, "_prepare_training_data", return_value=(X_all, y)
+            ):
                 with patch.object(
                     trainer,
                     "_split_data",

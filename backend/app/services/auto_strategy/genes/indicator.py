@@ -252,7 +252,11 @@ def _enhance_with_ma_cross(
             while period in existing_periods and len(existing_periods) < 5:
                 period = random.choice([10, 14, 20, 30, 50])
 
-            indicators.append(IndicatorGene(type=chosen, parameters={"period": period}, id=str(uuid.uuid4())))
+            indicators.append(
+                IndicatorGene(
+                    type=chosen, parameters={"period": period}, id=str(uuid.uuid4())
+                )
+            )
             if len(indicators) > getattr(config, "max_indicators", 5):
                 for i, ind in enumerate(indicators):
                     if ind.type not in MOVING_AVERAGE_INDICATORS:

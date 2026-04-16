@@ -69,7 +69,7 @@ class OverlapIndicators:
         # エッジケース: length=1でデータが1件の場合は、そのまま返す
         if length == 1 and len(data) == 1:
             return data.copy()
-        
+
         return cast(
             pd.Series,
             run_series_indicator(data, length, lambda: ta.sma(data, length=length)),

@@ -6,12 +6,11 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Optional, Sequence, Tuple
 
-import logging
 import pandas as pd
-
 
 from app.utils.datetime_utils import current_datetime_like as _current_datetime_like
 from app.utils.datetime_utils import (

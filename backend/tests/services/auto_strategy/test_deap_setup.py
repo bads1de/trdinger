@@ -4,8 +4,8 @@ DEAP環境初期化のテストモジュール
 DEAPSetupクラスの機能をテストする。
 """
 
-from unittest.mock import Mock, patch, call
 from types import SimpleNamespace
+from unittest.mock import Mock, call, patch
 
 import pytest
 from deap import base
@@ -61,7 +61,8 @@ class TestDEAPSetup:
         assert deap_setup.Individual is None
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_creates_fitness_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -83,7 +84,8 @@ class TestDEAPSetup:
         )
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_creates_individual_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -116,7 +118,8 @@ class TestDEAPSetup:
         )
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_registers_toolbox_functions(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -141,7 +144,8 @@ class TestDEAPSetup:
         assert hasattr(toolbox, "select")
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_registers_nsga2_for_any_objective_count(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -171,7 +175,8 @@ class TestDEAPSetup:
                 assert select_call[0][1] == mock_tools.selNSGA2
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_mutate_wrapper(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -195,7 +200,8 @@ class TestDEAPSetup:
         mock_functions["mutate"].assert_called_once_with(individual, mutation_rate=0.2)
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_get_toolbox(self, mock_creator, deap_setup, mock_config, mock_functions):
         """ツールボックスの取得テスト"""
@@ -211,7 +217,8 @@ class TestDEAPSetup:
         assert toolbox is not None
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_get_individual_class(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -227,10 +234,13 @@ class TestDEAPSetup:
 
         individual_class = deap_setup.get_individual_class()
         assert individual_class is not None
-        assert individual_class == getattr(mock_creator, deap_setup.individual_class_name)
+        assert individual_class == getattr(
+            mock_creator, deap_setup.individual_class_name
+        )
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_generates_unique_class_names(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -265,7 +275,8 @@ class TestDEAPSetup:
         assert getattr(mock_creator, first_individual_name) is first_individual_class
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_error_handling(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -284,7 +295,8 @@ class TestDEAPSetup:
             )
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_rejects_objective_weight_length_mismatch(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -303,7 +315,8 @@ class TestDEAPSetup:
             )
 
     @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator", new_callable=MockCreator
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
     )
     def test_setup_deap_normalizes_minimize_objective_weights(
         self, mock_creator, deap_setup, mock_config, mock_functions
@@ -333,6 +346,3 @@ class TestDEAPSetup:
         """セットアップ前の個体クラス取得テスト"""
         individual_class = deap_setup.get_individual_class()
         assert individual_class is None
-
-
-

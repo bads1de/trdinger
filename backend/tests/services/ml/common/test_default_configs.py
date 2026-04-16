@@ -18,7 +18,7 @@ class TestDefaultConfigs:
         assert isinstance(config, dict)
         assert config["enabled"] is True
         assert config["method"] == "stacking"
-        
+
         p = config["stacking_params"]
         assert "lightgbm" in p["base_models"]
         assert "xgboost" in p["base_models"]
@@ -39,7 +39,3 @@ class TestDefaultConfigs:
         c2 = get_default_ensemble_config()
         c1["enabled"] = False
         assert c2["enabled"] is True
-
-
-
-

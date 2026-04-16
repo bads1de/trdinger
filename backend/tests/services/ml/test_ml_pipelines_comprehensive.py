@@ -10,11 +10,11 @@ import pytest
 from sklearn.pipeline import Pipeline
 
 from app.services.ml.preprocessing.pipeline import (
-    create_ml_pipeline,
     create_classification_pipeline,
+    create_ml_pipeline,
     create_regression_pipeline,
-    optimize_ml_pipeline,
     get_ml_pipeline_info,
+    optimize_ml_pipeline,
 )
 
 
@@ -166,9 +166,7 @@ class TestMLPipelinesComprehensive:
 
     def test_invalid_classification_selection_method_error(self):
         """無効な分類特徴量選択方法のテスト"""
-        with pytest.raises(
-            ValueError, match="サポートされていない選択方法"
-        ):
+        with pytest.raises(ValueError, match="サポートされていない選択方法"):
             create_classification_pipeline(
                 feature_selection=True, n_features=2, selection_method="invalid_method"
             )
@@ -198,7 +196,9 @@ class TestMLPipelinesComprehensive:
         X = sample_data[["feature1", "feature2", "feature3"]]
         y = sample_data["target"]
 
-        pipeline = optimize_ml_pipeline(X, y, task_type="classification", max_features=4)
+        pipeline = optimize_ml_pipeline(
+            X, y, task_type="classification", max_features=4
+        )
 
         selector = dict(pipeline.steps)["feature_selection"]
         assert selector.k == 4
@@ -533,7 +533,3 @@ class TestMLPipelinesComprehensive:
         assert create_regression_pipeline.__doc__ is not None
         assert optimize_ml_pipeline.__doc__ is not None
         assert get_ml_pipeline_info.__doc__ is not None
-
-
-
-

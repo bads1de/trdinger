@@ -1,7 +1,7 @@
-import pytest
-import pandas as pd
-import numpy as np
 import lightgbm as lgb
+import numpy as np
+import pandas as pd
+import pytest
 from sklearn.metrics import accuracy_score, precision_score
 
 
@@ -139,7 +139,3 @@ class TestModelCapacity:
         assert (
             prec > 0.8
         ), "Balanced設定でも明確なパターンならPrecisionは維持されるべきです"
-
-
-
-

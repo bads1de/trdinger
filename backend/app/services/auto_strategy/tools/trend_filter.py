@@ -73,11 +73,15 @@ class TrendFilter(BaseTool):
 
         if random.random() < 0.3:
             new_params["min_adx"] = max(
-                10.0, min(50.0, new_params.get("min_adx", 25.0) * random.uniform(0.8, 1.2))
+                10.0,
+                min(50.0, new_params.get("min_adx", 25.0) * random.uniform(0.8, 1.2)),
             )
         if random.random() < 0.2:
             new_params["adx_period"] = max(
-                7, min(30, int(new_params.get("adx_period", 14) * random.uniform(0.8, 1.2)))
+                7,
+                min(
+                    30, int(new_params.get("adx_period", 14) * random.uniform(0.8, 1.2))
+                ),
             )
 
         return new_params

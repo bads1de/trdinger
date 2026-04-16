@@ -170,7 +170,9 @@ class StrategyParameterSpace:
 
                 if config and param_name in config.parameters:
                     param_cfg = config.parameters[param_name]
-                    if param_type == "integer" and getattr(param_cfg, "even_only", False):
+                    if param_type == "integer" and getattr(
+                        param_cfg, "even_only", False
+                    ):
                         step = 2
                         # 最小値が奇数なら偶数に調整
                         if low % 2 != 0:

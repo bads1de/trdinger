@@ -1,12 +1,12 @@
+from unittest.mock import MagicMock, mock_open, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import MagicMock, patch, mock_open
-
 import pytest
-
-from app.services.ml.ensemble.stacking import StackingEnsemble
-from app.services.ml.cross_validation.purged_kfold import PurgedKFold
 from sklearn.model_selection import KFold, StratifiedKFold
+
+from app.services.ml.cross_validation.purged_kfold import PurgedKFold
+from app.services.ml.ensemble.stacking import StackingEnsemble
 
 
 class TestStackingEnsemble:
@@ -42,7 +42,9 @@ class TestStackingEnsemble:
             mock_m.predict.return_value = np.zeros(len(X) // 2)
             mock_create.return_value = mock_m
 
-            with patch("app.services.ml.ensemble.stacking.cross_val_predict") as mock_cvp:
+            with patch(
+                "app.services.ml.ensemble.stacking.cross_val_predict"
+            ) as mock_cvp:
                 # OOF予測として 0.5 の配列を返す（回帰タスク）
                 mock_cvp.return_value = np.full(len(X), 0.5)
 
@@ -128,7 +130,7 @@ class TestStackingEnsemble:
         """新形式モデル読み込み (完全モック)"""
         ensemble = StackingEnsemble(config)
         base_path = "/mock/model"
-        
+
         model_data = {
             "model": {
                 "fitted_base_models": {"lgb": MagicMock()},
@@ -148,13 +150,15 @@ class TestStackingEnsemble:
 
         # 内部で使われる glob, os.path, joblib をグローバルにパッチ
         # 関数内での import joblib に対応するため
-        with patch("joblib.load", return_value=model_data), \
-             patch("glob.glob", return_value=["/mock/model.pkl"]), \
-             patch("os.path.exists", return_value=True), \
-             patch("os.path.abspath", return_value="/mock/model.pkl"), \
-             patch("os.path.getmtime", return_value=123.4), \
-             patch("builtins.open", mock_open(read_data='{}')):
-            
+        with (
+            patch("joblib.load", return_value=model_data),
+            patch("glob.glob", return_value=["/mock/model.pkl"]),
+            patch("os.path.exists", return_value=True),
+            patch("os.path.abspath", return_value="/mock/model.pkl"),
+            patch("os.path.getmtime", return_value=123.4),
+            patch("builtins.open", mock_open(read_data="{}")),
+        ):
+
             success = ensemble.load_models(base_path)
             assert success is True
             assert ensemble.is_fitted is True
@@ -186,8 +190,9 @@ class TestStackingEnsemble:
         ensemble = StackingEnsemble(config)
         ensemble.is_fitted = True
 
-        with patch.object(ensemble, "predict"), patch.object(
-            ensemble, "_evaluate_predictions", return_value={"mse": 0.05}
+        with (
+            patch.object(ensemble, "predict"),
+            patch.object(ensemble, "_evaluate_predictions", return_value={"mse": 0.05}),
         ):
             res = ensemble._evaluate_ensemble(X, y)
             assert res["mse"] == 0.05
@@ -258,7 +263,9 @@ class TestStackingEnsemble:
             mock_m.predict.return_value = np.zeros(len(X) // 2)
             mock_create.return_value = mock_m
 
-            with patch("app.services.ml.ensemble.stacking.cross_val_predict") as mock_cvp:
+            with patch(
+                "app.services.ml.ensemble.stacking.cross_val_predict"
+            ) as mock_cvp:
                 mock_cvp.return_value = np.full(len(X), 0.5)
                 result = ensemble.fit(X, y, X_test=X, y_test=y)
                 assert ensemble.is_fitted is True

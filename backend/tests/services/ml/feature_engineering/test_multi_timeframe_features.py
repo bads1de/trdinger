@@ -85,8 +85,13 @@ class TestCalculateFeatures:
     def test_insufficient_data_returns_empty(self, calculator):
         """200行未満では空DataFrameを返す"""
         short_data = pd.DataFrame(
-            {"open": [1] * 100, "high": [1] * 100, "low": [1] * 100,
-             "close": [1] * 100, "volume": [1] * 100},
+            {
+                "open": [1] * 100,
+                "high": [1] * 100,
+                "low": [1] * 100,
+                "close": [1] * 100,
+                "volume": [1] * 100,
+            },
             index=pd.date_range("2024-01-01", periods=100, freq="h"),
         )
         result = calculator.calculate_features(short_data)

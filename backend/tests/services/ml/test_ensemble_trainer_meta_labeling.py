@@ -4,16 +4,17 @@
 StackingEnsembleとMetaLabelingServiceの連携を検証します。
 """
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import MagicMock, patch
 
 from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
-from app.services.ml.ensemble.stacking import (
-    StackingEnsemble,
-)  # StackingEnsembleを明示的にインポート
 from app.services.ml.ensemble.meta_labeling import MetaLabelingService
+from app.services.ml.ensemble.stacking import (  # StackingEnsembleを明示的にインポート
+    StackingEnsemble,
+)
 
 
 @pytest.fixture
@@ -200,7 +201,3 @@ class TestEnsembleTrainerErrorHandling:
 
         assert len(result) == len(X)
         assert np.all(result == 0)  # 全てNo Trade
-
-
-
-

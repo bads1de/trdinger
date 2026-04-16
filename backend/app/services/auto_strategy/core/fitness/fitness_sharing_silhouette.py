@@ -11,6 +11,7 @@ from sklearn.metrics import silhouette_samples
 
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
+
 from .fitness_utils import has_valid_fitness
 
 logger = logging.getLogger(__name__)

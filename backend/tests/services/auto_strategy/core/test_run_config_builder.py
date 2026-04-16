@@ -1,10 +1,10 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 from app.services.auto_strategy.core.evaluation.run_config_builder import (
     RunConfigBuilder,
 )
-from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 
 
 class TestRunConfigBuilder:
@@ -32,7 +32,9 @@ class TestRunConfigBuilder:
         assert result["_skip_validation"] is True
         assert result["strategy_name"] == "GA_Individual_gene-123"
         assert result["strategy_config"]["parameters"]["strategy_gene"] is gene
-        assert result["strategy_config"]["parameters"]["volatility_gate_enabled"] is True
+        assert (
+            result["strategy_config"]["parameters"]["volatility_gate_enabled"] is True
+        )
         assert (
             result["strategy_config"]["parameters"]["volatility_model_path"]
             == "/tmp/model.pkl"

@@ -162,7 +162,7 @@ class VolumeIndicators:
     @handle_pandas_ta_errors
     def obv(close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
         """オンバランスボリューム
-        
+
         ゼロボリュームのバーではOBVは変化させない（前の値を維持）。
         NaNにすると累積計算が壊れるため、ゼロはそのまま渡す。
         """

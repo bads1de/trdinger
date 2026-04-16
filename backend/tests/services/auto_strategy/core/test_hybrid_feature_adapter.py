@@ -2,16 +2,17 @@
 HybridFeatureAdapter Tests
 """
 
+from unittest.mock import Mock
+
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import Mock
 
 from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
     HybridFeatureAdapter,
 )
-from app.services.ml.common.exceptions import MLFeatureError
 from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.ml.common.exceptions import MLFeatureError
 
 
 class TestHybridFeatureAdapter:

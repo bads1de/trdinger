@@ -2,11 +2,9 @@
 feature_selection.strategy_registry のテスト
 """
 
-from app.services.ml.feature_selection.config import FeatureSelectionConfig, SelectionMethod
-from app.services.ml.feature_selection.strategy_registry import (
-    build_selection_strategy_map,
-    build_staged_strategy_map,
-    default_staged_methods,
+from app.services.ml.feature_selection.config import (
+    FeatureSelectionConfig,
+    SelectionMethod,
 )
 from app.services.ml.feature_selection.strategies import (
     RFECVStrategy,
@@ -14,6 +12,11 @@ from app.services.ml.feature_selection.strategies import (
     TreeBasedStrategy,
     UnivariateStrategy,
     VarianceStrategy,
+)
+from app.services.ml.feature_selection.strategy_registry import (
+    build_selection_strategy_map,
+    build_staged_strategy_map,
+    default_staged_methods,
 )
 
 

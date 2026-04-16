@@ -10,8 +10,12 @@ import pytest
 
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
-from app.services.auto_strategy.core.evaluation.evaluation_report import ScenarioEvaluation
-from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.evaluation.evaluation_report import (
+    ScenarioEvaluation,
+)
+from app.services.auto_strategy.core.evaluation.individual_evaluator import (
+    IndividualEvaluator,
+)
 
 
 class TestWalkForwardAnalysis:
@@ -169,7 +173,9 @@ class TestWalkForwardAnalysis:
         """WFA が OOS スコアを平均化するテスト"""
         # 各フォールドで異なるスコアを返す
         scores = [
-            ScenarioEvaluation(name=f"fold_{idx}", fitness=(score,), passed=True, metadata={})
+            ScenarioEvaluation(
+                name=f"fold_{idx}", fitness=(score,), passed=True, metadata={}
+            )
             for idx, score in enumerate([0.3, 0.5, 0.7, 0.4, 0.6])
         ]
         mock_perform_eval.side_effect = scores

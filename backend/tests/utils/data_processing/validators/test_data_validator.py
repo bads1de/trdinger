@@ -37,7 +37,7 @@ def test_validate_ohlcv_data():
             "volume": [1000, 1200, 1100],
         }
     )
-    
+
     result = validate_ohlcv_data(valid_data)
     assert result
     print("[PASS] Valid OHLCV data test passed")
@@ -88,7 +88,7 @@ def test_validate_extended_data():
             "open_interest": [1000, 1200, 1100, 1300],
         }
     )
-    
+
     result = validate_extended_data(valid_extended)
     assert result
     print("[PASS] Valid extended data test passed")
@@ -105,7 +105,7 @@ def test_validate_extended_data():
 
     # Test no extended columns
     no_extended = pd.DataFrame({"price": [100, 105, 103]})
-    
+
     result = validate_extended_data(no_extended)
     assert result
     print("[PASS] No extended columns test passed")
@@ -122,7 +122,7 @@ def test_validate_data_integrity():
             "price": [100, 105, 103],
         }
     )
-    
+
     result = validate_data_integrity(valid_integrity)
     assert result
     print("[PASS] Valid timestamp data test passed")
@@ -144,7 +144,7 @@ def test_validate_data_integrity():
 
     # Test no timestamp column
     no_timestamp = pd.DataFrame({"price": [100, 105, 103]})
-    
+
     result = validate_data_integrity(no_timestamp)
     assert result
     print("[PASS] No timestamp column test passed")
@@ -162,6 +162,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"[ERROR] Tests failed: {e}")
         sys.exit(1)
-
-
-

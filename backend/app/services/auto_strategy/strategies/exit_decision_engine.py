@@ -73,18 +73,14 @@ class ExitDecisionEngine:
         else:
             return self._execute_full_exit(direction)
 
-    def _get_exit_conditions(
-        self, direction: float
-    ) -> list:
+    def _get_exit_conditions(self, direction: float) -> list:
         """方向に応じたイグジット条件リストを取得。"""
         if direction > 0:
             return getattr(self.strategy.gene, "long_exit_conditions", [])
         else:
             return getattr(self.strategy.gene, "short_exit_conditions", [])
 
-    def _evaluate_exit_conditions(
-        self, conditions: list
-    ) -> bool:
+    def _evaluate_exit_conditions(self, conditions: list) -> bool:
         """
         イグジット条件を評価する。
 
@@ -148,9 +144,7 @@ class ExitDecisionEngine:
             logger.debug("キャッシュ済みExitシグナルの取得に失敗しました: %s", e)
             return None
 
-    def _evaluate_condition_group(
-        self, group: ConditionGroup, evaluator
-    ) -> bool:
+    def _evaluate_condition_group(self, group: ConditionGroup, evaluator) -> bool:
         """ConditionGroupを再帰的に評価。"""
         if not group.conditions:
             return False

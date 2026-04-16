@@ -2,15 +2,16 @@
 AdaptiveCalculator のテスト (修正版)
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from app.services.auto_strategy.config.constants import TPSLMethod
+from app.services.auto_strategy.genes import TPSLResult
+from app.services.auto_strategy.genes.tpsl import TPSLGene
 from app.services.auto_strategy.tpsl.calculator.adaptive_calculator import (
     AdaptiveCalculator,
 )
-from app.services.auto_strategy.genes.tpsl import TPSLGene
-from app.services.auto_strategy.config.constants import TPSLMethod
-from app.services.auto_strategy.genes import TPSLResult
 
 
 class TestAdaptiveCalculator:

@@ -81,7 +81,9 @@ class ExperimentApplicationService:
                 task_scheduler,
             )
         except Exception as e:
-            logger.warning(f"実験開始中にエラーが発生しました (experiment_id={experiment_id}): {e}")
+            logger.warning(
+                f"実験開始中にエラーが発生しました (experiment_id={experiment_id}): {e}"
+            )
             if self.experiment_manager:
                 self.experiment_manager.release_experiment(experiment_id)
             self.persistence_service.fail_experiment(experiment_id)

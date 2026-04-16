@@ -1,6 +1,7 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.feature_engineering.price_features import (
     PriceFeatureCalculator,
 )
@@ -114,7 +115,3 @@ def test_calculate_features_integration(sample_ohlcv_data):
 
     for feature in expected_features:
         assert feature in result.columns, f"Missing feature: {feature}"
-
-
-
-

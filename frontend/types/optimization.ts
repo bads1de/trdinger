@@ -124,17 +124,7 @@ export interface GAConfig {
     /** 動的重み付け（レジーム適応） */
     dynamic_objective_reweighting?: boolean;
 
-    // TPSL設定
-    /** TPSL手法の制約リスト */
-    tpsl_method_constraints?: string[];
-    /** SL範囲 [min, max] */
-    tpsl_sl_range?: number[];
-    /** TP範囲 [min, max] */
-    tpsl_tp_range?: number[];
-    /** リスクリワード比範囲 [min, max] */
-    tpsl_rr_range?: number[];
-    /** ATR倍率範囲 [min, max] */
-    tpsl_atr_multiplier_range?: number[];
+
 
     /** 評価設定 */
     evaluation_config?: GAEvaluationConfig;

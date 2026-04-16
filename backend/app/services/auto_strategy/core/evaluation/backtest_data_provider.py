@@ -5,8 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Optional, Any, cast
-
+from typing import Any, Dict, Optional, cast
 
 import pandas as pd
 
@@ -48,7 +47,9 @@ class BacktestDataProvider:
         if parsed_range is None:
             return None
 
-        return cast(pd.Timestamp, pd.Timestamp(parsed_range[0])), cast(pd.Timestamp, pd.Timestamp(parsed_range[1]))
+        return cast(pd.Timestamp, pd.Timestamp(parsed_range[0])), cast(
+            pd.Timestamp, pd.Timestamp(parsed_range[1])
+        )
 
     @staticmethod
     def _extract_worker_data(

@@ -2,13 +2,14 @@
 Volatility Calculator Tests
 """
 
-import pytest
 from unittest.mock import Mock
 
+import pytest
+
+from app.services.auto_strategy.genes import TPSLGene
 from app.services.auto_strategy.tpsl.calculator.volatility_calculator import (
     VolatilityCalculator,
 )
-from app.services.auto_strategy.genes import TPSLGene
 
 
 class TestVolatilityCalculator:
@@ -107,7 +108,3 @@ class TestVolatilityCalculator:
 
         assert result.expected_performance.get("fallback") is True
         assert result.confidence_score == 0.5
-
-
-
-

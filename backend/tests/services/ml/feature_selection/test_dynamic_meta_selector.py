@@ -44,6 +44,7 @@ def sample_data() -> tuple:
 # 初期化
 # ---------------------------------------------------------------------------
 
+
 class TestInit:
     def test_default_values(self):
         sel = DynamicMetaSelector()
@@ -68,6 +69,7 @@ class TestInit:
 # _get_dynamic_k
 # ---------------------------------------------------------------------------
 
+
 class TestGetDynamicK:
     def test_small_sample(self):
         sel = DynamicMetaSelector(min_features=5)
@@ -89,6 +91,7 @@ class TestGetDynamicK:
 # _cluster_features
 # ---------------------------------------------------------------------------
 
+
 class TestClusterFeatures:
     def test_clusters_returned(self, sample_data):
         X, _ = sample_data
@@ -106,6 +109,7 @@ class TestClusterFeatures:
 # ---------------------------------------------------------------------------
 # fit / transform
 # ---------------------------------------------------------------------------
+
 
 class TestFitTransform:
     def test_fit_returns_self(self, sample_data):

@@ -88,11 +88,11 @@ class TestCalculatorFactoryCreateCalculator:
 
     def test_all_calculators_inherit_from_base(self):
         """全ての計算機がBaseCalculatorを継承"""
-        from app.services.auto_strategy.positions.calculators.calculator_factory import (
-            CalculatorFactory,
-        )
         from app.services.auto_strategy.positions.calculators.base_calculator import (
             BaseCalculator,
+        )
+        from app.services.auto_strategy.positions.calculators.calculator_factory import (
+            CalculatorFactory,
         )
 
         methods = [
@@ -194,7 +194,3 @@ class TestCalculatorFactoryIntegration:
         # インスタンスなしで呼び出せることを確認
         methods = CalculatorFactory.get_available_methods()
         assert methods is not None
-
-
-
-

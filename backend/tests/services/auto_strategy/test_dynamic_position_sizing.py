@@ -77,13 +77,13 @@ class TestDynamicPositionSizing:
             current_price=200.0,
             market_data=market_data,
         )
-            
+
         details = result["details"]
         var_ratio = details.get("var_ratio")
         expected_cap_size = (10000.0 * gene.max_var_ratio) / (
             max(var_ratio, 1e-12) * 200.0
         )
-        
+
         # ES制限の確認
         es_ratio = details.get("es_ratio")
         expected_shortfall_cap = (10000.0 * gene.max_expected_shortfall_ratio) / (
@@ -208,7 +208,7 @@ class TestDynamicPositionSizing:
             current_price=200.0,
             market_data=market_data,
         )
-    
+
         details = result["details"]
         es_ratio = details.get("es_ratio")
         var_ratio = details.get("var_ratio")
@@ -216,7 +216,7 @@ class TestDynamicPositionSizing:
             max(es_ratio, 1e-12) * 200.0
         )
         expected_size = min(es_cap, gene.max_position_size)
-    
+
         assert math.isclose(result["position_size"], expected_size, rel_tol=1e-6)
         assert any("期待ショートフォール制限" in w for w in result["warnings"])
 
@@ -239,9 +239,9 @@ class TestDynamicPositionSizing:
             current_price=100.0,
             market_data=market_data,
         )
-    
+
         details = result["details"]
-    
+
         assert details.get("return_sample_size") == 0
         assert details.get("var_ratio") == 0
         assert details.get("es_ratio") == 0
@@ -267,12 +267,15 @@ class TestDynamicPositionSizing:
             current_price=100.0,
             market_data=market_data,
         )
-    
+
         details = result["details"]
         tail_returns = returns[-3:]
-        from app.services.auto_strategy.positions.risk_metrics import calculate_historical_var
+        from app.services.auto_strategy.positions.risk_metrics import (
+            calculate_historical_var,
+        )
+
         expected_var = calculate_historical_var(tail_returns, gene.var_confidence)
-    
+
         assert details.get("return_sample_size") == 3
         assert math.isclose(details.get("var_ratio"), expected_var, rel_tol=1e-6)
 

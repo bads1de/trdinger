@@ -361,9 +361,7 @@ class RandomGeneGenerator:
             short_entry_conditions, "short", indicators
         )
         long_exit_conditions, short_exit_conditions, _ = (
-            self.smart_condition_generator.generate_exit_conditions(
-                indicators
-            )
+            self.smart_condition_generator.generate_exit_conditions(indicators)
         )
 
         # リスク管理設定（従来方式）

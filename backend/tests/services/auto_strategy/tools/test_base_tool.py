@@ -4,9 +4,10 @@ BaseTool のユニットテスト
 mutate_params のデフォルト実装（enabled 反転）をテストします。
 """
 
-import pytest
-from unittest.mock import patch
 from typing import Any, Dict
+from unittest.mock import patch
+
+import pytest
 
 from app.services.auto_strategy.tools.base import (
     BaseTool,
@@ -128,8 +129,10 @@ class TestSubclassMutateParams:
 
     def test_both_mutations_applied(self, tool):
         """enabled と固有パラメータの両方が変異"""
-        with patch("random.random", side_effect=[0.1, 0.1]), \
-             patch("random.randint", return_value=3):
+        with (
+            patch("random.random", side_effect=[0.1, 0.1]),
+            patch("random.randint", return_value=3),
+        ):
             params = {"enabled": True, "window_minutes": 15}
             result = tool.mutate_params(params)
             assert result["enabled"] is False

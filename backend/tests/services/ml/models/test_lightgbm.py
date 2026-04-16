@@ -1,8 +1,10 @@
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+
 from app.services.ml.models.lightgbm import LightGBMModel
 from app.utils.error_handler import ModelError
+
 
 class TestLightGBMModel:
     @pytest.fixture

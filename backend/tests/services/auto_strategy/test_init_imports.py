@@ -6,10 +6,10 @@ import pytest
 
 from app.services.auto_strategy import (
     AutoStrategyService,
-    StrategyGene,
     GAConfig,
-    TPSLService,
     PositionSizingService,
+    StrategyGene,
+    TPSLService,
 )
 
 
@@ -39,6 +39,6 @@ class TestAutoStrategyImports:
     def test_invalid_attribute_raises_error(self):
         """無効な属性でAttributeErrorが発生すること"""
         import app.services.auto_strategy as auto_strategy
-        
+
         with pytest.raises(AttributeError):
             _ = auto_strategy.InvalidAttribute

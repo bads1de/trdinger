@@ -64,7 +64,7 @@ class TestOOFDataLeakValidation:
 
         # In-Fold予測（全データで学習したモデルで全データを予測）
         in_fold_predictions = stacking.predict_proba(X)
-        
+
         # 3クラス分類の場合、in_fold_predictionsは(n_samples, n_classes)の形状
         # 2クラス分類の場合は(n_samples,)または(n_samples, 2)の形状
         if in_fold_predictions.ndim == 1:
@@ -205,7 +205,7 @@ class TestOOFDataLeakValidation:
 
         # OOF予測が確率かクラスラベルかを確認
         unique_values = np.unique(oof_predictions)
-        
+
         # クラスラベルの場合（整数値のみ）
         if all(v == int(v) for v in unique_values):
             # クラスラベルとして検証
@@ -281,8 +281,9 @@ class TestOOFPredictionQuality:
 
         過学習していない（In-Foldより性能が低い）ことを確認
         """
-        from app.services.ml.ensemble.stacking import StackingEnsemble
         from sklearn.metrics import roc_auc_score
+
+        from app.services.ml.ensemble.stacking import StackingEnsemble
 
         X, y = realistic_data
         y = y.astype(int)
@@ -317,7 +318,7 @@ class TestOOFPredictionQuality:
             print(
                 f"In-fold shape: {getattr(in_fold_proba, 'shape', 'unknown')}, type: {type(in_fold_proba)}"
             )
-            
+
             # in_fold_probaの形状に応じて適切なカラムを選択
             if in_fold_proba.ndim == 1:
                 in_fold_for_auc = in_fold_proba
@@ -325,7 +326,7 @@ class TestOOFPredictionQuality:
                 in_fold_for_auc = in_fold_proba[:, 1]
             else:
                 in_fold_for_auc = in_fold_proba[:, 0]
-            
+
             oof_auc = roc_auc_score(y_binary, oof_predictions)
             in_fold_auc = roc_auc_score(y_binary, in_fold_for_auc)
 

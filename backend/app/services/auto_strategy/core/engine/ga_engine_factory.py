@@ -91,7 +91,7 @@ class GeneticAlgorithmEngineFactory:
             ga_config (GAConfig): ハイブリッド設定（使用モデル、アンサンブル構成等）を含む設定。
 
         Returns:
-            tuple[HybridPredictor, HybridFeatureAdapter]: 
+            tuple[HybridPredictor, HybridFeatureAdapter]:
                 (構成済みの予測器, 特徴量エンジニアリング用アダプター) のタプル。
         """
         from ..hybrid.hybrid_feature_adapter import HybridFeatureAdapter

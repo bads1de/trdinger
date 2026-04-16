@@ -5,7 +5,6 @@ from datetime import datetime
 
 from database.models import BacktestResult, GeneratedStrategy
 
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "..", ".."))
 sys.path.insert(0, backend_dir)

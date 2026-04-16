@@ -320,8 +320,10 @@ class TestOriginalIndicators:
 
         with pytest.raises(ValueError, match="resonance_bands"):
             harmonic_resonance(
-                sample_df["close"], sample_df["high"], sample_df["low"],
-                resonance_bands=2
+                sample_df["close"],
+                sample_df["high"],
+                sample_df["low"],
+                resonance_bands=2,
             )
 
     # Chaos Fractal Dimension テスト
@@ -332,8 +334,7 @@ class TestOriginalIndicators:
         )
 
         ctf, signal = chaos_fractal_dimension(
-            sample_df["close"], sample_df["high"], sample_df["low"],
-            sample_df["volume"]
+            sample_df["close"], sample_df["high"], sample_df["low"], sample_df["volume"]
         )
         assert isinstance(ctf, pd.Series)
         assert isinstance(signal, pd.Series)
@@ -348,8 +349,11 @@ class TestOriginalIndicators:
 
         with pytest.raises(ValueError, match="length must be >= 15"):
             chaos_fractal_dimension(
-                sample_df["close"], sample_df["high"], sample_df["low"],
-                sample_df["volume"], length=10
+                sample_df["close"],
+                sample_df["high"],
+                sample_df["low"],
+                sample_df["volume"],
+                length=10,
             )
 
     def test_chaos_fractal_dimension_invalid_embedding(self, sample_df):
@@ -360,8 +364,11 @@ class TestOriginalIndicators:
 
         with pytest.raises(ValueError, match="embedding_dim"):
             chaos_fractal_dimension(
-                sample_df["close"], sample_df["high"], sample_df["low"],
-                sample_df["volume"], embedding_dim=1
+                sample_df["close"],
+                sample_df["high"],
+                sample_df["low"],
+                sample_df["volume"],
+                embedding_dim=1,
             )
 
     def test_calculate_wrappers_are_not_exposed(self):
@@ -377,7 +384,9 @@ class TestOriginalIndicators:
             connors_rsi,
         )
 
-        result = connors_rsi(sample_data, rsi_periods=3, streak_periods=2, rank_periods=10)
+        result = connors_rsi(
+            sample_data, rsi_periods=3, streak_periods=2, rank_periods=10
+        )
         assert isinstance(result, pd.Series)
         assert len(result) == len(sample_data)
         valid = result.dropna()
@@ -598,7 +607,9 @@ class TestOriginalIndicators:
                 "close": [100, 101, 102, 103, 104, 105],
             }
         )
-        result = OriginalIndicators.ttf(data["high"], data["low"], data["close"], length=5)
+        result = OriginalIndicators.ttf(
+            data["high"], data["low"], data["close"], length=5
+        )
         assert isinstance(result, pd.Series)
         assert len(result) == len(data)
         assert result.isna().all()

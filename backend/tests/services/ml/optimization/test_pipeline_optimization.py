@@ -5,14 +5,17 @@ optimize_full_pipeline メソッドのユニットテスト。
 CASH（Combined Algorithm Selection and Hyperparameter optimization）の動作確認。
 """
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pandas as pd
 import pytest
-from unittest.mock import patch, MagicMock
 
-from app.services.ml.optimization.optimization_service import OptimizationService
-from app.services.ml.optimization.optimization_service import OptimizationSettings
 from app.services.ml.ensemble.ensemble_trainer import EnsembleTrainer
+from app.services.ml.optimization.optimization_service import (
+    OptimizationService,
+    OptimizationSettings,
+)
 
 
 class TestOptimizeFullPipeline:

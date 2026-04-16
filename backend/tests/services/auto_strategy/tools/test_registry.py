@@ -75,7 +75,9 @@ class TestToolRegistry:
         tool1 = build_tool("dup_registry_tool")
         tool2 = build_tool("dup_registry_tool")
 
-        with patch("app.services.auto_strategy.tools.registry.logger.warning") as warning_mock:
+        with patch(
+            "app.services.auto_strategy.tools.registry.logger.warning"
+        ) as warning_mock:
             registry.register(tool1)
             registry.register(tool2)
 

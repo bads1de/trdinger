@@ -6,10 +6,13 @@ ProcessPoolExecutorのタイムアウト処理を検証します。
 """
 
 from unittest.mock import Mock, patch
+
 import pytest
 from cachetools import LRUCache
 
-from app.services.auto_strategy.core.evaluation.individual_evaluator import IndividualEvaluator
+from app.services.auto_strategy.core.evaluation.individual_evaluator import (
+    IndividualEvaluator,
+)
 from app.services.auto_strategy.core.evaluation.parallel_evaluator import (
     ParallelEvaluator,
 )
@@ -100,23 +103,23 @@ class TestLRUCacheEviction:
     def test_pickle_state_excludes_caches(self, mock_backtest_service):
         """Pickle化時にキャッシュが除外されること"""
         evaluator = IndividualEvaluator(mock_backtest_service)
-        
+
         # キャッシュにデータを入れる
         evaluator._data_cache["key"] = "value"
         evaluator._result_cache["key"] = "value"
-        
+
         # 状態取得
         state = evaluator.__getstate__()
-        
+
         # キャッシュが含まれていないことを確認
         assert "_data_cache" not in state
         assert "_result_cache" not in state
         assert "_lock" not in state
-        
+
         # 復元
         evaluator_restored = IndividualEvaluator(mock_backtest_service)
         evaluator_restored.__setstate__(state)
-        
+
         # キャッシュが再生成され、空であることを確認
         assert hasattr(evaluator_restored, "_data_cache")
         assert isinstance(evaluator_restored._data_cache, LRUCache)

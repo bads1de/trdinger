@@ -5,8 +5,8 @@ Feature Selection Strategies Base クラスのテスト
 import numpy as np
 import pytest
 
-from app.services.ml.feature_selection.strategies.base import BaseSelectionStrategy
 from app.services.ml.feature_selection.config import FeatureSelectionConfig
+from app.services.ml.feature_selection.strategies.base import BaseSelectionStrategy
 
 
 class ConcreteSelectionStrategy(BaseSelectionStrategy):
