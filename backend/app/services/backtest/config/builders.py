@@ -8,6 +8,11 @@ from typing import Any, Dict, Optional
 _MISSING = object()
 
 
+def _is_scalar_config_value(value: object) -> bool:
+    """設定値として扱いやすいスカラー値かを判定する。"""
+    return isinstance(value, (int, float, str))
+
+
 def _copy_config_source(source: Any) -> Dict[str, Any]:
     """
     設定ソースを辞書にコピーする
@@ -150,7 +155,7 @@ def build_execution_config(
             - strategy_name, strategy_config
             - symbol, timeframe, start_date, end_date
             - initial_capital, commission_rate
-            - slippage, leverage
+            - spread, slippage, leverage
     """
     working = _copy_config_source(source)
     if defaults:
@@ -195,19 +200,53 @@ def build_execution_config(
         if value is not _MISSING and value is not None:
             working[key] = value
 
-    slippage_default = (
-        defaults.get("slippage", default_slippage) if defaults else default_slippage
+    spread_default = (
+        defaults.get(
+            "spread",
+            defaults.get("slippage", default_slippage),
+        )
+        if defaults
+        else default_slippage
     )
     leverage_default = (
         defaults.get("leverage", default_leverage) if defaults else default_leverage
     )
 
-    if "slippage" not in working or working["slippage"] is None:
+    spread_value = working.get("spread", _MISSING)
+    if (
+        spread_value is _MISSING
+        or spread_value is None
+        or not _is_scalar_config_value(spread_value)
+    ):
+        spread_value = _get_optional_value(source, "spread")
+
+    slippage_value = working.get("slippage", _MISSING)
+    if (
+        slippage_value is _MISSING
+        or slippage_value is None
+        or not _is_scalar_config_value(slippage_value)
+    ):
         slippage_value = _get_optional_value(source, "slippage")
-        if slippage_value is _MISSING or slippage_value is None:
-            slippage_value = slippage_default
-        if slippage_value is not _MISSING and slippage_value is not None:
-            working["slippage"] = slippage_value
+
+    if spread_value is not _MISSING and not _is_scalar_config_value(spread_value):
+        spread_value = _MISSING
+    if slippage_value is not _MISSING and not _is_scalar_config_value(slippage_value):
+        slippage_value = _MISSING
+
+    if spread_value is _MISSING or spread_value is None:
+        spread_value = slippage_value
+    if slippage_value is _MISSING or slippage_value is None:
+        slippage_value = spread_value
+
+    if spread_value is _MISSING or spread_value is None:
+        spread_value = spread_default
+    if slippage_value is _MISSING or slippage_value is None:
+        slippage_value = spread_value
+
+    if spread_value is not _MISSING and spread_value is not None:
+        working["spread"] = spread_value
+    if slippage_value is not _MISSING and slippage_value is not None:
+        working["slippage"] = slippage_value
 
     if "leverage" not in working or working["leverage"] is None:
         leverage_value = _get_optional_value(source, "leverage")

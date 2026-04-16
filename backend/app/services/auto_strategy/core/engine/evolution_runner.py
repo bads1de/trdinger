@@ -703,10 +703,119 @@ class EvolutionRunner:
             ranked_candidates.append((rank_key, candidate))
 
         ranked_candidates.sort(key=lambda item: item[0], reverse=True)
+        ranked_candidates = self._diversify_reranked_elites(
+            ranked_candidates,
+            elite_count,
+        )
         return [
             (candidate, rank_key)
             for rank_key, candidate in ranked_candidates[:elite_count]
         ]
+
+    def _diversify_reranked_elites(
+        self,
+        ranked_candidates: List[tuple[tuple[float, ...], Any]],
+        elite_count: int,
+    ) -> List[tuple[tuple[float, ...], Any]]:
+        """behavior ベースでエリート候補を greedy に散らす。"""
+        if elite_count <= 1 or not ranked_candidates or self.fitness_sharing is None:
+            return ranked_candidates
+
+        build_vectors = getattr(
+            self.fitness_sharing,
+            "build_population_feature_vectors",
+            None,
+        )
+        if not callable(build_vectors):
+            return ranked_candidates
+
+        try:
+            candidate_vectors = build_vectors(
+                [candidate for _, candidate in ranked_candidates]
+            )
+        except Exception as exc:
+            logger.debug("behavior diversity 用ベクトル取得に失敗しました: %s", exc)
+            return ranked_candidates
+
+        if len(candidate_vectors) < 2:
+            return ranked_candidates
+
+        distance_threshold = self._get_behavior_distance_threshold(candidate_vectors)
+        if distance_threshold <= 0.0:
+            return ranked_candidates
+
+        diversified: List[tuple[tuple[float, ...], Any]] = []
+        remaining = list(ranked_candidates)
+
+        while remaining and len(diversified) < elite_count:
+            chosen_index = 0
+            if diversified:
+                for index, (_, candidate) in enumerate(remaining):
+                    if self._is_behaviorally_distinct(
+                        candidate,
+                        diversified,
+                        candidate_vectors,
+                        distance_threshold,
+                    ):
+                        chosen_index = index
+                        break
+            diversified.append(remaining.pop(chosen_index))
+
+        diversified.extend(remaining)
+        return diversified
+
+    def _get_behavior_distance_threshold(
+        self,
+        candidate_vectors: dict[int, np.ndarray],
+    ) -> float:
+        """selection で使う behavior 距離の閾値を返す。"""
+        if not candidate_vectors or self.fitness_sharing is None:
+            return 0.0
+
+        try:
+            sharing_radius = float(getattr(self.fitness_sharing, "sharing_radius", 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+        if sharing_radius <= 0.0:
+            return 0.0
+
+        first_vector = next(iter(candidate_vectors.values()), None)
+        if first_vector is None:
+            return 0.0
+        return sharing_radius * float(np.sqrt(len(first_vector)))
+
+    @staticmethod
+    def _is_behaviorally_distinct(
+        candidate: Any,
+        selected: List[tuple[tuple[float, ...], Any]],
+        candidate_vectors: dict[int, np.ndarray],
+        distance_threshold: float,
+    ) -> bool:
+        """既に選ばれた個体群から十分離れているか判定する。"""
+        candidate_vector = candidate_vectors.get(id(candidate))
+        if candidate_vector is None:
+            return True
+
+        min_distance: Optional[float] = None
+        candidate_vector_array = np.asarray(candidate_vector, dtype=float)
+        for _, selected_candidate in selected:
+            selected_vector = candidate_vectors.get(id(selected_candidate))
+            if selected_vector is None:
+                continue
+            distance = float(
+                np.linalg.norm(
+                    candidate_vector_array - np.asarray(selected_vector, dtype=float)
+                )
+            )
+            min_distance = distance if min_distance is None else min(
+                min_distance,
+                distance,
+            )
+
+        if min_distance is None:
+            return True
+        return min_distance >= distance_threshold
 
     def _resolve_evaluation_report(
         self,

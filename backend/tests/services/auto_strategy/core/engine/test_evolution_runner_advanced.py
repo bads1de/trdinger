@@ -493,6 +493,69 @@ class TestEvolutionRunnerAdvanced:
         assert len(selected) == 2
         assert selected == [robust_candidate, robust_candidate]
 
+    def test_two_stage_selection_prefers_behaviorally_distinct_elites(
+        self, mock_toolbox, mock_stats
+    ):
+        """behavior ベクトルが近い候補を避けてエリートを散らすこと"""
+        leader_a = MagicMock()
+        leader_a.id = "leader-a"
+        leader_a.fitness = MagicMock(valid=True, values=(0.95,))
+
+        leader_b = MagicMock()
+        leader_b.id = "leader-b"
+        leader_b.fitness = MagicMock(valid=True, values=(0.94,))
+
+        diverse_candidate = MagicMock()
+        diverse_candidate.id = "diverse-candidate"
+        diverse_candidate.fitness = MagicMock(valid=True, values=(0.93,))
+
+        mock_toolbox.select.return_value = [leader_a, leader_b]
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_cached_evaluation_report.side_effect = (
+            lambda individual: EvaluationReport.single(
+                mode="single",
+                objectives=["weighted_score"],
+                scenario=ScenarioEvaluation(
+                    name="full",
+                    fitness=individual.fitness.values,
+                    passed=True,
+                ),
+            )
+        )
+        mock_fitness_sharing = MagicMock()
+        mock_fitness_sharing.sharing_radius = 0.1
+        mock_fitness_sharing.build_population_feature_vectors.return_value = {
+            id(leader_a): [0.0, 0.0],
+            id(leader_b): [0.01, 0.0],
+            id(diverse_candidate): [1.0, 1.0],
+        }
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=mock_stats,
+            fitness_sharing=mock_fitness_sharing,
+            individual_evaluator=mock_evaluator,
+        )
+        config = SimpleNamespace(
+            elite_size=2,
+            two_stage_selection_config=SimpleNamespace(
+                enabled=True,
+                elite_count=2,
+                candidate_pool_size=3,
+                min_pass_rate=0.0,
+            ),
+        )
+
+        selected = runner._apply_two_stage_selection(
+            [leader_a, leader_b, diverse_candidate],
+            population_size=2,
+            config=config,
+        )
+
+        assert selected == [leader_a, diverse_candidate]
+        assert get_two_stage_rank(leader_a) == 0
+        assert get_two_stage_rank(diverse_candidate) == 1
+
 
 class TestEvolutionRunnerWithParallelEvaluator:
     """並列評価器付き進化エンジンのテスト"""

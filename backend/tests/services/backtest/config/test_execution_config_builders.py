@@ -33,6 +33,7 @@ class TestExecutionConfigBuilders:
             "parameters": {"strategy_gene": {"id": "gene-1"}},
         }
         assert result["_skip_validation"] is True
+        assert result["spread"] == 0.0
         assert result["slippage"] == 0.0
         assert result["leverage"] == 1.0
 
@@ -60,8 +61,30 @@ class TestExecutionConfigBuilders:
             "strategy_type": "MANUAL",
             "parameters": {"x": 1},
         }
+        assert result["spread"] == 0.0002
         assert result["slippage"] == 0.0002
         assert result["leverage"] == 2.0
+
+    def test_build_execution_config_accepts_explicit_spread_key(self):
+        source = {
+            "strategy_name": "SpreadStrategy",
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-02",
+            "initial_capital": 10000,
+            "commission_rate": 0.001,
+            "spread": 0.0004,
+            "strategy_config": {
+                "strategy_type": "MANUAL",
+                "parameters": {},
+            },
+        }
+
+        result = build_execution_config(source)
+
+        assert result["spread"] == 0.0004
+        assert result["slippage"] == 0.0004
 
     def test_ensure_backtest_defaults_fills_missing_values_without_mutating_input(self):
         source = {"symbol": "BTC/USDT:USDT", "start_date": None}

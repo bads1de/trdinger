@@ -166,6 +166,24 @@ class EvaluationStrategy:
         end_date = pd.Timestamp(parsed_range[1])
         return cast(pd.Timestamp, start_date), cast(pd.Timestamp, end_date)
 
+    @staticmethod
+    def _get_execution_spread(backtest_config: Dict[str, Any]) -> float:
+        """spread/slippage 互換キーから execution spread を取得する。"""
+        if "spread" in backtest_config and backtest_config.get("spread") is not None:
+            return float(backtest_config.get("spread", 0.0) or 0.0)
+        return float(backtest_config.get("slippage", 0.0) or 0.0)
+
+    @classmethod
+    def _set_execution_spread(
+        cls,
+        backtest_config: Dict[str, Any],
+        spread: float,
+    ) -> None:
+        """spread/slippage の両キーへ同じ値を書き戻す。"""
+        normalized_spread = float(spread)
+        backtest_config["spread"] = normalized_spread
+        backtest_config["slippage"] = normalized_spread
+
     def _build_robustness_scenarios(
         self,
         base_backtest_config: Dict[str, Any],
@@ -185,7 +203,7 @@ class EvaluationStrategy:
             scenario_key = (
                 str(scenario_config.get("symbol")),
                 float(scenario_config.get("commission_rate", 0.0) or 0.0),
-                float(scenario_config.get("slippage", 0.0) or 0.0),
+                self._get_execution_spread(scenario_config),
                 str(scenario_config.get("start_date")),
                 str(scenario_config.get("end_date")),
             )
@@ -196,10 +214,11 @@ class EvaluationStrategy:
             order += 1
 
         base_symbol = str(base_backtest_config.get("symbol", "") or "")
-        base_slippage = float(base_backtest_config.get("slippage", 0.0) or 0.0)
+        base_spread = self._get_execution_spread(base_backtest_config)
         base_commission = float(base_backtest_config.get("commission_rate", 0.0) or 0.0)
         base_start_date = str(base_backtest_config.get("start_date", "") or "")
         base_end_date = str(base_backtest_config.get("end_date", "") or "")
+        self._set_execution_spread(base_backtest_config, base_spread)
 
         add_scenario(
             "base",
@@ -207,7 +226,8 @@ class EvaluationStrategy:
             {
                 "scenario_kind": "base",
                 "symbol": base_symbol,
-                "slippage": base_slippage,
+                "spread": base_spread,
+                "slippage": base_spread,
                 "commission_rate": base_commission,
                 "start_date": base_start_date,
                 "end_date": base_end_date,
@@ -226,7 +246,8 @@ class EvaluationStrategy:
                 {
                     "scenario_kind": "symbol",
                     "symbol": symbol_str,
-                    "slippage": base_slippage,
+                    "spread": base_spread,
+                    "slippage": base_spread,
                     "commission_rate": base_commission,
                     "start_date": base_start_date,
                     "end_date": base_end_date,
@@ -246,7 +267,8 @@ class EvaluationStrategy:
                     "scenario_kind": "regime",
                     "regime_name": regime_window.name,
                     "symbol": base_symbol,
-                    "slippage": base_slippage,
+                    "spread": base_spread,
+                    "slippage": base_spread,
                     "commission_rate": base_commission,
                     "start_date": regime_window.start_date,
                     "end_date": regime_window.end_date,
@@ -255,15 +277,16 @@ class EvaluationStrategy:
 
         for slippage_delta in getattr(config.robustness_config, "stress_slippage", []) or []:
             scenario_config = base_backtest_config.copy()
-            stressed_slippage = base_slippage + float(slippage_delta)
-            scenario_config["slippage"] = stressed_slippage
+            stressed_spread = base_spread + float(slippage_delta)
+            self._set_execution_spread(scenario_config, stressed_spread)
             add_scenario(
-                f"slippage_{round(stressed_slippage, 10)}",
+                f"slippage_{round(stressed_spread, 10)}",
                 scenario_config,
                 {
                     "scenario_kind": "slippage",
                     "symbol": base_symbol,
-                    "slippage": stressed_slippage,
+                    "spread": stressed_spread,
+                    "slippage": stressed_spread,
                     "commission_rate": base_commission,
                     "start_date": base_start_date,
                     "end_date": base_end_date,
@@ -283,7 +306,8 @@ class EvaluationStrategy:
                 {
                     "scenario_kind": "commission",
                     "symbol": base_symbol,
-                    "slippage": base_slippage,
+                    "spread": base_spread,
+                    "slippage": base_spread,
                     "commission_rate": stressed_commission,
                     "commission_multiplier": multiplier_value,
                     "start_date": base_start_date,

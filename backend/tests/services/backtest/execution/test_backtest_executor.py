@@ -90,6 +90,7 @@ class TestBacktestExecutor:
             assert "Close" in df_passed.columns
             assert kwargs["cash"] == 10000
             assert kwargs["commission"] == 0.0
+            assert kwargs["spread"] == 0.0
             assert kwargs["margin"] == 1.0
 
     def test_create_backtest_instance_preserves_non_ohlcv_columns(self, executor):

@@ -62,6 +62,12 @@ class BacktestOrchestrator:
         """
         try:
             working_config = copy.deepcopy(config)
+            spread_value = working_config.get("spread")
+            slippage_value = working_config.get("slippage")
+            if spread_value is None and slippage_value is not None:
+                working_config["spread"] = slippage_value
+            elif slippage_value is None and spread_value is not None:
+                working_config["slippage"] = spread_value
 
             # 高速化フラグの確認
             skip_validation = working_config.pop("_skip_validation", False)
@@ -116,7 +122,7 @@ class BacktestOrchestrator:
                 end_date=backtest_config.end_date,
                 initial_capital=backtest_config.initial_capital,
                 commission_rate=backtest_config.commission_rate,
-                slippage=backtest_config.slippage,
+                slippage=backtest_config.spread,
                 leverage=backtest_config.leverage,
                 preloaded_data=preloaded_data,
             )
@@ -125,6 +131,7 @@ class BacktestOrchestrator:
             config_json = {
                 "strategy_config": strategy_config_dict,
                 "commission_rate": backtest_config.commission_rate,
+                "spread": backtest_config.spread,
                 "slippage": backtest_config.slippage,
                 "leverage": backtest_config.leverage,
             }

@@ -85,7 +85,8 @@ class BacktestExecutor:
             end_date (datetime): 検証終了日時。
             initial_capital (float): 初期証拠金。
             commission_rate (float): 手数料率（0.0006 = 0.06%）。
-            slippage (float): スリッページ率（0.0001 = 0.01%）。簡易的に手数料に加算されます。
+            slippage (float): 約定コスト率（0.0001 = 0.01%）。backtesting.py の
+                `spread` パラメータへ渡され、commission とは分離して扱われます。
             leverage (float): レバレッジ倍率。1.0より大きい場合、マージン率に換算して適用されます。
             preloaded_data (Optional[pd.DataFrame]): 外部でロード済みのOHLCVデータ。提供された場合はDBアクセスをスキップします。
 
@@ -178,8 +179,8 @@ class BacktestExecutor:
             # backtesting.py が期待する OHLCV 列だけを正規化する。
             data = normalize_ohlcv_columns(data, ensure_volume=True)
 
-            # スリッページを簡易的に手数料に加算（backtesting.pyの標準機能でサポートが薄いため）
-            effective_commission = commission_rate + slippage
+            effective_commission = float(commission_rate)
+            effective_spread = max(0.0, float(slippage))
 
             # レバレッジからマージン率を計算（例: レバレッジ10倍 -> マージン0.1）
             # 0除算防止のためmax(1.0, ...)を使用
@@ -190,6 +191,7 @@ class BacktestExecutor:
                 strategy_class,
                 cash=initial_capital,
                 commission=effective_commission,
+                spread=effective_spread,
                 exclusive_orders=False,  # 複数ポジション許可（制約緩和）
                 trade_on_close=False,  # 現在価格で取引（制約緩和）
                 hedging=True,  # ヘッジング有効化（制約緩和）

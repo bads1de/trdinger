@@ -371,7 +371,8 @@ class TestBacktestInstanceCreation:
             # FractionalBacktestが適切なパラメータで呼ばれたことを確認
             call_kwargs = mock_bt_class.call_args[1]
             assert call_kwargs["cash"] == 50000.0
-            assert call_kwargs["commission"] == 0.0021
+            assert call_kwargs["commission"] == 0.002
+            assert call_kwargs["spread"] == 0.0001
             assert call_kwargs["exclusive_orders"] is False
             assert call_kwargs["trade_on_close"] is False
             assert call_kwargs["hedging"] is True

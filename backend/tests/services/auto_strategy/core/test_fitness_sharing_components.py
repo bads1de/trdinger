@@ -137,6 +137,47 @@ class TestFitnessSharingComponents:
         assert profile["mean_total_return"] == pytest.approx(0.09)
         assert profile["mean_total_trades"] == pytest.approx(14.0)
 
+    def test_build_population_feature_vectors_returns_normalized_vectors(self) -> None:
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+        sharing.set_evaluation_report_provider(
+            lambda individual: (
+                {"pass_rate": 0.2}
+                if individual.id == "gene1"
+                else {"pass_rate": 0.8}
+            )
+        )
+
+        population = [
+            StrategyGene(
+                id="gene1",
+                indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            ),
+            StrategyGene(
+                id="gene2",
+                indicators=[IndicatorGene(type="EMA", parameters={"period": 30})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            ),
+        ]
+
+        vectors = sharing.build_population_feature_vectors(population)
+
+        assert set(vectors) == {id(population[0]), id(population[1])}
+        assert vectors[id(population[0])].shape == vectors[id(population[1])].shape
+        assert not np.array_equal(vectors[id(population[0])], vectors[id(population[1])])
+        assert np.all(vectors[id(population[0])] >= 0.0)
+        assert np.all(vectors[id(population[0])] <= 1.0)
+
     def test_compute_niche_counts_sampling_preserves_global_rng_state(self) -> None:
         np.random.seed(123)
         vectors = np.random.rand(12, 4)

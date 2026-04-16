@@ -128,18 +128,10 @@ class FitnessSharing:
 
             def resolve_vector(gene: StrategyGene) -> np.ndarray:
                 behavior_profile = behavior_profiles.get(id(gene))
-                cache_key = self._get_feature_vector_cache_key(
+                return self._resolve_feature_vector(
                     gene,
                     behavior_profile=behavior_profile,
                 )
-                vector = self._feature_vector_cache.get(cache_key)
-                if vector is None:
-                    vector = self._vectorize_gene(
-                        gene,
-                        behavior_profile=behavior_profile,
-                    )
-                    self._feature_vector_cache[cache_key] = vector
-                return vector
 
             vectors, valid_indices = _collect_gene_vectors(
                 population,
@@ -283,6 +275,71 @@ class FitnessSharing:
             except Exception as e:
                 logger.debug("behavior profile 構築に失敗しました: %s", e)
         return profiles
+
+    def _resolve_feature_vector(
+        self,
+        gene: StrategyGene,
+        behavior_profile: Optional[Mapping[str, float]] = None,
+    ) -> np.ndarray:
+        """gene と behavior profile から特徴ベクトルを取得する。"""
+        cache_key = self._get_feature_vector_cache_key(
+            gene,
+            behavior_profile=behavior_profile,
+        )
+        vector = self._feature_vector_cache.get(cache_key)
+        if vector is None:
+            vector = self._vectorize_gene(
+                gene,
+                behavior_profile=behavior_profile,
+            )
+            self._feature_vector_cache[cache_key] = vector
+        return vector
+
+    def build_population_feature_vectors(
+        self,
+        population: Sequence[Any],
+    ) -> dict[int, np.ndarray]:
+        """個体群を selection 用の正規化ベクトルへ変換する。"""
+        if not population:
+            return {}
+
+        behavior_profiles = self._build_behavior_profile_map(list(population))
+        raw_vectors: list[np.ndarray] = []
+        vector_keys: list[int] = []
+
+        for individual in population:
+            try:
+                gene = self.gene_serializer.from_list(individual, StrategyGene)
+                if gene is None:
+                    continue
+                behavior_profile = behavior_profiles.get(id(gene))
+                raw_vectors.append(
+                    self._resolve_feature_vector(
+                        gene,
+                        behavior_profile=behavior_profile,
+                    )
+                )
+                vector_keys.append(id(individual))
+            except Exception as e:
+                logger.debug("selection 用ベクトル構築に失敗しました: %s", e)
+
+        if not raw_vectors:
+            return {}
+
+        max_dim = max(vector.shape[0] for vector in raw_vectors)
+        padded_vectors: list[np.ndarray] = []
+        for vector in raw_vectors:
+            if vector.shape[0] < max_dim:
+                padding = np.zeros(max_dim - vector.shape[0])
+                padded_vectors.append(np.concatenate([vector, padding]))
+            else:
+                padded_vectors.append(vector)
+
+        normalized_vectors = self._normalize_vectors(np.array(padded_vectors))
+        return {
+            vector_keys[index]: normalized_vectors[index].copy()
+            for index in range(len(vector_keys))
+        }
 
     def compute_niche_counts_vectorized(self, vectors: np.ndarray) -> np.ndarray:
         """

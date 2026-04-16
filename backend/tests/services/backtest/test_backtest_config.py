@@ -72,7 +72,30 @@ def test_backtest_config_validation(valid_backtest_config_dict):
     # 日付は自動的にdatetimeに変換されるべき
     assert isinstance(config.start_date, datetime)
     assert config.commission_rate == 0.001
+    assert config.spread == 0.0
+    assert config.slippage == 0.0
     assert isinstance(config.strategy_config, StrategyConfig)
+
+
+def test_backtest_config_accepts_spread_alias(valid_backtest_config_dict):
+    """spread 指定時も slippage 互換値が同期されること"""
+    valid_backtest_config_dict["spread"] = 0.0003
+
+    config = BacktestRunConfig(**valid_backtest_config_dict)
+
+    assert config.spread == 0.0003
+    assert config.slippage == 0.0003
+
+
+def test_backtest_config_rejects_conflicting_spread_and_slippage(
+    valid_backtest_config_dict,
+):
+    """spread と slippage の不一致は拒否すること"""
+    valid_backtest_config_dict["spread"] = 0.0003
+    valid_backtest_config_dict["slippage"] = 0.0001
+
+    with pytest.raises(ValidationError):
+        BacktestRunConfig(**valid_backtest_config_dict)
 
 
 def test_missing_required_fields():
@@ -103,6 +126,8 @@ def test_serialization(valid_backtest_config_dict):
 
     assert data["strategy_name"] == "Test Strategy"
     assert data["strategy_config"]["strategy_type"] == "GENERATED_GA"
+    assert data["spread"] == 0.0
+    assert data["slippage"] == 0.0
     # 日付はdatetimeオブジェクトのまま（json化する際は別途対応が必要だがdumpでは維持）
     assert isinstance(data["start_date"], datetime)
 

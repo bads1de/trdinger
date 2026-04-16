@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime
+from math import isclose
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -77,9 +78,38 @@ class BacktestRunConfig(BaseModel):
     end_date: datetime
     initial_capital: float = Field(..., gt=0)
     commission_rate: float = Field(default=0.001, ge=0, le=1)
+    spread: float = Field(0.0, ge=0)
     slippage: float = Field(0.0, ge=0)
     leverage: float = Field(1.0, ge=1.0)
     strategy_config: StrategyConfig
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_execution_cost_aliases(cls, data: Any) -> Any:
+        """spread/slippage の互換キーを同期する。"""
+        if not isinstance(data, dict):
+            return data
+
+        working = dict(data)
+        spread = working.get("spread")
+        slippage = working.get("slippage")
+
+        if spread is not None and slippage is not None:
+            try:
+                spread_value = float(spread)
+                slippage_value = float(slippage)
+            except (TypeError, ValueError):
+                return working
+            if not isclose(spread_value, slippage_value, rel_tol=0.0, abs_tol=1e-12):
+                raise ValueError("spread と slippage は同じ値である必要があります")
+            return working
+
+        if spread is None and slippage is not None:
+            working["spread"] = slippage
+        elif slippage is None and spread is not None:
+            working["slippage"] = spread
+
+        return working
 
     @field_validator("timeframe")
     @classmethod

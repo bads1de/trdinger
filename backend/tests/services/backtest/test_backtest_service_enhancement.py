@@ -145,6 +145,7 @@ class TestBacktestServiceEnhancement:
             "strategy_type": "MANUAL",
             "parameters": {},
         }
+        assert config["spread"] == 0.0
         assert config["slippage"] == 0.0
         assert config["leverage"] == 1.0
         assert config["_skip_validation"] is True
