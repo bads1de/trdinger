@@ -2,8 +2,10 @@
 GA Engineのテストモジュール
 """
 
+import random
 from unittest.mock import Mock, patch
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -79,7 +81,7 @@ class TestGeneticAlgorithmEngine:
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
             gene_generator=mock_gene_generator,
-            hybrid_mode=False
+            hybrid_mode=False,
         )
 
         # 標準モードであることを確認
@@ -116,8 +118,7 @@ class TestGeneticAlgorithmEngine:
     ):
         """エンジンのコンポーネントが正しく設定されることを確認"""
         engine = GeneticAlgorithmEngine(
-            backtest_service=mock_backtest_service,
-            gene_generator=mock_gene_generator
+            backtest_service=mock_backtest_service, gene_generator=mock_gene_generator
         )
 
         # 必須コンポーネントが設定されていることを確認
@@ -125,6 +126,125 @@ class TestGeneticAlgorithmEngine:
         assert engine.gene_generator is not None
         assert engine.individual_evaluator is not None
         assert engine.deap_setup is not None
+
+    @patch(
+        "app.services.auto_strategy.generators.seed_strategy_factory.SeedStrategyFactory.get_all_seeds"
+    )
+    def test_seed_strategies_are_shuffled_deterministically_with_random_state(
+        self,
+        mock_get_all_seeds,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """random_state があれば seed の注入順が deterministic に並び替わる"""
+        from app.services.auto_strategy.genes import StrategyGene
+        from app.services.auto_strategy.config.ga import GAConfig
+
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        seeds = [
+            StrategyGene(metadata={"seed_strategy": "a"}),
+            StrategyGene(metadata={"seed_strategy": "b"}),
+            StrategyGene(metadata={"seed_strategy": "c"}),
+            StrategyGene(metadata={"seed_strategy": "d"}),
+        ]
+        mock_get_all_seeds.return_value = seeds
+
+        config = GAConfig(random_state=42)
+        shuffled = engine._get_seed_strategies_for_injection(config)
+
+        expected = list(seeds)
+        random.Random(42).shuffle(expected)
+
+        assert [s.metadata["seed_strategy"] for s in shuffled] == [
+            s.metadata["seed_strategy"] for s in expected
+        ]
+        # 元の seed 順は破壊しない
+        assert [s.metadata["seed_strategy"] for s in seeds] == ["a", "b", "c", "d"]
+
+    @patch("app.services.auto_strategy.core.engine.ga_engine.random.shuffle")
+    @patch(
+        "app.services.auto_strategy.generators.seed_strategy_factory.SeedStrategyFactory.get_all_seeds"
+    )
+    def test_seed_strategies_use_runtime_shuffle_when_random_state_missing(
+        self,
+        mock_get_all_seeds,
+        mock_shuffle,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """random_state がない場合は実行時の shuffle を使う"""
+        from app.services.auto_strategy.genes import StrategyGene
+        from app.services.auto_strategy.config.ga import GAConfig
+
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        seeds = [
+            StrategyGene(metadata={"seed_strategy": "a"}),
+            StrategyGene(metadata={"seed_strategy": "b"}),
+            StrategyGene(metadata={"seed_strategy": "c"}),
+        ]
+        mock_get_all_seeds.return_value = seeds
+
+        def reverse_in_place(values):
+            values.reverse()
+
+        mock_shuffle.side_effect = reverse_in_place
+
+        config = GAConfig(random_state=None)
+        shuffled = engine._get_seed_strategies_for_injection(config)
+
+        assert [s.metadata["seed_strategy"] for s in shuffled] == ["c", "b", "a"]
+        mock_shuffle.assert_called_once()
+
+    @pytest.mark.parametrize("random_state", [np.int32(42), np.int64(42)])
+    def test_seed_strategies_accept_numpy_integer_random_state(
+        self,
+        random_state,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """NumPy スカラーの random_state でも seed の並び替えができる"""
+        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.genes import StrategyGene
+
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        seeds = [
+            StrategyGene(metadata={"seed_strategy": "a"}),
+            StrategyGene(metadata={"seed_strategy": "b"}),
+            StrategyGene(metadata={"seed_strategy": "c"}),
+            StrategyGene(metadata={"seed_strategy": "d"}),
+        ]
+        with patch(
+            "app.services.auto_strategy.generators.seed_strategy_factory.SeedStrategyFactory.get_all_seeds"
+        ) as mock_get_all_seeds:
+            mock_get_all_seeds.return_value = seeds
+
+            config = GAConfig(random_state=random_state)
+            shuffled = engine._get_seed_strategies_for_injection(config)
+
+            expected = list(seeds)
+            random.Random(42).shuffle(expected)
+
+            assert [s.metadata["seed_strategy"] for s in shuffled] == [
+                s.metadata["seed_strategy"] for s in expected
+            ]
+            assert [s.metadata["seed_strategy"] for s in seeds] == [
+                "a",
+                "b",
+                "c",
+                "d",
+            ]
 
     @patch("app.services.auto_strategy.core.engine.ga_engine.FitnessSharing")
     def test_setup_deap_uses_default_sampling_ratio_when_missing(
@@ -185,10 +305,12 @@ class TestGeneticAlgorithmEngine:
 
         config = Mock()
 
-        best_individual, best_gene, best_strategies = engine.result_processor.extract_best_individuals(
-            [raw_best, robust_leader],
-            config,
-            halloffame=[raw_best],
+        best_individual, best_gene, best_strategies = (
+            engine.result_processor.extract_best_individuals(
+                [raw_best, robust_leader],
+                config,
+                halloffame=[raw_best],
+            )
         )
 
         assert best_individual is robust_leader
@@ -197,8 +319,12 @@ class TestGeneticAlgorithmEngine:
         assert len(best_strategies) == 1
         assert best_strategies[0]["fitness_values"] == [1.2]
 
-    @patch("app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator")
-    @patch("app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter")
+    @patch(
+        "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
+    )
+    @patch(
+        "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
+    )
     @patch("app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor")
     def test_factory_loads_latest_hybrid_model_when_available(
         self,
@@ -230,8 +356,12 @@ class TestGeneticAlgorithmEngine:
         predictor.load_latest_models.assert_called_once_with()
         assert engine.hybrid_mode is True
 
-    @patch("app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator")
-    @patch("app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter")
+    @patch(
+        "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
+    )
+    @patch(
+        "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
+    )
     @patch("app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor")
     def test_factory_keeps_hybrid_engine_when_no_latest_model_exists(
         self,
@@ -279,8 +409,12 @@ class TestGeneticAlgorithmEngine:
         config.two_stage_selection_config = Mock()
         config.two_stage_selection_config.enabled = False
 
-        engine.parameter_tuning_manager.select_tuning_candidates = Mock(return_value=["candidate"])
-        engine.parameter_tuning_manager.tune_candidate_genes = Mock(return_value=["tuned"])
+        engine.parameter_tuning_manager.select_tuning_candidates = Mock(
+            return_value=["candidate"]
+        )
+        engine.parameter_tuning_manager.tune_candidate_genes = Mock(
+            return_value=["tuned"]
+        )
         engine.parameter_tuning_manager.select_best_tuned_candidate = Mock(
             return_value=("wrong", -1.0, None)
         )
@@ -376,6 +510,7 @@ class TestGeneticAlgorithmEngine:
         mock_ind = Mock()
         # StrategyGeneであることを判定させるため
         from app.services.auto_strategy.genes import StrategyGene
+
         mock_ind.__class__ = StrategyGene
         mock_ind.fitness.valid = True
         mock_ind.fitness.values = (1.0,)
@@ -386,13 +521,11 @@ class TestGeneticAlgorithmEngine:
         # Mock EvolutionRunner instance
         mock_runner_instance = mock_runner_cls.return_value
         # 戻り値は (population, logbook) の 2 要素
-        mock_runner_instance.run_evolution.return_value = (
-            [mock_ind],
-            Mock()
-        )
+        mock_runner_instance.run_evolution.return_value = ([mock_ind], Mock())
 
         # Config mock - use real GAConfig for complete attribute coverage
         from app.services.auto_strategy.config.ga import GAConfig
+
         mock_config = GAConfig()
         mock_config.population_size = 10
         mock_config.generations = 5
@@ -440,6 +573,7 @@ class TestGeneticAlgorithmEngine:
         engine.deap_setup = Mock()
         mock_toolbox = Mock()
         from app.services.auto_strategy.genes import StrategyGene
+
         mock_ind = Mock()
         mock_ind.__class__ = StrategyGene
         mock_ind.fitness.valid = True
@@ -454,6 +588,7 @@ class TestGeneticAlgorithmEngine:
 
         # Config - use real GAConfig for complete attribute coverage
         from app.services.auto_strategy.config.ga import GAConfig
+
         mock_config = GAConfig()
         mock_config.evaluation_config.enable_parallel = True
         mock_config.evaluation_config.max_workers = 4

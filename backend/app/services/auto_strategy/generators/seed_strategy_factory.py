@@ -557,7 +557,7 @@ class SeedStrategyFactory:
 
 def inject_seeds_into_population(
     population: List[Any],
-    seed_injection_rate: float = 0.1,
+    seed_injection_rate: float = 0.3,
 ) -> List[Any]:
     """
     集団にシード戦略を注入

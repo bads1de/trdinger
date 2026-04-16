@@ -389,6 +389,38 @@ class TestConditionEvaluator:
         )
         assert isinstance(result, (bool, np.ndarray, pd.Series)), "結果はbool、ndarray、またはSeriesであるべき"
 
+    def test_calculate_conditions_vectorized_returns_none_for_scalar_only(self):
+        """スカラーしかない条件はベクトル化キャッシュしない"""
+        scalar_strategy = SimpleNamespace(
+            data=SimpleNamespace(index=pd.RangeIndex(3)),
+            indicators={
+                "left_value": 10.0,
+                "right_value": 5.0,
+            },
+        )
+        condition = Condition(
+            left_operand="left_value", operator=">", right_operand="right_value"
+        )
+
+        result = self.evaluator.calculate_conditions_vectorized(
+            [condition],
+            scalar_strategy,
+        )
+
+        assert result is None
+
+    def test_evaluate_single_condition_vectorized_not_equal(self, mock_strategy):
+        """非等価条件のベクトル化テスト"""
+        condition = Condition(
+            left_operand="sma_20", operator="!=", right_operand="ema_50"
+        )
+
+        result = self.evaluator.evaluate_single_condition_vectorized(
+            condition, mock_strategy
+        )
+
+        assert isinstance(result, (np.ndarray, pd.Series)), "結果は配列またはSeriesであるべき"
+
 
 # =============================================================================
 # インジケーター計算の正確性テスト

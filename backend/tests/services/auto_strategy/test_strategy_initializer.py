@@ -37,6 +37,7 @@ class TestStrategyInitializer:
             volatility_gate_enabled=False,
             ml_predictor=None,
             _precomputed_signals={},
+            _precomputed_exit_signals={},
             _precomputed_atr="sentinel",
             _precomputed_tpsl_atr={"old": np.array([1.0])},
             _get_effective_tpsl_gene=MagicMock(return_value=None),
@@ -78,4 +79,84 @@ class TestStrategyInitializer:
         strategy.ml_filter.precompute_ml_features.assert_called_once()
         assert 1.0 in strategy._precomputed_signals
         assert -1.0 in strategy._precomputed_signals
-        assert strategy.condition_evaluator.calculate_conditions_vectorized.call_count == 2
+        assert (
+            strategy.condition_evaluator.calculate_conditions_vectorized.call_count == 2
+        )
+
+    def test_initialize_skips_scalar_vectorized_results(self):
+        strategy = self._build_strategy()
+        strategy.gene = StrategyGene(
+            indicators=[],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand=100.0)
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand=90.0)
+            ],
+            long_exit_conditions=[
+                Condition(left_operand="close", operator=">", right_operand=110.0)
+            ],
+            short_exit_conditions=[
+                Condition(left_operand="close", operator="<", right_operand=80.0)
+            ],
+        )
+        strategy.condition_evaluator.calculate_conditions_vectorized.side_effect = [
+            True,
+            np.array([False, True]),
+            np.array([True, False]),
+            True,
+        ]
+
+        initializer = StrategyInitializer(strategy)
+        initializer.initialize()
+
+        assert 1.0 not in strategy._precomputed_signals
+        assert -1.0 in strategy._precomputed_signals
+        assert 1.0 in strategy._precomputed_exit_signals
+        assert -1.0 not in strategy._precomputed_exit_signals
+
+    def test_initialize_clears_stale_signal_caches_before_recomputing(self):
+        strategy = self._build_strategy()
+        strategy._precomputed_signals = {
+            1.0: np.array([True, True, True]),
+            -1.0: np.array([False, False, False]),
+        }
+        strategy._precomputed_exit_signals = {
+            1.0: np.array([False, False, False]),
+            -1.0: np.array([True, True, True]),
+        }
+        strategy.gene = StrategyGene(
+            indicators=[],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand=100.0)
+            ],
+            short_entry_conditions=[
+                Condition(left_operand="close", operator="<", right_operand=90.0)
+            ],
+            long_exit_conditions=[
+                Condition(left_operand="close", operator=">", right_operand=110.0)
+            ],
+            short_exit_conditions=[
+                Condition(left_operand="close", operator="<", right_operand=80.0)
+            ],
+        )
+        strategy.condition_evaluator.calculate_conditions_vectorized.side_effect = [
+            True,
+            np.array([False, True, False]),
+            True,
+            np.array([True, False, True]),
+        ]
+
+        initializer = StrategyInitializer(strategy)
+        initializer.initialize()
+
+        assert set(strategy._precomputed_signals.keys()) == {-1.0}
+        assert set(strategy._precomputed_exit_signals.keys()) == {-1.0}
+        np.testing.assert_array_equal(
+            strategy._precomputed_signals[-1.0],
+            np.array([False, True, False]),
+        )
+        np.testing.assert_array_equal(
+            strategy._precomputed_exit_signals[-1.0],
+            np.array([True, False, True]),
+        )

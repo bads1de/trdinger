@@ -281,6 +281,25 @@ class TestInjectSeedsIntoPopulation:
         for i in range(6, 20):
             assert result[i] == f"dummy_{i}"
 
+    def test_default_injection_rate_is_30_percent(self, monkeypatch):
+        """既定のシード注入率が30%であること"""
+        population = [f"dummy_{i}" for i in range(10)]
+        seeds = [
+            StrategyGene(metadata={"seed_strategy": f"seed_{i}"})
+            for i in range(10)
+        ]
+
+        monkeypatch.setattr(
+            SeedStrategyFactory,
+            "get_all_seeds",
+            staticmethod(lambda: seeds),
+        )
+
+        result = inject_seeds_into_population(population)
+
+        injected_count = sum(1 for item in result if isinstance(item, StrategyGene))
+        assert injected_count == 3
+
     def test_inject_respects_max_seeds(self):
         """シード数以上は注入されないこと"""
         population = [f"dummy_{i}" for i in range(100)]

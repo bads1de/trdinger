@@ -175,7 +175,7 @@ class GAConfig:
     # シード戦略設定（ハイブリッド初期化）
     # 実戦的な戦略テンプレートを初期集団に注入し、探索効率を向上させる
     use_seed_strategies: bool = True  # シード戦略を使用するか
-    seed_injection_rate: float = 0.1  # 初期集団のうちシードで置き換える割合（0.0-1.0）
+    seed_injection_rate: float = 0.3  # 初期集団のうちシードで置き換える割合（0.0-1.0）
 
     # パラメータチューニング設定（GA×Optunaハイブリッド）
     # サブ設定: tuning_config

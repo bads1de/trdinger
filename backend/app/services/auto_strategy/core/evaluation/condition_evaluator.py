@@ -39,7 +39,7 @@ class ConditionEvaluator:
             ">=": op_module.ge,
             "<=": op_module.le,
             "==": lambda x, y: np.isclose(x, y, atol=1e-8),
-            "!=": lambda x, y: not np.isclose(x, y, atol=1e-8),
+            "!=": lambda x, y: np.logical_not(np.isclose(x, y, atol=1e-8)),
             # CROSS_UP/DOWN は特別扱い
         }
 
@@ -54,6 +54,15 @@ class ConditionEvaluator:
             "close": "Close",
             "volume": "Volume",
         }
+
+    @staticmethod
+    def _is_vectorized_result(value: Any) -> bool:
+        """ベクトル化結果かどうかを判定する。"""
+        if isinstance(value, pd.Series):
+            return True
+        if isinstance(value, np.ndarray):
+            return value.ndim > 0
+        return False
 
     def _get_accessor(self, attr_name: str) -> Callable[[Any], Any]:
         """属性アクセサを取得または作成"""
@@ -111,11 +120,16 @@ class ConditionEvaluator:
             result = self._evaluate_recursive_item_vectorized(cond, strategy_instance)
             if result is None:
                 return None  # ベクトル化不可能
+            if not self._is_vectorized_result(result):
+                return None  # スカラー結果はベクトル化キャッシュしない
 
             if final_mask is None:
                 final_mask = result
             else:
                 final_mask = final_mask & result
+
+        if not self._is_vectorized_result(final_mask):
+            return None
 
         return final_mask
 
@@ -181,7 +195,10 @@ class ConditionEvaluator:
             # 高速な辞書ルックアップ
             func = self._ops.get(op)
             if func:
-                return func(left_val, right_val)
+                result = func(left_val, right_val)
+                if self._is_vectorized_result(result):
+                    return result
+                return None
 
             # クロス判定 (pandas Seriesを想定)
             if op == "CROSS_UP":

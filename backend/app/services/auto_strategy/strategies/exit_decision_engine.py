@@ -95,11 +95,9 @@ class ExitDecisionEngine:
             return False
 
         # ベクトル化キャッシュがあればそれを使用（高速パス）
-        cached_signals = self._get_cached_exit_signals()
-        if cached_signals is not None:
-            current_bar = self.strategy._current_bar_index
-            if 0 <= current_bar < len(cached_signals):
-                return bool(cached_signals[current_bar])
+        cached_signal = self._get_cached_exit_signal()
+        if cached_signal is not None:
+            return bool(cached_signal)
 
         # フォールバック: 逐次評価
         evaluator = self.strategy.condition_evaluator
@@ -114,14 +112,41 @@ class ExitDecisionEngine:
 
         return False
 
-    def _get_cached_exit_signals(self):
-        """ベクトル化されたExit条件のキャッシュ信号を取得。"""
+    def _get_cached_exit_signal(self):
+        """ベクトル化されたExit条件のキャッシュ信号を安全に取得する。"""
         position = self.strategy.position
         if not position:
             return None
         direction = 1.0 if position.size > 0 else -1.0
-        cached = getattr(self.strategy, "_precomputed_exit_signals", {})
-        return cached.get(direction)
+        cached = getattr(self.strategy, "_precomputed_exit_signals", None)
+        if not isinstance(cached, dict):
+            return None
+
+        signals = cached.get(direction)
+        if signals is None:
+            return None
+
+        try:
+            signal_len = len(signals)
+        except TypeError:
+            logger.debug(
+                "スカラー結果のためキャッシュ済みExitシグナルを使いません: direction=%s, type=%s",
+                direction,
+                type(signals).__name__,
+            )
+            return None
+
+        current_bar = self.strategy._current_bar_index
+        if not 0 <= current_bar < signal_len:
+            return None
+
+        try:
+            if hasattr(signals, "iloc"):
+                return signals.iloc[current_bar]
+            return signals[current_bar]
+        except Exception as e:
+            logger.debug("キャッシュ済みExitシグナルの取得に失敗しました: %s", e)
+            return None
 
     def _evaluate_condition_group(
         self, group: ConditionGroup, evaluator

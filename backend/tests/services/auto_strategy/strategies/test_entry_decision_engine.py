@@ -127,6 +127,24 @@ class TestEntryDecisionEngine:
         assert result is True
         strategy.condition_evaluator.evaluate_conditions.assert_not_called()
 
+    def test_check_entry_conditions_falls_back_when_cached_signal_is_scalar(
+        self, engine, strategy
+    ):
+        strategy._precomputed_signals = {1.0: True}
+        strategy.data = [object(), object()]
+        strategy.gene.long_entry_conditions = [
+            Condition(left_operand="close", operator=">", right_operand=100.0)
+        ]
+        strategy.condition_evaluator.evaluate_conditions.return_value = True
+
+        result = engine.check_entry_conditions(1.0)
+
+        assert result is True
+        strategy.condition_evaluator.evaluate_conditions.assert_called_once_with(
+            strategy.gene.long_entry_conditions,
+            strategy,
+        )
+
     def test_calculate_position_size_recomputes_from_service(self, engine, strategy):
         position_sizing_gene = PositionSizingGene(
             enabled=True,
@@ -143,8 +161,8 @@ class TestEntryDecisionEngine:
         strategy.data.Low = np.array([49500.0, 50500.0])
         strategy.data.__len__ = MagicMock(return_value=2)
 
-        assert engine.calculate_position_size() == 0.05
-        assert engine.calculate_position_size() == 0.08
+        assert engine.calculate_position_size() == pytest.approx(0.0255)
+        assert engine.calculate_position_size() == pytest.approx(0.0408)
 
     def test_calculate_position_size_preserves_gene_sized_quantity(self, engine, strategy):
         position_sizing_gene = PositionSizingGene(

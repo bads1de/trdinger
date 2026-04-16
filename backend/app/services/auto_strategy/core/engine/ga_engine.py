@@ -7,6 +7,7 @@ DEAPライブラリを使用したGA実装。
 from __future__ import annotations
 
 import logging
+import random
 import threading
 import time
 
@@ -248,11 +249,7 @@ class GeneticAlgorithmEngine:
 
             # シード戦略の注入（ハイブリッド初期化）
             if config.use_seed_strategies:
-                from app.services.auto_strategy.generators.seed_strategy_factory import (
-                    SeedStrategyFactory,
-                )
-
-                seeds = SeedStrategyFactory.get_all_seeds()
+                seeds = self._get_seed_strategies_for_injection(config)
                 num_to_inject = min(
                     int(len(population) * config.seed_injection_rate),
                     len(seeds),
@@ -340,6 +337,30 @@ class GeneticAlgorithmEngine:
         except (AttributeError, TypeError) as e:
             logger.debug(f"コンテキスト設定スキップ: {e}")
 
+    def _get_seed_strategies_for_injection(self, config: GAConfig) -> List[Any]:
+        """初期集団へ注入する seed 戦略を、固定順の偏りが出ないよう整列します。
+
+        `random_state` が指定されている場合はその値で deterministic に並び替えます。
+        指定がない場合は実行時の乱数でシャッフルします。
+        """
+        from app.services.auto_strategy.generators.seed_strategy_factory import (
+            SeedStrategyFactory,
+        )
+
+        seeds = list(SeedStrategyFactory.get_all_seeds())
+        if len(seeds) <= 1:
+            return seeds
+
+        seed = getattr(config, "random_state", None)
+        if seed is not None:
+            # NumPy scalar 由来の seed も Python の int に正規化して受ける。
+            rng = random.Random(int(seed))
+            rng.shuffle(seeds)
+        else:
+            random.shuffle(seeds)
+
+        return seeds
+
     def _create_statistics(self):
         """
         統計情報収集オブジェクトを作成
@@ -367,7 +388,9 @@ class GeneticAlgorithmEngine:
             ParallelEvaluator: 並列評価器インスタンス、またはNone。
         """
         evaluation_config = getattr(config, "evaluation_config", None)
-        if evaluation_config is None or not getattr(evaluation_config, "enable_parallel", False):
+        if evaluation_config is None or not getattr(
+            evaluation_config, "enable_parallel", False
+        ):
             return None
 
         from ..evaluation.evaluation_worker import (
@@ -566,14 +589,11 @@ class GeneticAlgorithmEngine:
         persisted_population = ranked_population[:100]
         result["all_strategies"] = persisted_population
         result["fitness_scores"] = [
-            extract_primary_fitness(individual)
-            for individual in persisted_population
+            extract_primary_fitness(individual) for individual in persisted_population
         ]
-        result["evaluation_summaries"] = (
-            self._collect_population_evaluation_summaries(
-                persisted_population,
-                config,
-            )
+        result["evaluation_summaries"] = self._collect_population_evaluation_summaries(
+            persisted_population,
+            config,
         )
         result["pareto_front"] = best_strategies or []
         result["objectives"] = config.objectives

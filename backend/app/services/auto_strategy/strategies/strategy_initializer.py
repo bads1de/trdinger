@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import cast
 
+import numpy as np
 import pandas as pd
 
 from ..genes import IndicatorGene, TPSLMethod
@@ -40,7 +41,9 @@ class StrategyInitializer:
     def init_indicator(self, indicator_gene: IndicatorGene) -> None:
         """単一指標の初期化を委譲する。"""
         try:
-            self.strategy.indicator_calculator.init_indicator(indicator_gene, self.strategy)
+            self.strategy.indicator_calculator.init_indicator(
+                indicator_gene, self.strategy
+            )
         except Exception as e:
             logger.error(
                 "指標初期化エラー %s: %s",
@@ -63,45 +66,96 @@ class StrategyInitializer:
 
     def _precompute_condition_signals(self) -> None:
         try:
+            precomputed_signals = self._get_or_create_signal_cache(
+                "_precomputed_signals"
+            )
+            precomputed_exit_signals = self._get_or_create_signal_cache(
+                "_precomputed_exit_signals"
+            )
+
+            # 同一 strategy インスタンスの再初期化でも古い方向別キャッシュを残さない。
+            precomputed_signals.clear()
+            precomputed_exit_signals.clear()
+
             # Entry条件
             long_conds = getattr(self.strategy.gene, "long_entry_conditions", [])
             if long_conds:
-                self.strategy._precomputed_signals[1.0] = (
+                self._cache_vectorized_signal(
+                    precomputed_signals,
+                    1.0,
                     self.strategy.condition_evaluator.calculate_conditions_vectorized(
                         long_conds,
                         self.strategy,
-                    )
+                    ),
                 )
 
             short_conds = getattr(self.strategy.gene, "short_entry_conditions", [])
             if short_conds:
-                self.strategy._precomputed_signals[-1.0] = (
+                self._cache_vectorized_signal(
+                    precomputed_signals,
+                    -1.0,
                     self.strategy.condition_evaluator.calculate_conditions_vectorized(
                         short_conds,
                         self.strategy,
-                    )
+                    ),
                 )
 
             # Exit条件
             long_exit_conds = getattr(self.strategy.gene, "long_exit_conditions", [])
             if long_exit_conds:
-                self.strategy._precomputed_exit_signals[1.0] = (
+                self._cache_vectorized_signal(
+                    precomputed_exit_signals,
+                    1.0,
                     self.strategy.condition_evaluator.calculate_conditions_vectorized(
                         long_exit_conds,
                         self.strategy,
-                    )
+                    ),
                 )
 
             short_exit_conds = getattr(self.strategy.gene, "short_exit_conditions", [])
             if short_exit_conds:
-                self.strategy._precomputed_exit_signals[-1.0] = (
+                self._cache_vectorized_signal(
+                    precomputed_exit_signals,
+                    -1.0,
                     self.strategy.condition_evaluator.calculate_conditions_vectorized(
                         short_exit_conds,
                         self.strategy,
-                    )
+                    ),
                 )
         except Exception as e:
             logger.debug("ベクトル化事前計算失敗（フォールバック使用）: %s", e)
+
+    def _get_or_create_signal_cache(self, attr_name: str) -> dict:
+        """シグナルキャッシュを取得または初期化する。"""
+        cache = getattr(self.strategy, attr_name, None)
+        if not isinstance(cache, dict):
+            cache = {}
+            setattr(self.strategy, attr_name, cache)
+        return cache
+
+    def _cache_vectorized_signal(
+        self,
+        cache: dict,
+        direction: float,
+        signal,
+    ) -> None:
+        """ベクトル化できたシグナルだけをキャッシュする。"""
+        if signal is None:
+            return
+
+        if isinstance(signal, pd.Series):
+            cache[direction] = signal
+            return
+
+        if isinstance(signal, np.ndarray) and signal.ndim > 0:
+            cache[direction] = signal
+            return
+
+        logger.debug(
+            "スカラー結果のためベクトル化シグナルをキャッシュしません: direction=%s, type=%s",
+            direction,
+            type(signal).__name__,
+        )
 
     def _precompute_position_sizing_atr(self) -> None:
         self.strategy._precomputed_atr = None

@@ -18,6 +18,8 @@ class TestGAConfig:
         assert config.crossover_rate > 0
         assert config.mutation_rate > 0
         assert config.indicator_universe_mode == "curated"
+        assert config.use_seed_strategies is True
+        assert config.seed_injection_rate == 0.3
 
     def test_custom_values(self):
         """カスタム値を設定できることを確認"""

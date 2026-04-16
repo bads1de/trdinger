@@ -103,12 +103,9 @@ class EntryDecisionEngine:
 
     def check_entry_conditions(self, direction: float) -> bool:
         """指定された方向のエントリー条件をチェックする。"""
-        if direction in self.strategy._precomputed_signals:
-            signals = self.strategy._precomputed_signals[direction]
-            if signals is not None:
-                idx = len(self.strategy.data) - 1
-                if 0 <= idx < len(signals):
-                    return bool(signals[idx])
+        cached_signal = self._get_cached_entry_signal(direction)
+        if cached_signal is not None:
+            return bool(cached_signal)
 
         field_name = (
             "long_entry_conditions" if direction > 0 else "short_entry_conditions"
@@ -124,6 +121,38 @@ class EntryDecisionEngine:
             conditions,
             self.strategy,
         )
+
+    def _get_cached_entry_signal(self, direction: float):
+        """キャッシュされたエントリーシグナルを安全に取得する。"""
+        cached = getattr(self.strategy, "_precomputed_signals", None)
+        if not isinstance(cached, dict):
+            return None
+
+        signals = cached.get(direction)
+        if signals is None:
+            return None
+
+        try:
+            signal_len = len(signals)
+        except TypeError:
+            logger.debug(
+                "スカラー結果のためキャッシュ済みエントリーシグナルを使いません: direction=%s, type=%s",
+                direction,
+                type(signals).__name__,
+            )
+            return None
+
+        idx = len(self.strategy.data) - 1
+        if not 0 <= idx < signal_len:
+            return None
+
+        try:
+            if hasattr(signals, "iloc"):
+                return signals.iloc[idx]
+            return signals[idx]
+        except Exception as e:
+            logger.debug("キャッシュ済みエントリーシグナルの取得に失敗しました: %s", e)
+            return None
 
     def calculate_position_size(self) -> float:
         """ポジションサイズを計算する。"""
