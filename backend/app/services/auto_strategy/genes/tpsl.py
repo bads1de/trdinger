@@ -87,65 +87,28 @@ class TPSLGene(BaseGene):
 
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
-        try:
-            from ..config.constants import TPSL_LIMITS
+        if not isinstance(self.method, TPSLMethod):
+            errors.append("methodは有効なTPSLMethodである必要があります")
 
-            if not isinstance(self.method, TPSLMethod):
-                errors.append("methodは有効なTPSLMethodである必要があります")
+        # NUMERIC_RANGESを使用して検証（config非依存）
+        for field_name, (min_val, max_val) in self.NUMERIC_RANGES.items():
+            value = getattr(self, field_name, None)
+            if value is not None:
+                self._validate_range(value, min_val, max_val, field_name, errors)
 
-            sl_min, sl_max = TPSL_LIMITS["stop_loss_pct"]
-            if not (sl_min <= self.stop_loss_pct <= sl_max):
-                errors.append(
-                    f"stop_loss_pct must be between {sl_min * 100:.1f}% and {sl_max * 100:.0f}%"
-                )
+        # method_weightsの検証
+        for key, value in self.method_weights.items():
+            if value < 0:
+                errors.append(f"method_weights[{key}]は0以上である必要があります")
 
-            tp_min, tp_max = TPSL_LIMITS["take_profit_pct"]
-            if not (tp_min <= self.take_profit_pct <= tp_max):
-                errors.append(
-                    f"take_profit_pct must be between {tp_min * 100:.1f}% and {tp_max * 100:.0f}%"
-                )
+        required_keys = {"fixed", "risk_reward", "volatility", "statistical"}
+        missing_keys = required_keys - set(self.method_weights.keys())
+        if missing_keys:
+            errors.append(f"method_weightsに不足しているキー: {missing_keys}")
 
-            # 他のパラメータ検証
-            self._validate_range(
-                self.risk_reward_ratio, 1.0, 10.0, "risk_reward_ratio", errors
-            )
-            self._validate_range(
-                self.confidence_threshold, 0.0, 1.0, "confidence_threshold", errors
-            )
-            self._validate_range(
-                self.atr_multiplier_sl, 0.1, 5.0, "atr_multiplier_sl", errors
-            )
-            self._validate_range(
-                self.atr_multiplier_tp, 0.1, 10.0, "atr_multiplier_tp", errors
-            )
-
-            # method_weightsの検証
-            # 各値が0以上であることを確認
-            for key, value in self.method_weights.items():
-                if value < 0:
-                    errors.append(f"method_weights[{key}]は0以上である必要があります")
-
-            # 必要なキーがすべて含まれていることを確認
-            required_keys = {"fixed", "risk_reward", "volatility", "statistical"}
-            missing_keys = required_keys - set(self.method_weights.keys())
-            if missing_keys:
-                errors.append(f"method_weightsに不足しているキー: {missing_keys}")
-
-            # 合計値が1.0であることを確認
-            total_weight = sum(self.method_weights.values())
-            if not (0.99 <= total_weight <= 1.01):  # 浮動小数点誤差考慮
-                errors.append("method_weightsの合計は1.0である必要があります")
-
-        except ImportError:
-            # 定数が利用できない場合の基本検証
-            if not isinstance(self.method, TPSLMethod):
-                errors.append("methodは有効なTPSLMethodである必要があります")
-
-            if not (0.005 <= self.stop_loss_pct <= 0.15):
-                errors.append("stop_loss_pct must be between 0.5% and 15%")
-
-            if not (0.01 <= self.take_profit_pct <= 0.3):
-                errors.append("take_profit_pct must be between 1% and 30%")
+        total_weight = sum(self.method_weights.values())
+        if not (0.99 <= total_weight <= 1.01):  # 浮動小数点誤差考慮
+            errors.append("method_weightsの合計は1.0である必要があります")
 
     def mutate(self, mutation_rate: float = 0.1) -> "TPSLGene":
         """TP/SL遺伝子の突然変異"""
@@ -300,7 +263,7 @@ class TPSLResult:
         return dataclass_to_dict(self)
 
 
-def create_random_tpsl_gene(config: Any = None) -> TPSLGene:
+def create_random_tpsl_gene() -> TPSLGene:
     """ランダムなTP/SL遺伝子を生成"""
     import random
 

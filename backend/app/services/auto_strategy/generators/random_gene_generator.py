@@ -94,19 +94,16 @@ class RandomGeneGenerator:
         self._tool_genes_template: Optional[List[ToolGene]] = None
 
     @staticmethod
-    def _create_enabled_tpsl_gene(config: Any) -> TPSLGene:
+    def _create_enabled_tpsl_gene() -> TPSLGene:
         """
         ランダム生成したTP/SL遺伝子を有効化して返す
 
         ランダムに生成されたTP/SL遺伝子のenabledフラグをTrueに設定して返します。
 
-        Args:
-            config: GA設定オブジェクト
-
         Returns:
             TPSLGene: 有効化されたTP/SL遺伝子
         """
-        gene = create_random_tpsl_gene(config)
+        gene = create_random_tpsl_gene()
         gene.enabled = True
         return gene
 
@@ -126,14 +123,14 @@ class RandomGeneGenerator:
                 self._indicator_cache.extend(indicators)
 
         for _ in range(10):
-            self._tpsl_cache.append(create_random_tpsl_gene(self.config))
+            self._tpsl_cache.append(create_random_tpsl_gene())
 
         for _ in range(10):
             self._exit_gene_cache.append(create_random_exit_gene(self.config))
 
         for _ in range(10):
             self._position_sizing_cache.append(
-                create_random_position_sizing_gene(self.config)
+                create_random_position_sizing_gene()
             )
 
         self._tool_genes_template = self._generate_tool_genes_template()
@@ -225,7 +222,7 @@ class RandomGeneGenerator:
 
         return self._clone_or_create_gene(
             self._tpsl_cache,
-            lambda: create_random_tpsl_gene(self.config),
+            lambda: create_random_tpsl_gene(),
             postprocess=lambda gene: setattr(gene, "enabled", True),
         )
 
@@ -244,7 +241,7 @@ class RandomGeneGenerator:
 
         return self._clone_or_create_gene(
             self._position_sizing_cache,
-            lambda: create_random_position_sizing_gene(self.config),
+            lambda: create_random_position_sizing_gene(),
         )
 
     def _get_cached_exit_gene(self) -> ExitGene:

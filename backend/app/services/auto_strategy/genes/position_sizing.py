@@ -7,40 +7,43 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
-from ..config.constants import (
-    GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE,
-    GA_POSITION_SIZING_ATR_PERIOD_RANGE,
-    GA_POSITION_SIZING_FIXED_QUANTITY_RANGE,
-    GA_POSITION_SIZING_FIXED_RATIO_RANGE,
-    GA_POSITION_SIZING_LOOKBACK_RANGE,
-    GA_POSITION_SIZING_MAX_ES_RATIO_RANGE,
-    GA_POSITION_SIZING_MAX_SIZE_RANGE,
-    GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE,
-    GA_POSITION_SIZING_MIN_SIZE_RANGE,
-    GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE,
-    GA_POSITION_SIZING_PRIORITY_RANGE,
-    GA_POSITION_SIZING_RISK_PER_TRADE_RANGE,
-    GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE,
-    GA_POSITION_SIZING_VAR_LOOKBACK_RANGE,
-    PositionSizingMethod,
-)
+from ..config.constants import PositionSizingMethod
 from .base_gene import BaseGene
 
-_DEFAULT_POSITION_SIZING_NUMERIC_RANGES = {
-    "lookback_period": tuple(GA_POSITION_SIZING_LOOKBACK_RANGE),
-    "optimal_f_multiplier": tuple(GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE),
-    "atr_period": tuple(GA_POSITION_SIZING_ATR_PERIOD_RANGE),
-    "atr_multiplier": tuple(GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE),
-    "risk_per_trade": tuple(GA_POSITION_SIZING_RISK_PER_TRADE_RANGE),
-    "fixed_ratio": tuple(GA_POSITION_SIZING_FIXED_RATIO_RANGE),
-    "fixed_quantity": tuple(GA_POSITION_SIZING_FIXED_QUANTITY_RANGE),
-    "min_position_size": tuple(GA_POSITION_SIZING_MIN_SIZE_RANGE),
-    "max_position_size": tuple(GA_POSITION_SIZING_MAX_SIZE_RANGE),
-    "var_confidence": tuple(GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE),
-    "max_var_ratio": tuple(GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE),
-    "max_expected_shortfall_ratio": tuple(GA_POSITION_SIZING_MAX_ES_RATIO_RANGE),
-    "var_lookback": tuple(GA_POSITION_SIZING_VAR_LOOKBACK_RANGE),
-    "priority": tuple(GA_POSITION_SIZING_PRIORITY_RANGE),
+# GA生成用レンジ（ランダム生成時の探索範囲）
+_GENERATION_RANGES = {
+    "lookback_period": (50, 200),
+    "optimal_f_multiplier": (0.25, 0.75),
+    "atr_period": (10, 30),
+    "atr_multiplier": (1.0, 4.0),
+    "risk_per_trade": (0.01, 0.05),
+    "fixed_ratio": (0.05, 0.3),
+    "fixed_quantity": (0.1, 10.0),
+    "min_position_size": (0.01, 0.1),
+    "max_position_size": (5.0, 50.0),
+    "var_confidence": (0.8, 0.99),
+    "max_var_ratio": (0.005, 0.05),
+    "max_expected_shortfall_ratio": (0.01, 0.1),
+    "var_lookback": (50, 500),
+    "priority": (0.5, 1.5),
+}
+
+# 検証用レンジ（許容される値の幅広い範囲）
+_VALIDATION_RANGES = {
+    "lookback_period": (10, 500),
+    "optimal_f_multiplier": (0.1, 1.0),
+    "atr_period": (5, 50),
+    "atr_multiplier": (0.5, 10.0),
+    "risk_per_trade": (0.001, 0.1),
+    "fixed_ratio": (0.01, 10.0),
+    "fixed_quantity": (0.01, 1000.0),
+    "min_position_size": (0.001, 1.0),
+    "max_position_size": (0.001, 1000000000.0),
+    "var_confidence": (0.8, 0.999),
+    "max_var_ratio": (0.001, 0.1),
+    "max_expected_shortfall_ratio": (0.001, 0.2),
+    "var_lookback": (20, 1000),
+    "priority": (0.5, 1.5),
 }
 
 
@@ -80,7 +83,7 @@ class PositionSizingGene(BaseGene):
     ]
     ENUM_FIELDS = ["method"]
     CHOICE_FIELDS = ["enabled"]
-    NUMERIC_RANGES = dict(_DEFAULT_POSITION_SIZING_NUMERIC_RANGES)
+    NUMERIC_RANGES = dict(_VALIDATION_RANGES)
 
     method: PositionSizingMethod = PositionSizingMethod.VOLATILITY_BASED
     lookback_period: int = 100
@@ -120,149 +123,19 @@ class PositionSizingGene(BaseGene):
 
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
-        try:
-            from ..config.constants import POSITION_SIZING_LIMITS
+        if not isinstance(self.method, PositionSizingMethod):
+            errors.append("methodは有効なPositionSizingMethodである必要があります")
 
-            if not isinstance(self.method, PositionSizingMethod):
-                errors.append("methodは有効なPositionSizingMethodである必要があります")
+        # NUMERIC_RANGESを使用して検証（config非依存）
+        for field_name, (min_val, max_val) in self.NUMERIC_RANGES.items():
+            value = getattr(self, field_name, None)
+            if value is not None:
+                self._validate_range(value, min_val, max_val, field_name, errors)
 
-            lb_min, lb_max = POSITION_SIZING_LIMITS["lookback_period"]
-            if not (lb_min <= self.lookback_period <= lb_max):
-                errors.append(
-                    f"lookback_periodは{lb_min}-{lb_max}の範囲である必要があります"
-                )
-
-            # 他のパラメータ検証も実装可能
-            self._validate_range(
-                self.risk_per_trade,
-                POSITION_SIZING_LIMITS["risk_per_trade"][0],
-                POSITION_SIZING_LIMITS["risk_per_trade"][1],
-                "risk_per_trade",
-                errors,
+        if self.min_position_size > self.max_position_size:
+            errors.append(
+                "min_position_sizeはmax_position_size以下である必要があります"
             )
-            self._validate_range(
-                self.fixed_ratio,
-                POSITION_SIZING_LIMITS["fixed_ratio"][0],
-                POSITION_SIZING_LIMITS["fixed_ratio"][1],
-                "fixed_ratio",
-                errors,
-            )
-            self._validate_range(
-                self.atr_multiplier,
-                POSITION_SIZING_LIMITS["atr_multiplier"][0],
-                POSITION_SIZING_LIMITS["atr_multiplier"][1],
-                "atr_multiplier",
-                errors,
-            )
-            self._validate_range(
-                self.var_confidence,
-                POSITION_SIZING_LIMITS["var_confidence"][0],
-                POSITION_SIZING_LIMITS["var_confidence"][1],
-                "var_confidence",
-                errors,
-            )
-            self._validate_range(
-                self.max_var_ratio,
-                POSITION_SIZING_LIMITS["max_var_ratio"][0],
-                POSITION_SIZING_LIMITS["max_var_ratio"][1],
-                "max_var_ratio",
-                errors,
-            )
-            self._validate_range(
-                self.max_expected_shortfall_ratio,
-                POSITION_SIZING_LIMITS["max_expected_shortfall_ratio"][0],
-                POSITION_SIZING_LIMITS["max_expected_shortfall_ratio"][1],
-                "max_expected_shortfall_ratio",
-                errors,
-            )
-            self._validate_range(
-                self.var_lookback,
-                POSITION_SIZING_LIMITS["var_lookback"][0],
-                POSITION_SIZING_LIMITS["var_lookback"][1],
-                "var_lookback",
-                errors,
-            )
-            self._validate_range(
-                self.optimal_f_multiplier,
-                POSITION_SIZING_LIMITS["optimal_f_multiplier"][0],
-                POSITION_SIZING_LIMITS["optimal_f_multiplier"][1],
-                "optimal_f_multiplier",
-                errors,
-            )
-            self._validate_range(
-                self.atr_period,
-                POSITION_SIZING_LIMITS["atr_period"][0],
-                POSITION_SIZING_LIMITS["atr_period"][1],
-                "atr_period",
-                errors,
-            )
-            self._validate_range(
-                self.fixed_quantity,
-                POSITION_SIZING_LIMITS["fixed_quantity"][0],
-                POSITION_SIZING_LIMITS["fixed_quantity"][1],
-                "fixed_quantity",
-                errors,
-            )
-            self._validate_range(
-                self.min_position_size,
-                POSITION_SIZING_LIMITS["min_position_size"][0],
-                POSITION_SIZING_LIMITS["min_position_size"][1],
-                "min_position_size",
-                errors,
-            )
-            self._validate_range(
-                self.max_position_size,
-                POSITION_SIZING_LIMITS["max_position_size"][0],
-                POSITION_SIZING_LIMITS["max_position_size"][1],
-                "max_position_size",
-                errors,
-            )
-            if self.min_position_size > self.max_position_size:
-                errors.append(
-                    "min_position_sizeはmax_position_size以下である必要があります"
-                )
-
-        except ImportError:
-            # 定数が利用できない場合の基本検証
-            if not isinstance(self.method, PositionSizingMethod):
-                errors.append("methodは有効なPositionSizingMethodである必要があります")
-
-            if not (50 <= self.lookback_period <= 200):
-                errors.append("lookback_periodは50-200の範囲である必要があります")
-
-            # 基本的な範囲検証
-            if not (0.001 <= self.risk_per_trade <= 0.1):
-                errors.append("risk_per_tradeは0.001-0.1の範囲である必要があります")
-            if not (0.01 <= self.fixed_ratio <= 10.0):
-                errors.append("fixed_ratioは0.01-10.0の範囲である必要があります")
-            if not (0.5 <= self.atr_multiplier <= 10.0):
-                errors.append("atr_multiplierは0.5-10.0の範囲である必要があります")
-            if not (0.8 <= self.var_confidence <= 0.999):
-                errors.append("var_confidenceは0.8-0.999の範囲である必要があります")
-            if not (0.001 <= self.max_var_ratio <= 0.1):
-                errors.append("max_var_ratioは0.001-0.1の範囲である必要があります")
-            if not (0.001 <= self.max_expected_shortfall_ratio <= 0.2):
-                errors.append(
-                    "max_expected_shortfall_ratioは0.001-0.2の範囲である必要があります"
-                )
-            if not (20 <= self.var_lookback <= 1000):
-                errors.append("var_lookbackは20-1000の範囲である必要があります")
-            if not (0.1 <= self.optimal_f_multiplier <= 1.0):
-                errors.append("optimal_f_multiplierは0.1-1.0の範囲である必要があります")
-            if not (5 <= self.atr_period <= 50):
-                errors.append("atr_periodは5-50の範囲である必要があります")
-            if not (0.01 <= self.fixed_quantity <= 1000.0):
-                errors.append("fixed_quantityは0.01-1000.0の範囲である必要があります")
-            if not (0.001 <= self.min_position_size <= 1.0):
-                errors.append("min_position_sizeは0.001-1.0の範囲である必要があります")
-            if not (0.001 <= self.max_position_size <= 1000000000.0):
-                errors.append(
-                    "max_position_sizeは0.001-1000000000.0の範囲である必要があります"
-                )
-            if self.min_position_size > self.max_position_size:
-                errors.append(
-                    "min_position_sizeはmax_position_size以下である必要があります"
-                )
 
     def mutate(
         self,
@@ -318,7 +191,7 @@ def create_random_position_sizing_gene() -> PositionSizingGene:
     import random
 
     method = random.choice(list(PositionSizingMethod))
-    ranges = _DEFAULT_POSITION_SIZING_NUMERIC_RANGES
+    ranges = _GENERATION_RANGES
 
     gene_params = {
         "method": method,

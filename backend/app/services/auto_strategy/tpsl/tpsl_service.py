@@ -379,27 +379,15 @@ class TPSLService:
         if not math.isfinite(percentage):
             return False
 
-        # 定数で定義された妥当範囲に統一
-        try:
-            from ..config.constants import TPSL_LIMITS
+        # TPSLGene.NUMERIC_RANGESを使用して検証（config非依存）
+        from ..genes.tpsl import TPSLGene
 
-            if label == "SL":
-                min_v, max_v = TPSL_LIMITS["stop_loss_pct"]
-            elif label == "TP":
-                min_v, max_v = TPSL_LIMITS["take_profit_pct"]
-            else:
-                # デフォルトは 0-1 の保守的な範囲
-                min_v, max_v = 0.0, 1.0
+        numeric_ranges = TPSLGene.NUMERIC_RANGES
+        if label == "SL":
+            min_v, max_v = numeric_ranges.get("stop_loss_pct", (0.0, 1.0))
+        elif label == "TP":
+            min_v, max_v = numeric_ranges.get("take_profit_pct", (0.0, 10.0))
+        else:
+            min_v, max_v = 0.0, 1.0
 
-            return min_v <= float(percentage) <= max_v
-        except Exception as e:
-            logger.debug(
-                f"TPSL_LIMITSの読み込みに失敗しました、フォールバック使用: {e}"
-            )
-            # フォールバック: 安全なデフォルト
-            if label == "SL":
-                return 0 <= percentage <= 1.0
-            elif label == "TP":
-                return 0 <= percentage <= 10.0
-            else:
-                return 0 <= percentage <= 1.0
+        return min_v <= float(percentage) <= max_v

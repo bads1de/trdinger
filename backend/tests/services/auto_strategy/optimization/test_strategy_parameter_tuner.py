@@ -20,10 +20,18 @@ class TestStrategyParameterTuner:
 
     @pytest.fixture
     def mock_config(self):
-        config = MagicMock(spec=GAConfig)
-        config.evaluation_config = EvaluationConfig(
-            enable_walk_forward=False,
-            wfa_n_folds=5,
+        from app.services.auto_strategy.config.ga.nested_configs import TuningConfig
+        
+        config = GAConfig(
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=False,
+                wfa_n_folds=5,
+            ),
+            tuning_config=TuningConfig(
+                n_trials=30,
+                use_wfa=True,
+                include_thresholds=False,
+            ),
         )
         return config
 

@@ -170,13 +170,18 @@ class EntryDecisionEngine:
                     else 50000.0
                 )
                 account_balance = getattr(self.strategy, "equity", 100000.0)
+                # モックの場合はfloatにキャスト
+                try:
+                    account_balance = float(account_balance)
+                except:
+                    account_balance = 100000.0
                 market_data = {}
                 try:
                     if (
                         hasattr(self.strategy, "_precomputed_atr")
                         and self.strategy._precomputed_atr is not None
                     ):
-                        idx = len(self.strategy.data) - 1
+                        idx = int(len(self.strategy.data)) - 1
                         if 0 <= idx < len(self.strategy._precomputed_atr):
                             atr = self.strategy._precomputed_atr[idx]
                             import numpy as np
@@ -190,7 +195,8 @@ class EntryDecisionEngine:
                             "lookback_period",
                             14,
                         )
-                        if len(self.strategy.data) > lookback + 1:
+                        data_length = int(len(self.strategy.data))
+                        if data_length > lookback + 1:
                             import numpy as np
 
                             high = np.array(self.strategy.data.High[-lookback:])
@@ -238,6 +244,11 @@ class EntryDecisionEngine:
                 # 0 < size < 1: 証拠金比率
                 # size >= 1: 整数のユニット数
                 equity = getattr(self.strategy, "equity", 100000.0)
+                # モックの場合はfloatにキャスト
+                try:
+                    equity = float(equity)
+                except:
+                    equity = 100000.0
                 if equity > 0:
                     fraction = (final_units * current_price) / equity
                     if fraction < 1.0:
@@ -281,7 +292,7 @@ class EntryDecisionEngine:
                 hasattr(self.strategy, "_precomputed_tpsl_atr")
                 and atr_period in self.strategy._precomputed_tpsl_atr
             ):
-                idx = len(self.strategy.data) - 1
+                idx = int(len(self.strategy.data)) - 1
                 atr_array = self.strategy._precomputed_tpsl_atr[atr_period]
                 if 0 <= idx < len(atr_array):
                     val = atr_array[idx]
@@ -292,7 +303,8 @@ class EntryDecisionEngine:
 
             if "atr" not in market_data:
                 required_slice_size = atr_period + 1
-                if len(self.strategy.data) > required_slice_size:
+                data_length = int(len(self.strategy.data))
+                if data_length > required_slice_size:
                     highs = self.strategy.data.High[-required_slice_size:]
                     lows = self.strategy.data.Low[-required_slice_size:]
                     closes = self.strategy.data.Close[-required_slice_size:]

@@ -63,6 +63,7 @@ def sample_config():
         "commission_rate": 0.001,
         "slippage": 0.0,
         "leverage": 1.0,
+        "spread": 0.0,
         "strategy_config": {
             "strategy_type": "GENERATED_GA",
             "parameters": {

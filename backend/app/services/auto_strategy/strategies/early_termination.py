@@ -161,9 +161,11 @@ class StrategyEarlyTerminationController:
     def get_progress_ratio(self) -> float:
         """現在までの評価進捗を返す。"""
         evaluation_index = getattr(self.strategy, "_evaluation_index", None)
-        if isinstance(evaluation_index, pd.DatetimeIndex) and len(evaluation_index) > 0:
+        eval_len = int(len(evaluation_index)) if evaluation_index is not None else 0
+        if isinstance(evaluation_index, pd.DatetimeIndex) and eval_len > 0:
             current_index = getattr(self.strategy.data, "index", None)
-            if current_index is not None and len(current_index) > 0:
+            current_len = int(len(current_index)) if current_index is not None else 0
+            if current_index is not None and current_len > 0:
                 try:
                     current_ts = pd.Timestamp(current_index[-1])
                     if pd.isna(current_ts):

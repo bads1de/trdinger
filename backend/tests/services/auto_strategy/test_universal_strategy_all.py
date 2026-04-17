@@ -39,7 +39,8 @@ class TestUniversalStrategyAll:
         data.Close = [100, 101, 102]
         data.High = [105, 106, 107]
         data.Low = [95, 96, 97]
-        data.__len__.return_value = 3
+        # __len__を正しくモック
+        type(data).__len__ = MagicMock(return_value=3)
         return data
 
     @pytest.fixture
@@ -333,17 +334,29 @@ class TestUniversalStrategyAll:
         valid_gene.position_sizing_gene = PositionSizingGene(
             enabled=True, method=PositionSizingMethod.FIXED_RATIO
         )
-        with patch(
-            "app.services.auto_strategy.strategies.universal_strategy.PositionSizingService"
-        ) as MockPS:
-            MockPS.return_value.calculate_position_size_fast.side_effect = [0.05, 0.08]
+        # equityをモックする
+        with patch.object(
+            UniversalStrategy, "equity", new_callable=PropertyMock, return_value=100000.0
+        ):
             strategy = UniversalStrategy(
                 mock_broker, mock_data, {"strategy_gene": valid_gene}
             )
-
-            assert strategy._calculate_position_size() == 0.05
-            assert strategy._calculate_position_size() == 0.08
-            assert not hasattr(strategy, "_cached_position_size")
+            
+            # 既存のインスタンスのメソッドを直接パッチする
+            # calculate_position_size_fastはユニット数を返すので、(0.05 * 100000)/102 で逆算する
+            target_fraction1 = 0.05
+            target_unit1 = (target_fraction1 * 100000.0) / 102.0
+            target_fraction2 = 0.08
+            target_unit2 = (target_fraction2 * 100000.0) / 102.0
+            
+            with patch.object(
+                strategy.position_sizing_service,
+                "calculate_position_size_fast",
+                side_effect=[target_unit1, target_unit2]
+            ):
+                assert abs(strategy._calculate_position_size() - 0.05) < 1e-9
+                assert abs(strategy._calculate_position_size() - 0.08) < 1e-9
+                assert not hasattr(strategy, "_cached_position_size")
 
     # ---------------------------------------------------------------------------
     # Stateful Condition テスト

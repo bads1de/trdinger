@@ -106,7 +106,7 @@ class MLFilter:
                 and self.strategy._precomputed_features is not None
             ):
                 # 高速化: タイムスタンプ検索(loc)ではなく整数インデックス(iloc)を使用
-                idx = len(self.strategy.data) - 1
+                idx = int(len(self.strategy.data)) - 1
                 if 0 <= idx < len(self.strategy._precomputed_features):
                     features = self.strategy._precomputed_features.iloc[[idx]]
 
