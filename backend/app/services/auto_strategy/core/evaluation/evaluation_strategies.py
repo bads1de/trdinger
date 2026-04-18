@@ -501,7 +501,7 @@ class EvaluationStrategy:
                     e,
                 )
                 bar_offset = pd.Timedelta(hours=1)
-            oos_start = pd.Timestamp(split_str) + bar_offset
+            oos_start = cast(pd.Timestamp, pd.Timestamp(split_str) + bar_offset)
             oos_config["start_date"] = oos_start.strftime(_DATETIME_FORMAT)
             oos_config["end_date"] = end_str
 
@@ -682,8 +682,8 @@ class EvaluationStrategy:
                 continue
 
             test_config = base_backtest_config.copy()
-            test_config["start_date"] = test_start.strftime(_DATETIME_FORMAT)
-            test_config["end_date"] = test_end.strftime(_DATETIME_FORMAT)
+            test_config["start_date"] = cast(pd.Timestamp, test_start).strftime(_DATETIME_FORMAT)
+            test_config["end_date"] = cast(pd.Timestamp, test_end).strftime(_DATETIME_FORMAT)
             fold_configs.append((fold_idx, test_config))
 
         return fold_configs

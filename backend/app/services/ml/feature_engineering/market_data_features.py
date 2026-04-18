@@ -159,7 +159,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             )
             if oi_col is None:
                 return df
-            oi_s = res[oi_col]
+            oi_s = cast(pd.Series, res[oi_col])
             # カラムを除去したDFを渡す
             return self._calculate_oi_derived_features(df.copy(), oi_s)
         except Exception as e:

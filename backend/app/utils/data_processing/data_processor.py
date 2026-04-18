@@ -6,7 +6,7 @@ transformers, pipelines, validatorsモジュールを統一的に操作可能。
 """
 
 import logging
-from typing import List
+from typing import List, cast
 
 import numpy as np
 import pandas as pd
@@ -159,7 +159,7 @@ class DataProcessor:
 
         for col in numeric_columns:
             # inf値をNaNに変換（補間前に）
-            result_df[col] = _replace_inf_with_nan(result_df[col])
+            result_df[col] = _replace_inf_with_nan(cast(pd.Series, result_df[col]))
 
             # Pandas Series比較を安全に行う - .item()でスカラー値を取得
             # .any()がSeriesを返す場合に備えて、明示的にitem()を使用
@@ -256,7 +256,7 @@ class DataProcessor:
         # funding_rateの範囲クリップ (-1から1)
         if "funding_rate" in result_df.columns:
             # NaNとinfを処理してからクリップ
-            funding_rate_clean = _replace_inf_with_nan(result_df["funding_rate"])
+            funding_rate_clean = _replace_inf_with_nan(cast(pd.Series, result_df["funding_rate"]))
             # Pandas Series比較を安全に行う
             below_min = (funding_rate_clean < -1).sum()
             above_max = (funding_rate_clean > 1).sum()
@@ -270,7 +270,7 @@ class DataProcessor:
 
         # open_interestは負値にならないようにクリップ
         if "open_interest" in result_df.columns:
-            oi_clean = _replace_inf_with_nan(result_df["open_interest"])
+            oi_clean = _replace_inf_with_nan(cast(pd.Series, result_df["open_interest"]))
             # Pandas Series比較を安全に行う
             before_count = (oi_clean < 0).sum()
             if before_count > 0:

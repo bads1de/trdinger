@@ -81,10 +81,10 @@ class VolatilityTargetService:
             )
             valid_forward_window &= shifted_returns.notna()
 
-        future_rv = np.sqrt(forward_variance)
+        future_rv = forward_variance.pow(0.5)
         future_log_rv = pd.Series(
-            np.log(np.clip(future_rv, 1e-8, None)), index=future_rv.index
-        )  # type: ignore[reportAttributeAccessIssue]
+            np.log(future_rv.clip(lower=1e-8)), index=future_rv.index
+        )
         future_log_rv = future_log_rv.where(valid_forward_window)
 
         aligned_features = features_df.copy()

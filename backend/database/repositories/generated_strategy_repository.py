@@ -5,7 +5,7 @@ GAによって生成された戦略の永続化処理を管理します。
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast as t_cast
 
 from sqlalchemy import Float, cast, desc
 from sqlalchemy.orm import Session, selectinload, defer
@@ -45,8 +45,8 @@ class GeneratedStrategyRepository(BaseRepository):
             .outerjoin(GeneratedStrategy.backtest_result)
             .options(
                 selectinload(GeneratedStrategy.backtest_result).options(
-                    defer(BacktestResult.equity_curve),
-                    defer(BacktestResult.trade_history),
+                    defer(t_cast(Any, "equity_curve")),
+                    defer(t_cast(Any, "trade_history")),
                 )
             )
         )
@@ -174,15 +174,15 @@ class GeneratedStrategyRepository(BaseRepository):
             
             if generation is not None:
                 query = query.filter(GeneratedStrategy.generation == generation)
-            
+
             if eager_load_backtest:
                 query = query.options(
                     selectinload(GeneratedStrategy.backtest_result).options(
-                        defer(BacktestResult.equity_curve),
-                        defer(BacktestResult.trade_history),
+                        defer(t_cast(Any, "equity_curve")),
+                        defer(t_cast(Any, "trade_history")),
                     )
                 )
-            
+
             query = query.order_by(desc(GeneratedStrategy.fitness_score))
             
             if limit is not None:
@@ -218,8 +218,8 @@ class GeneratedStrategyRepository(BaseRepository):
             if eager_load_backtest:
                 query = query.options(
                     selectinload(GeneratedStrategy.backtest_result).options(
-                        defer(BacktestResult.equity_curve),
-                        defer(BacktestResult.trade_history),
+                        defer(t_cast(Any, "equity_curve")),
+                        defer(t_cast(Any, "trade_history")),
                     )
                 )
             

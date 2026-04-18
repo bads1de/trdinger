@@ -182,9 +182,9 @@ class StrategyInitializer:
                     }
                 )
                 atr_series = ta.atr(
-                    temp_df["high"],
-                    temp_df["low"],
-                    temp_df["close"],
+                    cast(pd.Series, temp_df["high"]),
+                    cast(pd.Series, temp_df["low"]),
+                    cast(pd.Series, temp_df["close"]),
                     length=lookback,
                 )
                 if atr_series is not None:

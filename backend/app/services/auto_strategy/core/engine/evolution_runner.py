@@ -8,7 +8,7 @@
 import gc
 import logging
 import random
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Sequence, cast
 
 import numpy as np
 from deap import tools
@@ -738,8 +738,9 @@ class EvolutionRunner:
             return ranked_candidates
 
         try:
-            candidate_vectors = build_vectors(
-                [candidate for _, candidate in ranked_candidates]
+            candidate_vectors = cast(
+                dict[int, np.ndarray],
+                build_vectors([candidate for _, candidate in ranked_candidates]),
             )
         except Exception as exc:
             logger.debug("behavior diversity 用ベクトル取得に失敗しました: %s", exc)

@@ -5,6 +5,11 @@ import pandas as pd
 from numba import jit
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 @jit(nopython=True)
 def _process_events_numba(
     close_vals: np.ndarray,
@@ -160,7 +165,7 @@ class TripleBarrier:
         target = cast(pd.Series, target.loc[t_events])
         target = cast(pd.Series, target[target > min_ret])
         if target.empty:
-            return pd.DataFrame(columns=["t1", "trgt", "side"])
+            return pd.DataFrame(columns=pd.Index(["t1", "trgt", "side"]))
 
         # 準備
         if vertical_barrier_times is None:
@@ -197,8 +202,9 @@ class TripleBarrier:
 
         if valid_v_mask.any():
             # 有効な垂直バリア時刻のみインデックス検索
+            valid_v_bar_series = cast(pd.Series, v_bar[valid_v_mask])
             valid_times = pd.Series(
-                v_bar[valid_v_mask].values, index=v_bar[valid_v_mask].index
+                valid_v_bar_series.values, index=valid_v_bar_series.index
             )
             # get_indexer requires exact match which can fail. Use searchsorted to find position.
             idx_obj = cast(pd.DatetimeIndex, close.index)
@@ -264,7 +270,7 @@ class TripleBarrier:
         """
         ev = events.dropna(subset=["t1"])
         if ev.empty:
-            return pd.DataFrame(columns=["ret", "bin", "trgt"])
+            return pd.DataFrame(columns=pd.Index(["ret", "bin", "trgt"]))
 
         # 開始価格の取得（インデックスの整合性確認）
         # eventsのインデックスがcloseのインデックスと一致するとは限らないため
@@ -281,7 +287,7 @@ class TripleBarrier:
             px_init_series = px_init_series[valid_price_mask]
 
         if ev.empty:
-            return pd.DataFrame(columns=["ret", "bin", "trgt"])
+            return pd.DataFrame(columns=pd.Index(["ret", "bin", "trgt"]))
 
         px_init = px_init_series
 
@@ -299,18 +305,20 @@ class TripleBarrier:
             px_end_series = px_end_series[valid_end_price_mask]
             px_init = px_init[valid_end_price_mask]
 
-        if ev.empty:
-            return pd.DataFrame(columns=["ret", "bin", "trgt"])
+        ev_df = cast(pd.DataFrame, ev)
+        if ev_df.empty:
+            return pd.DataFrame(columns=pd.Index(["ret", "bin", "trgt"]))
 
         # インデックスをevに明示的に設定（位置合わせの保証）
-        px_end = pd.Series(px_end_series.values, index=ev.index)
+        ev_df_for_index = cast(pd.DataFrame, ev)
+        px_end = pd.Series(cast(pd.Series, px_end_series).values, index=ev_df_for_index.index)
 
-        out = pd.DataFrame(index=ev.index)
+        out = pd.DataFrame(index=ev_df_for_index.index)
         out["ret"] = px_end / px_init - 1
         out["bin"] = 0.0
         out["trgt"] = ev["trgt"]
 
-        if "side" in ev.columns:
+        if "side" in ev_df_for_index.columns:
             if binary_label:
                 # ptなら1、それ以外(sl/vertical)は0でいいのか？
                 # 元実装: pt->1, 他は暗黙0

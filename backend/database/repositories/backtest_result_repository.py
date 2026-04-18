@@ -6,7 +6,7 @@
 import logging
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -368,8 +368,8 @@ class BacktestResultRepository(BaseRepository):
             # 重いJSONカラムを遅延読み込み
             if not include_heavy_json:
                 query = query.options(
-                    defer(BacktestResult.equity_curve),
-                    defer(BacktestResult.trade_history),
+                    defer(cast(Any, "equity_curve")),
+                    defer(cast(Any, "trade_history")),
                 )
             
             results = query.all()

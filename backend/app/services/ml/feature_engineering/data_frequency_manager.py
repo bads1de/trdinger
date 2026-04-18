@@ -8,7 +8,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 
 import pandas as pd
 
@@ -80,7 +80,7 @@ class DataFrequencyManager:
             if deltas.empty:
                 return "1h"
 
-            median_delta = deltas.median()
+            median_delta = cast(pd.Timedelta, deltas.median())
             diff_m = median_delta.total_seconds() / 60
 
             logger.debug(f"Detected median diff: {diff_m} minutes")

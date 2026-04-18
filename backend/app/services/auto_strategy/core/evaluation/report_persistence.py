@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from math import isfinite
-from typing import Any, Dict, Mapping, Optional, Sequence
+from typing import Any, Dict, Mapping, Optional, Sequence, cast
 
 from .evaluation_report import EvaluationReport
 
@@ -46,7 +46,7 @@ def build_report_summary(
                     }
                 )
             if extra_components:
-                summary["selection_components"][
+                cast(Dict[str, Any], summary["selection_components"])[
                     "objective_components"
                 ] = extra_components
 

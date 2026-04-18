@@ -289,9 +289,9 @@ class ConditionEvaluator:
 
         if isinstance(data, pd.DataFrame):
             if attr_name in data.columns:
-                return data[attr_name]
+                return cast(pd.Series, data[attr_name])
             if search_key in data.columns:
-                return data[search_key]
+                return cast(pd.Series, data[search_key])
 
         return None
 

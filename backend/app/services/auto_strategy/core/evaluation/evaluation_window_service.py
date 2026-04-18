@@ -48,7 +48,7 @@ class EvaluationWindowService:
 
         prepared_config["_evaluation_start"] = start_date
         prepared_config["start_date"] = self.format_datetime_like(
-            start_date, adjusted_start
+            start_date, cast(pd.Timestamp, adjusted_start)
         )
         return prepared_config
 
@@ -180,8 +180,8 @@ class EvaluationWindowService:
         start_ts = self.normalize_timestamp_to_index(evaluation_start, market_df.index)
         end_ts = self.normalize_timestamp_to_index(evaluation_end, market_df.index)
 
-        start_pos = int(market_df.index.searchsorted(start_ts, side="left"))
-        end_pos = int(market_df.index.searchsorted(end_ts, side="right"))
+        start_pos = int(cast(pd.Index, market_df.index).searchsorted(cast(Any, start_ts), side="left"))
+        end_pos = int(cast(pd.Index, market_df.index).searchsorted(cast(Any, end_ts), side="right"))
 
         if start_pos >= end_pos:
             logger.warning(

@@ -49,7 +49,7 @@ class TPSLCalculatorFactory:
             # 未知の手法はエラーとして呼び出し元にフォールバックを委譲
             raise ValueError(f"未知のTPSL方式: {method_str}")
 
-        return calculator_class()
+        return calculator_class(method_str)
 
     @classmethod
     def get_available_methods(cls) -> Dict[str, str]:

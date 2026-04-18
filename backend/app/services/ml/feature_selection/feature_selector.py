@@ -183,6 +183,8 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
     ) -> np.ndarray:
         if input_features is None:
             input_features = self.feature_names_in_
+        if input_features is None:
+            return np.array([])
         return np.array([input_features[i] for i, s in enumerate(self.support_) if s])
 
     def _validate_input(

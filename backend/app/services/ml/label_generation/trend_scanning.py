@@ -217,7 +217,7 @@ class TrendScanning:
         # t_eventsがclose.indexに含まれるものだけにフィルタ
         t_events_resolved = t_events_resolved[t_events_resolved.isin(close.index)]
         if t_events_resolved.empty:
-            return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
+            return pd.DataFrame(columns=pd.Index(["t1", "t_value", "bin", "ret"]))
 
         # 対数価格の使用 (トレンド強度の一貫性向上のため推奨)
         if use_log_price:
@@ -242,7 +242,7 @@ class TrendScanning:
         valid_mask = t1_idxs != -1
 
         if not np.any(valid_mask):
-            return pd.DataFrame(columns=["t1", "t_value", "bin", "ret"])
+            return pd.DataFrame(columns=pd.Index(["t1", "t_value", "bin", "ret"]))
 
         valid_t0 = t_events_resolved[valid_mask]
         valid_t1_idxs = t1_idxs[valid_mask]
@@ -254,8 +254,8 @@ class TrendScanning:
         valid_t1 = close.index[valid_t1_idxs]
 
         # return計算 (元の価格ベース)
-        p1 = close.values[valid_t1_idxs]
-        p0 = close.values[valid_t0_idxs]
+        p1 = np.asarray(close.values[valid_t1_idxs], dtype=np.float64)
+        p0 = np.asarray(close.values[valid_t0_idxs], dtype=np.float64)
         returns = (p1 / p0) - 1.0
 
         out = pd.DataFrame(index=valid_t0)

@@ -264,7 +264,7 @@ class FeatureEngineeringService:
             try:
                 # 価格の分数差分
                 frac_price = AdvancedFeatures.frac_diff_ffd(
-                    result_df["close"], d=0.4, window=2000
+                    cast(pd.Series, result_df["close"]), d=0.4, window=2000
                 )
                 additional_features_list.append(frac_price.rename("FracDiff_Price"))
 
@@ -272,7 +272,7 @@ class FeatureEngineeringService:
                 if open_interest_data is not None and not open_interest_data.empty:
                     # OIデータのカラム名を特定（通常は open_interest）
                     oi_col = open_interest_data.columns[0]
-                    oi_series = open_interest_data[oi_col]
+                    oi_series = cast(pd.Series, open_interest_data[oi_col])
                     frac_oi = AdvancedFeatures.frac_diff_ffd(
                         oi_series, d=0.4, window=2000
                     )
@@ -300,7 +300,7 @@ class FeatureEngineeringService:
                 )
                 # それでも残るNaNのみを、指標の中央値で埋める（0埋めより安全）
                 # 0が有効な値として使われる指標（RSI等）で誤ったシグナルを防止
-                if result_df.isna().any().any():
+                if cast(pd.Series, result_df.isna().any()).any():
                     logger.warning(
                         f"前方修正後も{result_df.isna().sum().sum()}個のNaNが残っています。"
                         f"指標の中央値で補完します。"
@@ -350,7 +350,7 @@ class FeatureEngineeringService:
 
         # ボラティリティとその相対化 (Z-Score)
         # resample.std() は内部的に最適化されている
-        vol_1h = returns_1m.groupby(hour_labels).std()
+        vol_1h = cast(pd.Series, returns_1m.groupby(hour_labels).std())
         agg_features["Intraday_Volatility"] = vol_1h
         agg_features["Intraday_Volatility_Zscore"] = (
             vol_1h - vol_1h.rolling(24).mean()
@@ -433,7 +433,7 @@ class FeatureEngineeringService:
             try:
                 # 価格の分数次差分
                 frac_price = AdvancedFeatures.frac_diff_ffd(
-                    result_df["close"], d=d, window=2000
+                    cast(pd.Series, result_df["close"]), d=d, window=2000
                 )
                 frac_diff_features.append(frac_price.rename(f"FracDiff_Price_d{d}"))
             except Exception as e:
@@ -450,12 +450,13 @@ class FeatureEngineeringService:
                     else:
                         # open_interest_data から直接取得
                         oi_col = open_interest_data.columns[0]
-                        oi_series = (
-                            open_interest_data[oi_col].reindex(result_df.index).ffill()
+                        oi_series = cast(
+                            pd.Series,
+                            open_interest_data[oi_col].reindex(result_df.index).ffill(),
                         )
 
                     frac_oi = AdvancedFeatures.frac_diff_ffd(
-                        oi_series, d=d, window=2000
+                        cast(pd.Series, oi_series), d=d, window=2000
                     )
                     frac_diff_features.append(frac_oi.rename(f"FracDiff_OI_d{d}"))
                 except Exception as e:

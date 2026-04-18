@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from math import ceil
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import pandas as pd
 
@@ -137,7 +137,7 @@ class StrategyEarlyTerminationController:
         evaluation_start = getattr(self.strategy, "_evaluation_start", None)
         if evaluation_start is not None:
             aligned_start = align_timestamp_to_index(evaluation_start, full_index)
-            start_index = int(full_index.searchsorted(aligned_start, side="left"))
+            start_index = int(cast(pd.Index, full_index).searchsorted(cast(Any, aligned_start), side="left"))
 
         evaluation_total_bars = max(1, len(full_index) - start_index)
         return full_index, start_index, evaluation_total_bars
@@ -168,14 +168,14 @@ class StrategyEarlyTerminationController:
             if current_index is not None and current_len > 0:
                 try:
                     current_ts = pd.Timestamp(current_index[-1])
-                    if pd.isna(current_ts):
+                    if bool(pd.isna(current_ts)):
                         raise ValueError("NaT timestamp in index")
                     current_time = self.align_timestamp_to_index_tz(
-                        current_ts,  # type: ignore[arg-type]
+                        cast(pd.Timestamp, current_ts),
                         evaluation_index,
                     )
                     current_position = int(
-                        evaluation_index.searchsorted(current_time, side="right")
+                        cast(pd.Index, evaluation_index).searchsorted(cast(Any, current_time), side="right")
                     )
                     evaluation_start_index = int(
                         getattr(self.strategy, "_evaluation_start_index", 0) or 0

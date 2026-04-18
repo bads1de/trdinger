@@ -53,7 +53,7 @@ class ExperimentPersistenceService:
         Yields:
             Session: SQLAlchemyセッション
         """
-        if self._active_session is not None and not self._active_session.closed:
+        if self._active_session is not None and not getattr(self._active_session, "closed", True):
             # 既存のセッションを再利用
             yield self._active_session
         else:
@@ -70,7 +70,7 @@ class ExperimentPersistenceService:
         """アクティブなセッションを閉じる"""
         if self._active_session is not None:
             try:
-                if not self._active_session.closed:
+                if not getattr(self._active_session, "closed", True):
                     self._active_session.close()
             except Exception:
                 pass

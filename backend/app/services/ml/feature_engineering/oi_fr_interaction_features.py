@@ -5,7 +5,7 @@ Open InterestとFunding Rateの高度な相互作用パターンを捉える特�
 DRW Kaggle Competition と学術論文で有効性が実証された手法。
 """
 
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -82,12 +82,12 @@ class OIFRInteractionFeatureCalculator:
         # === 1. OI-Price Regime（市場レジーム識別 - 4象限）===
         # 0: Bull, 1: Short Cover, 2: Bear, 3: Long Liq
         result["OI_Price_Regime"] = AdvancedFeatures.regime_quadrant(
-            close=df["close"], open_interest=oi_series
+            close=cast(pd.Series, df["close"]), open_interest=oi_series
         ).fillna(-1)
 
         # === 1-B. OI-Price Confirmation (ダイバージェンス検知) ===
         result["OI_Price_Confirmation"] = AdvancedFeatures.oi_price_confirmation(
-            close=df["close"], open_interest=oi_series
+            close=cast(pd.Series, df["close"]), open_interest=oi_series
         ).fillna(0.0)
 
         # === 2. FR Acceleration（FR変化の加速度）===
@@ -134,12 +134,12 @@ class OIFRInteractionFeatureCalculator:
 
         # OI / Volume Ratio (Liquidity Efficiency)
         result["OI_Volume_Ratio"] = AdvancedFeatures.liquidity_efficiency(
-            open_interest=oi_series, volume=df["volume"]
+            open_interest=oi_series, volume=cast(pd.Series, df["volume"])
         ).fillna(0.0)
 
         # === New 1. Void Oscillator (流動性真空検知器) ===
         result["Void_Oscillator"] = AdvancedFeatures.void_oscillator(
-            close=df["close"], volume=df["volume"], window=20
+            close=cast(pd.Series, df["close"]), volume=cast(pd.Series, df["volume"]), window=20
         ).fillna(0.0)
 
         # === New 2. Crypto Leverage Index (CLI) ===
@@ -157,14 +157,16 @@ class OIFRInteractionFeatureCalculator:
         # === New 3. Triplet Imbalance (Upper/Lower Shadow Balance) ===
         # (High - Close) / (Close - Low) の対数変換
         result["Triplet_Imbalance"] = AdvancedFeatures.triplet_imbalance(
-            high=df["high"], low=df["low"], close=df["close"]
+            high=cast(pd.Series, df["high"]),
+            low=cast(pd.Series, df["low"]),
+            close=cast(pd.Series, df["close"]),
         ).fillna(0.0)
 
         # === New 4. Fakeout Detection (Volume Divergence) ===
         # 高値更新時の出来高減衰シグナル
         result["Fakeout_Volume_Divergence"] = (
             AdvancedFeatures.volume_divergence_fakeout(
-                close=df["close"], volume=df["volume"], window=20
+                close=cast(pd.Series, df["close"]), volume=cast(pd.Series, df["volume"]), window=20
             ).fillna(0.0)
         )
 
@@ -177,21 +179,21 @@ class OIFRInteractionFeatureCalculator:
         # === 11. Liquidation Cascade Score ===
         result["Liquidation_Cascade_Score"] = (
             AdvancedFeatures.liquidation_cascade_score(
-                close=df["close"], open_interest=oi_series, volume=df["volume"]
+                close=cast(pd.Series, df["close"]), open_interest=oi_series, volume=cast(pd.Series, df["volume"])
             ).fillna(0.0)
         )
 
         # === 12. Squeeze Probability ===
         result["Squeeze_Probability"] = AdvancedFeatures.squeeze_probability(
-            close=df["close"],
+            close=cast(pd.Series, df["close"]),
             funding_rate=fr_value,
             open_interest=oi_series,
-            low=df["low"],
+            low=cast(pd.Series, df["low"]),
         ).fillna(0.0)
 
         # === 13. Trend Quality ===
         result["Trend_Quality_20"] = AdvancedFeatures.trend_quality(
-            close=df["close"], open_interest=oi_series, window=20
+            close=cast(pd.Series, df["close"]), open_interest=oi_series, window=20
         ).fillna(0.0)
 
         # === 14. OI Weighted Funding Rate ===
@@ -201,7 +203,7 @@ class OIFRInteractionFeatureCalculator:
 
         # === 15. Liquidity Efficiency ===
         result["Liquidity_Efficiency"] = AdvancedFeatures.liquidity_efficiency(
-            open_interest=oi_series, volume=df["volume"]
+            open_interest=oi_series, volume=cast(pd.Series, df["volume"])
         ).fillna(0.0)
 
         # === 16. Leverage Ratio (Estimated) ===

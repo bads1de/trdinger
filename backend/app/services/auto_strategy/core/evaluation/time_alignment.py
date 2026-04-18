@@ -37,7 +37,7 @@ def _get_index_timezone(index: pd.Index) -> object | None:
         return index_tz
 
     try:
-        first_value = pd.Timestamp(index[0])
+        first_value = pd.Timestamp(cast(Any, index[0]))
     except Exception as e:
         logger.debug(f"Indexの先頭値からTimestampの生成に失敗しました: {e}")
         return None

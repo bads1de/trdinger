@@ -62,7 +62,7 @@ class MultiTimeframeFeatureCalculator:
         ]
 
         # 4時間足のRSI
-        df_4h["RSI"] = self._calculate_rsi(df_4h["close"], period=14)
+        df_4h["RSI"] = self._calculate_rsi(cast(pd.Series, df_4h["close"]), period=14)
 
         # === 1日足の情報を合成 ===
         df_1d = self._resample_to_timeframe(df, "1D")
@@ -179,7 +179,7 @@ class MultiTimeframeFeatureCalculator:
                 "volume": "sum",
             }
         )
-        return resampled.ffill()
+        return cast(pd.DataFrame, resampled.ffill())
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """RSIを計算"""
@@ -192,4 +192,4 @@ class MultiTimeframeFeatureCalculator:
         rs = gain / (loss + 1e-10)
         rsi = 100 - (100 / (1 + rs))
 
-        return rsi
+        return cast(pd.Series, rsi)

@@ -5,7 +5,7 @@ Advanced Rolling Statistics Features
 Kaggle上位入賞で頻繁に使用される手法。
 """
 
-from typing import List, Optional
+from typing import List, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -56,17 +56,27 @@ class AdvancedRollingStatsCalculator:
                 hl_r.rolling(w).std(),
             )
             res[f"Parkinson_Vol_{w}"] = parkinson_volatility(
-                df["high"], df["low"], window=w
+                cast(pd.Series, df["high"]), cast(pd.Series, df["low"]), window=w
             )
             res[f"Garman_Klass_Vol_{w}"] = garman_klass_volatility(
-                df["open"], df["high"], df["low"], df["close"], window=w
+                cast(pd.Series, df["open"]),
+                cast(pd.Series, df["high"]),
+                cast(pd.Series, df["low"]),
+                cast(pd.Series, df["close"]),
+                window=w,
             )
             res[f"Yang_Zhang_Vol_{w}"] = yang_zhang_volatility(
-                df["open"], df["high"], df["low"], df["close"], window=w
+                cast(pd.Series, df["open"]),
+                cast(pd.Series, df["high"]),
+                cast(pd.Series, df["low"]),
+                cast(pd.Series, df["close"]),
+                window=w,
             )
 
             # 価格位置 & テールリスク
-            c_pos = (df["close"] - df["low"]) / (df["high"] - df["low"] + 1e-9)
+            c_pos = (
+                cast(pd.Series, df["close"]) - cast(pd.Series, df["low"])
+            ) / (cast(pd.Series, df["high"]) - cast(pd.Series, df["low"]) + 1e-9)
             res[f"Close_Position_Mean_{w}"], res[f"Close_Position_Std_{w}"] = (
                 c_pos.rolling(w).mean(),
                 c_pos.rolling(w).std(),
@@ -85,12 +95,12 @@ class AdvancedRollingStatsCalculator:
         for w in [10, 20]:
             res[f"Price_Volume_Corr_{w}"] = rets.rolling(w).corr(vol.pct_change())
             res[f"Volume_Weighted_Returns_Skew_{w}"] = self._volume_weighted_skew(
-                rets, vol, w
+                cast(pd.Series, rets), cast(pd.Series, vol), w
             )
 
         # ハースト指数 (長期記憶性) - 計算コストが高いため期間固定
         res["Hurst_Exponent_100"] = AdvancedFeatures.hurst_exponent(
-            df["close"], window=100
+            cast(pd.Series, df["close"]), window=100
         )
 
         return res.fillna(0)

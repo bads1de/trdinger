@@ -7,7 +7,7 @@ OHLCV価格データから基本的な価格関連特徴量を計算します。
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import numpy as np
 import pandas as pd
@@ -72,7 +72,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
     ) -> pd.DataFrame:
         """時系列特徴量を計算"""
         df["Trend_strength_20"] = TrendIndicators.linregslope(
-            df["close"], length=20
+            cast(pd.Series, df["close"]), length=20
         ).fillna(0.0)
         return df
 
@@ -82,7 +82,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
     ) -> pd.DataFrame:
         """ボラティリティ特徴量を計算"""
         df["Parkinson_Vol_20"] = parkinson_volatility(
-            df["high"], df["low"], window=20
+            cast(pd.Series, df["high"]), cast(pd.Series, df["low"]), window=20
         ).fillna(0.0)
         return df
 
@@ -94,8 +94,12 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         if not self.validate_input_data(df, ["open", "high", "low", "close", "volume"]):
             return df
 
-        p_chg = MomentumIndicators.roc(df["close"], period=1).fillna(0.0)
-        v_chg = MomentumIndicators.roc(df["volume"], period=1).fillna(0.0)
+        p_chg = MomentumIndicators.roc(cast(pd.Series, df["close"]), period=1).fillna(
+            0.0
+        )
+        v_chg = MomentumIndicators.roc(cast(pd.Series, df["volume"]), period=1).fillna(
+            0.0
+        )
         df["Price_Volume_Trend"] = p_chg * v_chg
         return df
 

@@ -77,12 +77,16 @@ def triple_barrier_method_preset(
 
     logger.info(f"TBMラベル生成開始: {timeframe}, horizon={horizon_n}")
     try:
-        close = df[price_column]
+        close = cast(pd.Series, df[price_column])
         if use_atr:
             vol = cast(
                 pd.Series,
                 calculate_volatility_atr(
-                    df["high"], df["low"], close, atr_period, True
+                    cast(pd.Series, df["high"]),
+                    cast(pd.Series, df["low"]),
+                    close,
+                    atr_period,
+                    True,
                 ),
             )
         else:
@@ -99,7 +103,7 @@ def triple_barrier_method_preset(
         tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret)
         events = tb.get_events(close, t_ev, [pt, sl], vol, min_ret, v_bar)
         bins_df = tb.get_bins(events, close, binary_label=True)
-        labels = bins_df["bin"]
+        labels = cast(pd.Series, bins_df["bin"])
 
         _log_distribution("TBMラベル生成", labels)
         return labels
@@ -141,9 +145,9 @@ def trend_scanning_preset(
 
     logger.info(f"TSラベル生成開始: {timeframe}, threshold={threshold}")
     try:
-        close = df[price_column]
+        close = cast(pd.Series, df[price_column])
         ts = TrendScanning(min_window, horizon_n, window_step, threshold)
-        labels = ts.get_labels(close, t_events)["bin"].abs().astype(int)
+        labels = cast(pd.Series, ts.get_labels(close, t_events)["bin"]).abs().astype(int)
 
         _log_distribution("TSラベル生成", labels)
         return labels

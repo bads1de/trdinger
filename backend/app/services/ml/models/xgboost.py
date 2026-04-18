@@ -115,7 +115,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         if hasattr(model, "best_iteration"):
             self.best_iteration = model.best_iteration
         elif hasattr(model, "best_ntree_limit"):
-            self.best_iteration = model.best_ntree_limit
+            self.best_iteration = getattr(model, "best_ntree_limit")
 
         return model
 
@@ -154,7 +154,7 @@ class XGBoostModel(BaseGradientBoostingModel):
                 )
 
             # 訓練時と同じ順序に列を並べ替える
-            X = X[self.feature_names]
+            X = X.loc[:, self.feature_names]
 
         return xgb.DMatrix(X, feature_names=self.feature_names)
 

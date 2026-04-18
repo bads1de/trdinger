@@ -122,12 +122,15 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             vol_p = lookback_periods.get("volatility", 20)
             # NATR
             features["NATR"] = VolatilityIndicators.natr(
-                high=df["high"], low=df["low"], close=df["close"], length=vol_p
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                close=cast(pd.Series, df["close"]),
+                length=vol_p,
             ).fillna(0.0)
 
             # BBW
             upper, middle, lower = VolatilityIndicators.bbands(
-                df["close"], length=vol_p
+                cast(pd.Series, df["close"]), length=vol_p
             )
             features["BB_Width"] = self.safe_ratio_calculation(
                 upper - lower,
@@ -138,22 +141,22 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # Yang-Zhang, Parkinson, Garman-Klass
             if "open" in df.columns:
                 features["Yang_Zhang_Vol_20"] = yang_zhang_volatility(
-                    open_=df["open"],
-                    high=df["high"],
-                    low=df["low"],
-                    close=df["close"],
+                    open_=cast(pd.Series, df["open"]),
+                    high=cast(pd.Series, df["high"]),
+                    low=cast(pd.Series, df["low"]),
+                    close=cast(pd.Series, df["close"]),
                     window=vol_p,
                 ).fillna(0.0)
                 features[f"Garman_Klass_Vol_{vol_p}"] = garman_klass_volatility(
-                    open_=df["open"],
-                    high=df["high"],
-                    low=df["low"],
-                    close=df["close"],
+                    open_=cast(pd.Series, df["open"]),
+                    high=cast(pd.Series, df["high"]),
+                    low=cast(pd.Series, df["low"]),
+                    close=cast(pd.Series, df["close"]),
                     window=vol_p,
                 ).fillna(0.0)
 
             features[f"Parkinson_Vol_{vol_p}"] = parkinson_volatility(
-                high=df["high"], low=df["low"], window=vol_p
+                high=cast(pd.Series, df["high"]), low=cast(pd.Series, df["low"]), window=vol_p
             ).fillna(0.0)
 
             return features
@@ -183,20 +186,22 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             vol_p = lookback_periods.get("volume", 20)
 
             # 出来高MA
-            v_ma = TrendIndicators.sma(df["volume"], length=vol_p).fillna(df["volume"])
+            v_ma = TrendIndicators.sma(cast(pd.Series, df["volume"]), length=vol_p).fillna(
+                cast(pd.Series, df["volume"])
+            )
             v_max = df["volume"].quantile(0.99) * 10
             features[f"Volume_MA_{vol_p}"] = np.clip(v_ma, 0, v_max)
 
             # VWAP & Deviation
             vwap = VolumeIndicators.vwap(
-                high=df["high"],
-                low=df["low"],
-                close=df["close"],
-                volume=df["volume"],
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                close=cast(pd.Series, df["close"]),
+                volume=cast(pd.Series, df["volume"]),
                 period=vol_p,
-            ).fillna(df["close"])
+            ).fillna(cast(pd.Series, df["close"]))
             features["VWAP_Deviation"] = self.safe_ratio_calculation(
-                df["close"] - vwap,
+                cast(pd.Series, df["close"]) - vwap,
                 vwap,
                 fill_value=0.0,
             )
@@ -204,36 +209,45 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             # その他指標
             try:
                 features["MFI"] = VolumeIndicators.mfi(
-                    high=df["high"],
-                    low=df["low"],
-                    close=df["close"],
-                    volume=df["volume"],
+                    high=cast(pd.Series, df["high"]),
+                    low=cast(pd.Series, df["low"]),
+                    close=cast(pd.Series, df["close"]),
+                    volume=cast(pd.Series, df["volume"]),
                     length=14,
                 ).fillna(50.0)
             except Exception:
                 features["MFI"] = pd.Series(50.0, index=df.index)
 
             features["OBV"] = VolumeIndicators.obv(
-                close=df["close"], volume=df["volume"]
+                close=cast(pd.Series, df["close"]), volume=cast(pd.Series, df["volume"])
             ).fillna(0.0)
             features["AD"] = VolumeIndicators.ad(
-                high=df["high"], low=df["low"], close=df["close"], volume=df["volume"]
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                close=cast(pd.Series, df["close"]),
+                volume=cast(pd.Series, df["volume"]),
             ).fillna(0.0)
             features["ADOSC"] = VolumeIndicators.adosc(
-                high=df["high"], low=df["low"], close=df["close"], volume=df["volume"]
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                close=cast(pd.Series, df["close"]),
+                volume=cast(pd.Series, df["volume"]),
             ).fillna(0.0)
             features[f"VWAP_Z_Score_{vol_p}"] = VolumeIndicators.vwap_z_score(
-                high=df["high"],
-                low=df["low"],
-                close=df["close"],
-                volume=df["volume"],
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                close=cast(pd.Series, df["close"]),
+                volume=cast(pd.Series, df["volume"]),
                 period=vol_p,
             ).fillna(0.0)
             features[f"RVOL_{vol_p}"] = VolumeIndicators.rvol(
-                df["volume"], window=vol_p
+                cast(pd.Series, df["volume"]), window=vol_p
             ).fillna(0.0)
             features[f"Absorption_Score_{vol_p}"] = VolumeIndicators.absorption_score(
-                high=df["high"], low=df["low"], volume=df["volume"], window=vol_p
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                volume=cast(pd.Series, df["volume"]),
+                window=vol_p,
             ).fillna(0.0)
 
             return features
@@ -264,10 +278,18 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
 
             new_features = {
                 "Market_Efficiency": rets.rolling(window=vol_p, min_periods=3)
-                .corr(rets.shift(1).rolling(window=vol_p, min_periods=3).mean())
+                .corr(
+                    cast(
+                        pd.Series,
+                        rets.shift(1).rolling(window=vol_p, min_periods=3).mean(),
+                    )
+                )
                 .fillna(0.0),
                 "Choppiness_Index_14": TrendIndicators.chop(
-                    high=df["high"], low=df["low"], close=df["close"], length=14
+                    high=cast(pd.Series, df["high"]),
+                    low=cast(pd.Series, df["low"]),
+                    close=cast(pd.Series, df["close"]),
+                    length=14,
                 ).fillna(50.0),
                 "Amihud_Illiquidity": pd.Series(
                     np.log(rets.abs() / (df["volume"] * df["close"] + 1e-9) + 1e-9),
@@ -303,12 +325,14 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             if not self.validate_input_data(df, ["close", "high", "low"]):
                 return {}
 
-            _, _, hist = MomentumIndicators.macd(df["close"])  # type: ignore[misc]
+            _, _, hist = MomentumIndicators.macd(cast(pd.Series, df["close"]))
             new_features = {
-                "RSI": MomentumIndicators.rsi(df["close"]).fillna(50.0),
+                "RSI": MomentumIndicators.rsi(cast(pd.Series, df["close"])).fillna(50.0),
                 "MACD_Histogram": hist.fillna(0.0),
                 "Williams_R": MomentumIndicators.willr(
-                    high=df["high"], low=df["low"], close=df["close"]
+                    high=cast(pd.Series, df["high"]),
+                    low=cast(pd.Series, df["low"]),
+                    close=cast(pd.Series, df["close"]),
                 ).fillna(-50.0),
             }
             return new_features
@@ -333,13 +357,21 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 return {}
 
             adx, _, _ = TrendIndicators.adx(
-                high=df["high"], low=df["low"], close=df["close"]
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                close=cast(pd.Series, df["close"]),
             )
-            _, _, aroon_osc = TrendIndicators.aroon(high=df["high"], low=df["low"])
+            _, _, aroon_osc = TrendIndicators.aroon(
+                high=cast(pd.Series, df["high"]), low=cast(pd.Series, df["low"])
+            )
             ichimoku = TrendIndicators.ichimoku(
-                high=df["high"], low=df["low"], close=df["close"]
+                high=cast(pd.Series, df["high"]),
+                low=cast(pd.Series, df["low"]),
+                close=cast(pd.Series, df["close"]),
             )
-            psar = TrendIndicators.sar(high=df["high"], low=df["low"])
+            psar = TrendIndicators.sar(
+                high=cast(pd.Series, df["high"]), low=cast(pd.Series, df["low"])
+            )
 
             # Ichimoku安全策
             if (
@@ -350,34 +382,34 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 tenkan = ichimoku["tenkan_sen"]
                 kijun = ichimoku["kijun_sen"]
             else:
-                tenkan = df["close"]
-                kijun = df["close"]
+                tenkan = cast(pd.Series, df["close"])
+                kijun = cast(pd.Series, df["close"])
 
             new_features = {
                 "ADX": adx.fillna(0.0),
                 "AROONOSC": aroon_osc.fillna(0.0),
                 "MA_Long": TrendIndicators.sma(
-                    df["close"], length=lookback_periods.get("long_ma", 50)
-                ).fillna(df["close"]),
+                    cast(pd.Series, df["close"]), length=lookback_periods.get("long_ma", 50)
+                ).fillna(cast(pd.Series, df["close"])),
                 "Ichimoku_TK_Dist": self.safe_ratio_calculation(
                     tenkan - kijun,
-                    df["close"],
+                    cast(pd.Series, df["close"]),
                     fill_value=0.0,
                 ),
                 "Ichimoku_Kijun_Dist": self.safe_ratio_calculation(
-                    df["close"] - kijun,
-                    df["close"],
+                    cast(pd.Series, df["close"]) - kijun,
+                    cast(pd.Series, df["close"]),
                     fill_value=0.0,
                 ),
                 "PSAR_Trend": self.safe_ratio_calculation(
-                    df["close"] - psar,
-                    df["close"],
+                    cast(pd.Series, df["close"]) - psar,
+                    cast(pd.Series, df["close"]),
                     fill_value=0.0,
                 ),
                 "SMA_Cross_50_200": self.safe_ratio_calculation(
-                    TrendIndicators.sma(df["close"], 50)
-                    - TrendIndicators.sma(df["close"], 200),
-                    df["close"],
+                    TrendIndicators.sma(cast(pd.Series, df["close"]), 50)
+                    - TrendIndicators.sma(cast(pd.Series, df["close"]), 200),
+                    cast(pd.Series, df["close"]),
                     fill_value=0.0,
                 ),
             }

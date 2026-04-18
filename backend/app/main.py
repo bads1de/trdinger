@@ -104,7 +104,7 @@ def create_app() -> FastAPI:
     @app.exception_handler(Exception)
     async def global_exception_handler(
         request: Request, exc: Exception
-    ):  # noqa: F841, ARG001  # type: ignore[reportUnusedFunction]
+    ): 
         """グローバル例外ハンドラです。
 
         未処理の例外をキャッチして標準化されたエラーレスポンスを返します。
@@ -128,7 +128,7 @@ def create_app() -> FastAPI:
 
     # ヘルスチェックエンドポイント
     @app.get("/health")
-    async def health_check():  # noqa: F841  # type: ignore[reportUnusedFunction]
+    async def health_check(): 
         """ヘルスチェックエンドポイントです。
 
         アプリケーションの状態を確認するためのエンドポイントです。

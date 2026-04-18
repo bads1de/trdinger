@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 
 import pandas as pd
 
@@ -144,7 +144,7 @@ class LabelGenerationService:
 
             logger.info("🔍 CUSUMフィルターでイベントを検出します。")
             cusum_gen = CusumSignalGenerator()
-            volatility = cusum_gen.get_daily_volatility(ohlcv_df["close"])
+            volatility = cusum_gen.get_daily_volatility(cast(pd.Series, ohlcv_df["close"]))
             return cusum_gen.get_events(
                 df=ohlcv_df,
                 threshold=cusum_threshold,

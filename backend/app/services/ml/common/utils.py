@@ -214,7 +214,7 @@ def prepare_data_for_prediction(
                 scaled_values = scaler.transform(processed_features)
                 processed_features = pd.DataFrame(
                     scaled_values,
-                    columns=expected_columns,
+                    columns=pd.Index(expected_columns),
                     index=features_df.index,
                 )
             except Exception as e:
@@ -379,7 +379,7 @@ def calculate_price_change(
 
         if fill_na:
             pct_change = pct_change.fillna(0)
-        return pct_change
+        return cast(pd.Series, pct_change)
     except Exception as e:
         logger.error(f"価格変化率計算エラー: {e}")
         raise

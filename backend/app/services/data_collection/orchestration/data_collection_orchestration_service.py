@@ -11,7 +11,6 @@ from typing import Any, Dict, Optional
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.config.unified_config import unified_config
 from database.repositories.ohlcv_repository import OHLCVRepository
 
 from . import historical_data_orchestrator as historical_data_orchestrator_module

@@ -6,7 +6,7 @@ Sample Entropy, Fractal Dimension, VPIN Approximation など、
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 import pandas as pd
 
@@ -50,35 +50,35 @@ class ComplexityFeatureCalculator(BaseFeatureCalculator):
         # すでにTechnicalFeatureCalculatorにあるかもしれないが、ここでは複数の期間で算出
         logger.info("Complexity: Hurst Exponent を計算中...")
         new_features[f"Hurst_{mid_p}"] = AdvancedFeatures.hurst_exponent(
-            df["close"], window=mid_p
+            cast(pd.Series, df["close"]), window=mid_p
         )
         new_features[f"Hurst_{long_p}"] = AdvancedFeatures.hurst_exponent(
-            df["close"], window=long_p
+            cast(pd.Series, df["close"]), window=long_p
         )
 
         # 2. フラクタル次元 (Fractal Dimension)
         logger.info("Complexity: Fractal Dimension を計算中...")
         new_features[f"Fractal_Dim_{short_p}"] = AdvancedFeatures.fractal_dimension(
-            df["close"], window=short_p
+            cast(pd.Series, df["close"]), window=short_p
         )
         new_features[f"Fractal_Dim_{mid_p}"] = AdvancedFeatures.fractal_dimension(
-            df["close"], window=mid_p
+            cast(pd.Series, df["close"]), window=mid_p
         )
 
         # 3. サンプル・エントロピー (Sample Entropy)
         # 計算コストが高いため、比較的小さな窓幅で計算
         logger.info("Complexity: Sample Entropy を計算中...")
         new_features[f"Sample_Entropy_{short_p}"] = AdvancedFeatures.sample_entropy(
-            df["close"], window=short_p
+            cast(pd.Series, df["close"]), window=short_p
         )
 
         # 4. 近似 VPIN (Order Flow Imbalance)
         logger.info("Complexity: VPIN Approximation を計算中...")
         new_features[f"VPIN_{short_p}"] = AdvancedFeatures.vpin_approximation(
-            df["close"], df["volume"], window=short_p
+            cast(pd.Series, df["close"]), cast(pd.Series, df["volume"]), window=short_p
         )
         new_features[f"VPIN_{mid_p}"] = AdvancedFeatures.vpin_approximation(
-            df["close"], df["volume"], window=mid_p
+            cast(pd.Series, df["close"]), cast(pd.Series, df["volume"]), window=mid_p
         )
 
         # 5. 複合指標 (Interaction)

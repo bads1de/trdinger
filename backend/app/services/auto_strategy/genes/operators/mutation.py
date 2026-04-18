@@ -371,9 +371,8 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
 
     except Exception as e:
         logger.error(f"戦略遺伝子突然変異エラー: {e}")
+        mutated = gene.clone() if hasattr(gene, "clone") else gene
         try:
-            if "mutated" not in locals():
-                mutated = gene.clone() if hasattr(gene, "clone") else gene
             if hasattr(mutated, "fitness") and hasattr(mutated.fitness, "values"):
                 del mutated.fitness.values
             return mutated

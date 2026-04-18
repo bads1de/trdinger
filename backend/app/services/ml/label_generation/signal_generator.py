@@ -145,7 +145,7 @@ class SignalGenerator:
         if not self._validate_df(df, window):
             return pd.DatetimeIndex([])
 
-        v: pd.Series = df[volume_column]
+        v: pd.Series = cast(pd.Series, df[volume_column])
         avg_v = cast(pd.Series, v.rolling(window).mean()).shift(1)
         return cast(
             pd.DatetimeIndex, df.index[(v >= avg_v * multiplier) & avg_v.notna()]

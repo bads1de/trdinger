@@ -7,7 +7,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import timedelta
 from math import ceil
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, cast
 
 import pandas as pd
 
@@ -132,7 +132,7 @@ def adjust_backtest_config_for_fidelity(
         getattr(evaluation_config, "multi_fidelity_window_ratio", 0.3),
         0.3,
     )
-    total_duration = end_ts - start_ts
+    total_duration = cast(pd.Timedelta, end_ts - start_ts)
     coarse_duration = total_duration * window_ratio
     if coarse_duration <= timedelta(0):
         return adjusted

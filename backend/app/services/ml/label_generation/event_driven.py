@@ -5,7 +5,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -97,8 +97,8 @@ class EventDrivenLabelGenerator:
 
         regime_profiles = self._summarize_regime_profiles(profiles)
         label_distribution = {
-            "hrhp": self._distribution_summary(labels_df["label_hrhp"]),
-            "lrlp": self._distribution_summary(labels_df["label_lrlp"]),
+            "hrhp": self._distribution_summary(cast(pd.Series, labels_df["label_hrhp"])),
+            "lrlp": self._distribution_summary(cast(pd.Series, labels_df["label_lrlp"])),
         }
 
         info = {
