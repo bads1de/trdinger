@@ -35,9 +35,9 @@ class AdvancedRollingStatsCalculator:
     def calculate_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Advanced Rolling Statistics特徴量を計算"""
         res = pd.DataFrame(index=df.index)
-        rets = df["close"].pct_change()
+        rets = cast(pd.Series, df["close"]).pct_change()
         log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
-        vol = df["volume"]
+        vol = cast(pd.Series, df["volume"])
 
         for w in self.windows:
             # 価格統計

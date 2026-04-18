@@ -12,7 +12,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -103,7 +103,7 @@ class FundingRateFeatureCalculator:
         )
 
         # 相関とZ-Score (ベクトル化)
-        close_series = res["close"] if "close" in res.columns else None
+        close_series = cast(pd.Series, res["close"]) if "close" in res.columns else None
         for w in [72, 168]:
             roll = res["fr_bps"].rolling(window=w, min_periods=1)
             # Z-Score

@@ -47,7 +47,7 @@ def sanitize_numeric_dataframe(
         return result_df.fillna(fill_value) if fill_value is not None else result_df
 
     for position in numeric_positions:
-        series = _replace_inf_with_nan(result_df.iloc[:, position])
+        series = _replace_inf_with_nan(cast(pd.Series, result_df.iloc[:, position]))
 
         if forward_fill:
             series = series.ffill()
