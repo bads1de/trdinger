@@ -158,6 +158,13 @@ class HybridPredictor:
     単一モデルまたは複数モデルのアンサンブル予測をサポートします。
     """
 
+    # 定数
+    DEFAULT_FORECAST_LOG_RV = 0.0
+    DEFAULT_FORECAST_VOL = 1.0
+    DEFAULT_GATE_OPEN = True
+    DEFAULT_GATE_THRESHOLD = 0.5
+    DEFAULT_MODEL_TYPE = "lightgbm"
+
     def __init__(
         self,
         trainer_type: str = "single",
@@ -182,7 +189,7 @@ class HybridPredictor:
         elif self.single_model_config.get("model_type"):
             self.model_type = self.single_model_config["model_type"]
         else:
-            self.model_type = "lightgbm"
+            self.model_type = self.DEFAULT_MODEL_TYPE
 
         if trainer_type == "single":
             self.single_model_config["model_type"] = self.model_type
@@ -223,9 +230,9 @@ class HybridPredictor:
             デフォルトの予測確率辞書
         """
         return {
-            "forecast_log_rv": 0.0,
-            "forecast_vol": 1.0,
-            "gate_open": True,
+            "forecast_log_rv": HybridPredictor.DEFAULT_FORECAST_LOG_RV,
+            "forecast_vol": HybridPredictor.DEFAULT_FORECAST_VOL,
+            "gate_open": HybridPredictor.DEFAULT_GATE_OPEN,
         }
 
     @staticmethod
@@ -515,16 +522,16 @@ class HybridPredictor:
             正規化された予測結果
         """
         if "forecast_log_rv" in prediction:
-            forecast_log_rv = float(prediction.get("forecast_log_rv", 0.0))
+            forecast_log_rv = float(prediction.get("forecast_log_rv", HybridPredictor.DEFAULT_FORECAST_LOG_RV))
             if not np.isfinite(forecast_log_rv):
-                forecast_log_rv = 0.0
+                forecast_log_rv = HybridPredictor.DEFAULT_FORECAST_LOG_RV
             forecast_vol = prediction.get("forecast_vol")
             if forecast_vol is None:
                 forecast_vol = float(np.exp(forecast_log_rv))
             forecast_vol = float(forecast_vol)
             if not np.isfinite(forecast_vol) or forecast_vol < 0.0:
                 forecast_vol = float(np.exp(forecast_log_rv))
-            gate_cutoff_log_rv = float(prediction.get("gate_cutoff_log_rv", 0.0))
+            gate_cutoff_log_rv = float(prediction.get("gate_cutoff_log_rv", HybridPredictor.DEFAULT_FORECAST_LOG_RV))
             raw_gate_open = prediction.get("gate_open")
             if isinstance(raw_gate_open, bool):
                 gate_open = raw_gate_open
@@ -532,7 +539,7 @@ class HybridPredictor:
                 gate_open = forecast_log_rv >= gate_cutoff_log_rv
             else:
                 try:
-                    gate_open = float(raw_gate_open) >= 0.5
+                    gate_open = float(raw_gate_open) >= HybridPredictor.DEFAULT_GATE_THRESHOLD
                 except (TypeError, ValueError):
                     gate_open = forecast_log_rv >= gate_cutoff_log_rv
             return {
@@ -542,11 +549,11 @@ class HybridPredictor:
             }
 
         if "is_valid" in prediction:
-            is_valid = float(prediction.get("is_valid", 0.5))
+            is_valid = float(prediction.get("is_valid", HybridPredictor.DEFAULT_GATE_THRESHOLD))
             return {
-                "forecast_log_rv": 0.0,
-                "forecast_vol": 1.0,
-                "gate_open": bool(is_valid >= 0.5),
+                "forecast_log_rv": HybridPredictor.DEFAULT_FORECAST_LOG_RV,
+                "forecast_vol": HybridPredictor.DEFAULT_FORECAST_VOL,
+                "gate_open": bool(is_valid >= HybridPredictor.DEFAULT_GATE_THRESHOLD),
             }
 
         # 未知のフォーマットの場合はデフォルトを返す

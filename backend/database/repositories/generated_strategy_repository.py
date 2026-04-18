@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast as t_cast
 from sqlalchemy import Float, cast, desc
 from sqlalchemy.orm import Session, selectinload, defer
 
-from database.models import GeneratedStrategy, BacktestResult
+from database.models import GeneratedStrategy
 
 from .base_repository import BaseRepository
 

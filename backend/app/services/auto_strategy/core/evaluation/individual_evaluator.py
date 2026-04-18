@@ -60,8 +60,11 @@ class IndividualEvaluator(EvaluationWindowService):
     並列実行時の効率を高めます。
     """
 
-    # デフォルトのキャッシュサイズ上限
+    # 定数
     DEFAULT_MAX_CACHE_SIZE = 100
+    RESULT_CACHE_MULTIPLIER = 100
+    REPORT_CACHE_MULTIPLIER = 20
+    ROBUSTNESS_REPORT_CACHE_MULTIPLIER = 10
 
     def __init__(
         self,
@@ -81,10 +84,10 @@ class IndividualEvaluator(EvaluationWindowService):
         self._data_cache: LRUCache = LRUCache(maxsize=self._max_cache_size)
         # 評価結果キャッシュ（軽量、ヒット率向上用）
         # データより軽量なのでサイズを大きめに取る
-        self._result_cache: LRUCache = LRUCache(maxsize=self._max_cache_size * 100)
-        self._report_cache: LRUCache = LRUCache(maxsize=self._max_cache_size * 20)
+        self._result_cache: LRUCache = LRUCache(maxsize=self._max_cache_size * self.RESULT_CACHE_MULTIPLIER)
+        self._report_cache: LRUCache = LRUCache(maxsize=self._max_cache_size * self.REPORT_CACHE_MULTIPLIER)
         self._robustness_report_cache: LRUCache = LRUCache(
-            maxsize=self._max_cache_size * 10
+            maxsize=self._max_cache_size * self.ROBUSTNESS_REPORT_CACHE_MULTIPLIER
         )
         self._lock = threading.Lock()
         self._last_evaluation_report: Optional[EvaluationReport] = None
@@ -288,11 +291,11 @@ class IndividualEvaluator(EvaluationWindowService):
         if not hasattr(self, "_data_cache"):
             self._data_cache = LRUCache(maxsize=self._max_cache_size)
         if not hasattr(self, "_result_cache"):
-            self._result_cache = LRUCache(maxsize=self._max_cache_size * 100)
+            self._result_cache = LRUCache(maxsize=self._max_cache_size * self.RESULT_CACHE_MULTIPLIER)
         if not hasattr(self, "_report_cache"):
-            self._report_cache = LRUCache(maxsize=self._max_cache_size * 20)
+            self._report_cache = LRUCache(maxsize=self._max_cache_size * self.REPORT_CACHE_MULTIPLIER)
         if not hasattr(self, "_robustness_report_cache"):
-            self._robustness_report_cache = LRUCache(maxsize=self._max_cache_size * 10)
+            self._robustness_report_cache = LRUCache(maxsize=self._max_cache_size * self.ROBUSTNESS_REPORT_CACHE_MULTIPLIER)
         if not hasattr(self, "_last_evaluation_report"):
             self._last_evaluation_report = None
 

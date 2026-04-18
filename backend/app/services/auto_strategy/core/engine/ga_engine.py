@@ -47,6 +47,10 @@ from .result_processor import ResultProcessor
 
 logger = logging.getLogger(__name__)
 
+# 定数
+DEFAULT_TIMEOUT_PER_INDIVIDUAL = 300.0
+MAX_PERSISTED_POPULATION_SIZE = 100
+
 
 class GeneticAlgorithmEngine:
     """遺伝的アルゴリズムエンジン。
@@ -434,7 +438,7 @@ class GeneticAlgorithmEngine:
         parallel_evaluator = ParallelEvaluator(
             evaluate_func=worker_evaluate_individual,  # type: ignore[arg-type]  # トップレベル関数を指定
             max_workers=getattr(evaluation_config, "max_workers", None),
-            timeout_per_individual=getattr(evaluation_config, "timeout", 300.0),
+            timeout_per_individual=getattr(evaluation_config, "timeout", DEFAULT_TIMEOUT_PER_INDIVIDUAL),
             worker_initializer=initialize_worker_process,  # トップレベル関数を指定
             worker_initargs=worker_initargs,
             use_process_pool=True,
@@ -595,7 +599,7 @@ class GeneticAlgorithmEngine:
         ranked_population = self.result_processor.rank_population_for_persistence(
             population
         )
-        persisted_population = ranked_population[:100]
+        persisted_population = ranked_population[:MAX_PERSISTED_POPULATION_SIZE]
         result["all_strategies"] = persisted_population
         result["fitness_scores"] = [
             extract_primary_fitness(individual) for individual in persisted_population

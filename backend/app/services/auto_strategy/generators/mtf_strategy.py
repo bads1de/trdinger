@@ -21,6 +21,19 @@ class MTFStrategy:
     マルチタイムフレーム（MTF）戦略
     """
 
+    # 定数
+    MAX_CONDITIONS_SAMPLE = 5
+    DEFAULT_HIGHER_TF = "1d"
+    TIMEFRAME_MAPPING = {
+        "1m": ["5m", "15m"],
+        "5m": ["30m", "1h"],
+        "15m": ["1h", "4h"],
+        "30m": ["1h", "4h"],
+        "1h": ["4h", "1d"],
+        "4h": "1d",
+        "1d": "1w",
+    }
+
     def __init__(self, condition_generator: Any) -> None:
         self.gen = condition_generator
 
@@ -96,22 +109,13 @@ class MTFStrategy:
 
         # 多すぎる場合は間引く
         def _sample(lst):
-            return random.sample(lst, 5) if len(lst) > 5 else lst
+            return random.sample(lst, self.MAX_CONDITIONS_SAMPLE) if len(lst) > self.MAX_CONDITIONS_SAMPLE else lst
 
         return _sample(long_conds), _sample(short_conds), []
 
     def _determine_higher_tf(self, current_tf: str) -> str:
         """実行足に基づいて適切な上位足を決定"""
-        mapping = {
-            "1m": ["5m", "15m"],
-            "5m": ["30m", "1h"],
-            "15m": ["1h", "4h"],
-            "30m": ["1h", "4h"],
-            "1h": ["4h", "1d"],
-            "4h": "1d",
-            "1d": "1w",
-        }
-        res = mapping.get(current_tf, "1d")
+        res = self.TIMEFRAME_MAPPING.get(current_tf, self.DEFAULT_HIGHER_TF)
         return random.choice(res) if isinstance(res, list) else res
 
     def _create_mtf_indicators(

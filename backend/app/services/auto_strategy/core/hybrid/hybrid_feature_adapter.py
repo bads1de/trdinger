@@ -29,9 +29,19 @@ class HybridFeatureAdapter:
     GAで生成された戦略遺伝子をMLモデルで評価可能な特徴量に変換します。
     """
 
+    # 定数
+    DERIVED_CACHE_SIZE = 20
+    DEFAULT_FILL_VALUE = 0.0
+    DEFAULT_TAKE_PROFIT_RATIO = 0.02
+    DEFAULT_STOP_LOSS_RATIO = 0.01
+    SENTIMENT_ROLLING_WINDOW = 3
+    DEFAULT_ROLLING_WINDOW = 5
+    DEFAULT_WAVELET_SCALES = [2, 4]
+    DEFAULT_MIN_SCALE = 2
+
     # 派生特徴量のキャッシュ（クラスレベル）
     # (data_hash, wavelet_config_hash) -> derived_features_df
-    _derived_cache: LRUCache[Any, Any] = LRUCache(maxsize=20)
+    _derived_cache: LRUCache[Any, Any] = LRUCache(maxsize=DERIVED_CACHE_SIZE)
 
     def __init__(
         self,
@@ -107,7 +117,7 @@ class HybridFeatureAdapter:
         sanitized = sanitize_numeric_dataframe(
             features_df, fill_value=None, forward_fill=True
         )
-        return sanitized.ffill().fillna(0.0)
+        return sanitized.ffill().fillna(HybridFeatureAdapter.DEFAULT_FILL_VALUE)
 
     def gene_to_features(
         self,
@@ -160,7 +170,7 @@ class HybridFeatureAdapter:
                 ]
                 safe_label_data = label_data.loc[:, safe_columns].copy()
                 if "market_regime" not in safe_label_data.columns:
-                    safe_label_data["market_regime"] = 0.0
+                    safe_label_data["market_regime"] = self.DEFAULT_FILL_VALUE
 
                 aligned = self._sanitize_feature_frame(
                     safe_label_data.reindex(features_df.index)
@@ -168,7 +178,7 @@ class HybridFeatureAdapter:
                 for col in aligned.columns:
                     features_df[col] = aligned[col]
             else:
-                features_df["market_regime"] = 0.0
+                features_df["market_regime"] = self.DEFAULT_FILL_VALUE
 
             # 3. マーケット特性（OI/FR/Sentiment）
             # OI変化率
@@ -177,30 +187,30 @@ class HybridFeatureAdapter:
                     features_df["open_interest"]
                     .replace(0, np.nan)
                     .pct_change()
-                    .fillna(0)
+                    .fillna(self.DEFAULT_FILL_VALUE)
                 )
             else:
-                features_df["oi_pct_change"] = 0.0
+                features_df["oi_pct_change"] = self.DEFAULT_FILL_VALUE
 
             # FR変化
             if "funding_rate" in features_df.columns:
                 features_df["funding_rate_change"] = (
-                    features_df["funding_rate"].diff().fillna(0)
+                    features_df["funding_rate"].diff().fillna(self.DEFAULT_FILL_VALUE)
                 )
             else:
-                features_df["funding_rate_change"] = 0.0
+                features_df["funding_rate_change"] = self.DEFAULT_FILL_VALUE
 
             # センチメント
             if sentiment_scores is not None and not sentiment_scores.empty:
                 features_df["sentiment_smoothed"] = (
                     sentiment_scores.reindex(features_df.index)
                     .ffill()
-                    .rolling(3, min_periods=1)
+                    .rolling(self.SENTIMENT_ROLLING_WINDOW, min_periods=1)
                     .mean()
-                    .fillna(0)  # type: ignore[reportAttributeAccessIssue]
+                    .fillna(self.DEFAULT_FILL_VALUE)  # type: ignore[reportAttributeAccessIssue]
                 )
             else:
-                features_df["sentiment_smoothed"] = 0.0
+                features_df["sentiment_smoothed"] = self.DEFAULT_FILL_VALUE
 
             # 4. 拡張特徴量（Wavelet / 派生） - キャッシュ対応
             derived_features = self._get_cached_derived_features(ohlcv_data)
@@ -282,10 +292,10 @@ class HybridFeatureAdapter:
             {
                 "has_tpsl": int(bool(tpsl and tpsl.enabled)),
                 "take_profit_ratio": (
-                    getattr(tpsl, "take_profit_pct", 0.02) if tpsl else 0.02
+                    getattr(tpsl, "take_profit_pct", self.DEFAULT_TAKE_PROFIT_RATIO) if tpsl else self.DEFAULT_TAKE_PROFIT_RATIO
                 ),
                 "stop_loss_ratio": (
-                    getattr(tpsl, "stop_loss_pct", 0.01) if tpsl else 0.01
+                    getattr(tpsl, "stop_loss_pct", self.DEFAULT_STOP_LOSS_RATIO) if tpsl else self.DEFAULT_STOP_LOSS_RATIO
                 ),
             }
         )
@@ -343,28 +353,28 @@ class HybridFeatureAdapter:
 
         if "close" in augmented.columns:
             close = augmented["close"].astype(float)
-            augmented["close_return_1"] = close.pct_change().fillna(0)
-            augmented["close_return_5"] = close.pct_change(periods=5).fillna(0)
+            augmented["close_return_1"] = close.pct_change().fillna(self.DEFAULT_FILL_VALUE)
+            augmented["close_return_5"] = close.pct_change(periods=5).fillna(self.DEFAULT_FILL_VALUE)
             augmented["close_rolling_mean_5"] = close.rolling(
-                window=5, min_periods=1
+                window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
             ).mean()
             augmented["close_rolling_std_5"] = (
-                close.rolling(window=5, min_periods=1).std().fillna(0)
+                close.rolling(window=self.DEFAULT_ROLLING_WINDOW, min_periods=1).std().fillna(self.DEFAULT_FILL_VALUE)
             )
             augmented["close_rolling_min_5"] = close.rolling(
-                window=5, min_periods=1
+                window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
             ).min()
             augmented["close_rolling_max_5"] = close.rolling(
-                window=5, min_periods=1
+                window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
             ).max()
 
         if "volume" in augmented.columns:
             volume = augmented["volume"].astype(float)
             augmented["volume_rolling_mean_5"] = volume.rolling(
-                window=5, min_periods=1
+                window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
             ).mean()
             augmented["volume_rolling_std_5"] = (
-                volume.rolling(window=5, min_periods=1).std().fillna(0)
+                volume.rolling(window=self.DEFAULT_ROLLING_WINDOW, min_periods=1).std().fillna(self.DEFAULT_FILL_VALUE)
             )
 
         if set(["high", "low"]).issubset(augmented.columns):
@@ -401,16 +411,16 @@ class WaveletFeatureTransformer:
     @staticmethod
     def _validate_scales(scales: Any) -> List[int]:
         if not isinstance(scales, (list, tuple, set)):
-            return [2, 4]
+            return HybridFeatureAdapter.DEFAULT_WAVELET_SCALES
         validated: List[int] = []
         for scale in scales:
             try:
                 scale_int = int(scale)
             except (TypeError, ValueError):
                 continue
-            if scale_int >= 2:
+            if scale_int >= HybridFeatureAdapter.DEFAULT_MIN_SCALE:
                 validated.append(scale_int)
-        return sorted(set(validated)) or [2, 4]
+        return sorted(set(validated)) or HybridFeatureAdapter.DEFAULT_WAVELET_SCALES
 
     def append_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
         """指定カラムにウェーブレットディテール成分を付与"""

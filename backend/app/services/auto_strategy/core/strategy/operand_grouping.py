@@ -7,7 +7,7 @@
 
 import logging
 from enum import Enum
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,13 @@ class OperandGroupingSystem:
     指標とデータソースを適切なスケールグループに分類し、
     同一グループ内での比較を優先する仕組みを提供します。
     """
+
+    # 定数
+    PERFECT_COMPATIBILITY = 1.0
+    HIGH_COMPATIBILITY = 0.8
+    MEDIUM_COMPATIBILITY = 0.3
+    LOW_COMPATIBILITY = 0.1
+    DEFAULT_MIN_COMPATIBILITY = 0.8
 
     # 指標とグループのマッピング（クラス定数として定義）
     GROUP_PATTERNS: Dict[OperandGroup, List[str]] = {
@@ -101,27 +108,27 @@ class OperandGroupingSystem:
 
         # 同一グループ内は完全に互換
         for group in OperandGroup:
-            matrix[(group, group)] = 1.0
+            matrix[(group, group)] = self.PERFECT_COMPATIBILITY
 
         # 価格ベースと価格比率は高い互換性（どちらも価格関連スケール）
-        matrix[(OperandGroup.PRICE_BASED, OperandGroup.PRICE_RATIO)] = 0.8
-        matrix[(OperandGroup.PRICE_RATIO, OperandGroup.PRICE_BASED)] = 0.8
+        matrix[(OperandGroup.PRICE_BASED, OperandGroup.PRICE_RATIO)] = self.HIGH_COMPATIBILITY
+        matrix[(OperandGroup.PRICE_RATIO, OperandGroup.PRICE_BASED)] = self.HIGH_COMPATIBILITY
 
         # 0-100%オシレーター同士は高い互換性
-        matrix[(OperandGroup.PERCENTAGE_0_100, OperandGroup.PERCENTAGE_0_100)] = 1.0
+        matrix[(OperandGroup.PERCENTAGE_0_100, OperandGroup.PERCENTAGE_0_100)] = self.PERFECT_COMPATIBILITY
 
         # ±100オシレーターとゼロ中心は中程度の互換性
-        matrix[(OperandGroup.PERCENTAGE_NEG100_100, OperandGroup.ZERO_CENTERED)] = 0.3
-        matrix[(OperandGroup.ZERO_CENTERED, OperandGroup.PERCENTAGE_NEG100_100)] = 0.3
+        matrix[(OperandGroup.PERCENTAGE_NEG100_100, OperandGroup.ZERO_CENTERED)] = self.MEDIUM_COMPATIBILITY
+        matrix[(OperandGroup.ZERO_CENTERED, OperandGroup.PERCENTAGE_NEG100_100)] = self.MEDIUM_COMPATIBILITY
 
         # 特殊スケール同士は低い互換性
-        matrix[(OperandGroup.SPECIAL_SCALE, OperandGroup.SPECIAL_SCALE)] = 0.3
+        matrix[(OperandGroup.SPECIAL_SCALE, OperandGroup.SPECIAL_SCALE)] = self.MEDIUM_COMPATIBILITY
 
         # その他の組み合わせは非常に低い互換性
         for group1 in OperandGroup:
             for group2 in OperandGroup:
                 if (group1, group2) not in matrix:
-                    matrix[(group1, group2)] = 0.1
+                    matrix[(group1, group2)] = self.LOW_COMPATIBILITY
 
         return matrix
 
@@ -165,7 +172,7 @@ class OperandGroupingSystem:
         group1 = self.get_operand_group(operand1)
         group2 = self.get_operand_group(operand2)
 
-        score = self._compatibility_matrix.get((group1, group2), 0.1)
+        score = self._compatibility_matrix.get((group1, group2), self.LOW_COMPATIBILITY)
 
         return score
 
@@ -173,18 +180,20 @@ class OperandGroupingSystem:
         self,
         target_operand: str,
         available_operands: List[str],
-        min_compatibility: float = 0.8,
+        min_compatibility: Optional[float] = None,
     ) -> List[str]:
         """指定されたオペランドと互換性の高いオペランドリストを取得
 
         Args:
             target_operand: 対象オペランド
             available_operands: 利用可能なオペランドリスト
-            min_compatibility: 最小互換性スコア
+            min_compatibility: 最小互換性スコア（デフォルト: DEFAULT_MIN_COMPATIBILITY）
 
         Returns:
             互換性の高いオペランドリスト
         """
+        if min_compatibility is None:
+            min_compatibility = self.DEFAULT_MIN_COMPATIBILITY
         compatible = []
 
         for operand in available_operands:
@@ -215,9 +224,9 @@ class OperandGroupingSystem:
 
         compatibility = self.get_compatibility_score(left_operand, str(right_operand))
 
-        if compatibility >= 0.8:
+        if compatibility >= self.HIGH_COMPATIBILITY:
             return True, f"高い互換性 (スコア: {compatibility:.2f})"
-        elif compatibility >= 0.3:
+        elif compatibility >= self.MEDIUM_COMPATIBILITY:
             return True, f"中程度の互換性 (スコア: {compatibility:.2f})"
         else:
             return False, f"低い互換性 (スコア: {compatibility:.2f})"

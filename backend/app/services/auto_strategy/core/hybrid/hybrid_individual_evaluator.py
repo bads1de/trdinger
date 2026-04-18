@@ -2,7 +2,7 @@
 
 import importlib
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Tuple, Type
 
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config.helpers import (
@@ -32,12 +32,15 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     IndividualEvaluatorを継承し、ML予測スコアをフィットネス計算に統合します。
     """
 
+    # 定数
+    DEFAULT_CACHE_SIZE = 1000
+
     def __init__(
         self,
         backtest_service: BacktestService,
         predictor: Optional[HybridPredictor] = None,
         feature_adapter: Optional["HybridFeatureAdapter"] = None,
-        cache_size: int = 1000,
+        cache_size: Optional[int] = None,
     ):
         """
         初期化
@@ -47,6 +50,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             predictor: ハイブリッド予測器（オプション）
             feature_adapter: 特徴量アダプタ（オプション）
         """
+        if cache_size is None:
+            cache_size = self.DEFAULT_CACHE_SIZE
         super().__init__(backtest_service)
         self.predictor = predictor
         self.feature_adapter = feature_adapter or self._create_feature_adapter()

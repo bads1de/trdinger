@@ -35,6 +35,13 @@ from .report_selection import (
 
 logger = logging.getLogger(__name__)
 
+# 定数
+GC_THRESHOLD_GENERATIONS = 2000
+GC_THRESHOLD_DIVISIONS = 20
+DYNAMIC_SCALAR_MAX = 2.0
+DEFAULT_SCALAR_VALUE = 1.0
+DEFAULT_MIN_PASS_RATE = 0.0
+
 
 def _invalidate_individual_cache(individual: Any) -> None:
     """個体のキャッシュを無効化する。
@@ -207,7 +214,7 @@ class EvolutionRunner:
             # GCを完全に無効化するのではなく、閾値を上げて頻度を下げる
             # デフォルト: (700, 10, 10) → 評価中は(2000, 20, 20)に変更
             original_threshold = gc.get_threshold()
-            gc.set_threshold(2000, 20, 20)
+            gc.set_threshold(GC_THRESHOLD_GENERATIONS, GC_THRESHOLD_DIVISIONS, GC_THRESHOLD_DIVISIONS)
 
             try:
                 logger.debug("世代 %s/%s を開始", gen + 1, config.generations)
@@ -586,9 +593,9 @@ class EvolutionRunner:
 
             average_value = float(np.mean(values))
             if objective_registry.is_dynamic_scalar_objective(objective):
-                scalars[objective] = min(2.0, 1.0 + max(average_value, 0.0))
+                scalars[objective] = min(DYNAMIC_SCALAR_MAX, DEFAULT_SCALAR_VALUE + max(average_value, DEFAULT_MIN_PASS_RATE))
             else:
-                scalars[objective] = 1.0
+                scalars[objective] = DEFAULT_SCALAR_VALUE
 
         config.objective_dynamic_scalars = scalars
 
@@ -706,7 +713,7 @@ class EvolutionRunner:
             rank_key = build_report_rank_key(
                 candidate,
                 report,
-                getattr(two_stage_config, "min_pass_rate", 0.0),
+                getattr(two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE),
             )
             ranked_candidates.append((rank_key, candidate))
 

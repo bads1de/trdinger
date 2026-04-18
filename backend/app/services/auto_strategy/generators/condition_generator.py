@@ -27,6 +27,17 @@ class ConditionGenerator:
     4. 指標特性活用戦略
     """
 
+    # 定数
+    OR_GROUP_PROBABILITY = 0.3
+    OSCILLATOR_HIGH_THRESHOLD = 70.0
+    OSCILLATOR_LOW_THRESHOLD = 30.0
+    OSCILLATOR_MIDPOINT = 50.0
+    ZERO_THRESHOLD = 0.0
+    PRICE_RATIO_LONG_THRESHOLD = 1.01
+    PRICE_RATIO_SHORT_THRESHOLD = 0.99
+    EXIT_MOMENTUM_HIGH_THRESHOLD = 10.0
+    EXIT_MOMENTUM_LOW_THRESHOLD = -10.0
+
     @safe_operation(context="ConditionGenerator初期化", is_api_call=False)
     def __init__(self, ga_config: Optional[Any] = None):
         """
@@ -230,13 +241,39 @@ class ConditionGenerator:
             logger.debug(f"MTFStrategy生成スキップ: {e}")
 
         # 3. 制限とフォールバック
+        return self._finalize_conditions(longs, shorts, indicators, purpose="entry")
+
+    def _finalize_conditions(
+        self,
+        longs: List[Union[Condition, ConditionGroup]],
+        shorts: List[Union[Condition, ConditionGroup]],
+        indicators: List[IndicatorGene],
+        *,
+        purpose: str = "entry",
+    ) -> Tuple[
+        List[Union[Condition, ConditionGroup]],
+        List[Union[Condition, ConditionGroup]],
+        List[Condition],
+    ]:
+        """
+        条件リストを最終化する（共通メソッド）
+
+        Args:
+            longs: ロング条件リスト
+            shorts: ショート条件リスト
+            indicators: 指標リスト
+            purpose: "entry" または "exit"
+
+        Returns:
+            (正規化されたロング条件, 正規化されたショート条件, 空リスト)
+        """
         max_conds = getattr(self.ga_config_obj, "max_conditions", 3)
 
         def _finalize(lst, side):
             if not lst:
-                return self.normalize_conditions([], side, indicators)
+                return self.normalize_conditions([], side, indicators, purpose=purpose)
             res = random.sample(lst, max_conds) if len(lst) > max_conds else lst
-            return self.normalize_conditions(res, side, indicators)
+            return self.normalize_conditions(res, side, indicators, purpose=purpose)
 
         return _finalize(longs, "long"), _finalize(shorts, "short"), []
 
@@ -275,25 +312,7 @@ class ConditionGenerator:
         longs.extend(tp_longs)
         shorts.extend(tp_shorts)
 
-        max_conds = getattr(self.ga_config_obj, "max_conditions", 3)
-
-        def _finalize(lst, side):
-            if not lst:
-                return self.normalize_conditions(
-                    [],
-                    side,
-                    indicators,
-                    purpose="exit",
-                )
-            res = random.sample(lst, max_conds) if len(lst) > max_conds else lst
-            return self.normalize_conditions(
-                res,
-                side,
-                indicators,
-                purpose="exit",
-            )
-
-        return _finalize(longs, "long"), _finalize(shorts, "short"), []
+        return self._finalize_conditions(longs, shorts, indicators, purpose="exit")
 
     def generate_fallback_exit_conditions(
         self, indicators: List[IndicatorGene]
@@ -361,12 +380,12 @@ class ConditionGenerator:
             elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
                 longs.append(
                     Condition(
-                        left_operand=momentum_name, operator="<", right_operand=-10.0
+                        left_operand=momentum_name, operator="<", right_operand=self.EXIT_MOMENTUM_LOW_THRESHOLD
                     )
                 )
                 shorts.append(
                     Condition(
-                        left_operand=momentum_name, operator=">", right_operand=10.0
+                        left_operand=momentum_name, operator=">", right_operand=self.EXIT_MOMENTUM_HIGH_THRESHOLD
                     )
                 )
 
@@ -441,12 +460,12 @@ class ConditionGenerator:
             if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
                 longs.append(
                     Condition(
-                        left_operand=indicator_name, operator=">", right_operand=70.0
+                        left_operand=indicator_name, operator=">", right_operand=self.OSCILLATOR_HIGH_THRESHOLD
                     )
                 )
                 shorts.append(
                     Condition(
-                        left_operand=indicator_name, operator="<", right_operand=30.0
+                        left_operand=indicator_name, operator="<", right_operand=self.OSCILLATOR_LOW_THRESHOLD
                     )
                 )
 
@@ -558,19 +577,19 @@ class ConditionGenerator:
                     threshold = "close"
                 elif scale_type == IndicatorScaleType.OSCILLATOR_0_100:
                     # 0-100オシレーターなら50を基準
-                    threshold = 50.0
+                    threshold = self.OSCILLATOR_MIDPOINT
                 elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
                     # ±100なら0でOK
-                    threshold = 0.0
+                    threshold = self.ZERO_THRESHOLD
                 elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
                     # 0中心なら0でOK
-                    threshold = 0.0
+                    threshold = self.ZERO_THRESHOLD
                 elif scale_type in (
                     IndicatorScaleType.FUNDING_RATE,
                     IndicatorScaleType.OPEN_INTEREST,
                 ):
                     # OI/FR 派生はゼロ基準の閾値を使う
-                    threshold = 0.0
+                    threshold = self.ZERO_THRESHOLD
                 elif scale_type == IndicatorScaleType.VOLUME:
                     # 出来高
                     threshold = "SMA"
@@ -592,7 +611,7 @@ class ConditionGenerator:
         res: List[Union[Condition, ConditionGroup]] = []
         i = 0
         while i < len(conditions):
-            if i + 1 < len(conditions) and random.random() < 0.3:
+            if i + 1 < len(conditions) and random.random() < self.OR_GROUP_PROBABILITY:
                 res.append(
                     ConditionGroup(
                         operator="OR", conditions=[conditions[i], conditions[i + 1]]

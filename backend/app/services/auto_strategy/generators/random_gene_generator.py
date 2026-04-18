@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Any, Dict, List, Optional, Protocol, Sequence, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, TypeVar
 
 from app.utils.error_handler import safe_operation
 
@@ -48,6 +48,11 @@ class RandomGeneGenerator:
 
     OI/FRデータソースを含む多様な戦略遺伝子を生成します。
     """
+
+    # キャッシュ設定
+    CACHE_SIZE = 10
+    TOOL_ENABLE_PROBABILITY = 0.5
+    DEFAULT_POSITION_SIZE = 0.1
 
     def __init__(
         self,
@@ -115,20 +120,20 @@ class RandomGeneGenerator:
         キャッシュを事前に生成して、ランダム生成のパフォーマンスを向上させます。
 
         Note:
-            各キャッシュに10個のサンプルを生成します。
+            各キャッシュにCACHE_SIZE個のサンプルを生成します。
         """
-        for _ in range(10):
+        for _ in range(self.CACHE_SIZE):
             indicators = generate_random_indicators(self.config)
             if indicators:
                 self._indicator_cache.extend(indicators)
 
-        for _ in range(10):
+        for _ in range(self.CACHE_SIZE):
             self._tpsl_cache.append(create_random_tpsl_gene())
 
-        for _ in range(10):
+        for _ in range(self.CACHE_SIZE):
             self._exit_gene_cache.append(create_random_exit_gene(self.config))
 
-        for _ in range(10):
+        for _ in range(self.CACHE_SIZE):
             self._position_sizing_cache.append(
                 create_random_position_sizing_gene()
             )
@@ -138,10 +143,10 @@ class RandomGeneGenerator:
     @staticmethod
     def _clone_or_create_gene(
         cache: Sequence[T],
-        creator: Any,
+        creator: Callable[[], T],
         *,
-        postprocess: Optional[Any] = None,
-    ) -> Any:
+        postprocess: Optional[Callable[[T], None]] = None,
+    ) -> T:
         """
         キャッシュから clone し、無ければ creator で生成する
 
@@ -176,7 +181,7 @@ class RandomGeneGenerator:
             tool_genes.append(
                 ToolGene(
                     tool_name=tool.name,
-                    enabled=random.random() < 0.5,
+                    enabled=random.random() < self.TOOL_ENABLE_PROBABILITY,
                     params=tool.get_default_params(),
                 )
             )
@@ -277,8 +282,7 @@ class RandomGeneGenerator:
             for tool in self._tool_genes_template or []
         ]
 
-    @staticmethod
-    def _clone_tool_gene_template(tool: ToolGene) -> ToolGene:
+    def _clone_tool_gene_template(self, tool: ToolGene) -> ToolGene:
         """
         ツール遺伝子テンプレートを clone し、enabled を再抽選する
 
@@ -291,7 +295,7 @@ class RandomGeneGenerator:
             ToolGene: クローンされたツール遺伝子
         """
         cloned = tool.clone()
-        cloned.enabled = random.random() < 0.5
+        cloned.enabled = random.random() < self.TOOL_ENABLE_PROBABILITY
         return cloned
 
     @safe_operation(
@@ -363,7 +367,7 @@ class RandomGeneGenerator:
 
         # リスク管理設定（従来方式）
         risk_management = {
-            "position_size": 0.1,  # デフォルト値（実際にはposition_sizing_geneが使用される）
+            "position_size": self.DEFAULT_POSITION_SIZE,  # デフォルト値（実際にはposition_sizing_geneが使用される）
         }
 
         # ポジションサイジング遺伝子を生成（GA最適化対象）

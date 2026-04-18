@@ -17,6 +17,13 @@ from app.utils.error_handler import safe_operation
 
 logger = logging.getLogger(__name__)
 
+# 定数
+FLOAT_TOLERANCE = 1e-8
+SHIFT_AMOUNT = 1
+PREVIOUS_VALUE_INDEX = 2
+PREVIOUS_VALUE_ILOC_INDEX = -2
+LAST_VALUE_INDEX = -1
+
 
 class ConditionEvaluator:
     """
@@ -38,8 +45,8 @@ class ConditionEvaluator:
             "<": op_module.lt,
             ">=": op_module.ge,
             "<=": op_module.le,
-            "==": lambda x, y: np.isclose(x, y, atol=1e-8),
-            "!=": lambda x, y: np.logical_not(np.isclose(x, y, atol=1e-8)),
+            "==": lambda x, y: np.isclose(x, y, atol=FLOAT_TOLERANCE),
+            "!=": lambda x, y: np.logical_not(np.isclose(x, y, atol=FLOAT_TOLERANCE)),
             # CROSS_UP/DOWN は特別扱い
         }
 
@@ -206,8 +213,8 @@ class ConditionEvaluator:
                     l_curr = left_val
                     r_curr = right_val
                     # shift属性チェックをhasattrでなくtry-exceptで行う方がPythonicで高速
-                    l_prev = l_curr.shift(1)  # type: ignore[union-attr]
-                    r_prev = r_curr.shift(1)  # type: ignore[union-attr]
+                    l_prev = l_curr.shift(SHIFT_AMOUNT)  # type: ignore[union-attr]
+                    r_prev = r_curr.shift(SHIFT_AMOUNT)  # type: ignore[union-attr]
                     result = (l_curr > r_curr) & (l_prev <= r_prev)
                     return cast(Union["pd.Series", "np.ndarray"], result)
                 except AttributeError:
@@ -218,8 +225,8 @@ class ConditionEvaluator:
                 try:
                     l_curr = left_val
                     r_curr = right_val
-                    l_prev = l_curr.shift(1)  # type: ignore[union-attr]
-                    r_prev = r_curr.shift(1)  # type: ignore[union-attr]
+                    l_prev = l_curr.shift(SHIFT_AMOUNT)  # type: ignore[union-attr]
+                    r_prev = r_curr.shift(SHIFT_AMOUNT)  # type: ignore[union-attr]
                     result = (l_curr < r_curr) & (l_prev >= r_prev)
                     return cast(Union["pd.Series", "np.ndarray"], result)
                 except AttributeError:
@@ -409,15 +416,15 @@ class ConditionEvaluator:
             try:
                 # pandas Series / DataFrame
                 if hasattr(val, "iloc"):
-                    if len(val) >= 2:
-                        return float(val.iloc[-2])  # type: ignore[reportAttributeAccessIssue]
+                    if len(val) >= PREVIOUS_VALUE_INDEX:
+                        return float(val.iloc[PREVIOUS_VALUE_ILOC_INDEX])  # type: ignore[reportAttributeAccessIssue]
                 # numpy array / list
                 elif hasattr(val, "__getitem__"):
                     # 0次元配列（スカラー）の場合は len() がエラーになるためチェック
                     if hasattr(val, "ndim") and val.ndim == 0:
                         return float("nan")
-                    if len(val) >= 2:
-                        return float(cast("float", val[-2]))
+                    if len(val) >= PREVIOUS_VALUE_INDEX:
+                        return float(cast("float", val[-PREVIOUS_VALUE_INDEX]))
             except Exception as e:
                 logger.debug("前回の値の取得に失敗しました: %s", e)
                 pass
@@ -443,12 +450,12 @@ class ConditionEvaluator:
         # 3. Pandas Series
         if isinstance(value, pd.Series):
             if not value.empty:
-                return float(value.values[-1])  # .iloc[-1]よりvalues[-1]が速い
+                return float(value.values[LAST_VALUE_INDEX])  # .iloc[-1]よりvalues[-1]が速い
             return 0.0
 
         # 4. リスト等
         try:
-            return float(value[-1])
+            return float(value[LAST_VALUE_INDEX])
         except (IndexError, TypeError, ValueError):
             return 0.0
 
@@ -473,16 +480,16 @@ class ConditionEvaluator:
             # ヘルパー関数: 安全に最後の値を取得
             def _safe_get_last(obj):
                 if isinstance(obj, (pd.Series, pd.DataFrame)):
-                    return float(obj.values[-1])
+                    return float(obj.values[LAST_VALUE_INDEX])
                 # 0次元配列（スカラー）の対応
                 if isinstance(obj, np.ndarray) and obj.ndim == 0:
                     return float(obj)
                 try:
-                    return float(obj[-1])
+                    return float(obj[LAST_VALUE_INDEX])
                 except (TypeError, KeyError, IndexError):
                     # PandasのRangeIndexなどで[-1]がキーエラーになる場合のフォールバック
                     if hasattr(obj, "iloc"):
-                        return float(obj.iloc[-1])  # type: ignore[reportAttributeAccessIssue]
+                        return float(obj.iloc[LAST_VALUE_INDEX])  # type: ignore[reportAttributeAccessIssue]
                     raise
 
             try:

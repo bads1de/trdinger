@@ -25,6 +25,11 @@ class IndicatorCompositionService:
     トレンド指標強制追加やMAクロス戦略などの複雑な構成を管理。
     """
 
+    # 定数
+    MA_CROSS_PROBABILITY = 0.25
+    MA_PERIOD_CHOICES = [10, 14, 20, 30, 50]
+    DEFAULT_MA_PERIOD = 20
+
     def __init__(self, config):
         self.config = config
         self.indicator_service = TechnicalIndicatorService()
@@ -51,7 +56,7 @@ class IndicatorCompositionService:
             # 確率的にMAクロスを導入（強制的ではない）
             rnd_val = random.random()
 
-            if ma_count < 2 and rnd_val < 0.25:  # 25%の確率で導入
+            if ma_count < 2 and rnd_val < self.MA_CROSS_PROBABILITY:  # 25%の確率で導入
                 # MA指標プールを準備
                 ma_pool = [
                     name
@@ -99,12 +104,12 @@ class IndicatorCompositionService:
         """
         try:
             if indicator_type in MA_INDICATORS_NEEDING_PERIOD:
-                return {"period": random.choice([10, 14, 20, 30, 50])}
+                return {"period": random.choice(self.MA_PERIOD_CHOICES)}
             else:
                 return {}
         except Exception as e:
             logger.debug(f"デフォルトパラメータ取得エラー: {e}")
-            return {"period": 20}  # SMA用フォールバック
+            return {"period": self.DEFAULT_MA_PERIOD}  # SMA用フォールバック
 
     def _get_existing_periods(self, indicators: List[IndicatorGene]) -> set:
         """

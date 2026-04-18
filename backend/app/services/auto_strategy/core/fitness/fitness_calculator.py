@@ -33,6 +33,21 @@ class FitnessCalculator:
     スカラー/ベクトルのフィットネス計算、ロング・ショートバランス評価を行います。
     """
 
+    # 定数
+    DEFAULT_WEIGHT_TOTAL_RETURN = 0.3
+    DEFAULT_WEIGHT_SHARPE_RATIO = 0.4
+    DEFAULT_WEIGHT_MAX_DRAWDOWN = 0.2
+    DEFAULT_WEIGHT_WIN_RATE = 0.1
+    DEFAULT_WEIGHT_BALANCE_SCORE = 0.1
+    TRADE_BALANCE_WEIGHT = 0.6
+    PROFIT_BALANCE_WEIGHT = 0.4
+    PROFIT_BALANCE_BOTH_POSITIVE = 1.0
+    PROFIT_BALANCE_ONE_POSITIVE = 0.7
+    PROFIT_BALANCE_NEUTRAL = 0.5
+    PROFIT_BALANCE_BOTH_NEGATIVE = 0.1
+    PROFIT_BALANCE_ONE_NEGATIVE = 0.3
+    NUMPY_THRESHOLD = 50
+
     def __init__(self) -> None:
         # メトリクスキャッシュ（同一 backtest_result の再計算を避ける）
         self._metrics_cache: Dict[str, Dict[str, float]] = {}
@@ -389,11 +404,11 @@ class FitnessCalculator:
             fitness_weights = config.fitness_weights.copy()
 
             fitness = (
-                float(fitness_weights.get("total_return", 0.3)) * total_return
-                + float(fitness_weights.get("sharpe_ratio", 0.4)) * sharpe_ratio
-                + float(fitness_weights.get("max_drawdown", 0.2)) * (1 - max_drawdown)
-                + float(fitness_weights.get("win_rate", 0.1)) * win_rate
-                + float(fitness_weights.get("balance_score", 0.1)) * balance_score
+                float(fitness_weights.get("total_return", self.DEFAULT_WEIGHT_TOTAL_RETURN)) * total_return
+                + float(fitness_weights.get("sharpe_ratio", self.DEFAULT_WEIGHT_SHARPE_RATIO)) * sharpe_ratio
+                + float(fitness_weights.get("max_drawdown", self.DEFAULT_WEIGHT_MAX_DRAWDOWN)) * (1 - max_drawdown)
+                + float(fitness_weights.get("win_rate", self.DEFAULT_WEIGHT_WIN_RATE)) * win_rate
+                + float(fitness_weights.get("balance_score", self.DEFAULT_WEIGHT_BALANCE_SCORE)) * balance_score
             )
 
             ulcer_scale = 1.0
@@ -430,7 +445,7 @@ class FitnessCalculator:
 
         try:
             n_trades = len(trade_history)
-            if n_trades < 50:
+            if n_trades < self.NUMPY_THRESHOLD:
                 return self._calculate_balance_score_inline(
                     cast(list[dict[str, Any]], trade_history)
                 )
@@ -471,17 +486,17 @@ class FitnessCalculator:
         total_pnl = long_pnl + short_pnl
         if total_pnl > 0:
             if long_pnl > 0 and short_pnl > 0:
-                profit_balance = 1.0
+                profit_balance = self.PROFIT_BALANCE_BOTH_POSITIVE
             elif long_pnl > 0 or short_pnl > 0:
-                profit_balance = 0.7
+                profit_balance = self.PROFIT_BALANCE_ONE_POSITIVE
             else:
-                profit_balance = 0.5
+                profit_balance = self.PROFIT_BALANCE_NEUTRAL
         elif long_pnl < 0 and short_pnl < 0:
-            profit_balance = 0.1
+            profit_balance = self.PROFIT_BALANCE_BOTH_NEGATIVE
         else:
-            profit_balance = 0.3
+            profit_balance = self.PROFIT_BALANCE_ONE_NEGATIVE
 
-        balance_score = 0.6 * trade_balance + 0.4 * profit_balance
+        balance_score = self.TRADE_BALANCE_WEIGHT * trade_balance + self.PROFIT_BALANCE_WEIGHT * profit_balance
         return float(max(0.0, min(1.0, balance_score)))
 
     def _calculate_balance_score_numpy(
@@ -522,17 +537,17 @@ class FitnessCalculator:
 
         if total_pnl > 0:
             if long_pnl > 0 and short_pnl > 0:
-                profit_balance = 1.0
+                profit_balance = FitnessCalculator.PROFIT_BALANCE_BOTH_POSITIVE
             elif long_pnl > 0 or short_pnl > 0:
-                profit_balance = 0.7
+                profit_balance = FitnessCalculator.PROFIT_BALANCE_ONE_POSITIVE
             else:
-                profit_balance = 0.5
+                profit_balance = FitnessCalculator.PROFIT_BALANCE_NEUTRAL
         elif long_pnl < 0 and short_pnl < 0:
-            profit_balance = 0.1
+            profit_balance = FitnessCalculator.PROFIT_BALANCE_BOTH_NEGATIVE
         else:
-            profit_balance = 0.3
+            profit_balance = FitnessCalculator.PROFIT_BALANCE_ONE_NEGATIVE
 
-        balance_score = float(0.6 * trade_balance + 0.4 * profit_balance)
+        balance_score = float(FitnessCalculator.TRADE_BALANCE_WEIGHT * trade_balance + FitnessCalculator.PROFIT_BALANCE_WEIGHT * profit_balance)
         return max(0.0, min(1.0, balance_score))
 
     def calculate_long_short_balance(

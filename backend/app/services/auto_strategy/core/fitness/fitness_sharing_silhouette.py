@@ -16,6 +16,14 @@ from .fitness_utils import has_valid_fitness
 
 logger = logging.getLogger(__name__)
 
+# 定数
+MIN_VECTORS_FOR_CLUSTERING = 3
+MAX_CLUSTERS = 3
+RANDOM_STATE = 42
+SILHOUETTE_OFFSET = 1.0
+SILHOUETTE_DIVISOR = 2.0
+MIN_ADJUSTMENT_FACTOR = 0.1
+
 
 def _collect_gene_vectors(
     population: List[Any],
@@ -66,15 +74,15 @@ def silhouette_based_sharing(
             vectorize_gene=vectorize_gene,
         )
 
-        if len(vectors) < 3:
+        if len(vectors) < MIN_VECTORS_FOR_CLUSTERING:
             return population
 
         vectors_array = np.array(vectors)
-        n_clusters = min(len(vectors_array) - 1, 3)
+        n_clusters = min(len(vectors_array) - 1, MAX_CLUSTERS)
         if n_clusters < 2:
             return population
 
-        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
+        kmeans = KMeans(n_clusters=n_clusters, random_state=RANDOM_STATE, n_init="auto")
         labels = kmeans.fit_predict(vectors_array)
 
         silhouette_vals = silhouette_samples(vectors_array, labels)
@@ -83,8 +91,8 @@ def silhouette_based_sharing(
             individual = population[idx]
             if has_valid_fitness(individual):
                 silhouette_score = silhouette_vals[j]
-                normalized_silhouette = (silhouette_score + 1.0) / 2.0
-                adjustment_factor = max(0.1, 1.0 - normalized_silhouette)
+                normalized_silhouette = (silhouette_score + SILHOUETTE_OFFSET) / SILHOUETTE_DIVISOR
+                adjustment_factor = max(MIN_ADJUSTMENT_FACTOR, 1.0 - normalized_silhouette)
 
                 original_fitness_values = individual.fitness.values
                 adjusted_values = tuple(

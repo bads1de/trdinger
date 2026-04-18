@@ -33,6 +33,74 @@ class SeedStrategyFactory:
     GA初期集団に注入するための実戦的な戦略テンプレートを生成します。
     """
 
+    # シード戦略のマッピング（名前 -> 作成メソッド）
+    _SEED_MAPPING: dict[str, str] = {
+        "dmi_extreme": "create_dmi_extreme_trend",
+        "rsi_momentum": "create_rsi_momentum",
+        "bollinger_breakout": "create_bollinger_breakout",
+        "kama_adx": "create_kama_adx_hybrid",
+        "wae": "create_wae",
+        "trendilo": "create_trendilo",
+    }
+
+    # 戦略ごとのパラメータ定数
+    class DMIExtremeParams:
+        DI_THRESHOLD = 45.0
+        ADX_THRESHOLD = 45.0
+        ATR_LENGTH = 14
+        ATR_SL_MULTIPLIER = 2.5
+        ATR_TP_MULTIPLIER = 5.0
+        SL_PCT = 0.025
+        TP_PCT = 0.05
+
+    class RSIMomentumParams:
+        RSI_LONG_THRESHOLD = 75.0
+        RSI_SHORT_THRESHOLD = 25.0
+        RSI_PERIOD = 14
+        SL_PCT = 0.02
+        TP_PCT = 0.04
+        RISK_REWARD_RATIO = 2.0
+
+    class BollingerBreakoutParams:
+        BB_LENGTH = 20
+        BB_STD = 2.0
+        SL_PCT = 0.04
+        TP_PCT = 0.08
+        RISK_REWARD_RATIO = 2.0
+
+    class KAMAADXHybridParams:
+        KAMA_LENGTH = 30
+        ADX_LENGTH = 13
+        DI_THRESHOLD = 40.0
+        ADX_THRESHOLD = 20.0
+        SL_PCT = 0.03
+        TP_PCT = 0.05
+        RISK_REWARD_RATIO = 1.67
+
+    class WAEParams:
+        MACD_FAST = 12
+        MACD_SLOW = 26
+        MACD_SIGNAL = 9
+        BB_LENGTH = 20
+        BB_STD = 2.0
+        ATR_LENGTH = 100
+        ATR_PERIOD = 14
+        ATR_SL_MULTIPLIER = 2.0
+        ATR_TP_MULTIPLIER = 4.0
+        SL_PCT = 0.03
+        TP_PCT = 0.06
+
+    class TrendiloParams:
+        T3_LENGTH = 200
+        T3_A = 0.7
+        ADX_LENGTH = 14
+        ADX_THRESHOLD = 20.0
+        ATR_PERIOD = 14
+        ATR_SL_MULTIPLIER = 2.0
+        ATR_TP_MULTIPLIER = 4.0
+        SL_PCT = 0.02
+        TP_PCT = 0.04
+
     @staticmethod
     def _create_indicator_gene(
         indicator_type: str, parameters: dict[str, Any]
@@ -68,6 +136,66 @@ class SeedStrategyFactory:
         return {"seed_strategy": seed_name, "version": "1.0"}
 
     @classmethod
+    def _create_volatility_based_tpsl(
+        cls,
+        sl_pct: float,
+        tp_pct: float,
+        atr_sl_multiplier: float,
+        atr_tp_multiplier: float,
+        atr_period: int,
+    ) -> TPSLGene:
+        """ボラティリティベースのTPSL遺伝子を生成"""
+        return TPSLGene(
+            method=TPSLMethod.VOLATILITY_BASED,
+            stop_loss_pct=sl_pct,
+            take_profit_pct=tp_pct,
+            atr_multiplier_sl=atr_sl_multiplier,
+            atr_multiplier_tp=atr_tp_multiplier,
+            atr_period=atr_period,
+            enabled=True,
+        )
+
+    @classmethod
+    def _create_risk_reward_tpsl(
+        cls,
+        sl_pct: float,
+        tp_pct: float,
+        risk_reward_ratio: float,
+    ) -> TPSLGene:
+        """リスクリワード比率ベースのTPSL遺伝子を生成"""
+        return TPSLGene(
+            method=TPSLMethod.RISK_REWARD_RATIO,
+            stop_loss_pct=sl_pct,
+            take_profit_pct=tp_pct,
+            risk_reward_ratio=risk_reward_ratio,
+            enabled=True,
+        )
+
+    @classmethod
+    def _create_simple_condition(
+        cls,
+        left_operand: dict[str, str] | str,
+        operator: str,
+        right_operand: float | dict[str, str],
+        direction: str,
+    ) -> Condition:
+        """単一条件を生成"""
+        return Condition(
+            left_operand=left_operand,
+            operator=operator,
+            right_operand=right_operand,
+            direction=direction,  # type: ignore
+        )
+
+    @classmethod
+    def _create_and_condition_group(
+        cls,
+        conditions: list[Condition | ConditionGroup],
+    ) -> ConditionGroup:
+        """AND条件グループを生成"""
+        return ConditionGroup(operator="AND", conditions=conditions)
+
+    @classmethod
     def get_all_seeds(cls) -> List[StrategyGene]:
         """
         すべてのシード戦略を取得
@@ -76,12 +204,8 @@ class SeedStrategyFactory:
             シード戦略のリスト
         """
         seeds = [
-            cls.create_dmi_extreme_trend(),
-            cls.create_rsi_momentum(),
-            cls.create_bollinger_breakout(),
-            cls.create_kama_adx_hybrid(),
-            cls.create_wae(),
-            cls.create_trendilo(),
+            getattr(cls, method_name)()
+            for method_name in cls._SEED_MAPPING.values()
         ]
         logger.info(f"シード戦略を {len(seeds)} 個生成しました")
         return seeds
@@ -97,17 +221,9 @@ class SeedStrategyFactory:
         Returns:
             対応するシード戦略、見つからない場合はNone
         """
-        mapping = {
-            "dmi_extreme": cls.create_dmi_extreme_trend,
-            "rsi_momentum": cls.create_rsi_momentum,
-            "bollinger_breakout": cls.create_bollinger_breakout,
-            "kama_adx": cls.create_kama_adx_hybrid,
-            "wae": cls.create_wae,
-            "trendilo": cls.create_trendilo,
-        }
-        factory_func = mapping.get(name.lower())
-        if factory_func:
-            return factory_func()
+        method_name = cls._SEED_MAPPING.get(name.lower())
+        if method_name:
+            return getattr(cls, method_name)()
         return None
 
     # =========================================================================
@@ -124,8 +240,10 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
+        params = cls.DMIExtremeParams
+
         # 指標: ADX (ADX, DMP, DMN を返す)
-        adx_indicator = cls._create_indicator_gene("ADX", {"length": 14})
+        adx_indicator = cls._create_indicator_gene("ADX", {"length": params.ATR_LENGTH})
         indicators = [adx_indicator]
 
         # Long: DMP > 45 AND ADX > 45
@@ -136,13 +254,13 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 1),
                         operator=">",
-                        right_operand=45.0,
+                        right_operand=params.DI_THRESHOLD,
                         direction="long",
                     ),
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
-                        right_operand=45.0,
+                        right_operand=params.ADX_THRESHOLD,
                         direction="long",
                     ),
                 ],
@@ -157,13 +275,13 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 2),
                         operator=">",
-                        right_operand=45.0,
+                        right_operand=params.DI_THRESHOLD,
                         direction="short",
                     ),
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
-                        right_operand=45.0,
+                        right_operand=params.ADX_THRESHOLD,
                         direction="short",
                     ),
                 ],
@@ -171,14 +289,12 @@ class SeedStrategyFactory:
         ]
 
         # TP/SL: ATRベース (2.5x SL, 5x TP)
-        tpsl_gene = TPSLGene(
-            method=TPSLMethod.VOLATILITY_BASED,
-            stop_loss_pct=0.025,
-            take_profit_pct=0.05,
-            atr_multiplier_sl=2.5,
-            atr_multiplier_tp=5.0,
-            atr_period=14,
-            enabled=True,
+        tpsl_gene = cls._create_volatility_based_tpsl(
+            sl_pct=params.SL_PCT,
+            tp_pct=params.TP_PCT,
+            atr_sl_multiplier=params.ATR_SL_MULTIPLIER,
+            atr_tp_multiplier=params.ATR_TP_MULTIPLIER,
+            atr_period=params.ATR_LENGTH,
         )
 
         return StrategyGene.assemble(
@@ -203,7 +319,9 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        rsi_indicator = cls._create_indicator_gene("RSI", {"period": 14})
+        params = cls.RSIMomentumParams
+
+        rsi_indicator = cls._create_indicator_gene("RSI", {"period": params.RSI_PERIOD})
         indicators = [rsi_indicator]
 
         # Long: RSI > 75 (強い上昇モメンタム)
@@ -211,7 +329,7 @@ class SeedStrategyFactory:
             Condition(
                 left_operand=cls._indicator_ref(rsi_indicator),
                 operator=">",
-                right_operand=75.0,
+                right_operand=params.RSI_LONG_THRESHOLD,
                 direction="long",
             )
         ]
@@ -221,17 +339,15 @@ class SeedStrategyFactory:
             Condition(
                 left_operand=cls._indicator_ref(rsi_indicator),
                 operator="<",
-                right_operand=25.0,
+                right_operand=params.RSI_SHORT_THRESHOLD,
                 direction="short",
             )
         ]
 
-        tpsl_gene = TPSLGene(
-            method=TPSLMethod.RISK_REWARD_RATIO,
-            stop_loss_pct=0.02,
-            take_profit_pct=0.04,
-            risk_reward_ratio=2.0,
-            enabled=True,
+        tpsl_gene = cls._create_risk_reward_tpsl(
+            sl_pct=params.SL_PCT,
+            tp_pct=params.TP_PCT,
+            risk_reward_ratio=params.RISK_REWARD_RATIO,
         )
 
         return StrategyGene.assemble(
@@ -256,8 +372,10 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
+        params = cls.BollingerBreakoutParams
+
         bbands_indicator = cls._create_indicator_gene(
-            "BBANDS", {"length": 20, "std": 2.0}
+            "BBANDS", {"length": params.BB_LENGTH, "std": params.BB_STD}
         )
         indicators = [bbands_indicator]
 
@@ -281,12 +399,10 @@ class SeedStrategyFactory:
             )
         ]
 
-        tpsl_gene = TPSLGene(
-            method=TPSLMethod.RISK_REWARD_RATIO,
-            stop_loss_pct=0.04,
-            take_profit_pct=0.08,
-            risk_reward_ratio=2.0,
-            enabled=True,
+        tpsl_gene = cls._create_risk_reward_tpsl(
+            sl_pct=params.SL_PCT,
+            tp_pct=params.TP_PCT,
+            risk_reward_ratio=params.RISK_REWARD_RATIO,
         )
 
         return StrategyGene.assemble(
@@ -311,8 +427,10 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        kama_indicator = cls._create_indicator_gene("KAMA", {"length": 30})
-        adx_indicator = cls._create_indicator_gene("ADX", {"length": 13})
+        params = cls.KAMAADXHybridParams
+
+        kama_indicator = cls._create_indicator_gene("KAMA", {"length": params.KAMA_LENGTH})
+        adx_indicator = cls._create_indicator_gene("ADX", {"length": params.ADX_LENGTH})
         indicators = [kama_indicator, adx_indicator]
 
         # Long: Close > KAMA AND DMP > 40 AND ADX > 20
@@ -329,13 +447,13 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 1),
                         operator=">",
-                        right_operand=40.0,
+                        right_operand=params.DI_THRESHOLD,
                         direction="long",
                     ),
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
-                        right_operand=20.0,
+                        right_operand=params.ADX_THRESHOLD,
                         direction="long",
                     ),
                 ],
@@ -356,25 +474,23 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 2),
                         operator=">",
-                        right_operand=40.0,
+                        right_operand=params.DI_THRESHOLD,
                         direction="short",
                     ),
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
-                        right_operand=20.0,
+                        right_operand=params.ADX_THRESHOLD,
                         direction="short",
                     ),
                 ],
             )
         ]
 
-        tpsl_gene = TPSLGene(
-            method=TPSLMethod.RISK_REWARD_RATIO,
-            stop_loss_pct=0.03,
-            take_profit_pct=0.05,
-            risk_reward_ratio=1.67,
-            enabled=True,
+        tpsl_gene = cls._create_risk_reward_tpsl(
+            sl_pct=params.SL_PCT,
+            tp_pct=params.TP_PCT,
+            risk_reward_ratio=params.RISK_REWARD_RATIO,
         )
 
         return StrategyGene.assemble(
@@ -403,13 +519,15 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
+        params = cls.WAEParams
+
         macd_indicator = cls._create_indicator_gene(
-            "MACD", {"fast": 12, "slow": 26, "signal": 9}
+            "MACD", {"fast": params.MACD_FAST, "slow": params.MACD_SLOW, "signal": params.MACD_SIGNAL}
         )
         bbands_indicator = cls._create_indicator_gene(
-            "BBANDS", {"length": 20, "std": 2.0}
+            "BBANDS", {"length": params.BB_LENGTH, "std": params.BB_STD}
         )
-        atr_indicator = cls._create_indicator_gene("ATR", {"length": 100})
+        atr_indicator = cls._create_indicator_gene("ATR", {"length": params.ATR_LENGTH})
         indicators = [macd_indicator, bbands_indicator, atr_indicator]
 
         # 簡易版WAE Long: MACD > Signal AND MACD > 0
@@ -455,14 +573,12 @@ class SeedStrategyFactory:
             )
         ]
 
-        tpsl_gene = TPSLGene(
-            method=TPSLMethod.VOLATILITY_BASED,
-            stop_loss_pct=0.03,
-            take_profit_pct=0.06,
-            atr_multiplier_sl=2.0,
-            atr_multiplier_tp=4.0,
-            atr_period=14,
-            enabled=True,
+        tpsl_gene = cls._create_volatility_based_tpsl(
+            sl_pct=params.SL_PCT,
+            tp_pct=params.TP_PCT,
+            atr_sl_multiplier=params.ATR_SL_MULTIPLIER,
+            atr_tp_multiplier=params.ATR_TP_MULTIPLIER,
+            atr_period=params.ATR_PERIOD,
         )
 
         return StrategyGene.assemble(
@@ -490,8 +606,10 @@ class SeedStrategyFactory:
         Returns:
             StrategyGene
         """
-        t3_indicator = cls._create_indicator_gene("T3", {"length": 200, "a": 0.7})
-        adx_indicator = cls._create_indicator_gene("ADX", {"length": 14})
+        params = cls.TrendiloParams
+
+        t3_indicator = cls._create_indicator_gene("T3", {"length": params.T3_LENGTH, "a": params.T3_A})
+        adx_indicator = cls._create_indicator_gene("ADX", {"length": params.ADX_LENGTH})
         indicators = [t3_indicator, adx_indicator]
 
         # Long: Close > T3 AND ADX > 20
@@ -508,7 +626,7 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
-                        right_operand=20.0,
+                        right_operand=params.ADX_THRESHOLD,
                         direction="long",
                     ),
                 ],
@@ -529,21 +647,19 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(adx_indicator, 0),
                         operator=">",
-                        right_operand=20.0,
+                        right_operand=params.ADX_THRESHOLD,
                         direction="short",
                     ),
                 ],
             )
         ]
 
-        tpsl_gene = TPSLGene(
-            method=TPSLMethod.VOLATILITY_BASED,
-            stop_loss_pct=0.02,
-            take_profit_pct=0.04,
-            atr_multiplier_sl=2.0,
-            atr_multiplier_tp=4.0,
-            atr_period=14,
-            enabled=True,
+        tpsl_gene = cls._create_volatility_based_tpsl(
+            sl_pct=params.SL_PCT,
+            tp_pct=params.TP_PCT,
+            atr_sl_multiplier=params.ATR_SL_MULTIPLIER,
+            atr_tp_multiplier=params.ATR_TP_MULTIPLIER,
+            atr_period=params.ATR_PERIOD,
         )
 
         return StrategyGene.assemble(
@@ -556,9 +672,9 @@ class SeedStrategyFactory:
 
 
 def inject_seeds_into_population(
-    population: List[Any],
+    population: List[StrategyGene],
     seed_injection_rate: float = 0.3,
-) -> List[Any]:
+) -> List[StrategyGene]:
     """
     集団にシード戦略を注入
 

@@ -359,3 +359,120 @@ class TestStrategyValidation:
         assert cloned.metadata.get("seed_strategy") == strategy.metadata.get(
             "seed_strategy"
         )
+
+
+class TestHelperMethods:
+    """ヘルパーメソッドのテスト"""
+
+    def test_create_volatility_based_tpsl(self):
+        """ボラティリティベースTPSL生成ヘルパーのテスト"""
+        tpsl = SeedStrategyFactory._create_volatility_based_tpsl(
+            sl_pct=0.02,
+            tp_pct=0.04,
+            atr_sl_multiplier=2.0,
+            atr_tp_multiplier=4.0,
+            atr_period=14,
+        )
+
+        assert isinstance(tpsl, TPSLGene)
+        assert tpsl.stop_loss_pct == 0.02
+        assert tpsl.take_profit_pct == 0.04
+        assert tpsl.atr_multiplier_sl == 2.0
+        assert tpsl.atr_multiplier_tp == 4.0
+        assert tpsl.atr_period == 14
+        assert tpsl.enabled is True
+
+    def test_create_risk_reward_tpsl(self):
+        """リスクリワード比率TPSL生成ヘルパーのテスト"""
+        tpsl = SeedStrategyFactory._create_risk_reward_tpsl(
+            sl_pct=0.03,
+            tp_pct=0.06,
+            risk_reward_ratio=2.0,
+        )
+
+        assert isinstance(tpsl, TPSLGene)
+        assert tpsl.stop_loss_pct == 0.03
+        assert tpsl.take_profit_pct == 0.06
+        assert tpsl.risk_reward_ratio == 2.0
+        assert tpsl.enabled is True
+
+    def test_create_simple_condition(self):
+        """単一条件生成ヘルパーのテスト"""
+        condition = SeedStrategyFactory._create_simple_condition(
+            left_operand="close",
+            operator=">",
+            right_operand=100.0,
+            direction="long",
+        )
+
+        assert isinstance(condition, Condition)
+        assert condition.left_operand == "close"
+        assert condition.operator == ">"
+        assert condition.right_operand == 100.0
+        assert condition.direction == "long"
+
+    def test_create_and_condition_group(self):
+        """AND条件グループ生成ヘルパーのテスト"""
+        cond1 = SeedStrategyFactory._create_simple_condition(
+            left_operand="close",
+            operator=">",
+            right_operand=100.0,
+            direction="long",
+        )
+        cond2 = SeedStrategyFactory._create_simple_condition(
+            left_operand="close",
+            operator="<",
+            right_operand=200.0,
+            direction="long",
+        )
+
+        group = SeedStrategyFactory._create_and_condition_group([cond1, cond2])
+
+        assert isinstance(group, ConditionGroup)
+        assert group.operator == "AND"
+        assert len(group.conditions) == 2
+
+
+class TestParameterConstants:
+    """パラメータ定数クラスのテスト"""
+
+    def test_dmi_extreme_params_exist(self):
+        """DMI Extremeパラメータ定数が存在すること"""
+        assert hasattr(SeedStrategyFactory, "DMIExtremeParams")
+        assert SeedStrategyFactory.DMIExtremeParams.DI_THRESHOLD == 45.0
+        assert SeedStrategyFactory.DMIExtremeParams.ADX_THRESHOLD == 45.0
+        assert SeedStrategyFactory.DMIExtremeParams.ATR_LENGTH == 14
+
+    def test_rsi_momentum_params_exist(self):
+        """RSI Momentumパラメータ定数が存在すること"""
+        assert hasattr(SeedStrategyFactory, "RSIMomentumParams")
+        assert SeedStrategyFactory.RSIMomentumParams.RSI_LONG_THRESHOLD == 75.0
+        assert SeedStrategyFactory.RSIMomentumParams.RSI_SHORT_THRESHOLD == 25.0
+        assert SeedStrategyFactory.RSIMomentumParams.RSI_PERIOD == 14
+
+    def test_bollinger_breakout_params_exist(self):
+        """Bollinger Breakoutパラメータ定数が存在すること"""
+        assert hasattr(SeedStrategyFactory, "BollingerBreakoutParams")
+        assert SeedStrategyFactory.BollingerBreakoutParams.BB_LENGTH == 20
+        assert SeedStrategyFactory.BollingerBreakoutParams.BB_STD == 2.0
+
+    def test_kama_adx_hybrid_params_exist(self):
+        """KAMA-ADX Hybridパラメータ定数が存在すること"""
+        assert hasattr(SeedStrategyFactory, "KAMAADXHybridParams")
+        assert SeedStrategyFactory.KAMAADXHybridParams.KAMA_LENGTH == 30
+        assert SeedStrategyFactory.KAMAADXHybridParams.ADX_LENGTH == 13
+        assert SeedStrategyFactory.KAMAADXHybridParams.DI_THRESHOLD == 40.0
+
+    def test_wae_params_exist(self):
+        """WAEパラメータ定数が存在すること"""
+        assert hasattr(SeedStrategyFactory, "WAEParams")
+        assert SeedStrategyFactory.WAEParams.MACD_FAST == 12
+        assert SeedStrategyFactory.WAEParams.MACD_SLOW == 26
+        assert SeedStrategyFactory.WAEParams.MACD_SIGNAL == 9
+
+    def test_trendilo_params_exist(self):
+        """Trendiloパラメータ定数が存在すること"""
+        assert hasattr(SeedStrategyFactory, "TrendiloParams")
+        assert SeedStrategyFactory.TrendiloParams.T3_LENGTH == 200
+        assert SeedStrategyFactory.TrendiloParams.T3_A == 0.7
+        assert SeedStrategyFactory.TrendiloParams.ADX_LENGTH == 14

@@ -19,6 +19,9 @@ from .report_selection import (
 
 logger = logging.getLogger(__name__)
 
+# 定数
+MAX_STRATEGIES_TO_EXTRACT = 10
+
 
 class ResultProcessor:
     """
@@ -70,7 +73,7 @@ class ResultProcessor:
         best_individual = two_stage_best or best_individuals[0]
 
         best_strategies = []
-        for ind in best_individuals[:10]:
+        for ind in best_individuals[:MAX_STRATEGIES_TO_EXTRACT]:
             if isinstance(ind, StrategyGene):
                 gene = ind
             else:

@@ -9,6 +9,20 @@ from app.services.auto_strategy.genes import StrategyGene
 
 logger = logging.getLogger(__name__)
 
+# 定数
+INDICATOR_WEIGHT = 0.2
+LONG_CONDITION_WEIGHT = 0.2
+SHORT_CONDITION_WEIGHT = 0.2
+RISK_MANAGEMENT_WEIGHT = 0.2
+TPSL_WEIGHT = 0.15
+POSITION_SIZING_WEIGHT = 0.05
+OPERATOR_SIMILARITY_SCORE = 0.5
+OPERAND_SIMILARITY_SCORE = 0.5
+METHOD_MATCH_SCORE = 0.5
+TPSL_ATTRIBUTE_WEIGHT = 0.25
+POSITION_SIZING_ATTRIBUTE_WEIGHT = 0.5
+EPSILON = 1e-6
+
 
 def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
     """
@@ -16,31 +30,31 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
     """
     try:
         components = [
-            (gene1.indicators, gene2.indicators, calculate_indicator_similarity, 0.2),
+            (gene1.indicators, gene2.indicators, calculate_indicator_similarity, INDICATOR_WEIGHT),
             (
                 gene1.long_entry_conditions,
                 gene2.long_entry_conditions,
                 calculate_condition_similarity,
-                0.2,
+                LONG_CONDITION_WEIGHT,
             ),
             (
                 gene1.short_entry_conditions,
                 gene2.short_entry_conditions,
                 calculate_condition_similarity,
-                0.2,
+                SHORT_CONDITION_WEIGHT,
             ),
             (
                 gene1.risk_management,
                 gene2.risk_management,
                 calculate_risk_management_similarity,
-                0.2,
+                RISK_MANAGEMENT_WEIGHT,
             ),
-            (gene1.tpsl_gene, gene2.tpsl_gene, calculate_tpsl_similarity, 0.15),
+            (gene1.tpsl_gene, gene2.tpsl_gene, calculate_tpsl_similarity, TPSL_WEIGHT),
             (
                 gene1.position_sizing_gene,
                 gene2.position_sizing_gene,
                 calculate_position_sizing_similarity,
-                0.05,
+                POSITION_SIZING_WEIGHT,
             ),
         ]
 
@@ -99,11 +113,11 @@ def calculate_condition_similarity(
 
     for c1, c2 in zip(conditions1, conditions2):
         if getattr(c1, "operator", None) == getattr(c2, "operator", None):
-            similar_count += 0.5
+            similar_count += OPERATOR_SIMILARITY_SCORE
         if str(type(getattr(c1, "left_operand", None))) == str(
             type(getattr(c2, "left_operand", None))
         ):
-            similar_count += 0.5
+            similar_count += OPERAND_SIMILARITY_SCORE
 
     return similar_count / total
 
@@ -143,12 +157,12 @@ def calculate_tpsl_similarity(tpsl1: Any, tpsl2: Any) -> float:
     if res is not None:
         return res
 
-    score = 0.5 if tpsl1.method == tpsl2.method else 0.0
+    score = METHOD_MATCH_SCORE if tpsl1.method == tpsl2.method else 0.0
     for attr in ["stop_loss_pct", "take_profit_pct"]:
         v1, v2 = getattr(tpsl1, attr, None), getattr(tpsl2, attr, None)
         if v1 is not None and v2 is not None:
             diff = abs(v1 - v2)
-            score += max(0.0, 0.25 * (1 - diff / max(v1, v2, 1e-6)))
+            score += max(0.0, TPSL_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON)))
     return min(1.0, score)
 
 
@@ -158,9 +172,9 @@ def calculate_position_sizing_similarity(ps1: Any, ps2: Any) -> float:
     if res is not None:
         return res
 
-    score = 0.5 if ps1.method == ps2.method else 0.0
+    score = METHOD_MATCH_SCORE if ps1.method == ps2.method else 0.0
     v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(ps2, "risk_per_trade", None)
     if v1 is not None and v2 is not None:
         diff = abs(v1 - v2)
-        score += max(0.0, 0.5 * (1 - diff / max(v1, v2, 1e-6)))
+        score += max(0.0, POSITION_SIZING_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON)))
     return min(1.0, score)

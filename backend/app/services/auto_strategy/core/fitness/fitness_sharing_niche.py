@@ -7,6 +7,13 @@ from typing import Sequence, cast
 import numpy as np
 from scipy.spatial import cKDTree  # type: ignore[reportAttributeAccessIssue]
 
+# 定数
+DEFAULT_NICHE_COUNT = 1.0
+DEFAULT_RANGE_VALUE = 1.0
+DEFAULT_SAMPLE_SIZE = 10
+RANDOM_SEED = 42
+DEFAULT_K_NEIGHBORS = 10
+
 
 def compute_niche_counts_vectorized(
     vectors: np.ndarray,
@@ -37,7 +44,7 @@ def compute_niche_counts_vectorized(
         radius=distance_threshold,
     )
     niche_counts = np.array(
-        [max(1.0, float(len(neighbors))) for neighbors in neighbors_list]
+        [max(DEFAULT_NICHE_COUNT, float(len(neighbors))) for neighbors in neighbors_list]
     )
     return niche_counts
 
@@ -68,7 +75,7 @@ def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
     max_vals = vectors.max(axis=0)
 
     range_vals = max_vals - min_vals
-    range_vals[range_vals == 0] = 1.0
+    range_vals[range_vals == 0] = DEFAULT_RANGE_VALUE
 
     return (vectors - min_vals) / range_vals
 
@@ -82,18 +89,18 @@ def compute_niche_counts_sampling(
     サンプリングベースのニッチカウント近似（大規模集団用）
     """
     n_individuals = len(vectors)
-    sample_size = max(10, int(n_individuals * sampling_ratio))
+    sample_size = max(DEFAULT_SAMPLE_SIZE, int(n_individuals * sampling_ratio))
 
     rng_state = np.random.get_state()
     try:
-        np.random.seed(42)
+        np.random.seed(RANDOM_SEED)
         sample_indices = np.random.choice(
             n_individuals, size=min(sample_size, n_individuals), replace=False
         )
         sample_vectors = vectors[sample_indices]
 
         sample_tree = cKDTree(sample_vectors)
-        distances, _ = sample_tree.query(vectors, k=min(10, len(sample_indices)))
+        distances, _ = sample_tree.query(vectors, k=min(DEFAULT_K_NEIGHBORS, len(sample_indices)))
         distances = cast(np.ndarray, distances)
 
         if distances.ndim == 1:
@@ -102,7 +109,7 @@ def compute_niche_counts_sampling(
         neighbors_in_sample = np.sum(distances < distance_threshold, axis=1)
 
         scale_factor = n_individuals / len(sample_indices)
-        niche_counts = np.maximum(1.0, neighbors_in_sample * scale_factor)
+        niche_counts = np.maximum(DEFAULT_NICHE_COUNT, neighbors_in_sample * scale_factor)
         return niche_counts
     finally:
         np.random.set_state(rng_state)

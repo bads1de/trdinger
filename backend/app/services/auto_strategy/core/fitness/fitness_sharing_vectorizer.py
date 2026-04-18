@@ -8,6 +8,16 @@ import numpy as np
 
 from app.services.auto_strategy.genes import ConditionGroup, StrategyGene
 
+# 定数
+DEFAULT_POSITION_SIZE = 0.1
+DEFAULT_STOP_LOSS_PCT = 0.05
+DEFAULT_TAKE_PROFIT_PCT = 0.1
+DEFAULT_RISK_PER_TRADE = 0.01
+DEFAULT_PERIOD_MEAN = 0.0
+DEFAULT_PERIOD_MAX = 0.0
+SAFE_FLOAT_FALLBACK = 0.0
+EPSILON = 1e-6
+
 BEHAVIOR_FEATURE_NAMES: tuple[str, ...] = (
     "objective_count",
     "fitness_primary",
@@ -135,25 +145,25 @@ def vectorize_gene(
 
     # リスク管理パラメータ
     if gene.risk_management:
-        features.append(float(gene.risk_management.get("position_size", 0.1)))
+        features.append(float(gene.risk_management.get("position_size", DEFAULT_POSITION_SIZE)))
     else:
-        features.append(0.1)
+        features.append(DEFAULT_POSITION_SIZE)
 
     # TP/SLパラメータ
     if gene.tpsl_gene:
-        features.append(float(gene.tpsl_gene.stop_loss_pct or 0.05))
-        features.append(float(gene.tpsl_gene.take_profit_pct or 0.1))
+        features.append(float(gene.tpsl_gene.stop_loss_pct or DEFAULT_STOP_LOSS_PCT))
+        features.append(float(gene.tpsl_gene.take_profit_pct or DEFAULT_TAKE_PROFIT_PCT))
     else:
-        features.append(0.05)
-        features.append(0.1)
+        features.append(DEFAULT_STOP_LOSS_PCT)
+        features.append(DEFAULT_TAKE_PROFIT_PCT)
 
     # ポジションサイジングパラメータ
     if gene.position_sizing_gene and hasattr(
         gene.position_sizing_gene, "risk_per_trade"
     ):
-        features.append(float(gene.position_sizing_gene.risk_per_trade or 0.01))
+        features.append(float(gene.position_sizing_gene.risk_per_trade or DEFAULT_RISK_PER_TRADE))
     else:
-        features.append(0.01)
+        features.append(DEFAULT_RISK_PER_TRADE)
 
     # 指標タイプベクトル（Bag of Words）
     if indicator_types:
@@ -196,8 +206,8 @@ def vectorize_gene(
         features.append(float(np.mean(period_values)))
         features.append(float(np.max(period_values)))
     else:
-        features.append(0.0)
-        features.append(0.0)
+        features.append(DEFAULT_PERIOD_MEAN)
+        features.append(DEFAULT_PERIOD_MAX)
 
     # オペランド特性（定数比較 vs 動的比較）
     numeric_operands, dynamic_operands = _count_operand_types(all_conditions)
@@ -209,7 +219,7 @@ def vectorize_gene(
     return np.array(features)
 
 
-def _safe_float(value: Any, fallback: float = 0.0) -> float:
+def _safe_float(value: Any, fallback: float = SAFE_FLOAT_FALLBACK) -> float:
     """非数値や NaN/Inf を安全に float へ落とす。"""
     if value is None or not isinstance(value, (int, float)):
         return fallback

@@ -67,15 +67,17 @@ class FitnessSharing:
     多様な戦略の共存を促進します。
     """
 
-    # 大規模集団でサンプリングを使用する閾値（デフォルト: 200個体以上）
+    # 定数
     DEFAULT_SAMPLING_THRESHOLD = 200
-    # サンプリング時に使用するサンプル数の割合
     SAMPLING_RATIO = 0.3
+    DEFAULT_SHARING_RADIUS = 0.1
+    DEFAULT_ALPHA = 1.0
+    BEHAVIOR_SIGNATURE_PRECISION = 8
 
     def __init__(
         self,
-        sharing_radius: float = 0.1,
-        alpha: float = 1.0,
+        sharing_radius: Optional[float] = None,
+        alpha: Optional[float] = None,
         sampling_threshold: Optional[int] = None,
         sampling_ratio: Optional[float] = None,
         evaluation_report_provider: Optional[Callable[[Any], Any]] = None,
@@ -89,6 +91,10 @@ class FitnessSharing:
             sampling_threshold: サンプリングを使用する集団サイズの閾値
             sampling_ratio: サンプリング時に使用するサンプル数の割合
         """
+        if sharing_radius is None:
+            sharing_radius = self.DEFAULT_SHARING_RADIUS
+        if alpha is None:
+            alpha = self.DEFAULT_ALPHA
         self.sharing_radius = sharing_radius
         self.alpha = alpha
         self.gene_serializer = GeneSerializer()
@@ -234,7 +240,7 @@ class FitnessSharing:
             behavior_signature = tuple(
                 (
                     key,
-                    round(float(value), 8),
+                    round(float(value), self.BEHAVIOR_SIGNATURE_PRECISION),
                 )
                 for key, value in sorted(behavior_profile.items())
             )

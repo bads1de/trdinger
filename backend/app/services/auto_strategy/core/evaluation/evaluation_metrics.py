@@ -17,11 +17,16 @@ from app.utils.datetime_utils import parse_datetime_optional
 
 logger = logging.getLogger(__name__)
 
-# 基準となる1日あたりの取引回数（これを超えると過剰取引とみなすペナルティが増加）
+# 定数
 REFERENCE_TRADES_PER_DAY = 8.0
+DATETIME_CACHE_SIZE = 1024
+NORMALIZATION_THRESHOLD = 1.0
+PERCENTAGE_NORMALIZATION = 100.0
+SECONDS_PER_DAY = 86_400.0
+MINIMUM_DURATION_HOURS = 1.0 / 24.0
 
 
-@functools.lru_cache(maxsize=1024)
+@functools.lru_cache(maxsize=DATETIME_CACHE_SIZE)
 def _ensure_datetime(value: Optional[object]) -> Optional[datetime]:
     """値をdatetimeオブジェクトに変換します（キャッシュ付き）。"""
     return parse_datetime_optional(value)
@@ -46,9 +51,9 @@ def _calculate_ulcer_index_numba(dd_array: np.ndarray) -> float:
         # 絶対値化
         val = abs(val)
 
-        # 1.0より大きい場合はパーセンテージ(0-100)とみなして小数(0-1.0)に正規化
-        if val > 1.0:
-            val /= 100.0
+        # NORMALIZATION_THRESHOLDより大きい場合はパーセンテージ(0-100)とみなして小数(0-1.0)に正規化
+        if val > NORMALIZATION_THRESHOLD:
+            val /= PERCENTAGE_NORMALIZATION
 
         squared_sum += val * val
         count += 1
@@ -132,11 +137,11 @@ def calculate_trade_frequency_penalty(
     parsed_end = _ensure_datetime(end_date)
 
     if parsed_start is None or parsed_end is None or parsed_end <= parsed_start:
-        duration_days = 1.0
+        duration_days = NORMALIZATION_THRESHOLD
     else:
         duration_days = max(
-            (parsed_end - parsed_start).total_seconds() / 86_400.0,
-            1.0 / 24.0,
+            (parsed_end - parsed_start).total_seconds() / SECONDS_PER_DAY,
+            MINIMUM_DURATION_HOURS,
         )
 
     trades_per_day = trades / duration_days

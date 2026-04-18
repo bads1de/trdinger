@@ -24,6 +24,12 @@ class ComplexConditionsStrategy:
     複数の指標組み合わせで意味のある条件を生成する戦略。
     """
 
+    # 定数
+    OSCILLATOR_LONG_THRESHOLDS = [55, 60, 65]
+    OSCILLATOR_SHORT_THRESHOLDS = [45, 40, 35]
+    PM100_LONG_THRESHOLDS = [10, 25, 50]
+    PM100_SHORT_THRESHOLDS = [-10, -25, -50]
+
     def __init__(self, condition_generator: Any) -> None:
         self.gen = condition_generator
 
@@ -93,11 +99,11 @@ class ComplexConditionsStrategy:
 
         th_long, th_short = 0, 0
         if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
-            th_long = random.choice([55, 60, 65])
-            th_short = random.choice([45, 40, 35])
+            th_long = random.choice(self.OSCILLATOR_LONG_THRESHOLDS)
+            th_short = random.choice(self.OSCILLATOR_SHORT_THRESHOLDS)
         elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-            th_long = random.choice([10, 25, 50])
-            th_short = random.choice([-10, -25, -50])
+            th_long = random.choice(self.PM100_LONG_THRESHOLDS)
+            th_short = random.choice(self.PM100_SHORT_THRESHOLDS)
         elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
             th_long = 0
             th_short = 0
