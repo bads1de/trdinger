@@ -9,42 +9,10 @@ from typing import Any, Dict, List
 
 from ..config.constants import PositionSizingMethod
 from .base_gene import BaseGene
-
-# GA生成用レンジ（ランダム生成時の探索範囲）
-_GENERATION_RANGES = {
-    "lookback_period": (50, 200),
-    "optimal_f_multiplier": (0.25, 0.75),
-    "atr_period": (10, 30),
-    "atr_multiplier": (1.0, 4.0),
-    "risk_per_trade": (0.01, 0.05),
-    "fixed_ratio": (0.05, 0.3),
-    "fixed_quantity": (0.1, 10.0),
-    "min_position_size": (0.01, 0.1),
-    "max_position_size": (5.0, 50.0),
-    "var_confidence": (0.8, 0.99),
-    "max_var_ratio": (0.005, 0.05),
-    "max_expected_shortfall_ratio": (0.01, 0.1),
-    "var_lookback": (50, 500),
-    "priority": (0.5, 1.5),
-}
-
-# 検証用レンジ（許容される値の幅広い範囲）
-_VALIDATION_RANGES = {
-    "lookback_period": (10, 500),
-    "optimal_f_multiplier": (0.1, 1.0),
-    "atr_period": (5, 50),
-    "atr_multiplier": (0.5, 10.0),
-    "risk_per_trade": (0.001, 0.1),
-    "fixed_ratio": (0.01, 10.0),
-    "fixed_quantity": (0.01, 1000.0),
-    "min_position_size": (0.001, 1.0),
-    "max_position_size": (0.001, 1000000000.0),
-    "var_confidence": (0.8, 0.999),
-    "max_var_ratio": (0.001, 0.1),
-    "max_expected_shortfall_ratio": (0.001, 0.2),
-    "var_lookback": (20, 1000),
-    "priority": (0.5, 1.5),
-}
+from .gene_ranges import (
+    POSITION_SIZING_GENERATION_RANGES,
+    POSITION_SIZING_VALIDATION_RANGES,
+)
 
 
 def _ensure_position_size_bounds(params: Dict[str, Any]) -> None:
@@ -83,7 +51,7 @@ class PositionSizingGene(BaseGene):
     ]
     ENUM_FIELDS = ["method"]
     CHOICE_FIELDS = ["enabled"]
-    NUMERIC_RANGES = dict(_VALIDATION_RANGES)
+    NUMERIC_RANGES = dict(POSITION_SIZING_VALIDATION_RANGES)
 
     method: PositionSizingMethod = PositionSizingMethod.VOLATILITY_BASED
     lookback_period: int = 100
@@ -191,7 +159,7 @@ def create_random_position_sizing_gene() -> PositionSizingGene:
     import random
 
     method = random.choice(list(PositionSizingMethod))
-    ranges = _GENERATION_RANGES
+    ranges = POSITION_SIZING_GENERATION_RANGES
 
     gene_params = {
         "method": method,

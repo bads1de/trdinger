@@ -12,6 +12,8 @@ from app.utils.serialization import dataclass_to_dict
 
 from ..config.constants import TPSLMethod
 from .base_gene import BaseGene
+from .gene_constants import PRIORITY_GENERATION_RANGE, TPSL_METHOD_WEIGHT_RANGES
+from .gene_ranges import TPSL_GENERATION_RANGES, TPSL_VALIDATION_RANGES
 
 logger = logging.getLogger(__name__)
 
@@ -40,19 +42,7 @@ class TPSLGene(BaseGene):
     ]
     ENUM_FIELDS = ["method"]
     CHOICE_FIELDS = ["enabled", "trailing_stop", "trailing_take_profit"]
-    NUMERIC_RANGES = {
-        "stop_loss_pct": (0.005, 0.15),  # 0.5%-15%
-        "take_profit_pct": (0.01, 0.3),  # 1%-30%
-        "risk_reward_ratio": (1.0, 10.0),  # 1:10まで
-        "base_stop_loss": (0.01, 0.06),
-        "atr_multiplier_sl": (0.5, 3.0),
-        "atr_multiplier_tp": (1.0, 5.0),
-        "confidence_threshold": (0.1, 0.9),
-        "priority": (0.5, 1.5),
-        "lookback_period": (50, 200),
-        "atr_period": (10, 30),
-        "trailing_step_pct": (0.005, 0.05),
-    }
+    NUMERIC_RANGES = dict(TPSL_VALIDATION_RANGES)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> TPSLGene:
@@ -268,12 +258,11 @@ def create_random_tpsl_gene() -> TPSLGene:
     import random
 
     method = random.choice(list(TPSLMethod))
+    ranges = TPSL_GENERATION_RANGES
 
     method_weights = {
-        "fixed": random.uniform(0.1, 0.4),
-        "risk_reward": random.uniform(0.2, 0.5),
-        "volatility": random.uniform(0.1, 0.4),
-        "statistical": random.uniform(0.1, 0.3),
+        key: random.uniform(*value_range)
+        for key, value_range in TPSL_METHOD_WEIGHT_RANGES.items()
     }
 
     # Normalize method_weights to sum to 1.0
@@ -284,18 +273,18 @@ def create_random_tpsl_gene() -> TPSLGene:
 
     tpsl_gene = TPSLGene(
         method=method,
-        stop_loss_pct=random.uniform(0.01, 0.08),
-        take_profit_pct=random.uniform(0.02, 0.15),
-        risk_reward_ratio=random.uniform(1.2, 4.0),
-        base_stop_loss=random.uniform(0.01, 0.06),
-        atr_multiplier_sl=random.uniform(1.0, 3.0),
-        atr_multiplier_tp=random.uniform(2.0, 5.0),
-        atr_period=random.randint(10, 30),
-        lookback_period=random.randint(50, 200),
-        confidence_threshold=random.uniform(0.5, 0.9),
+        stop_loss_pct=random.uniform(*ranges["stop_loss_pct"]),
+        take_profit_pct=random.uniform(*ranges["take_profit_pct"]),
+        risk_reward_ratio=random.uniform(*ranges["risk_reward_ratio"]),
+        base_stop_loss=random.uniform(*ranges["base_stop_loss"]),
+        atr_multiplier_sl=random.uniform(*ranges["atr_multiplier_sl"]),
+        atr_multiplier_tp=random.uniform(*ranges["atr_multiplier_tp"]),
+        atr_period=random.randint(int(ranges["atr_period"][0]), int(ranges["atr_period"][1])),
+        lookback_period=random.randint(int(ranges["lookback_period"][0]), int(ranges["lookback_period"][1])),
+        confidence_threshold=random.uniform(*ranges["confidence_threshold"]),
         method_weights=method_weights,
         enabled=True,
-        priority=random.uniform(0.5, 1.5),
+        priority=random.uniform(*PRIORITY_GENERATION_RANGE),
     )
 
     return tpsl_gene

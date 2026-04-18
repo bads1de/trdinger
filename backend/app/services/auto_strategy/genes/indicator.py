@@ -14,6 +14,13 @@ from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
 
 from ..config.indicator_universe import get_indicator_universe_names
+from .gene_constants import (
+    INDICATOR_GENERATION_MAX_ATTEMPTS_MULTIPLIER,
+    MA_CROSS_ENHANCEMENT_PROBABILITY,
+    MA_PERIOD_CANDIDATES,
+    PREFERRED_TREND_INDICATORS,
+    TREND_INDICATOR_SELECTION_PROBABILITY,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -144,18 +151,7 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
 
     # トレンド系指標を優先するためのリスト作成
     trend_indicators = []
-    preferred_trend_names = [
-        "SMA",
-        "EMA",
-        "ADX",
-        "SUPERTREND",
-        "VORTEX",
-        "AROON",
-        "CHOP",
-        "HMA",
-        "KAMA",
-        "ZLEMA",
-    ]
+    preferred_trend_names = PREFERRED_TREND_INDICATORS
 
     for name in available_indicators:
         cfg = indicator_registry.get_indicator_config(name)
@@ -186,10 +182,10 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
 
     # 各指標を生成
     attempts = 0
-    max_attempts = max(10, num_indicators * 5)
+    max_attempts = max(10, num_indicators * INDICATOR_GENERATION_MAX_ATTEMPTS_MULTIPLIER)
     while len(indicators) < num_indicators and attempts < max_attempts:
-        # 70%の確率でトレンド系指標を選択（リストがあれば）
-        if trend_indicators and random.random() < 0.7:
+        # トレンド系指標を選択する確率
+        if trend_indicators and random.random() < TREND_INDICATOR_SELECTION_PROBABILITY:
             indicator_type = random.choice(trend_indicators)
         else:
             indicator_type = random.choice(available_indicators)
@@ -236,7 +232,7 @@ def _enhance_with_ma_cross(
     from ..config.constants import MOVING_AVERAGE_INDICATORS, PREFERRED_MA_INDICATORS
 
     ma_count = sum(1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS)
-    if ma_count < 2 and random.random() < 0.25:
+    if ma_count < 2 and random.random() < MA_CROSS_ENHANCEMENT_PROBABILITY:
         ma_pool = [n for n in available if n in MOVING_AVERAGE_INDICATORS]
         if ma_pool:
             preferred = [n for n in ma_pool if n in PREFERRED_MA_INDICATORS]
@@ -248,9 +244,9 @@ def _enhance_with_ma_cross(
                 for ind in indicators
                 if "period" in ind.parameters
             }
-            period = random.choice([10, 14, 20, 30, 50])
+            period = random.choice(MA_PERIOD_CANDIDATES)
             while period in existing_periods and len(existing_periods) < 5:
-                period = random.choice([10, 14, 20, 30, 50])
+                period = random.choice(MA_PERIOD_CANDIDATES)
 
             indicators.append(
                 IndicatorGene(

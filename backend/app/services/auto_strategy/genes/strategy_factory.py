@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from .conditions import Condition, ConditionGroup
 from .entry import EntryGene
+from .exit import ExitGene
 from .indicator import IndicatorGene
 from .position_sizing import PositionSizingGene, PositionSizingMethod
 from .tool import ToolGene
@@ -52,9 +53,9 @@ def assemble_strategy_gene(
     entry_gene: Optional[EntryGene] = None,
     long_entry_gene: Optional[EntryGene] = None,
     short_entry_gene: Optional[EntryGene] = None,
-    exit_gene=None,
-    long_exit_conditions=None,
-    short_exit_conditions=None,
+    exit_gene: Optional[ExitGene] = None,
+    long_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
+    short_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
     tool_genes: Optional[List[ToolGene]] = None,
     risk_management: Optional[Dict[str, Any]] = None,
     metadata: Optional[Dict[str, Any]] = None,

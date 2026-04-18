@@ -12,6 +12,13 @@ from typing import Any, List, Tuple
 from app.utils.serialization import dataclass_to_dict
 
 from ..config.constants import ExitType
+from .gene_constants import (
+    EXIT_PARTIAL_ENABLED_PROBABILITY,
+    EXIT_TRAILING_ACTIVATION_PROBABILITY,
+    EXIT_TYPE_WEIGHTS,
+    PRIORITY_GENERATION_RANGE,
+)
+from .gene_ranges import EXIT_GENERATION_RANGES
 
 
 @dataclass(slots=True)
@@ -21,6 +28,15 @@ class ExitGene:
 
     GAによって最適化されるイグジット注文のパラメータを定義します。
     """
+
+    # 遺伝的操作のための設定
+    NUMERIC_FIELDS = ["partial_exit_pct", "priority"]
+    ENUM_FIELDS = ["exit_type"]
+    CHOICE_FIELDS = ["partial_exit_enabled", "trailing_stop_activation", "enabled"]
+    NUMERIC_RANGES = {
+        "partial_exit_pct": (0.1, 0.9),
+        "priority": (0.5, 1.5),
+    }
 
     # イグジットタイプ
     exit_type: ExitType = ExitType.FULL
@@ -143,32 +159,16 @@ class ExitGene:
         cls, parent1: "ExitGene", parent2: "ExitGene"
     ) -> Tuple["ExitGene", "ExitGene"]:
         """イグジット遺伝子の交叉"""
-        import random
+        from .genetic_utils import GeneticUtils
 
-        c1_params = {}
-        c2_params = {}
-
-        fields = [
-            "exit_type",
-            "partial_exit_pct",
-            "partial_exit_enabled",
-            "trailing_stop_activation",
-            "enabled",
-            "priority",
-        ]
-
-        for field in fields:
-            val1 = getattr(parent1, field)
-            val2 = getattr(parent2, field)
-
-            if random.random() < 0.5:
-                c1_params[field] = val1
-                c2_params[field] = val2
-            else:
-                c1_params[field] = val2
-                c2_params[field] = val1
-
-        return cls(**c1_params), cls(**c2_params)
+        return GeneticUtils.crossover_generic_genes(
+            parent1_gene=parent1,
+            parent2_gene=parent2,
+            gene_class=cls,
+            numeric_fields=cls.NUMERIC_FIELDS,
+            enum_fields=cls.ENUM_FIELDS,
+            choice_fields=cls.CHOICE_FIELDS,
+        )
 
 
 def create_random_exit_gene(config: Any = None) -> ExitGene:
@@ -183,12 +183,8 @@ def create_random_exit_gene(config: Any = None) -> ExitGene:
     """
     import random
 
-    # イグジットタイプの出現確率（全決済を多めに設定）
-    default_weights = {
-        ExitType.FULL: 0.5,
-        ExitType.PARTIAL: 0.3,
-        ExitType.TRAILING: 0.2,
-    }
+    default_weights = EXIT_TYPE_WEIGHTS
+    ranges = EXIT_GENERATION_RANGES
 
     try:
         weights = default_weights
@@ -202,12 +198,12 @@ def create_random_exit_gene(config: Any = None) -> ExitGene:
 
         exit_type = random.choices(types, weights=type_weights, k=1)[0]
 
-        # 部分決済割合をランダム生成（20% 〜 80%）
-        partial_exit_pct = random.uniform(0.2, 0.8)
+        # 部分決済割合をランダム生成
+        partial_exit_pct = random.uniform(*ranges["partial_exit_pct"])
 
         # フラグをランダムに設定
-        partial_exit_enabled = random.random() < 0.3
-        trailing_stop_activation = random.random() < 0.2
+        partial_exit_enabled = random.random() < EXIT_PARTIAL_ENABLED_PROBABILITY
+        trailing_stop_activation = random.random() < EXIT_TRAILING_ACTIVATION_PROBABILITY
 
         return ExitGene(
             exit_type=exit_type,
@@ -215,14 +211,15 @@ def create_random_exit_gene(config: Any = None) -> ExitGene:
             partial_exit_enabled=partial_exit_enabled,
             trailing_stop_activation=trailing_stop_activation,
             enabled=True,
-            priority=random.uniform(0.5, 1.5),
+            priority=random.uniform(*PRIORITY_GENERATION_RANGE),
         )
 
     except (ValueError, TypeError, KeyError, AttributeError):
         # フォールバック: 全決済のデフォルト遺伝子
+        fallback_ranges = EXIT_GENERATION_RANGES
         return ExitGene(
             exit_type=ExitType.FULL,
-            partial_exit_pct=0.5,
+            partial_exit_pct=fallback_ranges["partial_exit_pct"][0],
             partial_exit_enabled=False,
             trailing_stop_activation=False,
             enabled=True,

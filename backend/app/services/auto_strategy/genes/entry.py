@@ -12,6 +12,8 @@ from typing import Any, List, Tuple
 from app.utils.serialization import dataclass_to_dict
 
 from ..config.constants import EntryType
+from .gene_constants import ENTRY_TYPE_WEIGHTS, PRIORITY_GENERATION_RANGE
+from .gene_ranges import ENTRY_GENERATION_RANGES
 
 
 @dataclass(slots=True)
@@ -21,6 +23,22 @@ class EntryGene:
 
     GAによって最適化されるエントリー注文のパラメータを定義します。
     """
+
+    # 遺伝的操作のための設定
+    NUMERIC_FIELDS = [
+        "limit_offset_pct",
+        "stop_offset_pct",
+        "order_validity_bars",
+        "priority",
+    ]
+    ENUM_FIELDS = ["entry_type"]
+    CHOICE_FIELDS = ["enabled"]
+    NUMERIC_RANGES = {
+        "limit_offset_pct": (0.0, 0.1),
+        "stop_offset_pct": (0.0, 0.1),
+        "order_validity_bars": (0, 100),
+        "priority": (0.5, 1.5),
+    }
 
     # エントリータイプ
     entry_type: EntryType = EntryType.MARKET
@@ -165,33 +183,16 @@ class EntryGene:
         cls, parent1: "EntryGene", parent2: "EntryGene"
     ) -> Tuple["EntryGene", "EntryGene"]:
         """エントリー遺伝子の交叉"""
-        import random
+        from .genetic_utils import GeneticUtils
 
-        # 単純なフィールドごとのユニフォーム交叉
-        c1_params = {}
-        c2_params = {}
-
-        fields = [
-            "entry_type",
-            "limit_offset_pct",
-            "stop_offset_pct",
-            "order_validity_bars",
-            "enabled",
-            "priority",
-        ]
-
-        for field in fields:
-            val1 = getattr(parent1, field)
-            val2 = getattr(parent2, field)
-
-            if random.random() < 0.5:
-                c1_params[field] = val1
-                c2_params[field] = val2
-            else:
-                c1_params[field] = val2
-                c2_params[field] = val1
-
-        return cls(**c1_params), cls(**c2_params)
+        return GeneticUtils.crossover_generic_genes(
+            parent1_gene=parent1,
+            parent2_gene=parent2,
+            gene_class=cls,
+            numeric_fields=cls.NUMERIC_FIELDS,
+            enum_fields=cls.ENUM_FIELDS,
+            choice_fields=cls.CHOICE_FIELDS,
+        )
 
 
 def create_random_entry_gene(config: Any = None) -> EntryGene:
@@ -206,13 +207,8 @@ def create_random_entry_gene(config: Any = None) -> EntryGene:
     """
     import random
 
-    # エントリータイプの出現確率（初期段階では成行注文を多めに設定）
-    default_weights = {
-        EntryType.MARKET: 0.6,
-        EntryType.LIMIT: 0.2,
-        EntryType.STOP: 0.15,
-        EntryType.STOP_LIMIT: 0.05,
-    }
+    default_weights = ENTRY_TYPE_WEIGHTS
+    ranges = ENTRY_GENERATION_RANGES
 
     try:
         # 重み付きでエントリータイプを選択
@@ -227,12 +223,12 @@ def create_random_entry_gene(config: Any = None) -> EntryGene:
 
         entry_type = random.choices(types, weights=type_weights, k=1)[0]
 
-        # オフセット値をランダム生成（0.1% ~ 2.0%）
-        limit_offset_pct = random.uniform(0.001, 0.02)
-        stop_offset_pct = random.uniform(0.001, 0.02)
+        # オフセット値をランダム生成
+        limit_offset_pct = random.uniform(*ranges["limit_offset_pct"])
+        stop_offset_pct = random.uniform(*ranges["stop_offset_pct"])
 
-        # 有効期限をランダム生成（1 ~ 20バー）
-        order_validity_bars = random.randint(1, 20)
+        # 有効期限をランダム生成
+        order_validity_bars = random.randint(int(ranges["order_validity_bars"][0]), int(ranges["order_validity_bars"][1]))
 
         return EntryGene(
             entry_type=entry_type,
@@ -240,15 +236,15 @@ def create_random_entry_gene(config: Any = None) -> EntryGene:
             stop_offset_pct=stop_offset_pct,
             order_validity_bars=order_validity_bars,
             enabled=True,
-            priority=random.uniform(0.5, 1.5),
+            priority=random.uniform(*PRIORITY_GENERATION_RANGE),
         )
 
     except (ValueError, TypeError, KeyError, AttributeError):
         # フォールバック: 成行注文のデフォルト遺伝子
         return EntryGene(
             entry_type=EntryType.MARKET,
-            limit_offset_pct=0.005,
-            stop_offset_pct=0.005,
-            order_validity_bars=5,
+            limit_offset_pct=ranges["limit_offset_pct"][0],
+            stop_offset_pct=ranges["stop_offset_pct"][0],
+            order_validity_bars=int(ranges["order_validity_bars"][0]),
             enabled=True,
         )

@@ -147,9 +147,9 @@ class TestExitGene:
         assert isinstance(child2, ExitGene)
         assert child1 is not parent1
         assert child2 is not parent2
-        # 交叉結果は0.3か0.7のいずれか
-        assert child1.partial_exit_pct in (0.3, 0.7)
-        assert child2.partial_exit_pct in (0.3, 0.7)
+        # 数値フィールドは平均化される: (0.3 + 0.7) / 2 = 0.5
+        assert child1.partial_exit_pct == 0.5
+        assert child2.partial_exit_pct == 0.5
 
     def test_create_random_exit_gene_defaults(self):
         gene = create_random_exit_gene()

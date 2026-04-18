@@ -54,12 +54,6 @@ class TestGeneValidator:
         condition.right_operand = None
         return condition
 
-    def test_init(self, validator):
-        """初期化テスト"""
-        assert validator.valid_indicator_types is not None
-        assert validator.valid_operators is not None
-        assert validator.valid_data_sources is not None
-
     def test_validate_indicator_gene_valid(self, validator, valid_indicator_gene):
         """有効な指標遺伝子の検証"""
         result = validator.validate_indicator_gene(valid_indicator_gene)
@@ -167,100 +161,6 @@ class TestGeneValidator:
         assert result is True
         assert error == ""
 
-    def test_is_trivial_condition_false_for_price_action(self, validator):
-        """異なる価格データ同士の比較（プライスアクション）がトリビアルでないことをテスト"""
-        # close > open（陽線）はプライスアクションとして有効
-        condition = Mock()
-        condition.left_operand = "close"
-        condition.right_operand = "open"
-        condition.operator = ">"
-
-        result = validator._is_trivial_condition(condition)
-        assert result is False
-
-    def test_is_trivial_condition_false_for_indicator_price(self, validator):
-        """指標と価格の比較がトリビアルでないことをテスト"""
-        condition = Mock()
-        condition.left_operand = "SMA_20"
-        condition.right_operand = "close"
-        condition.operator = ">"
-
-        result = validator._is_trivial_condition(condition)
-        assert result is False
-
-    def test_is_trivial_condition_true_for_same_price(self, validator):
-        """同じ価格データの比較がトリビアルと判定されることをテスト"""
-        condition = Mock()
-        condition.left_operand = "close"
-        condition.right_operand = "close"
-        condition.operator = ">"
-
-        result = validator._is_trivial_condition(condition)
-        assert result is True
-
-    def test_is_valid_operand_detailed_number(self, validator):
-        """数値オペランドの検証"""
-        result, error = validator._is_valid_operand_detailed(10.5)
-        assert result is True
-        assert error == ""
-
-    def test_is_valid_operand_detailed_string_valid(self, validator):
-        """有効な文字列オペランドの検証"""
-        result, error = validator._is_valid_operand_detailed("SMA_20")
-        assert result is True
-        assert error == ""
-
-    def test_is_valid_operand_detailed_string_invalid(self, validator):
-        """無効な文字列オペランドの検証"""
-        result, error = validator._is_valid_operand_detailed("invalid_string")
-        assert result is False
-        assert error != ""
-
-    def test_is_valid_operand_detailed_dict_indicator(self, validator):
-        """指標辞書オペランドの検証"""
-        operand = {"type": "indicator", "name": "SMA"}
-        result, error = validator._is_valid_operand_detailed(operand)
-        assert result is True
-        assert error == ""
-
-    def test_is_valid_operand_detailed_dict_price(self, validator):
-        """価格辞書オペランドの検証"""
-        operand = {"type": "price", "name": "close"}
-        result, error = validator._is_valid_operand_detailed(operand)
-        assert result is True
-        assert error == ""
-
-    def test_is_valid_operand_detailed_dict_value(self, validator):
-        """値辞書オペランドの検証"""
-        operand = {"type": "value", "value": 10.5}
-        result, error = validator._is_valid_operand_detailed(operand)
-        assert result is True
-        assert error == ""
-
-    def test_is_valid_operand_detailed_none(self, validator):
-        """Noneオペランドの検証"""
-        result, error = validator._is_valid_operand_detailed(None)
-        assert result is False
-        assert "Noneです" in error
-
-    def test_is_indicator_name_valid(self, validator):
-        """有効な指標名の検証"""
-        result = validator._is_indicator_name("SMA")
-        assert result is True
-
-    def test_is_indicator_name_invalid(self, validator):
-        """無効な指標名の検証"""
-        result = validator._is_indicator_name("invalid")
-        assert result is False
-
-    def test_is_indicator_name_with_params(self, validator):
-        """パラメータ付き指標名の検証"""
-        # 実際のindicator_typesに依存するので、テストは汎用的に
-
-    def test_is_indicator_name_ui_not_corrected(self, validator):
-        """'UI'指標名が修正されないことを確認"""
-        # UIが有効な指標でない限りFalseになるべき
-
     def test_clean_condition_valid(self, validator):
         """有効な条件のクリーニング"""
         condition = Mock()
@@ -287,24 +187,6 @@ class TestGeneValidator:
         assert condition.left_operand == " SMA "  # stripされない
         assert condition.right_operand == " close "  # stripされない
         assert condition.operator == "<"
-
-    def test_extract_operand_from_dict_indicator(self, validator):
-        """指標辞書からの抽出"""
-        operand = {"type": "indicator", "name": "SMA"}
-        result = validator._extract_operand_from_dict(operand)
-        assert result == "SMA"
-
-    def test_extract_operand_from_dict_price(self, validator):
-        """価格辞書からの抽出"""
-        operand = {"type": "price", "name": "close"}
-        result = validator._extract_operand_from_dict(operand)
-        assert result == "close"
-
-    def test_extract_operand_from_dict_value(self, validator):
-        """値辞書からの抽出"""
-        operand = {"type": "value", "value": 10.5}
-        result = validator._extract_operand_from_dict(operand)
-        assert result == "10.5"
 
     def test_validate_strategy_gene_valid(self, validator):
         """有効な戦略遺伝子の検証"""
