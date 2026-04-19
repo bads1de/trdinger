@@ -27,7 +27,7 @@ class OHLCVRepository(BaseRepository):
 
     def insert_ohlcv_data(self, ohlcv_records: List[dict]) -> int:
         """
-        大量のOHLCVレコードをデータベースに一括挿入します。
+        大量のOHLCVレコードを一括挿入します。
 
         このメソッドは以下の高度な処理を実行します：
         1. 入力データのバリデーション（タイムスタンプの整合性、欠損値チェック）。

@@ -139,7 +139,7 @@ class DataProcessor:
 
     def _interpolate_data(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        データ補間処理
+        データ補間処理（ベクトル化版）
 
         数値カラムとカテゴリカルカラムの欠損値を補間します。
         - 数値カラム: inf→NaN変換後、前方補完→線形補完→ゼロ埋め
@@ -154,82 +154,56 @@ class DataProcessor:
         """
         result_df = df.copy()
 
-        # 数値カラムの補間
+        # 数値カラムの補間（ベクトル化）
         numeric_columns = result_df.select_dtypes(include=[np.number]).columns
 
         for col in numeric_columns:
             # inf値をNaNに変換（補間前に）
             result_df[col] = _replace_inf_with_nan(cast(pd.Series, result_df[col]))
 
-            # Pandas Series比較を安全に行う - .item()でスカラー値を取得
-            # .any()がSeriesを返す場合に備えて、明示的にitem()を使用
-            try:
-                has_null_check = result_df[col].isnull().any()
-                # has_null_checkがSeriesの場合、.item()でスカラー値を取得
-                if hasattr(has_null_check, "item"):
-                    has_null = has_null_check.item()  # type: ignore[reportAttributeAccessIssue]
-                else:
-                    has_null = bool(has_null_check)
-            except (ValueError, AttributeError):
-                # フォールバック: 要素ごとにチェック
-                has_null = bool(np.any(result_df[col].isnull().to_numpy()))
-
-            if has_null:
+            # 欠損値がある場合のみ補間
+            if bool(np.any(result_df[col].isnull().to_numpy())):
                 # 前方補完 → 線形補完 → ゼロ埋め（未来データを使わない）
-                # bfill() は未来のデータを使うためデータリークの原因となるため削除
                 result_df[col] = (
                     result_df[col].ffill().interpolate(method="linear").fillna(0)
                 )
 
-        # 特別なOHLCカラムの補間後検証と修正
+        # 特別なOHLCカラムの補間後検証と修正（ベクトル化）
         if all(col in result_df.columns for col in ["open", "high", "low", "close"]):
-            # OHLCカラムが全て存在する場合のみ検証
-            for idx in result_df.index:
-                row = result_df.loc[idx]
+            # NaN値を含まない行のみ抽出
+            ohlc_mask = result_df[["open", "high", "low", "close"]].notnull().all(axis=1)
+            ohlc_df = result_df.loc[ohlc_mask, ["open", "high", "low", "close"]].copy()
 
-                # NaN値が含まれている行はスキップ
-                ohlc_values = row[["open", "high", "low", "close"]]
-                # Pandas Series比較を安全に行う - boolに変換してから評価
-                has_null_ohlc = bool(ohlc_values.isnull().any())
-                if has_null_ohlc:
-                    continue
+            if not ohlc_df.empty:
+                # numpy配列に変換して高速処理
+                open_vals = ohlc_df["open"].values
+                high_vals = ohlc_df["high"].values
+                low_vals = ohlc_df["low"].values
+                close_vals = ohlc_df["close"].values
 
-                # OHLC関係が崩れている場合は修正
-                # Pandas Series比較を安全に行う
-                low_val = float(row["low"])
-                open_val = float(row["open"])
-                high_val = float(row["high"])
-                close_val = float(row["close"])
+                # OHLC関係の検証（ベクトル化）
+                valid_min = np.minimum(open_vals, close_vals)
+                valid_max = np.maximum(open_vals, close_vals)
 
-                ohlc_valid = (
-                    (low_val <= open_val)
-                    and (open_val <= high_val)
-                    and (low_val <= close_val)
-                    and (close_val <= high_val)
-                )
+                # lowの修正
+                low_invalid = low_vals > valid_min
+                low_vals[low_invalid] = valid_min[low_invalid]
 
-                if not ohlc_valid:
-                    # OHLC関係を強制的に修正
-                    valid_min = min(open_val, close_val)
-                    valid_max = max(open_val, close_val)
+                # highの修正
+                high_invalid = high_vals < valid_max
+                high_vals[high_invalid] = valid_max[high_invalid]
 
-                    # lowが適切な最小値になるように修正
-                    if low_val > valid_min:
-                        result_df.loc[idx, "low"] = valid_min
+                # 修正結果を反映
+                result_df.loc[ohlc_mask, "low"] = low_vals
+                result_df.loc[ohlc_mask, "high"] = high_vals
 
-                    # highが適切な最大値になるように修正
-                    if high_val < valid_max:
-                        result_df.loc[idx, "high"] = valid_max
-
-        # カテゴリカルカラムの補間
+        # カテゴリカルカラムの補間（ベクトル化）
         categorical_columns = result_df.select_dtypes(
             include=["object", "category"]
         ).columns
 
         for col in categorical_columns:
-            # Pandas Series比較を安全に行う - boolに変換してから評価
-            has_null = bool(result_df[col].isnull().any())
-            if has_null:
+            if bool(np.any(result_df[col].isnull().to_numpy())):
                 # 最頻値で補完
                 mode_value = result_df[col].mode()
                 if not mode_value.empty:

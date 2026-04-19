@@ -115,15 +115,17 @@ class IndividualEvaluator(EvaluationWindowService):
         """遺伝子構造に基づく安定したキャッシュキーを生成する。
 
         id属性が有効な場合はそれを使用し、空文字列やNoneの場合は
-        シリアライズ結果のMD5ハッシュで補完する。
+        シリアライズ結果のSHA256ハッシュで補完する（MD5より高速）。
         """
         gene_id = getattr(gene, "id", "") or ""
         if gene_id:
             return gene_id
         try:
             serialized = self._gene_serializer.strategy_gene_to_dict(gene)
+            # ソートして安定したキーを生成
             raw = str(sorted(serialized.items(), key=lambda x: str(x[0])))
-            return hashlib.md5(raw.encode()).hexdigest()
+            # SHA256はMD5より高速でセキュア
+            return hashlib.sha256(raw.encode()).hexdigest()
         except Exception as e:
             logger.debug("キャッシュキー生成に失敗しました: %s", e)
             return str(gene)

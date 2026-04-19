@@ -251,7 +251,7 @@ class TuningConfig(NestedConfigMixin):
     """
 
     enabled: bool = True
-    n_trials: int = 30
+    n_trials: int = 10
     elite_count: int = 3
     use_wfa: bool = True
     include_thresholds: bool = False

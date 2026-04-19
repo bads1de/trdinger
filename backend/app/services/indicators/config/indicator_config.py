@@ -8,6 +8,7 @@
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
+import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
@@ -457,6 +458,19 @@ class IndicatorConfigRegistry:
 
 # グローバルレジストリインスタンス
 indicator_registry = IndicatorConfigRegistry()
+
+# 初期化キャッシュ（プロセス間共有）
+_indicator_cache: Dict[str, Any] = {}
+_cache_lock = threading.Lock()
+
+
+def get_cached_indicators() -> List[str]:
+    """キャッシュされたインジケーターリストを取得"""
+    global _indicator_cache
+    with _cache_lock:
+        if "indicators" not in _indicator_cache:
+            _indicator_cache["indicators"] = indicator_registry.list_indicators()
+        return _indicator_cache["indicators"]
 
 
 def _initialize_registry(registry: IndicatorConfigRegistry) -> None:

@@ -34,6 +34,23 @@ class BacktestDataProvider:
         self._prefetch_enabled = prefetch_enabled
         self._prefetch_executor = ThreadPoolExecutor(max_workers=max_prefetch_workers)
         self._prefetch_cache: Dict[tuple, Any] = {}
+        # ロックの粒度を細かくするための個別ロック
+        self._cache_locks: Dict[str, threading.Lock] = {}
+        # キャッシュ統計
+        self._cache_hits = 0
+        self._cache_misses = 0
+
+    @staticmethod
+    def _normalize_cache_key(key: tuple[Any, ...]) -> tuple[Any, ...]:
+        """キャッシュキーを正規化して一貫性を保つ。"""
+        if len(key) >= 4:
+            # 日時範囲を正規化
+            parsed_range = parse_datetime_range_optional(key[-2], key[-1])
+            if parsed_range is not None:
+                normalized_start = str(pd.Timestamp(parsed_range[0]))
+                normalized_end = str(pd.Timestamp(parsed_range[1]))
+                return key[:-2] + (normalized_start, normalized_end)
+        return key
 
     @staticmethod
     def _parse_key_date_range(
@@ -114,7 +131,7 @@ class BacktestDataProvider:
         timeframe = backtest_config.get("timeframe")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")
-        key = (symbol, timeframe, str(start_date), str(end_date))
+        key = self._normalize_cache_key((symbol, timeframe, str(start_date), str(end_date)))
 
         try:
             from .parallel_evaluator import get_worker_data
@@ -123,12 +140,14 @@ class BacktestDataProvider:
             if worker_data is not None:
                 with self._lock:
                     self._data_cache[key] = worker_data
+                    self._cache_hits += 1
                 return worker_data
         except ImportError:
             pass
 
         with self._lock:
             if key in self._data_cache:
+                self._cache_hits += 1
                 return self._data_cache[key]
 
         self.backtest_service.ensure_data_service_initialized()
@@ -140,8 +159,10 @@ class BacktestDataProvider:
         )
         with self._lock:
             if key in self._data_cache:
+                self._cache_hits += 1
                 return self._data_cache[key]
             self._data_cache[key] = data
+            self._cache_misses += 1
         logger.debug(f"バックテストデータをキャッシュしました: {key}")
         return data
 
@@ -152,7 +173,7 @@ class BacktestDataProvider:
         symbol = backtest_config.get("symbol")
         start_date = backtest_config.get("start_date")
         end_date = backtest_config.get("end_date")
-        key = ("minute", symbol, "1m", str(start_date), str(end_date))
+        key = self._normalize_cache_key(("minute", symbol, "1m", str(start_date), str(end_date)))
 
         try:
             from .parallel_evaluator import get_worker_data
@@ -161,12 +182,14 @@ class BacktestDataProvider:
             if worker_data is not None:
                 with self._lock:
                     self._data_cache[key] = worker_data
+                    self._cache_hits += 1
                 return worker_data
         except ImportError:
             pass
 
         with self._lock:
             if key in self._data_cache:
+                self._cache_hits += 1
                 return self._data_cache[key]
 
         try:
@@ -180,8 +203,10 @@ class BacktestDataProvider:
             if not data.empty:
                 with self._lock:
                     if key in self._data_cache:
+                        self._cache_hits += 1
                         return self._data_cache[key]
                     self._data_cache[key] = data
+                    self._cache_misses += 1
                 logger.debug(f"1分足データをキャッシュしました: {key}")
                 return data
             logger.debug(f"1分足データが空です: {key}")
@@ -213,6 +238,7 @@ class BacktestDataProvider:
             if cache_key in self._data_cache:
                 cached_data = self._data_cache[cache_key]
                 if hasattr(cached_data, "empty") and not cached_data.empty:
+                    self._cache_hits += 1
                     logger.debug(f"OHLCVデータ: キャッシュヒット (key={cache_key})")
                     return cached_data
 
@@ -226,6 +252,7 @@ class BacktestDataProvider:
                 ):
                     self._data_cache[cache_key] = prefetch_data
                     self._prefetch_cache.pop(cache_key, None)
+                    self._cache_hits += 1
                     logger.debug(f"OHLCVデータ: プリフェッチヒット (key={cache_key})")
                     return prefetch_data
 
@@ -246,6 +273,9 @@ class BacktestDataProvider:
                 with self._lock:
                     if cache_key not in self._data_cache:
                         self._data_cache[cache_key] = ohlcv_data
+                        self._cache_misses += 1
+                    else:
+                        self._cache_hits += 1
                 logger.debug(
                     f"OHLCVデータ: DBから取得・キャッシュ保存 (key={cache_key})"
                 )
@@ -304,12 +334,19 @@ class BacktestDataProvider:
         with self._lock:
             self._data_cache.clear()
             self._prefetch_cache.clear()
+            self._cache_hits = 0
+            self._cache_misses = 0
 
     def get_cache_statistics(self) -> Dict[str, Any]:
         """キャッシュ統計を取得する。"""
         with self._lock:
+            total_requests = self._cache_hits + self._cache_misses
+            hit_rate = self._cache_hits / total_requests if total_requests > 0 else 0.0
             return {
                 "cache_size": len(self._data_cache),
                 "prefetch_size": len(self._prefetch_cache),
                 "readers": 0,
+                "cache_hits": self._cache_hits,
+                "cache_misses": self._cache_misses,
+                "hit_rate": hit_rate,
             }

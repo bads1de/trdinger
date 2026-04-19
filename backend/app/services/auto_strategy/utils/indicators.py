@@ -8,7 +8,14 @@ import logging
 from typing import Dict, List
 
 from app.services.indicators import TechnicalIndicatorService
-from app.services.indicators.config.indicator_config import indicator_registry
+from app.services.auto_strategy.config.helpers import (
+    normalize_robustness_regime_windows,
+)
+from app.services.indicators.config.indicator_config import (
+    get_cached_indicators,
+    indicator_registry,
+)
+from ..config.constants import COMPOSITE_INDICATORS
 
 # =============================================================================
 # 指標リスト取得関連
@@ -51,16 +58,13 @@ def get_all_indicators(include_composite: bool = True) -> List[str]:
         include_composite: 複合指標（COMPOSITE_INDICATORS）を含めるか
     """
     indicator_registry.ensure_initialized()
-    all_types = indicator_registry.list_indicators()
+    # キャッシュを使用
+    all_types = get_cached_indicators()
 
     if include_composite:
-        from ..config.constants import COMPOSITE_INDICATORS
-
-        all_types.extend(COMPOSITE_INDICATORS)
-
-    # 重複除去して順序維持
-    seen: set[str] = set()
-    return [x for x in all_types if x not in seen and not seen.add(x)]  # type: ignore[func-returns-value]
+        return all_types
+    else:
+        return [t for t in all_types if t not in COMPOSITE_INDICATORS]
 
 
 def get_volume_indicators() -> List[str]:

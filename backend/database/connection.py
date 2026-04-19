@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
 
 logger = logging.getLogger(__name__)

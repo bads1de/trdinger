@@ -48,7 +48,7 @@ class ParallelEvaluator:
         evaluate_func: Callable[[Any], Tuple[float, ...]],
         max_workers: Optional[int] = None,
         timeout_per_individual: float = 300.0,
-        use_process_pool: bool = False,
+        use_process_pool: bool = True,
         worker_initializer: Optional[Callable] = None,
         worker_initargs: Tuple = (),
     ):

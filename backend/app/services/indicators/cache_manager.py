@@ -23,14 +23,16 @@ class IndicatorCacheManager:
     in-place更新でも必ず再計算されます。
     """
 
-    def __init__(self, maxsize: int = 5000):
+    def __init__(self, maxsize: int = 10000):
         """
         IndicatorCacheManagerを初期化します。
 
         Args:
-            maxsize: キャッシュの最大サイズ（デフォルト: 5000）
+            maxsize: キャッシュの最大サイズ（デフォルト: 10000）
         """
         self._calculation_cache: LRUCache = LRUCache(maxsize=maxsize)
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def clear_cache(self) -> None:
         """
@@ -39,6 +41,8 @@ class IndicatorCacheManager:
         すべてのキャッシュされた計算結果を削除します。
         """
         self._calculation_cache.clear()
+        self._cache_hits = 0
+        self._cache_misses = 0
         logger.info("Indicator calculation cache cleared.")
 
     def make_cache_key(
@@ -98,11 +102,16 @@ class IndicatorCacheManager:
             cache_key: キャッシュキー（make_cache_keyで生成）
 
         Returns:
-            Optional[Any]: キャッシュされた結果、見つからない場合はNone
+            Optional[Any]: キャッシュされた結果、またはNone
         """
-        if cache_key and cache_key in self._calculation_cache:
-            return self._calculation_cache[cache_key]
-        return None
+        if cache_key is None:
+            return None
+        result = self._calculation_cache.get(cache_key)
+        if result is not None:
+            self._cache_hits += 1
+        else:
+            self._cache_misses += 1
+        return result
 
     def cache_result(self, cache_key: Optional[tuple], result: Any) -> None:
         """
@@ -114,5 +123,16 @@ class IndicatorCacheManager:
             cache_key: キャッシュキー（make_cache_keyで生成）
             result: キャッシュする計算結果
         """
-        if result is not None and cache_key:
+        if cache_key is not None and result is not None:
             self._calculation_cache[cache_key] = result
+
+    def get_cache_statistics(self) -> Dict[str, Any]:
+        """キャッシュ統計を取得"""
+        total_requests = self._cache_hits + self._cache_misses
+        hit_rate = self._cache_hits / total_requests if total_requests > 0 else 0.0
+        return {
+            "cache_size": len(self._calculation_cache),
+            "cache_hits": self._cache_hits,
+            "cache_misses": self._cache_misses,
+            "hit_rate": hit_rate,
+        }
