@@ -18,6 +18,10 @@ import pandas_ta_classic as ta
 logger = logging.getLogger(__name__)
 
 
+# サンプルDataFrameキャッシュ（同じパラメータなら同じDataFrameを再利用）
+_sample_frame_cache: Dict[tuple, pd.DataFrame] = {}
+
+
 def _build_sample_ohlcv_frame(
     rows: int,
     *,
@@ -28,6 +32,7 @@ def _build_sample_ohlcv_frame(
     pandas-ta の検証用サンプル OHLCV DataFrame を作る
 
     インジケーターの検証やイントロスペクション用のサンプルデータを生成します。
+    同じパラメータでの呼び出しはキャッシュから返されます。
 
     Args:
         rows: 行数（データポイント数）
@@ -41,6 +46,10 @@ def _build_sample_ohlcv_frame(
         walk_close=Falseの場合、乱数で生成された価格を使用します。
         walk_close=Trueの場合、累積和でトレンドを持つ価格を生成します。
     """
+    cache_key = (rows, walk_close, with_datetime_index)
+    if cache_key in _sample_frame_cache:
+        return _sample_frame_cache[cache_key]
+
     import numpy as np
     import pandas as pd
 
@@ -76,6 +85,7 @@ def _build_sample_ohlcv_frame(
     if with_datetime_index:
         frame.index = pd.date_range("2024-01-01", periods=rows, freq="h")
 
+    _sample_frame_cache[cache_key] = frame
     return frame
 
 
@@ -130,6 +140,10 @@ def _build_indicator_call_kwargs(
     return kwargs
 
 
+# サンプル実行結果キャッシュ（同じ関数/パラメータなら同じ結果を再利用）
+_sample_run_cache: Dict[tuple, Any] = {}
+
+
 def _run_indicator_on_sample_frame(
     func: Callable[..., Any],
     *,
@@ -142,6 +156,7 @@ def _run_indicator_on_sample_frame(
     サンプル OHLCV DataFrame で指標を実行する共通処理
 
     サンプルDataFrameを生成し、インジケーター関数を実行して結果を返します。
+    同じ関数/パラメータでの呼び出しはキャッシュから返されます。
 
     Args:
         func: インジケーター関数
@@ -156,6 +171,14 @@ def _run_indicator_on_sample_frame(
     Note:
         FutureWarningを抑制して実行します。
     """
+    # キャッシュキーを生成（funcはhashableではないので名前ベース）
+    func_id = getattr(func, "__name__", None) or getattr(func, "__qualname__", id(func))
+    params_key = tuple(sorted(default_params.items())) if default_params else ()
+    cache_key = (func_id, rows, params_key, walk_close, with_datetime_index)
+
+    if cache_key in _sample_run_cache:
+        return _sample_run_cache[cache_key]
+
     sample_frame = _build_sample_ohlcv_frame(
         rows,
         walk_close=walk_close,
@@ -165,7 +188,10 @@ def _run_indicator_on_sample_frame(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", FutureWarning)
-        return func(**kwargs)
+        result = func(**kwargs)
+
+    _sample_run_cache[cache_key] = result
+    return result
 
 
 # =============================================================================

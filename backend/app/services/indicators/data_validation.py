@@ -181,7 +181,7 @@ def _is_missing_indicator_result(result: Any) -> bool:
         return result.empty or bool(result.isna().all())
 
     if isinstance(result, pd.DataFrame):
-        return result.empty or bool(result.isna().all().all())
+        return result.empty or bool(result.isna().all(axis=None))
 
     if isinstance(result, np.ndarray):
         if result.size == 0:
