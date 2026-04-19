@@ -93,7 +93,7 @@ class TestValidateSymbolAndTimeframe:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            "app.services.data_collection.orchestration.data_validator.unified_config"
         ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
@@ -135,7 +135,7 @@ class TestValidateSymbolAndTimeframe:
             orchestration_service: オーケストレーションサービス
         """
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            "app.services.data_collection.orchestration.data_validator.unified_config"
         ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
@@ -188,7 +188,7 @@ class TestStartHistoricalDataCollection:
         """
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+                "app.services.data_collection.orchestration.data_validator.unified_config"
             ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.historical_data_orchestrator.OHLCVRepository"
@@ -231,7 +231,7 @@ class TestStartHistoricalDataCollection:
         """
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+                "app.services.data_collection.orchestration.data_validator.unified_config"
             ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.historical_data_orchestrator.OHLCVRepository"
@@ -275,7 +275,7 @@ class TestStartHistoricalDataCollection:
         """
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+                "app.services.data_collection.orchestration.data_validator.unified_config"
             ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.historical_data_orchestrator.OHLCVRepository"
@@ -441,7 +441,7 @@ class TestGetCollectionStatus:
 
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+                "app.services.data_collection.orchestration.data_validator.unified_config"
             ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.collection_status_checker.OHLCVRepository"
@@ -486,7 +486,7 @@ class TestGetCollectionStatus:
         """
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+                "app.services.data_collection.orchestration.data_validator.unified_config"
             ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.collection_status_checker.OHLCVRepository"
@@ -533,7 +533,7 @@ class TestGetCollectionStatus:
         """
         with (
             patch(
-                "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+                "app.services.data_collection.orchestration.data_validator.unified_config"
             ) as mock_config,
             patch(
                 "app.services.data_collection.orchestration.collection_status_checker.OHLCVRepository"
@@ -680,7 +680,7 @@ class TestStartHistoricalOiCollection:
     ):
         """正常系: OI履歴データ収集が正常に開始される"""
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            "app.services.data_collection.orchestration.data_validator.unified_config"
         ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
@@ -706,64 +706,9 @@ class TestStartHistoricalOiCollection:
         mock_background_tasks: MagicMock,
     ):
         """異常系: 無効なシンボルでエラーが発生"""
-        with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
-        ) as mock_config:
-            mock_config.market.symbol_mapping = {}
-            mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
-            mock_config.market.supported_timeframes = ["1h"]
-
-            with pytest.raises(ValueError):
-                await orchestration_service.start_historical_oi_collection(
-                    symbol="INVALID/SYMBOL",
-                    interval="1h",
-                    background_tasks=mock_background_tasks,
-                    db=mock_db_session,
-                )
-
-
-class TestStartHistoricalOiCollection:
-    """正常系・異常系: OI履歴データ収集開始のテスト"""
-
-    @pytest.mark.asyncio
-    async def test_start_historical_oi_collection_success(
-        self,
-        orchestration_service: DataCollectionOrchestrationService,
-        mock_db_session: MagicMock,
-        mock_background_tasks: MagicMock,
-    ):
-        """正常系: OI履歴データ収集が正常に開始される"""
-        with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
-        ) as mock_config:
-            mock_config.market.symbol_mapping = {}
-            mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
-            mock_config.market.supported_timeframes = ["1h"]
-
-            result = await orchestration_service.start_historical_oi_collection(
-                symbol="BTC/USDT:USDT",
-                interval="1h",
-                background_tasks=mock_background_tasks,
-                db=mock_db_session,
-            )
-
-            assert result["success"] is True
-            assert result["status"] == "started"
-            assert "OI履歴データ収集を開始" in result["message"]
-            mock_background_tasks.add_task.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_start_historical_oi_collection_invalid_symbol(
-        self,
-        orchestration_service: DataCollectionOrchestrationService,
-        mock_db_session: MagicMock,
-        mock_background_tasks: MagicMock,
-    ):
-        """異常系: 無効なシンボルでエラーが発生（safe_operation デコレータが HTTPException を送出）"""
         from fastapi import HTTPException
-
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            "app.services.data_collection.orchestration.data_validator.unified_config"
         ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]
@@ -797,7 +742,7 @@ class TestErrorHandling:
             mock_background_tasks: BackgroundTasksモック
         """
         with patch(
-            "app.services.data_collection.orchestration.data_collection_orchestration_service.unified_config"
+            "app.services.data_collection.orchestration.data_validator.unified_config"
         ) as mock_config:
             mock_config.market.symbol_mapping = {}
             mock_config.market.supported_symbols = ["BTC/USDT:USDT"]

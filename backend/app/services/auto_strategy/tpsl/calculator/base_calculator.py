@@ -22,7 +22,7 @@ class BaseTPSLCalculator(ABC):
     テンプレートメソッドパターンを使用して、共通の例外処理と結果作成を実現します。
     """
 
-    def __init__(self, method_name: str):
+    def __init__(self, method_name: str = "unknown"):
         """初期化"""
         self.method_name = method_name
 

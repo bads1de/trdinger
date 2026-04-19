@@ -21,6 +21,8 @@ __all__ = [
     "BacktestRunConfigValidationError",
     "StrategyConfig",
     "SUPPORTED_STRATEGIES",
+    "BacktestDataService",
+    "BacktestService",
 ]
 
 _LAZY_EXPORTS = {

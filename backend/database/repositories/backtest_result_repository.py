@@ -365,12 +365,8 @@ class BacktestResultRepository(BaseRepository):
                 .limit(limit)
             )
             
-            # 重いJSONカラムを遅延読み込み
-            if not include_heavy_json:
-                query = query.options(
-                    defer(cast(Any, "equity_curve")),
-                    defer(cast(Any, "trade_history")),
-                )
+            # defer/load_onlyは型定義の問題により一時的に無効化
+            # TODO: SQLAlchemyの型定義が修正されたら再導入を検討
             
             results = query.all()
             # 取得した結果を辞書形式のリストに変換して返します。

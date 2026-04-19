@@ -73,13 +73,13 @@ def test_hierarchical_condition_evaluation_complex_false():
 def test_hierarchical_validation():
     """ネストされたConditionGroupのバリデーションテスト"""
     from app.services.auto_strategy.genes import TPSLGene
+    from app.services.auto_strategy.genes.validators.indicator_validator import IndicatorValidator
 
-    # Mock get_all_indicators to include our test operands "A", "B", "C"
-    with patch(
-        "app.services.auto_strategy.genes.validator.get_all_indicators",
-        return_value=["A", "B", "C"],
-    ):
+    # Mock IndicatorValidator to accept our test indicators "A", "B", "C"
+    with patch.object(IndicatorValidator, '__init__', lambda self: None):
         validator = GeneValidator()
+        # Manually set valid_indicator_types
+        validator._indicator_validator.valid_indicator_types = ["A", "B", "C"]
 
         # Valid Nested Structure: (A > 10 AND B < 5) OR C > 100
         cond_a = Condition("A", ">", 10)

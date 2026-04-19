@@ -44,10 +44,7 @@ class GeneratedStrategyRepository(BaseRepository):
             self.db.query(GeneratedStrategy)
             .outerjoin(GeneratedStrategy.backtest_result)
             .options(
-                selectinload(GeneratedStrategy.backtest_result).options(
-                    defer(t_cast(Any, "equity_curve")),
-                    defer(t_cast(Any, "trade_history")),
-                )
+                selectinload(GeneratedStrategy.backtest_result)
             )
         )
 
@@ -177,10 +174,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
             if eager_load_backtest:
                 query = query.options(
-                    selectinload(GeneratedStrategy.backtest_result).options(
-                        defer(t_cast(Any, "equity_curve")),
-                        defer(t_cast(Any, "trade_history")),
-                    )
+                    selectinload(GeneratedStrategy.backtest_result)
                 )
 
             query = query.order_by(desc(GeneratedStrategy.fitness_score))
@@ -217,10 +211,7 @@ class GeneratedStrategyRepository(BaseRepository):
             
             if eager_load_backtest:
                 query = query.options(
-                    selectinload(GeneratedStrategy.backtest_result).options(
-                        defer(t_cast(Any, "equity_curve")),
-                        defer(t_cast(Any, "trade_history")),
-                    )
+                    selectinload(GeneratedStrategy.backtest_result)
                 )
             
             query = query.order_by(desc(GeneratedStrategy.fitness_score))
