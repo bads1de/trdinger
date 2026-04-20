@@ -48,16 +48,13 @@ class DataConversionService:
     )
     def convert_ohlcv_to_dataframe(self, ohlcv_data: List[OHLCVData]) -> pd.DataFrame:
         """
-        OHLCVDataリストをpandas.DataFrameに変換
+        OHLCVデータをDataFrameに変換
 
         Args:
-            ohlcv_data: OHLCVDataオブジェクトのリスト
+            ohlcv_data: OHLCVデータのリスト
 
         Returns:
-            backtesting.py用のDataFrame
-
-        Raises:
-            DataConversionError: 変換に失敗した場合
+            OHLCVカラムを持つDataFrame
         """
         if not ohlcv_data:
             return pd.DataFrame()
@@ -79,7 +76,7 @@ class DataConversionService:
 
             df = pd.DataFrame(
                 records,
-                columns=["timestamp", "open", "high", "low", "close", "volume"],
+                columns=["timestamp", "open", "high", "low", "close", "volume"],  # type: ignore[arg-type]
             )
 
             # インデックスをdatetimeに設定

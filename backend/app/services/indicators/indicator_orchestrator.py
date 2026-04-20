@@ -175,30 +175,39 @@ class TechnicalIndicatorService:
             return cached_result
 
         try:
-            # pandas-ta設定を取得
-            pandas_config = self.pandas_ta_caller.get_pandas_ta_config(
-                indicator_type, self.registry
-            )
-            result = None
-
-            if pandas_config:
-                # pandas-ta方式で処理
-                normalized_params = self.parameter_normalizer.normalize_params(
-                    params, pandas_config
+            # adapter_functionがある場合はアダプターパスを優先
+            config_obj = self._get_indicator_config(indicator_type)
+            pandas_config = None  # 初期化
+            if config_obj and config_obj.adapter_function:
+                # アダプター方式で処理
+                result = self.adapter_handler.calculate_with_adapter(
+                    df, indicator_type, params, config_obj
                 )
+            else:
+                # pandas-ta設定を取得
+                pandas_config = self.pandas_ta_caller.get_pandas_ta_config(
+                    indicator_type, self.registry
+                )
+                result = None
 
-                if not self.validator.basic_validation(
-                    df, pandas_config, normalized_params
-                ):
-                    result = self.validator.create_nan_result(df, pandas_config)
-                else:
-                    raw_result = self.pandas_ta_caller.call_pandas_ta(
-                        df, pandas_config, normalized_params
+                if pandas_config:
+                    # pandas-ta方式で処理
+                    normalized_params = self.parameter_normalizer.normalize_params(
+                        params, pandas_config
                     )
-                    if raw_result is not None:
-                        result = self.post_processor.post_process(
-                            raw_result, pandas_config, df
+
+                    if not self.validator.basic_validation(
+                        df, pandas_config, normalized_params
+                    ):
+                        result = self.validator.create_nan_result(df, pandas_config)
+                    else:
+                        raw_result = self.pandas_ta_caller.call_pandas_ta(
+                            df, pandas_config, normalized_params
                         )
+                        if raw_result is not None:
+                            result = self.post_processor.post_process(
+                                raw_result, pandas_config, df
+                            )
 
             # アダプター方式にフォールバック
             if result is None:
@@ -209,16 +218,23 @@ class TechnicalIndicatorService:
                             df, indicator_type, params, config_obj
                         )
                     else:
-                        raise ValueError(
-                            f"指標 {indicator_type} の実装が見つかりません"
-                        )
+                        # アダプター関数がない場合はNaN結果を返す
+                        if pandas_config:
+                            result = self.validator.create_nan_result(df, pandas_config)
+                            logger.warning(f"指標 {indicator_type} のアダプター関数がありません。NaN結果を返します")
+                        else:
+                            raise ValueError(
+                                f"指標 {indicator_type} の実装が見つかりません"
+                            )
                 except ValueError:
+                    # pandas_configがない場合は、デフォルトのNaN結果を作成
                     if pandas_config:
                         result = self.validator.create_nan_result(df, pandas_config)
                     else:
-                        raise ValueError(
-                            f"指標 {indicator_type} の実装が見つかりません"
-                        )
+                        # pandas_configがない場合は、デフォルト設定でNaN結果を作成
+                        default_config = {"function": indicator_type, "returns": "single", "return_cols": [indicator_type]}
+                        result = self.validator.create_nan_result(df, default_config)
+                        logger.warning(f"指標 {indicator_type} のpandas_configがありません。デフォルトNaN結果を返します")
 
             # キャッシュに保存
             if result is not None and cache_key:

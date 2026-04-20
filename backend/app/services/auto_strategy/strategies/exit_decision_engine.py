@@ -175,7 +175,10 @@ class ExitDecisionEngine:
             return False
 
         exit_pct = exit_gene.partial_exit_pct
-        exit_size = abs(position.size) * exit_pct
+        exit_size = round(abs(position.size) * exit_pct)
+        # sizeが0の場合は1に設定して最低1単位は決済する
+        if exit_size == 0:
+            exit_size = 1
 
         if exit_size <= 0:
             return False

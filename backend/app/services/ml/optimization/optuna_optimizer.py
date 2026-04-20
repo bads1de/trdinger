@@ -96,14 +96,17 @@ class OptunaOptimizer:
         self.study = optuna.create_study(
             direction="maximize",
             sampler=optuna.samplers.TPESampler(seed=42),
-            pruner=optuna.pruners.MedianPruner(),
+            pruner=optuna.pruners.MedianPruner(),  # プルーナーを有効化
         )
 
         # 目的関数をOptunaに適応
         def optuna_objective(trial: optuna.Trial) -> float:
+            logger.info(f"=== optuna_objective called ===")
             params = self._suggest_parameters(trial, parameter_space)
+            logger.info(f"Parameters: {params}")
             try:
                 score = objective_function(params)
+                logger.info(f"Score: {score}")
                 return score
             except Exception as e:
                 logger.warning(f"目的関数評価中にエラー: {e}")

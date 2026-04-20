@@ -21,8 +21,9 @@ class SpecificDayFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="specific_day_filter",
-        description="特定の曜日を指定してエントリーを回避します",
+        description="特定曜日のエントリーを回避します",
         default_params={"enabled": True, "skip_days": []},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

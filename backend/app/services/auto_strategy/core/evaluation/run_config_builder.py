@@ -60,6 +60,11 @@ class RunConfigBuilder:
             return config_dict
         except Exception as e:
             logger.error(f"バックテスト設定生成エラー: {e}")
+            # 例外をファイルに書き出す
+            with open('build_run_config_error.txt', 'a') as f:
+                f.write(f"Error in build_run_config: {e}\n")
+                import traceback
+                f.write(traceback.format_exc())
             return None
 
     @staticmethod

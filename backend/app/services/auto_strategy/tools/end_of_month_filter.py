@@ -22,8 +22,9 @@ class EndOfMonthFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="end_of_month_filter",
-        description="月末のリバランスによる不規則な動きを回避します",
+        description="月末の数日間のエントリーを回避します",
         default_params={"enabled": True, "days_before_end": 0},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

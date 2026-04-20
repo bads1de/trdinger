@@ -175,11 +175,11 @@ class DataProcessor:
             ohlc_df = result_df.loc[ohlc_mask, ["open", "high", "low", "close"]].copy()
 
             if not ohlc_df.empty:
-                # numpy配列に変換して高速処理
-                open_vals = ohlc_df["open"].values
-                high_vals = ohlc_df["high"].values
-                low_vals = ohlc_df["low"].values
-                close_vals = ohlc_df["close"].values
+                # numpy配列に変換して高速処理（.copy()で書き込み可能にする）
+                open_vals = ohlc_df["open"].values.copy()
+                high_vals = ohlc_df["high"].values.copy()
+                low_vals = ohlc_df["low"].values.copy()
+                close_vals = ohlc_df["close"].values.copy()
 
                 # OHLC関係の検証（ベクトル化）
                 valid_min = np.minimum(open_vals, close_vals)

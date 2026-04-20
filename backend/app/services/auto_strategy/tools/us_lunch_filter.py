@@ -28,8 +28,9 @@ class USLunchFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="us_lunch_filter",
-        description="米国ランチタイム（12:00-13:00 EST）の流動性低下を回避します",
+        description="米国ランチタイム（12:00-13:30 EST）のエントリーを回避します",
         default_params={"enabled": True},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

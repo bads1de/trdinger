@@ -18,12 +18,13 @@ class ToolDefinition:
     """
     ツールの宣言的メタデータ
 
-    name / description / default_params をまとめて定義します。
+    name / description / default_params / priority をまとめて定義します。
     """
 
     name: str
     description: str = ""
     default_params: Dict[str, Any] = field(default_factory=dict)
+    priority: str = "optional"  # essential, optional, disabled
 
 
 @dataclass

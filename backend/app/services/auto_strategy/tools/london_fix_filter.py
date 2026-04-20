@@ -24,8 +24,9 @@ class LondonFixFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="london_fix_filter",
-        description="ロンドンフィックス（16:00 LDN）前後の乱高下を回避します",
+        description="ロンドンフィックス時間帯のエントリーを回避します",
         default_params={"enabled": True, "window_minutes": 15},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

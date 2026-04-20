@@ -202,29 +202,32 @@ class DataIntegrationService:
         Returns:
             最適化済みの DataFrame
         """
-        # 必須カラムを定義
-        required_columns = [
-            "open",
-            "high",
-            "low",
-            "close",
-            "volume",
-            "open_interest",
-            "funding_rate",
-        ]
+        try:
+            # 必須カラムを定義
+            required_columns = [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "open_interest",
+                "funding_rate",
+            ]
 
-        # 0. データのソート（重要：インジケーター計算のために時系列順にする）
-        df = df.sort_index()
+            # 0. データのソート（重要：インジケーター計算のために時系列順にする）
+            df = df.sort_index()
 
-        # データクリーニングと検証
-        df = data_processor.clean_and_validate_data(
-            df,
-            required_columns=required_columns,
-            interpolate=True,
-            optimize=True,
-        )
+            # データクリーニングと検証
+            df = data_processor.clean_and_validate_data(
+                df,
+                required_columns=required_columns,
+                interpolate=True,
+                optimize=True,
+            )
 
-        return df
+            return df
+        except Exception as e:
+            raise
 
     @safe_operation(context="データ概要取得", is_api_call=False, default_return={})
     def get_data_summary(self, df: pd.DataFrame) -> dict:

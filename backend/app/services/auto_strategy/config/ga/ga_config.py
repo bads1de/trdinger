@@ -88,6 +88,7 @@ class GAConfig:
     constraint_violation_penalty: float = GA_DEFAULT_CONFIG[
         "constraint_violation_penalty"
     ]
+    max_enabled_filters: int = int(GA_DEFAULT_CONFIG.get("max_enabled_filters", 3))
 
     # 交叉・突然変異拡張設定
     # サブ設定: mutation_config

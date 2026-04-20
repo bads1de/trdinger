@@ -323,6 +323,35 @@ class AdapterHandler:
             Any: 実行結果（失敗時はNone）
         """
         sig = inspect.signature(cast(Callable[..., Any], adapter_function))
+        
+        # 期間パラメータのバリデーション
+        period_params = ["length", "period", "window", "n"]
+        max_period = None
+        for param in period_params:
+            if param in assigned_params:
+                try:
+                    param_value = assigned_params[param]
+                    if isinstance(param_value, (int, float)):
+                        period_val = int(param_value)
+                        max_period = period_val
+                        break
+                except (ValueError, TypeError):
+                    pass
+        
+        # データ長の確認
+        data_length = None
+        for val in assigned_params.values():
+            if isinstance(val, (pd.Series, pd.DataFrame)):
+                data_length = len(val)
+                break
+        
+        # 期間がデータ長を超えている場合はNoneを返す
+        if max_period and data_length and max_period >= data_length:
+            logger.warning(
+                f"{indicator_type}: 期間({max_period})がデータ長({data_length})以上のため計算をスキップします"
+            )
+            return None
+        
         try:
             valid_params = {
                 k: v for k, v in assigned_params.items() if k in sig.parameters

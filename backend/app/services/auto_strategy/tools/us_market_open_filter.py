@@ -32,8 +32,9 @@ class USMarketOpenFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="us_market_open_filter",
-        description="米国市場開始（09:30 EST）前後の乱高下を回避します",
+        description="米国市場オープン時間帯のエントリーを回避します",
         default_params={"enabled": True, "window_minutes": 30},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

@@ -149,7 +149,8 @@ class StrategyParameterTuner:
             else:
                 fitness_tuple = self.evaluator.evaluate_individual(gene, self.config)
 
-            return extract_primary_fitness_from_result(fitness_tuple)
+            fitness = extract_primary_fitness_from_result(fitness_tuple)
+            return fitness
 
         except Exception as e:
             logger.warning(f"遺伝子評価中にエラー: {e}")

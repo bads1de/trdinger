@@ -151,11 +151,13 @@ class BacktestDataProvider:
                 return self._data_cache[key]
 
         self.backtest_service.ensure_data_service_initialized()
+        start_dt = pd.to_datetime(start_date).tz_localize('UTC') if pd.to_datetime(start_date).tzinfo is None else pd.to_datetime(start_date)  # type: ignore[reportArgumentType]
+        end_dt = pd.to_datetime(end_date).tz_localize('UTC') if pd.to_datetime(end_date).tzinfo is None else pd.to_datetime(end_date)  # type: ignore[reportArgumentType]
         data = self.backtest_service.data_service.get_data_for_backtest(
             symbol=symbol,
             timeframe=timeframe,
-            start_date=pd.to_datetime(start_date),  # type: ignore[reportArgumentType]
-            end_date=pd.to_datetime(end_date),  # type: ignore[reportArgumentType]
+            start_date=start_dt,  # type: ignore[reportArgumentType]
+            end_date=end_dt,  # type: ignore[reportArgumentType]
         )
         with self._lock:
             if key in self._data_cache:

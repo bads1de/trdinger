@@ -22,8 +22,9 @@ class MondayReversalFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="monday_reversal_filter",
-        description="月曜日前半の調整局面（Reversal）を回避します",
+        description="月曜日のエントリーを回避します",
         default_params={"enabled": True, "skip_hours": 12},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

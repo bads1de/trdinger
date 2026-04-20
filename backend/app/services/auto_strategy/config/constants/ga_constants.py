@@ -13,7 +13,8 @@ GA_DEFAULT_CONFIG = {
     "elite_size": 10,
     "max_indicators": 10,
     "zero_trades_penalty": 0.1,
-    "constraint_violation_penalty": 0.0,
+    "constraint_violation_penalty": 0.0,  # 0.0に戻して制約違反が原因か確認
+    "max_enabled_filters": 3,  # 最大有効フィルター数
 }
 
 # === フィットネス重み設定 ===
@@ -33,7 +34,7 @@ DEFAULT_FITNESS_WEIGHTS = FITNESS_WEIGHT_PROFILES["balanced"]
 
 # === フィットネス制約設定 ===
 DEFAULT_FITNESS_CONSTRAINTS = {
-    "min_trades": 50,  # 最低保証回数（10→50に強化）
+    "min_trades": 10,  # 最低保証回数（50→10に一時的に緩和）
     "max_drawdown_limit": 0.2,  # 20%以上のドローダウンでペナルティ（0.3→0.2に強化）
     "min_sharpe_ratio": 0.5,  # 最低シャープレシオ（1.0→0.5に変更）
 }

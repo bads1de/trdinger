@@ -481,10 +481,11 @@ class EvolutionRunner:
             return list(self.parallel_evaluator.evaluate_population(individuals))
 
         if self.individual_evaluator is not None and config is not None:
-            return [
+            fitness_values = [
                 self.individual_evaluator.evaluate(individual, config)
                 for individual in individuals
             ]
+            return fitness_values
 
         return list(self.toolbox.map(self.toolbox.evaluate, individuals))
 

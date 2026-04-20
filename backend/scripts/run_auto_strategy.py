@@ -49,10 +49,16 @@ from app.services.auto_strategy.serializers.serialization import GeneSerializer 
 from app.services.backtest.services.backtest_service import BacktestService  # noqa: E402
 
 # ロギング設定
+log_file = project_root / "logs" / "ga_run.log"
+log_file.parent.mkdir(parents=True, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(log_file, encoding="utf-8")
+    ],
 )
 logger = logging.getLogger(__name__)
 

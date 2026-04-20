@@ -32,8 +32,9 @@ class FundingRateFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="funding_rate_filter",
-        description="極端なファンディングレートの環境でのエントリーを回避します",
+        description="ファンディングレートが高い場合のエントリーを回避します",
         default_params={"enabled": True, "max_funding_rate": 0.001},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

@@ -399,7 +399,8 @@ class IndividualEvaluator(EvaluationWindowService):
 
         except Exception as e:
             logger.error(f"個体評価エラー: {e}")
-            return self._fitness_calculator.get_penalty_values(config)
+            penalty = self._fitness_calculator.get_penalty_values(config)
+            return penalty
 
     def evaluate_robustness_report(
         self, individual: Any, config: GAConfig
@@ -621,9 +622,12 @@ class IndividualEvaluator(EvaluationWindowService):
             )
 
             # 3. バックテスト実行
-            result = self.backtest_service.run_backtest(
-                config=run_config, preloaded_data=data
-            )
+            try:
+                result = self.backtest_service.run_backtest(
+                    config=run_config, preloaded_data=data
+                )
+            except Exception as e:
+                raise
 
             if (
                 evaluation_start is not None
@@ -708,7 +712,8 @@ class IndividualEvaluator(EvaluationWindowService):
         self, gene, backtest_config: Dict[str, Any], config: GAConfig
     ) -> Optional[Dict[str, Any]]:
         """バックテスト実行用設定の構築（高速化版）"""
-        return self._run_config_builder.build_run_config(gene, backtest_config, config)
+        run_config = self._run_config_builder.build_run_config(gene, backtest_config, config)
+        return run_config
 
     def _inject_external_objects(
         self,

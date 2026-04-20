@@ -113,12 +113,13 @@ class DataRetrievalService:
 
         def query() -> List[OHLCVData]:
             ohlcv_repo = cast(OHLCVRepository, self.ohlcv_repo)
-            return ohlcv_repo.get_ohlcv_data(
+            result = ohlcv_repo.get_ohlcv_data(
                 symbol=symbol,
                 timeframe=timeframe,
                 start_time=start_date,
                 end_time=end_date,
             )
+            return result
 
         return self._fetch_with_safe_operation(
             context="OHLCVデータ取得",

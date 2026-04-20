@@ -233,6 +233,12 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
         c1_tool = GeneticUtils.copy_tool_genes(parent2.tool_genes)
         c2_tool = GeneticUtils.copy_tool_genes(parent1.tool_genes)
 
+    # フィルター数制限を強制
+    from ...generators.random_gene_generator import RandomGeneGenerator
+    generator = RandomGeneGenerator(config)
+    c1_tool = generator._enforce_filter_limit(c1_tool)
+    c2_tool = generator._enforce_filter_limit(c2_tool)
+
     if random.random() < 0.5:
         c1_long_exit_cond = GeneticUtils.copy_conditions(parent1.long_exit_conditions)
         c2_long_exit_cond = GeneticUtils.copy_conditions(parent2.long_exit_conditions)
@@ -282,7 +288,7 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
         long_entry_gene=c2_long_entry,
         short_entry_gene=c2_short_entry,
         exit_gene=c2_exit,
-        long_exit_conditions=c2_long_exit_cond,
+        long_exit_conditions=c1_long_exit_cond,
         short_exit_conditions=c2_short_exit_cond,
         tool_genes=c2_tool,
         metadata=c2_meta,

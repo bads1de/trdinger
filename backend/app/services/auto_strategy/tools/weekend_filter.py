@@ -21,8 +21,9 @@ class WeekendFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="weekend_filter",
-        description="土曜日・日曜日のエントリーをスキップします",
+        description="週末（土日）のエントリーを回避します",
         default_params={"enabled": True},
+        priority="essential",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

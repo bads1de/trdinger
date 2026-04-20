@@ -34,6 +34,7 @@ class VolumeFilter(BaseTool):
         name="volume_filter",
         description="出来高が平均より低い場合、流動性低下を回避してエントリーをスキップします",
         default_params={"enabled": True, "min_volume_ratio": 0.5, "volume_period": 20},
+        priority="optional",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

@@ -250,8 +250,8 @@ class TuningConfig(NestedConfigMixin):
     ここでは試行回数と閾値最適化の切り替えだけを管理する。
     """
 
-    enabled: bool = True
-    n_trials: int = 10
+    enabled: bool = False  # Optunaチューニングを一時的に無効化
+    n_trials: int = 30
     elite_count: int = 3
     use_wfa: bool = True
     include_thresholds: bool = False

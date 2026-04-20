@@ -30,8 +30,9 @@ class VolatilityFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="volatility_filter",
-        description="ボラティリティが低い環境でのエントリーを回避します",
+        description="ボラティリティが低い場合のエントリーを回避します",
         default_params={"enabled": True, "min_atr_pct": 0.001, "atr_period": 14},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

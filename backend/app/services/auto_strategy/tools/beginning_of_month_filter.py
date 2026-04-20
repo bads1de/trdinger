@@ -21,8 +21,9 @@ class BeginningOfMonthFilter(BaseTool):
 
     tool_definition = ToolDefinition(
         name="beginning_of_month_filter",
-        description="月初の特異な需給バランスによる乱高下を回避します",
+        description="月初の数日間のエントリーを回避します",
         default_params={"enabled": True, "days_from_start": 2},
+        priority="disabled",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

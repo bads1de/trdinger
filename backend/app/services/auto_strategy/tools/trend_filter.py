@@ -37,6 +37,7 @@ class TrendFilter(BaseTool):
         name="trend_filter",
         description="ADXでトレンド強度を判定し、レンジ相場でのエントリーを回避します",
         default_params={"enabled": True, "min_adx": 25.0, "adx_period": 14},
+        priority="optional",
     )
 
     def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:

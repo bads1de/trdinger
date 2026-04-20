@@ -341,10 +341,12 @@ class FitnessCalculator:
 
             total_trades = int(metrics.get("total_trades", 0))
             if total_trades <= 0:
+                print(f"制約違反: 取引回数が0以下 (total_trades={total_trades})")
                 return False
 
             min_trades_req = int(constraints.get("min_trades", 0) or 0)
             if total_trades < min_trades_req:
+                print(f"制約違反: 取引回数が最小要件未満 (total_trades={total_trades}, min_trades_req={min_trades_req})")
                 return False
 
             max_drawdown_limit = constraints.get("max_drawdown_limit", None)
@@ -352,15 +354,18 @@ class FitnessCalculator:
             if isinstance(max_drawdown_limit, (float, int)) and max_drawdown > float(
                 max_drawdown_limit
             ):
+                print(f"制約違反: ドローダウン超過 (max_drawdown={max_drawdown}, limit={max_drawdown_limit})")
                 return False
 
             total_return = metrics.get("total_return", 0.0)
             if total_return < 0.0:
+                print(f"制約違反: 総リターンが負 (total_return={total_return})")
                 return False
 
             sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
             min_sharpe_ratio = float(constraints.get("min_sharpe_ratio", 0.0) or 0.0)
             if sharpe_ratio < min_sharpe_ratio:
+                print(f"制約違反: シャープレシオ未満 (sharpe_ratio={sharpe_ratio}, min_sharpe_ratio={min_sharpe_ratio})")
                 return False
 
             return True
@@ -391,12 +396,15 @@ class FitnessCalculator:
             ulcer_index = metrics.get("ulcer_index", 0.0)
             trade_penalty = metrics.get("trade_frequency_penalty", 0.0)
 
+            print(f"フィットネス計算: total_trades={total_trades}, total_return={total_return}, sharpe_ratio={sharpe_ratio}, max_drawdown={max_drawdown}, win_rate={win_rate}")
+
             if total_trades == 0:
                 # GAの探索では zero-trade はよくある境界条件なので、警告ではなく debug に落とす。
-                logger.debug("取引回数が0のため、低いフィットネス値を設定")
+                print("取引回数が0のため、低いフィットネス値を設定")
                 return config.zero_trades_penalty
 
             if not self.meets_constraints(metrics, config):
+                print(f"制約違反のためフィットネスを設定: constraint_violation_penalty={config.constraint_violation_penalty}")
                 return config.constraint_violation_penalty
 
             balance_score = self.calculate_long_short_balance(backtest_result)

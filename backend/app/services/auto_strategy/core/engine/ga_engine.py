@@ -441,10 +441,6 @@ class GeneticAlgorithmEngine:
             timeout_per_individual=getattr(evaluation_config, "timeout", DEFAULT_TIMEOUT_PER_INDIVIDUAL),
             worker_initializer=initialize_worker_process,  # トップレベル関数を指定
             worker_initargs=worker_initargs,
-            use_process_pool=True,
-        )
-        logger.info(
-            f"[Parallel] 並列評価有効: max_workers={parallel_evaluator.max_workers}"
         )
         return parallel_evaluator
 

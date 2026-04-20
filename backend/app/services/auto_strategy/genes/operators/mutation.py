@@ -363,6 +363,11 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
                     if tool:
                         tool_gene.params = tool.mutate_params(tool_gene.params)
 
+            # フィルター数制限を強制
+            from ...generators.random_gene_generator import RandomGeneGenerator
+            generator = RandomGeneGenerator(config)
+            mutated.tool_genes = generator._enforce_filter_limit(mutated.tool_genes)
+
         mutated.metadata["mutated"] = True
         mutated.metadata["mutation_rate"] = mutation_rate
         mutated.id = str(uuid.uuid4())
