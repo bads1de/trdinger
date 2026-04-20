@@ -2,7 +2,7 @@
 
 import importlib
 import logging
-from typing import Any, Callable, Dict, List, Optional, Type, cast
+from typing import Any, Callable, Dict, List, Optional, Type, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -126,7 +126,7 @@ class RuntimeModelPredictorAdapter:
         )
 
     @staticmethod
-    def _normalise_runtime_prediction(raw_prediction: Any) -> Dict[str, float]:
+    def _normalise_runtime_prediction(raw_prediction: Union[Dict[str, float], object]) -> Dict[str, float]:
         """モデル出力を volatility gate 形式に正規化する。"""
         if isinstance(raw_prediction, dict):
             return HybridPredictor._normalise_prediction(raw_prediction)

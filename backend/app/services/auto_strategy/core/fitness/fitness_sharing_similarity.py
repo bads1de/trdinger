@@ -69,7 +69,7 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
         return 0.0
 
 
-def check_none_similarity(val1: Any, val2: Any) -> Optional[float]:
+def check_none_similarity(val1: object, val2: object) -> Optional[float]:
     """
     None値に対する類似度チェックの共通処理。
     """

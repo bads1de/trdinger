@@ -7,7 +7,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from ..config.ga.ga_config import GAConfig
 
 from app.utils.serialization import dataclass_to_dict
 

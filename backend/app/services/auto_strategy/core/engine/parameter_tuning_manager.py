@@ -5,7 +5,10 @@ GA実行後のエリート個体のパラメータチューニングと最終選
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+
+if TYPE_CHECKING:
+    from ...config.ga.ga_config import GAConfig
 
 from app.services.auto_strategy.genes import StrategyGene
 
@@ -38,7 +41,7 @@ class ParameterTuningManager:
         self.individual_evaluator = individual_evaluator
 
     def tune_elite_parameters(
-        self, best_gene: StrategyGene, config: Any
+        self, best_gene: StrategyGene, config: "GAConfig"
     ) -> StrategyGene:
         """
         GAで選出された最良個体に対して、Optunaを用いてパラメータの微調整（ローカルサーチ）を実行します。
@@ -76,8 +79,8 @@ class ParameterTuningManager:
 
     def select_tuning_candidates(
         self,
-        population: List[Any],
-        config: Any,
+        population: List[object],
+        config: "GAConfig",
         *,
         fallback_gene: Optional[StrategyGene] = None,
     ) -> List[StrategyGene]:
@@ -95,7 +98,7 @@ class ParameterTuningManager:
         from .result_processor import ResultProcessor
 
         processor = ResultProcessor()
-        ordered_population = processor.rank_population_for_persistence(population)
+        ordered_population = processor.sort_population(population)
 
         candidates: List[StrategyGene] = []
         seen_keys = set()
@@ -117,7 +120,7 @@ class ParameterTuningManager:
         return candidates
 
     def tune_candidate_genes(
-        self, candidates: List[StrategyGene], config: Any
+        self, candidates: List[StrategyGene], config: "GAConfig"
     ) -> List[StrategyGene]:
         """
         候補遺伝子群を順次チューニングする。
@@ -144,7 +147,7 @@ class ParameterTuningManager:
         return tuned_candidates
 
     def select_best_tuned_candidate(
-        self, tuned_candidates: List[StrategyGene], config: Any
+        self, tuned_candidates: List[StrategyGene], config: "GAConfig"
     ) -> Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]]:
         """
         チューニング後候補を robustness で再評価し最終勝者を返す。
@@ -231,7 +234,7 @@ class ParameterTuningManager:
         return best_tuple
 
     def select_best_tuned_candidate_by_fitness(
-        self, tuned_candidates: List[StrategyGene], config: Any
+        self, tuned_candidates: List[StrategyGene], config: "GAConfig"
     ) -> Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]]:
         """
         チューニング後候補を主 fitness だけで再選抜する。
@@ -272,7 +275,7 @@ class ParameterTuningManager:
         return best_tuple
 
     def evaluate_individual_with_full_fidelity(
-        self, individual: Any, config: Any
+        self, individual: object, config: "GAConfig"
     ) -> Tuple[float, ...]:
         """
         必要に応じて full fidelity で個体を再評価する。
@@ -286,7 +289,7 @@ class ParameterTuningManager:
         return self.individual_evaluator.evaluate(individual, config)
 
     @staticmethod
-    def extract_primary_fitness_from_result(result: Any) -> float:
+    def extract_primary_fitness_from_result(result: object) -> float:
         """
         評価結果から主 fitness を取り出す。
         """
@@ -297,12 +300,12 @@ class ParameterTuningManager:
     def tune_and_select_best_gene(
         self,
         *,
-        population: List[Any],
+        population: List[object],
         current_best_gene: Optional[StrategyGene],
-        config: Any,
-        fallback_fitness: Any,
+        config: "GAConfig",
+        fallback_fitness: object,
         fallback_summary: Optional[Dict[str, Any]],
-    ) -> Tuple[Optional[StrategyGene], Any, Optional[Dict[str, Any]]]:
+    ) -> Tuple[Optional[StrategyGene], object, Optional[Dict[str, Any]]]:
         """
         上位候補をチューニングし、設定に応じた基準で最終勝者を選び直す。
         """
@@ -373,10 +376,10 @@ class ParameterTuningManager:
         self,
         *,
         best_gene: Optional[StrategyGene],
-        config: Any,
-        fallback_fitness: Any,
+        config: "GAConfig",
+        fallback_fitness: object,
         fallback_summary: Optional[Dict[str, Any]],
-    ) -> Tuple[Any, Optional[Dict[str, Any]]]:
+    ) -> Tuple[object, Optional[Dict[str, Any]]]:
         """
         チューニング後の最良遺伝子を再評価し、summary を最新化する。
         """
@@ -400,8 +403,8 @@ class ParameterTuningManager:
 
     def build_individual_evaluation_summary(
         self,
-        individual: Any,
-        config: Any,
+        individual: object,
+        config: "GAConfig",
         *,
         force_robustness: bool = False,
         primary_fitness: Optional[float] = None,
@@ -479,7 +482,7 @@ class ParameterTuningManager:
         if selection_rank is None:
             selection_rank = get_two_stage_rank(individual)
 
-        selection_score: Any = selection_score_override
+        selection_score: object = selection_score_override
         if selection_score is None:
             selection_score = get_two_stage_score(individual)
         if not isinstance(selection_score, (tuple, list)):

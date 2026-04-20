@@ -43,7 +43,7 @@ class MultiTimeframeDataProvider:
 
     def __init__(
         self,
-        base_data: Any,
+        base_data: pd.DataFrame,
         base_timeframe: str = "1h",
         available_timeframes: Optional[List[str]] = None,
     ):

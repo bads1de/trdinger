@@ -51,8 +51,9 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=mock_evaluate,
             max_workers=1,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
-        result = evaluator.evaluate_population([mock_individual])
+        result = evaluator.evaluate_population([mock_individual], default_fitness=(0.0,))
         assert len(result) == 1
         assert result[0] == (0.5,)
 
@@ -68,8 +69,9 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=mock_evaluate,
             max_workers=2,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
-        result = evaluator.evaluate_population(individuals)
+        result = evaluator.evaluate_population(individuals, default_fitness=(0.0,))
         assert len(result) == 5
         # 順序が保持されていること
         for i, fitness in enumerate(result):
@@ -86,9 +88,10 @@ class TestParallelEvaluator:
                 behavior_summary={"pass_rate": 0.4, "mean_total_return": 0.12},
             ),
             max_workers=1,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
 
-        result = evaluator.evaluate_population([individual])
+        result = evaluator.evaluate_population([individual], default_fitness=(0.0,))
 
         assert result == [(1.25,)]
         assert evaluator.get_cached_behavior_profile(individual) == {
@@ -110,6 +113,7 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=mock_evaluate,
             max_workers=2,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
         result = evaluator.evaluate_population(individuals, default_fitness=(0.0,))
         assert len(result) == 3
@@ -135,6 +139,7 @@ class TestParallelEvaluator:
             evaluate_func=timed_evaluate,
             max_workers=len(individuals),
             timeout_per_individual=0.05,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
 
         result = evaluator.evaluate_population(individuals, default_fitness=(-1.0,))
@@ -158,9 +163,10 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=slow_evaluate,
             max_workers=4,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
         start = time.time()
-        evaluator.evaluate_population(individuals)
+        evaluator.evaluate_population(individuals, default_fitness=(0.0,))
         parallel_time = time.time() - start
 
         # シーケンシャル評価
@@ -177,6 +183,7 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=lambda x: (1.0,),
             max_workers=1,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
 
         # 初期状態
@@ -186,7 +193,7 @@ class TestParallelEvaluator:
 
         # 評価後
         individuals = [MagicMock() for _ in range(3)]
-        evaluator.evaluate_population(individuals)
+        evaluator.evaluate_population(individuals, default_fitness=(0.0,))
 
         stats = evaluator.get_statistics()
         assert stats["total_evaluations"] == 3
@@ -198,10 +205,11 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=lambda x: (1.0,),
             max_workers=1,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
 
         individuals = [MagicMock() for _ in range(3)]
-        evaluator.evaluate_population(individuals)
+        evaluator.evaluate_population(individuals, default_fitness=(0.0,))
 
         evaluator.reset_statistics()
         stats = evaluator.get_statistics()
@@ -218,9 +226,10 @@ class TestParallelEvaluator:
                 behavior_summary={"pass_rate": 0.5},
             ),
             max_workers=1,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
 
-        evaluator.evaluate_population([individual])
+        evaluator.evaluate_population([individual], default_fitness=(0.0,))
         assert evaluator.get_cached_behavior_profile(individual) == {"pass_rate": 0.5}
 
         evaluator._reset_generation_stats()
@@ -236,6 +245,7 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=mock_evaluate,
             max_workers=1,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
 
         # フィットネスが無効な個体を作成

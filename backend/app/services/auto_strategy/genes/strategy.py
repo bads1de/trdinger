@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 from .conditions import Condition, ConditionGroup, StatefulCondition
 from .entry import EntryGene
@@ -20,6 +20,9 @@ from .indicator import IndicatorGene
 from .position_sizing import PositionSizingGene
 from .tool import ToolGene
 from .tpsl import TPSLGene
+
+if TYPE_CHECKING:
+    from ..config.ga.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 
@@ -170,7 +173,7 @@ class StrategyGene:
     def clone_field_names(cls) -> Tuple[str, ...]:
         """clone 対象となるフィールド名を返す。"""
         return tuple(
-            field_info.name for field_info in fields(cls) if field_info.name != "id"
+            field_info.name for field_info in fields(cls) if field_info.name != "id"  # type: ignore[arg-type]
         )
 
     @classmethod
@@ -224,14 +227,14 @@ class StrategyGene:
         cloned_fields["id"] = self.id if keep_id else str(uuid.uuid4())
         return type(self)(**cast(Dict[str, Any], cloned_fields))  # type: ignore[arg-type]
 
-    def mutate(self, config: Any, mutation_rate: float = 0.1) -> "StrategyGene":
+    def mutate(self, config: GAConfig, mutation_rate: float = 0.1) -> "StrategyGene":
         """戦略遺伝子の突然変異を実行する。"""
         from .operators import mutate_strategy_gene
 
         return mutate_strategy_gene(self, config, mutation_rate=mutation_rate)
 
     def adaptive_mutate(
-        self, population: List[Any], config: Any, base_mutation_rate: float = 0.1
+        self, population: List["StrategyGene"], config: GAConfig, base_mutation_rate: float = 0.1
     ) -> "StrategyGene":
         """集団の多様性に基づいて変異率を調整する。"""
         from .operators import adaptive_mutate_strategy_gene
@@ -248,7 +251,7 @@ class StrategyGene:
         cls,
         parent1: "StrategyGene",
         parent2: "StrategyGene",
-        config: Any,
+        config: GAConfig,
         crossover_type: str = "uniform",
     ) -> Tuple["StrategyGene", "StrategyGene"]:
         """2つの親個体から交叉により新しい子個体を生成する。"""
@@ -264,7 +267,7 @@ class StrategyGene:
 
     @staticmethod
     def _mutate_indicators(
-        mutated: "StrategyGene", mutation_rate: float, config: Any
+        mutated: "StrategyGene", mutation_rate: float, config: GAConfig
     ) -> None:
         """指標遺伝子の突然変異処理。"""
         from .operators import mutate_indicators
@@ -273,7 +276,7 @@ class StrategyGene:
 
     @staticmethod
     def _mutate_conditions(
-        mutated: "StrategyGene", mutation_rate: float, config: Any
+        mutated: "StrategyGene", mutation_rate: float, config: GAConfig
     ) -> None:
         """取引条件の突然変異処理。"""
         from .operators import mutate_conditions
@@ -315,7 +318,7 @@ class StrategyGene:
         cls,
         parent1: "StrategyGene",
         parent2: "StrategyGene",
-        config: Any,
+        config: GAConfig,
     ) -> Tuple["StrategyGene", "StrategyGene"]:
         """ユニフォーム交叉。"""
         from .operators import uniform_crossover
@@ -327,7 +330,7 @@ class StrategyGene:
         cls,
         parent1: "StrategyGene",
         parent2: "StrategyGene",
-        config: Any,
+        config: GAConfig,
     ) -> Tuple["StrategyGene", "StrategyGene"]:
         """一点交叉。"""
         from .operators import single_point_crossover

@@ -40,7 +40,7 @@ BEHAVIOR_FEATURE_NAMES: tuple[str, ...] = (
 
 def build_behavior_profile(
     fitness_values: Sequence[float] | None = None,
-    evaluation_report: Any | None = None,
+    evaluation_report: object | None = None,
 ) -> dict[str, float]:
     """
     評価済み個体の挙動を固定長の数値特徴へ要約する。
@@ -219,7 +219,7 @@ def vectorize_gene(
     return np.array(features)
 
 
-def _safe_float(value: Any, fallback: float = SAFE_FLOAT_FALLBACK) -> float:
+def _safe_float(value: object, fallback: float = SAFE_FLOAT_FALLBACK) -> float:
     """非数値や NaN/Inf を安全に float へ落とす。"""
     if value is None or not isinstance(value, (int, float)):
         return fallback

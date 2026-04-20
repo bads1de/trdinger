@@ -170,15 +170,16 @@ class TestParallelEvaluatorImprovements:
         evaluator = ParallelEvaluator(
             evaluate_func=mock_evaluate_func,
             max_workers=2,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
 
         # 1回目の評価
-        evaluator.evaluate_population([1, 2])
+        evaluator.evaluate_population([1, 2], default_fitness=(0.0,))
         stats1 = evaluator.get_statistics()
         assert stats1["successful_evaluations"] == 2
 
         # 2回目の評価（auto_reset_per_generationがTrueなので統計はリセット）
-        evaluator.evaluate_population([3, 4, 5])
+        evaluator.evaluate_population([3, 4, 5], default_fitness=(0.0,))
         stats2 = evaluator.get_statistics()
         # 成功数は前回から累積されていないことを確認
         assert stats2["successful_evaluations"] == 3

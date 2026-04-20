@@ -66,7 +66,7 @@ def _resolve_model_path(*candidates: Any) -> Optional[str]:
     return None
 
 
-def resolve_ml_gate_settings(source: Any) -> MLGateSettings:
+def resolve_ml_gate_settings(source: Mapping[str, Any]) -> MLGateSettings:
     """
     volatility gate 設定を共通形に解決する
 
@@ -101,7 +101,7 @@ def resolve_ml_gate_settings(source: Any) -> MLGateSettings:
     return MLGateSettings(enabled=gate_enabled, model_path=model_path)
 
 
-def normalize_ml_gate_fields(source: Any) -> dict[str, Optional[str] | bool]:
+def normalize_ml_gate_fields(source: Mapping[str, Any]) -> dict[str, Optional[str] | bool]:
     """
     volatility gate 設定を正規化する
 

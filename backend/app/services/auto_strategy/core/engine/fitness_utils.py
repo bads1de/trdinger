@@ -8,7 +8,7 @@ from typing import Any
 
 
 def normalize_fitness_values(
-    values: Any,
+    values: object,
     *,
     default: float = 0.0,
 ) -> float | tuple[float, ...]:
@@ -38,7 +38,7 @@ def normalize_fitness_values(
 
 
 def extract_individual_primary_fitness(
-    individual: Any,
+    individual: object,
     *,
     default: float = float("-inf"),
 ) -> float:
@@ -74,7 +74,7 @@ def extract_individual_primary_fitness(
 
 
 def extract_primary_fitness_from_result(
-    result: Any,
+    result: object,
     *,
     default: float = 0.0,
 ) -> float:
@@ -101,7 +101,7 @@ def extract_primary_fitness_from_result(
     return float(default)
 
 
-def extract_result_fitness(individual: Any) -> float | tuple[float, ...]:
+def extract_result_fitness(individual: object) -> float | tuple[float, ...]:
     """
     結果出力用に個体の fitness を整形して返す。
 

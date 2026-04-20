@@ -90,7 +90,7 @@ class ExperimentBacktestService:
             evaluation_summary=evaluation_summary,
         )
 
-    def _normalize_fitness_score(self, best_fitness: Any, ga_config: GAConfig) -> float:
+    def _normalize_fitness_score(self, best_fitness: object, ga_config: GAConfig) -> float:
         """GA結果から保存用の代表スコアを抽出する"""
         if isinstance(best_fitness, (list, tuple)):
             return float(best_fitness[0]) if best_fitness else 0.0

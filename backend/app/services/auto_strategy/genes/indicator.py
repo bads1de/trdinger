@@ -8,7 +8,10 @@ import logging
 import random
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from ..config.ga.ga_config import GAConfig
 
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
@@ -95,7 +98,7 @@ class IndicatorGene:
     context="指標遺伝子作成",
 )
 def create_random_indicator_gene(
-    indicator_type: str, config: Any = None, timeframe: str | None = None
+    indicator_type: str, config: object = None, timeframe: str | None = None
 ) -> IndicatorGene:
     """
     ランダムなパラメータを持つ指標遺伝子を作成
@@ -212,7 +215,7 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
 
 
 def _enhance_with_ma_cross(
-    indicators: List[IndicatorGene], available: List[str], config: Any
+    indicators: List[IndicatorGene], available: List[str], config: object
 ) -> List[IndicatorGene]:
     """
     MAクロス戦略の生成を助けるため、MA指標を確率的に補完

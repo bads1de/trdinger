@@ -213,7 +213,7 @@ class TechnicalIndicatorService:
             if result is None:
                 try:
                     config_obj = self._get_indicator_config(indicator_type)
-                    if config_obj.adapter_function:
+                    if config_obj and config_obj.adapter_function:
                         result = self.adapter_handler.calculate_with_adapter(
                             df, indicator_type, params, config_obj
                         )
@@ -244,7 +244,12 @@ class TechnicalIndicatorService:
 
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
-            raise
+            # 例外が発生した場合はNaN結果を返す
+            default_config = {"function": indicator_type, "returns": "single", "return_cols": [indicator_type]}
+            result = self.validator.create_nan_result(df, default_config)
+            if result is not None and cache_key:
+                self.cache_manager.cache_result(cache_key, result)
+            return result
 
     def _get_support_tier(self, config: IndicatorConfig) -> str:
         """

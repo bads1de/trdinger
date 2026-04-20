@@ -7,7 +7,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import timedelta
 from math import ceil
-from typing import Any, Dict, Mapping, cast
+from typing import Any, Dict, Mapping, Optional, cast
 
 import pandas as pd
 
@@ -17,12 +17,12 @@ from app.utils.datetime_utils import parse_datetime_range_optional
 from .evaluation_report import _DATETIME_FORMAT
 
 
-def is_coarse_fidelity(config: Any) -> bool:
+def is_coarse_fidelity(config: object) -> bool:
     """設定が coarse fidelity かを返す。"""
     return str(getattr(config, "_evaluation_fidelity", "full")) == "coarse"
 
 
-def _coerce_bool(value: Any) -> bool:
+def _coerce_bool(value: object) -> bool:
     """Mock などの曖昧な値を安全に bool へ寄せる。"""
     if isinstance(value, bool):
         return value
@@ -48,7 +48,7 @@ def _get_evaluation_config(source: object) -> object:
     return getattr(source, "evaluation_config", None)
 
 
-def is_multi_fidelity_enabled(config: Any) -> bool:
+def is_multi_fidelity_enabled(config: object) -> bool:
     """multi-fidelity を有効とみなす条件を返す。"""
     evaluation_config = _get_evaluation_config(config)
     if evaluation_config is None:
@@ -91,7 +91,7 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
 
 def adjust_backtest_config_for_fidelity(
     backtest_config: Dict[str, Any],
-    config: Any,
+    config: object,
 ) -> Dict[str, Any]:
     """
     評価精度設定に基づいて、バックテストの実行範囲（期間）を調整します。
@@ -138,12 +138,12 @@ def adjust_backtest_config_for_fidelity(
         return adjusted
 
     coarse_start = end_ts - coarse_duration
-    adjusted["start_date"] = _format_timestamp_like_input(coarse_start, start_date)  # type: ignore[arg-type]
-    adjusted["end_date"] = _format_timestamp_like_input(end_ts, end_date)  # type: ignore[arg-type]
+    adjusted["start_date"] = _format_timestamp_like_input(cast(Optional[pd.Timestamp], coarse_start), start_date)
+    adjusted["end_date"] = _format_timestamp_like_input(cast(Optional[pd.Timestamp], end_ts), end_date)
     return adjusted
 
 
-def get_multi_fidelity_candidate_limit(population_size: int, config: Any) -> int:
+def get_multi_fidelity_candidate_limit(population_size: int, config: object) -> int:
     """フル評価へ昇格する候補数を返す。"""
     if population_size <= 0:
         return 0
@@ -164,10 +164,12 @@ def get_multi_fidelity_candidate_limit(population_size: int, config: Any) -> int
     return min(population_size, max(min_candidates, int(ceil(population_size * ratio))))
 
 
-def _format_timestamp_like_input(value: pd.Timestamp, source: object) -> object:
+def _format_timestamp_like_input(value: Optional[pd.Timestamp], source: object) -> str:
     """入力形式に寄せて日時を書き戻す。"""
+    if value is None:
+        return ""
     if isinstance(source, str):
         if "T" in source:
             return value.isoformat(sep="T")
         return value.strftime(_DATETIME_FORMAT)
-    return value.to_pydatetime()
+    return str(value)

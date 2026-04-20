@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 
 def build_indicator_reference_name(
-    indicator: Any,
+    indicator: object,
     output_index: Optional[int] = None,
 ) -> str:
     """

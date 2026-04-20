@@ -60,7 +60,7 @@ class ConditionValidator:
     @safe_operation(
         context="オペランド検証", is_api_call=False, default_return=(False, "エラー")
     )
-    def _is_valid_operand_detailed(self, operand: Any) -> Tuple[bool, str]:
+    def _is_valid_operand_detailed(self, operand: object) -> Tuple[bool, str]:
         """オペランドの妥当性を詳細に検証"""
         if operand is None:
             return False, "オペランドがNoneです"

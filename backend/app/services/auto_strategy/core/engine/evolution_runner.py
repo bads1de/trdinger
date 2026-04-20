@@ -8,7 +8,11 @@
 import gc
 import logging
 import random
-from typing import Any, Callable, List, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, cast
+
+if TYPE_CHECKING:
+    from ...config.ga.ga_config import GAConfig
+    from ..evaluation.evaluation_report import EvaluationReport
 
 import numpy as np
 from deap import tools
@@ -147,11 +151,11 @@ class EvolutionRunner:
     def run_evolution(
         self,
         population: List[Any],
-        config: Any,
+        config: "GAConfig",
         halloffame: Optional[Any] = None,
         should_stop: Optional[Callable[[], bool]] = None,
         progress_callback: Optional[Callable[[int, int, Optional[float]], None]] = None,
-    ) -> tuple[List[Any], Any]:
+    ) -> tuple[List[Any], object]:
         """
         設定された世代数分、進化計算アルゴリズムを実行します。
 
@@ -287,7 +291,7 @@ class EvolutionRunner:
         logger.info("進化アルゴリズム完了")
         return population, logbook
 
-    def _apply_crossover_batch(self, offspring: List[Any], config: Any) -> List[Any]:
+    def _apply_crossover_batch(self, offspring: List[Any], config: "GAConfig") -> List[Any]:
         """
         交叉のバッチ処理
 
@@ -315,7 +319,7 @@ class EvolutionRunner:
 
         return offspring
 
-    def _apply_mutation_batch(self, offspring: List[Any], config: Any) -> List[Any]:
+    def _apply_mutation_batch(self, offspring: List[Any], config: "GAConfig") -> List[Any]:
         """
         突然変異のバッチ処理
 
@@ -553,7 +557,7 @@ class EvolutionRunner:
                 logger.debug("評価粒度メタデータの設定をスキップしました: %s", e)
 
     def _update_dynamic_objective_scalars(
-        self, population: List[Any], config: Any
+        self, population: List[Any], config: "GAConfig"
     ) -> None:
         """
         リスク回避型の重み付けのために、動的な目的正規化係数を更新します。
@@ -604,7 +608,7 @@ class EvolutionRunner:
         self,
         candidate_population: List[Any],
         population_size: int,
-        config: Any,
+        config: "GAConfig",
     ) -> List[Any]:
         """
         粗選抜後に report ベースでエリートを差し替える
@@ -682,7 +686,7 @@ class EvolutionRunner:
         self,
         candidates: List[Any],
         elite_count: int,
-        config: Any,
+        config: "GAConfig",
     ) -> List[tuple[Any, tuple[float, ...]]]:
         """
         候補を report ベースで再ランクしてエリートを返す
@@ -713,7 +717,7 @@ class EvolutionRunner:
             two_stage_config = getattr(config, "two_stage_selection_config", None)
             rank_key = build_report_rank_key(
                 candidate,
-                report,
+                cast(Optional["EvaluationReport"], report),
                 getattr(two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE),
             )
             ranked_candidates.append((rank_key, candidate))
@@ -840,9 +844,9 @@ class EvolutionRunner:
 
     def _resolve_evaluation_report(
         self,
-        candidate: Any,
-        config: Any,
-    ) -> Optional[Any]:
+        candidate: object,
+        config: "GAConfig",
+    ) -> Optional[object]:
         """
         候補の report を取得し、必要なら主プロセスで再評価する
 
@@ -854,7 +858,7 @@ class EvolutionRunner:
             config: GA設定オブジェクト
 
         Returns:
-            Optional[Any]: 評価レポート、取得失敗時はNone
+            Optional[object]: 評価レポート、取得失敗時はNone
 
         Note:
             個別評価器がない場合はNoneを返します。
@@ -862,7 +866,7 @@ class EvolutionRunner:
         if self.individual_evaluator is None:
             return None
 
-        report = None
+        report: Optional[object] = None
         get_cached_robustness_report = getattr(
             self.individual_evaluator,
             "get_cached_robustness_report",

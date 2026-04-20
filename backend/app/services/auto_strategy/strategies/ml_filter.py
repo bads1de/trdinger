@@ -31,7 +31,7 @@ class MLFilter:
         self.strategy = strategy
 
     @staticmethod
-    def _has_predictor_contract(predictor: Any) -> bool:
+    def _has_predictor_contract(predictor: object) -> bool:
         """runtime predictor 契約を満たすかを判定する。"""
         return callable(getattr(predictor, "predict", None)) and callable(
             getattr(predictor, "is_trained", None)

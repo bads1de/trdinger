@@ -72,7 +72,7 @@ DYNAMIC_SCALAR_OBJECTIVES: Final[frozenset[str]] = frozenset(
 )
 
 
-def get_objective_definition(objective: Any) -> ObjectiveDefinition:
+def get_objective_definition(objective: str) -> ObjectiveDefinition:
     """
     Return the registry entry for an objective, or the default definition.
 
@@ -101,7 +101,7 @@ def get_objective_definition(objective: Any) -> ObjectiveDefinition:
     return OBJECTIVE_REGISTRY.get(objective_str, DEFAULT_OBJECTIVE_DEFINITION)
 
 
-def is_minimize_objective(objective: Any) -> bool:
+def is_minimize_objective(objective: str) -> bool:
     """
     Return True when the objective should be minimized.
 
@@ -116,7 +116,7 @@ def is_minimize_objective(objective: Any) -> bool:
     return get_objective_definition(objective).direction == "minimize"
 
 
-def is_dynamic_scalar_objective(objective: Any) -> bool:
+def is_dynamic_scalar_objective(objective: str) -> bool:
     """
     Return True when dynamic scalar reweighting should apply.
 
@@ -132,7 +132,7 @@ def is_dynamic_scalar_objective(objective: Any) -> bool:
     return get_objective_definition(objective).dynamic_scalar
 
 
-def to_selection_space(value: float, objective: Any) -> float:
+def to_selection_space(value: float, objective: str) -> float:
     """
     Convert an objective value into the selection space used by ranking.
 

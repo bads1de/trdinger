@@ -63,7 +63,7 @@ class ConditionEvaluator:
         }
 
     @staticmethod
-    def _is_vectorized_result(value: Any) -> bool:
+    def _is_vectorized_result(value: object) -> bool:
         """ベクトル化結果かどうかを判定する。"""
         if isinstance(value, pd.Series):
             return True
@@ -79,7 +79,7 @@ class ConditionEvaluator:
             self._accessor_cache[attr_name] = operator.attrgetter(attr_name)
         return self._accessor_cache[attr_name]
 
-    def _extract_operand_str(self, operand: Any) -> str:
+    def _extract_operand_str(self, operand: object) -> str:
         """オペランドから文字列識別子を抽出"""
         if isinstance(operand, str):
             return operand

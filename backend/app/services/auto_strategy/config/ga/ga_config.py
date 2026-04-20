@@ -187,7 +187,7 @@ class GAConfig:
     )
     robustness_config: RobustnessConfig = field(default_factory=RobustnessConfig)
 
-    def __init__(self, **data: Any) -> None:
+    def __init__(self, **data: Dict[str, Any]) -> None:
         """canonical フィールドのみを受け付ける手動初期化器。"""
         defaults = self._from_dict_defaults()
         unknown_keys = sorted(key for key in data if key not in defaults)

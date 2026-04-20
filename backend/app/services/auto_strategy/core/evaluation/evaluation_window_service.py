@@ -26,7 +26,7 @@ class EvaluationWindowService:
     """評価窓の前処理と統計再計算を提供する。"""
 
     def prepare_backtest_config_for_evaluation(
-        self, gene: Any, backtest_config: Dict[str, Any]
+        self, gene: object, backtest_config: Dict[str, Any]
     ) -> Dict[str, Any]:
         """指標 warmup 用に評価開始前の履歴を含む実行設定へ変換する。"""
         prepared_config = backtest_config.copy()
@@ -54,7 +54,7 @@ class EvaluationWindowService:
 
     _prepare_backtest_config_for_evaluation = prepare_backtest_config_for_evaluation
 
-    def estimate_required_warmup_bars(self, gene: Any, base_timeframe: str) -> int:
+    def estimate_required_warmup_bars(self, gene: object, base_timeframe: str) -> int:
         """戦略実行前に必要な warmup バー数を推定する。"""
         base_minutes = self.timeframe_to_minutes(base_timeframe)
         max_bars = 0
@@ -161,10 +161,10 @@ class EvaluationWindowService:
     def apply_evaluation_window_to_result(
         self,
         backtest_result: Dict[str, Any],
-        raw_stats: Any,
+        raw_stats: object,
         market_data: pd.DataFrame,
-        evaluation_start: Any,
-        evaluation_end: Any,
+        evaluation_start: object,
+        evaluation_end: object,
     ) -> Dict[str, Any]:
         """warmup を除外した評価窓だけでバックテスト結果を再計算する。"""
         if raw_stats is None or market_data is None or market_data.empty:
@@ -241,7 +241,7 @@ class EvaluationWindowService:
     _apply_evaluation_window_to_result = apply_evaluation_window_to_result
 
     @staticmethod
-    def normalize_timestamp_to_index(value: Any, index: pd.Index) -> pd.Timestamp:
+    def normalize_timestamp_to_index(value: object, index: pd.Index) -> pd.Timestamp:
         """インデックスのタイムゾーンに合わせて Timestamp を正規化する。"""
         return align_timestamp_to_index(value, index)
 
@@ -292,7 +292,7 @@ class EvaluationWindowService:
 
     @staticmethod
     def slice_trades_for_window(
-        raw_trades: Any,
+        raw_trades: object,
         start_pos: int,
         end_pos: int,
     ) -> pd.DataFrame:

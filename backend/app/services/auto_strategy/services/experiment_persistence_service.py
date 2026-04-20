@@ -388,7 +388,7 @@ class ExperimentPersistenceService:
         }
 
     @staticmethod
-    def _get_strategy_result_key(strategy: Any) -> str:
+    def _get_strategy_result_key(strategy: object) -> str:
         """result 内部の summary 対応付けキーを返す。"""
         strategy_id = getattr(strategy, "id", None)
         if strategy_id not in (None, ""):

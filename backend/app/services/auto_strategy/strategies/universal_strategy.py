@@ -7,7 +7,7 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import Any, Optional, Tuple, cast
+from typing import Any, Optional, Tuple, Union, cast
 
 import pandas as pd
 from backtesting import Strategy
@@ -288,7 +288,7 @@ class UniversalStrategy(Strategy):
         target = self._get_effective_sub_gene(direction, "exit")
         return cast(Optional[ExitGene], target)
 
-    def _normalize_evaluation_start(self, value: Any) -> Optional[pd.Timestamp]:
+    def _normalize_evaluation_start(self, value: Union[str, pd.Timestamp, None]) -> Optional[pd.Timestamp]:
         """評価開始時刻を pandas.Timestamp に正規化する。"""
         return self.early_termination_controller.normalize_evaluation_start(value)
 
@@ -298,7 +298,7 @@ class UniversalStrategy(Strategy):
 
     def _initialize_evaluation_progress_bounds(
         self,
-        data: Any,
+        data: object,
     ) -> tuple[Optional[pd.DatetimeIndex], int, int]:
         """評価進捗計算に使う評価窓の境界を初期化する。"""
         return self.early_termination_controller.initialize_evaluation_progress_bounds(

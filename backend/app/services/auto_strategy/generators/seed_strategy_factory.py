@@ -17,7 +17,7 @@ import uuid
 from typing import Any, List, Optional
 
 from ..config.constants import TPSLMethod
-from ..genes.conditions import Condition, ConditionGroup
+from ..genes.conditions import Condition, ConditionGroup, EntryDirection
 from ..genes.indicator import IndicatorGene
 from ..genes.strategy import StrategyGene
 from ..genes.tpsl import TPSLGene
@@ -177,14 +177,14 @@ class SeedStrategyFactory:
         left_operand: dict[str, str] | str,
         operator: str,
         right_operand: float | dict[str, str],
-        direction: str,
+        direction: EntryDirection,
     ) -> Condition:
         """単一条件を生成"""
         return Condition(
             left_operand=left_operand,
             operator=operator,
             right_operand=right_operand,
-            direction=direction,  # type: ignore
+            direction=direction,
         )
 
     @classmethod

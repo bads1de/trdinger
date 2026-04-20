@@ -23,7 +23,7 @@ TWO_STAGE_SCORE_ATTR = "_two_stage_selection_score"
 _DEFAULT_RERANK_MARGIN = 2
 
 
-def get_two_stage_elite_count(config: Any, population_size: int) -> int:
+def get_two_stage_elite_count(config: object, population_size: int) -> int:
     """二段階選抜に回すエリート数を返す。
 
     GA設定と集団サイズから、二段階選抜（Two-Stage Selection）で
@@ -58,7 +58,7 @@ def get_two_stage_elite_count(config: Any, population_size: int) -> int:
     return min(population_size, ceiling, rerank_budget)
 
 
-def get_two_stage_pool_size(candidate_count: int, elite_count: int, config: Any) -> int:
+def get_two_stage_pool_size(candidate_count: int, elite_count: int, config: object) -> int:
     """二段階選抜で再ランクする候補数を返す。
 
     エリート数と設定から、再ランク（再評価）対象となる候補数を計算します。
@@ -89,8 +89,8 @@ def get_two_stage_pool_size(candidate_count: int, elite_count: int, config: Any)
 
 
 def build_report_rank_key(
-    individual: Any,
-    report: Optional[EvaluationReport],
+    individual: object,
+    report: Optional["EvaluationReport"],
     min_pass_rate: float = 0.0,
 ) -> Tuple[float, ...]:
     """report を利用した再ランクキーを構築する。
@@ -117,7 +117,7 @@ def build_report_rank_key(
 
 def build_report_rank_key_from_primary_fitness(
     primary_fitness: float,
-    report: Optional[EvaluationReport],
+    report: Optional["EvaluationReport"],
     min_pass_rate: float = 0.0,
 ) -> Tuple[float, ...]:
     """主fitness値とreportから再ランクキーを構築する。
@@ -185,7 +185,7 @@ def build_report_rank_key_from_primary_fitness(
     return tuple(rank_components)
 
 
-def extract_primary_fitness(individual: Any) -> float:
+def extract_primary_fitness(individual: object) -> float:
     """個体から主 fitness を取り出す。"""
     return _extract_individual_primary_fitness(individual)
 
@@ -206,7 +206,7 @@ def get_individual_identity(individual: object) -> object:
     return individual_id if individual_id not in (None, "") else id(individual)
 
 
-def get_two_stage_rank(individual: Any) -> Optional[int]:
+def get_two_stage_rank(individual: object) -> Optional[int]:
     """個体に付与された二段階選抜順位を返す。"""
     for target in _iter_two_stage_metadata_targets(individual):
         rank = getattr(target, TWO_STAGE_RANK_ATTR, None)
@@ -215,7 +215,7 @@ def get_two_stage_rank(individual: Any) -> Optional[int]:
     return None
 
 
-def get_two_stage_score(individual: Any) -> Optional[Tuple[float, ...]]:
+def get_two_stage_score(individual: object) -> Optional[Tuple[float, ...]]:
     """個体に付与された二段階選抜スコアを返す。"""
     for target in _iter_two_stage_metadata_targets(individual):
         score = getattr(target, TWO_STAGE_SCORE_ATTR, None)
@@ -227,9 +227,9 @@ def get_two_stage_score(individual: Any) -> Optional[Tuple[float, ...]]:
 
 
 def set_two_stage_metadata(
-    individual: Any,
+    individual: object,
     rank: Optional[int],
-    score: Optional[Any],
+    score: Optional[object],
 ) -> None:
     """二段階選抜メタデータを fitness 側へ保存する。"""
     target = _get_two_stage_metadata_target(individual)
@@ -289,7 +289,7 @@ def get_two_stage_best_individual(population: Sequence[Any]) -> Optional[Any]:
     return ranked[0][1]
 
 
-def is_evaluation_report(report: Any) -> TypeGuard[EvaluationReport]:
+def is_evaluation_report(report: object) -> TypeGuard[EvaluationReport]:
     """EvaluationReport 互換のオブジェクトかを判定する。"""
     if not isinstance(report, EvaluationReport):
         return False
@@ -316,7 +316,7 @@ def _get_two_stage_metadata_target(individual: object) -> object:
     return fitness if fitness is not None else individual
 
 
-def _iter_two_stage_metadata_targets(individual: Any) -> tuple[Any, ...]:
+def _iter_two_stage_metadata_targets(individual: object) -> tuple[object, ...]:
     primary = _get_two_stage_metadata_target(individual)
     if primary is individual:
         return (individual,)

@@ -33,9 +33,9 @@ class ResultProcessor:
 
     def extract_best_individuals(
         self,
-        population: List[Any],
-        config: Any,
-        halloffame: Optional[Any] = None,
+        population: List[object],
+        config: object,
+        halloffame: Optional[object] = None,
     ) -> Tuple[Any, Optional[StrategyGene], Optional[List[Dict[str, Any]]]]:
         """
         GAの実行結果（最終集団および殿堂入りリスト）から、最も優れた個体を選択し、利用可能な形式に整形します。
@@ -94,22 +94,23 @@ class ResultProcessor:
 
         return best_individual, best_gene, best_strategies
 
-    def rank_population_for_persistence(self, population: List[Any]) -> List[Any]:
+    def sort_population(self, population: List[object]) -> List[object]:
         """
-        データベース保存やレポート表示のために、個体群を優先順位に従って並び替えます。
+        集団をランク付けしてソートする。表示のために、個体群を優先順位に従って並び替えます。
 
         ソート順の優先度：
         1. **二段階選抜ランク**: 堅牢性チェックを通過したランク（値が小さいほど上位）。
         2. **主目的関数（Primary Fitness）**: 同じランク内、あるいはランクがない場合に適応度で比較（降順）。
 
         Args:
+            population (List[object]): 並び替え対象の個体リスト。
             population (List[Any]): 並び替え対象の個体リスト。
 
         Returns:
             List[Any]: ソート済みの個体リスト。
         """
 
-        def sort_key(individual: Any) -> Tuple[int, int, float]:
+        def sort_key(individual: object) -> Tuple[int, int, float]:
             """
             ソート用のキーを生成する。
 
@@ -123,7 +124,7 @@ class ResultProcessor:
 
         return sorted(population, key=sort_key)
 
-    def get_strategy_result_key(self, strategy: Any) -> str:
+    def get_strategy_result_key(self, strategy: object) -> str:
         """
         result 内部で戦略 summary を対応付けるキーを返す。
         """

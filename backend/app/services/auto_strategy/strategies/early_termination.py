@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from math import ceil
-from typing import Any, Optional, cast
+from typing import Any, Optional, Union, cast
 
 import pandas as pd
 
@@ -50,7 +50,7 @@ class StrategyEarlyTerminationController:
         """
         self.strategy = strategy
 
-    def normalize_evaluation_start(self, value: Any) -> Optional[pd.Timestamp]:
+    def normalize_evaluation_start(self, value: Union[str, pd.Timestamp, None]) -> Optional[pd.Timestamp]:
         """評価開始時刻をpandas.Timestampに正規化する。
 
         文字列やその他の形式で指定された評価開始時刻を、
@@ -106,7 +106,7 @@ class StrategyEarlyTerminationController:
 
     def initialize_evaluation_progress_bounds(
         self,
-        data: Any,
+        data: object,
     ) -> tuple[Optional[pd.DatetimeIndex], int, int]:
         """評価進捗計算に使う評価窓の境界を初期化する。
 

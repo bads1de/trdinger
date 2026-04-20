@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from collections.abc import Collection
+from enum import Enum
+from typing import Any, List, Optional, Union
 
 from app.utils.error_handler import safe_operation
 
@@ -85,7 +87,7 @@ class IndicatorValidator:
         self,
         indicator_gene,
         indicator_universe_mode: Any = "curated",
-        allowed_indicators: Any = None,
+        allowed_indicators: Optional[Collection[str]] = None,
     ) -> bool:
         """GA 生成・変異で使う指標遺伝子をユニバース込みで検証する。"""
         if not self.validate_indicator_gene(indicator_gene):

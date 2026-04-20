@@ -11,7 +11,7 @@ import inspect
 import logging
 import random
 import uuid
-from typing import Any, Callable, List
+from typing import TYPE_CHECKING, Any, Callable, List
 
 from ..conditions import ConditionGroup
 from ..entry import EntryGene, create_random_entry_gene
@@ -22,6 +22,9 @@ from ..position_sizing import (
 )
 from ..strategy import StrategyGene
 from ..tpsl import TPSLGene, create_random_tpsl_gene
+
+if TYPE_CHECKING:
+    from ...config.ga.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +86,7 @@ _MUTATION_CONFIG_CREATION_ATTR_MAP = {
 }
 
 
-def _get_creation_probability_multiplier(config: Any, attr_name: str) -> float:
+def _get_creation_probability_multiplier(config: GAConfig, attr_name: str) -> float:
     """突然変異で使用する生成確率倍率を安全に取得する。"""
     nested_attr_name = _MUTATION_CONFIG_CREATION_ATTR_MAP.get(attr_name)
     mutation_config = getattr(config, "mutation_config", None)
@@ -115,7 +118,7 @@ def _create_sub_gene(creator_func: Callable[..., object], config: object) -> obj
     return creator_func(config)
 
 
-def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
+def _iter_mutable_sub_gene_specs(config: GAConfig) -> list[tuple[str, Any, float]]:
     """StrategyGene の定義を基準に、突然変異対象のサブ遺伝子を列挙する。"""
     class_map = StrategyGene.sub_gene_class_map()
     specs: list[tuple[str, Any, float]] = []
@@ -143,7 +146,7 @@ def _iter_mutable_sub_gene_specs(config: Any) -> list[tuple[str, Any, float]]:
     return specs
 
 
-def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
+def mutate_indicators(mutated, mutation_rate: float, config: GAConfig) -> None:
     """指標遺伝子の突然変異処理。"""
     min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
@@ -242,7 +245,7 @@ def mutate_indicators(mutated, mutation_rate: float, config: Any) -> None:
             mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
 
-def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
+def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
     """条件の突然変異処理。"""
 
     def mutate_item(condition):
@@ -285,10 +288,10 @@ def mutate_conditions(mutated, mutation_rate: float, config: Any) -> None:
 
 
 def mutate_indicators_batch(
-    individuals: List[Any], mutation_rate: float, config: Any
-) -> List[Any]:
+    individuals: List["StrategyGene"], mutation_rate: float, config: "GAConfig"
+) -> List["StrategyGene"]:
     """指標遺伝子の突然変異処理（バッチ版）。"""
-    results: List[Any] = []
+    results: List["StrategyGene"] = []
     for individual in individuals:
         mutated = individual.clone() if hasattr(individual, "clone") else individual
         mutate_indicators(mutated, mutation_rate, config)
@@ -297,10 +300,10 @@ def mutate_indicators_batch(
 
 
 def mutate_conditions_batch(
-    individuals: List[Any], mutation_rate: float, config: Any
-) -> List[Any]:
+    individuals: List["StrategyGene"], mutation_rate: float, config: "GAConfig"
+) -> List["StrategyGene"]:
     """条件の突然変異処理（バッチ版）。"""
-    results: List[Any] = []
+    results: List["StrategyGene"] = []
     for individual in individuals:
         mutated = individual.clone() if hasattr(individual, "clone") else individual
         mutate_conditions(mutated, mutation_rate, config)
@@ -308,7 +311,7 @@ def mutate_conditions_batch(
     return results
 
 
-def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
+def mutate_strategy_gene(gene, config: GAConfig, mutation_rate: float = 0.1):
     """戦略遺伝子の「突然変異（Mutation）」を実行し、新しい個体を生成する。"""
     try:
         mutated = gene.clone()
@@ -388,7 +391,7 @@ def mutate_strategy_gene(gene, config: Any, mutation_rate: float = 0.1):
 
 
 def mutate_strategy_gene_batch(
-    individuals: List[Any], config: Any, mutation_rate: float = 0.1
+    individuals: List[Any], config: GAConfig, mutation_rate: float = 0.1
 ) -> List[Any]:
     """StrategyGene の突然変異をバッチで実行する。"""
     return [
@@ -400,7 +403,7 @@ def mutate_strategy_gene_batch(
 def adaptive_mutate_strategy_gene(
     gene,
     population,
-    config: Any,
+    config: GAConfig,
     base_mutation_rate: float = 0.1,
 ):
     """集団分散に基づく適応的突然変異。"""

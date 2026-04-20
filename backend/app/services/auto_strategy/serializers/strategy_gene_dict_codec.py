@@ -7,6 +7,8 @@ import uuid
 from collections.abc import Iterable, Mapping
 from typing import Any, Dict, Tuple, cast
 
+from ..genes import StrategyGene
+
 logger = logging.getLogger(__name__)
 
 
@@ -17,7 +19,7 @@ class StrategyGeneDictCodec:
         self.converter = converter
 
     @staticmethod
-    def _get_sub_gene_field_names(strategy_gene_class: Any) -> Tuple[str, ...]:
+    def _get_sub_gene_field_names(strategy_gene_class: type) -> Tuple[str, ...]:
         """StrategyGene 系クラスのサブ遺伝子フィールド名を取得する。"""
         getter = getattr(strategy_gene_class, "sub_gene_field_names", None)
         if callable(getter):
@@ -37,12 +39,10 @@ class StrategyGeneDictCodec:
 
             return cast(Tuple[str, ...], field_names)
 
-        from ..genes import StrategyGene
-
         return StrategyGene.sub_gene_field_names()
 
     @staticmethod
-    def _get_sub_gene_class_map(strategy_gene_class: Any) -> Dict[str, Any]:
+    def _get_sub_gene_class_map(strategy_gene_class: type) -> Dict[str, Any]:
         """StrategyGene 系クラスのサブ遺伝子クラス対応表を取得する。"""
         getter = getattr(strategy_gene_class, "sub_gene_class_map", None)
         if callable(getter):
@@ -59,11 +59,9 @@ class StrategyGeneDictCodec:
 
             return dict(cast(Mapping[str, Any], raw_class_map))
 
-        from ..genes import StrategyGene
-
         return StrategyGene.sub_gene_class_map()
 
-    def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
+    def strategy_gene_to_dict(self, strategy_gene: StrategyGene) -> Dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換。"""
         try:
             clean_risk_management = self._clean_risk_management(
@@ -114,7 +112,7 @@ class StrategyGeneDictCodec:
             logger.error(f"戦略遺伝子辞書変換エラー: {e}")
             raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
 
-    def dict_to_strategy_gene(self, data: Any, strategy_gene_class: Any):
+    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class: type):
         """辞書形式のデータから戦略遺伝子オブジェクトを復元。"""
         try:
             if isinstance(data, strategy_gene_class):

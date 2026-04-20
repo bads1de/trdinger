@@ -5,6 +5,7 @@ auto_strategy全体で使用されるパラメータ正規化・Enum正規化の
 """
 
 import logging
+from enum import Enum
 from typing import Any, Union
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ class NormalizationUtils:
         return str(value)
 
     @staticmethod
-    def create_default_strategy_gene(strategy_gene_class):
+    def create_default_strategy_gene(strategy_gene_class: type) -> Any:
         """デフォルトの戦略遺伝子を作成
 
         StrategyGene.create_defaultメソッドに委譲して、

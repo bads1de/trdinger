@@ -59,7 +59,7 @@ def _coerce_window_text(window: Mapping[str, Any], key: str) -> str:
 
 
 def normalize_robustness_regime_window(
-    window: Any,
+    window: Mapping[str, Any],
 ) -> Optional[RobustnessRegimeWindow]:
     """
     regime window をシナリオ生成向けに正規化する
@@ -90,7 +90,7 @@ def normalize_robustness_regime_window(
 
 
 def normalize_robustness_regime_windows(
-    windows: Any,
+    windows: Iterable[Mapping[str, Any]],
 ) -> list[RobustnessRegimeWindow]:
     """
     regime window のリストを正規化する
@@ -120,7 +120,7 @@ def normalize_robustness_regime_windows(
     return normalized_windows
 
 
-def validate_robustness_regime_window(window: Any) -> list[str]:
+def validate_robustness_regime_window(window: Mapping[str, Any]) -> list[str]:
     """
     regime window の妥当性を検証する
 

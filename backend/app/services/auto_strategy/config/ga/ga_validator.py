@@ -6,7 +6,7 @@ GAConfigを含む設定オブジェクトの妥当性を検証します。
 """
 
 import logging
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Mapping, Tuple
 
 from ..helpers import validate_robustness_regime_window
 from .ga_config import GAConfig
@@ -25,7 +25,7 @@ class ConfigValidator:
     VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
 
     @staticmethod
-    def validate(config: Any) -> Tuple[bool, List[str]]:
+    def validate(config: GAConfig) -> Tuple[bool, List[str]]:
         """
         設定オブジェクトの妥当性を検証
 
@@ -43,13 +43,14 @@ class ConfigValidator:
                 ConfigValidator._validate_generic_rules(config, validation_rules)
             )
 
-        if isinstance(config, GAConfig):
+        # GAConfigの属性を持っている場合のみGA固有の検証を実行
+        if hasattr(config, "population_size"):
             errors.extend(ConfigValidator._validate_ga_config(config))
 
         return len(errors) == 0, errors
 
     @staticmethod
-    def _validate_generic_rules(config: Any, rules: Any) -> List[str]:
+    def _validate_generic_rules(config: GAConfig, rules: Dict[str, Any]) -> List[str]:
         """validation_rules ベースの汎用検証を行う。"""
         errors: List[str] = []
 
@@ -296,7 +297,7 @@ class ConfigValidator:
         return errors
 
     @staticmethod
-    def _validate_parameter_ranges(parameter_ranges: Any) -> List[str]:
+    def _validate_parameter_ranges(parameter_ranges: Dict[str, List[float]]) -> List[str]:
         """
         パラメータ探索範囲設定の検証
 
@@ -561,7 +562,7 @@ class ConfigValidator:
         return errors
 
     @staticmethod
-    def _validate_robustness_window(window: Any) -> List[str]:
+    def _validate_robustness_window(window: Mapping[str, Any]) -> List[str]:
         """
         robustness 検証用期間設定の検証
 
@@ -601,7 +602,7 @@ class ConfigValidator:
         return errors
 
     @staticmethod
-    def _validate_non_negative_numeric_list(values: Any, label: str) -> List[str]:
+    def _validate_non_negative_numeric_list(values: List[float], label: str) -> List[str]:
         """
         非負数値リストの検証
 
@@ -625,7 +626,7 @@ class ConfigValidator:
         return errors
 
     @staticmethod
-    def _validate_positive_numeric_list(values: Any, label: str) -> List[str]:
+    def _validate_positive_numeric_list(values: List[float], label: str) -> List[str]:
         """
         正の数値リストの検証
 

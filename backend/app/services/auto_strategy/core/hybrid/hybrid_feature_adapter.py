@@ -409,7 +409,7 @@ class WaveletFeatureTransformer:
             self.base_wavelet = "haar"
 
     @staticmethod
-    def _validate_scales(scales: Any) -> List[int]:
+    def _validate_scales(scales: object) -> List[int]:
         if not isinstance(scales, (list, tuple, set)):
             return HybridFeatureAdapter.DEFAULT_WAVELET_SCALES
         validated: List[int] = []

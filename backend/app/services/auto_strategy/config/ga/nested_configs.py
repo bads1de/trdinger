@@ -6,9 +6,12 @@ GAConfig にぶら下がる設定 dataclass 群を定義する。
 import copy
 import logging
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
 
 from ..constants import GA_DEFAULT_CONFIG, GA_MUTATION_SETTINGS, OPERATORS
+
+if TYPE_CHECKING:
+    from .ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +85,7 @@ class EarlyTerminationSettings(NestedConfigMixin):
     expectancy_progress: float = 0.6
 
     @classmethod
-    def from_source(cls, source: Any) -> "EarlyTerminationSettings":
+    def from_source(cls, source: Mapping[str, Any]) -> "EarlyTerminationSettings":
         """dict / オブジェクトのどちらからでも設定を生成する。"""
         if isinstance(source, cls):
             return source
@@ -152,11 +155,11 @@ class MutationConfig(NestedConfigMixin):
         default_factory=lambda: OPERATORS.copy()
     )
 
-    def bind_parent(self, parent: Any) -> None:
+    def bind_parent(self, parent: "GAConfig") -> None:
         """GAConfig の mutation_rate と同期するための親参照を設定する。"""
         object.__setattr__(self, "_parent_ga_config", parent)
 
-    def __setattr__(self, name: str, value: Any) -> None:
+    def __setattr__(self, name: str, value: float) -> None:
         object.__setattr__(self, name, value)
         if name == "rate":
             self._sync_parent_rate(value)
@@ -172,7 +175,7 @@ class MutationConfig(NestedConfigMixin):
         memo[id(self)] = copied
         return copied
 
-    def _sync_parent_rate(self, value: Any) -> None:
+    def _sync_parent_rate(self, value: float) -> None:
         """親の mutation_rate を直接更新する。"""
         parent = getattr(self, "_parent_ga_config", None)
         if parent is None:

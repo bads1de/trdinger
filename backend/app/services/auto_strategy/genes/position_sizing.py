@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+import logging
+import random
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from ..config.constants import PositionSizingMethod
 from .base_gene import BaseGene
@@ -130,7 +132,7 @@ class PositionSizingGene(BaseGene):
             mutated_params[field_name] = new_value
 
         _ensure_position_size_bounds(mutated_params)
-        return PositionSizingGene(**mutated_params)  # type: ignore[arg-type]
+        return PositionSizingGene(**cast(Dict[str, Any], mutated_params))
 
     def clone(self) -> PositionSizingGene:
         """軽量コピーを作成"""

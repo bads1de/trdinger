@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
+from typing import Dict, List, Optional, Protocol, Tuple, TypeVar, cast
 
 from app.types import SerializableValue
 
@@ -175,7 +175,7 @@ class GeneticUtils:
     @staticmethod
     def copy_stateful_conditions(conditions: List[Cloneable]) -> List[Cloneable]:
         """
-        ステートフル条件リストをクローンする。
+        ステートフル条件をクローンする。
 
         Args:
             conditions: ステートフル条件のリスト
@@ -183,7 +183,7 @@ class GeneticUtils:
         Returns:
             クローンされたステートフル条件のリスト
         """
-        return [c.clone() for c in conditions]  # type: ignore[misc]
+        return [c.clone() for c in conditions]
 
     @staticmethod
     def copy_tool_genes(tools: List[Cloneable]) -> List[Cloneable]:
@@ -196,7 +196,7 @@ class GeneticUtils:
         Returns:
             クローンされたツール遺伝子のリスト
         """
-        return [t.clone() for t in tools]  # type: ignore[misc]
+        return [t.clone() for t in tools]
 
     @staticmethod
     def crossover_generic_genes(

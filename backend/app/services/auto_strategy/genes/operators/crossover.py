@@ -9,13 +9,16 @@ from __future__ import annotations
 import logging
 import random
 import uuid
-from typing import Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 from ..entry import EntryGene
 from ..exit import ExitGene
 from ..genetic_utils import GeneticUtils
 from ..position_sizing import PositionSizingGene
 from ..tpsl import TPSLGene
+
+if TYPE_CHECKING:
+    from ...config.ga.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +61,7 @@ def crossover_strategy_genes(
     strategy_gene_class,
     parent1,
     parent2,
-    config: Any,
+    config: GAConfig,
     crossover_type: str = "uniform",
 ):
     """2つの親個体から新しい2つの子個体を交叉により生成する。"""
@@ -77,7 +80,7 @@ def crossover_strategy_genes(
 
 
 def crossover_strategy_genes_batch(
-    individuals: List[Any], config: Any, crossover_rate: float = 0.8
+    individuals: List[Any], config: GAConfig, crossover_rate: float = 0.8
 ) -> List[Tuple[Any, Any]]:
     """StrategyGene の交叉をバッチで実行する。"""
     results: List[Tuple[Any, Any]] = []
@@ -107,7 +110,7 @@ def crossover_strategy_genes_batch(
     return results
 
 
-def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
+def uniform_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
     """ユニフォーム交叉（一様交叉）。"""
     selection_prob = config.mutation_config.crossover_field_selection_probability
 
@@ -138,7 +141,7 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: Any):
     return strategy_gene_class(**child1_params), strategy_gene_class(**child2_params)
 
 
-def single_point_crossover(strategy_gene_class, parent1, parent2, config: Any):
+def single_point_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
     """一点交叉。"""
     max_indicators_parent1 = len(parent1.indicators)
     max_indicators_parent2 = len(parent2.indicators)

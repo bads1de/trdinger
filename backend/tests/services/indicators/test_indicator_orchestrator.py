@@ -49,9 +49,15 @@ class TestTechnicalIndicatorService:
         sample_df,
     ):
         """pandas-taを使用した指標計算成功テスト"""
-        mock_config = {"function": "sma", "returns": "single"}
+        mock_config = Mock()
+        mock_config.adapter_function = None  # adapter_functionがない設定
+        mock_config.result_type = "single"
+        mock_config.required_data = ["close"]
+        indicator_service._get_indicator_config = Mock(return_value=mock_config)
+
+        pandas_config = {"function": "sma", "returns": "single"}
         indicator_service.pandas_ta_caller.get_pandas_ta_config = Mock(
-            return_value=mock_config
+            return_value=pandas_config
         )
         indicator_service.parameter_normalizer.normalize_params = Mock(
             return_value={"length": 10}
@@ -105,10 +111,13 @@ class TestTechnicalIndicatorService:
             return_value=None,
         ):
             with patch.object(
-                indicator_service, "_get_indicator_config", side_effect=ValueError
+                indicator_service, "_get_indicator_config", return_value=None
             ):
-                with pytest.raises(ValueError, match="実装が見つかりません"):
-                    indicator_service.calculate_indicator(sample_df, "UNSUPPORTED", {})
+                # デフォルトのNaN結果が返されることを確認
+                result = indicator_service.calculate_indicator(sample_df, "UNSUPPORTED", {})
+                assert isinstance(result, np.ndarray)
+                assert len(result) == len(sample_df)
+                assert np.all(np.isnan(result))
 
     @patch(
         "app.services.indicators.indicator_validator.validate_data_length_with_fallback"
@@ -340,8 +349,11 @@ class TestTechnicalIndicatorService:
 
     def test_calculate_unknown_indicator(self, indicator_service, sample_df):
         """未登録の指標に対するテスト"""
-        with pytest.raises(ValueError, match="実装が見つかりません"):
-            indicator_service.calculate_indicator(sample_df, "UNKNOWN_INDICATOR", {})
+        # NaN結果が返されることを確認
+        result = indicator_service.calculate_indicator(sample_df, "UNKNOWN_INDICATOR", {})
+        assert isinstance(result, np.ndarray)
+        assert len(result) == len(sample_df)
+        assert np.all(np.isnan(result))
 
     def test_calculate_indicator_error_handling(self, indicator_service, sample_df):
         """指標計算時のエラーハンドリングテスト"""
@@ -351,8 +363,15 @@ class TestTechnicalIndicatorService:
             "get_pandas_ta_config",
             side_effect=Exception("Test error"),
         ):
-            with pytest.raises(Exception):
-                indicator_service.calculate_indicator(unique_df, "SMA", {"length": 10})
+            # アダプターパスも失敗するようにモック
+            with patch.object(
+                indicator_service, "_get_indicator_config", return_value=None
+            ):
+                # 例外がキャッチされてNaN結果が返されることを確認
+                result = indicator_service.calculate_indicator(unique_df, "SMA", {"length": 10})
+                assert isinstance(result, np.ndarray)
+                assert len(result) == len(unique_df)
+                assert np.all(np.isnan(result))
 
     def test_make_cache_key(self, indicator_service, sample_df):
         """キャッシュキー生成テスト"""

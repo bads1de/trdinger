@@ -13,7 +13,7 @@ import math
 from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from enum import Enum
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 from app.types import SerializableValue
 
@@ -184,7 +184,7 @@ class DictConverter:
             )
             return ("object_id", id(data))
 
-    def strategy_gene_to_dict(self, strategy_gene: Any) -> Dict[str, Any]:
+    def strategy_gene_to_dict(self, strategy_gene: StrategyGene) -> Dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換"""
         try:
             cache_key = self._generate_cache_key(strategy_gene)
@@ -363,7 +363,7 @@ class DictConverter:
         """risk_managementからTP/SL関連の設定を除外"""
         return self._strategy_gene_codec._clean_risk_management(risk_management)
 
-    def dict_to_strategy_gene(self, data: Any, strategy_gene_class: Any):
+    def dict_to_strategy_gene(self, data: Dict[str, Any], strategy_gene_class: type):
         """辞書形式のデータから戦略遺伝子オブジェクトを復元"""
         try:
             if strategy_gene_class is None:
@@ -480,7 +480,7 @@ class GeneSerializer(DictConverter):
         super().__init__(cache_size=cache_size)
 
     def from_list(
-        self, individual_list: list, strategy_gene_class: Any
+        self, individual_list: List[Any], strategy_gene_class: type
     ) -> Optional[StrategyGene]:
         """
         リスト形式（DEAP個体）から戦略遺伝子を復元します。

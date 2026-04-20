@@ -4,7 +4,8 @@ TPSL計算機ファクトリ
 手法に応じたTPSL計算機インスタンスを生成します。
 """
 
-from typing import Any, Dict
+from enum import Enum
+from typing import Any, Dict, Union
 
 from ...utils.normalization import normalize_enum_name
 from .adaptive_calculator import AdaptiveCalculator
@@ -28,7 +29,7 @@ class TPSLCalculatorFactory:
     }
 
     @classmethod
-    def create_calculator(cls, method: Any) -> BaseTPSLCalculator:
+    def create_calculator(cls, method: Union[str, Enum]) -> BaseTPSLCalculator:
         """
         手法名に対応したTPSL計算機インスタンスを生成
 

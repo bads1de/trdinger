@@ -105,7 +105,7 @@ class BacktestDataProvider:
 
     @staticmethod
     def _is_compatible_worker_key(
-        worker_key: Any,
+        worker_key: object,
         expected_key: tuple[Any, ...],
     ) -> bool:
         """共有データが要求期間を内包しているかを返す。"""
@@ -295,8 +295,8 @@ class BacktestDataProvider:
         self,
         symbol: str,
         timeframe: str,
-        start_date: Any,
-        end_date: Any,
+        start_date: object,
+        end_date: object,
         cache_prefix: str = "ohlcv",
     ) -> None:
         """データをプリフェッチする。"""

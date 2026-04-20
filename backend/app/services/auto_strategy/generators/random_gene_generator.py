@@ -9,7 +9,10 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, Sequence, TypeVar
+
+if TYPE_CHECKING:
+    from ..config.ga.ga_config import GAConfig
 
 from app.utils.error_handler import safe_operation
 
@@ -70,7 +73,7 @@ class RandomGeneGenerator:
 
     def __init__(
         self,
-        config: Any,
+        config: "GAConfig",
         smart_context: dict | None = None,
     ):
         """
@@ -227,7 +230,7 @@ class RandomGeneGenerator:
 
 
         # コストを計算
-        def get_cost(tool_gene: Any) -> int:
+        def get_cost(tool_gene: ToolGene) -> int:
             tool = tool_registry.get(tool_gene.tool_name)
             if tool:
                 priority = tool.definition.priority

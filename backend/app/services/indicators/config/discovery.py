@@ -81,6 +81,45 @@ def _load_cache() -> Optional[List[IndicatorConfig]]:
             # unpickle可能でない関数を再構成
             if config.pandas_function or hasattr(ta, config.indicator_name.lower()):
                 config.min_length_func = lambda p, ind=config.indicator_name.lower(): calculate_min_length(ind, p)  # type: ignore[misc]
+            # _SPECIAL_CONFIG_OVERRIDESにあるインジケーターのmin_length_funcも再構成
+            elif config.indicator_name in DynamicIndicatorDiscovery._SPECIAL_CONFIG_OVERRIDES:
+                overrides = DynamicIndicatorDiscovery._SPECIAL_CONFIG_OVERRIDES[config.indicator_name]
+                if "min_length_func" in overrides:
+                    config.min_length_func = overrides["min_length_func"]
+            # customカテゴリのインジケーターのadapter_functionを再構成
+            if config.category == "custom" and config.adapter_function is None:
+                try:
+                    # technical_indicatorsパッケージからクラスを探してadapter_functionを再構成
+                    from .. import technical_indicators
+                    for scan_path in technical_indicators.__path__:
+                        pandas_ta_path = os.path.join(scan_path, "pandas_ta")
+                        scan_paths = [scan_path]
+                        if os.path.exists(pandas_ta_path):
+                            scan_paths.append(pandas_ta_path)
+                        for path in scan_paths:
+                            for _, module_name, _ in pkgutil.iter_modules([path]):
+                                try:
+                                    if path == pandas_ta_path:
+                                        full_module_name = f"..technical_indicators.pandas_ta.{module_name}"
+                                    else:
+                                        full_module_name = f"..technical_indicators.{module_name}"
+                                    module = importlib.import_module(full_module_name, __package__)
+                                    for name, obj in inspect.getmembers(module, inspect.isclass):
+                                        # IndicatorsクラスとAdvancedFeaturesクラスをスキャン
+                                        if (name.endswith("Indicators") and name != "Indicators") or name == "AdvancedFeatures":
+                                            if hasattr(obj, config.indicator_name.lower()):
+                                                config.adapter_function = getattr(obj, config.indicator_name.lower())
+                                                break
+                                    if config.adapter_function is not None:
+                                        break
+                                except Exception:
+                                    continue
+                                if config.adapter_function is not None:
+                                    break
+                            if config.adapter_function is not None:
+                                break
+                except Exception:
+                    pass
             configs.append(config)
 
         return configs
@@ -174,6 +213,22 @@ class DynamicIndicatorDiscovery:
         "signals",
         "tsignals",
         "xsignals",
+        "cagr",
+        "calmar_ratio",
+        "geometric_mean",
+        "get_weights_ffd",
+        "ma",
+        "vp",
+        "dataframe",
+        "series",
+        "frac_diff_ffd",
+        "ichimoku",
+        "absorption_score",
+        "aroon",
+        "vortex",
+        "hilo",
+        "demarker",
+        "dm",
     }
 
     # プロジェクト固有のデータカラム（pandas-ta標準以外）
@@ -838,31 +893,40 @@ class DynamicIndicatorDiscovery:
         # technical_indicators パッケージ内の全モジュールをスキャン
         # pandas_ta サブパッケージへ移した互換ラッパーも含めてすべて検出
         skipped_wrapper_modules = set()
-        for _loader, module_name, _is_pkg in pkgutil.iter_modules(
-            technical_indicators.__path__
-        ):
-            if module_name in skipped_wrapper_modules:
-                continue
-            try:
-                # 相対インポートでモジュールをロード
-                full_module_name = f"..technical_indicators.{module_name}"
-                module = importlib.import_module(full_module_name, __package__)
+        
+        # pandas_taサブパッケージもスキャン対象に追加
+        scan_paths = list(technical_indicators.__path__)
+        pandas_ta_path = technical_indicators.__path__[0] + "/pandas_ta"
+        if os.path.exists(pandas_ta_path):
+            scan_paths.append(pandas_ta_path)
+        
+        for scan_path in scan_paths:
+            for _loader, module_name, _is_pkg in pkgutil.iter_modules([scan_path]):
+                if module_name in skipped_wrapper_modules:
+                    continue
+                try:
+                    # pandas_taサブパッケージの場合はパスを調整
+                    if scan_path == pandas_ta_path:
+                        full_module_name = f"..technical_indicators.pandas_ta.{module_name}"
+                    else:
+                        full_module_name = f"..technical_indicators.{module_name}"
+                    module = importlib.import_module(full_module_name, __package__)
 
-                # モジュール内の全クラスをチェック
-                for name, obj in inspect.getmembers(module, inspect.isclass):
-                    # 指標クラスを検出:
-                    # - 末尾が Indicators
-                    # - 高度特徴量クラス AdvancedFeatures
-                    if (
-                        name.endswith("Indicators") and name != "Indicators"
-                    ) or name == "AdvancedFeatures":
-                        if module_name == "original":
-                            original_modules.append(obj)
-                        else:
-                            custom_modules.append(obj)
-            except Exception as e:
-                pass
-                logger.warning(f"モジュール {module_name} のスキャンに失敗: {e}")
+                    # モジュール内の全クラスをチェック
+                    for name, obj in inspect.getmembers(module, inspect.isclass):
+                        # 指標クラスを検出:
+                        # - 末尾が Indicators
+                        # - 高度特徴量クラス AdvancedFeatures
+                        if (
+                            name.endswith("Indicators") and name != "Indicators"
+                        ) or name == "AdvancedFeatures":
+                            if module_name == "original":
+                                original_modules.append(obj)
+                            else:
+                                custom_modules.append(obj)
+                except Exception as e:
+                    pass
+                    logger.warning(f"モジュール {module_name} のスキャンに失敗: {e}")
 
         for module_class in custom_modules + original_modules:
             custom_configs = cls._discover_custom_class(module_class)
@@ -1022,7 +1086,7 @@ class DynamicIndicatorDiscovery:
             List[IndicatorConfig]: 検出された独自実装インジケーター設定のリスト
 
         スキャンプロセス:
-            1. クラス内の全メソッドを取得
+            1. クラス内の全メソッドを取得（staticmethod含む）
             2. プライベートメソッド（_で始まる）を除外
             3. 指標関数か判定
             4. 関数を解析して設定を生成
@@ -1033,8 +1097,12 @@ class DynamicIndicatorDiscovery:
             calculate_で始まるメソッドは除外されます。
         """
         configs = []
-        for name, method in inspect.getmembers(klass, predicate=inspect.isfunction):
+        # callableなメンバーを取得（staticmethodを含む）
+        for name in dir(klass):
             if name.startswith("_") or name.startswith("calculate_"):
+                continue
+            method = getattr(klass, name)
+            if not callable(method):
                 continue
             if not cls._is_indicator_function(method):
                 continue
@@ -1044,7 +1112,7 @@ class DynamicIndicatorDiscovery:
                 # 独自実装なので adapter_function を設定
                 # Orchestrator は config.adapter_function を直接呼び出すため、
                 # callable を直接設定する
-                config.adapter_function = getattr(klass, name)
+                config.adapter_function = method
                 configs.append(config)
 
         return configs

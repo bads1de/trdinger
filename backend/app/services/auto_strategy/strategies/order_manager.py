@@ -7,7 +7,7 @@ UniversalStrategyから注文管理の責務を分離するためのクラスで
 
 import logging
 import weakref
-from typing import List, Optional
+from typing import List, Optional, cast
 
 import pandas as pd
 
@@ -241,4 +241,4 @@ class OrderManager:
             "4h": pd.Timedelta(hours=4),
             "1d": pd.Timedelta(days=1),
         }
-        return timeframe_map.get(timeframe)  # type: ignore[return-value]
+        return cast(Optional[pd.Timedelta], timeframe_map.get(timeframe, None))

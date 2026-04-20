@@ -81,4 +81,4 @@ class TestWeekendFilter:
 
     def test_metadata(self, filter_tool):
         assert filter_tool.name == "weekend_filter"
-        assert "土曜日" in filter_tool.description
+        assert "土日" in filter_tool.description

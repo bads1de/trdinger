@@ -592,7 +592,7 @@ class GeneticAlgorithmEngine:
             "best_evaluation_summary": best_evaluation_summary,
         }
 
-        ranked_population = self.result_processor.rank_population_for_persistence(
+        ranked_population = self.result_processor.sort_population(
             population
         )
         persisted_population = ranked_population[:MAX_PERSISTED_POPULATION_SIZE]

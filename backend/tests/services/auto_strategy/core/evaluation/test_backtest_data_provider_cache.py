@@ -46,7 +46,10 @@ class TestBacktestDataProviderCache:
         mock_service = Mock()
         mock_service.ensure_data_service_initialized = Mock()
         mock_service.data_service = Mock()
-        mock_df = pd.DataFrame({"close": [1, 2, 3]})
+        mock_df = pd.DataFrame(
+            {"close": [1, 2, 3]},
+            index=pd.date_range("2024-01-01", periods=3, freq="H", tz="UTC"),
+        )
 
         provider = BacktestDataProvider(
             backtest_service=mock_service,
@@ -55,23 +58,27 @@ class TestBacktestDataProviderCache:
             prefetch_enabled=False,
         )
 
+        # worker_dataの最後のインデックスを取得
+        end_date = mock_df.index[-1]
+
         config = {
             "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",
             "start_date": "2024-01-01",
-            "end_date": "2024-01-02",
+            "end_date": end_date,
         }
 
         with patch(
             "app.services.auto_strategy.core.evaluation.parallel_evaluator.get_worker_data",
             return_value={
-                "key": ("BTC/USDT:USDT", "1h", "2024-01-01", "2024-01-02"),
+                "key": ("BTC/USDT:USDT", "1h", "2024-01-01", str(end_date)),
                 "data": mock_df,
             },
         ):
             result = provider.get_cached_backtest_data(config)
 
-        assert result is mock_df
+        # worker_dataが使用されていることを確認（値が等しい）
+        pd.testing.assert_frame_equal(result, mock_df)
         mock_service.data_service.get_data_for_backtest.assert_not_called()
 
     def test_get_cached_backtest_data_aligns_timezone_aware_worker_slice(self):
