@@ -225,6 +225,42 @@ class TestEvolutionRunner:
         assert dummy_population[2].fitness.values == (1.1,)
         assert dummy_population[3].fitness.values == (0.1,)
 
+    def test_evaluate_population_multi_fidelity_parallel_skips_coarse_config_build(
+        self, mock_toolbox, dummy_population
+    ):
+        """並列評価時は coarse config の deep copy を行わない。"""
+        for ind in dummy_population:
+            ind.fitness.valid = False
+
+        mock_parallel_evaluator = Mock()
+        mock_parallel_evaluator.evaluate_population.return_value = [
+            (2.0,) for _ in dummy_population
+        ]
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=None,
+            parallel_evaluator=mock_parallel_evaluator,
+        )
+        config = SimpleNamespace(
+            evaluation_config=SimpleNamespace(
+                enable_multi_fidelity_evaluation=True,
+            ),
+        )
+
+        with patch(
+            "app.services.auto_strategy.core.engine.evolution_runner.build_coarse_ga_config"
+        ) as mock_build_coarse_config:
+            runner._evaluate_population(dummy_population, config)
+
+        mock_build_coarse_config.assert_not_called()
+        mock_parallel_evaluator.evaluate_population.assert_called_once_with(
+            dummy_population
+        )
+        for ind in dummy_population:
+            assert ind.fitness.values == (2.0,)
+            assert getattr(ind, "_evaluation_fidelity", None) == "coarse"
+
     def test_evaluate_invalid_individuals_mixed(self, mock_toolbox, dummy_population):
         """Test evaluation of only invalid individuals."""
         runner = EvolutionRunner(toolbox=mock_toolbox, stats=None)
@@ -244,6 +280,76 @@ class TestEvolutionRunner:
         # Check values
         assert dummy_population[0].fitness.values == (5.0,)  # Should not change
         assert dummy_population[1].fitness.values == (1.0,)  # Should be updated
+
+    def test_evaluate_invalid_individuals_multi_fidelity_parallel_skips_coarse_config_build(
+        self, mock_toolbox, dummy_population
+    ):
+        """並列評価時の invalid 評価では coarse config を構築しない。"""
+        invalid_ind = dummy_population[:2]
+        for ind in invalid_ind:
+            ind.fitness.valid = False
+
+        mock_parallel_evaluator = Mock()
+        mock_parallel_evaluator.evaluate_population.return_value = [
+            (3.0,) for _ in invalid_ind
+        ]
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=None,
+            parallel_evaluator=mock_parallel_evaluator,
+        )
+        config = SimpleNamespace(
+            evaluation_config=SimpleNamespace(
+                enable_multi_fidelity_evaluation=True,
+            ),
+        )
+
+        with patch(
+            "app.services.auto_strategy.core.engine.evolution_runner.build_coarse_ga_config"
+        ) as mock_build_coarse_config:
+            runner._evaluate_invalid_individuals(invalid_ind, config)
+
+        mock_build_coarse_config.assert_not_called()
+        mock_parallel_evaluator.evaluate_population.assert_called_once_with(invalid_ind)
+        for ind in invalid_ind:
+            assert ind.fitness.values == (3.0,)
+            assert getattr(ind, "_evaluation_fidelity", None) == "coarse"
+
+    def test_select_top_candidates_uses_partial_selection_when_limit_is_small(
+        self, mock_toolbox
+    ):
+        """limit が小さいときは全件ソートを回避する。"""
+        candidates = [
+            _DummyIndividual((0.3,)),
+            _DummyIndividual((0.9,)),
+            _DummyIndividual((0.8,)),
+            _DummyIndividual((0.1,)),
+        ]
+        runner = EvolutionRunner(toolbox=mock_toolbox, stats=None)
+
+        with patch(
+            "app.services.auto_strategy.core.engine.evolution_runner.sorted",
+            side_effect=AssertionError("sorted should not be used for partial selection"),
+            create=True,
+        ):
+            top_candidates = runner._select_top_candidates(candidates, 2)
+
+        assert top_candidates == [candidates[1], candidates[2]]
+
+    def test_select_top_candidates_keeps_input_order_on_equal_fitness(
+        self, mock_toolbox
+    ):
+        """部分選択時も同点フィットネスの入力順を維持する。"""
+        candidates = [
+            _DummyIndividual((0.9,)),
+            _DummyIndividual((0.9,)),
+            _DummyIndividual((0.8,)),
+        ]
+        runner = EvolutionRunner(toolbox=mock_toolbox, stats=None)
+
+        top_candidates = runner._select_top_candidates(candidates, 2)
+
+        assert top_candidates == [candidates[0], candidates[1]]
 
     def test_fitness_sharing_application(self, mock_toolbox, dummy_population, config):
         """Test fitness sharing application during evolution."""

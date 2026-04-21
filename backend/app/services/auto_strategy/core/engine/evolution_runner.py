@@ -6,6 +6,7 @@
 """
 
 import gc
+import heapq
 import logging
 import random
 from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, cast
@@ -413,7 +414,13 @@ class EvolutionRunner:
             評価値（fitness.values）が設定された個体群
         """
         if config is not None and is_multi_fidelity_enabled(config):
-            coarse_config = build_coarse_ga_config(config)
+            # 並列評価時はワーカー初期化時点で coarse config が適用済みのため、
+            # 世代ごとの deepcopy を回避する。
+            coarse_config = (
+                config
+                if self.parallel_evaluator is not None
+                else build_coarse_ga_config(config)
+            )
             fitnesses = self._evaluate_individuals_with_config(
                 population, coarse_config
             )
@@ -443,7 +450,13 @@ class EvolutionRunner:
             return
 
         if config is not None and is_multi_fidelity_enabled(config):
-            coarse_config = build_coarse_ga_config(config)
+            # 並列評価時はワーカー初期化時点で coarse config が適用済みのため、
+            # 世代ごとの deepcopy を回避する。
+            coarse_config = (
+                config
+                if self.parallel_evaluator is not None
+                else build_coarse_ga_config(config)
+            )
             fitnesses = self._evaluate_individuals_with_config(
                 invalid_ind, coarse_config
             )
@@ -675,12 +688,20 @@ class EvolutionRunner:
         """
         if limit <= 0:
             return []
-        ranked = sorted(
-            candidate_population,
-            key=extract_primary_fitness,
-            reverse=True,
+        if limit >= len(candidate_population):
+            ranked = sorted(
+                candidate_population,
+                key=extract_primary_fitness,
+                reverse=True,
+            )
+            return ranked
+
+        ranked_top = heapq.nlargest(
+            limit,
+            enumerate(candidate_population),
+            key=lambda item: (extract_primary_fitness(item[1]), -item[0]),
         )
-        return ranked[:limit]
+        return [candidate for _, candidate in ranked_top]
 
     def _select_report_ranked_elites(
         self,
