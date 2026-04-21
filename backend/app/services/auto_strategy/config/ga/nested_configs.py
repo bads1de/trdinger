@@ -16,14 +16,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DEFAULT_EARLY_TERMINATION_VALUES = {
-    "enabled": False,
-    "max_drawdown": None,
-    "min_trades": None,
-    "min_trade_check_progress": 0.5,
+    "enabled": True,
+    "max_drawdown": 0.15,
+    "min_trades": 30,
+    "min_trade_check_progress": 0.33,
     "trade_pace_tolerance": 0.5,
-    "min_expectancy": None,
-    "expectancy_min_trades": 5,
-    "expectancy_progress": 0.6,
+    "min_expectancy": -0.05,
+    "expectancy_min_trades": 10,
+    "expectancy_progress": 0.1,
 }
 
 
@@ -75,14 +75,14 @@ class NestedConfigMixin:
 class EarlyTerminationSettings(NestedConfigMixin):
     """早期終了の正規化済み設定。"""
 
-    enabled: bool = False
-    max_drawdown: Optional[float] = None
-    min_trades: Optional[int] = None
-    min_trade_check_progress: float = 0.5
+    enabled: bool = True
+    max_drawdown: Optional[float] = 0.15
+    min_trades: Optional[int] = 30
+    min_trade_check_progress: float = 0.33
     trade_pace_tolerance: float = 0.5
-    min_expectancy: Optional[float] = None
-    expectancy_min_trades: int = 5
-    expectancy_progress: float = 0.6
+    min_expectancy: Optional[float] = -0.05
+    expectancy_min_trades: int = 10
+    expectancy_progress: float = 0.1
 
     @classmethod
     def from_source(cls, source: Mapping[str, Any]) -> "EarlyTerminationSettings":
