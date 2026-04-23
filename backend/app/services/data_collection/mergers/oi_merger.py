@@ -12,7 +12,9 @@ import pandas as pd
 
 from app.utils.error_handler import ErrorHandler
 from database.models import OpenInterestData
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,11 @@ class OIMerger:
         self.oi_repo = oi_repo
 
     def merge_oi_data(
-        self, df: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """
         Open Interest データをマージ
@@ -75,7 +81,9 @@ class OIMerger:
 
         return df
 
-    def _convert_oi_to_dataframe(self, oi_data: List[OpenInterestData]) -> pd.DataFrame:
+    def _convert_oi_to_dataframe(
+        self, oi_data: List[OpenInterestData]
+    ) -> pd.DataFrame:
         """
         OpenInterestDataリストをpandas.DataFrameに変換
 

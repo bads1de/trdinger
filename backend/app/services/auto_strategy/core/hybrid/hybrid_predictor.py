@@ -59,7 +59,8 @@ class RuntimeModelPredictorAdapter:
                     return result
             except Exception as e:
                 logger.debug(
-                    "runtime predictor の is_trained 呼び出しに失敗しました: %s", e
+                    "runtime predictor の is_trained 呼び出しに失敗しました: %s",
+                    e,
                 )
 
         is_fitted_attr = getattr(self.model, "is_fitted", None)
@@ -71,13 +72,19 @@ class RuntimeModelPredictorAdapter:
     def predict(self, features_df: pd.DataFrame) -> Dict[str, float]:
         """保存済みモデルを使ってボラティリティ予測を返す。"""
         try:
-            if features_df is None or features_df.empty or not self.is_trained():
+            if (
+                features_df is None
+                or features_df.empty
+                or not self.is_trained()
+            ):
                 return HybridPredictor._default_prediction()
 
             prepared_features = self._prepare_features(features_df)
             raw_prediction = self._run_model(prepared_features)
             normalised = self._normalise_runtime_prediction(raw_prediction)
-            gate_cutoff_log_rv = float(self.metadata.get("gate_cutoff_log_rv", 0.0))
+            gate_cutoff_log_rv = float(
+                self.metadata.get("gate_cutoff_log_rv", 0.0)
+            )
             normalised["gate_open"] = bool(
                 normalised.get("forecast_log_rv", 0.0) >= gate_cutoff_log_rv
             )
@@ -102,14 +109,16 @@ class RuntimeModelPredictorAdapter:
         """モデル固有の予測関数を呼び出す。"""
         predict_volatility = getattr(self.model, "predict_volatility", None)
         if callable(predict_volatility):
-            return cast(Callable[[pd.DataFrame], np.ndarray], predict_volatility)(
-                features_df
-            )
+            return cast(
+                Callable[[pd.DataFrame], np.ndarray], predict_volatility
+            )(features_df)
 
         if self.metadata.get("task_type") == "volatility_regression":
             predict = getattr(self.model, "predict", None)
             if callable(predict):
-                return cast(Callable[[pd.DataFrame], np.ndarray], predict)(features_df)
+                return cast(Callable[[pd.DataFrame], np.ndarray], predict)(
+                    features_df
+                )
 
         predict_proba = getattr(self.model, "predict_proba", None)
         if callable(predict_proba):
@@ -119,14 +128,18 @@ class RuntimeModelPredictorAdapter:
 
         predict = getattr(self.model, "predict", None)
         if callable(predict):
-            return cast(Callable[[pd.DataFrame], np.ndarray], predict)(features_df)
+            return cast(Callable[[pd.DataFrame], np.ndarray], predict)(
+                features_df
+            )
 
         raise MLPredictionError(
             "runtime predictor が predict/predict_proba を持っていません"
         )
 
     @staticmethod
-    def _normalise_runtime_prediction(raw_prediction: Union[Dict[str, float], object]) -> Dict[str, float]:
+    def _normalise_runtime_prediction(
+        raw_prediction: Union[Dict[str, float], object],
+    ) -> Dict[str, float]:
         """モデル出力を volatility gate 形式に正規化する。"""
         if isinstance(raw_prediction, dict):
             return HybridPredictor._normalise_prediction(raw_prediction)
@@ -197,7 +210,9 @@ class HybridPredictor:
         self.training_service_cls = self._resolve_training_service_cls(
             training_service_cls
         )
-        self.model_manager = self._resolve_model_manager(model_manager_instance)
+        self.model_manager = self._resolve_model_manager(
+            model_manager_instance
+        )
 
         if model_types and len(model_types) > 1:
             self.services: List["MLTrainingService"] = []
@@ -214,7 +229,9 @@ class HybridPredictor:
             service = self.training_service_cls(
                 trainer_type=trainer_type,
                 single_model_config=(
-                    self.single_model_config if trainer_type == "single" else None
+                    self.single_model_config
+                    if trainer_type == "single"
+                    else None
                 ),
                 ensemble_config=ensemble_config,
             )
@@ -269,7 +286,8 @@ class HybridPredictor:
             else:
                 keys = preds[0].keys()
                 ml_prediction = {
-                    k: float(np.mean([p.get(k, 0.0) for p in preds])) for k in keys
+                    k: float(np.mean([p.get(k, 0.0) for p in preds]))
+                    for k in keys
                 }
 
             return self._normalise_prediction(ml_prediction)
@@ -394,7 +412,9 @@ class HybridPredictor:
                 if service.load_model(latest_model):
                     loaded_any = True
                 else:
-                    logger.warning(f"最新モデルのロードに失敗しました: {latest_model}")
+                    logger.warning(
+                        f"最新モデルのロードに失敗しました: {latest_model}"
+                    )
             return loaded_any
 
         latest_model = self.get_latest_model(self.model_type)
@@ -449,11 +469,15 @@ class HybridPredictor:
         return getattr(module, "MLTrainingService")
 
     @staticmethod
-    def _resolve_model_manager(override: Optional["ModelManager"]) -> "ModelManager":
+    def _resolve_model_manager(
+        override: Optional["ModelManager"],
+    ) -> "ModelManager":
         if override is not None:
             return override
 
-        module = importlib.import_module("app.services.ml.models.model_manager")
+        module = importlib.import_module(
+            "app.services.ml.models.model_manager"
+        )
         manager_cls = getattr(module, "ModelManager")
         return manager_cls()
 
@@ -488,18 +512,20 @@ class HybridPredictor:
         """利用可能な予測インターフェースを順に試す。"""
         generate_forecast = getattr(service, "generate_forecast", None)
         if callable(generate_forecast):
-            return cast(Callable[[pd.DataFrame], Dict[str, float]], generate_forecast)(
-                features_df
-            )
+            return cast(
+                Callable[[pd.DataFrame], Dict[str, float]], generate_forecast
+            )(features_df)
 
         predict_volatility = getattr(service, "predict_volatility", None)
         if callable(predict_volatility):
-            return cast(Callable[[pd.DataFrame], Dict[str, float]], predict_volatility)(
-                features_df
-            )
+            return cast(
+                Callable[[pd.DataFrame], Dict[str, float]], predict_volatility
+            )(features_df)
 
         trainer = getattr(service, "trainer", None)
-        trainer_predict_volatility = getattr(trainer, "predict_volatility", None)
+        trainer_predict_volatility = getattr(
+            trainer, "predict_volatility", None
+        )
         if callable(trainer_predict_volatility):
             return cast(
                 Callable[[pd.DataFrame], Dict[str, float]],
@@ -511,7 +537,9 @@ class HybridPredictor:
         )
 
     @staticmethod
-    def _normalise_prediction(prediction: Dict[str, float]) -> Dict[str, float]:
+    def _normalise_prediction(
+        prediction: Dict[str, float],
+    ) -> Dict[str, float]:
         """
         予測結果を正規化（volatility gate 専用）
 
@@ -522,7 +550,11 @@ class HybridPredictor:
             正規化された予測結果
         """
         if "forecast_log_rv" in prediction:
-            forecast_log_rv = float(prediction.get("forecast_log_rv", HybridPredictor.DEFAULT_FORECAST_LOG_RV))
+            forecast_log_rv = float(
+                prediction.get(
+                    "forecast_log_rv", HybridPredictor.DEFAULT_FORECAST_LOG_RV
+                )
+            )
             if not np.isfinite(forecast_log_rv):
                 forecast_log_rv = HybridPredictor.DEFAULT_FORECAST_LOG_RV
             forecast_vol = prediction.get("forecast_vol")
@@ -531,7 +563,12 @@ class HybridPredictor:
             forecast_vol = float(forecast_vol)
             if not np.isfinite(forecast_vol) or forecast_vol < 0.0:
                 forecast_vol = float(np.exp(forecast_log_rv))
-            gate_cutoff_log_rv = float(prediction.get("gate_cutoff_log_rv", HybridPredictor.DEFAULT_FORECAST_LOG_RV))
+            gate_cutoff_log_rv = float(
+                prediction.get(
+                    "gate_cutoff_log_rv",
+                    HybridPredictor.DEFAULT_FORECAST_LOG_RV,
+                )
+            )
             raw_gate_open = prediction.get("gate_open")
             if isinstance(raw_gate_open, bool):
                 gate_open = raw_gate_open
@@ -539,7 +576,10 @@ class HybridPredictor:
                 gate_open = forecast_log_rv >= gate_cutoff_log_rv
             else:
                 try:
-                    gate_open = float(raw_gate_open) >= HybridPredictor.DEFAULT_GATE_THRESHOLD
+                    gate_open = (
+                        float(raw_gate_open)
+                        >= HybridPredictor.DEFAULT_GATE_THRESHOLD
+                    )
                 except (TypeError, ValueError):
                     gate_open = forecast_log_rv >= gate_cutoff_log_rv
             return {
@@ -549,11 +589,17 @@ class HybridPredictor:
             }
 
         if "is_valid" in prediction:
-            is_valid = float(prediction.get("is_valid", HybridPredictor.DEFAULT_GATE_THRESHOLD))
+            is_valid = float(
+                prediction.get(
+                    "is_valid", HybridPredictor.DEFAULT_GATE_THRESHOLD
+                )
+            )
             return {
                 "forecast_log_rv": HybridPredictor.DEFAULT_FORECAST_LOG_RV,
                 "forecast_vol": HybridPredictor.DEFAULT_FORECAST_VOL,
-                "gate_open": bool(is_valid >= HybridPredictor.DEFAULT_GATE_THRESHOLD),
+                "gate_open": bool(
+                    is_valid >= HybridPredictor.DEFAULT_GATE_THRESHOLD
+                ),
             }
 
         # 未知のフォーマットの場合はデフォルトを返す

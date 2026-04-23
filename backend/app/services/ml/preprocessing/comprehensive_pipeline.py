@@ -249,10 +249,16 @@ def get_comprehensive_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     step_names = [step[0] for step in pipeline.steps]
     info.update(
         {
-            "has_preprocessing": any("preprocess" in name for name in step_names),
-            "has_feature_selection": any("selection" in name for name in step_names),
+            "has_preprocessing": any(
+                "preprocess" in name for name in step_names
+            ),
+            "has_feature_selection": any(
+                "selection" in name for name in step_names
+            ),
             "has_scaling": any("scaler" in name for name in step_names),
-            "has_polynomial_features": any("polynomial" in name for name in step_names),
+            "has_polynomial_features": any(
+                "polynomial" in name for name in step_names
+            ),
         }
     )
 
@@ -260,7 +266,9 @@ def get_comprehensive_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     for step_name, step_obj in pipeline.steps:
         if step_name == "ml_pipeline":
             try:
-                from app.services.ml.preprocessing.pipeline import get_ml_pipeline_info
+                from app.services.ml.preprocessing.pipeline import (
+                    get_ml_pipeline_info,
+                )
 
                 ml_info = get_ml_pipeline_info(step_obj)
                 info["ml_pipeline_info"] = ml_info
@@ -382,7 +390,9 @@ def optimize_comprehensive_pipeline(
         outlier_removal=outlier_removal,
         feature_selection=feature_selection,
         n_features=n_features_opt,
-        selection_method="f_regression" if task_type == "regression" else "f_classif",
+        selection_method=(
+            "f_regression" if task_type == "regression" else "f_classif"
+        ),
         scaling=True,
         scaling_method=scaling_method,
         polynomial_features=False,  # Disable by default for optimization

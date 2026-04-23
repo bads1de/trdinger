@@ -46,7 +46,9 @@ def resolve_holdout_test_size(
         return float(test_size)
 
     effective_train_split = (
-        default_train_split if train_test_split is None else float(train_test_split)
+        default_train_split
+        if train_test_split is None
+        else float(train_test_split)
     )
     effective_validation_split = (
         default_validation_split

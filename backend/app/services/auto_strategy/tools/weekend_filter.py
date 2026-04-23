@@ -26,7 +26,9 @@ class WeekendFilter(BaseTool):
         priority="essential",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """週末かどうかを判定してエントリースキップを決定"""
         if not params.get("enabled", True) or context.timestamp is None:
             return False

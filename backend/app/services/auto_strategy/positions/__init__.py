@@ -5,7 +5,10 @@
 """
 
 from .entry_executor import EntryExecutor
-from .position_sizing_service import PositionSizingResult, PositionSizingService
+from .position_sizing_service import (
+    PositionSizingResult,
+    PositionSizingService,
+)
 
 __all__ = [
     "PositionSizingService",

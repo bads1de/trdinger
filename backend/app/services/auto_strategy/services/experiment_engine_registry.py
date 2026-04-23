@@ -23,7 +23,9 @@ class ExperimentEngineRegistry:
     def lock(self) -> threading.RLock:
         return self._lock
 
-    def register(self, experiment_id: str, engine: "GeneticAlgorithmEngine") -> None:
+    def register(
+        self, experiment_id: str, engine: "GeneticAlgorithmEngine"
+    ) -> None:
         with self._lock:
             self._active_engines[experiment_id] = engine
 

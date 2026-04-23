@@ -37,7 +37,9 @@ class XGBoostModel(BaseGradientBoostingModel):
         self.learning_rate = learning_rate
         self.n_estimators = n_estimators
         self.feature_names: Optional[List[str]] = None
-        self.best_iteration: Optional[int] = None  # 早期停止の最適イテレーション
+        self.best_iteration: Optional[int] = (
+            None  # 早期停止の最適イテレーション
+        )
 
     def _create_dataset(
         self,
@@ -64,10 +66,14 @@ class XGBoostModel(BaseGradientBoostingModel):
             "objective": (
                 "reg:squarederror"
                 if is_regression
-                else ("multi:softprob" if num_classes > 2 else "binary:logistic")
+                else (
+                    "multi:softprob" if num_classes > 2 else "binary:logistic"
+                )
             ),
             "num_class": (
-                None if is_regression else (num_classes if num_classes > 2 else None)
+                None
+                if is_regression
+                else (num_classes if num_classes > 2 else None)
             ),
             "eval_metric": (
                 "rmse"
@@ -100,7 +106,9 @@ class XGBoostModel(BaseGradientBoostingModel):
         if valid_data:
             evals.append((valid_data, "eval"))
 
-        actual_early_stopping_rounds = early_stopping_rounds if valid_data else None
+        actual_early_stopping_rounds = (
+            early_stopping_rounds if valid_data else None
+        )
 
         model = xgb.train(
             params,

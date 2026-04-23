@@ -24,7 +24,9 @@ class IndicatorValidator:
         self.valid_indicator_types = get_all_indicators()
 
     @safe_operation(
-        context="指標遺伝子バリデーション", is_api_call=False, default_return=False
+        context="指標遺伝子バリデーション",
+        is_api_call=False,
+        default_return=False,
     )
     def validate_indicator_gene(self, indicator_gene) -> bool:
         """指標遺伝子の妥当性を検証"""
@@ -33,7 +35,9 @@ class IndicatorValidator:
             return False
 
         if not isinstance(indicator_gene.parameters, dict):
-            logger.warning(f"指標パラメータが無効: {indicator_gene.parameters}")
+            logger.warning(
+                f"指標パラメータが無効: {indicator_gene.parameters}"
+            )
             return False
 
         # ログ: 指標タイプが有効リストに含まれているかを確認
@@ -70,9 +74,13 @@ class IndicatorValidator:
 
         config = indicator_registry.get_indicator_config(indicator_gene.type)
         if config and config.parameter_constraints:
-            is_valid, errors = config.validate_constraints(indicator_gene.parameters)
+            is_valid, errors = config.validate_constraints(
+                indicator_gene.parameters
+            )
             if not is_valid:
-                logger.warning(f"パラメータ制約違反 ({indicator_gene.type}): {errors}")
+                logger.warning(
+                    f"パラメータ制約違反 ({indicator_gene.type}): {errors}"
+                )
                 return False
 
         logger.debug(f"指標タイプ {indicator_gene.type} は有効です")
@@ -95,11 +103,15 @@ class IndicatorValidator:
 
         if allowed_indicators is not None:
             try:
-                normalized_allowed = {str(name).upper() for name in allowed_indicators}
+                normalized_allowed = {
+                    str(name).upper() for name in allowed_indicators
+                }
             except TypeError:
                 return False
             return str(indicator_gene.type).upper() in normalized_allowed
 
         from ...config.indicator_universe import is_indicator_in_universe
 
-        return is_indicator_in_universe(indicator_gene.type, indicator_universe_mode)
+        return is_indicator_in_universe(
+            indicator_gene.type, indicator_universe_mode
+        )

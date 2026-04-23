@@ -114,7 +114,9 @@ class PandasTaCaller:
         """
         try:
             if not hasattr(ta, config["function"]):
-                logger.warning(f"pandas-ta関数 {config['function']} が存在しません")
+                logger.warning(
+                    f"pandas-ta関数 {config['function']} が存在しません"
+                )
                 return None
 
             if config.get("multi_column", False):
@@ -123,7 +125,9 @@ class PandasTaCaller:
                 return self._call_single_column(df, config, params)
 
         except Exception as e:
-            logger.error(f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}")
+            logger.error(
+                f"pandas-ta呼び出し失敗: {config['function']}, エラー: {e}"
+            )
             return None
 
     def _call_multi_column(
@@ -159,7 +163,14 @@ class PandasTaCaller:
                 return None
 
             col_lower = req_col.lower()
-            if col_lower in ["open", "high", "low", "close", "volume", "open_"]:
+            if col_lower in [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "open_",
+            ]:
                 ta_args[col_lower] = df[col_name]
             else:
                 positional_args.append(df[col_name])
@@ -200,7 +211,9 @@ class PandasTaCaller:
             return None
 
         if len(df) < params.get("length", 0):
-            logger.error(f"データ長({len(df)})がlength({params.get('length')})未満")
+            logger.error(
+                f"データ長({len(df)})がlength({params.get('length')})未満"
+            )
             return None
 
         # 安全策: 位置引数として渡すデータと同じ名前のパラメータがあれば削除

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_data_management_orchestration_service
-from app.services.data_collection.orchestration.data_management_orchestration_service import (
+from app.services.data_collection.orchestration.data_management_orchestration_service import (  # noqa: E501
     DataManagementOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
@@ -101,7 +101,9 @@ async def reset_open_interest_data(
 
 
 @router.delete("/symbol/{symbol:path}")
-@ErrorHandler.api_endpoint("シンボル別データのリセット中にエラーが発生しました")
+@ErrorHandler.api_endpoint(
+    "シンボル別データのリセット中にエラーが発生しました"
+)
 async def reset_data_by_symbol(
     symbol: str,
     db: Session = Depends(get_db),

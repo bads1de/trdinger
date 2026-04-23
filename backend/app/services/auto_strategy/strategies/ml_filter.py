@@ -40,7 +40,9 @@ class MLFilter:
     def precompute_ml_features(self) -> None:
         """ML予測に必要な全期間の特徴量を一括計算してキャッシュする"""
         try:
-            from ..core.hybrid.hybrid_feature_adapter import HybridFeatureAdapter
+            from ..core.hybrid.hybrid_feature_adapter import (
+                HybridFeatureAdapter,
+            )
 
             # アダプターの初期化
             self.strategy.feature_adapter = HybridFeatureAdapter()
@@ -74,7 +76,9 @@ class MLFilter:
         Returns:
             True: エントリー許可, False: エントリー拒否
         """
-        gate_enabled = bool(getattr(self.strategy, "volatility_gate_enabled", False))
+        gate_enabled = bool(
+            getattr(self.strategy, "volatility_gate_enabled", False)
+        )
         if not gate_enabled:
             return True
 
@@ -117,7 +121,9 @@ class MLFilter:
             # 3. ML予測を実行
             prediction = self.strategy.ml_predictor.predict(features)
             if not isinstance(prediction, dict):
-                logger.warning("ML予測結果が辞書形式ではないためフェイルセーフします")
+                logger.warning(
+                    "ML予測結果が辞書形式ではないためフェイルセーフします"
+                )
                 return True
 
             raw_gate_open = prediction.get("gate_open", True)
@@ -144,7 +150,9 @@ class MLFilter:
         HybridFeatureAdapterに委譲して一貫性を確保します。
         """
         try:
-            from ..core.hybrid.hybrid_feature_adapter import HybridFeatureAdapter
+            from ..core.hybrid.hybrid_feature_adapter import (
+                HybridFeatureAdapter,
+            )
 
             # アダプターの初期化（まだ存在しない場合）
             if not hasattr(self.strategy, "feature_adapter"):

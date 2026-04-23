@@ -31,12 +31,16 @@ class BacktestRunConfigValidationError(Exception):
 class GeneratedGAParameters(BaseModel):
     """GA生成戦略のパラメータ"""
 
-    strategy_gene: Dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
+    strategy_gene: Dict[
+        str, Any
+    ]  # 将来的にはStrategyGeneモデルそのものに置き換える
     volatility_gate_enabled: bool = False
     volatility_model_path: Optional[str] = None
     ml_predictor: Optional[Any] = None  # MLモデルインスタンス
     evaluation_start: Optional[Any] = None
-    minute_data: Optional[Any] = None  # DataFrameなどはPydanticで検証しにくいためAny
+    minute_data: Optional[Any] = (
+        None  # DataFrameなどはPydanticで検証しにくいためAny
+    )
     enable_early_termination: bool = False
     early_termination_max_drawdown: Optional[float] = None
     early_termination_min_trades: Optional[int] = None
@@ -100,8 +104,12 @@ class BacktestRunConfig(BaseModel):
                 slippage_value = float(slippage)
             except (TypeError, ValueError):
                 return working
-            if not isclose(spread_value, slippage_value, rel_tol=0.0, abs_tol=1e-12):
-                raise ValueError("spread と slippage は同じ値である必要があります")
+            if not isclose(
+                spread_value, slippage_value, rel_tol=0.0, abs_tol=1e-12
+            ):
+                raise ValueError(
+                    "spread と slippage は同じ値である必要があります"
+                )
             return working
 
         if spread is None and slippage is not None:

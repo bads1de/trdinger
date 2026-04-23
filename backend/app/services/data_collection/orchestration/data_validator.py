@@ -19,8 +19,12 @@ class DataValidator:
     シンボルと時間軸のバリデーションを行います。
     """
 
-    @safe_operation(context="シンボル・時間軸バリデーション", is_api_call=False)
-    def validate_symbol_and_timeframe(self, symbol: str, timeframe: str) -> str:
+    @safe_operation(
+        context="シンボル・時間軸バリデーション", is_api_call=False
+    )
+    def validate_symbol_and_timeframe(
+        self, symbol: str, timeframe: str
+    ) -> str:
         """
         シンボルと時間軸のバリデーション
 
@@ -35,7 +39,9 @@ class DataValidator:
             ValueError: バリデーションエラー
         """
         # シンボル正規化
-        normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+        normalized_symbol = unified_config.market.symbol_mapping.get(
+            symbol, symbol
+        )
         if normalized_symbol not in unified_config.market.supported_symbols:
             raise ValueError(f"サポートされていないシンボル: {symbol}")
 

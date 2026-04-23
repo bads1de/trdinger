@@ -64,7 +64,9 @@ class MLManagementOrchestrationService:
                 "is_active": self._is_active_model(m),
             }
             try:
-                data = await run_in_threadpool(load_model_metadata_safely, m["path"])
+                data = await run_in_threadpool(
+                    load_model_metadata_safely, m["path"]
+                )
                 meta = data["metadata"] if data else {}
                 metrics = await run_in_threadpool(
                     model_manager.extract_model_performance_metrics,
@@ -105,7 +107,9 @@ class MLManagementOrchestrationService:
         logger.info(f"モデル削除要求: {model_id}")
         dec_id = unquote(model_id)
         models = await run_in_threadpool(model_manager.list_models, "*")
-        target = next((m for m in models if m["name"] in [dec_id, model_id]), None)
+        target = next(
+            (m for m in models if m["name"] in [dec_id, model_id]), None
+        )
 
         if not target:
             raise HTTPException(
@@ -116,7 +120,9 @@ class MLManagementOrchestrationService:
             await run_in_threadpool(os.remove, target["path"])
             return api_response(success=True, message="モデルが削除されました")
         except FileNotFoundError:
-            raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
+            raise HTTPException(
+                status_code=404, detail="モデルファイルが存在しません"
+            )
         except Exception as e:
             logger.error(f"削除エラー: {e}")
             raise HTTPException(status_code=500, detail="削除失敗")
@@ -147,7 +153,9 @@ class MLManagementOrchestrationService:
                 logger.info(f"モデル削除成功: {model['name']}")
                 deleted_count += 1
             except FileNotFoundError:
-                logger.warning(f"モデルファイルが存在しません: {model['path']}")
+                logger.warning(
+                    f"モデルファイルが存在しません: {model['path']}"
+                )
                 failed_models.append(model["name"])
             except Exception as e:
                 logger.error(f"モデル削除エラー: {model['name']} -> {e}")
@@ -205,7 +213,9 @@ class MLManagementOrchestrationService:
                         "model_path": model_info_data["path"],
                         "model_type": model_info.get("model_type"),
                         "feature_count": model_info.get("feature_count", 0),
-                        "training_samples": model_info.get("training_samples", 0),
+                        "training_samples": model_info.get(
+                            "training_samples", 0
+                        ),
                     }
                 )
                 status["model_info"] = model_info
@@ -250,7 +260,9 @@ class MLManagementOrchestrationService:
                 if feature_importance:
                     # 重要度でソートして上位N個を返す
                     sorted_features = sorted(
-                        feature_importance.items(), key=lambda x: x[1], reverse=True
+                        feature_importance.items(),
+                        key=lambda x: x[1],
+                        reverse=True,
                     )[:top_n]
 
                     return {"feature_importance": dict(sorted_features)}
@@ -353,14 +365,20 @@ class MLManagementOrchestrationService:
                 # ブロッキングI/Oをスレッドプールで実行
                 if await run_in_threadpool(os.path.exists, current_model_path):
                     stat = await run_in_threadpool(os.stat, current_model_path)
-                    last_updated = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                    last_updated = datetime.fromtimestamp(
+                        stat.st_mtime
+                    ).isoformat()
 
                 return {
                     "loaded": True,
-                    "model_type": current_metadata.get("model_type", "Unknown"),
+                    "model_type": current_metadata.get(
+                        "model_type", "Unknown"
+                    ),
                     "is_trained": True,
                     "feature_count": current_metadata.get("feature_count", 0),
-                    "training_samples": current_metadata.get("training_samples", 0),
+                    "training_samples": current_metadata.get(
+                        "training_samples", 0
+                    ),
                     "accuracy": metrics.get("accuracy", 0.0),
                     "precision": metrics.get("precision", 0.0),
                     "recall": metrics.get("recall", 0.0),
@@ -369,7 +387,10 @@ class MLManagementOrchestrationService:
                     "path": current_model_path,
                 }
             else:
-                return {"loaded": False, "message": "モデルがロードされていません"}
+                return {
+                    "loaded": False,
+                    "message": "モデルがロードされていません",
+                }
 
         except Exception as e:
             logger.warning(f"現在のモデル情報取得エラー: {e}")
@@ -384,7 +405,9 @@ class MLManagementOrchestrationService:
         """
         return ml_config_manager.get_config_dict()
 
-    async def update_ml_config(self, config_updates: Dict[str, Any]) -> Dict[str, Any]:
+    async def update_ml_config(
+        self, config_updates: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         ML設定を更新
 
@@ -404,7 +427,10 @@ class MLManagementOrchestrationService:
                     "updated_config": ml_config_manager.get_config_dict(),
                 }
             else:
-                return {"success": False, "message": "ML設定の更新に失敗しました"}
+                return {
+                    "success": False,
+                    "message": "ML設定の更新に失敗しました",
+                }
 
         except Exception as e:
             logger.error(f"ML設定更新エラー: {e}")
@@ -430,7 +456,10 @@ class MLManagementOrchestrationService:
                     "config": ml_config_manager.get_config_dict(),
                 }
             else:
-                return {"success": False, "message": "ML設定のリセットに失敗しました"}
+                return {
+                    "success": False,
+                    "message": "ML設定のリセットに失敗しました",
+                }
 
         except Exception as e:
             logger.error(f"ML設定リセットエラー: {e}")
@@ -463,5 +492,7 @@ class MLManagementOrchestrationService:
             return False
         except Exception as e:
             # 予期しない例外はログに記録して再スロー
-            logger.error(f"予期しないアクティブモデル判定エラー: {e}", exc_info=True)
+            logger.error(
+                f"予期しないアクティブモデル判定エラー: {e}", exc_info=True
+            )
             return False

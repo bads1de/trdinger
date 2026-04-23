@@ -31,11 +31,17 @@ class VolatilityFilter(BaseTool):
     tool_definition = ToolDefinition(
         name="volatility_filter",
         description="ボラティリティが低い場合のエントリーを回避します",
-        default_params={"enabled": True, "min_atr_pct": 0.001, "atr_period": 14},
+        default_params={
+            "enabled": True,
+            "min_atr_pct": 0.001,
+            "atr_period": 14,
+        },
         priority="disabled",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """
         ボラティリティが低ければエントリーをスキップ
 
@@ -79,14 +85,19 @@ class VolatilityFilter(BaseTool):
                 0.0001,
                 min(
                     0.01,
-                    new_params.get("min_atr_pct", 0.001) * random.uniform(0.8, 1.2),
+                    new_params.get("min_atr_pct", 0.001)
+                    * random.uniform(0.8, 1.2),
                 ),
             )
         if random.random() < 0.2:
             new_params["atr_period"] = max(
                 5,
                 min(
-                    50, int(new_params.get("atr_period", 14) * random.uniform(0.8, 1.2))
+                    50,
+                    int(
+                        new_params.get("atr_period", 14)
+                        * random.uniform(0.8, 1.2)
+                    ),
                 ),
             )
 

@@ -49,7 +49,8 @@ class StackingEnsemble(BaseEnsemble):
             "base_models", ["lightgbm", "xgboost", "catboost"]
         )
         self._meta_model_type: str = (
-            config.get("meta_model", "logistic_regression") or "logistic_regression"
+            config.get("meta_model", "logistic_regression")
+            or "logistic_regression"
         )
         self.cv_folds = config.get("cv_folds", 5)
         self.stack_method = config.get("stack_method", "predict_proba")
@@ -69,7 +70,9 @@ class StackingEnsemble(BaseEnsemble):
         self.X_train_original: Optional[pd.DataFrame] = (
             None  # メタモデルの特徴量として使うため
         )
-        self.y_train_original: Optional[pd.Series] = None  # メタラベル生成のため
+        self.y_train_original: Optional[pd.Series] = (
+            None  # メタラベル生成のため
+        )
 
         logger.info(
             f"StackingEnsemble初期化（自前実装）: base_models={self._base_model_types}, "
@@ -151,7 +154,9 @@ class StackingEnsemble(BaseEnsemble):
         """
         try:
             logger.info("スタッキング学習開始（計算コスト最適化版）")
-            validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
+            validate_training_inputs(
+                X_train, y_train, X_test, y_test, log_info=True
+            )
             self.feature_columns = X_train.columns.tolist()
             estimators = self._create_base_estimators(base_model_params)
             cv = self._create_cv_splitter(X_train)
@@ -193,14 +198,18 @@ class StackingEnsemble(BaseEnsemble):
                     "meta_model": self._meta_model_type,
                     "cv_folds": self.cv_folds,
                     "stack_method": self.stack_method,
-                    "fitted_base_models": list(self._fitted_base_models.keys()),
+                    "fitted_base_models": list(
+                        self._fitted_base_models.keys()
+                    ),
                 }
             )
             return ensemble_result
 
         except Exception as e:
             logger.error(f"スタッキングアンサンブル学習エラー: {e}")
-            raise ModelError(f"スタッキングアンサンブル学習に失敗しました: {e}")
+            raise ModelError(
+                f"スタッキングアンサンブル学習に失敗しました: {e}"
+            )
 
     def _calculate_oof_predictions(
         self,
@@ -270,7 +279,9 @@ class StackingEnsemble(BaseEnsemble):
                 後続の評価や分析に使用されます。
         """
         meta_features = (
-            pd.concat([oof_preds, X], axis=1) if self.passthrough else oof_preds
+            pd.concat([oof_preds, X], axis=1)
+            if self.passthrough
+            else oof_preds
         )
         fitted_meta_model: Any = self._create_base_model(
             self._meta_model_type, meta_model_params
@@ -283,7 +294,9 @@ class StackingEnsemble(BaseEnsemble):
         return np.asarray(
             cross_val_predict(
                 clone(
-                    self._create_base_model(self._meta_model_type, meta_model_params)
+                    self._create_base_model(
+                        self._meta_model_type, meta_model_params
+                    )
                 ),
                 meta_features,
                 y,
@@ -380,7 +393,9 @@ class StackingEnsemble(BaseEnsemble):
 
         # メタモデルで予測
         meta_features = (
-            pd.concat([base_preds, X], axis=1) if self.passthrough else base_preds
+            pd.concat([base_preds, X], axis=1)
+            if self.passthrough
+            else base_preds
         )
         result = self._fitted_meta_model.predict(meta_features)
         return np.asarray(result).ravel()
@@ -418,7 +433,8 @@ class StackingEnsemble(BaseEnsemble):
                 if base_model_params:
                     params = (
                         base_model_params.get(
-                            model_type, base_model_params.get(model_type.lower(), {})
+                            model_type,
+                            base_model_params.get(model_type.lower(), {}),
                         )
                         or {}
                     )
@@ -426,7 +442,9 @@ class StackingEnsemble(BaseEnsemble):
                 estimators.append((model_type, model))
                 logger.info(f"ベースモデル追加: {model_type}")
             except Exception as e:
-                logger.warning(f"ベースモデル({model_type})の作成をスキップ: {e}")
+                logger.warning(
+                    f"ベースモデル({model_type})の作成をスキップ: {e}"
+                )
                 continue
 
         if not estimators:
@@ -522,11 +540,17 @@ class StackingEnsemble(BaseEnsemble):
 
                 if len(coef) == len(estimator_names):
                     return {
-                        estimator_names[i]: float(coef[i]) for i in range(len(coef))
+                        estimator_names[i]: float(coef[i])
+                        for i in range(len(coef))
                     }
                 else:
-                    feature_names = [f"meta_feature_{i}" for i in range(len(coef))]
-                    return {feature_names[i]: float(coef[i]) for i in range(len(coef))}
+                    feature_names = [
+                        f"meta_feature_{i}" for i in range(len(coef))
+                    ]
+                    return {
+                        feature_names[i]: float(coef[i])
+                        for i in range(len(coef))
+                    }
             else:
                 logger.warning(
                     f"メタモデル({self._meta_model_type})は特徴量重要度をサポートしていません"
@@ -611,7 +635,8 @@ class StackingEnsemble(BaseEnsemble):
                 self._fitted_meta_model = fitted_meta_model
                 self._base_model_types = list(
                     payload.get(
-                        "base_model_types", list(self._fitted_base_models.keys())
+                        "base_model_types",
+                        list(self._fitted_base_models.keys()),
                     )
                 )
                 self._meta_model_type = payload.get(
@@ -623,7 +648,9 @@ class StackingEnsemble(BaseEnsemble):
                 self.config = payload.get("config", self.config)
                 self.passthrough = payload.get("passthrough", False)
                 self.cv_folds = payload.get("cv_folds", self.cv_folds)
-                self.stack_method = payload.get("stack_method", self.stack_method)
+                self.stack_method = payload.get(
+                    "stack_method", self.stack_method
+                )
                 self.oof_predictions = payload.get("oof_predictions", None)
                 self.oof_base_model_predictions = payload.get(
                     "oof_base_model_predictions", None
@@ -636,7 +663,9 @@ class StackingEnsemble(BaseEnsemble):
                 self._fitted_base_models = dict(
                     getattr(payload, "_fitted_base_models", {})
                 )
-                self._fitted_meta_model = getattr(payload, "_fitted_meta_model", None)
+                self._fitted_meta_model = getattr(
+                    payload, "_fitted_meta_model", None
+                )
                 self._base_model_types = list(
                     getattr(
                         payload,
@@ -653,13 +682,21 @@ class StackingEnsemble(BaseEnsemble):
                 self.config = getattr(payload, "config", self.config)
                 self.passthrough = getattr(payload, "passthrough", False)
                 self.cv_folds = getattr(payload, "cv_folds", self.cv_folds)
-                self.stack_method = getattr(payload, "stack_method", self.stack_method)
-                self.oof_predictions = getattr(payload, "oof_predictions", None)
+                self.stack_method = getattr(
+                    payload, "stack_method", self.stack_method
+                )
+                self.oof_predictions = getattr(
+                    payload, "oof_predictions", None
+                )
                 self.oof_base_model_predictions = getattr(
                     payload, "oof_base_model_predictions", None
                 )
-                self.X_train_original = getattr(payload, "X_train_original", None)
-                self.y_train_original = getattr(payload, "y_train_original", None)
+                self.X_train_original = getattr(
+                    payload, "X_train_original", None
+                )
+                self.y_train_original = getattr(
+                    payload, "y_train_original", None
+                )
                 self.is_fitted = bool(getattr(payload, "is_fitted", True))
                 logger.info("スタッキングモデルオブジェクトを読み込み完了")
             else:
@@ -694,7 +731,9 @@ class StackingEnsemble(BaseEnsemble):
                     "meta_model", self._meta_model_type
                 )
                 self.cv_folds = metadata.get("cv_folds", self.cv_folds)
-                self.stack_method = metadata.get("stack_method", self.stack_method)
+                self.stack_method = metadata.get(
+                    "stack_method", self.stack_method
+                )
                 if "feature_columns" in metadata:
                     self.feature_columns = metadata["feature_columns"]
                 if "passthrough" in metadata:
@@ -716,9 +755,12 @@ class StackingEnsemble(BaseEnsemble):
                     self.passthrough = sidecar_metadata["passthrough"]
 
             self.is_fitted = (
-                bool(self._fitted_base_models) and self._fitted_meta_model is not None
+                bool(self._fitted_base_models)
+                and self._fitted_meta_model is not None
             )
-            logger.info(f"スタッキングアンサンブルモデルを読み込みました: {model_path}")
+            logger.info(
+                f"スタッキングアンサンブルモデルを読み込みました: {model_path}"
+            )
             return True
 
         except Exception as e:

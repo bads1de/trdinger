@@ -32,7 +32,9 @@ def setup_logging():
     """
     # ルートロガーを取得
     root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, unified_config.logging.level.upper()))
+    root_logger.setLevel(
+        getattr(logging, unified_config.logging.level.upper())
+    )
 
     # 既存のハンドラーをクリア
     for handler in root_logger.handlers[:]:
@@ -40,7 +42,9 @@ def setup_logging():
 
     # コンソールハンドラーを作成
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(getattr(logging, unified_config.logging.level.upper()))
+    console_handler.setLevel(
+        getattr(logging, unified_config.logging.level.upper())
+    )
 
     # フォーマッターを設定
     formatter = logging.Formatter(unified_config.logging.format)
@@ -102,9 +106,7 @@ def create_app() -> FastAPI:
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)
-    async def global_exception_handler(
-        request: Request, exc: Exception
-    ): 
+    async def global_exception_handler(request: Request, exc: Exception):
         """グローバル例外ハンドラです。
 
         未処理の例外をキャッチして標準化されたエラーレスポンスを返します。
@@ -128,7 +130,7 @@ def create_app() -> FastAPI:
 
     # ヘルスチェックエンドポイント
     @app.get("/health")
-    async def health_check(): 
+    async def health_check():
         """ヘルスチェックエンドポイントです。
 
         アプリケーションの状態を確認するためのエンドポイントです。

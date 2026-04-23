@@ -18,19 +18,25 @@ from app.services.data_collection.orchestration.base_orchestration_service impor
     BaseDataCollectionOrchestrationService,
 )
 from database.models import LongShortRatioData
-from database.repositories.long_short_ratio_repository import LongShortRatioRepository
+from database.repositories.long_short_ratio_repository import (
+    LongShortRatioRepository,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService):
+class LongShortRatioOrchestrationService(
+    BaseDataCollectionOrchestrationService
+):
     """
     ロング/ショート比率データの収集と管理を統括するサービスクラス
     """
 
     def __init__(
         self,
-        bybit_service: BybitLongShortRatioService = Depends(BybitLongShortRatioService),
+        bybit_service: BybitLongShortRatioService = Depends(
+            BybitLongShortRatioService
+        ),
     ):
         """
         サービスの初期化
@@ -105,21 +111,17 @@ class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService)
         try:
             if fetch_all:
                 # 履歴データの一括収集
-                saved_count = (
-                    await self.bybit_service.collect_historical_long_short_ratio_data(
-                        symbol=symbol,
-                        period=period,
-                        repository=repo,
-                    )
+                saved_count = await self.bybit_service.collect_historical_long_short_ratio_data(
+                    symbol=symbol,
+                    period=period,
+                    repository=repo,
                 )
             else:
                 # 差分更新
-                result = (
-                    await self.bybit_service.fetch_incremental_long_short_ratio_data(
-                        symbol=symbol,
-                        period=period,
-                        repository=repo,
-                    )
+                result = await self.bybit_service.fetch_incremental_long_short_ratio_data(
+                    symbol=symbol,
+                    period=period,
+                    repository=repo,
                 )
                 saved_count = result.get("saved_count", 0)
 
@@ -158,7 +160,9 @@ class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService)
         Returns:
             収集結果
         """
-        logger.info(f"{len(symbols)}シンボル ({period}) の一括データ収集を開始します")
+        logger.info(
+            f"{len(symbols)}シンボル ({period}) の一括データ収集を開始します"
+        )
         total_count = 0
 
         for symbol in symbols:
@@ -174,9 +178,13 @@ class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService)
                     total_count += result["data"].get("count", 0)
 
             except Exception as e:
-                logger.error(f"{symbol}のデータ収集中にエラーが発生しました: {e}")
+                logger.error(
+                    f"{symbol}のデータ収集中にエラーが発生しました: {e}"
+                )
 
-        logger.info(f"一括データ収集完了。合計{total_count}件のデータを保存しました")
+        logger.info(
+            f"一括データ収集完了。合計{total_count}件のデータを保存しました"
+        )
 
         return self._create_success_response(
             "一括データ収集完了", data={"total_count": total_count}

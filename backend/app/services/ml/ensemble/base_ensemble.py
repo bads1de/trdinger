@@ -128,7 +128,9 @@ class BaseEnsemble(ABC):
             Any: 作成されたモデルインスタンス。
         """
         mt = model_type.lower()
-        params = {k: v for k, v in (model_params or {}).items() if v is not None}
+        params = {
+            k: v for k, v in (model_params or {}).items() if v is not None
+        }
         ml_training = ml_config_manager.config.training
         seed = params.pop(
             "random_state",
@@ -203,7 +205,9 @@ class BaseEnsemble(ABC):
             import catboost as cb
 
             return cb.CatBoostClassifier(
-                iterations=params.pop("iterations", params.pop("n_estimators", 100)),
+                iterations=params.pop(
+                    "iterations", params.pop("n_estimators", 100)
+                ),
                 learning_rate=params.pop("learning_rate", 0.1),
                 depth=params.pop("depth", params.pop("max_depth", 6)),
                 random_seed=seed,
@@ -282,7 +286,9 @@ class BaseEnsemble(ABC):
             try:
                 # 統一関数を使用して重要度を取得
                 model_importance = get_feature_importance_unified(
-                    model, self.feature_columns, top_n=len(self.feature_columns)
+                    model,
+                    self.feature_columns,
+                    top_n=len(self.feature_columns),
                 )
 
                 if model_importance:
@@ -294,7 +300,9 @@ class BaseEnsemble(ABC):
                             all_importances[feature] = []
                         all_importances[feature].append(importance)
                 else:
-                    logger.warning(f"モデル{i}: 特徴量重要度が取得できませんでした")
+                    logger.warning(
+                        f"モデル{i}: 特徴量重要度が取得できませんでした"
+                    )
 
             except Exception as e:
                 logger.error(f"モデル{i}の特徴量重要度取得エラー: {e}")
@@ -305,7 +313,9 @@ class BaseEnsemble(ABC):
                 feature: float(np.mean(values))
                 for feature, values in all_importances.items()
             }
-            logger.info(f"アンサンブル特徴量重要度を計算: {len(avg_importance)}個")
+            logger.info(
+                f"アンサンブル特徴量重要度を計算: {len(avg_importance)}個"
+            )
             return avg_importance
 
         logger.warning("特徴量重要度データが見つかりませんでした")
@@ -397,7 +407,9 @@ class BaseEnsemble(ABC):
 
         try:
             # 1. StackingClassifier ファイル検索
-            f_list = collect_unique_files([f"{base_path}_stacking_classifier_*.pkl"])
+            f_list = collect_unique_files(
+                [f"{base_path}_stacking_classifier_*.pkl"]
+            )
             f_list.sort()
             if f_list:
                 with warnings.catch_warnings():
@@ -415,7 +427,9 @@ class BaseEnsemble(ABC):
             # 2. 統合モデルファイル検索
             f_list = collect_unique_files([f"{base_path}_*_*.pkl"])
             f_list = [
-                f for f in f_list if not f.endswith(("_config.pkl", "_meta_model.pkl"))
+                f
+                for f in f_list
+                if not f.endswith(("_config.pkl", "_meta_model.pkl"))
             ]
             f_list.sort()
             if f_list:

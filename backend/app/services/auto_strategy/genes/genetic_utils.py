@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import random
 from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
+
 from app.types import SerializableValue
 
 T = TypeVar("T")
@@ -115,7 +116,9 @@ class GeneticUtils:
         return GeneticUtils._extract_gene_params(gene)
 
     @staticmethod
-    def smart_copy(value: SerializableValue | object) -> SerializableValue | object:
+    def smart_copy(
+        value: SerializableValue | object,
+    ) -> SerializableValue | object:
         """
         値をスマートにコピーする。
 
@@ -182,7 +185,9 @@ class GeneticUtils:
         return [GeneticUtils.smart_copy(c) for c in conditions]
 
     @staticmethod
-    def copy_stateful_conditions(conditions: List[Cloneable]) -> List[Cloneable]:
+    def copy_stateful_conditions(
+        conditions: List[Cloneable],
+    ) -> List[Cloneable]:
         """
         ステートフル条件をクローンする。
 
@@ -265,7 +270,9 @@ class GeneticUtils:
                 # 数値フィールドは平均化
                 val1 = parent1_dict[field]
                 val2 = parent2_dict[field]
-                if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
+                if isinstance(val1, (int, float)) and isinstance(
+                    val2, (int, float)
+                ):
                     child1_params[field] = (val1 + val2) / 2
                     child2_params[field] = (val1 + val2) / 2
                 else:

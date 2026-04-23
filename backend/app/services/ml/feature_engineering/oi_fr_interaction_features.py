@@ -10,7 +10,9 @@ from typing import Optional, cast
 import numpy as np
 import pandas as pd
 
-from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
+from ...indicators.technical_indicators.advanced_features import (
+    AdvancedFeatures,
+)
 
 
 class OIFRInteractionFeatureCalculator:
@@ -39,7 +41,12 @@ class OIFRInteractionFeatureCalculator:
         """
         result = pd.DataFrame(index=df.index)
 
-        if oi_data is None or fr_data is None or len(oi_data) == 0 or len(fr_data) == 0:
+        if (
+            oi_data is None
+            or fr_data is None
+            or len(oi_data) == 0
+            or len(fr_data) == 0
+        ):
             # データがない場合は空のDataFrameを返す
             return result
 
@@ -86,9 +93,11 @@ class OIFRInteractionFeatureCalculator:
         ).fillna(-1)
 
         # === 1-B. OI-Price Confirmation (ダイバージェンス検知) ===
-        result["OI_Price_Confirmation"] = AdvancedFeatures.oi_price_confirmation(
-            close=cast(pd.Series, df["close"]), open_interest=oi_series
-        ).fillna(0.0)
+        result["OI_Price_Confirmation"] = (
+            AdvancedFeatures.oi_price_confirmation(
+                close=cast(pd.Series, df["close"]), open_interest=oi_series
+            ).fillna(0.0)
+        )
 
         # === 2. FR Acceleration（FR変化の加速度）===
         fr_change = fr_value.diff()
@@ -108,9 +117,9 @@ class OIFRInteractionFeatureCalculator:
         )
 
         # === 5. FR-OI Divergence（FR-OI乖離）===
-        result["FR_OI_Divergence"] = (np.sign(fr_change) != np.sign(oi_change)).astype(
-            float
-        )
+        result["FR_OI_Divergence"] = (
+            np.sign(fr_change) != np.sign(oi_change)
+        ).astype(float)
 
         # === 6. Market Stress Indicator（市場ストレス指標・改良版）===
         result["Market_Stress_V2"] = (
@@ -139,7 +148,9 @@ class OIFRInteractionFeatureCalculator:
 
         # === New 1. Void Oscillator (流動性真空検知器) ===
         result["Void_Oscillator"] = AdvancedFeatures.void_oscillator(
-            close=cast(pd.Series, df["close"]), volume=cast(pd.Series, df["volume"]), window=20
+            close=cast(pd.Series, df["close"]),
+            volume=cast(pd.Series, df["volume"]),
+            window=20,
         ).fillna(0.0)
 
         # === New 2. Crypto Leverage Index (CLI) ===
@@ -147,12 +158,14 @@ class OIFRInteractionFeatureCalculator:
         # 将来的にMarketDataFeatureCalculatorなどで統合することを推奨
         dummy_ls_div = pd.Series(0, index=df.index)
 
-        result["Crypto_Leverage_Index"] = AdvancedFeatures.crypto_leverage_index(
-            open_interest=oi_series,
-            funding_rate=fr_value,
-            ls_ratio_divergence=dummy_ls_div,  # L/S情報なし
-            window=50,  # 長めの期間で過熱感を見る
-        ).fillna(0.0)
+        result["Crypto_Leverage_Index"] = (
+            AdvancedFeatures.crypto_leverage_index(
+                open_interest=oi_series,
+                funding_rate=fr_value,
+                ls_ratio_divergence=dummy_ls_div,  # L/S情報なし
+                window=50,  # 長めの期間で過熱感を見る
+            ).fillna(0.0)
+        )
 
         # === New 3. Triplet Imbalance (Upper/Lower Shadow Balance) ===
         # (High - Close) / (Close - Low) の対数変換
@@ -166,12 +179,16 @@ class OIFRInteractionFeatureCalculator:
         # 高値更新時の出来高減衰シグナル
         result["Fakeout_Volume_Divergence"] = (
             AdvancedFeatures.volume_divergence_fakeout(
-                close=cast(pd.Series, df["close"]), volume=cast(pd.Series, df["volume"]), window=20
+                close=cast(pd.Series, df["close"]),
+                volume=cast(pd.Series, df["volume"]),
+                window=20,
             ).fillna(0.0)
         )
 
         # === 10. Cumulative OI-Price Divergence（累積OI-価格乖離）===
-        oi_price_alignment = (np.sign(oi_change) == np.sign(price_change)).astype(float)
+        oi_price_alignment = (
+            np.sign(oi_change) == np.sign(price_change)
+        ).astype(float)
         result["Cumulative_OI_Price_Divergence"] = (
             (1 - oi_price_alignment).rolling(20).sum()
         )
@@ -179,7 +196,9 @@ class OIFRInteractionFeatureCalculator:
         # === 11. Liquidation Cascade Score ===
         result["Liquidation_Cascade_Score"] = (
             AdvancedFeatures.liquidation_cascade_score(
-                close=cast(pd.Series, df["close"]), open_interest=oi_series, volume=cast(pd.Series, df["volume"])
+                close=cast(pd.Series, df["close"]),
+                open_interest=oi_series,
+                volume=cast(pd.Series, df["volume"]),
             ).fillna(0.0)
         )
 
@@ -193,7 +212,9 @@ class OIFRInteractionFeatureCalculator:
 
         # === 13. Trend Quality ===
         result["Trend_Quality_20"] = AdvancedFeatures.trend_quality(
-            close=cast(pd.Series, df["close"]), open_interest=oi_series, window=20
+            close=cast(pd.Series, df["close"]),
+            open_interest=oi_series,
+            window=20,
         ).fillna(0.0)
 
         # === 14. OI Weighted Funding Rate ===

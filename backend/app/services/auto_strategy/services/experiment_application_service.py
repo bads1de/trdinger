@@ -36,7 +36,9 @@ class ExperimentApplicationService:
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
-    def initialize_ga_engine(self, experiment_id: str, ga_config: GAConfig) -> None:
+    def initialize_ga_engine(
+        self, experiment_id: str, ga_config: GAConfig
+    ) -> None:
         """GA エンジンを初期化する。"""
         if not self.experiment_manager:
             raise RuntimeError("実験管理マネージャーが初期化されていません。")

@@ -77,11 +77,16 @@ class ResultProcessor:
             if isinstance(ind, StrategyGene):
                 gene = ind
             else:
-                logger.error(f"個体がStrategyGene型ではありません: {type(ind)}")
+                logger.error(
+                    f"個体がStrategyGene型ではありません: {type(ind)}"
+                )
                 continue
 
             best_strategies.append(
-                {"strategy": gene, "fitness_values": list(ind.fitness.values)}  # type: ignore[union-attr]
+                {
+                    "strategy": gene,
+                    "fitness_values": list(ind.fitness.values),
+                }  # type: ignore[union-attr]
             )
 
         if isinstance(best_individual, StrategyGene):

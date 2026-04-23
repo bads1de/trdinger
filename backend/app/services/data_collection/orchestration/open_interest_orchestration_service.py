@@ -14,7 +14,9 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.base_orchestration_service import (
     BaseDataCollectionOrchestrationService,
 )
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 from ..bybit.open_interest_service import BybitOpenInterestService
 
@@ -32,7 +34,9 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
 
     def __init__(
         self,
-        bybit_service: BybitOpenInterestService = Depends(BybitOpenInterestService),
+        bybit_service: BybitOpenInterestService = Depends(
+            BybitOpenInterestService
+        ),
     ):
         """
         初期化
@@ -73,11 +77,13 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
 
                 # データ収集実行
                 # bybit_serviceはDIされたものを使用
-                result = await self.bybit_service.fetch_and_save_open_interest_data(
-                    symbol=symbol,
-                    limit=limit,
-                    repository=repository,
-                    fetch_all=fetch_all,
+                result = (
+                    await self.bybit_service.fetch_and_save_open_interest_data(
+                        symbol=symbol,
+                        limit=limit,
+                        repository=repository,
+                        fetch_all=fetch_all,
+                    )
                 )
 
             if result.get("success", False):
@@ -101,7 +107,9 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 )
 
         except Exception as e:
-            logger.error(f"オープンインタレストデータ収集エラー: {e}", exc_info=True)
+            logger.error(
+                f"オープンインタレストデータ収集エラー: {e}", exc_info=True
+            )
             return self._create_error_response(
                 message=f"オープンインタレストデータ収集中にエラーが発生しました: {str(e)}",
                 details={
@@ -152,7 +160,9 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                     for r in records
                 ]
 
-                logger.info(f"オープンインタレストデータ取得成功: {len(data)}件")
+                logger.info(
+                    f"オープンインタレストデータ取得成功: {len(data)}件"
+                )
 
                 return self._create_success_response(
                     message=f"{len(data)}件のオープンインタレストデータを取得しました",
@@ -163,7 +173,9 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                     },
                 )
         except Exception as e:
-            logger.error(f"オープンインタレストデータ取得エラー: {e}", exc_info=True)
+            logger.error(
+                f"オープンインタレストデータ取得エラー: {e}", exc_info=True
+            )
             return self._create_error_response(
                 message=f"オープンインタレストデータ取得中にエラーが発生しました: {str(e)}",
                 details={
@@ -190,7 +202,9 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
             一括収集結果を含む辞書
         """
         try:
-            logger.info(f"オープンインタレスト一括収集開始: {len(symbols)}シンボル")
+            logger.info(
+                f"オープンインタレスト一括収集開始: {len(symbols)}シンボル"
+            )
 
             with self._get_db_session(db_session) as session:
                 repository = OpenInterestRepository(session)
@@ -203,25 +217,27 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 for symbol in symbols:
                     try:
                         # bybit_serviceを使用
-                        result = (
-                            await self.bybit_service.fetch_and_save_open_interest_data(
-                                symbol=symbol,
-                                repository=repository,
-                                fetch_all=True,
-                            )
+                        result = await self.bybit_service.fetch_and_save_open_interest_data(
+                            symbol=symbol,
+                            repository=repository,
+                            fetch_all=True,
                         )
                         results.append(result)
                         total_saved += result["saved_count"]
                         successful_symbols += 1
 
-                        logger.info(f"✅ {symbol}: {result['saved_count']}件保存")
+                        logger.info(
+                            f"✅ {symbol}: {result['saved_count']}件保存"
+                        )
 
                         # レート制限対策
                         await asyncio.sleep(0.1)
 
                     except Exception as e:
                         logger.error(f"❌ {symbol} 収集エラー: {e}")
-                        failed_symbols.append({"symbol": symbol, "error": str(e)})
+                        failed_symbols.append(
+                            {"symbol": symbol, "error": str(e)}
+                        )
 
                 logger.info(
                     f"オープンインタレスト一括収集完了: {successful_symbols}/{len(symbols)}成功"
@@ -239,7 +255,9 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 )
 
         except Exception as e:
-            logger.error(f"オープンインタレスト一括収集エラー: {e}", exc_info=True)
+            logger.error(
+                f"オープンインタレスト一括収集エラー: {e}", exc_info=True
+            )
             return self._create_error_response(
                 message=f"一括収集中にエラーが発生しました: {str(e)}",
                 details={

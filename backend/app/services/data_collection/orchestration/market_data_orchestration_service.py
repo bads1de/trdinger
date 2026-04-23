@@ -60,6 +60,10 @@ class MarketDataOrchestrationService(BaseDataCollectionOrchestrationService):
         logger.debug(f"OHLCVデータ取得成功: {len(ohlcv_data)}件")
 
         return self._create_success_response(
-            data={"ohlcv_data": ohlcv_data, "symbol": symbol, "timeframe": timeframe},
+            data={
+                "ohlcv_data": ohlcv_data,
+                "symbol": symbol,
+                "timeframe": timeframe,
+            },
             message=f"{symbol} の {timeframe} OHLCVデータを取得しました",
         )

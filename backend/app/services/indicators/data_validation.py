@@ -220,7 +220,9 @@ def _run_indicator_with_validation(
         Any: 計算結果またはフォールバック結果
     """
     if validation is not None:
-        return fallback_factory() if fallback_factory is not None else validation
+        return (
+            fallback_factory() if fallback_factory is not None else validation
+        )
 
     result = result_factory()
     if _is_missing_indicator_result(result):
@@ -255,7 +257,9 @@ def run_series_indicator(
     Returns:
         Any: 計算結果またはフォールバック結果
     """
-    validation = validate_series_params(data, length, min_data_length=min_data_length)
+    validation = validate_series_params(
+        data, length, min_data_length=min_data_length
+    )
     return _run_indicator_with_validation(
         validation,
         result_factory,
@@ -300,7 +304,9 @@ def run_multi_series_indicator(
     )
 
 
-def normalize_non_finite(series: pd.Series, fill_value: Any = np.nan) -> pd.Series:
+def normalize_non_finite(
+    series: pd.Series, fill_value: Any = np.nan
+) -> pd.Series:
     """
     inf/-inf を NaN 経由で指定値に揃える。
 
@@ -477,7 +483,9 @@ def extract_tuple_result(
 
         if isinstance(result, pd.DataFrame):
             if column_names is not None:
-                missing = [name for name in column_names if name not in result.columns]
+                missing = [
+                    name for name in column_names if name not in result.columns
+                ]
                 if missing:
                     raise KeyError(f"Missing columns: {missing}")
                 selected_columns = list(column_names)
@@ -518,7 +526,9 @@ def extract_tuple_result(
         raise
 
 
-def get_param_value(params: Dict[str, Any], keys: list[str], default: int = 1) -> int:
+def get_param_value(
+    params: Dict[str, Any], keys: list[str], default: int = 1
+) -> int:
     """
     パラメータ名がlengthまたはwindowの場合の値取得をサポート
 
@@ -541,7 +551,9 @@ def get_param_value(params: Dict[str, Any], keys: list[str], default: int = 1) -
     return default
 
 
-def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
+def get_minimum_data_length(
+    indicator_type: str, params: Dict[str, Any]
+) -> int:
     """
     指標の種類とパラメータから最小必要データ長を取得
 
@@ -565,7 +577,9 @@ def get_minimum_data_length(indicator_type: str, params: Dict[str, Any]) -> int:
 
     # フォールバック：デフォルト値 - lengthまたはwindowパラメータをサポート
     if config and config.default_values:
-        length_value = get_param_value(config.default_values, ["length", "window"], 14)
+        length_value = get_param_value(
+            config.default_values, ["length", "window"], 14
+        )
         return length_value
 
     return 1  # 最低1つのデータ点
@@ -716,7 +730,9 @@ def validate_input(data: object, period: int) -> None:
         raise PandasTAError(f"期間は正の整数である必要があります: {period}")
 
     if len(series) < period:
-        raise PandasTAError(f"データ長({len(series)})が期間({period})より短いです")
+        raise PandasTAError(
+            f"データ長({len(series)})が期間({period})より短いです"
+        )
 
     # NaNや無限大の値をチェック (pandas.Series専用)
     if bool(series.isna().any()):
@@ -816,7 +832,9 @@ def handle_pandas_ta_errors(func):
                     raise PandasTAError(f"{func.__name__}: 計算結果が空です")
                 # 全NaNチェック（重要）
                 if len(result) > 0 and np.all(np.isnan(result)):
-                    raise PandasTAError(f"{func.__name__}: 計算結果が全てNaNです")
+                    raise PandasTAError(
+                        f"{func.__name__}: 計算結果が全てNaNです"
+                    )
 
             # tupleの場合（MACD等）
             elif isinstance(result, tuple):
@@ -826,8 +844,12 @@ def handle_pandas_ta_errors(func):
                     return result
 
                 for i, arr in enumerate(result):
-                    if arr is None or (hasattr(arr, "__len__") and len(arr) == 0):
-                        raise PandasTAError(f"{func.__name__}: 結果[{i}]が無効です")
+                    if arr is None or (
+                        hasattr(arr, "__len__") and len(arr) == 0
+                    ):
+                        raise PandasTAError(
+                            f"{func.__name__}: 結果[{i}]が無効です"
+                        )
 
             return result
 

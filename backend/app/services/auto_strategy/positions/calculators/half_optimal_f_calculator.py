@@ -44,12 +44,22 @@ class HalfOptimalFCalculator(BaseCalculator):
         if not trade_history or len(trade_history) < 10:
             # データ不足時は簡易版オプティマルF計算を試行
             result = self._calculate_simplified_optimal_f(
-                gene, account_balance, current_price, warnings, details, **kwargs
+                gene,
+                account_balance,
+                current_price,
+                warnings,
+                details,
+                **kwargs,
             )
         else:
             # 過去データの分析
             result = self._calculate_with_trade_history(
-                gene, account_balance, current_price, warnings, details, **kwargs
+                gene,
+                account_balance,
+                current_price,
+                warnings,
+                details,
+                **kwargs,
             )
 
         # 統一された最終処理（重複コード除去）
@@ -75,7 +85,9 @@ class HalfOptimalFCalculator(BaseCalculator):
             default_return={
                 "position_size": 0,
                 "warnings": ["簡易計算失敗"],
-                "details": {"fallback_reason": "simplified_calculation_failed"},
+                "details": {
+                    "fallback_reason": "simplified_calculation_failed"
+                },
             },
         )
         def _simplified_optimal_f():
@@ -88,7 +100,9 @@ class HalfOptimalFCalculator(BaseCalculator):
                 assumed_win_rate * assumed_avg_win
                 - (1 - assumed_win_rate) * assumed_avg_loss
             ) / assumed_avg_win
-            half_optimal_f = max(0, min(0.1, optimal_f * gene.optimal_f_multiplier))
+            half_optimal_f = max(
+                0, min(0.1, optimal_f * gene.optimal_f_multiplier)
+            )
 
             # 修正ポイント: リスクベースの計算
             risk_amount = account_balance * half_optimal_f
@@ -182,7 +196,9 @@ class HalfOptimalFCalculator(BaseCalculator):
 
         # オプティマルF計算
         if avg_win > 0 and avg_loss > 0:
-            optimal_f = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
+            optimal_f = (
+                win_rate * avg_win - (1 - win_rate) * avg_loss
+            ) / avg_win
             half_optimal_f = max(0, optimal_f * gene.optimal_f_multiplier)
 
             # 修正ポイント: half_optimal_f を「リスク額（損失許容額）」として扱う
@@ -192,7 +208,9 @@ class HalfOptimalFCalculator(BaseCalculator):
             # ストップロス幅の決定: market_dataのATRを使用するか、デフォルト設定を使用
             market_data = kwargs.get("market_data", {})
             atr_pct = market_data.get("atr_pct", 0.02)  # デフォルト2%
-            atr_multiplier = getattr(gene, "atr_multiplier", 2.0)  # 遺伝子設定の倍率
+            atr_multiplier = getattr(
+                gene, "atr_multiplier", 2.0
+            )  # 遺伝子設定の倍率
 
             # 想定損切り幅（%）
             stop_loss_pct = max(atr_pct * atr_multiplier, 0.01)  # 最低1%で制限
@@ -254,13 +272,19 @@ class HalfOptimalFCalculator(BaseCalculator):
             },
         )
         def _fallback():
-            fallback_atr_multiplier = AUTO_STRATEGY_DEFAULTS["fallback_atr_multiplier"]
+            fallback_atr_multiplier = AUTO_STRATEGY_DEFAULTS[
+                "fallback_atr_multiplier"
+            ]
             # 簡易ボラティリティ計算
             atr_value = current_price * fallback_atr_multiplier
             risk_amount = account_balance * gene.risk_per_trade
-            volatility_factor = atr_value / current_price if current_price > 0 else 0
+            volatility_factor = (
+                atr_value / current_price if current_price > 0 else 0
+            )
             if volatility_factor > 0:
-                position_size = risk_amount / (current_price * volatility_factor)
+                position_size = risk_amount / (
+                    current_price * volatility_factor
+                )
             else:
                 position_size = gene.min_position_size
 

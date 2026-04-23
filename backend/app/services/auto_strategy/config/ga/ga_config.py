@@ -88,7 +88,9 @@ class GAConfig:
     constraint_violation_penalty: float = GA_DEFAULT_CONFIG[
         "constraint_violation_penalty"
     ]
-    max_enabled_filters: int = int(GA_DEFAULT_CONFIG.get("max_enabled_filters", 3))
+    max_enabled_filters: int = int(
+        GA_DEFAULT_CONFIG.get("max_enabled_filters", 3)
+    )
 
     # 交叉・突然変異拡張設定
     # サブ設定: mutation_config
@@ -119,7 +121,9 @@ class GAConfig:
     )
 
     # 目的関数設定
-    objectives: List[str] = field(default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy())
+    objectives: List[str] = field(
+        default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy()
+    )
     objective_weights: List[float] = field(
         default_factory=lambda: DEFAULT_GA_OBJECTIVE_WEIGHTS.copy()
     )
@@ -156,7 +160,9 @@ class GAConfig:
     available_timeframes: Optional[List[str]] = (
         None  # 利用可能なタイムフレーム（Noneの場合はデフォルト）
     )
-    mtf_indicator_probability: float = 0.3  # MTF指標が生成される確率（0.0-1.0）
+    mtf_indicator_probability: float = (
+        0.3  # MTF指標が生成される確率（0.0-1.0）
+    )
 
     # パラメータ範囲プリセット設定
     # 探索範囲のプリセット名（例: "short_term", "mid_term", "long_term"）
@@ -166,7 +172,9 @@ class GAConfig:
     # シード戦略設定（ハイブリッド初期化）
     # 実戦的な戦略テンプレートを初期集団に注入し、探索効率を向上させる
     use_seed_strategies: bool = True  # シード戦略を使用するか
-    seed_injection_rate: float = 0.3  # 初期集団のうちシードで置き換える割合（0.0-1.0）
+    seed_injection_rate: float = (
+        0.3  # 初期集団のうちシードで置き換える割合（0.0-1.0）
+    )
 
     # パラメータチューニング設定（GA×Optunaハイブリッド）
     # サブ設定: tuning_config
@@ -179,20 +187,26 @@ class GAConfig:
 
     # サブ設定（ネスト辞書からの復元用）
     mutation_config: MutationConfig = field(default_factory=MutationConfig)
-    evaluation_config: EvaluationConfig = field(default_factory=EvaluationConfig)
+    evaluation_config: EvaluationConfig = field(
+        default_factory=EvaluationConfig
+    )
     hybrid_config: HybridConfig = field(default_factory=HybridConfig)
     tuning_config: TuningConfig = field(default_factory=TuningConfig)
     two_stage_selection_config: TwoStageSelectionConfig = field(
         default_factory=TwoStageSelectionConfig
     )
-    robustness_config: RobustnessConfig = field(default_factory=RobustnessConfig)
+    robustness_config: RobustnessConfig = field(
+        default_factory=RobustnessConfig
+    )
 
     def __init__(self, **data: Dict[str, Any]) -> None:
         """canonical フィールドのみを受け付ける手動初期化器。"""
         defaults = self._from_dict_defaults()
         unknown_keys = sorted(key for key in data if key not in defaults)
         if unknown_keys:
-            raise ValueError(f"未対応の設定キーがあります: {', '.join(unknown_keys)}")
+            raise ValueError(
+                f"未対応の設定キーがあります: {', '.join(unknown_keys)}"
+            )
 
         defaults.update(copy.deepcopy(data))
         object.__setattr__(self, "_provided_keys", set(data.keys()))
@@ -268,17 +282,23 @@ class GAConfig:
             )
         if isinstance(self.hybrid_config, dict):
             object.__setattr__(
-                self, "hybrid_config", HybridConfig.from_dict(self.hybrid_config)
+                self,
+                "hybrid_config",
+                HybridConfig.from_dict(self.hybrid_config),
             )
         if isinstance(self.tuning_config, dict):
             object.__setattr__(
-                self, "tuning_config", TuningConfig.from_dict(self.tuning_config)
+                self,
+                "tuning_config",
+                TuningConfig.from_dict(self.tuning_config),
             )
         if isinstance(self.two_stage_selection_config, dict):
             object.__setattr__(
                 self,
                 "two_stage_selection_config",
-                TwoStageSelectionConfig.from_dict(self.two_stage_selection_config),
+                TwoStageSelectionConfig.from_dict(
+                    self.two_stage_selection_config
+                ),
             )
         if isinstance(self.robustness_config, dict):
             object.__setattr__(
@@ -317,7 +337,9 @@ class GAConfig:
     @classmethod
     def _from_dict_defaults(cls) -> Dict[str, Any]:
         """from_dict 用のデフォルト値を生成する。"""
-        return cast(Dict[str, Any], copy.deepcopy(_get_default_values_from_fields(cls)))
+        return cast(
+            Dict[str, Any], copy.deepcopy(_get_default_values_from_fields(cls))
+        )
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GAConfig":

@@ -10,7 +10,11 @@ from typing import Any, Dict
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
-from .time_windows import is_within_any_window, mutate_window_minutes, to_utc_minutes
+from .time_windows import (
+    is_within_any_window,
+    mutate_window_minutes,
+    to_utc_minutes,
+)
 
 
 class LondonFixFilter(BaseTool):
@@ -29,7 +33,9 @@ class LondonFixFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """
         ロンドンフィックス前後かどうかを判定
 
@@ -52,7 +58,9 @@ class LondonFixFilter(BaseTool):
 
         window = params.get("window_minutes", 15)
         current_minutes = to_utc_minutes(context.timestamp)
-        return is_within_any_window(current_minutes, [15 * 60, 16 * 60], window)
+        return is_within_any_window(
+            current_minutes, [15 * 60, 16 * 60], window
+        )
 
     def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """

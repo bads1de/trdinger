@@ -9,9 +9,15 @@ CPU バウンドな計算を効率化します。
 import logging
 import os
 import time
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, ThreadPoolExecutor
+from concurrent.futures import (
+    FIRST_COMPLETED,
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+)
 from concurrent.futures import TimeoutError as FuturesTimeoutError
-from concurrent.futures import wait
+from concurrent.futures import (
+    wait,
+)
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -111,7 +117,9 @@ class ParallelEvaluator:
         if self._executor is not None:
             return
 
-        logger.info(f"並列評価Executorを起動します (max_workers={self.max_workers})")
+        logger.info(
+            f"並列評価Executorを起動します (max_workers={self.max_workers})"
+        )
 
         if self.use_process_pool:
             self._executor = ProcessPoolExecutor(
@@ -193,7 +201,9 @@ class ParallelEvaluator:
             )
 
         # Noneが残っている場合はデフォルト値で埋める
-        final_results = [r if r is not None else default_fitness for r in results]
+        final_results = [
+            r if r is not None else default_fitness for r in results
+        ]
 
         logger.info(
             f"並列評価完了: 成功={self._successful_evaluations}, "
@@ -284,7 +294,9 @@ class ParallelEvaluator:
                 future.cancel()
 
         if timed_out_futures:
-            logger.warning("個体評価タイムアウトを検知したため、Executorを再生成します")
+            logger.warning(
+                "個体評価タイムアウトを検知したため、Executorを再生成します"
+            )
             executor.shutdown(wait=False)
             if self._executor == executor:
                 self._executor = None
@@ -453,15 +465,21 @@ class ParallelEvaluator:
             (フィットネス値, 個体) のタプルリスト
         """
         # 無効な個体を抽出
-        invalid_individuals = [ind for ind in population if not ind.fitness.valid]
+        invalid_individuals = [
+            ind for ind in population if not ind.fitness.valid
+        ]
 
         if not invalid_individuals:
             return []
 
-        logger.debug(f"無効な個体数: {len(invalid_individuals)}/{len(population)}")
+        logger.debug(
+            f"無効な個体数: {len(invalid_individuals)}/{len(population)}"
+        )
 
         # 並列評価
-        fitnesses = self.evaluate_population(invalid_individuals, default_fitness)
+        fitnesses = self.evaluate_population(
+            invalid_individuals, default_fitness
+        )
 
         return list(zip(fitnesses, invalid_individuals))
 

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.dependencies import get_market_data_orchestration_service
 from app.config.unified_config import unified_config
-from app.services.data_collection.orchestration.market_data_orchestration_service import (
+from app.services.data_collection.orchestration.market_data_orchestration_service import (  # noqa: E501
     MarketDataOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
@@ -25,7 +25,9 @@ router = APIRouter(prefix="/api/market-data", tags=["market-data"])
 
 @router.get("/ohlcv")
 async def get_ohlcv_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USDT:USDT）"),
+    symbol: str = Query(
+        ..., description="取引ペアシンボル（例: BTC/USDT:USDT）"
+    ),
     timeframe: str = Query(
         unified_config.market.default_timeframe,
         description="時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）",
@@ -34,7 +36,11 @@ async def get_ohlcv_data(
         unified_config.market.default_limit,
         ge=unified_config.market.min_limit,
         le=unified_config.market.max_limit,
-        description=f"取得するデータ数（{unified_config.market.min_limit}-{unified_config.market.max_limit}）",
+        description=(
+            f"取得するデータ数"
+            f"({unified_config.market.min_limit}"
+            f"-{unified_config.market.max_limit}）"
+        ),
     ),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),

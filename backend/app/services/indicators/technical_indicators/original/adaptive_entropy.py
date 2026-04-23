@@ -64,7 +64,9 @@ def adaptive_entropy(
     if short_length >= long_length:
         raise ValueError("short_length must be < long_length")
 
-    validation = validate_series_params(close, long_length, min_data_length=long_length)
+    validation = validate_series_params(
+        close, long_length, min_data_length=long_length
+    )
     if validation is not None:
         nan_osc = pd.Series(
             np.full(len(close), np.nan),
@@ -114,4 +116,6 @@ def adaptive_entropy(
         name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}",
     )
 
-    return cast(Tuple[pd.Series, pd.Series, pd.Series], (oscillator, signal, ratio))
+    return cast(
+        Tuple[pd.Series, pd.Series, pd.Series], (oscillator, signal, ratio)
+    )

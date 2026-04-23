@@ -105,8 +105,12 @@ class StrategyGene:
         long_entry_gene: Optional[EntryGene] = None,
         short_entry_gene: Optional[EntryGene] = None,
         exit_gene: Optional[ExitGene] = None,
-        long_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
-        short_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
+        long_exit_conditions: Optional[
+            List[Union[Condition, ConditionGroup]]
+        ] = None,
+        short_exit_conditions: Optional[
+            List[Union[Condition, ConditionGroup]]
+        ] = None,
         tool_genes: Optional[List[ToolGene]] = None,
         risk_management: Optional[Dict[str, Any]] = None,
         metadata: Optional[Dict[str, Any]] = None,
@@ -179,7 +183,9 @@ class StrategyGene:
     @classmethod
     def crossover_field_names(cls) -> Tuple[str, ...]:
         """uniform crossover 対象となるフィールド名を返す。"""
-        return tuple(name for name in cls.clone_field_names() if name != "metadata")
+        return tuple(
+            name for name in cls.clone_field_names() if name != "metadata"
+        )
 
     @classmethod
     def sub_gene_field_names(cls) -> Tuple[str, ...]:
@@ -220,7 +226,9 @@ class StrategyGene:
         cloned_fields["id"] = self.id if keep_id else str(uuid.uuid4())
         return type(self)(**cast(Dict[str, Any], cloned_fields))  # type: ignore[arg-type]
 
-    def mutate(self, config: GAConfig, mutation_rate: float = 0.1) -> "StrategyGene":
+    def mutate(
+        self, config: GAConfig, mutation_rate: float = 0.1
+    ) -> "StrategyGene":
         """戦略遺伝子の突然変異を実行する。"""
         from .operators import mutate_strategy_gene
 

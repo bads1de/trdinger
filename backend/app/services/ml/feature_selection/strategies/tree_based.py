@@ -51,10 +51,14 @@ class TreeBasedStrategy(BaseSelectionStrategy):
         mask = cast(np.ndarray, selector.get_support())
 
         if config.max_features and mask.sum() > config.max_features:
-            mask = self._limit_features(mask, model.feature_importances_, config)
+            mask = self._limit_features(
+                mask, model.feature_importances_, config
+            )
 
         if config.min_features and mask.sum() < config.min_features:
-            top_k = np.argsort(model.feature_importances_)[-config.min_features :]
+            top_k = np.argsort(model.feature_importances_)[
+                -config.min_features :
+            ]
             mask = np.zeros(len(feature_names), dtype=bool)
             mask[top_k] = True
 

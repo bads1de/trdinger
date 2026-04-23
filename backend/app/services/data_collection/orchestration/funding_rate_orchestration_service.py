@@ -30,7 +30,9 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
 
     def __init__(
         self,
-        bybit_service: BybitFundingRateService = Depends(BybitFundingRateService),
+        bybit_service: BybitFundingRateService = Depends(
+            BybitFundingRateService
+        ),
     ):
         """
         サービスの初期化
@@ -61,7 +63,9 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
         Returns:
             ファンディングレートデータのリスト
         """
-        logger.info(f"{symbol}のファンディングレートデータを{limit}件取得します")
+        logger.info(
+            f"{symbol}のファンディングレートデータを{limit}件取得します"
+        )
 
         # 文字列の日付をdatetimeオブジェクトに変換
         start_datetime = self._parse_datetime(start_date)
@@ -96,7 +100,9 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
         """
         logger.info(f"{symbol}のファンディングレートデータ収集を開始します")
         if fetch_all:
-            rates_data = await self.bybit_service.fetch_all_funding_rate_history(symbol)
+            rates_data = (
+                await self.bybit_service.fetch_all_funding_rate_history(symbol)
+            )
         else:
             rates_data = await self.bybit_service.fetch_funding_rate_history(
                 symbol, limit
@@ -106,7 +112,9 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
             logger.warning(
                 f"{symbol}のファンディングレートデータが見つかりませんでした"
             )
-            return self._create_success_response("データなし", data={"count": 0})
+            return self._create_success_response(
+                "データなし", data={"count": 0}
+            )
 
         funding_rate_repo = FundingRateRepository(db_session)
         inserted_count = funding_rate_repo.insert_funding_rate_data(rates_data)
@@ -136,14 +144,21 @@ class FundingRateOrchestrationService(BaseDataCollectionOrchestrationService):
         for symbol in symbols:
             try:
                 result = await self.collect_funding_rate_data(
-                    symbol=symbol, limit=200, fetch_all=True, db_session=db_session
+                    symbol=symbol,
+                    limit=200,
+                    fetch_all=True,
+                    db_session=db_session,
                 )
                 # resultはAPIレスポンス形式になっているため、data['count']から取得
                 if result.get("success") and result.get("data"):
                     total_count += result["data"].get("count", 0)
             except Exception as e:
-                logger.error(f"{symbol}のデータ収集中にエラーが発生しました: {e}")
-        logger.info(f"一括データ収集完了。合計{total_count}件のデータを保存しました")
+                logger.error(
+                    f"{symbol}のデータ収集中にエラーが発生しました: {e}"
+                )
+        logger.info(
+            f"一括データ収集完了。合計{total_count}件のデータを保存しました"
+        )
 
         return self._create_success_response(
             "一括データ収集完了", data={"total_count": total_count}

@@ -1,11 +1,9 @@
+import logging
 from typing import Any, List, Optional, cast
 
 import numpy as np
 import pandas as pd
 from numba import jit
-
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +185,9 @@ class TripleBarrier:
         # 1. 価格データと時刻
         close_vals = close.to_numpy(dtype=np.float64)
         # 時刻はint64(ns)として扱う (明示的にns解像度に変換)
-        close_times = close.index.astype("datetime64[ns]").astype(np.int64).to_numpy()
+        close_times = (
+            close.index.astype("datetime64[ns]").astype(np.int64).to_numpy()
+        )
 
         # 2. イベント開始位置のインデックス
         # get_indexer は見つからない場合 -1 を返す
@@ -215,7 +215,9 @@ class TripleBarrier:
             v_bar_idxs[valid_v_mask] = found_idxs
 
         # 4. 垂直バリアの時刻 (int64)
-        v_bar_times_int = v_bar.astype("datetime64[ns]").astype(np.int64).to_numpy()
+        v_bar_times_int = (
+            v_bar.astype("datetime64[ns]").astype(np.int64).to_numpy()
+        )
 
         # 5. その他パラメータ配列
         target_vals = target.to_numpy(dtype=np.float64)
@@ -262,7 +264,10 @@ class TripleBarrier:
         return events
 
     def get_bins(
-        self, events: pd.DataFrame, close: pd.Series, binary_label: bool = False
+        self,
+        events: pd.DataFrame,
+        close: pd.Series,
+        binary_label: bool = False,
     ) -> pd.DataFrame:
         """バリア接触イベントに基づいてラベルを生成
 
@@ -311,7 +316,9 @@ class TripleBarrier:
 
         # インデックスをevに明示的に設定（位置合わせの保証）
         ev_df_for_index = cast(pd.DataFrame, ev)
-        px_end = pd.Series(cast(pd.Series, px_end_series).values, index=ev_df_for_index.index)
+        px_end = pd.Series(
+            cast(pd.Series, px_end_series).values, index=ev_df_for_index.index
+        )
 
         out = pd.DataFrame(index=ev_df_for_index.index)
         out["ret"] = px_end / px_init - 1
@@ -330,8 +337,12 @@ class TripleBarrier:
         else:
             # フォールバック (リターンベース)
             if self.pt > 0:
-                out.loc[out["ret"] > out["trgt"] * self.pt * 0.999, "bin"] = 1.0
+                out.loc[out["ret"] > out["trgt"] * self.pt * 0.999, "bin"] = (
+                    1.0
+                )
             if not binary_label and self.sl > 0:
-                out.loc[out["ret"] < -out["trgt"] * self.sl * 0.999, "bin"] = -1.0
+                out.loc[out["ret"] < -out["trgt"] * self.sl * 0.999, "bin"] = (
+                    -1.0
+                )
 
         return out

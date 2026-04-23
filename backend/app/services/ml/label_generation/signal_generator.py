@@ -116,7 +116,9 @@ class SignalGenerator:
             return pd.DatetimeIndex([])
 
         h, low_p = df[price_column_high], df[price_column_low]
-        ph, pl = h.rolling(window).max().shift(1), low_p.rolling(window).min().shift(1)
+        ph, pl = h.rolling(window).max().shift(1), low_p.rolling(
+            window
+        ).min().shift(1)
 
         mask = ((h > ph) & ph.notna()) | ((low_p < pl) & pl.notna())
         return cast(pd.DatetimeIndex, df.index[mask])
@@ -148,7 +150,8 @@ class SignalGenerator:
         v: pd.Series = cast(pd.Series, df[volume_column])
         avg_v = cast(pd.Series, v.rolling(window).mean()).shift(1)
         return cast(
-            pd.DatetimeIndex, df.index[(v >= avg_v * multiplier) & avg_v.notna()]
+            pd.DatetimeIndex,
+            df.index[(v >= avg_v * multiplier) & avg_v.notna()],
         )
 
     def get_combined_events(
@@ -187,10 +190,14 @@ class SignalGenerator:
         if use_bb:
             events.append(self.get_bb_breakout_events(df, bb_window, bb_dev))
         if use_donchian:
-            events.append(self.get_donchian_breakout_events(df, donchian_window))
+            events.append(
+                self.get_donchian_breakout_events(df, donchian_window)
+            )
         if use_volume:
             events.append(
-                self.get_volume_spike_events(df, volume_window, volume_multiplier)
+                self.get_volume_spike_events(
+                    df, volume_window, volume_multiplier
+                )
             )
 
         if not events:

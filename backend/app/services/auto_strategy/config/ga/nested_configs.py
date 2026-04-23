@@ -85,7 +85,9 @@ class EarlyTerminationSettings(NestedConfigMixin):
     expectancy_progress: float = 0.1
 
     @classmethod
-    def from_source(cls, source: Mapping[str, Any]) -> "EarlyTerminationSettings":
+    def from_source(
+        cls, source: Mapping[str, Any]
+    ) -> "EarlyTerminationSettings":
         """dict / オブジェクトのどちらからでも設定を生成する。"""
         if isinstance(source, cls):
             return source
@@ -103,21 +105,23 @@ class EarlyTerminationSettings(NestedConfigMixin):
 class MutationConfig(NestedConfigMixin):
     """突然変異関連設定。"""
 
-    rate: float = float(GA_DEFAULT_CONFIG["mutation_rate"])
+    rate: float = float(GA_DEFAULT_CONFIG["mutation_rate"])  # type: ignore[arg-type]
     crossover_field_selection_probability: float = float(
         GA_MUTATION_SETTINGS["crossover_field_selection_probability"]
-    )
+    )  # type: ignore[arg-type]
     indicator_param_range: List[float] = field(
         default_factory=lambda: list(
             GA_MUTATION_SETTINGS["indicator_param_mutation_range"]
-        )
+        )  # type: ignore[arg-type]
     )
     risk_param_range: List[float] = field(
-        default_factory=lambda: list(GA_MUTATION_SETTINGS["risk_param_mutation_range"])
+        default_factory=lambda: list(
+            GA_MUTATION_SETTINGS["risk_param_mutation_range"]
+        )  # type: ignore[arg-type]
     )
     indicator_add_delete_probability: float = float(
         GA_MUTATION_SETTINGS["indicator_add_delete_probability"]
-    )
+    )  # type: ignore[arg-type]
     indicator_add_vs_delete_probability: float = float(
         GA_MUTATION_SETTINGS["indicator_add_vs_delete_probability"]
     )
@@ -134,7 +138,9 @@ class MutationConfig(NestedConfigMixin):
         GA_MUTATION_SETTINGS["tpsl_gene_creation_probability_multiplier"]
     )
     position_sizing_gene_creation_multiplier: float = float(
-        GA_MUTATION_SETTINGS["position_sizing_gene_creation_probability_multiplier"]
+        GA_MUTATION_SETTINGS[
+            "position_sizing_gene_creation_probability_multiplier"
+        ]
     )
     entry_gene_creation_multiplier: float = float(
         GA_MUTATION_SETTINGS["entry_gene_creation_probability_multiplier"]
@@ -168,7 +174,9 @@ class MutationConfig(NestedConfigMixin):
         """親参照を持ち込まずに deepcopy する。"""
         copied = type(self)(
             **{
-                field_info.name: copy.deepcopy(getattr(self, field_info.name), memo)
+                field_info.name: copy.deepcopy(
+                    getattr(self, field_info.name), memo
+                )
                 for field_info in fields(type(self))
             }
         )
@@ -192,7 +200,9 @@ class EvaluationConfig(NestedConfigMixin):
     """評価・検証関連設定。"""
 
     enable_parallel: bool = True
-    max_workers: Optional[int] = None  # Noneの場合は自動で物理コア-2, 最大8に制限
+    max_workers: Optional[int] = (
+        None  # Noneの場合は自動で物理コア-2, 最大8に制限
+    )
     timeout: float = 300.0
     enable_multi_fidelity_evaluation: bool = False
     multi_fidelity_window_ratio: float = 0.3

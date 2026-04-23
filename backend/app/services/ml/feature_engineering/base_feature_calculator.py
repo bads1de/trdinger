@@ -44,10 +44,16 @@ def sanitize_numeric_dataframe(
     ]
 
     if not numeric_positions:
-        return result_df.fillna(fill_value) if fill_value is not None else result_df
+        return (
+            result_df.fillna(fill_value)
+            if fill_value is not None
+            else result_df
+        )
 
     for position in numeric_positions:
-        series = _replace_inf_with_nan(cast(pd.Series, result_df.iloc[:, position]))
+        series = _replace_inf_with_nan(
+            cast(pd.Series, result_df.iloc[:, position])
+        )
 
         if forward_fill:
             series = series.ffill()
@@ -77,7 +83,9 @@ class BaseFeatureCalculator(ABC):
         """
 
     def validate_input_data(
-        self, df: Optional[pd.DataFrame], required_columns: Optional[list] = None
+        self,
+        df: Optional[pd.DataFrame],
+        required_columns: Optional[list] = None,
     ) -> bool:
         """入力データの妥当性を検証"""
         if df is None or df.empty:
@@ -144,7 +152,9 @@ class BaseFeatureCalculator(ABC):
             return df.copy()
 
         # DataFrame断片化を避けるため、辞書で収集 → pd.concat()で一括追加
-        result_df = pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
+        result_df = pd.concat(
+            [df, pd.DataFrame(new_features, index=df.index)], axis=1
+        )
         return result_df
 
     def handle_calculation_error(
@@ -215,7 +225,9 @@ class BaseFeatureCalculator(ABC):
             return result
 
         # Series型入力の場合
-        if isinstance(numerators, pd.Series) and isinstance(denominators, pd.Series):
+        if isinstance(numerators, pd.Series) and isinstance(
+            denominators, pd.Series
+        ):
             safe_denominators = denominators.replace(0, np.nan)
             result = numerators / safe_denominators
             return result.fillna(fill_value)

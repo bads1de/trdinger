@@ -79,8 +79,12 @@ class EventDrivenLabelGenerator:
                     [regime_array, np.full(pad_count, pad_value, dtype=int)]
                 )
 
-        hrhp_labels = self._apply_profile(market_data, profiles["hrhp"], regime_array)
-        lrlp_labels = self._apply_profile(market_data, profiles["lrlp"], regime_array)
+        hrhp_labels = self._apply_profile(
+            market_data, profiles["hrhp"], regime_array
+        )
+        lrlp_labels = self._apply_profile(
+            market_data, profiles["lrlp"], regime_array
+        )
 
         index = market_data.index[: len(hrhp_labels)]
         labels_df = pd.DataFrame(
@@ -91,14 +95,20 @@ class EventDrivenLabelGenerator:
             labels_df["market_regime"] = 0
             active_regime = 0
         else:
-            regime_series = pd.Series(regime_array[: len(hrhp_labels)], index=index)
+            regime_series = pd.Series(
+                regime_array[: len(hrhp_labels)], index=index
+            )
             labels_df["market_regime"] = regime_series
             active_regime = int(regime_series.iloc[-1])
 
         regime_profiles = self._summarize_regime_profiles(profiles)
         label_distribution = {
-            "hrhp": self._distribution_summary(cast(pd.Series, labels_df["label_hrhp"])),
-            "lrlp": self._distribution_summary(cast(pd.Series, labels_df["label_lrlp"])),
+            "hrhp": self._distribution_summary(
+                cast(pd.Series, labels_df["label_hrhp"])
+            ),
+            "lrlp": self._distribution_summary(
+                cast(pd.Series, labels_df["label_lrlp"])
+            ),
         }
 
         info = {
@@ -165,7 +175,9 @@ class EventDrivenLabelGenerator:
             sl = profile.base_sl * f["sl"]
             hld = max(1, int(round(profile.holding_period * f["holding"])))
 
-            labels[idx] = self._first_touch_label(close, high, low, idx, tp, sl, hld)
+            labels[idx] = self._first_touch_label(
+                close, high, low, idx, tp, sl, hld
+            )
 
         return labels
 
@@ -174,7 +186,9 @@ class EventDrivenLabelGenerator:
     ) -> Dict[str, float]:
         if regime_value is None:
             return self.REGIME_FACTORS["default"]
-        return self.REGIME_FACTORS.get(regime_value, self.REGIME_FACTORS["default"])
+        return self.REGIME_FACTORS.get(
+            regime_value, self.REGIME_FACTORS["default"]
+        )
 
     def _first_touch_label(
         self,
@@ -208,7 +222,9 @@ class EventDrivenLabelGenerator:
         if entry_price <= 0:
             return 0
 
-        up_bar, dn_bar = entry_price * (1 + tp_mult), entry_price * (1 - sl_mult)
+        up_bar, dn_bar = entry_price * (1 + tp_mult), entry_price * (
+            1 - sl_mult
+        )
         end_idx = min(len(close) - 1, start_idx + holding)
 
         for i in range(start_idx + 1, end_idx + 1):
@@ -249,7 +265,11 @@ class EventDrivenLabelGenerator:
     def _distribution_summary(self, labels: pd.Series) -> dict:
         total = len(labels)
         if total == 0:
-            return {"positive_ratio": 0.0, "negative_ratio": 0.0, "neutral_ratio": 0.0}
+            return {
+                "positive_ratio": 0.0,
+                "negative_ratio": 0.0,
+                "neutral_ratio": 0.0,
+            }
         pos_ratio = float((labels == 1).sum()) / total
         neg_ratio = float((labels == -1).sum()) / total
         neu_ratio = float((labels == 0).sum()) / total

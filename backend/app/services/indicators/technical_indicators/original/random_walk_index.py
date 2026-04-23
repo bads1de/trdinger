@@ -7,7 +7,10 @@ from typing import Tuple
 import numpy as np
 import pandas as pd
 
-from ...data_validation import handle_pandas_ta_errors, validate_multi_series_params
+from ...data_validation import (
+    handle_pandas_ta_errors,
+    validate_multi_series_params,
+)
 
 
 def _calculate_true_range(
@@ -56,9 +59,13 @@ def rwi(
         )
         return nan_high, nan_low
 
-    high_f = pd.Series(high.values.astype(float), index=high.index, name=high.name)
+    high_f = pd.Series(
+        high.values.astype(float), index=high.index, name=high.name
+    )
     low_f = pd.Series(low.values.astype(float), index=low.index, name=low.name)
-    close_f = pd.Series(close.values.astype(float), index=close.index, name=close.name)
+    close_f = pd.Series(
+        close.values.astype(float), index=close.index, name=close.name
+    )
 
     true_range = _calculate_true_range(high_f, low_f, close_f)
 
@@ -77,7 +84,9 @@ def rwi(
             high_candidate = (high_f - low_f.shift(period)) / (atr * scale)
             low_candidate = (high_f.shift(period) - low_f) / (atr * scale)
 
-        high_candidates.append(high_candidate.replace([np.inf, -np.inf], np.nan))
+        high_candidates.append(
+            high_candidate.replace([np.inf, -np.inf], np.nan)
+        )
         low_candidates.append(low_candidate.replace([np.inf, -np.inf], np.nan))
 
     rwi_high = pd.concat(high_candidates, axis=1).max(axis=1)

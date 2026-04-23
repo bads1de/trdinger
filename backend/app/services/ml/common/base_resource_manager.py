@@ -33,7 +33,9 @@ class BaseResourceManager(ABC):
         self._cleanup_level = CleanupLevel.STANDARD
         self._is_cleaned_up = False
 
-    def cleanup_resources(self, level: Optional[CleanupLevel] = None) -> Dict[str, Any]:
+    def cleanup_resources(
+        self, level: Optional[CleanupLevel] = None
+    ) -> Dict[str, Any]:
         """リソースの統一クリーンアップ"""
         if self._is_cleaned_up:
             return {"status": "already_cleaned", "memory_freed": 0}

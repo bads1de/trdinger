@@ -22,7 +22,9 @@ from database.models import (
 )
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +101,9 @@ class DataManagementOrchestrationService:
             )
 
         except Exception as e:
-            logger.error(f"{display_name}データリセットエラー: {e}", exc_info=True)
+            logger.error(
+                f"{display_name}データリセットエラー: {e}", exc_info=True
+            )
             return error_response(
                 message=f"{display_name}データリセット中にエラーが発生しました: {str(e)}",
                 details={
@@ -282,8 +286,8 @@ class DataManagementOrchestrationService:
                 oi_repo = OpenInterestRepository(session)
 
                 try:
-                    deleted_counts["ohlcv"] = ohlcv_repo.clear_ohlcv_data_by_symbol(
-                        symbol
+                    deleted_counts["ohlcv"] = (
+                        ohlcv_repo.clear_ohlcv_data_by_symbol(symbol)
                     )
                 except Exception as e:
                     errors.append(f"OHLCV削除エラー: {str(e)}")
@@ -314,7 +318,9 @@ class DataManagementOrchestrationService:
                 else f"シンボル '{symbol}' の一部データリセットでエラーが発生しました"
             )
 
-            logger.info(f"シンボル '{symbol}' データリセット完了: {deleted_counts}")
+            logger.info(
+                f"シンボル '{symbol}' データリセット完了: {deleted_counts}"
+            )
             return api_response(
                 success=success,
                 message=message,
@@ -381,8 +387,12 @@ class DataManagementOrchestrationService:
 
                     ohlcv_details[tf] = {
                         "count": count,
-                        "latest_timestamp": latest.isoformat() if latest else None,
-                        "oldest_timestamp": oldest.isoformat() if oldest else None,
+                        "latest_timestamp": (
+                            latest.isoformat() if latest else None
+                        ),
+                        "oldest_timestamp": (
+                            oldest.isoformat() if oldest else None
+                        ),
                     }
 
                 # ファンディングレート詳細情報

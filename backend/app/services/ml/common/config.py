@@ -93,9 +93,13 @@ class MLConfigManager:
 
             if not self.config_file_path.parent.exists():
                 try:
-                    self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
+                    self.config_file_path.parent.mkdir(
+                        parents=True, exist_ok=True
+                    )
                 except Exception as e:
-                    logger.warning(f"設定ディレクトリの作成に失敗しました: {e}")
+                    logger.warning(
+                        f"設定ディレクトリの作成に失敗しました: {e}"
+                    )
 
             with open(self.config_file_path, "w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
@@ -110,7 +114,9 @@ class MLConfigManager:
         """ファイルから設定を読み込み、現在の設定に適用"""
         try:
             if not self.config_file_path.exists():
-                logger.warning(f"設定ファイルが存在しません: {self.config_file_path}")
+                logger.warning(
+                    f"設定ファイルが存在しません: {self.config_file_path}"
+                )
                 return False
 
             with open(self.config_file_path, "r", encoding="utf-8") as f:
@@ -118,7 +124,9 @@ class MLConfigManager:
 
             config_dict.pop("_metadata", None)
             self._apply_config_dict(config_dict)
-            logger.info(f"ML設定を読み込み適用しました: {self.config_file_path}")
+            logger.info(
+                f"ML設定を読み込み適用しました: {self.config_file_path}"
+            )
             return True
         except Exception as e:
             logger.error(f"ML設定の読み込みに失敗しました: {e}")
@@ -138,11 +146,15 @@ class MLConfigManager:
         """
         try:
             current_config = self.get_config_dict()
-            updated_config = self._merge_config_updates(current_config, config_updates)
+            updated_config = self._merge_config_updates(
+                current_config, config_updates
+            )
             self._apply_config_dict(updated_config)
 
             if self.save_config():
-                logger.info(f"ML設定を更新しました: {list(config_updates.keys())}")
+                logger.info(
+                    f"ML設定を更新しました: {list(config_updates.keys())}"
+                )
                 return True
             else:
                 logger.error("ML設定の保存に失敗しました")

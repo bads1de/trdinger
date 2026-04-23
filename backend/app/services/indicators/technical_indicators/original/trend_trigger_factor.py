@@ -5,7 +5,10 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ...data_validation import handle_pandas_ta_errors, validate_multi_series_params
+from ...data_validation import (
+    handle_pandas_ta_errors,
+    validate_multi_series_params,
+)
 
 
 @handle_pandas_ta_errors

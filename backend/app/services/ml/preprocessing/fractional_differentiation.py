@@ -25,7 +25,10 @@ class FractionalDifferentiation:
     """
 
     def __init__(
-        self, d: float = 1.0, window_size: int = 0, weight_threshold: float = 1e-4
+        self,
+        d: float = 1.0,
+        window_size: int = 0,
+        weight_threshold: float = 1e-4,
     ):
         """
         初期化

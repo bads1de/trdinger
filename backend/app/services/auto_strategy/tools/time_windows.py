@@ -32,7 +32,9 @@ def to_timezone_minutes(
     assume_timezone: str = "UTC",
 ) -> Optional[int]:
     """指定タイムゾーンでの分単位時刻を返す。"""
-    normalized = normalize_timestamp(timestamp, assume_timezone=assume_timezone)
+    normalized = normalize_timestamp(
+        timestamp, assume_timezone=assume_timezone
+    )
     if normalized is None:
         return None
     localized = normalized.tz_convert(timezone_name)
@@ -45,7 +47,9 @@ def to_utc_minutes(
     assume_timezone: str = "UTC",
 ) -> Optional[int]:
     """UTC での分単位時刻を返す。"""
-    return to_timezone_minutes(timestamp, "UTC", assume_timezone=assume_timezone)
+    return to_timezone_minutes(
+        timestamp, "UTC", assume_timezone=assume_timezone
+    )
 
 
 def is_within_window(

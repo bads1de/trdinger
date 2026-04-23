@@ -61,7 +61,9 @@ class LightGBMModel(BaseGradientBoostingModel):
         Returns:
             lgb.Dataset: LightGBM内部で使用される最適化されたデータ構造。
         """
-        return lgb.Dataset(X, label=y, weight=sample_weight, free_raw_data=False)
+        return lgb.Dataset(
+            X, label=y, weight=sample_weight, free_raw_data=False
+        )
 
     def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
         """
@@ -91,7 +93,9 @@ class LightGBMModel(BaseGradientBoostingModel):
                 if is_regression
                 else ("multiclass" if is_multi else "binary")
             ),
-            "num_class": None if is_regression else (num_classes if is_multi else None),
+            "num_class": (
+                None if is_regression else (num_classes if is_multi else None)
+            ),
             "metric": (
                 "rmse"
                 if is_regression
@@ -164,7 +168,9 @@ class LightGBMModel(BaseGradientBoostingModel):
 
         return cast(
             np.ndarray,
-            self.model.predict(X_data, num_iteration=self.model.best_iteration),
+            self.model.predict(
+                X_data, num_iteration=self.model.best_iteration
+            ),
         )
 
     def _prepare_input_for_prediction(self, X: pd.DataFrame) -> pd.DataFrame:

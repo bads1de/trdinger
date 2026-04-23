@@ -23,8 +23,12 @@ logger = logging.getLogger(__name__)
 class ThresholdMethod(Enum):
     """閾値計算方法"""
 
-    TRIPLE_BARRIER = "triple_barrier"  # Triple Barrier Method (利確/損切り/時間切れ)
-    TREND_SCANNING = "trend_scanning"  # Trend Scanning Method (t値によるトレンド判定)
+    TRIPLE_BARRIER = (
+        "triple_barrier"  # Triple Barrier Method (利確/損切り/時間切れ)
+    )
+    TREND_SCANNING = (
+        "trend_scanning"  # Trend Scanning Method (t値によるトレンド判定)
+    )
 
 
 class LabelCache:
@@ -150,7 +154,9 @@ class LabelCache:
                 t_events,
             )
         else:
-            raise NotImplementedError(f"Method {threshold_method} not supported")
+            raise NotImplementedError(
+                f"Method {threshold_method} not supported"
+            )
 
         if use_cache:
             self.cache[cache_key] = labels

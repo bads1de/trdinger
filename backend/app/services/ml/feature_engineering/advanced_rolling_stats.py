@@ -10,7 +10,9 @@ from typing import List, Optional, cast
 import numpy as np
 import pandas as pd
 
-from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
+from ...indicators.technical_indicators.advanced_features import (
+    AdvancedFeatures,
+)
 from .volatility_estimators import (
     garman_klass_volatility,
     parkinson_volatility,
@@ -36,7 +38,9 @@ class AdvancedRollingStatsCalculator:
         """Advanced Rolling Statistics特徴量を計算"""
         res = pd.DataFrame(index=df.index)
         rets = cast(pd.Series, df["close"]).pct_change()
-        log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
+        log_rets = pd.Series(
+            np.log(df["close"] / df["close"].shift(1)), index=df.index
+        )
         vol = cast(pd.Series, df["volume"])
 
         for w in self.windows:
@@ -56,7 +60,9 @@ class AdvancedRollingStatsCalculator:
                 hl_r.rolling(w).std(),
             )
             res[f"Parkinson_Vol_{w}"] = parkinson_volatility(
-                cast(pd.Series, df["high"]), cast(pd.Series, df["low"]), window=w
+                cast(pd.Series, df["high"]),
+                cast(pd.Series, df["low"]),
+                window=w,
             )
             res[f"Garman_Klass_Vol_{w}"] = garman_klass_volatility(
                 cast(pd.Series, df["open"]),
@@ -76,7 +82,9 @@ class AdvancedRollingStatsCalculator:
             # 価格位置 & テールリスク
             c_pos = (
                 cast(pd.Series, df["close"]) - cast(pd.Series, df["low"])
-            ) / (cast(pd.Series, df["high"]) - cast(pd.Series, df["low"]) + 1e-9)
+            ) / (
+                cast(pd.Series, df["high"]) - cast(pd.Series, df["low"]) + 1e-9
+            )
             res[f"Close_Position_Mean_{w}"], res[f"Close_Position_Std_{w}"] = (
                 c_pos.rolling(w).mean(),
                 c_pos.rolling(w).std(),
@@ -93,9 +101,13 @@ class AdvancedRollingStatsCalculator:
             )
 
         for w in [10, 20]:
-            res[f"Price_Volume_Corr_{w}"] = rets.rolling(w).corr(vol.pct_change())
-            res[f"Volume_Weighted_Returns_Skew_{w}"] = self._volume_weighted_skew(
-                cast(pd.Series, rets), cast(pd.Series, vol), w
+            res[f"Price_Volume_Corr_{w}"] = rets.rolling(w).corr(
+                vol.pct_change()
+            )
+            res[f"Volume_Weighted_Returns_Skew_{w}"] = (
+                self._volume_weighted_skew(
+                    cast(pd.Series, rets), cast(pd.Series, vol), w
+                )
             )
 
         # ハースト指数 (長期記憶性) - 計算コストが高いため期間固定

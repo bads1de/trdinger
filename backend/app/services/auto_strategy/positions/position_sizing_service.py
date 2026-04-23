@@ -17,7 +17,10 @@ from app.utils.error_handler import safe_operation
 from ..utils.normalization import normalize_enum_name
 from .calculators.calculator_factory import CalculatorFactory
 from .market_data_handler import MarketDataHandler
-from .risk_metrics import calculate_expected_shortfall, calculate_historical_var
+from .risk_metrics import (
+    calculate_expected_shortfall,
+    calculate_historical_var,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -89,12 +92,18 @@ class PositionSizingService:
         warnings: List[str] = []
 
         # 1. 入力値の検証
-        validation_result = self._validate_inputs(gene, account_balance, current_price)
+        validation_result = self._validate_inputs(
+            gene, account_balance, current_price
+        )
         if not validation_result["valid"]:
             method_name = "unknown"
             if gene and hasattr(gene, "method"):
-                method_name = normalize_enum_name(gene.method, default="unknown")
-            return self._create_error_result(validation_result["error"], method_name)
+                method_name = normalize_enum_name(
+                    gene.method, default="unknown"
+                )
+            return self._create_error_result(
+                validation_result["error"], method_name
+            )
 
         # 2. 市場データの準備
         enhanced_market_data = self._market_data_handler.prepare_market_data(
@@ -155,15 +164,24 @@ class PositionSizingService:
             return {"valid": False, "error": "遺伝子が指定されていません"}
 
         if account_balance <= 0:
-            return {"valid": False, "error": "口座残高は正の値である必要があります"}
+            return {
+                "valid": False,
+                "error": "口座残高は正の値である必要があります",
+            }
 
         if current_price <= 0:
-            return {"valid": False, "error": "現在価格は正の値である必要があります"}
+            return {
+                "valid": False,
+                "error": "現在価格は正の値である必要があります",
+            }
 
         # 遺伝子の妥当性チェック
         is_valid, errors = gene.validate()
         if not is_valid:
-            return {"valid": False, "error": f"遺伝子が無効です: {', '.join(errors)}"}
+            return {
+                "valid": False,
+                "error": f"遺伝子が無効です: {', '.join(errors)}",
+            }
 
         return {"valid": True}
 
@@ -179,7 +197,9 @@ class PositionSizingService:
         """リスクメトリクスの計算"""
         # 基本メトリクス
         position_value = position_size * current_price
-        position_ratio = position_value / account_balance if account_balance > 0 else 0
+        position_ratio = (
+            position_value / account_balance if account_balance > 0 else 0
+        )
 
         # ボラティリティベースのリスク
         atr_pct = market_data.get("atr_pct", 0.02)
@@ -193,7 +213,9 @@ class PositionSizingService:
         if returns_data is not None:
             try:
                 returns_list = list(returns_data)
-                lookback = max(int(getattr(gene, "var_lookback", len(returns_list))), 1)
+                lookback = max(
+                    int(getattr(gene, "var_lookback", len(returns_list))), 1
+                )
                 returns_sample = returns_list[-lookback:]
             except TypeError:
                 returns_sample = []
@@ -213,9 +235,11 @@ class PositionSizingService:
             "atr_used": atr_pct,
             "var": var_ratio,
             "var_loss": position_value * var_ratio,
-            "max_var_allowed": account_balance * getattr(gene, "max_var_ratio", 0.0),
+            "max_var_allowed": account_balance
+            * getattr(gene, "max_var_ratio", 0.0),
             "expected_shortfall": expected_shortfall_ratio,
-            "expected_shortfall_loss": position_value * expected_shortfall_ratio,
+            "expected_shortfall_loss": position_value
+            * expected_shortfall_ratio,
             "max_expected_shortfall_allowed": account_balance
             * getattr(gene, "max_expected_shortfall_ratio", 0.0),
             "return_sample_size": len(returns_sample),

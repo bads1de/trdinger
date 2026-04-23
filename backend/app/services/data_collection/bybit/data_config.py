@@ -42,7 +42,9 @@ class DataServiceConfig:
 def get_funding_rate_config() -> DataServiceConfig:
     """ファンディングレート設定を取得"""
     from app.utils.data_conversion import FundingRateDataConverter
-    from database.repositories.funding_rate_repository import FundingRateRepository
+    from database.repositories.funding_rate_repository import (
+        FundingRateRepository,
+    )
 
     return DataServiceConfig(
         repository_class=FundingRateRepository,
@@ -63,7 +65,9 @@ def get_funding_rate_config() -> DataServiceConfig:
 def get_open_interest_config() -> DataServiceConfig:
     """オープンインタレスト設定を取得"""
     from app.utils.data_conversion import OpenInterestDataConverter
-    from database.repositories.open_interest_repository import OpenInterestRepository
+    from database.repositories.open_interest_repository import (
+        OpenInterestRepository,
+    )
 
     return DataServiceConfig(
         repository_class=OpenInterestRepository,

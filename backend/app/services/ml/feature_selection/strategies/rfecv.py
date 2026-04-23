@@ -39,7 +39,9 @@ class RFECVStrategy(BaseSelectionStrategy):
             cv = TimeSeriesSplit(n_splits=config.cv_folds)
         else:
             cv = StratifiedKFold(
-                n_splits=config.cv_folds, shuffle=True, random_state=config.random_state
+                n_splits=config.cv_folds,
+                shuffle=True,
+                random_state=config.random_state,
             )
 
         min_features = config.target_k or config.min_features
@@ -62,5 +64,7 @@ class RFECVStrategy(BaseSelectionStrategy):
             "method": "rfecv",
             "n_features": int(mask.sum()),
             "ranking": rfecv.ranking_.tolist(),
-            "cv_results": rfecv.cv_results_ if hasattr(rfecv, "cv_results_") else None,
+            "cv_results": (
+                rfecv.cv_results_ if hasattr(rfecv, "cv_results_") else None
+            ),
         }

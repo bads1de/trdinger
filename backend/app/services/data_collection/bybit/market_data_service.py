@@ -97,7 +97,9 @@ class BybitMarketDataService(BybitService):
             保存された件数
         """
         # OHLCVデータを辞書形式に変換
-        records = OHLCVDataConverter.ccxt_to_db_format(ohlcv_data, symbol, timeframe)
+        records = OHLCVDataConverter.ccxt_to_db_format(
+            ohlcv_data, symbol, timeframe
+        )
 
         # データベースに挿入
         return repository.insert_ohlcv_data(records)
@@ -137,7 +139,9 @@ class BybitMarketDataService(BybitService):
 
         for i, candle in enumerate(data):
             if not isinstance(candle, list) or len(candle) != 6:
-                raise ValueError(f"ローソク足データ[{i}]の形式が無効です: {candle}")
+                raise ValueError(
+                    f"ローソク足データ[{i}]の形式が無効です: {candle}"
+                )
 
             _timestamp, open_price, high, low, close, volume = candle
 
@@ -149,7 +153,9 @@ class BybitMarketDataService(BybitService):
 
             # 価格関係の検証
             if high < max(open_price, close) or low > min(open_price, close):
-                raise ValueError(f"ローソク足データ[{i}]の価格関係が無効です: {candle}")
+                raise ValueError(
+                    f"ローソク足データ[{i}]の価格関係が無効です: {candle}"
+                )
 
             if high < low:
                 raise ValueError(

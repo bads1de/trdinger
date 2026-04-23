@@ -26,7 +26,10 @@ def _njit_cyber_cycle_loop(
     # Smooth = (price + 2*price[1] + 2*price[2] + price[3]) / 6
     for i in range(3, n):
         smooth[i] = (
-            prices[i] + 2.0 * prices[i - 1] + 2.0 * prices[i - 2] + prices[i - 3]
+            prices[i]
+            + 2.0 * prices[i - 1]
+            + 2.0 * prices[i - 2]
+            + prices[i - 3]
         ) / 6.0
 
     # Cyber Cycle = (1 - 0.5*alpha)^2 * (smooth - 2*smooth[1] + smooth[2])

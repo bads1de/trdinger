@@ -15,7 +15,9 @@ from app.services.data_collection.bybit.long_short_ratio_service import (
     BybitLongShortRatioService,
 )
 from app.utils.datetime_utils import parse_datetime_optional
-from database.repositories.long_short_ratio_repository import LongShortRatioRepository
+from database.repositories.long_short_ratio_repository import (
+    LongShortRatioRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,9 @@ async def get_long_short_ratio_data(
     limit: int = Query(100, ge=1, le=1000, description="取得件数"),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
-    repository: LongShortRatioRepository = Depends(get_long_short_ratio_repository),
+    repository: LongShortRatioRepository = Depends(
+        get_long_short_ratio_repository
+    ),
 ):
     """
     ロング/ショート比率データを取得
@@ -83,10 +87,16 @@ async def collect_long_short_ratio_data(
     symbol: str = Query(..., description="取引ペア（例: BTC/USDT:USDT）"),
     period: str = Query(..., description="期間（例: 5min, 1h, 1d）"),
     mode: str = Query(
-        "incremental", enum=["incremental", "historical"], description="収集モード"
+        "incremental",
+        enum=["incremental", "historical"],
+        description="収集モード",
     ),
-    service: BybitLongShortRatioService = Depends(get_long_short_ratio_service),
-    repository: LongShortRatioRepository = Depends(get_long_short_ratio_repository),
+    service: BybitLongShortRatioService = Depends(
+        get_long_short_ratio_service
+    ),
+    repository: LongShortRatioRepository = Depends(
+        get_long_short_ratio_repository
+    ),
 ):
     """
     ロング/ショート比率データの収集を実行（バックグラウンド）

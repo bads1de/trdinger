@@ -30,7 +30,12 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
     """
     try:
         components = [
-            (gene1.indicators, gene2.indicators, calculate_indicator_similarity, INDICATOR_WEIGHT),
+            (
+                gene1.indicators,
+                gene2.indicators,
+                calculate_indicator_similarity,
+                INDICATOR_WEIGHT,
+            ),
             (
                 gene1.long_entry_conditions,
                 gene2.long_entry_conditions,
@@ -49,7 +54,12 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
                 calculate_risk_management_similarity,
                 RISK_MANAGEMENT_WEIGHT,
             ),
-            (gene1.tpsl_gene, gene2.tpsl_gene, calculate_tpsl_similarity, TPSL_WEIGHT),
+            (
+                gene1.tpsl_gene,
+                gene2.tpsl_gene,
+                calculate_tpsl_similarity,
+                TPSL_WEIGHT,
+            ),
             (
                 gene1.position_sizing_gene,
                 gene2.position_sizing_gene,
@@ -144,7 +154,9 @@ def calculate_risk_management_similarity(
                 score += 1.0
             else:
                 max_v = max(abs(v1), abs(v2))
-                score += max(0.0, 1.0 - abs(v1 - v2) / max_v) if max_v > 0 else 1.0
+                score += (
+                    max(0.0, 1.0 - abs(v1 - v2) / max_v) if max_v > 0 else 1.0
+                )
         elif v1 == v2:
             score += 1.0
 
@@ -162,7 +174,9 @@ def calculate_tpsl_similarity(tpsl1: Any, tpsl2: Any) -> float:
         v1, v2 = getattr(tpsl1, attr, None), getattr(tpsl2, attr, None)
         if v1 is not None and v2 is not None:
             diff = abs(v1 - v2)
-            score += max(0.0, TPSL_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON)))
+            score += max(
+                0.0, TPSL_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON))
+            )
     return min(1.0, score)
 
 
@@ -173,8 +187,14 @@ def calculate_position_sizing_similarity(ps1: Any, ps2: Any) -> float:
         return res
 
     score = METHOD_MATCH_SCORE if ps1.method == ps2.method else 0.0
-    v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(ps2, "risk_per_trade", None)
+    v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(
+        ps2, "risk_per_trade", None
+    )
     if v1 is not None and v2 is not None:
         diff = abs(v1 - v2)
-        score += max(0.0, POSITION_SIZING_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON)))
+        score += max(
+            0.0,
+            POSITION_SIZING_ATTRIBUTE_WEIGHT
+            * (1 - diff / max(v1, v2, EPSILON)),
+        )
     return min(1.0, score)

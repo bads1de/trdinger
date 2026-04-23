@@ -58,8 +58,13 @@ class CollectionStatusChecker:
             # デフォルトのバリデーション（テスト用）
             from app.config.unified_config import unified_config
 
-            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
-            if normalized_symbol not in unified_config.market.supported_symbols:
+            normalized_symbol = unified_config.market.symbol_mapping.get(
+                symbol, symbol
+            )
+            if (
+                normalized_symbol
+                not in unified_config.market.supported_symbols
+            ):
                 raise ValueError(f"サポートされていないシンボル: {symbol}")
             if timeframe not in unified_config.market.supported_timeframes:
                 raise ValueError(f"無効な時間軸: {timeframe}")
@@ -80,7 +85,9 @@ class CollectionStatusChecker:
                     db,
                     data_validator=data_validator,
                 )
-                logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
+                logger.info(
+                    f"自動フェッチを開始: {normalized_symbol} {timeframe}"
+                )
 
                 return api_response(
                     success=True,
@@ -114,11 +121,17 @@ class CollectionStatusChecker:
         # 最新・最古タイムスタンプを取得
         latest_timestamp = repository.get_latest_timestamp(
             timestamp_column="timestamp",
-            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe},
+            filter_conditions={
+                "symbol": normalized_symbol,
+                "timeframe": timeframe,
+            },
         )
         oldest_timestamp = repository.get_oldest_timestamp(
             timestamp_column="timestamp",
-            filter_conditions={"symbol": normalized_symbol, "timeframe": timeframe},
+            filter_conditions={
+                "symbol": normalized_symbol,
+                "timeframe": timeframe,
+            },
         )
 
         return api_response(

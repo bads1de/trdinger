@@ -29,7 +29,9 @@ def _clamp_confidence(confidence: float) -> float:
     return float(min(max(confidence, 0.0), 0.999))
 
 
-def calculate_historical_var(returns: Iterable[float], confidence: float) -> float:
+def calculate_historical_var(
+    returns: Iterable[float], confidence: float
+) -> float:
     """ヒストリカルVaR（損失率）を計算"""
     prepared = _prepare_returns(returns)
     if prepared.size == 0:
@@ -39,7 +41,9 @@ def calculate_historical_var(returns: Iterable[float], confidence: float) -> flo
     return float(abs(min(quantile, 0.0)))
 
 
-def calculate_expected_shortfall(returns: Iterable[float], confidence: float) -> float:
+def calculate_expected_shortfall(
+    returns: Iterable[float], confidence: float
+) -> float:
     """ヒストリカルES（条件付平均損失率）を計算"""
     prepared = _prepare_returns(returns)
     if prepared.size == 0:

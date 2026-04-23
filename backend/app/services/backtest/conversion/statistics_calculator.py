@@ -61,16 +61,23 @@ class BacktestStatisticsCalculator:
                     message="divide by zero encountered",
                 )
 
-                actual_stats = resolve_stats_object(stats, warning_logger=logger)
+                actual_stats = resolve_stats_object(
+                    stats, warning_logger=logger
+                )
                 statistics: Dict[str, Any] = {}
 
                 if isinstance(actual_stats, pd.Series) or (
-                    hasattr(actual_stats, "keys") and hasattr(actual_stats, "get")
+                    hasattr(actual_stats, "keys")
+                    and hasattr(actual_stats, "get")
                 ):
                     statistics = self._extract_metrics(actual_stats)
 
-                statistics = self._enrich_metrics_from_trades(statistics, actual_stats)
-                statistics = self._enrich_metrics_from_equity(statistics, actual_stats)
+                statistics = self._enrich_metrics_from_trades(
+                    statistics, actual_stats
+                )
+                statistics = self._enrich_metrics_from_equity(
+                    statistics, actual_stats
+                )
                 statistics = self._validate_and_fill_defaults(statistics)
 
                 return statistics
@@ -81,7 +88,9 @@ class BacktestStatisticsCalculator:
     def _extract_metrics(self, stats: Any) -> Dict[str, Any]:
         """Series/Dict 共通の統計指標を抽出"""
         statistics = self._extract_common_metrics(stats.get)
-        statistics["total_trades"] = self._safe_int_conversion(stats.get("# Trades", 0))
+        statistics["total_trades"] = self._safe_int_conversion(
+            stats.get("# Trades", 0)
+        )
         statistics["avg_win"] = 0.0
         statistics["avg_loss"] = 0.0
         return statistics
@@ -203,7 +212,9 @@ class BacktestStatisticsCalculator:
         losing_pnl = float(pnl_series[losses_mask].sum())
 
         calculated_win_rate = (
-            float(win_count) / float(total_trades) * 100.0 if total_trades > 0 else 0.0
+            float(win_count) / float(total_trades) * 100.0
+            if total_trades > 0
+            else 0.0
         )
 
         if losing_pnl < 0:
@@ -215,8 +226,12 @@ class BacktestStatisticsCalculator:
 
         statistics["win_rate"] = calculated_win_rate
         statistics["profit_factor"] = calculated_profit_factor
-        statistics["avg_win"] = winning_pnl / win_count if win_count > 0 else 0.0
-        statistics["avg_loss"] = abs(losing_pnl) / loss_count if loss_count > 0 else 0.0
+        statistics["avg_win"] = (
+            winning_pnl / win_count if win_count > 0 else 0.0
+        )
+        statistics["avg_loss"] = (
+            abs(losing_pnl) / loss_count if loss_count > 0 else 0.0
+        )
 
     def _enrich_metrics_from_equity(
         self, statistics: Dict[str, Any], stats: Any
@@ -238,7 +253,9 @@ class BacktestStatisticsCalculator:
                         and first_equity > 0
                     ):
                         computed_return = float(
-                            (last_equity - first_equity) / float(first_equity) * 100.0
+                            (last_equity - first_equity)
+                            / float(first_equity)
+                            * 100.0
                         )
                         statistics["total_return"] = computed_return
                         statistics["final_equity"] = float(last_equity)
@@ -264,7 +281,9 @@ class BacktestStatisticsCalculator:
             logger.warning(f"エクイティ値の取得失敗 (index={index}): {e}")
             return None
 
-    def _validate_and_fill_defaults(self, statistics: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_and_fill_defaults(
+        self, statistics: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """整合性チェックとデフォルト値設定"""
         final_total_trades = statistics.get("total_trades", 0)
         final_total_return = statistics.get("total_return", 0)

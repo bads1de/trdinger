@@ -7,7 +7,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Mapping, Optional
 
-from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
+from app.services.auto_strategy.config.ga.nested_configs import (
+    EarlyTerminationSettings,
+)
 from app.services.auto_strategy.config.helpers import (
     normalize_ml_gate_fields,
 )
@@ -36,12 +38,16 @@ class RunConfigBuilder:
                 "strategy_gene": gene,
             }
             strategy_parameters.update(normalize_ml_gate_fields(config))
-            if not isinstance(early_termination_settings, EarlyTerminationSettings):
-                early_termination_settings = EarlyTerminationSettings.from_source(
-                    early_termination_settings
+            if not isinstance(
+                early_termination_settings, EarlyTerminationSettings
+            ):
+                early_termination_settings = (
+                    EarlyTerminationSettings.from_source(
+                        early_termination_settings
+                    )
                 )
-            strategy_parameters["early_termination_settings"] = dataclass_to_dict(
-                early_termination_settings
+            strategy_parameters["early_termination_settings"] = (
+                dataclass_to_dict(early_termination_settings)
             )
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:
@@ -61,9 +67,10 @@ class RunConfigBuilder:
         except Exception as e:
             logger.error(f"バックテスト設定生成エラー: {e}")
             # 例外をファイルに書き出す
-            with open('build_run_config_error.txt', 'a') as f:
+            with open("build_run_config_error.txt", "a") as f:
                 f.write(f"Error in build_run_config: {e}\n")
                 import traceback
+
                 f.write(traceback.format_exc())
             return None
 
@@ -75,4 +82,6 @@ class RunConfigBuilder:
     ) -> None:
         """実行設定へ外部オブジェクトを注入する。"""
         if minute_data is not None:
-            run_config["strategy_config"]["parameters"]["minute_data"] = minute_data
+            run_config["strategy_config"]["parameters"][
+                "minute_data"
+            ] = minute_data

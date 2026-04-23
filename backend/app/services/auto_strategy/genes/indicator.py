@@ -94,7 +94,9 @@ class IndicatorGene:
 
 
 @safe_operation(
-    default_return=IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True),
+    default_return=IndicatorGene(
+        type="SMA", parameters={"period": 20}, enabled=True
+    ),
     context="指標遺伝子作成",
 )
 def create_random_indicator_gene(
@@ -112,7 +114,9 @@ def create_random_indicator_gene(
         指標遺伝子オブジェクト
     """
     # パラメータ生成
-    preset = getattr(config, "parameter_range_preset", None) if config else None
+    preset = (
+        getattr(config, "parameter_range_preset", None) if config else None
+    )
     parameters = indicator_registry.generate_parameters_for_indicator(
         indicator_type, preset=preset
     )
@@ -146,10 +150,14 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
     available_indicators = list(get_indicator_universe_names(config))
 
     if not available_indicators:
-        return [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
+        return [
+            IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+        ]
 
     # 指標の個数を決定
-    num_indicators = random.randint(config.min_indicators, config.max_indicators)
+    num_indicators = random.randint(
+        config.min_indicators, config.max_indicators
+    )
     indicators = []
 
     # トレンド系指標を優先するためのリスト作成
@@ -169,7 +177,9 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
     from app.config.constants import SUPPORTED_TIMEFRAMES
 
     available_timeframes = config.available_timeframes or SUPPORTED_TIMEFRAMES
-    indicator_universe_mode = getattr(config, "indicator_universe_mode", "curated")
+    indicator_universe_mode = getattr(
+        config, "indicator_universe_mode", "curated"
+    )
     allowed_indicators = set(available_indicators)
 
     from .validator import GeneValidator
@@ -185,16 +195,23 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
 
     # 各指標を生成
     attempts = 0
-    max_attempts = max(10, num_indicators * INDICATOR_GENERATION_MAX_ATTEMPTS_MULTIPLIER)
+    max_attempts = max(
+        10, num_indicators * INDICATOR_GENERATION_MAX_ATTEMPTS_MULTIPLIER
+    )
     while len(indicators) < num_indicators and attempts < max_attempts:
         # トレンド系指標を選択する確率
-        if trend_indicators and random.random() < TREND_INDICATOR_SELECTION_PROBABILITY:
+        if (
+            trend_indicators
+            and random.random() < TREND_INDICATOR_SELECTION_PROBABILITY
+        ):
             indicator_type = random.choice(trend_indicators)
         else:
             indicator_type = random.choice(available_indicators)
 
         timeframe = get_random_timeframe()
-        indicator_gene = create_random_indicator_gene(indicator_type, config, timeframe)
+        indicator_gene = create_random_indicator_gene(
+            indicator_type, config, timeframe
+        )
         if validator.validate_indicator_gene_for_generation(
             indicator_gene,
             indicator_universe_mode=indicator_universe_mode,
@@ -209,7 +226,9 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
         )
 
     # 指標構成の底上げ（MAクロス戦略など）
-    indicators = _enhance_with_ma_cross(indicators, available_indicators, config)
+    indicators = _enhance_with_ma_cross(
+        indicators, available_indicators, config
+    )
 
     return indicators
 
@@ -232,9 +251,14 @@ def _enhance_with_ma_cross(
     Returns:
         補完・調整後の指標リスト
     """
-    from ..config.constants import MOVING_AVERAGE_INDICATORS, PREFERRED_MA_INDICATORS
+    from ..config.constants import (
+        MOVING_AVERAGE_INDICATORS,
+        PREFERRED_MA_INDICATORS,
+    )
 
-    ma_count = sum(1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS)
+    ma_count = sum(
+        1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS
+    )
     if ma_count < 2 and random.random() < MA_CROSS_ENHANCEMENT_PROBABILITY:
         ma_pool = [n for n in available if n in MOVING_AVERAGE_INDICATORS]
         if ma_pool:
@@ -253,7 +277,9 @@ def _enhance_with_ma_cross(
 
             indicators.append(
                 IndicatorGene(
-                    type=chosen, parameters={"period": period}, id=str(uuid.uuid4())
+                    type=chosen,
+                    parameters={"period": period},
+                    id=str(uuid.uuid4()),
                 )
             )
             if len(indicators) > getattr(config, "max_indicators", 5):

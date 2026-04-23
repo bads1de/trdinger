@@ -59,4 +59,9 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
             current_price, sl_pct, tp_pct, position_direction
         )
 
-        return sl_pct, tp_pct, 0.95, {"sl_price": sl_price, "tp_price": tp_price}
+        return (
+            sl_pct,
+            tp_pct,
+            0.95,
+            {"sl_price": sl_price, "tp_price": tp_price},
+        )

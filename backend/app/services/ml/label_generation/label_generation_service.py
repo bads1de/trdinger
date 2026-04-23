@@ -83,13 +83,19 @@ class LabelGenerationService:
                 )
 
             # ラベル生成
-            timeframe = training_params.get("timeframe", label_config.timeframe)
+            timeframe = training_params.get(
+                "timeframe", label_config.timeframe
+            )
             labels = label_cache.get_labels(
-                horizon_n=training_params.get("horizon_n", label_config.horizon_n),
+                horizon_n=training_params.get(
+                    "horizon_n", label_config.horizon_n
+                ),
                 threshold_method=training_params.get(
                     "threshold_method", label_config.threshold_method
                 ),
-                threshold=training_params.get("threshold", label_config.threshold),
+                threshold=training_params.get(
+                    "threshold", label_config.threshold
+                ),
                 timeframe=timeframe,
                 price_column=label_config.price_column,
                 pt_factor=training_params.get("pt_factor", 1.0),
@@ -144,7 +150,9 @@ class LabelGenerationService:
 
             logger.info("🔍 CUSUMフィルターでイベントを検出します。")
             cusum_gen = CusumSignalGenerator()
-            volatility = cusum_gen.get_daily_volatility(cast(pd.Series, ohlcv_df["close"]))
+            volatility = cusum_gen.get_daily_volatility(
+                cast(pd.Series, ohlcv_df["close"])
+            )
             return cusum_gen.get_events(
                 df=ohlcv_df,
                 threshold=cusum_threshold,

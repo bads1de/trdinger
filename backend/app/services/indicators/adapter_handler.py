@@ -78,7 +78,11 @@ class AdapterHandler:
         all_args = {**required_data, **converted_params}
 
         return cast(
-            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            np.ndarray
+            | tuple[np.ndarray, ...]
+            | pd.DataFrame
+            | pd.Series
+            | None,
             self._call_adapter_function(
                 adapter_function, all_args, indicator_type, config
             ),
@@ -108,7 +112,9 @@ class AdapterHandler:
             for key in config.required_data:
                 key_lower = key.lower()
                 if key_lower in standard_keys:
-                    col_name = self.validator.resolve_column_name(df, key_lower)
+                    col_name = self.validator.resolve_column_name(
+                        df, key_lower
+                    )
                     if col_name:
                         required_data[key_lower] = df[col_name]
                 elif key_lower in ["data", "df", "ohlcv"]:
@@ -204,7 +210,11 @@ class AdapterHandler:
         )
 
         result = cast(
-            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            np.ndarray
+            | tuple[np.ndarray, ...]
+            | pd.DataFrame
+            | pd.Series
+            | None,
             self._execute_adapter_function(
                 adapter_function, assigned_params, indicator_type, all_args
             ),
@@ -212,18 +222,28 @@ class AdapterHandler:
 
         if result is None:
             input_ref = all_args.get("data", all_args.get("close"))
-            fallback_input = input_ref if input_ref is not None else pd.DataFrame()
+            fallback_input = (
+                input_ref if input_ref is not None else pd.DataFrame()
+            )
             return self.validator.create_nan_result(
                 fallback_input, {"function": indicator_type}
             )
 
         result = cast(
-            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            np.ndarray
+            | tuple[np.ndarray, ...]
+            | pd.DataFrame
+            | pd.Series
+            | None,
             self._align_adapter_result(result, reference_index),
         )
 
         return cast(
-            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            np.ndarray
+            | tuple[np.ndarray, ...]
+            | pd.DataFrame
+            | pd.Series
+            | None,
             self._convert_adapter_result(result, config),
         )
 
@@ -323,7 +343,7 @@ class AdapterHandler:
             Any: 実行結果（失敗時はNone）
         """
         sig = inspect.signature(cast(Callable[..., Any], adapter_function))
-        
+
         # 期間パラメータのバリデーション
         period_params = ["length", "period", "window", "n"]
         max_period = None
@@ -337,21 +357,21 @@ class AdapterHandler:
                         break
                 except (ValueError, TypeError):
                     pass
-        
+
         # データ長の確認
         data_length = None
         for val in assigned_params.values():
             if isinstance(val, (pd.Series, pd.DataFrame)):
                 data_length = len(val)
                 break
-        
+
         # 期間がデータ長を超えている場合はNoneを返す
         if max_period and data_length and max_period >= data_length:
             logger.warning(
                 f"{indicator_type}: 期間({max_period})がデータ長({data_length})以上のため計算をスキップします"
             )
             return None
-        
+
         try:
             valid_params = {
                 k: v for k, v in assigned_params.items() if k in sig.parameters
@@ -387,7 +407,11 @@ class AdapterHandler:
         """
         if reference_index is None:
             return cast(
-                np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+                np.ndarray
+                | tuple[np.ndarray, ...]
+                | pd.DataFrame
+                | pd.Series
+                | None,
                 result,
             )
 
@@ -410,7 +434,11 @@ class AdapterHandler:
             )
 
         return cast(
-            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
+            np.ndarray
+            | tuple[np.ndarray, ...]
+            | pd.DataFrame
+            | pd.Series
+            | None,
             result,
         )
 

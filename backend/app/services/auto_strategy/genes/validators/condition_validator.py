@@ -41,7 +41,9 @@ class ConditionValidator:
         if condition.operator not in self.valid_operators:
             return False, f"無効な演算子: {condition.operator}"
 
-        left_valid, left_error = self._is_valid_operand_detailed(condition.left_operand)
+        left_valid, left_error = self._is_valid_operand_detailed(
+            condition.left_operand
+        )
         if not left_valid:
             return False, f"無効な左オペランド: {left_error}"
 
@@ -58,7 +60,9 @@ class ConditionValidator:
         return True, ""
 
     @safe_operation(
-        context="オペランド検証", is_api_call=False, default_return=(False, "エラー")
+        context="オペランド検証",
+        is_api_call=False,
+        default_return=(False, "エラー"),
     )
     def _is_valid_operand_detailed(self, operand: object) -> Tuple[bool, str]:
         """オペランドの妥当性を詳細に検証"""
@@ -78,7 +82,9 @@ class ConditionValidator:
                 return True, ""
             except ValueError:
                 # データソースは大文字小文字を区別せずチェック
-                if val.lower() in [ds.lower() for ds in self.valid_data_sources]:
+                if val.lower() in [
+                    ds.lower() for ds in self.valid_data_sources
+                ]:
                     return True, ""
                 if self._is_indicator_name(val):
                     return True, ""
@@ -159,7 +165,9 @@ class ConditionValidator:
 
         return False
 
-    @safe_operation(context="条件クリーニング", is_api_call=False, default_return=False)
+    @safe_operation(
+        context="条件クリーニング", is_api_call=False, default_return=False
+    )
     def clean_condition(self, condition) -> bool:
         """条件をクリーニングして修正可能な問題を自動修正"""
         from ..conditions import ConditionGroup
@@ -199,7 +207,9 @@ class ConditionValidator:
 
         return True
 
-    @safe_operation(context="辞書オペランド抽出", is_api_call=False, default_return="")
+    @safe_operation(
+        context="辞書オペランド抽出", is_api_call=False, default_return=""
+    )
     def _extract_operand_from_dict(self, operand_dict: dict) -> str:
         """辞書形式のオペランドから文字列を抽出"""
         if operand_dict.get("type") == "indicator":

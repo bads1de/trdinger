@@ -138,12 +138,18 @@ def adjust_backtest_config_for_fidelity(
         return adjusted
 
     coarse_start = end_ts - coarse_duration
-    adjusted["start_date"] = _format_timestamp_like_input(cast(Optional[pd.Timestamp], coarse_start), start_date)
-    adjusted["end_date"] = _format_timestamp_like_input(cast(Optional[pd.Timestamp], end_ts), end_date)
+    adjusted["start_date"] = _format_timestamp_like_input(
+        cast(Optional[pd.Timestamp], coarse_start), start_date
+    )
+    adjusted["end_date"] = _format_timestamp_like_input(
+        cast(Optional[pd.Timestamp], end_ts), end_date
+    )
     return adjusted
 
 
-def get_multi_fidelity_candidate_limit(population_size: int, config: object) -> int:
+def get_multi_fidelity_candidate_limit(
+    population_size: int, config: object
+) -> int:
     """フル評価へ昇格する候補数を返す。"""
     if population_size <= 0:
         return 0
@@ -153,7 +159,8 @@ def get_multi_fidelity_candidate_limit(population_size: int, config: object) -> 
         return 0
 
     ratio = _coerce_float(
-        getattr(evaluation_config, "multi_fidelity_candidate_ratio", 0.25), 0.25
+        getattr(evaluation_config, "multi_fidelity_candidate_ratio", 0.25),
+        0.25,
     )
     try:
         min_candidates = int(
@@ -161,10 +168,15 @@ def get_multi_fidelity_candidate_limit(population_size: int, config: object) -> 
         )
     except (TypeError, ValueError):
         min_candidates = 3
-    return min(population_size, max(min_candidates, int(ceil(population_size * ratio))))
+    return min(
+        population_size,
+        max(min_candidates, int(ceil(population_size * ratio))),
+    )
 
 
-def _format_timestamp_like_input(value: Optional[pd.Timestamp], source: object) -> str:
+def _format_timestamp_like_input(
+    value: Optional[pd.Timestamp], source: object
+) -> str:
     """入力形式に寄せて日時を書き戻す。"""
     if value is None:
         return ""

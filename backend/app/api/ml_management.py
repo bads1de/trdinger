@@ -261,7 +261,9 @@ async def reset_ml_config(
 
 
 @router.post("/models/cleanup")
-@ErrorHandler.api_endpoint("古いモデルのクリーンアップ中にエラーが発生しました")
+@ErrorHandler.api_endpoint(
+    "古いモデルのクリーンアップ中にエラーが発生しました"
+)
 async def cleanup_old_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service

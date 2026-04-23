@@ -23,7 +23,10 @@ class PostProcessor:
     """
 
     def post_process(
-        self, result: Any, config: Dict[str, Any], df: Optional[pd.DataFrame] = None
+        self,
+        result: Any,
+        config: Dict[str, Any],
+        df: Optional[pd.DataFrame] = None,
     ) -> Union[np.ndarray, tuple]:
         """
         後処理 - 戻り値の統一
@@ -149,9 +152,13 @@ class PostProcessor:
                         if col in c or col.lower() in c.lower()
                     ]
                     if matching_cols:
-                        selected_cols.append(result[matching_cols[0]].to_numpy())
+                        selected_cols.append(
+                            result[matching_cols[0]].to_numpy()
+                        )
                     else:
                         selected_cols.append(np.full(len(result), np.nan))
             return tuple(selected_cols)
         else:
-            return tuple(result.iloc[:, i].to_numpy() for i in range(result.shape[1]))
+            return tuple(
+                result.iloc[:, i].to_numpy() for i in range(result.shape[1])
+            )

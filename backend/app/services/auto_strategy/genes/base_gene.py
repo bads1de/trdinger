@@ -108,7 +108,9 @@ class BaseGene(ABC):
             try:
                 return param_type(value)
             except ValueError:
-                logger.warning(f"無効なEnum値 {value} を無視、既定値へフォールバック")
+                logger.warning(
+                    f"無効なEnum値 {value} を無視、既定値へフォールバック"
+                )
                 return BaseGene._SKIP_FIELD_CONVERSION
         return value
 
@@ -130,12 +132,16 @@ class BaseGene(ABC):
             try:
                 return datetime.fromisoformat(value)
             except ValueError:
-                logger.warning(f"無効なdatetime値 {value} を無視、デフォルト値を設定")
+                logger.warning(
+                    f"無効なdatetime値 {value} を無視、デフォルト値を設定"
+                )
                 return datetime.now()  # デフォルトとして現在時刻
         return value
 
     @staticmethod
-    def _convert_value(value: object, param_type: type) -> SerializableValue | object:
+    def _convert_value(
+        value: object, param_type: type
+    ) -> SerializableValue | object:
         """一般的な値変換"""
         if BaseGene._is_enum_type(param_type):
             return BaseGene._convert_enum_value(value, param_type)
@@ -160,7 +166,9 @@ class BaseGene(ABC):
                     combined_globalns.update(vars(base_module))
                 except Exception as e:
                     logger.debug(
-                        "モジュール変数の更新に失敗しました (%s): %s", base.__name__, e
+                        "モジュール変数の更新に失敗しました (%s): %s",
+                        base.__name__,
+                        e,
                     )
 
         localns: dict[str, object] = {}
@@ -177,11 +185,15 @@ class BaseGene(ABC):
 
             try:
                 annotations.update(
-                    get_type_hints(base, globalns=combined_globalns, localns=localns)
+                    get_type_hints(
+                        base, globalns=combined_globalns, localns=localns
+                    )
                 )
             except Exception as e:
                 # Try per-annotation to salvage what we can
-                logger.debug("型ヒントの取得に失敗しました (%s): %s", base.__name__, e)
+                logger.debug(
+                    "型ヒントの取得に失敗しました (%s): %s", base.__name__, e
+                )
                 for name, raw in raw_annotations.items():
                     if name in annotations:
                         continue
@@ -194,7 +206,9 @@ class BaseGene(ABC):
                         annotations[name] = resolved[name]
                     except Exception as e:
                         logger.debug(
-                            "個別アノテーションの解決に失敗しました (%s): %s", name, e
+                            "個別アノテーションの解決に失敗しました (%s): %s",
+                            name,
+                            e,
                         )
                         annotations[name] = raw  # type: ignore[assignment]
 

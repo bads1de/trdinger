@@ -48,7 +48,9 @@ class HybridFeatureAdapter:
         wavelet_config: Optional[Dict[str, Any]] = None,
         use_derived_features: bool = True,
         preprocess_handler: Optional[
-            Callable[[pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]]
+            Callable[
+                [pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]
+            ]
         ] = None,
     ):
         """
@@ -68,11 +70,17 @@ class HybridFeatureAdapter:
             wavelet_config, use_derived_features
         )
 
-        if isinstance(wavelet_config, dict) and wavelet_config.get("enabled", False):
+        if isinstance(wavelet_config, dict) and wavelet_config.get(
+            "enabled", False
+        ):
             try:
-                self._wavelet_transformer = WaveletFeatureTransformer(wavelet_config)
+                self._wavelet_transformer = WaveletFeatureTransformer(
+                    wavelet_config
+                )
             except Exception as exc:
-                logger.warning("WaveletFeatureTransformer初期化に失敗しました: %s", exc)
+                logger.warning(
+                    "WaveletFeatureTransformer初期化に失敗しました: %s", exc
+                )
                 self._wavelet_transformer = None
 
     def _compute_config_hash(self, wavelet_config, use_derived):
@@ -90,7 +98,9 @@ class HybridFeatureAdapter:
             logger.debug(f"DataFrameのハッシュ生成に失敗しました: {e}")
             return None
 
-    def _get_cached_derived_features(self, df: pd.DataFrame) -> Optional[pd.DataFrame]:
+    def _get_cached_derived_features(
+        self, df: pd.DataFrame
+    ) -> Optional[pd.DataFrame]:
         """キャッシュされた派生特徴量を取得"""
         data_hash = self._get_dataframe_hash(df)
         if data_hash is None:
@@ -102,7 +112,9 @@ class HybridFeatureAdapter:
             return None
         return cached.copy(deep=True)
 
-    def _cache_derived_features(self, df: pd.DataFrame, features: pd.DataFrame):
+    def _cache_derived_features(
+        self, df: pd.DataFrame, features: pd.DataFrame
+    ):
         """派生特徴量をキャッシュに保存"""
         data_hash = self._get_dataframe_hash(df)
         if data_hash is None:
@@ -117,7 +129,9 @@ class HybridFeatureAdapter:
         sanitized = sanitize_numeric_dataframe(
             features_df, fill_value=None, forward_fill=True
         )
-        return sanitized.ffill().fillna(HybridFeatureAdapter.DEFAULT_FILL_VALUE)
+        return sanitized.ffill().fillna(
+            HybridFeatureAdapter.DEFAULT_FILL_VALUE
+        )
 
     def gene_to_features(
         self,
@@ -195,7 +209,9 @@ class HybridFeatureAdapter:
             # FR変化
             if "funding_rate" in features_df.columns:
                 features_df["funding_rate_change"] = (
-                    features_df["funding_rate"].diff().fillna(self.DEFAULT_FILL_VALUE)
+                    features_df["funding_rate"]
+                    .diff()
+                    .fillna(self.DEFAULT_FILL_VALUE)
                 )
             else:
                 features_df["funding_rate_change"] = self.DEFAULT_FILL_VALUE
@@ -220,7 +236,9 @@ class HybridFeatureAdapter:
                 temp_df = ohlcv_data.copy()
 
                 if self._wavelet_transformer:
-                    temp_df = self._wavelet_transformer.append_features(temp_df)
+                    temp_df = self._wavelet_transformer.append_features(
+                        temp_df
+                    )
 
                 if self._use_derived_features:
                     temp_df = self._augment_with_derived_features(temp_df)
@@ -234,7 +252,9 @@ class HybridFeatureAdapter:
 
             # 派生特徴量を結合
             if not derived_features.empty:
-                features_df = pd.concat([features_df, derived_features], axis=1)
+                features_df = pd.concat(
+                    [features_df, derived_features], axis=1
+                )
 
             # 5. 前処理
             features_df = (
@@ -264,7 +284,9 @@ class HybridFeatureAdapter:
         short_c = len(gene.short_entry_conditions or [])
 
         periods = [
-            i.parameters.get("period") for i in enabled_inds if "period" in i.parameters
+            i.parameters.get("period")
+            for i in enabled_inds
+            if "period" in i.parameters
         ]
         # None を除外して数値のみにする
         numeric_periods = [p for p in periods if isinstance(p, (int, float))]
@@ -274,7 +296,9 @@ class HybridFeatureAdapter:
             "condition_count": long_c + short_c,
             "long_condition_count": long_c,
             "short_condition_count": short_c,
-            "has_long_short_separation": int(bool(gene.has_long_short_separation())),
+            "has_long_short_separation": int(
+                bool(gene.has_long_short_separation())
+            ),
             "avg_indicator_period": (
                 np.mean(numeric_periods) if numeric_periods else 0.0
             ),
@@ -292,10 +316,18 @@ class HybridFeatureAdapter:
             {
                 "has_tpsl": int(bool(tpsl and tpsl.enabled)),
                 "take_profit_ratio": (
-                    getattr(tpsl, "take_profit_pct", self.DEFAULT_TAKE_PROFIT_RATIO) if tpsl else self.DEFAULT_TAKE_PROFIT_RATIO
+                    getattr(
+                        tpsl, "take_profit_pct", self.DEFAULT_TAKE_PROFIT_RATIO
+                    )
+                    if tpsl
+                    else self.DEFAULT_TAKE_PROFIT_RATIO
                 ),
                 "stop_loss_ratio": (
-                    getattr(tpsl, "stop_loss_pct", self.DEFAULT_STOP_LOSS_RATIO) if tpsl else self.DEFAULT_STOP_LOSS_RATIO
+                    getattr(
+                        tpsl, "stop_loss_pct", self.DEFAULT_STOP_LOSS_RATIO
+                    )
+                    if tpsl
+                    else self.DEFAULT_STOP_LOSS_RATIO
                 ),
             }
         )
@@ -304,7 +336,9 @@ class HybridFeatureAdapter:
         features["has_position_sizing"] = int(bool(ps and ps.enabled))
         method_str = str(getattr(ps, "method", ""))
         features["position_sizing_method"] = (
-            int(hashlib.md5(method_str.encode()).hexdigest()[:6], 16) if ps else 0
+            int(hashlib.md5(method_str.encode()).hexdigest()[:6], 16)
+            if ps
+            else 0
         )
 
         return features
@@ -334,18 +368,24 @@ class HybridFeatureAdapter:
                 return processed[0]
             return processed
         except Exception as exc:
-            logger.warning(f"前処理の適用に失敗したためフォールバックします: {exc}")
+            logger.warning(
+                f"前処理の適用に失敗したためフォールバックします: {exc}"
+            )
             return self._fallback_preprocess(features_df)
 
     def _get_preprocess_callable(
         self,
     ) -> Optional[
-        Callable[[pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]]
+        Callable[
+            [pd.DataFrame, pd.DataFrame], Tuple[pd.DataFrame, pd.DataFrame]
+        ]
     ]:
         """明示注入された前処理関数のみを返す。"""
         return self._preprocess_handler
 
-    def _augment_with_derived_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
+    def _augment_with_derived_features(
+        self, features_df: pd.DataFrame
+    ) -> pd.DataFrame:
         """派生特徴量（ローリング統計量、リターン等）を生成"""
 
         augmented = features_df.copy()
@@ -353,13 +393,21 @@ class HybridFeatureAdapter:
 
         if "close" in augmented.columns:
             close = augmented["close"].astype(float)
-            augmented["close_return_1"] = close.pct_change().fillna(self.DEFAULT_FILL_VALUE)
-            augmented["close_return_5"] = close.pct_change(periods=5).fillna(self.DEFAULT_FILL_VALUE)
+            augmented["close_return_1"] = close.pct_change().fillna(
+                self.DEFAULT_FILL_VALUE
+            )
+            augmented["close_return_5"] = close.pct_change(periods=5).fillna(
+                self.DEFAULT_FILL_VALUE
+            )
             augmented["close_rolling_mean_5"] = close.rolling(
                 window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
             ).mean()
             augmented["close_rolling_std_5"] = (
-                close.rolling(window=self.DEFAULT_ROLLING_WINDOW, min_periods=1).std().fillna(self.DEFAULT_FILL_VALUE)
+                close.rolling(
+                    window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
+                )
+                .std()
+                .fillna(self.DEFAULT_FILL_VALUE)
             )
             augmented["close_rolling_min_5"] = close.rolling(
                 window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
@@ -374,11 +422,17 @@ class HybridFeatureAdapter:
                 window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
             ).mean()
             augmented["volume_rolling_std_5"] = (
-                volume.rolling(window=self.DEFAULT_ROLLING_WINDOW, min_periods=1).std().fillna(self.DEFAULT_FILL_VALUE)
+                volume.rolling(
+                    window=self.DEFAULT_ROLLING_WINDOW, min_periods=1
+                )
+                .std()
+                .fillna(self.DEFAULT_FILL_VALUE)
             )
 
         if set(["high", "low"]).issubset(augmented.columns):
-            spread = augmented["high"].astype(float) - augmented["low"].astype(float)
+            spread = augmented["high"].astype(float) - augmented["low"].astype(
+                float
+            )
             augmented["hl_spread"] = spread
             augmented["hl_spread_ratio"] = np.where(
                 augmented["low"].astype(float) == 0,
@@ -420,7 +474,10 @@ class WaveletFeatureTransformer:
                 continue
             if scale_int >= HybridFeatureAdapter.DEFAULT_MIN_SCALE:
                 validated.append(scale_int)
-        return sorted(set(validated)) or HybridFeatureAdapter.DEFAULT_WAVELET_SCALES
+        return (
+            sorted(set(validated))
+            or HybridFeatureAdapter.DEFAULT_WAVELET_SCALES
+        )
 
     def append_features(self, features_df: pd.DataFrame) -> pd.DataFrame:
         """指定カラムにウェーブレットディテール成分を付与"""

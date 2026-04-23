@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_data_collection_orchestration_service
 from app.config.constants import DEFAULT_MARKET_SYMBOL
-from app.services.data_collection.orchestration.data_collection_orchestration_service import (
+from app.services.data_collection.orchestration.data_collection_orchestration_service import (  # noqa: E501
     DataCollectionOrchestrationService,
 )
 from app.utils.error_handler import api_safe_execute, ensure_db_initialized
@@ -90,7 +90,9 @@ async def update_bulk_incremental_data(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
-    return await orchestration_service.execute_bulk_incremental_update(symbol, db)
+    return await orchestration_service.execute_bulk_incremental_update(
+        symbol, db
+    )
 
 
 @router.post("/bulk-historical")

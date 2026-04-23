@@ -96,7 +96,9 @@ class EvaluationReport:
         report = cls(
             mode=mode,
             objectives=tuple(objectives),
-            aggregated_fitness=tuple(float(value) for value in scenario.fitness),
+            aggregated_fitness=tuple(
+                float(value) for value in scenario.fitness
+            ),
             scenarios=[scenario],
             aggregate_method="single",
             metadata=_safe_copy_metadata(metadata),
@@ -152,7 +154,11 @@ class EvaluationReport:
         aggregated_fitness = []
         for index, objective in enumerate(objective_names):
             values = [
-                float(scenario.fitness[index]) if index < len(scenario.fitness) else 0.0
+                (
+                    float(scenario.fitness[index])
+                    if index < len(scenario.fitness)
+                    else 0.0
+                )
                 for scenario in scenario_list
             ]
             aggregated_fitness.append(
@@ -216,7 +222,10 @@ class EvaluationReport:
         if aggregate_method == "weighted":
             normalized_weights = cls._normalize_weights(weights, len(values))
             return float(
-                sum(value * weight for value, weight in zip(values, normalized_weights))
+                sum(
+                    value * weight
+                    for value, weight in zip(values, normalized_weights)
+                )
             )
 
         if aggregate_method == "mean":
@@ -272,7 +281,9 @@ class EvaluationReport:
             ],
         }
 
-    def to_summary_dict(self, max_scenarios: Optional[int] = None) -> Dict[str, Any]:
+    def to_summary_dict(
+        self, max_scenarios: Optional[int] = None
+    ) -> Dict[str, Any]:
         """保存向けの軽量 summary を返す。"""
         if max_scenarios is None or max_scenarios < 0:
             scenario_slice = self.scenarios

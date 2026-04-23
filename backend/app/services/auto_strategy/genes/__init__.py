@@ -4,7 +4,12 @@
 戦略遺伝子、GA設定、フィットネス評価などのモデルを定義します。
 """
 
-from ..config.constants import EntryType, ExitType, PositionSizingMethod, TPSLMethod
+from ..config.constants import (
+    EntryType,
+    ExitType,
+    PositionSizingMethod,
+    TPSLMethod,
+)
 from .conditions import (
     Condition,
     ConditionGroup,

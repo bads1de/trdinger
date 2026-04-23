@@ -56,11 +56,17 @@ async def get_strategies(
         description="取得件数制限",
     ),
     offset: int = Query(0, ge=0, description="オフセット"),
-    risk_level: Optional[str] = Query(None, description="リスクレベルフィルター"),
+    risk_level: Optional[str] = Query(
+        None, description="リスクレベルフィルター"
+    ),
     experiment_id: Optional[int] = Query(None, description="実験IDフィルター"),
-    min_fitness: Optional[float] = Query(None, description="最小フィットネススコア"),
+    min_fitness: Optional[float] = Query(
+        None, description="最小フィットネススコア"
+    ),
     sort_by: str = Query("fitness_score", description="ソート項目"),
-    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="ソート順序"),
+    sort_order: str = Query(
+        "desc", pattern="^(asc|desc)$", description="ソート順序"
+    ),
     strategy_service: GeneratedStrategyService = Depends(
         get_generated_strategy_service_with_db
     ),
@@ -77,7 +83,9 @@ async def get_strategies(
         risk_level: リスクレベルフィルター (low, medium, high)
         experiment_id: 実験IDフィルター
         min_fitness: 最小フィットネススコア
-        sort_by: ソート項目 (fitness_score, created_at, expected_return, sharpe_ratio, max_drawdown, win_rate)
+        sort_by: ソート項目
+            (fitness_score, created_at, expected_return,
+            sharpe_ratio, max_drawdown, win_rate)
         sort_order: ソート順序 (asc, desc)
         strategy_service: 戦略統合サービス（依存性注入）
 

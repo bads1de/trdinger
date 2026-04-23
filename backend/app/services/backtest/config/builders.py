@@ -209,7 +209,9 @@ def build_execution_config(
         else default_slippage
     )
     leverage_default = (
-        defaults.get("leverage", default_leverage) if defaults else default_leverage
+        defaults.get("leverage", default_leverage)
+        if defaults
+        else default_leverage
     )
 
     spread_value = working.get("spread", _MISSING)
@@ -228,9 +230,13 @@ def build_execution_config(
     ):
         slippage_value = _get_optional_value(source, "slippage")
 
-    if spread_value is not _MISSING and not _is_scalar_config_value(spread_value):
+    if spread_value is not _MISSING and not _is_scalar_config_value(
+        spread_value
+    ):
         spread_value = _MISSING
-    if slippage_value is not _MISSING and not _is_scalar_config_value(slippage_value):
+    if slippage_value is not _MISSING and not _is_scalar_config_value(
+        slippage_value
+    ):
         slippage_value = _MISSING
 
     if spread_value is _MISSING or spread_value is None:

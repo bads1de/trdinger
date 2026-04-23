@@ -37,7 +37,9 @@ class FundingRateFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """
         ファンディングレートが極端ならエントリーをスキップ
 

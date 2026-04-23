@@ -100,7 +100,9 @@ def build_behavior_profile(
         "total_trades",
     )
     for metric_name in metric_names:
-        metric_values = _extract_scenario_metric_values(scenario_list, metric_name)
+        metric_values = _extract_scenario_metric_values(
+            scenario_list, metric_name
+        )
         if not metric_values:
             continue
 
@@ -120,7 +122,10 @@ def behavior_profile_to_vector(
     """behavior profile を固定順のベクトルへ変換する。"""
     if not behavior_profile:
         return [0.0] * len(BEHAVIOR_FEATURE_NAMES)
-    return [float(behavior_profile.get(name, 0.0)) for name in BEHAVIOR_FEATURE_NAMES]
+    return [
+        float(behavior_profile.get(name, 0.0))
+        for name in BEHAVIOR_FEATURE_NAMES
+    ]
 
 
 def vectorize_gene(
@@ -145,14 +150,24 @@ def vectorize_gene(
 
     # リスク管理パラメータ
     if gene.risk_management:
-        features.append(float(gene.risk_management.get("position_size", DEFAULT_POSITION_SIZE)))
+        features.append(
+            float(
+                gene.risk_management.get(
+                    "position_size", DEFAULT_POSITION_SIZE
+                )
+            )
+        )
     else:
         features.append(DEFAULT_POSITION_SIZE)
 
     # TP/SLパラメータ
     if gene.tpsl_gene:
-        features.append(float(gene.tpsl_gene.stop_loss_pct or DEFAULT_STOP_LOSS_PCT))
-        features.append(float(gene.tpsl_gene.take_profit_pct or DEFAULT_TAKE_PROFIT_PCT))
+        features.append(
+            float(gene.tpsl_gene.stop_loss_pct or DEFAULT_STOP_LOSS_PCT)
+        )
+        features.append(
+            float(gene.tpsl_gene.take_profit_pct or DEFAULT_TAKE_PROFIT_PCT)
+        )
     else:
         features.append(DEFAULT_STOP_LOSS_PCT)
         features.append(DEFAULT_TAKE_PROFIT_PCT)
@@ -161,7 +176,12 @@ def vectorize_gene(
     if gene.position_sizing_gene and hasattr(
         gene.position_sizing_gene, "risk_per_trade"
     ):
-        features.append(float(gene.position_sizing_gene.risk_per_trade or DEFAULT_RISK_PER_TRADE))
+        features.append(
+            float(
+                gene.position_sizing_gene.risk_per_trade
+                or DEFAULT_RISK_PER_TRADE
+            )
+        )
     else:
         features.append(DEFAULT_RISK_PER_TRADE)
 

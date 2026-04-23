@@ -40,6 +40,8 @@ def __getattr__(name: str) -> Any:
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
     module = import_module(_LAZY_EXPORTS[name], __name__)
-    value: Any = module if name.startswith("backtest_") else getattr(module, name)
+    value: Any = (
+        module if name.startswith("backtest_") else getattr(module, name)
+    )
     globals()[name] = value
     return value

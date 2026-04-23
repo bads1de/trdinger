@@ -104,7 +104,9 @@ class MetricsCalculator:
         if level == "basic":
             # バランス精度は重要かつ軽量なので計算
             if self.config.include_balanced_accuracy:
-                metrics.update(self._calculate_balanced_metrics(y_true, y_pred))
+                metrics.update(
+                    self._calculate_balanced_metrics(y_true, y_pred)
+                )
             return metrics
 
         # 以下はFullモードのみ実行
@@ -115,22 +117,30 @@ class MetricsCalculator:
 
         # 確率ベース指標
         if y_proba is not None:
-            metrics.update(self._calculate_probability_metrics(y_true, y_proba))
+            metrics.update(
+                self._calculate_probability_metrics(y_true, y_proba)
+            )
 
         # 混同行列
         if self.config.include_confusion_matrix:
             metrics.update(
-                self._calculate_confusion_matrix_metrics(y_true, y_pred, class_names)
+                self._calculate_confusion_matrix_metrics(
+                    y_true, y_pred, class_names
+                )
             )
 
         # 分類レポート
         if self.config.include_classification_report:
             metrics.update(
-                self._calculate_classification_report(y_true, y_pred, class_names)
+                self._calculate_classification_report(
+                    y_true, y_pred, class_names
+                )
             )
 
         # クラス別詳細指標
-        metrics.update(self._calculate_per_class_metrics(y_true, y_pred, class_names))
+        metrics.update(
+            self._calculate_per_class_metrics(y_true, y_pred, class_names)
+        )
 
         # データ分布情報
         metrics.update(self._calculate_distribution_metrics(y_true, y_pred))
@@ -153,7 +163,10 @@ class MetricsCalculator:
                 zero_division=self.config.zero_division,
             )
             pm, rm, fm, _ = precision_recall_fscore_support(
-                y_true, y_pred, average="macro", zero_division=self.config.zero_division
+                y_true,
+                y_pred,
+                average="macro",
+                zero_division=self.config.zero_division,
             )
 
             return {
@@ -179,7 +192,9 @@ class MetricsCalculator:
 
         try:
             # バランス精度（分析報告書で推奨）
-            metrics["balanced_accuracy"] = balanced_accuracy_score(y_true, y_pred)
+            metrics["balanced_accuracy"] = balanced_accuracy_score(
+                y_true, y_pred
+            )
 
             # クラス重み付き精度
             sample_weight = self._calculate_class_weights(y_true)
@@ -224,7 +239,9 @@ class MetricsCalculator:
                         for i in range(n_classes)
                         if np.sum(y_true == i) > 0
                     ]
-                    metrics["pr_auc"] = np.mean(np.asarray(pr_aucs)) if pr_aucs else 0.0
+                    metrics["pr_auc"] = (
+                        np.mean(np.asarray(pr_aucs)) if pr_aucs else 0.0
+                    )
 
             metrics["log_loss"] = log_loss(y_true, y_proba)
             if n_classes == 2:
@@ -233,7 +250,9 @@ class MetricsCalculator:
                 metrics["brier_score"] = np.mean(
                     np.asarray(
                         [
-                            brier_score_loss((y_true == i).astype(int), y_proba[:, i])
+                            brier_score_loss(
+                                (y_true == i).astype(int), y_proba[:, i]
+                            )
                             for i in range(n_classes)
                         ]
                     )
@@ -262,7 +281,12 @@ class MetricsCalculator:
 
             labels = np.unique(y_true)
             mcm = multilabel_confusion_matrix(y_true, y_pred, labels=labels)
-            tn, fp, fn, tp = mcm[:, 0, 0], mcm[:, 0, 1], mcm[:, 1, 0], mcm[:, 1, 1]
+            tn, fp, fn, tp = (
+                mcm[:, 0, 0],
+                mcm[:, 0, 1],
+                mcm[:, 1, 0],
+                mcm[:, 1, 1],
+            )
 
             eps = 1e-12
             spec, sens, npv, ppv = (
@@ -290,8 +314,12 @@ class MetricsCalculator:
                 weights = counts / (counts.sum() + eps)
                 metrics.update(
                     {
-                        "specificity": float(np.average(spec, weights=weights)),
-                        "sensitivity": float(np.average(sens, weights=weights)),
+                        "specificity": float(
+                            np.average(spec, weights=weights)
+                        ),
+                        "sensitivity": float(
+                            np.average(sens, weights=weights)
+                        ),
                         "npv": float(np.average(npv, weights=weights)),
                         "ppv": float(np.average(ppv, weights=weights)),
                     }
@@ -335,7 +363,10 @@ class MetricsCalculator:
         try:
             # average=None の場合、各指標はクラスごとの配列として返される
             res = precision_recall_fscore_support(
-                y_true, y_pred, average=None, zero_division=self.config.zero_division
+                y_true,
+                y_pred,
+                average=None,
+                zero_division=self.config.zero_division,
             )
             p, r, f, s = map(np.asanyarray, res)
             labels = np.unique(y_true)
@@ -374,7 +405,9 @@ class MetricsCalculator:
             # 予測ラベル分布
             pred_counts = np.bincount(y_pred, minlength=len(true_counts))
             pred_distribution = pred_counts / len(y_pred)
-            metrics["predicted_label_distribution"] = pred_distribution.tolist()
+            metrics["predicted_label_distribution"] = (
+                pred_distribution.tolist()
+            )
 
             # 不均衡比率
             max_class_ratio = np.max(true_distribution) / np.min(

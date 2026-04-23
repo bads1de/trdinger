@@ -40,7 +40,11 @@ class BaseTPSLCalculator(ABC):
         try:
             # サブクラス固有の計算を実行
             sl_pct, tp_pct, confidence, metrics = self._do_calculate(
-                current_price, tpsl_gene, market_data, position_direction, **kwargs
+                current_price,
+                tpsl_gene,
+                market_data,
+                position_direction,
+                **kwargs,
             )
 
             return self._create_result(
@@ -97,7 +101,9 @@ class BaseTPSLCalculator(ABC):
             if take_profit_pct == 0:
                 tp_price = current_price
             else:
-                tp_price = current_price * (1 + (position_direction * take_profit_pct))
+                tp_price = current_price * (
+                    1 + (position_direction * take_profit_pct)
+                )
 
         return sl_price, tp_price
 

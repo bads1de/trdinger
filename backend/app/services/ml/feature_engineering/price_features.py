@@ -59,7 +59,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         df[f"Close_range_{w}"] = (
             df["high"].rolling(w).max() - df["low"].rolling(w).min()
         ).fillna(0.0)
-        log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
+        log_rets = pd.Series(
+            np.log(df["close"] / df["close"].shift(1)), index=df.index
+        )
         df[f"Historical_Volatility_{w}"] = (
             log_rets.rolling(w).std() * np.sqrt(252)
         ).fillna(0.0)
@@ -76,7 +78,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         ).fillna(0.0)
         return df
 
-    @safe_ml_operation(default_return=None, context="ボラティリティ特徴量計算エラー")
+    @safe_ml_operation(
+        default_return=None, context="ボラティリティ特徴量計算エラー"
+    )
     def calculate_volatility_features(
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
@@ -91,15 +95,17 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
         """基本価格特徴量を計算"""
-        if not self.validate_input_data(df, ["open", "high", "low", "close", "volume"]):
+        if not self.validate_input_data(
+            df, ["open", "high", "low", "close", "volume"]
+        ):
             return df
 
-        p_chg = MomentumIndicators.roc(cast(pd.Series, df["close"]), period=1).fillna(
-            0.0
-        )
-        v_chg = MomentumIndicators.roc(cast(pd.Series, df["volume"]), period=1).fillna(
-            0.0
-        )
+        p_chg = MomentumIndicators.roc(
+            cast(pd.Series, df["close"]), period=1
+        ).fillna(0.0)
+        v_chg = MomentumIndicators.roc(
+            cast(pd.Series, df["volume"]), period=1
+        ).fillna(0.0)
         df["Price_Volume_Trend"] = p_chg * v_chg
         return df
 

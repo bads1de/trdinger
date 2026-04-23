@@ -78,12 +78,18 @@ class TPSLService:
         @safe_operation(
             context="TP/SL価格計算",
             is_api_call=False,
-            default_return=self._calculate_fallback(current_price, position_direction),
+            default_return=self._calculate_fallback(
+                current_price, position_direction
+            ),
         )
         def _calculate_tpsl_prices():
             """TP/SL価格計算の内部実行関数"""
             # TP/SL遺伝子が利用可能な場合（GA最適化対象）
-            if tpsl_gene and hasattr(tpsl_gene, "enabled") and tpsl_gene.enabled:
+            if (
+                tpsl_gene
+                and hasattr(tpsl_gene, "enabled")
+                and tpsl_gene.enabled
+            ):
                 return self._calculate_from_gene(
                     current_price, tpsl_gene, market_data, position_direction
                 )
@@ -123,7 +129,9 @@ class TPSLService:
         @safe_operation(
             context="CalculatorベースTP/SL計算",
             is_api_call=False,
-            default_return=self._calculate_fallback(current_price, position_direction),
+            default_return=self._calculate_fallback(
+                current_price, position_direction
+            ),
         )
         def _calculate_from_gene():
             """遺伝子ベースのTP/SL価格計算の内部実行関数"""
@@ -190,7 +198,10 @@ class TPSLService:
             context="基本TP/SL価格計算",
             is_api_call=False,
             default_return=self._calculate_simple_tpsl_prices(
-                current_price, stop_loss_pct, take_profit_pct, position_direction
+                current_price,
+                stop_loss_pct,
+                take_profit_pct,
+                position_direction,
             ),
         )
         def _calculate_basic_tpsl_prices():
@@ -207,7 +218,10 @@ class TPSLService:
             else:
                 # 基本的なTP/SL計算
                 return self._calculate_simple_tpsl_prices(
-                    current_price, stop_loss_pct, take_profit_pct, position_direction
+                    current_price,
+                    stop_loss_pct,
+                    take_profit_pct,
+                    position_direction,
                 )
 
         return _calculate_basic_tpsl_prices()
@@ -276,7 +290,10 @@ class TPSLService:
 
             # 基本的な価格計算（ポジション方向を考慮）
             sl_price, tp_price = self._build_price_pair(
-                current_price, stop_loss_pct, take_profit_pct, position_direction
+                current_price,
+                stop_loss_pct,
+                take_profit_pct,
+                position_direction,
             )
 
             # 戦略固有の調整
@@ -297,7 +314,10 @@ class TPSLService:
             logger.error(f"高度なTP/SL価格計算エラー: {e}")
             # フォールバック
             return self._calculate_simple_tpsl_prices(
-                current_price, stop_loss_pct, take_profit_pct, position_direction
+                current_price,
+                stop_loss_pct,
+                take_profit_pct,
+                position_direction,
             )
 
     def _build_price_pair(

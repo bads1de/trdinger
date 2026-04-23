@@ -70,7 +70,9 @@ class ModelManager:
 
             for extension in (".pkl",):
                 patterns.append(
-                    os.path.join(search_path, f"{model_name_pattern}*{extension}")
+                    os.path.join(
+                        search_path, f"{model_name_pattern}*{extension}"
+                    )
                 )
 
         return collect_unique_files(patterns)
@@ -83,7 +85,9 @@ class ModelManager:
         sidecar_path = self._get_sidecar_path(model_path)
         if os.path.exists(sidecar_path):
             os.remove(sidecar_path)
-            logger.info(f"モデルのサイドカーを削除: {os.path.basename(sidecar_path)}")
+            logger.info(
+                f"モデルのサイドカーを削除: {os.path.basename(sidecar_path)}"
+            )
 
     def _build_model_info(self, model_path: str) -> Dict[str, Any]:
         """モデルファイルの一覧表示用情報を構築する"""
@@ -152,7 +156,9 @@ class ModelManager:
             model_class_name = type(model).__name__.lower()
             from ..common.registry import algorithm_registry
 
-            algorithm_name = algorithm_registry.get_algorithm_name(model_class_name)
+            algorithm_name = algorithm_registry.get_algorithm_name(
+                model_class_name
+            )
             if algorithm_name != "unknown":
                 return algorithm_name
         except Exception as e:
@@ -160,7 +166,9 @@ class ModelManager:
 
         return "unknown"
 
-    @safe_ml_operation(default_return=None, context="モデル保存でエラーが発生しました")
+    @safe_ml_operation(
+        default_return=None, context="モデル保存でエラーが発生しました"
+    )
     def save_model(
         self,
         model: Any,
@@ -207,10 +215,10 @@ class ModelManager:
             model_path = os.path.join(self.config.model_save_path, filename)
 
             while os.path.exists(model_path):
-                filename = (
-                    f"{base_filename}_{counter:02d}{self.config.model_file_extension}"
+                filename = f"{base_filename}_{counter:02d}{self.config.model_file_extension}"
+                model_path = os.path.join(
+                    self.config.model_save_path, filename
                 )
-                model_path = os.path.join(self.config.model_save_path, filename)
                 counter += 1
 
             # モデルデータを構築
@@ -276,7 +284,9 @@ class ModelManager:
         """
         try:
             if not os.path.exists(model_path):
-                raise MLModelError(f"モデルファイルが見つかりません: {model_path}")
+                raise MLModelError(
+                    f"モデルファイルが見つかりません: {model_path}"
+                )
 
             # モデルデータを読み込み
             from sklearn.exceptions import InconsistentVersionWarning
@@ -355,7 +365,9 @@ class ModelManager:
             logger.error(f"最新モデル検索エラー: {e}")
             return None
 
-    def list_models(self, model_name_pattern: str = "*") -> List[Dict[str, Any]]:
+    def list_models(
+        self, model_name_pattern: str = "*"
+    ) -> List[Dict[str, Any]]:
         """
         管理パス内にある保存済みモデルのリストを取得
 
@@ -372,7 +384,9 @@ class ModelManager:
                 try:
                     models.append(self._build_model_info(model_path))
                 except Exception as e:
-                    logger.warning(f"モデルファイル情報取得エラー {model_path}: {e}")
+                    logger.warning(
+                        f"モデルファイル情報取得エラー {model_path}: {e}"
+                    )
 
             # 更新時刻でソート（新しい順）
             models.sort(key=lambda x: x["modified_at"], reverse=True)
@@ -396,16 +410,22 @@ class ModelManager:
                     continue
 
                 patterns.append(
-                    os.path.join(search_path, f"*{self.config.model_file_extension}")
+                    os.path.join(
+                        search_path, f"*{self.config.model_file_extension}"
+                    )
                 )
 
             for model_file in collect_unique_files(patterns):
                 try:
-                    file_time = datetime.fromtimestamp(os.path.getmtime(model_file))
+                    file_time = datetime.fromtimestamp(
+                        os.path.getmtime(model_file)
+                    )
                     if file_time < cutoff_date:
                         self._delete_model_artifacts(model_file)
                 except Exception as e:
-                    logger.warning(f"期限切れモデル削除エラー {model_file}: {e}")
+                    logger.warning(
+                        f"期限切れモデル削除エラー {model_file}: {e}"
+                    )
 
         except Exception as e:
             logger.error(f"期限切れモデルクリーンアップエラー: {e}")
@@ -433,7 +453,9 @@ class ModelManager:
                 try:
                     self._delete_model_artifacts(file_path)
                 except Exception as e:
-                    logger.warning(f"モデルファイル削除エラー {file_path}: {e}")
+                    logger.warning(
+                        f"モデルファイル削除エラー {file_path}: {e}"
+                    )
 
         except Exception as e:
             logger.error(f"モデルクリーンアップエラー: {e}")
@@ -471,11 +493,15 @@ class ModelManager:
                     if isinstance(report, dict) and "macro avg" in report:
                         macro_avg = report["macro avg"]
                         if metrics["precision"] == 0.0:
-                            metrics["precision"] = macro_avg.get("precision", 0.0)
+                            metrics["precision"] = macro_avg.get(
+                                "precision", 0.0
+                            )
                         if metrics["recall"] == 0.0:
                             metrics["recall"] = macro_avg.get("recall", 0.0)
                         if metrics["f1_score"] == 0.0:
-                            metrics["f1_score"] = macro_avg.get("f1-score", 0.0)
+                            metrics["f1_score"] = macro_avg.get(
+                                "f1-score", 0.0
+                            )
 
             return metrics
 
@@ -532,7 +558,9 @@ class ModelManager:
             }
 
             with open(sidecar_path, "w", encoding="utf-8") as f:
-                json.dump(sidecar_data, f, ensure_ascii=False, indent=2, default=str)
+                json.dump(
+                    sidecar_data, f, ensure_ascii=False, indent=2, default=str
+                )
 
             logger.debug(f"サイドカーJSONを保存: {sidecar_path}")
             return True
@@ -564,7 +592,9 @@ class ModelManager:
                 with open(sidecar_path, "r", encoding="utf-8") as f:
                     sidecar_data = json.load(f)
 
-                logger.debug(f"サイドカーJSONからメタデータを読み込み: {sidecar_path}")
+                logger.debug(
+                    f"サイドカーJSONからメタデータを読み込み: {sidecar_path}"
+                )
                 return sidecar_data
 
             # サイドカーJSONが存在しない場合はフォールバック
@@ -577,7 +607,9 @@ class ModelManager:
             logger.warning(f"メタデータ読み込みエラー {model_path}: {e}")
             return None
 
-    def _load_metadata_fallback(self, model_path: str) -> Optional[Dict[str, Any]]:
+    def _load_metadata_fallback(
+        self, model_path: str
+    ) -> Optional[Dict[str, Any]]:
         """
         joblibからメタデータを読み込む（フォールバック）
 
@@ -609,7 +641,9 @@ class ModelManager:
             }
 
         except Exception as e:
-            logger.warning(f"フォールバックメタデータ読み込みエラー {model_path}: {e}")
+            logger.warning(
+                f"フォールバックメタデータ読み込みエラー {model_path}: {e}"
+            )
             return None
 
 

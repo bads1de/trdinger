@@ -12,10 +12,15 @@ import pandas as pd
 from app.services.ml.label_generation import EventDrivenLabelGenerator
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 from ..data.data_conversion_service import DataConversionService
-from ..data.data_integration_service import DataIntegrationError, DataIntegrationService
+from ..data.data_integration_service import (
+    DataIntegrationError,
+    DataIntegrationService,
+)
 from ..data.data_retrieval_service import DataRetrievalService
 
 logger = logging.getLogger(__name__)
@@ -62,7 +67,11 @@ class BacktestDataService:
         )
 
     def get_data_for_backtest(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """
         OHLCV、OI、FR データを統合してシミュレーター形式に変換
@@ -94,7 +103,11 @@ class BacktestDataService:
             raise ValueError(f"バックテスト用データの作成に失敗しました: {e}")
 
     def get_ohlcv_data(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """
         指定された期間と銘柄のOHLCVデータを取得
@@ -136,7 +149,11 @@ class BacktestDataService:
         return df
 
     def get_ml_training_data(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """
         ML モデル学習用に、正規化済みの市場統合データを取得
@@ -162,7 +179,9 @@ class BacktestDataService:
             )
         except DataIntegrationError as e:
             logger.error(f"MLトレーニング用データ作成エラー: {e}")
-            raise ValueError(f"MLトレーニング用データの作成に失敗しました: {e}")
+            raise ValueError(
+                f"MLトレーニング用データの作成に失敗しました: {e}"
+            )
 
     def get_event_labeled_training_data(
         self,
@@ -196,15 +215,21 @@ class BacktestDataService:
             )
         except DataIntegrationError as exc:
             logger.error(f"イベントラベル用データ作成エラー: {exc}")
-            raise ValueError(f"イベントラベル付きデータの作成に失敗しました: {exc}")
+            raise ValueError(
+                f"イベントラベル付きデータの作成に失敗しました: {exc}"
+            )
 
         if market_df.empty:
-            logger.warning("取得データが空のためイベントラベリングをスキップします")
+            logger.warning(
+                "取得データが空のためイベントラベリングをスキップします"
+            )
             return market_df, {"regime_profiles": {}, "label_distribution": {}}
 
-        labels_df, profile_info = self._event_label_generator.generate_hrhp_lrlp_labels(
-            market_df,
-            regime_labels=None,
+        labels_df, profile_info = (
+            self._event_label_generator.generate_hrhp_lrlp_labels(
+                market_df,
+                regime_labels=None,
+            )
         )
 
         aligned_market = market_df.loc[labels_df.index].copy()

@@ -10,7 +10,9 @@ from typing import Any, Callable, List, Optional, cast
 from database.models import FundingRateData, OHLCVData, OpenInterestData
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +73,8 @@ class DataRetrievalService:
                 raise
             except Exception as e:
                 error_msg = (
-                    empty_error_message or f"{context}でエラーが発生しました: {e}"
+                    empty_error_message
+                    or f"{context}でエラーが発生しました: {e}"
                 )
                 logger.error(error_msg)
                 raise DataRetrievalError(error_msg) from e
@@ -93,7 +96,11 @@ class DataRetrievalService:
         return _run_query()
 
     def get_ohlcv_data(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> List[OHLCVData]:
         """
         OHLCVデータを取得

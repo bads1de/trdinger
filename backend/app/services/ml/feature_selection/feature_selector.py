@@ -92,7 +92,9 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
         self.staged_methods = staged_methods
 
     def fit(
-        self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray]
+        self,
+        X: Union[pd.DataFrame, np.ndarray],
+        y: Union[pd.Series, np.ndarray],
     ) -> "FeatureSelector":
         """
         与えられたデータから最適な特徴量を選択するルールを学習します。
@@ -110,7 +112,9 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             self.feature_names_in_ = X.columns.tolist()
             X = np.asarray(X)
         else:
-            self.feature_names_in_ = [f"feature_{i}" for i in range(X.shape[1])]
+            self.feature_names_in_ = [
+                f"feature_{i}" for i in range(X.shape[1])
+            ]
 
         y = np.asarray(y)
 
@@ -119,7 +123,9 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
 
         X_processed, correlation_mask = self._remove_correlated_features(X)
         processed_names = [
-            self.feature_names_in_[i] for i, m in enumerate(correlation_mask) if m
+            self.feature_names_in_[i]
+            for i, m in enumerate(correlation_mask)
+            if m
         ]
 
         strategy = self._get_strategy()
@@ -163,7 +169,9 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
 
         if isinstance(X, pd.DataFrame):
             selected_features = self.get_feature_names_out()
-            return pd.DataFrame(X_selected, columns=selected_features, index=X.index)
+            return pd.DataFrame(
+                X_selected, columns=selected_features, index=X.index
+            )
 
         return X_selected
 
@@ -185,7 +193,9 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
             input_features = self.feature_names_in_
         if input_features is None:
             return np.array([])
-        return np.array([input_features[i] for i, s in enumerate(self.support_) if s])
+        return np.array(
+            [input_features[i] for i, s in enumerate(self.support_) if s]
+        )
 
     def _validate_input(
         self, X: np.ndarray, y: np.ndarray

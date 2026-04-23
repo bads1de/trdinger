@@ -6,12 +6,17 @@ import numpy as np
 import pandas as pd
 from numba import njit
 
-from ...data_validation import handle_pandas_ta_errors, validate_multi_series_params
+from ...data_validation import (
+    handle_pandas_ta_errors,
+    validate_multi_series_params,
+)
 from ._window_helpers import _window_mean, _window_mean_and_std
 
 
 @njit(cache=True)
-def _njit_damiani_volatmeter_loop(high, low, close, vis_atr, vis_std, sed_atr, sed_std):
+def _njit_damiani_volatmeter_loop(
+    high, low, close, vis_atr, vis_std, sed_atr, sed_std
+):
     n = len(close)
     result = np.full(n, np.nan, dtype=np.float64)
     min_len = max(sed_atr, sed_std)
@@ -40,7 +45,14 @@ def _njit_damiani_volatmeter_loop(high, low, close, vis_atr, vis_std, sed_atr, s
 
 @handle_pandas_ta_errors
 def damiani_volatmeter(
-    high, low, close, vis_atr=13, vis_std=20, sed_atr=40, sed_std=100, threshold=1.4
+    high,
+    low,
+    close,
+    vis_atr=13,
+    vis_std=20,
+    sed_atr=40,
+    sed_std=100,
+    threshold=1.4,
 ):
     """Damiani Volatmeter.
 
@@ -56,7 +68,9 @@ def damiani_volatmeter(
     """
     min_data = max(sed_atr, sed_std) + 1
     validation = validate_multi_series_params(
-        {"high": high, "low": low, "close": close}, min_data, min_data_length=min_data
+        {"high": high, "low": low, "close": close},
+        min_data,
+        min_data_length=min_data,
     )
     if validation is not None:
         nan1 = pd.Series(
@@ -80,7 +94,9 @@ def damiani_volatmeter(
         sed_atr,
         sed_std,
     )
-    osc = pd.Series(result, index=close.index, name=f"DAMIANI_{vis_atr}_{sed_atr}")
+    osc = pd.Series(
+        result, index=close.index, name=f"DAMIANI_{vis_atr}_{sed_atr}"
+    )
     thr = pd.Series(
         np.full(len(close), threshold),
         index=close.index,

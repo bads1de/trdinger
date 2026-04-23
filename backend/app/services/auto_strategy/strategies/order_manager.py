@@ -44,7 +44,10 @@ class OrderManager:
         return self._strategy_ref()
 
     def check_pending_order_fills(
-        self, minute_data: pd.DataFrame, current_bar_time, current_bar_index: int
+        self,
+        minute_data: pd.DataFrame,
+        current_bar_time,
+        current_bar_index: int,
     ) -> None:
         """保留注文の約定をチェックする。
 
@@ -149,13 +152,17 @@ class OrderManager:
         )
         self.pending_orders.append(order)
 
-    def _execute_filled_order(self, order: PendingOrder, fill_price: float) -> None:
+    def _execute_filled_order(
+        self, order: PendingOrder, fill_price: float
+    ) -> None:
         """
         約定した注文を実行（Strategyに委譲）
         """
         strategy = self.strategy
         if strategy is None:
-            logger.error("Execute filled order failed: strategy instance is None")
+            logger.error(
+                "Execute filled order failed: strategy instance is None"
+            )
             return
 
         # ポジションサイズの検証
@@ -203,7 +210,9 @@ class OrderManager:
             return
 
         runtime_state = getattr(strategy, "runtime_state", None)
-        if runtime_state is not None and hasattr(runtime_state, "set_open_position"):
+        if runtime_state is not None and hasattr(
+            runtime_state, "set_open_position"
+        ):
             try:
                 runtime_state.set_open_position(
                     entry_price=entry_price,
@@ -225,7 +234,9 @@ class OrderManager:
             try:
                 setattr(strategy, attr_name, value)
             except Exception as exc:
-                logger.debug("legacy 属性 %s の更新に失敗しました: %s", attr_name, exc)
+                logger.debug(
+                    "legacy 属性 %s の更新に失敗しました: %s", attr_name, exc
+                )
 
     def _get_bar_duration(self) -> Optional[pd.Timedelta]:
         """現在のタイムフレームのバー期間を取得"""

@@ -71,7 +71,9 @@ class MultiTimeframeDataProvider:
             )
 
         # 利用可能なタイムフレームを設定
-        self.available_timeframes = available_timeframes or SUPPORTED_TIMEFRAMES.copy()
+        self.available_timeframes = (
+            available_timeframes or SUPPORTED_TIMEFRAMES.copy()
+        )
 
         # ベースタイムフレームのデータをキャッシュに追加
         self._cache[base_timeframe] = self.base_df

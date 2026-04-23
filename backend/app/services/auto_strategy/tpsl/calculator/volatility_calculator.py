@@ -93,7 +93,9 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
         # OHLCデータからATRを計算
         if "ohlc_data" in market_data:
-            return self._calculate_atr_from_ohlc(market_data["ohlc_data"], atr_period)
+            return self._calculate_atr_from_ohlc(
+                market_data["ohlc_data"], atr_period
+            )
 
         # ボラティリティから推定
         if "volatility" in market_data:
@@ -115,7 +117,9 @@ class VolatilityCalculator(BaseTPSLCalculator):
                 low = ohlc_data[i]["low"]
                 prev_close = ohlc_data[i - 1]["close"]
 
-                tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
+                tr = max(
+                    high - low, abs(high - prev_close), abs(low - prev_close)
+                )
                 true_ranges.append(tr)
 
             # ATR = 平均True Range

@@ -268,9 +268,13 @@ class OptimizationService:
         if fixed_label_params:
             final_params.update(fixed_label_params)
 
-        df_for_label = ohlcv_data if ohlcv_data is not None else feature_superset
+        df_for_label = (
+            ohlcv_data if ohlcv_data is not None else feature_superset
+        )
 
-        labels_best = self._generate_pipeline_labels(df_for_label, final_params)
+        labels_best = self._generate_pipeline_labels(
+            df_for_label, final_params
+        )
 
         # アラインメント
         X_aligned, y_aligned = self._align_feature_superset_and_labels(
@@ -283,20 +287,22 @@ class OptimizationService:
         )
 
         # ベストパラメータでフルTrainValデータで再学習
-        test_score, n_selected_features = self._evaluate_selected_model_pipeline(
-            X_train=X_trainval,
-            y_train=y_trainval,
-            X_eval=X_test,
-            y_eval=y_test,
-            d_value=best_params["frac_diff_d"],
-            selection_method=best_params["selection_method"],
-            correlation_threshold=best_params["correlation_threshold"],
-            min_features=best_params["min_features"],
-            learning_rate=best_params["learning_rate"],
-            num_leaves=best_params["num_leaves"],
-            cv_folds=3,
-            cv_strategy="timeseries",
-            n_jobs=-1,
+        test_score, n_selected_features = (
+            self._evaluate_selected_model_pipeline(
+                X_train=X_trainval,
+                y_train=y_trainval,
+                X_eval=X_test,
+                y_eval=y_test,
+                d_value=best_params["frac_diff_d"],
+                selection_method=best_params["selection_method"],
+                correlation_threshold=best_params["correlation_threshold"],
+                min_features=best_params["min_features"],
+                learning_rate=best_params["learning_rate"],
+                num_leaves=best_params["num_leaves"],
+                cv_folds=3,
+                cv_strategy="timeseries",
+                n_jobs=-1,
+            )
         )
 
         baseline_score = 0.0
@@ -387,7 +393,9 @@ class OptimizationService:
         from app.services.ml.feature_engineering.feature_engineering_service import (
             FeatureEngineeringService,
         )
-        from app.services.ml.feature_selection.feature_selector import FeatureSelector
+        from app.services.ml.feature_selection.feature_selector import (
+            FeatureSelector,
+        )
 
         X_train_filtered = FeatureEngineeringService.filter_superset_for_d(
             X_train, d_value
@@ -397,7 +405,9 @@ class OptimizationService:
         )
 
         exclude_cols = ["open", "high", "low", "close", "volume"]
-        feature_cols = [c for c in X_train_filtered.columns if c not in exclude_cols]
+        feature_cols = [
+            c for c in X_train_filtered.columns if c not in exclude_cols
+        ]
         X_train_features: pd.DataFrame = cast(
             pd.DataFrame, X_train_filtered[feature_cols]
         )
@@ -450,7 +460,9 @@ class OptimizationService:
         from app.services.ml.feature_engineering.feature_engineering_service import (
             FeatureEngineeringService,
         )
-        from app.services.ml.feature_selection.feature_selector import FeatureSelector
+        from app.services.ml.feature_selection.feature_selector import (
+            FeatureSelector,
+        )
 
         logger.info("🚀 メタモデル最適化 (OOF) を開始")
 
@@ -462,11 +474,16 @@ class OptimizationService:
             f"[*] Generating OOF predictions for primary model ({cv_splits} folds)..."
         )
         for train_idx, val_idx in tscv.split(X_superset, y_true):
-            X_train, X_val = X_superset.iloc[train_idx], X_superset.iloc[val_idx]
+            X_train, X_val = (
+                X_superset.iloc[train_idx],
+                X_superset.iloc[val_idx],
+            )
             y_train = y_true.iloc[train_idx]
 
             primary_pipeline.fit(X_train, y_train)
-            oof_probs.iloc[val_idx] = primary_pipeline.predict_proba(X_val)[:, 1]
+            oof_probs.iloc[val_idx] = primary_pipeline.predict_proba(X_val)[
+                :, 1
+            ]
 
         # 予測が生成されたサンプルのみを対象にする (最初のFoldはnanになる)
         valid_mask = oof_probs.notna()
@@ -478,7 +495,10 @@ class OptimizationService:
         # ここでは閾値 0.5 で「エントリー判断」をしたポイントのみを抽出
         entry_mask = primary_probs >= 0.5
         if entry_mask.sum() < 100:
-            return {"status": "skipped", "reason": "too few entries for meta-learning"}
+            return {
+                "status": "skipped",
+                "reason": "too few entries for meta-learning",
+            }
 
         X_meta = X_meta_full[entry_mask]
         # メタラベル: 1 = 成功(TP), 0 = 失敗(FP/ダマシ)
@@ -515,7 +535,9 @@ class OptimizationService:
         )
 
         frac_diff_d_values = [0.3, 0.4, 0.5]
-        parameter_space = self._get_pipeline_parameter_space(frac_diff_d_values)
+        parameter_space = self._get_pipeline_parameter_space(
+            frac_diff_d_values
+        )
 
         def objective_function(params: Dict[str, Any]) -> float:
             try:
@@ -545,7 +567,11 @@ class OptimizationService:
 
                 # CV評価 (F1スコアを重視)
                 scores = cross_val_score(
-                    model, X_sel, y_meta, cv=TimeSeriesSplit(n_splits=3), scoring="f1"
+                    model,
+                    X_sel,
+                    y_meta,
+                    cv=TimeSeriesSplit(n_splits=3),
+                    scoring="f1",
                 )
                 return scores.mean()
             except Exception:
@@ -577,9 +603,12 @@ class OptimizationService:
             ),
             # Feature Selection
             "selection_method": ParameterSpace(
-                type="categorical", categories=["staged", "rfecv", "mutual_info"]
+                type="categorical",
+                categories=["staged", "rfecv", "mutual_info"],
             ),
-            "correlation_threshold": ParameterSpace(type="real", low=0.85, high=0.99),
+            "correlation_threshold": ParameterSpace(
+                type="real", low=0.85, high=0.99
+            ),
             "min_features": ParameterSpace(type="integer", low=5, high=30),
             # Model (LightGBM)
             "learning_rate": ParameterSpace(type="real", low=0.005, high=0.1),
@@ -594,7 +623,9 @@ class OptimizationService:
         if "tbm_sl" not in fixed_keys:
             space["tbm_sl"] = ParameterSpace(type="real", low=0.5, high=3.0)
         if "tbm_horizon" not in fixed_keys:
-            space["tbm_horizon"] = ParameterSpace(type="integer", low=4, high=48)
+            space["tbm_horizon"] = ParameterSpace(
+                type="integer", low=4, high=48
+            )
 
         return space
 
@@ -653,7 +684,8 @@ class OptimizationService:
         if hasattr(trainer, "ensemble_config"):
             c = trainer.ensemble_config
             return self.optimizer.get_ensemble_parameter_space(
-                c.get("method", "stacking"), c.get("models", ["lightgbm", "xgboost"])
+                c.get("method", "stacking"),
+                c.get("models", ["lightgbm", "xgboost"]),
             )
 
         from app.services.ml.optimization.optuna_optimizer import (
@@ -669,8 +701,16 @@ class OptimizationService:
         return {
             name: ParameterSpace(
                 type=cfg["type"],
-                low=int(cfg["low"]) if cfg["type"] == "integer" else cfg.get("low"),
-                high=int(cfg["high"]) if cfg["type"] == "integer" else cfg.get("high"),
+                low=(
+                    int(cfg["low"])
+                    if cfg["type"] == "integer"
+                    else cfg.get("low")
+                ),
+                high=(
+                    int(cfg["high"])
+                    if cfg["type"] == "integer"
+                    else cfg.get("high")
+                ),
                 categories=cfg.get("categories"),
             )
             for name, cfg in parameter_space_config.items()

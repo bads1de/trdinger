@@ -240,7 +240,9 @@ class ModelMetadata:
             rmse_log_rv=r.get("rmse_log_rv", 0.0),
             mae_log_rv=r.get("mae_log_rv", 0.0),
             feature_count=feature_count,
-            training_samples=r.get("training_samples", r.get("train_samples", 0)),
+            training_samples=r.get(
+                "training_samples", r.get("train_samples", 0)
+            ),
             test_samples=r.get("test_samples", 0),
             best_iteration=r.get("best_iteration", 0),
             num_classes=r.get("num_classes", 1),
@@ -249,7 +251,9 @@ class ModelMetadata:
             model_type=model_type,
             symbol=p.get("symbol", ""),
             timeframe=p.get("timeframe", ""),
-            prediction_horizon=int(p.get("prediction_horizon", p.get("horizon_n", 1))),
+            prediction_horizon=int(
+                p.get("prediction_horizon", p.get("horizon_n", 1))
+            ),
             gate_quantile=float(p.get("gate_quantile", 0.67)),
             gate_cutoff_log_rv=float(r.get("gate_cutoff_log_rv", 0.0)),
             gate_cutoff_vol=float(r.get("gate_cutoff_vol", 1.0)),
@@ -304,5 +308,11 @@ class ModelMetadata:
         if self.feature_count <= 0:
             warnings.append(f"特徴量数が0以下です: {self.feature_count}")
         if self.training_samples <= 0:
-            warnings.append(f"学習サンプル数が0以下です: {self.training_samples}")
-        return {"is_valid": len(errors) == 0, "errors": errors, "warnings": warnings}
+            warnings.append(
+                f"学習サンプル数が0以下です: {self.training_samples}"
+            )
+        return {
+            "is_valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings,
+        }

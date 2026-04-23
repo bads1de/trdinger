@@ -29,14 +29,18 @@ class GeneValidator:
     def __init__(self) -> None:
         """初期化"""
         self._indicator_validator = IndicatorValidator()
-        self._condition_validator = ConditionValidator(self._indicator_validator)
+        self._condition_validator = ConditionValidator(
+            self._indicator_validator
+        )
         self._strategy_validator = StrategyValidator(
             self._indicator_validator, self._condition_validator
         )
 
     def validate_indicator_gene(self, indicator_gene: object) -> bool:
         """指標遺伝子の妥当性を検証"""
-        return self._indicator_validator.validate_indicator_gene(indicator_gene)
+        return self._indicator_validator.validate_indicator_gene(
+            indicator_gene
+        )
 
     def validate_indicator_gene_for_generation(
         self,
@@ -45,8 +49,10 @@ class GeneValidator:
         allowed_indicators: Optional[Collection[str]] = None,
     ) -> bool:
         """GA 生成・変異で使う指標遺伝子をユニバース込みで検証する。"""
-        return self._indicator_validator.validate_indicator_gene_for_generation(
-            indicator_gene, indicator_universe_mode, allowed_indicators
+        return (
+            self._indicator_validator.validate_indicator_gene_for_generation(
+                indicator_gene, indicator_universe_mode, allowed_indicators
+            )
         )
 
     def validate_condition(self, condition: object) -> Tuple[bool, str]:
@@ -61,4 +67,6 @@ class GeneValidator:
         self, strategy_gene: object, config: Optional["GAConfig"] = None
     ) -> Tuple[bool, List[str]]:
         """戦略遺伝子の妥当性を検証"""
-        return self._strategy_validator.validate_strategy_gene(strategy_gene, config)
+        return self._strategy_validator.validate_strategy_gene(
+            strategy_gene, config
+        )

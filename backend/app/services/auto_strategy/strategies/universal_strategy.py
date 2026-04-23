@@ -137,7 +137,9 @@ class UniversalStrategy(Strategy):
         self.tpsl_service = TPSLService()
         self.position_sizing_service = PositionSizingService()
         self.entry_executor = EntryExecutor()  # エントリー注文実行サービス
-        self.lower_tf_simulator = LowerTimeframeSimulator()  # 1分足シミュレーター
+        self.lower_tf_simulator = (
+            LowerTimeframeSimulator()
+        )  # 1分足シミュレーター
         self.state_tracker = StateTracker()  # ステートフル条件用
         self.runtime_state = StrategyRuntimeState()
         self._current_bar_index = 0  # バーインデックストラッカー
@@ -148,7 +150,9 @@ class UniversalStrategy(Strategy):
         # ヘルパークラスの初期化
         self.position_manager = PositionManager(self)
         self.stateful_conditions_evaluator = StatefulConditionsEvaluator(self)
-        self.early_termination_controller = StrategyEarlyTerminationController(self)
+        self.early_termination_controller = StrategyEarlyTerminationController(
+            self
+        )
         self.ml_filter = MLFilter(self)
         self.entry_decision_engine = EntryDecisionEngine(self)
         self.exit_decision_engine = ExitDecisionEngine(self)
@@ -172,20 +176,26 @@ class UniversalStrategy(Strategy):
             self.gene = self.strategy_gene
         else:
             # 安全のためデフォルトの空遺伝子またはエラー
-            raise ValueError("UniversalStrategy requires 'strategy_gene' in params")
+            raise ValueError(
+                "UniversalStrategy requires 'strategy_gene' in params"
+            )
 
         # ベースタイムフレーム（パラメータから取得、デフォルトは1h）
         self.base_timeframe = params.get("timeframe", "1h")
         self.evaluation_start = params.get("evaluation_start")
-        self._evaluation_start = self._normalize_evaluation_start(self.evaluation_start)
+        self._evaluation_start = self._normalize_evaluation_start(
+            self.evaluation_start
+        )
         early_termination_settings = params.get("early_termination_settings")
         if early_termination_settings is None:
             self.early_termination_settings = EarlyTerminationSettings()
         elif isinstance(early_termination_settings, EarlyTerminationSettings):
             self.early_termination_settings = early_termination_settings
         else:
-            self.early_termination_settings = EarlyTerminationSettings.from_source(
-                early_termination_settings
+            self.early_termination_settings = (
+                EarlyTerminationSettings.from_source(
+                    early_termination_settings
+                )
             )
 
         # 1分足データの取得（1分足シミュレーション用）
@@ -223,7 +233,9 @@ class UniversalStrategy(Strategy):
         # HybridPredictor インスタンス（オプション）
         self.ml_predictor = params.get("ml_predictor")
         ml_gate_fields = normalize_ml_gate_fields(params)
-        self.volatility_gate_enabled = bool(ml_gate_fields["volatility_gate_enabled"])
+        self.volatility_gate_enabled = bool(
+            ml_gate_fields["volatility_gate_enabled"]
+        )
         self.volatility_model_path = ml_gate_fields["volatility_model_path"]
 
         # ベクトル化評価結果のキャッシュ
@@ -240,7 +252,9 @@ class UniversalStrategy(Strategy):
             if ind.enabled
         )
 
-    def _get_effective_sub_gene(self, direction: float, gene_type: str) -> object:
+    def _get_effective_sub_gene(
+        self, direction: float, gene_type: str
+    ) -> object:
         """
         方向とタイプに応じた有効なサブ遺伝子を取得（統合版）
 
@@ -276,7 +290,9 @@ class UniversalStrategy(Strategy):
         target = self._get_effective_sub_gene(direction, "tpsl")
         return cast(Optional[TPSLGene], target)
 
-    def _get_effective_entry_gene(self, direction: float) -> Optional[EntryGene]:
+    def _get_effective_entry_gene(
+        self, direction: float
+    ) -> Optional[EntryGene]:
         """有効なエントリー遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         target = self._get_effective_sub_gene(direction, "entry")
         return cast(Optional[EntryGene], target)
@@ -288,9 +304,13 @@ class UniversalStrategy(Strategy):
         target = self._get_effective_sub_gene(direction, "exit")
         return cast(Optional[ExitGene], target)
 
-    def _normalize_evaluation_start(self, value: Union[str, pd.Timestamp, None]) -> Optional[pd.Timestamp]:
+    def _normalize_evaluation_start(
+        self, value: Union[str, pd.Timestamp, None]
+    ) -> Optional[pd.Timestamp]:
         """評価開始時刻を pandas.Timestamp に正規化する。"""
-        return self.early_termination_controller.normalize_evaluation_start(value)
+        return self.early_termination_controller.normalize_evaluation_start(
+            value
+        )
 
     def _is_evaluation_bar(self) -> bool:
         """現在バーが評価開始時刻以降かを返す。"""
@@ -326,7 +346,9 @@ class UniversalStrategy(Strategy):
 
     def _calculate_closed_trade_expectancy(self) -> Optional[float]:
         """クローズ済みトレードの平均期待値を返す。"""
-        return self.early_termination_controller.calculate_closed_trade_expectancy()
+        return (
+            self.early_termination_controller.calculate_closed_trade_expectancy()
+        )
 
     def _should_terminate_early(self) -> Optional[str]:
         """早期打ち切りすべき理由を返す。"""
@@ -417,7 +439,8 @@ class UniversalStrategy(Strategy):
             raise
         except Exception as e:
             logger.error(
-                f"戦略実行エラー (bar={self._current_bar_index}): {e}", exc_info=True
+                f"戦略実行エラー (bar={self._current_bar_index}): {e}",
+                exc_info=True,
             )
             # エラー発生時は安全な状態にリセットし、次のバーで継続できるようにする
             self.position_manager.reset_position_state()
@@ -456,7 +479,9 @@ class UniversalStrategy(Strategy):
         Returns:
             1.0 (Long), -1.0 (Short), または None
         """
-        return self.stateful_conditions_evaluator.get_stateful_entry_direction()
+        return (
+            self.stateful_conditions_evaluator.get_stateful_entry_direction()
+        )
 
     # ===== ツールフィルターメソッド =====
 

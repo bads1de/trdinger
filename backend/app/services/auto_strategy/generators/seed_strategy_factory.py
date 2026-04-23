@@ -243,7 +243,9 @@ class SeedStrategyFactory:
         params = cls.DMIExtremeParams
 
         # 指標: ADX (ADX, DMP, DMN を返す)
-        adx_indicator = cls._create_indicator_gene("ADX", {"length": params.ATR_LENGTH})
+        adx_indicator = cls._create_indicator_gene(
+            "ADX", {"length": params.ATR_LENGTH}
+        )
         indicators = [adx_indicator]
 
         # Long: DMP > 45 AND ADX > 45
@@ -321,7 +323,9 @@ class SeedStrategyFactory:
         """
         params = cls.RSIMomentumParams
 
-        rsi_indicator = cls._create_indicator_gene("RSI", {"period": params.RSI_PERIOD})
+        rsi_indicator = cls._create_indicator_gene(
+            "RSI", {"period": params.RSI_PERIOD}
+        )
         indicators = [rsi_indicator]
 
         # Long: RSI > 75 (強い上昇モメンタム)
@@ -429,8 +433,12 @@ class SeedStrategyFactory:
         """
         params = cls.KAMAADXHybridParams
 
-        kama_indicator = cls._create_indicator_gene("KAMA", {"length": params.KAMA_LENGTH})
-        adx_indicator = cls._create_indicator_gene("ADX", {"length": params.ADX_LENGTH})
+        kama_indicator = cls._create_indicator_gene(
+            "KAMA", {"length": params.KAMA_LENGTH}
+        )
+        adx_indicator = cls._create_indicator_gene(
+            "ADX", {"length": params.ADX_LENGTH}
+        )
         indicators = [kama_indicator, adx_indicator]
 
         # Long: Close > KAMA AND DMP > 40 AND ADX > 20
@@ -522,12 +530,19 @@ class SeedStrategyFactory:
         params = cls.WAEParams
 
         macd_indicator = cls._create_indicator_gene(
-            "MACD", {"fast": params.MACD_FAST, "slow": params.MACD_SLOW, "signal": params.MACD_SIGNAL}
+            "MACD",
+            {
+                "fast": params.MACD_FAST,
+                "slow": params.MACD_SLOW,
+                "signal": params.MACD_SIGNAL,
+            },
         )
         bbands_indicator = cls._create_indicator_gene(
             "BBANDS", {"length": params.BB_LENGTH, "std": params.BB_STD}
         )
-        atr_indicator = cls._create_indicator_gene("ATR", {"length": params.ATR_LENGTH})
+        atr_indicator = cls._create_indicator_gene(
+            "ATR", {"length": params.ATR_LENGTH}
+        )
         indicators = [macd_indicator, bbands_indicator, atr_indicator]
 
         # 簡易版WAE Long: MACD > Signal AND MACD > 0
@@ -608,8 +623,12 @@ class SeedStrategyFactory:
         """
         params = cls.TrendiloParams
 
-        t3_indicator = cls._create_indicator_gene("T3", {"length": params.T3_LENGTH, "a": params.T3_A})
-        adx_indicator = cls._create_indicator_gene("ADX", {"length": params.ADX_LENGTH})
+        t3_indicator = cls._create_indicator_gene(
+            "T3", {"length": params.T3_LENGTH, "a": params.T3_A}
+        )
+        adx_indicator = cls._create_indicator_gene(
+            "ADX", {"length": params.ADX_LENGTH}
+        )
         indicators = [t3_indicator, adx_indicator]
 
         # Long: Close > T3 AND ADX > 20

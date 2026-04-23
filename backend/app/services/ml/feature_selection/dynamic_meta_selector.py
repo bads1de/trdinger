@@ -99,10 +99,14 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
 
         # 全て落とされた場合のセーフティ
         if not support_mask.any():
-            logger.warning("All features failed shadow test. Falling back to top 5.")
+            logger.warning(
+                "All features failed shadow test. Falling back to top 5."
+            )
             # 単純な重要度順でTop 5を返す
             model.fit(X.values, y)
-            top_indices = np.argsort(model.feature_importances_)[-self.min_features :]
+            top_indices = np.argsort(model.feature_importances_)[
+                -self.min_features :
+            ]
             support_mask = np.zeros(n_features, dtype=bool)
             support_mask[top_indices] = True
 
@@ -134,7 +138,9 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         # 2. 各クラスタから代表者を選定 (ターゲットへの相互情報量が最大のもの)
         from sklearn.feature_selection import mutual_info_regression
 
-        mi_scores = mutual_info_regression(X, y, random_state=self.random_state)
+        mi_scores = mutual_info_regression(
+            X, y, random_state=self.random_state
+        )
         mi_series = pd.Series(mi_scores, index=X.columns)
 
         representative_features = []
@@ -177,9 +183,13 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
 
         # support_mask_ の作成
         feature_names: List[str] = (
-            self.feature_names_in_ if self.feature_names_in_ is not None else []
+            self.feature_names_in_
+            if self.feature_names_in_ is not None
+            else []
         )
-        self.support_mask_ = np.array([f in final_candidates for f in feature_names])
+        self.support_mask_ = np.array(
+            [f in final_candidates for f in feature_names]
+        )
 
         logger.info(
             f"DynamicMetaSelector complete: Selected {len(final_candidates)} features."
@@ -193,7 +203,11 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         if isinstance(X, pd.DataFrame):
             result = X[self.selected_features_]
             # 単一列選択時に Series になるのを防ぐ
-            return result if isinstance(result, pd.DataFrame) else result.to_frame()
+            return (
+                result
+                if isinstance(result, pd.DataFrame)
+                else result.to_frame()
+            )
 
         # NumPy配列の場合はマスクを適用
         return X[:, self.support_mask_]

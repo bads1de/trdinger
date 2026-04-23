@@ -27,7 +27,9 @@ class MondayReversalFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """
         月曜日の指定時間帯かどうかを判定
 

@@ -72,7 +72,9 @@ class OverlapIndicators:
 
         return cast(
             pd.Series,
-            run_series_indicator(data, length, lambda: ta.sma(data, length=length)),
+            run_series_indicator(
+                data, length, lambda: ta.sma(data, length=length)
+            ),
         )
 
     @staticmethod
@@ -107,7 +109,9 @@ class OverlapIndicators:
 
         return cast(
             pd.Series,
-            run_series_indicator(data, length, lambda: ta.wma(data, length=length)),
+            run_series_indicator(
+                data, length, lambda: ta.wma(data, length=length)
+            ),
         )
 
     @staticmethod
@@ -139,7 +143,9 @@ class OverlapIndicators:
             run_series_indicator(
                 data,
                 length,
-                lambda: ta.zlma(data, length=length, mamode=mamode, offset=offset),
+                lambda: ta.zlma(
+                    data, length=length, mamode=mamode, offset=offset
+                ),
             ),
         )
 
@@ -223,7 +229,9 @@ class OverlapIndicators:
         """カウフマン適応移動平均"""
         return cast(
             pd.Series,
-            run_series_indicator(data, length, lambda: ta.kama(data, length=length)),
+            run_series_indicator(
+                data, length, lambda: ta.kama(data, length=length)
+            ),
         )
 
     @staticmethod
@@ -232,7 +240,9 @@ class OverlapIndicators:
         """Hull移動平均"""
         return cast(
             pd.Series,
-            run_series_indicator(data, length, lambda: ta.hma(data, length=length)),
+            run_series_indicator(
+                data, length, lambda: ta.hma(data, length=length)
+            ),
         )
 
     @staticmethod
@@ -315,7 +325,9 @@ class OverlapIndicators:
         """Wilde's Moving Average"""
         return cast(
             pd.Series,
-            run_series_indicator(data, length, lambda: ta.rma(data, length=length)),
+            run_series_indicator(
+                data, length, lambda: ta.rma(data, length=length)
+            ),
         )
 
     @staticmethod
@@ -512,7 +524,9 @@ class OverlapIndicators:
         return cast(
             pd.Series,
             run_multi_series_indicator(
-                {"high": high, "low": low}, None, lambda: ta.hl2(high=high, low=low)
+                {"high": high, "low": low},
+                None,
+                lambda: ta.hl2(high=high, low=low),
             ),
         )
 
@@ -557,7 +571,9 @@ class OverlapIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def midprice(high: pd.Series, low: pd.Series, length: int = 2) -> pd.Series:
+    def midprice(
+        high: pd.Series, low: pd.Series, length: int = 2
+    ) -> pd.Series:
         """Midprice"""
         return cast(
             pd.Series,
@@ -622,29 +638,39 @@ class OverlapIndicators:
             run_series_indicator(
                 close,
                 length,
-                lambda: ta.jma(close=close, length=length, phase=phase, offset=offset),
+                lambda: ta.jma(
+                    close=close, length=length, phase=phase, offset=offset
+                ),
             ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def fwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
+    def fwma(
+        close: pd.Series, length: int = 10, asc: bool = True
+    ) -> pd.Series:
         """Fibonacci Weighted Moving Average"""
         return cast(
             pd.Series,
             run_series_indicator(
-                close, length, lambda: ta.fwma(close=close, length=length, asc=asc)
+                close,
+                length,
+                lambda: ta.fwma(close=close, length=length, asc=asc),
             ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def pwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
+    def pwma(
+        close: pd.Series, length: int = 10, asc: bool = True
+    ) -> pd.Series:
         """Pascal Weighted Moving Average"""
         return cast(
             pd.Series,
             run_series_indicator(
-                close, length, lambda: ta.pwma(close=close, length=length, asc=asc)
+                close,
+                length,
+                lambda: ta.pwma(close=close, length=length, asc=asc),
             ),
         )
 
@@ -666,7 +692,9 @@ class OverlapIndicators:
         return cast(
             pd.Series,
             run_series_indicator(
-                close, length, lambda: ta.ssf(close=close, length=length, poles=poles)
+                close,
+                length,
+                lambda: ta.ssf(close=close, length=length, poles=poles),
             ),
         )
 

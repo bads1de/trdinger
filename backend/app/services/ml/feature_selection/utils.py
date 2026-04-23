@@ -84,7 +84,9 @@ def get_default_regressor(
             ),
         )
     else:
-        logger.warning("LightGBM not available, falling back to RandomForestRegressor")
+        logger.warning(
+            "LightGBM not available, falling back to RandomForestRegressor"
+        )
         return RandomForestRegressor(
             n_estimators=n_estimators,
             random_state=random_state,

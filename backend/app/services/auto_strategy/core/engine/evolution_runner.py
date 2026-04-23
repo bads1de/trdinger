@@ -134,9 +134,9 @@ class EvolutionRunner:
         )
 
         def resolve_behavior_or_report(individual: Any) -> Any:
-            if getattr(individual, "_evaluation_fidelity", None) == "full" and callable(
-                get_cached_report
-            ):
+            if getattr(
+                individual, "_evaluation_fidelity", None
+            ) == "full" and callable(get_cached_report):
                 report = get_cached_report(individual)
                 if report is not None:
                     return report
@@ -156,7 +156,9 @@ class EvolutionRunner:
         config: "GAConfig",
         halloffame: Optional[Any] = None,
         should_stop: Optional[Callable[[], bool]] = None,
-        progress_callback: Optional[Callable[[int, int, Optional[float]], None]] = None,
+        progress_callback: Optional[
+            Callable[[int, int, Optional[float]], None]
+        ] = None,
     ) -> tuple[List[Any], object]:
         """
         設定された世代数分、進化計算アルゴリズムを実行します。
@@ -178,9 +180,12 @@ class EvolutionRunner:
         Args:
             population (List[Any]): 進化を開始する初期個体群のリスト。
             config (Any): 世代数、交叉率、突然変異率等のハイパーパラメータを含む設定オブジェクト。
-            halloffame (Optional[Any]): 最良個体を保持するDEAPの HallOfFame または ParetoFront オブジェクト。
+            halloffame (Optional[Any]): 最良個体を保持するDEAPの
+                HallOfFame または ParetoFront オブジェクト。
             should_stop (Optional[Callable[[], bool]]): 外部から中断を指示するためのコールバック関数。
-            progress_callback (Optional[Callable[[int, int, Optional[float]], None]]):
+            progress_callback (
+                Optional[Callable[[int, int, Optional[float]], None]]
+            ):
                 各世代終了時に呼び出される進捗通知コールバック。
                 引数: (current_generation, total_generations, best_fitness)。
 
@@ -195,7 +200,9 @@ class EvolutionRunner:
             raise EvolutionStoppedError("進化処理は開始前に停止されました")
 
         logger.info(
-            f"進化アルゴリズムを開始（世代数: {config.generations}, 目的数: {len(config.objectives)}）"
+            f"進化アルゴリズムを開始"
+            f"（世代数: {config.generations}, "
+            f"目的数: {len(config.objectives)}）"
         )
 
         # 初期適応度評価
@@ -221,7 +228,9 @@ class EvolutionRunner:
             # デフォルト: (700, 10, 10) → 評価中は(2000, 20, 20)に変更
             original_threshold = gc.get_threshold()
             gc.set_threshold(
-                GC_THRESHOLD_GENERATIONS, GC_THRESHOLD_DIVISIONS, GC_THRESHOLD_DIVISIONS
+                GC_THRESHOLD_GENERATIONS,
+                GC_THRESHOLD_DIVISIONS,
+                GC_THRESHOLD_DIVISIONS,
             )
 
             try:
@@ -232,17 +241,23 @@ class EvolutionRunner:
                     config.fitness_sharing.get("enable_fitness_sharing", False)
                     and self.fitness_sharing
                 ):
-                    population = self.fitness_sharing.apply_fitness_sharing(population)
+                    population = self.fitness_sharing.apply_fitness_sharing(
+                        population
+                    )
 
                 # 選択（親個体の選択）
                 # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
-                offspring = list(self.toolbox.map(self.toolbox.clone, population))
+                offspring = list(
+                    self.toolbox.map(self.toolbox.clone, population)
+                )
 
                 offspring = self._apply_crossover_batch(offspring, config)
                 offspring = self._apply_mutation_batch(offspring, config)
 
                 # 未評価個体の評価（並列評価対応）
-                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+                invalid_ind = [
+                    ind for ind in offspring if not ind.fitness.valid
+                ]
                 self._evaluate_invalid_individuals(invalid_ind, config)
 
                 if should_stop and should_stop():
@@ -285,7 +300,9 @@ class EvolutionRunner:
                         best_fitness = float(best_fitness[0])
                     else:
                         best_fitness = (
-                            float(best_fitness) if best_fitness is not None else None
+                            float(best_fitness)
+                            if best_fitness is not None
+                            else None
                         )
                     progress_callback(gen, config.generations, best_fitness)
             finally:
@@ -502,7 +519,9 @@ class EvolutionRunner:
             return []
 
         if self.parallel_evaluator:
-            return list(self.parallel_evaluator.evaluate_population(individuals))
+            return list(
+                self.parallel_evaluator.evaluate_population(individuals)
+            )
 
         if self.individual_evaluator is not None and config is not None:
             fitness_values = [
@@ -538,11 +557,15 @@ class EvolutionRunner:
         ):
             return
 
-        limit = get_multi_fidelity_candidate_limit(len(candidate_population), config)
+        limit = get_multi_fidelity_candidate_limit(
+            len(candidate_population), config
+        )
         if limit <= 0:
             return
 
-        for candidate in self._select_top_candidates(candidate_population, limit):
+        for candidate in self._select_top_candidates(
+            candidate_population, limit
+        ):
             if getattr(candidate, "_evaluation_fidelity", None) == "full":
                 continue
             fitness = self.individual_evaluator.evaluate(
@@ -574,7 +597,9 @@ class EvolutionRunner:
             try:
                 setattr(individual, "_evaluation_fidelity", fidelity)
             except Exception as e:
-                logger.debug("評価粒度メタデータの設定をスキップしました: %s", e)
+                logger.debug(
+                    "評価粒度メタデータの設定をスキップしました: %s", e
+                )
 
     def _update_dynamic_objective_scalars(
         self, population: List[Any], config: "GAConfig"
@@ -620,7 +645,8 @@ class EvolutionRunner:
             if objective_registry.is_dynamic_scalar_objective(objective):
                 scalars[objective] = min(
                     DYNAMIC_SCALAR_MAX,
-                    DEFAULT_SCALAR_VALUE + max(average_value, DEFAULT_MIN_PASS_RATE),
+                    DEFAULT_SCALAR_VALUE
+                    + max(average_value, DEFAULT_MIN_PASS_RATE),
                 )
             else:
                 scalars[objective] = DEFAULT_SCALAR_VALUE
@@ -650,7 +676,9 @@ class EvolutionRunner:
         Note:
             個別評価器がない場合は通常の選択のみ行います。
         """
-        selected = list(self.toolbox.select(candidate_population, population_size))
+        selected = list(
+            self.toolbox.select(candidate_population, population_size)
+        )
         self._clear_two_stage_metadata(selected)
 
         elite_count = get_two_stage_elite_count(config, population_size)
@@ -674,7 +702,9 @@ class EvolutionRunner:
 
         self._mark_two_stage_elites(reranked_elites)
 
-        return merge_reranked_elites(selected, reranked_elites, population_size)
+        return merge_reranked_elites(
+            selected, reranked_elites, population_size
+        )
 
     def _select_top_candidates(
         self,
@@ -745,11 +775,15 @@ class EvolutionRunner:
             seen_keys.add(candidate_key)
 
             report = self._resolve_evaluation_report(candidate, config)
-            two_stage_config = getattr(config, "two_stage_selection_config", None)
+            two_stage_config = getattr(
+                config, "two_stage_selection_config", None
+            )
             rank_key = build_report_rank_key(
                 candidate,
                 cast(Optional["EvaluationReport"], report),
-                getattr(two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE),
+                getattr(
+                    two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE
+                ),
             )
             ranked_candidates.append((rank_key, candidate))
 
@@ -769,7 +803,11 @@ class EvolutionRunner:
         elite_count: int,
     ) -> List[tuple[tuple[float, ...], Any]]:
         """behavior ベースでエリート候補を greedy に散らす。"""
-        if elite_count <= 1 or not ranked_candidates or self.fitness_sharing is None:
+        if (
+            elite_count <= 1
+            or not ranked_candidates
+            or self.fitness_sharing is None
+        ):
             return ranked_candidates
 
         build_vectors = getattr(
@@ -783,16 +821,22 @@ class EvolutionRunner:
         try:
             candidate_vectors = cast(
                 dict[int, np.ndarray],
-                build_vectors([candidate for _, candidate in ranked_candidates]),
+                build_vectors(
+                    [candidate for _, candidate in ranked_candidates]
+                ),
             )
         except Exception as exc:
-            logger.debug("behavior diversity 用ベクトル取得に失敗しました: %s", exc)
+            logger.debug(
+                "behavior diversity 用ベクトル取得に失敗しました: %s", exc
+            )
             return ranked_candidates
 
         if len(candidate_vectors) < 2:
             return ranked_candidates
 
-        distance_threshold = self._get_behavior_distance_threshold(candidate_vectors)
+        distance_threshold = self._get_behavior_distance_threshold(
+            candidate_vectors
+        )
         if distance_threshold <= 0.0:
             return ranked_candidates
 
@@ -825,7 +869,9 @@ class EvolutionRunner:
             return 0.0
 
         try:
-            sharing_radius = float(getattr(self.fitness_sharing, "sharing_radius", 0.0))
+            sharing_radius = float(
+                getattr(self.fitness_sharing, "sharing_radius", 0.0)
+            )
         except (TypeError, ValueError):
             return 0.0
 
@@ -857,7 +903,8 @@ class EvolutionRunner:
                 continue
             distance = float(
                 np.linalg.norm(
-                    candidate_vector_array - np.asarray(selected_vector, dtype=float)
+                    candidate_vector_array
+                    - np.asarray(selected_vector, dtype=float)
                 )
             )
             min_distance = (
@@ -919,7 +966,9 @@ class EvolutionRunner:
                 if not is_evaluation_report(report):
                     report = None
             except Exception as exc:
-                logger.debug("二段階選抜用の robustness 評価に失敗しました: %s", exc)
+                logger.debug(
+                    "二段階選抜用の robustness 評価に失敗しました: %s", exc
+                )
 
         get_cached_report = getattr(
             self.individual_evaluator,

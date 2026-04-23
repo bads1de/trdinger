@@ -14,7 +14,9 @@ if TYPE_CHECKING:
         BackgroundTaskManager,
         background_task_manager,
     )
-    from .ml_management_orchestration_service import MLManagementOrchestrationService
+    from .ml_management_orchestration_service import (
+        MLManagementOrchestrationService,
+    )
     from .ml_training_orchestration_service import (
         MLTrainingService,
         ml_training_service,

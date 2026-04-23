@@ -53,7 +53,9 @@ class ShadowFeatureStrategy(BaseSelectionStrategy):
             real_importances = importances[:n_features]
             shadow_importances = importances[n_features:]
 
-            shadow_max = np.percentile(shadow_importances, config.shadow_percentile)
+            shadow_max = np.percentile(
+                shadow_importances, config.shadow_percentile
+            )
 
             hit_counts[real_importances > shadow_max] += 1
 

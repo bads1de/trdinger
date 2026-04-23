@@ -35,7 +35,14 @@ class TechnicalIndicatorService:
     オートストラテジー（GA）からの利用を最適化します。
     """
 
-    _STANDARD_SUPPORT_DATA = {"open", "open_", "high", "low", "close", "volume"}
+    _STANDARD_SUPPORT_DATA = {
+        "open",
+        "open_",
+        "high",
+        "low",
+        "close",
+        "volume",
+    }
     _EXTENDED_MARKET_DATA = {
         "open_interest",
         "funding_rate",
@@ -84,7 +91,9 @@ class TechnicalIndicatorService:
         """
         config = self.registry.get_indicator_config(indicator_type)
         if not config:
-            raise ValueError(f"サポートされていない指標タイプ: {indicator_type}")
+            raise ValueError(
+                f"サポートされていない指標タイプ: {indicator_type}"
+            )
         return config
 
     def _resolve_indicator_name(self, indicator_type: str) -> str:
@@ -102,7 +111,9 @@ class TechnicalIndicatorService:
         """
         return indicator_type.upper()
 
-    def _resolve_column_name(self, df: pd.DataFrame, data_key: str) -> str | None:
+    def _resolve_column_name(
+        self, df: pd.DataFrame, data_key: str
+    ) -> str | None:
         """
         カラム名解決をバリデータに委譲する
 
@@ -133,7 +144,9 @@ class TechnicalIndicatorService:
 
     def calculate_indicator(
         self, df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-    ) -> Union[np.ndarray, pd.Series, pd.DataFrame, tuple, tuple[pd.Series, ...], None]:
+    ) -> Union[
+        np.ndarray, pd.Series, pd.DataFrame, tuple, tuple[pd.Series, ...], None
+    ]:
         """
         OHLCVデータから指定されたテクニカル指標を計算します。
 
@@ -169,7 +182,9 @@ class TechnicalIndicatorService:
         indicator_type = self._resolve_indicator_name(indicator_type)
 
         # キャッシュチェック
-        cache_key = self.cache_manager.make_cache_key(indicator_type, params, df)
+        cache_key = self.cache_manager.make_cache_key(
+            indicator_type, params, df
+        )
         cached_result = self.cache_manager.get_cached_result(cache_key)
         if cached_result is not None:
             return cached_result
@@ -192,14 +207,18 @@ class TechnicalIndicatorService:
 
                 if pandas_config:
                     # pandas-ta方式で処理
-                    normalized_params = self.parameter_normalizer.normalize_params(
-                        params, pandas_config
+                    normalized_params = (
+                        self.parameter_normalizer.normalize_params(
+                            params, pandas_config
+                        )
                     )
 
                     if not self.validator.basic_validation(
                         df, pandas_config, normalized_params
                     ):
-                        result = self.validator.create_nan_result(df, pandas_config)
+                        result = self.validator.create_nan_result(
+                            df, pandas_config
+                        )
                     else:
                         raw_result = self.pandas_ta_caller.call_pandas_ta(
                             df, pandas_config, normalized_params
@@ -220,8 +239,12 @@ class TechnicalIndicatorService:
                     else:
                         # アダプター関数がない場合はNaN結果を返す
                         if pandas_config:
-                            result = self.validator.create_nan_result(df, pandas_config)
-                            logger.warning(f"指標 {indicator_type} のアダプター関数がありません。NaN結果を返します")
+                            result = self.validator.create_nan_result(
+                                df, pandas_config
+                            )
+                            logger.warning(
+                                f"指標 {indicator_type} のアダプター関数がありません。NaN結果を返します"
+                            )
                         else:
                             raise ValueError(
                                 f"指標 {indicator_type} の実装が見つかりません"
@@ -229,12 +252,22 @@ class TechnicalIndicatorService:
                 except ValueError:
                     # pandas_configがない場合は、デフォルトのNaN結果を作成
                     if pandas_config:
-                        result = self.validator.create_nan_result(df, pandas_config)
+                        result = self.validator.create_nan_result(
+                            df, pandas_config
+                        )
                     else:
                         # pandas_configがない場合は、デフォルト設定でNaN結果を作成
-                        default_config = {"function": indicator_type, "returns": "single", "return_cols": [indicator_type]}
-                        result = self.validator.create_nan_result(df, default_config)
-                        logger.warning(f"指標 {indicator_type} のpandas_configがありません。デフォルトNaN結果を返します")
+                        default_config = {
+                            "function": indicator_type,
+                            "returns": "single",
+                            "return_cols": [indicator_type],
+                        }
+                        result = self.validator.create_nan_result(
+                            df, default_config
+                        )
+                        logger.warning(
+                            f"指標 {indicator_type} のpandas_configがありません。デフォルトNaN結果を返します"
+                        )
 
             # キャッシュに保存
             if result is not None and cache_key:
@@ -245,7 +278,11 @@ class TechnicalIndicatorService:
         except Exception as e:
             logger.error(f"指標計算エラー {indicator_type}: {e}")
             # 例外が発生した場合はNaN結果を返す
-            default_config = {"function": indicator_type, "returns": "single", "return_cols": [indicator_type]}
+            default_config = {
+                "function": indicator_type,
+                "returns": "single",
+                "return_cols": [indicator_type],
+            }
             result = self.validator.create_nan_result(df, default_config)
             if result is not None and cache_key:
                 self.cache_manager.cache_result(cache_key, result)
@@ -314,7 +351,9 @@ class TechnicalIndicatorService:
                 "parameters": config.get_parameter_ranges(),
                 "result_type": config.result_type.value,
                 "required_data": config.required_data,
-                "scale_type": config.scale_type.value if config.scale_type else None,
+                "scale_type": (
+                    config.scale_type.value if config.scale_type else None
+                ),
                 "support_tier": self._get_support_tier(config),
             }
         return infos

@@ -55,7 +55,14 @@ class OperandGroupingSystem:
             "high",
             "low",
         ],
-        OperandGroup.PERCENTAGE_0_100: ["RSI", "STOCH", "ADX", "MFI", "QQE", "UI"],
+        OperandGroup.PERCENTAGE_0_100: [
+            "RSI",
+            "STOCH",
+            "ADX",
+            "MFI",
+            "QQE",
+            "UI",
+        ],
         OperandGroup.PERCENTAGE_NEG100_100: ["CCI", "CMO", "AROONOSC"],
         OperandGroup.ZERO_CENTERED: [
             "MACD",
@@ -111,18 +118,30 @@ class OperandGroupingSystem:
             matrix[(group, group)] = self.PERFECT_COMPATIBILITY
 
         # 価格ベースと価格比率は高い互換性（どちらも価格関連スケール）
-        matrix[(OperandGroup.PRICE_BASED, OperandGroup.PRICE_RATIO)] = self.HIGH_COMPATIBILITY
-        matrix[(OperandGroup.PRICE_RATIO, OperandGroup.PRICE_BASED)] = self.HIGH_COMPATIBILITY
+        matrix[(OperandGroup.PRICE_BASED, OperandGroup.PRICE_RATIO)] = (
+            self.HIGH_COMPATIBILITY
+        )
+        matrix[(OperandGroup.PRICE_RATIO, OperandGroup.PRICE_BASED)] = (
+            self.HIGH_COMPATIBILITY
+        )
 
         # 0-100%オシレーター同士は高い互換性
-        matrix[(OperandGroup.PERCENTAGE_0_100, OperandGroup.PERCENTAGE_0_100)] = self.PERFECT_COMPATIBILITY
+        matrix[
+            (OperandGroup.PERCENTAGE_0_100, OperandGroup.PERCENTAGE_0_100)
+        ] = self.PERFECT_COMPATIBILITY
 
         # ±100オシレーターとゼロ中心は中程度の互換性
-        matrix[(OperandGroup.PERCENTAGE_NEG100_100, OperandGroup.ZERO_CENTERED)] = self.MEDIUM_COMPATIBILITY
-        matrix[(OperandGroup.ZERO_CENTERED, OperandGroup.PERCENTAGE_NEG100_100)] = self.MEDIUM_COMPATIBILITY
+        matrix[
+            (OperandGroup.PERCENTAGE_NEG100_100, OperandGroup.ZERO_CENTERED)
+        ] = self.MEDIUM_COMPATIBILITY
+        matrix[
+            (OperandGroup.ZERO_CENTERED, OperandGroup.PERCENTAGE_NEG100_100)
+        ] = self.MEDIUM_COMPATIBILITY
 
         # 特殊スケール同士は低い互換性
-        matrix[(OperandGroup.SPECIAL_SCALE, OperandGroup.SPECIAL_SCALE)] = self.MEDIUM_COMPATIBILITY
+        matrix[(OperandGroup.SPECIAL_SCALE, OperandGroup.SPECIAL_SCALE)] = (
+            self.MEDIUM_COMPATIBILITY
+        )
 
         # その他の組み合わせは非常に低い互換性
         for group1 in OperandGroup:
@@ -172,7 +191,9 @@ class OperandGroupingSystem:
         group1 = self.get_operand_group(operand1)
         group2 = self.get_operand_group(operand2)
 
-        score = self._compatibility_matrix.get((group1, group2), self.LOW_COMPATIBILITY)
+        score = self._compatibility_matrix.get(
+            (group1, group2), self.LOW_COMPATIBILITY
+        )
 
         return score
 
@@ -222,7 +243,9 @@ class OperandGroupingSystem:
             # 数値との比較は常に有効
             return True, "数値との比較"
 
-        compatibility = self.get_compatibility_score(left_operand, str(right_operand))
+        compatibility = self.get_compatibility_score(
+            left_operand, str(right_operand)
+        )
 
         if compatibility >= self.HIGH_COMPATIBILITY:
             return True, f"高い互換性 (スコア: {compatibility:.2f})"
@@ -275,4 +298,6 @@ def validate_condition(left_operand: str, right_operand) -> Tuple[bool, str]:
     Returns:
         (妥当性, 理由)のタプル
     """
-    return operand_grouping_system.validate_condition(left_operand, right_operand)
+    return operand_grouping_system.validate_condition(
+        left_operand, right_operand
+    )

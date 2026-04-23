@@ -76,7 +76,9 @@ class BybitService(ABC):
                     f"limitは1から{max_limit}の間の整数である必要があります"
                 )
 
-    def _validate_parameters(self, symbol: str, limit: Optional[int] = None) -> None:
+    def _validate_parameters(
+        self, symbol: str, limit: Optional[int] = None
+    ) -> None:
         """
         パラメータの検証
 
@@ -152,7 +154,9 @@ class BybitService(ABC):
             raise DataError(f"取引所エラー: {e}") from e
         except Exception as e:
             logger.error(f"予期しないエラー: {e}")
-            raise DataError(f"{operation_name}中にエラーが発生しました: {e}") from e
+            raise DataError(
+                f"{operation_name}中にエラーが発生しました: {e}"
+            ) from e
 
     async def _fetch_paginated_data(
         self,
@@ -185,7 +189,9 @@ class BybitService(ABC):
         if max_pages is None:
             max_pages = unified_config.data_collection.bybit_max_pages
 
-        logger.info(f"全期間データ取得開始: {symbol} (strategy: {pagination_strategy})")
+        logger.info(
+            f"全期間データ取得開始: {symbol} (strategy: {pagination_strategy})"
+        )
 
         if pagination_strategy == "until":
             return await self._fetch_paginated_data_until(
@@ -207,7 +213,9 @@ class BybitService(ABC):
                 **fetch_kwargs,
             )
         else:
-            raise ValueError(f"未対応のページネーション戦略: {pagination_strategy}")
+            raise ValueError(
+                f"未対応のページネーション戦略: {pagination_strategy}"
+            )
 
     async def _fetch_paginated_data_until(
         self,
@@ -264,7 +272,9 @@ class BybitService(ABC):
 
                 # 次のページのために until_time を更新
                 if page_data:
-                    until_time = min(item["timestamp"] for item in page_data) - 1
+                    until_time = (
+                        min(item["timestamp"] for item in page_data) - 1
+                    )
 
                 # 取得件数が期待値より少ない場合は最後のページ
                 if len(page_data) < page_limit:
@@ -277,8 +287,12 @@ class BybitService(ABC):
                 logger.error(f"ページ {page_count} 取得エラー: {e}")
                 continue
 
-        all_data.sort(key=lambda x: x["timestamp"], reverse=True)  # 新しい順にソート
-        logger.info(f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)")
+        all_data.sort(
+            key=lambda x: x["timestamp"], reverse=True
+        )  # 新しい順にソート
+        logger.info(
+            f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)"
+        )
         return all_data
 
     async def _fetch_paginated_data_time_range(
@@ -372,7 +386,9 @@ class BybitService(ABC):
                 logger.error(f"ページ {page_count} 取得エラー: {e}")
                 break
 
-        logger.info(f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)")
+        logger.info(
+            f"全期間データ取得完了: {len(all_data)}件 ({page_count}ページ)"
+        )
         return all_data
 
     def _process_page_data(
@@ -399,7 +415,9 @@ class BybitService(ABC):
         # 重複チェック（タイムスタンプベース）
         existing_timestamps = {item["timestamp"] for item in all_data}
         new_items = [
-            item for item in page_data if item["timestamp"] not in existing_timestamps
+            item
+            for item in page_data
+            if item["timestamp"] not in existing_timestamps
         ]
 
         # 差分更新: データタイプに応じた条件で新規データをフィルタ
@@ -420,7 +438,9 @@ class BybitService(ABC):
                 ]
 
             if not new_items:
-                logger.info(f"ページ {page_count}: 既存データに到達。差分更新完了")
+                logger.info(
+                    f"ページ {page_count}: 既存データに到達。差分更新完了"
+                )
                 return None
 
         logger.info(f"ページ {page_count}: 新規データ {len(new_items)}件追加")
@@ -547,7 +567,9 @@ class BybitService(ABC):
                 f"最新タイムスタンプの取得中にエラーが発生しました: {e}",
                 exc_info=True,
             )
-            raise DataError(f"最新タイムスタンプの取得に失敗しました: {e}") from e
+            raise DataError(
+                f"最新タイムスタンプの取得に失敗しました: {e}"
+            ) from e
 
     async def fetch_incremental_data(
         self,
@@ -579,14 +601,19 @@ class BybitService(ABC):
         # 履歴取得メソッドを取得
         # シンボルを正規化
         normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
-        fetch_history_method = getattr(self.exchange, config.fetch_history_method_name)
+        fetch_history_method = getattr(
+            self.exchange, config.fetch_history_method_name
+        )
 
         if latest_timestamp:
             logger.info(
                 f"{config.log_prefix}差分データ収集開始: {symbol} (since: {latest_timestamp})"
             )
             # 最新タイムスタンプより新しいデータを取得
-            if config.fetch_history_method_name == "fetch_open_interest_history":
+            if (
+                config.fetch_history_method_name
+                == "fetch_open_interest_history"
+            ):
                 interval = kwargs.get("intervalTime", "1h")
                 history_data = await self._handle_ccxt_errors(
                     f"{config.log_prefix}差分履歴取得",
@@ -609,12 +636,17 @@ class BybitService(ABC):
 
             # 重複を避けるため、最新タイムスタンプより新しいデータのみフィルタ
             history_data = [
-                item for item in history_data if item["timestamp"] > latest_timestamp
+                item
+                for item in history_data
+                if item["timestamp"] > latest_timestamp
             ]
         else:
             logger.info(f"{config.log_prefix}初回データ収集開始: {symbol}")
             # データがない場合は最新データを取得
-            if config.fetch_history_method_name == "fetch_open_interest_history":
+            if (
+                config.fetch_history_method_name
+                == "fetch_open_interest_history"
+            ):
                 interval = kwargs.get("intervalTime", "1h")
                 history_data = await self._handle_ccxt_errors(
                     f"{config.log_prefix}初回履歴取得",
@@ -642,7 +674,9 @@ class BybitService(ABC):
             repository=repository,
         )
 
-        logger.info(f"{config.log_prefix}差分データ収集完了: {saved_count}件保存")
+        logger.info(
+            f"{config.log_prefix}差分データ収集完了: {saved_count}件保存"
+        )
         return {
             "symbol": normalized_symbol,
             "fetched_count": len(history_data),
@@ -704,7 +738,10 @@ class BybitService(ABC):
             )
 
             # オープンインタレストの場合はtimeframeパラメータが必要
-            if config.fetch_history_method_name == "fetch_open_interest_history":
+            if (
+                config.fetch_history_method_name
+                == "fetch_open_interest_history"
+            ):
                 interval = kwargs.get("intervalTime", "1h")
                 history_data = await self._handle_ccxt_errors(
                     f"{config.log_prefix}履歴取得",
@@ -768,7 +805,9 @@ class BybitService(ABC):
         )
         records = converter_method(history_data, symbol)
 
-        logger.info(f"データ変換完了: {len(records)}件のレコードをDB挿入開始...")
+        logger.info(
+            f"データ変換完了: {len(records)}件のレコードをDB挿入開始..."
+        )
 
         # データベース挿入
         try:
@@ -794,7 +833,9 @@ class BybitService(ABC):
 
         async def save_with_db(db, repository):
             repo = repository or config.repository_class(db)
-            return await self._save_data_to_database(history_data, symbol, repo, config)
+            return await self._save_data_to_database(
+                history_data, symbol, repo, config
+            )
 
         return await self._execute_with_db_session(
             func=save_with_db, repository=repository

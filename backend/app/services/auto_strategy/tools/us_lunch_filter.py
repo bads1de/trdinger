@@ -33,7 +33,9 @@ class USLunchFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """
         米国ランチタイムかどうかを判定
 
@@ -50,11 +52,18 @@ class USLunchFilter(BaseTool):
 
         # タイムゾーン処理を行い、NY時間を取得
         try:
-            current_minutes = to_timezone_minutes(context.timestamp, "US/Eastern")
-            return current_minutes is not None and 12 * 60 <= current_minutes < 13 * 60
+            current_minutes = to_timezone_minutes(
+                context.timestamp, "US/Eastern"
+            )
+            return (
+                current_minutes is not None
+                and 12 * 60 <= current_minutes < 13 * 60
+            )
 
         except Exception as e:
-            logger.debug(f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}")
+            logger.debug(
+                f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}"
+            )
             from .time_windows import is_summer_time_by_month
 
             is_summer = is_summer_time_by_month(context.timestamp)

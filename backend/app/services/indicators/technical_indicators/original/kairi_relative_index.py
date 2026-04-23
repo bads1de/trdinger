@@ -38,10 +38,14 @@ def kairi_relative_index(close, length=14, signal_length=3):
     validation = validate_series_params(close, length, min_data_length=length)
     if validation is not None:
         nan1 = pd.Series(
-            np.full(len(close), np.nan), index=close.index, name=f"KRI_{length}"
+            np.full(len(close), np.nan),
+            index=close.index,
+            name=f"KRI_{length}",
         )
         nan2 = pd.Series(
-            np.full(len(close), np.nan), index=close.index, name=f"KRI_SIGNAL_{length}"
+            np.full(len(close), np.nan),
+            index=close.index,
+            name=f"KRI_SIGNAL_{length}",
         )
         return nan1, nan2
 

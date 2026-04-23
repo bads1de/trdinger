@@ -47,7 +47,9 @@ class LassoStrategy(BaseSelectionStrategy):
                 - メタデータ（係数、alpha値、メソッド名を含む）
         """
         model = LassoCV(
-            cv=config.cv_folds, random_state=config.random_state, n_jobs=config.n_jobs
+            cv=config.cv_folds,
+            random_state=config.random_state,
+            n_jobs=config.n_jobs,
         )
         model.fit(X, y)
 

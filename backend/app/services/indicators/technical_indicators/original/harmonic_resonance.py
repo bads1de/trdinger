@@ -8,7 +8,10 @@ import numpy as np
 import pandas as pd
 from numba import njit, prange
 
-from ...data_validation import handle_pandas_ta_errors, validate_multi_series_params
+from ...data_validation import (
+    handle_pandas_ta_errors,
+    validate_multi_series_params,
+)
 from ._window_helpers import _window_mean
 
 
@@ -78,7 +81,9 @@ def _njit_find_dominant_freqs(prices: np.ndarray) -> np.ndarray:
 
 
 @njit(cache=True)
-def _njit_apply_bandpass_res(x: np.ndarray, freq: float, q: float = 2.0) -> np.ndarray:
+def _njit_apply_bandpass_res(
+    x: np.ndarray, freq: float, q: float = 2.0
+) -> np.ndarray:
     n = len(x)
     y = np.zeros(n, dtype=np.float64)
 
@@ -228,7 +233,9 @@ def harmonic_resonance(
         raise ValueError("signal_length must be >= 2")
 
     validation = validate_multi_series_params(
-        {"close": close, "high": high, "low": low}, length, min_data_length=length
+        {"close": close, "high": high, "low": low},
+        length,
+        min_data_length=length,
     )
     if validation is not None:
         nan_hri = pd.Series(
@@ -247,7 +254,9 @@ def harmonic_resonance(
         prices, length, resonance_bands, min_period
     )
 
-    hri_series = pd.Series(hri_values, index=close.index, name="HARMONIC_RESONANCE")
+    hri_series = pd.Series(
+        hri_values, index=close.index, name="HARMONIC_RESONANCE"
+    )
     signal = hri_series.rolling(window=signal_length, min_periods=1).mean()
     signal.name = "HRI_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 

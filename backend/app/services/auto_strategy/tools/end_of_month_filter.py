@@ -27,7 +27,9 @@ class EndOfMonthFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """
         月末かどうかを判定
 

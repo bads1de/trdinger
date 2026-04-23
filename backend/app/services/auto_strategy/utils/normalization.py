@@ -5,7 +5,6 @@ auto_strategy全体で使用されるパラメータ正規化・Enum正規化の
 """
 
 import logging
-from enum import Enum
 from typing import Any, Union
 
 logger = logging.getLogger(__name__)
@@ -92,7 +91,7 @@ class NormalizationUtils:
         Raises:
             AttributeError: strategy_gene_classにcreate_defaultメソッドが存在しない場合。
         """
-        return strategy_gene_class.create_default()
+        return strategy_gene_class.create_default()  # type: ignore[attr-defined]
 
 
 # 外部で使用可能な便利関数

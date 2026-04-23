@@ -98,11 +98,15 @@ class DEAPSetup:
                 )
                 normalized_weights.append(normalized_weight)
         except (TypeError, ValueError) as exc:
-            raise ValueError("objective_weights は数値である必要があります") from exc
+            raise ValueError(
+                "objective_weights は数値である必要があります"
+            ) from exc
 
         weights = tuple(normalized_weights)
 
-        logger.info(f"多目的最適化モード: 目的={config.objectives}, 重み={weights}")
+        logger.info(
+            f"多目的最適化モード: 目的={config.objectives}, 重み={weights}"
+        )
 
         # フィットネスクラスを作成
         creator.create(fitness_class_name, base.Fitness, weights=weights)
@@ -112,7 +116,9 @@ class DEAPSetup:
         creator.create(
             individual_class_name, StrategyGene, fitness=fitness_class
         )  # type: ignore
-        self.Individual = getattr(creator, individual_class_name)  # type: ignore
+        self.Individual = getattr(
+            creator, individual_class_name
+        )  # type: ignore
 
         # ツールボックスの初期化
         self.toolbox = base.Toolbox()

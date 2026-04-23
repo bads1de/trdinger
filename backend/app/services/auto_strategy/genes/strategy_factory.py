@@ -19,7 +19,9 @@ from .tpsl import TPSLGene
 
 def create_default_strategy_gene(strategy_gene_class):
     """デフォルトの StrategyGene を構築する。"""
-    indicators = [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
+    indicators = [
+        IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+    ]
 
     return strategy_gene_class(
         id=str(uuid.uuid4()),
@@ -31,7 +33,9 @@ def create_default_strategy_gene(strategy_gene_class):
             Condition(left_operand="close", operator="<", right_operand="open")
         ],
         risk_management={"position_size": 0.1},
-        tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005, enabled=True),
+        tpsl_gene=TPSLGene(
+            take_profit_pct=0.01, stop_loss_pct=0.005, enabled=True
+        ),
         position_sizing_gene=PositionSizingGene(
             method=PositionSizingMethod.FIXED_QUANTITY,
             fixed_quantity=1000,
@@ -54,8 +58,12 @@ def assemble_strategy_gene(
     long_entry_gene: Optional[EntryGene] = None,
     short_entry_gene: Optional[EntryGene] = None,
     exit_gene: Optional[ExitGene] = None,
-    long_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
-    short_exit_conditions: Optional[List[Union[Condition, ConditionGroup]]] = None,
+    long_exit_conditions: Optional[
+        List[Union[Condition, ConditionGroup]]
+    ] = None,
+    short_exit_conditions: Optional[
+        List[Union[Condition, ConditionGroup]]
+    ] = None,
     tool_genes: Optional[List[ToolGene]] = None,
     risk_management: Optional[Dict[str, Any]] = None,
     metadata: Optional[Dict[str, Any]] = None,

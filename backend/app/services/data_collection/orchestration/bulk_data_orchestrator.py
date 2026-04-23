@@ -15,7 +15,9 @@ from app.config.unified_config import unified_config
 from app.utils.response import api_response
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 from ..historical.historical_data_service import HistoricalDataService
 
@@ -56,12 +58,14 @@ class BulkDataOrchestrator:
             open_interest_repository = OpenInterestRepository(db)
 
             # 全時間足を自動的に処理（OHLCV、FR、OI）
-            result = await self.historical_service.collect_bulk_incremental_data(
-                symbol=symbol,
-                timeframe="1h",  # デフォルト値（実際は全時間足を処理）
-                ohlcv_repository=ohlcv_repository,
-                funding_rate_repository=funding_rate_repository,
-                open_interest_repository=open_interest_repository,
+            result = (
+                await self.historical_service.collect_bulk_incremental_data(
+                    symbol=symbol,
+                    timeframe="1h",  # デフォルト値（実際は全時間足を処理）
+                    ohlcv_repository=ohlcv_repository,
+                    funding_rate_repository=funding_rate_repository,
+                    open_interest_repository=open_interest_repository,
+                )
             )
 
             return api_response(
@@ -165,10 +169,8 @@ class BulkDataOrchestrator:
                     if should_collect:
                         if force_update and data_count > 0:
                             # 強制更新の場合は既存データを削除
-                            deleted_count = (
-                                repository.clear_ohlcv_data_by_symbol_and_timeframe(
-                                    symbol, timeframe
-                                )
+                            deleted_count = repository.clear_ohlcv_data_by_symbol_and_timeframe(
+                                symbol, timeframe
                             )
                             logger.info(
                                 f"強制更新のため {symbol} {timeframe} の既存データを{deleted_count}件削除しました"
@@ -183,9 +185,7 @@ class BulkDataOrchestrator:
                             start_date,
                         )
 
-            status_message = (
-                f"一括履歴データ収集を開始しました（{len(collection_tasks)}件のタスク）"
-            )
+            status_message = f"一括履歴データ収集を開始しました（{len(collection_tasks)}件のタスク）"
             if force_update:
                 status_message += "（強制更新モード）"
 
@@ -233,7 +233,9 @@ class BulkDataOrchestrator:
             for symbol in symbols:
                 for timeframe in timeframes:
                     # OHLCVデータの存在チェック
-                    ohlcv_count = ohlcv_repository.get_data_count(symbol, timeframe)
+                    ohlcv_count = ohlcv_repository.get_data_count(
+                        symbol, timeframe
+                    )
                     if ohlcv_count == 0:
                         collection_tasks.append((symbol, timeframe))
                         background_tasks.add_task(
@@ -269,8 +271,10 @@ class BulkDataOrchestrator:
             logger.info(f"OHLCV収集開始: {symbol} {timeframe}")
             ohlcv_repository = OHLCVRepository(db)
 
-            ohlcv_result = await self.historical_service.collect_historical_data(
-                symbol, timeframe, ohlcv_repository
+            ohlcv_result = (
+                await self.historical_service.collect_historical_data(
+                    symbol, timeframe, ohlcv_repository
+                )
             )
 
             if ohlcv_result is not None and ohlcv_result >= 0:
@@ -284,13 +288,19 @@ class BulkDataOrchestrator:
             # 2. Funding Rate収集
             try:
                 logger.info(f"Funding Rate収集開始: {symbol} {timeframe}")
-                from ..bybit.funding_rate_service import BybitFundingRateService
+                from ..bybit.funding_rate_service import (
+                    BybitFundingRateService,
+                )
 
                 funding_service = BybitFundingRateService()
                 funding_repository = FundingRateRepository(db)
 
-                funding_result = await funding_service.fetch_and_save_funding_rate_data(
-                    symbol=symbol, repository=funding_repository, fetch_all=True
+                funding_result = (
+                    await funding_service.fetch_and_save_funding_rate_data(
+                        symbol=symbol,
+                        repository=funding_repository,
+                        fetch_all=True,
+                    )
                 )
 
                 if funding_result["success"]:
@@ -303,12 +313,16 @@ class BulkDataOrchestrator:
                     )
 
             except Exception as e:
-                logger.error(f"Funding Rate収集エラー: {symbol}", exc_info=True)
+                logger.error(
+                    f"Funding Rate収集エラー: {symbol}", exc_info=True
+                )
 
             # 3. Open Interest収集
             try:
                 logger.info(f"Open Interest収集開始: {symbol} {timeframe}")
-                from ..bybit.open_interest_service import BybitOpenInterestService
+                from ..bybit.open_interest_service import (
+                    BybitOpenInterestService,
+                )
 
                 oi_service = BybitOpenInterestService()
                 oi_repository = OpenInterestRepository(db)
@@ -331,7 +345,8 @@ class BulkDataOrchestrator:
 
             except Exception as e:
                 logger.error(
-                    f"Open Interest収集エラー: {symbol} {timeframe}", exc_info=True
+                    f"Open Interest収集エラー: {symbol} {timeframe}",
+                    exc_info=True,
                 )
 
             logger.info(f"全データ収集完了: {symbol} {timeframe}")

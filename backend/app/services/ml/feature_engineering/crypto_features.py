@@ -11,7 +11,10 @@ from typing import Any, Dict, Optional
 
 import pandas as pd
 
-from .base_feature_calculator import BaseFeatureCalculator, sanitize_numeric_dataframe
+from .base_feature_calculator import (
+    BaseFeatureCalculator,
+    sanitize_numeric_dataframe,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,9 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
         logger.info("暗号通貨特化特徴量を計算中...")
 
         # 必須カラムチェック
-        if not self.validate_input_data(df, ["open", "high", "low", "close", "volume"]):
+        if not self.validate_input_data(
+            df, ["open", "high", "low", "close", "volume"]
+        ):
             return df
 
         result_df = df.copy()

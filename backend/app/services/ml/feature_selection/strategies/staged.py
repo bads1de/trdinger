@@ -26,11 +26,16 @@ class StagedStrategy(BaseSelectionStrategy):
     """
 
     def __init__(
-        self, strategies: Optional[Dict[SelectionMethod, BaseSelectionStrategy]] = None
+        self,
+        strategies: Optional[
+            Dict[SelectionMethod, BaseSelectionStrategy]
+        ] = None,
     ):
         self.strategy_map = strategies or self._default_strategies()
 
-    def _default_strategies(self) -> Dict[SelectionMethod, BaseSelectionStrategy]:
+    def _default_strategies(
+        self,
+    ) -> Dict[SelectionMethod, BaseSelectionStrategy]:
         return build_staged_strategy_map()
 
     def select(

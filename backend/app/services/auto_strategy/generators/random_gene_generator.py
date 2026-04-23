@@ -9,7 +9,17 @@ from __future__ import annotations
 
 import logging
 import random
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Protocol, Sequence, TypeVar
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Protocol,
+    Sequence,
+    TypeVar,
+)
 
 if TYPE_CHECKING:
     from ..config.ga.ga_config import GAConfig
@@ -225,9 +235,12 @@ class RandomGeneGenerator:
         max_filters = getattr(self.config, "max_enabled_filters", 3)
 
         # 有効なフィルターをコスト順にソート（コストが高い＝優先度低い）
-        enabled_filters = [t for t in tool_genes if hasattr(t, "enabled") and t.enabled]
-        disabled_filters = [t for t in tool_genes if hasattr(t, "enabled") and not t.enabled]
-
+        enabled_filters = [
+            t for t in tool_genes if hasattr(t, "enabled") and t.enabled
+        ]
+        disabled_filters = [
+            t for t in tool_genes if hasattr(t, "enabled") and not t.enabled
+        ]
 
         # コストを計算
         def get_cost(tool_gene: ToolGene) -> int:
@@ -367,7 +380,9 @@ class RandomGeneGenerator:
         is_api_call=False,
         default_return=StrategyGene(
             indicators=[
-                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
+                IndicatorGene(
+                    type="SMA", parameters={"period": 20}, enabled=True
+                )
             ],
             long_entry_conditions=[],
             short_entry_conditions=[],
@@ -376,7 +391,9 @@ class RandomGeneGenerator:
             risk_management={},
             tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
             long_tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
-            short_tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
+            short_tpsl_gene=TPSLGene(
+                take_profit_pct=0.01, stop_loss_pct=0.005
+            ),
             exit_gene=ExitGene(),
             position_sizing_gene=PositionSizingGene(
                 method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
@@ -415,15 +432,21 @@ class RandomGeneGenerator:
             logger.debug("指標キャッシュの設定に失敗しました: %s", e)
             pass
         long_entry_conditions, short_entry_conditions, _ = (
-            self.smart_condition_generator.generate_balanced_conditions(indicators)
+            self.smart_condition_generator.generate_balanced_conditions(
+                indicators
+            )
         )
 
         # 条件の成立性を底上げ：OR 正規化と価格vsトレンド(or open)フォールバックをコアに委譲
-        long_entry_conditions = self.smart_condition_generator.normalize_conditions(
-            long_entry_conditions, "long", indicators
+        long_entry_conditions = (
+            self.smart_condition_generator.normalize_conditions(
+                long_entry_conditions, "long", indicators
+            )
         )
-        short_entry_conditions = self.smart_condition_generator.normalize_conditions(
-            short_entry_conditions, "short", indicators
+        short_entry_conditions = (
+            self.smart_condition_generator.normalize_conditions(
+                short_entry_conditions, "short", indicators
+            )
         )
         long_exit_conditions, short_exit_conditions, _ = (
             self.smart_condition_generator.generate_exit_conditions(indicators)

@@ -75,7 +75,9 @@ class MTFStrategy:
         for trend_ind in mtf_trends:
             t_name = self.gen._get_indicator_name(trend_ind)
             t_long = self.gen._create_side_condition(trend_ind, "long", t_name)
-            t_short = self.gen._create_side_condition(trend_ind, "short", t_name)
+            t_short = self.gen._create_side_condition(
+                trend_ind, "short", t_name
+            )
 
             for trig_ind in targets:
                 if (
@@ -85,10 +87,16 @@ class MTFStrategy:
                     continue
 
                 m_name = self.gen._get_indicator_name(trig_ind)
-                m_long = self.gen._create_side_condition(trig_ind, "long", m_name)
-                m_short = self.gen._create_side_condition(trig_ind, "short", m_name)
+                m_long = self.gen._create_side_condition(
+                    trig_ind, "long", m_name
+                )
+                m_short = self.gen._create_side_condition(
+                    trig_ind, "short", m_name
+                )
 
-                build_and_groups = getattr(type(self.gen), "_build_and_groups", None)
+                build_and_groups = getattr(
+                    type(self.gen), "_build_and_groups", None
+                )
                 if build_and_groups is None:
                     long_group = ConditionGroup(
                         operator="AND",
@@ -109,7 +117,11 @@ class MTFStrategy:
 
         # 多すぎる場合は間引く
         def _sample(lst):
-            return random.sample(lst, self.MAX_CONDITIONS_SAMPLE) if len(lst) > self.MAX_CONDITIONS_SAMPLE else lst
+            return (
+                random.sample(lst, self.MAX_CONDITIONS_SAMPLE)
+                if len(lst) > self.MAX_CONDITIONS_SAMPLE
+                else lst
+            )
 
         return _sample(long_conds), _sample(short_conds), []
 

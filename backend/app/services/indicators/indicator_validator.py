@@ -10,7 +10,10 @@ from typing import Any, Dict, Union
 import numpy as np
 import pandas as pd
 
-from .data_validation import create_nan_result, validate_data_length_with_fallback
+from .data_validation import (
+    create_nan_result,
+    validate_data_length_with_fallback,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +44,9 @@ class IndicatorValidator:
         Returns:
             bool: 検証に合格した場合はTrue、不合格の場合はFalse
         """
-        is_valid, _ = validate_data_length_with_fallback(df, config["function"], params)
+        is_valid, _ = validate_data_length_with_fallback(
+            df, config["function"], params
+        )
         if not is_valid:
             return False
 
@@ -81,7 +86,9 @@ class IndicatorValidator:
             return tuple(nan_result[:, i] for i in range(nan_result.shape[1]))
         return nan_result
 
-    def resolve_column_name(self, df: pd.DataFrame, data_key: str) -> str | None:
+    def resolve_column_name(
+        self, df: pd.DataFrame, data_key: str
+    ) -> str | None:
         """
         データフレームから適切なカラム名を解決
 

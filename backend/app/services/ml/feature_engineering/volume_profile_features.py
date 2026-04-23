@@ -189,19 +189,34 @@ class VolumeProfileFeatureCalculator:
 
             # 手動でのNaN埋めをベクトル化 (Forward fill)
             def safe_fill(arr: np.ndarray) -> np.ndarray:
-                return pd.Series(arr).ffill().fillna(0.0).to_numpy(dtype=np.float64)
+                return (
+                    pd.Series(arr)
+                    .ffill()
+                    .fillna(0.0)
+                    .to_numpy(dtype=np.float64)
+                )
 
-            poc_f, vah_f, val_f = safe_fill(poc), safe_fill(vah), safe_fill(val)
+            poc_f, vah_f, val_f = (
+                safe_fill(poc),
+                safe_fill(vah),
+                safe_fill(val),
+            )
 
             # 距離計算 (ベクトル化)
             features_dict[f"POC_Distance_{period}"] = np.where(
-                poc_f != 0, (close_arr - poc_f) / np.where(poc_f == 0, 1.0, poc_f), 0.0
+                poc_f != 0,
+                (close_arr - poc_f) / np.where(poc_f == 0, 1.0, poc_f),
+                0.0,
             )
             features_dict[f"VAH_Distance_{period}"] = np.where(
-                vah_f != 0, (close_arr - vah_f) / np.where(vah_f == 0, 1.0, vah_f), 0.0
+                vah_f != 0,
+                (close_arr - vah_f) / np.where(vah_f == 0, 1.0, vah_f),
+                0.0,
             )
             features_dict[f"VAL_Distance_{period}"] = np.where(
-                val_f != 0, (close_arr - val_f) / np.where(val_f == 0, 1.0, val_f), 0.0
+                val_f != 0,
+                (close_arr - val_f) / np.where(val_f == 0, 1.0, val_f),
+                0.0,
             )
             features_dict[f"In_Value_Area_{period}"] = (
                 (val_f <= close_arr) & (close_arr <= vah_f)

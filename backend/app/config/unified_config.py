@@ -162,16 +162,25 @@ class DataCollectionConfig(BaseSettings):
 
     # Bybit API設定
     bybit_timeout: int = Field(default=30, description="APIタイムアウト（秒）")
-    bybit_page_limit: int = Field(default=200, description="ページング時の制限")
+    bybit_page_limit: int = Field(
+        default=200, description="ページング時の制限"
+    )
     bybit_max_pages: int = Field(
-        default=500, description="最大ページ数（2020年からのデータを取得可能に拡張）"
+        default=500,
+        description="最大ページ数（2020年からのデータを取得可能に拡張）",
     )
 
     # メモリ管理
-    memory_warning_threshold: int = Field(default=8000, description="メモリ警告閾値")
-    memory_limit_threshold: int = Field(default=10000, description="メモリ制限閾値")
+    memory_warning_threshold: int = Field(
+        default=8000, description="メモリ警告閾値"
+    )
+    memory_limit_threshold: int = Field(
+        default=10000, description="メモリ制限閾値"
+    )
 
-    model_config = SettingsConfigDict(env_prefix="DATA_COLLECTION_", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="DATA_COLLECTION_", extra="ignore"
+    )
 
 
 class UnifiedConfig(BaseSettings):
@@ -184,7 +193,9 @@ class UnifiedConfig(BaseSettings):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     market: MarketConfig = Field(default_factory=MarketConfig)
-    data_collection: DataCollectionConfig = Field(default_factory=DataCollectionConfig)
+    data_collection: DataCollectionConfig = Field(
+        default_factory=DataCollectionConfig
+    )
 
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",

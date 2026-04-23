@@ -83,7 +83,11 @@ class EntryExecutor:
         return {}
 
     def _calculate_offset_price(
-        self, base_price: float, direction: float, offset_pct: float, is_limit: bool
+        self,
+        base_price: float,
+        direction: float,
+        offset_pct: float,
+        is_limit: bool,
     ) -> float:
         """
         オフセット価格を計算（共通ロジック）
@@ -99,10 +103,14 @@ class EntryExecutor:
         self, base_price: float, direction: float, offset_pct: float
     ) -> float:
         """指値価格を計算（有利な価格）"""
-        return self._calculate_offset_price(base_price, direction, offset_pct, True)
+        return self._calculate_offset_price(
+            base_price, direction, offset_pct, True
+        )
 
     def _calculate_stop_price(
         self, base_price: float, direction: float, offset_pct: float
     ) -> float:
         """逆指値価格を計算（ブレイクアウト価格）"""
-        return self._calculate_offset_price(base_price, direction, offset_pct, False)
+        return self._calculate_offset_price(
+            base_price, direction, offset_pct, False
+        )

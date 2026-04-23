@@ -6,9 +6,9 @@
 """
 
 import logging
+import threading
 from dataclasses import dataclass, field
 from enum import Enum
-import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,12 @@ class IndicatorScaleType(Enum):
     """指標のスケールタイプ"""
 
     OSCILLATOR_0_100 = "oscillator_0_100"  # 0-100スケール（RSI, STOCH等）
-    OSCILLATOR_PLUS_MINUS_100 = "oscillator_plus_minus_100"  # ±100スケール（CCI等）
-    MOMENTUM_ZERO_CENTERED = "momentum_zero_centered"  # ゼロ近辺変動（TRIX, PPO等）
+    OSCILLATOR_PLUS_MINUS_100 = (
+        "oscillator_plus_minus_100"  # ±100スケール（CCI等）
+    )
+    MOMENTUM_ZERO_CENTERED = (
+        "momentum_zero_centered"  # ゼロ近辺変動（TRIX, PPO等）
+    )
     PRICE_RATIO = "price_ratio"  # 価格比率（SMA, EMA等）
     FUNDING_RATE = "funding_rate"  # ファンディングレート
     OPEN_INTEREST = "open_interest"  # オープンインタレスト
@@ -75,15 +79,21 @@ class ParameterConfig:
         # フォールバック：デフォルトの min/max 範囲を使用
         return (self.min_value, self.max_value)
 
-    def _apply_even_constraint(self, value: Union[int, float]) -> Union[int, float]:
+    def _apply_even_constraint(
+        self, value: Union[int, float]
+    ) -> Union[int, float]:
         """even_only 制約を満たすように値を調整する。"""
         if not self.even_only or int(value) % 2 == 0:
             return value
 
-        upper_bound = self.max_value if self.max_value is not None else float("inf")
+        upper_bound = (
+            self.max_value if self.max_value is not None else float("inf")
+        )
         return value + 1 if value < upper_bound else value - 1
 
-    def _normalize_numeric_value(self, value: Union[int, float]) -> Union[int, float]:
+    def _normalize_numeric_value(
+        self, value: Union[int, float]
+    ) -> Union[int, float]:
         """min/max と even_only をまとめて適用する。"""
         normalized = value
 
@@ -145,7 +155,9 @@ class IndicatorConfig:
 
         # 派生属性の判定と自動設定
         # returns (single / multiple)
-        if hasattr(self, "returns") and (not self.returns or self.returns == "single"):
+        if hasattr(self, "returns") and (
+            not self.returns or self.returns == "single"
+        ):
             if self.result_type == IndicatorResultType.COMPLEX:
                 self.returns = "multiple"
             else:
@@ -159,9 +171,13 @@ class IndicatorConfig:
             self.data_column = self.required_data[0].capitalize()
 
         if not self.data_columns and len(self.required_data) > 1:
-            self.data_columns = [col.capitalize() for col in self.required_data]
+            self.data_columns = [
+                col.capitalize() for col in self.required_data
+            ]
 
-    def validate_constraints(self, params: Dict[str, Any]) -> tuple[bool, List[str]]:
+    def validate_constraints(
+        self, params: Dict[str, Any]
+    ) -> tuple[bool, List[str]]:
         """
         パラメータ依存関係制約を検証
 
@@ -299,7 +315,11 @@ class IndicatorConfig:
         # param_mapに基づいてエイリアスマッピング
         if self.param_map:
             for param_key, mapped_param in self.param_map.items():
-                if param_key in params and mapped_param and mapped_param != param_key:
+                if (
+                    param_key in params
+                    and mapped_param
+                    and mapped_param != param_key
+                ):
                     value = params[param_key]
                     normalized[mapped_param] = value
                     if param_key in normalized:
@@ -307,16 +327,20 @@ class IndicatorConfig:
 
         # パラメータ範囲チェック
         for param_name, param_config in self.parameters.items():
-            if param_name in normalized and isinstance(param_config, ParameterConfig):
+            if param_name in normalized and isinstance(
+                param_config, ParameterConfig
+            ):
                 value = normalized[param_name]
                 if isinstance(value, (int, float)):
-                    normalized[param_name] = param_config._normalize_numeric_value(
-                        value
+                    normalized[param_name] = (
+                        param_config._normalize_numeric_value(value)
                     )
 
         return normalized
 
-    def generate_random_parameters(self, preset: str | None = None) -> Dict[str, Any]:
+    def generate_random_parameters(
+        self, preset: str | None = None
+    ) -> Dict[str, Any]:
         """
         ランダムなパラメータを生成（GA用）
 
@@ -350,9 +374,13 @@ class IndicatorConfig:
 
                 if isinstance(param_config.default_value, int):
                     val = random.randint(int(min_val), int(max_val))
-                    params[param_name] = param_config._apply_even_constraint(val)
+                    params[param_name] = param_config._apply_even_constraint(
+                        val
+                    )
                 else:
-                    params[param_name] = random.uniform(float(min_val), float(max_val))
+                    params[param_name] = random.uniform(
+                        float(min_val), float(max_val)
+                    )
             else:
                 params[param_name] = param_config.default_value  # type: ignore[assignment]
 
@@ -412,11 +440,15 @@ class IndicatorConfigRegistry:
         self._initialized = False
         self._auto_initialize_on_access = False
 
-    def get_indicator_config(self, indicator_name: str) -> Optional[IndicatorConfig]:
+    def get_indicator_config(
+        self, indicator_name: str
+    ) -> Optional[IndicatorConfig]:
         """設定を取得"""
         self._ensure_ready()
         normalized_name = self._normalize_key(indicator_name)
-        return self._configs.get(normalized_name) or self._aliases.get(normalized_name)
+        return self._configs.get(normalized_name) or self._aliases.get(
+            normalized_name
+        )
 
     def list_indicators(self) -> List[str]:
         """登録されているインジケーター名のリストを取得"""
@@ -469,7 +501,9 @@ def get_cached_indicators() -> List[str]:
     global _indicator_cache
     with _cache_lock:
         if "indicators" not in _indicator_cache:
-            _indicator_cache["indicators"] = indicator_registry.list_indicators()
+            _indicator_cache["indicators"] = (
+                indicator_registry.list_indicators()
+            )
         return _indicator_cache["indicators"]
 
 
@@ -486,7 +520,9 @@ def _initialize_registry(registry: IndicatorConfigRegistry) -> None:
         registry._initialized = True
 
     except ImportError as e:
-        logger.warning(f"DynamicIndicatorDiscoveryのインポートに失敗しました: {e}")
+        logger.warning(
+            f"DynamicIndicatorDiscoveryのインポートに失敗しました: {e}"
+        )
     except Exception as e:
         logger.error(f"インジケーター初期化エラー: {e}")
 

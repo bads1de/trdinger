@@ -46,8 +46,12 @@ class VolatilityBasedCalculator(BaseCalculator):
         atr_pct = atr_value / current_price if current_price > 0 else 0.02
 
         # 2. 基本ポジションサイズの計算
-        risk_amount = account_balance * self._get_param(gene, "risk_per_trade", 0.02)
-        volatility_factor = atr_pct * self._get_param(gene, "atr_multiplier", 2.0)
+        risk_amount = account_balance * self._get_param(
+            gene, "risk_per_trade", 0.02
+        )
+        volatility_factor = atr_pct * self._get_param(
+            gene, "atr_multiplier", 2.0
+        )
 
         if volatility_factor > 0:
             position_size = risk_amount / (current_price * volatility_factor)

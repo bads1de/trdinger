@@ -32,13 +32,17 @@ from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response, ensure_response_dict
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 from ..common.base_resource_manager import BaseResourceManager, CleanupLevel
 from ..common.config import get_default_single_model_config
 from ..common.training_utils import resolve_holdout_test_size
 from ..ensemble.ensemble_trainer import EnsembleConfig, EnsembleTrainer
-from ..trainers.volatility_regression_trainer import VolatilityRegressionTrainer
+from ..trainers.volatility_regression_trainer import (
+    VolatilityRegressionTrainer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +86,9 @@ def get_latest_model_with_info(
         )
         file_info = {
             "size_mb": os.path.getsize(latest_model) / (1024 * 1024),
-            "modified_at": datetime.fromtimestamp(os.path.getmtime(latest_model)),
+            "modified_at": datetime.fromtimestamp(
+                os.path.getmtime(latest_model)
+            ),
         }
         return {
             "path": latest_model,
@@ -188,7 +194,9 @@ class MLTrainingService(BaseResourceManager):
         self.trainer_type = trainer_type
         self.trainer: Union[VolatilityRegressionTrainer, EnsembleTrainer]
         if trainer_type == "single":
-            model_type = (single_model_config or {}).get("model_type", "lightgbm")
+            model_type = (single_model_config or {}).get(
+                "model_type", "lightgbm"
+            )
             self.trainer = VolatilityRegressionTrainer(
                 model_type=model_type,
                 model_params=single_model_config or {},
@@ -197,7 +205,9 @@ class MLTrainingService(BaseResourceManager):
             config = self._create_trainer_config(
                 trainer_type, ensemble_config, single_model_config
             )
-            self.trainer = EnsembleTrainer(ensemble_config=cast(EnsembleConfig, config))
+            self.trainer = EnsembleTrainer(
+                ensemble_config=cast(EnsembleConfig, config)
+            )
         self.optimization_service = OptimizationService()
 
     def _create_trainer_config(
@@ -231,11 +241,17 @@ class MLTrainingService(BaseResourceManager):
         """
         if trainer_type == "ensemble":
             if ensemble_config is None:
-                ensemble_config = ml_config_manager.config.ensemble.model_dump()
+                ensemble_config = (
+                    ml_config_manager.config.ensemble.model_dump()
+                )
                 if "default_method" in ensemble_config:
-                    ensemble_config["method"] = ensemble_config.pop("default_method")
+                    ensemble_config["method"] = ensemble_config.pop(
+                        "default_method"
+                    )
                 if "algorithms" in ensemble_config:
-                    ensemble_config["models"] = ensemble_config.pop("algorithms")
+                    ensemble_config["models"] = ensemble_config.pop(
+                        "algorithms"
+                    )
             return cast(EnsembleConfig, ensemble_config)
 
         elif trainer_type == "single":
@@ -249,7 +265,9 @@ class MLTrainingService(BaseResourceManager):
                 **single_model_config,
             }
         else:
-            raise ValueError(f"サポートされていないトレーナータイプ: {trainer_type}")
+            raise ValueError(
+                f"サポートされていないトレーナータイプ: {trainer_type}"
+            )
 
     # --- オーケストレーション（API向け）機能 ---
 
@@ -281,7 +299,9 @@ class MLTrainingService(BaseResourceManager):
             # 設定の検証
             self._validate_training_config(config)
 
-            training_id = f"training_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+            training_id = (
+                f"training_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+            )
 
             # 実行開始前に状態を確保して、連打による二重起動を防ぐ
             with training_status_lock:
@@ -396,7 +416,9 @@ class MLTrainingService(BaseResourceManager):
 
             model_status = {
                 "is_loaded": model_info_data is not None,
-                "model_path": model_info_data["path"] if model_info_data else None,
+                "model_path": (
+                    model_info_data["path"] if model_info_data else None
+                ),
                 **model_status_base,
             }
             return api_response(
@@ -411,7 +433,9 @@ class MLTrainingService(BaseResourceManager):
             logger.error(f"MLモデル情報取得エラー: {e}")
             default_status = get_model_info_with_defaults(None)
             default_status.update({"is_loaded": False, "model_path": None})
-            return api_response(success=True, data={"model_status": default_status})
+            return api_response(
+                success=True, data={"model_status": default_status}
+            )
 
     async def stop_training(self) -> Dict[str, Any]:
         """
@@ -448,7 +472,9 @@ class MLTrainingService(BaseResourceManager):
             )
 
         background_task_manager.cleanup_all_tasks()
-        return api_response(success=True, message="MLトレーニングを停止しました")
+        return api_response(
+            success=True, message="MLトレーニングを停止しました"
+        )
 
     async def _train_in_background(self, config, training_id: str):
         """
@@ -527,7 +553,9 @@ class MLTrainingService(BaseResourceManager):
                         config.start_date, config.end_date
                     )
                     if date_range is None:
-                        raise ValueError("開始日は終了日より前である必要があります")
+                        raise ValueError(
+                            "開始日は終了日より前である必要があります"
+                        )
 
                     training_data = data_service.get_ml_training_data(
                         symbol=config.symbol,
@@ -556,7 +584,8 @@ class MLTrainingService(BaseResourceManager):
 
                 except Exception as e:
                     logger.error(
-                        f"バックグラウンドトレーニングエラー: {e}", exc_info=True
+                        f"バックグラウンドトレーニングエラー: {e}",
+                        exc_info=True,
                     )
                     with training_status_lock:
                         if training_status["status"] == "stopped":
@@ -658,12 +687,17 @@ class MLTrainingService(BaseResourceManager):
                 model_params=single_cfg or {},
             )
         else:
-            cfg = self._create_trainer_config(trainer_type, ensemble_cfg, single_cfg)
-            self.trainer = EnsembleTrainer(ensemble_config=cast(EnsembleConfig, cfg))
+            cfg = self._create_trainer_config(
+                trainer_type, ensemble_cfg, single_cfg
+            )
+            self.trainer = EnsembleTrainer(
+                ensemble_config=cast(EnsembleConfig, cfg)
+            )
 
         opt_settings = (
             config.optimization_settings
-            if config.optimization_settings and config.optimization_settings.enabled
+            if config.optimization_settings
+            and config.optimization_settings.enabled
             else None
         )
 
@@ -854,7 +888,9 @@ class MLTrainingService(BaseResourceManager):
 
         best_params, is_optimized, opt_result = {}, False, None
         if optimization_settings and optimization_settings.enabled:
-            task_type = kwargs.get("task_type", self.trainer.config.training.task_type)
+            task_type = kwargs.get(
+                "task_type", self.trainer.config.training.task_type
+            )
             if task_type == "volatility_regression":
                 raise ValueError(
                     "volatility_regression では optimization_settings をサポートしていません"

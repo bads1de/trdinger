@@ -5,7 +5,10 @@
 """
 
 from .data_conversion_service import DataConversionError, DataConversionService
-from .data_integration_service import DataIntegrationError, DataIntegrationService
+from .data_integration_service import (
+    DataIntegrationError,
+    DataIntegrationService,
+)
 from .data_retrieval_service import DataRetrievalError, DataRetrievalService
 
 __all__ = [

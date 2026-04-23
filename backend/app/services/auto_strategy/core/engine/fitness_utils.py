@@ -4,8 +4,6 @@ fitness 値の抽出を共通化するユーティリティ。
 
 from __future__ import annotations
 
-from typing import Any
-
 
 def normalize_fitness_values(
     values: object,

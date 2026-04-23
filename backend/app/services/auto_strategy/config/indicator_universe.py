@@ -71,7 +71,9 @@ _CONDITION_INCOMPATIBLE_CURATED_INDICATORS = frozenset(
 )
 
 
-def normalize_indicator_universe_mode(value: Union[str, IndicatorUniverseMode, None]) -> str:
+def normalize_indicator_universe_mode(
+    value: Union[str, IndicatorUniverseMode, None],
+) -> str:
     """
     ユニバースモードを正規化する。
 
@@ -105,14 +107,20 @@ def normalize_indicator_universe_mode(value: Union[str, IndicatorUniverseMode, N
     return normalized
 
 
-def _extract_mode(config_or_mode: Union[str, IndicatorUniverseMode, Mapping[str, Any], None] = None) -> str:
+def _extract_mode(
+    config_or_mode: Union[
+        str, IndicatorUniverseMode, Mapping[str, Any], None
+    ] = None,
+) -> str:
     if config_or_mode is None or isinstance(
         config_or_mode, (str, IndicatorUniverseMode)
     ):
         raw_value = config_or_mode
     else:
         candidate = getattr(config_or_mode, "indicator_universe_mode", None)
-        if isinstance(candidate, (str, IndicatorUniverseMode)) or candidate in (
+        if isinstance(
+            candidate, (str, IndicatorUniverseMode)
+        ) or candidate in (
             None,
             "",
         ):
@@ -144,7 +152,11 @@ def _supports_condition_generation(indicator_name: str) -> bool:
     return indicator_name not in _CONDITION_INCOMPATIBLE_CURATED_INDICATORS
 
 
-def get_indicator_universe_names(config_or_mode: Union[str, IndicatorUniverseMode, Mapping[str, Any], None] = None) -> List[str]:
+def get_indicator_universe_names(
+    config_or_mode: Union[
+        str, IndicatorUniverseMode, Mapping[str, Any], None
+    ] = None,
+) -> List[str]:
     """
     指定モードで利用可能なインジケータ名一覧を返す。
 
@@ -181,7 +193,12 @@ def get_indicator_universe_names(config_or_mode: Union[str, IndicatorUniverseMod
     return curated_names
 
 
-def is_indicator_in_universe(indicator_name: str, config_or_mode: Union[str, IndicatorUniverseMode, Mapping[str, Any], None] = None) -> bool:
+def is_indicator_in_universe(
+    indicator_name: str,
+    config_or_mode: Union[
+        str, IndicatorUniverseMode, Mapping[str, Any], None
+    ] = None,
+) -> bool:
     """
     指標名が指定ユニバースに含まれるかを返す。
 
@@ -200,10 +217,16 @@ def is_indicator_in_universe(indicator_name: str, config_or_mode: Union[str, Ind
     """
     if not indicator_name:
         return False
-    return indicator_name.upper() in set(get_indicator_universe_names(config_or_mode))
+    return indicator_name.upper() in set(
+        get_indicator_universe_names(config_or_mode)
+    )
 
 
-def iter_indicator_universe_names(config_or_mode: Union[str, IndicatorUniverseMode, Mapping[str, Any], None] = None) -> Iterable[str]:
+def iter_indicator_universe_names(
+    config_or_mode: Union[
+        str, IndicatorUniverseMode, Mapping[str, Any], None
+    ] = None,
+) -> Iterable[str]:
     """
     ユニバース名一覧の iterable を返す。
 

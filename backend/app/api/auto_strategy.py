@@ -30,7 +30,9 @@ class GAGenerationRequest(BaseModel):
         ..., description="実験ID（フロントエンドで生成されたUUID）"
     )
     experiment_name: str = Field(..., description="実験名")
-    base_config: Dict[str, Any] = Field(..., description="基本バックテスト設定")
+    base_config: Dict[str, Any] = Field(
+        ..., description="基本バックテスト設定"
+    )
     ga_config: Dict[str, Any] = Field(..., description="GA設定")
 
     model_config = ConfigDict(
@@ -113,7 +115,9 @@ class ExperimentDetailResponse(BaseModel):
 )
 async def get_experiment_detail(
     experiment_id: str,
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+    auto_strategy_service: AutoStrategyService = Depends(
+        get_auto_strategy_service
+    ),
 ):
     """
     実験詳細を取得
@@ -153,7 +157,9 @@ async def get_experiment_detail(
 async def generate_strategy(
     request: GAGenerationRequest,
     background_tasks: BackgroundTasks,
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+    auto_strategy_service: AutoStrategyService = Depends(
+        get_auto_strategy_service
+    ),
 ):
     """
     遺伝的アルゴリズム（GA）を用いた取引戦略の自動生成を開始します。
@@ -178,7 +184,9 @@ async def generate_strategy(
         GAGenerationResponse: タスクの受付状態と `experiment_id` を含むレスポンス。
 
     Note:
-        進捗状況や生成された最良戦略は `/api/auto-strategy/experiments/{experiment_id}` で確認可能です。
+        進捗状況や生成された最良戦略は
+        `/api/auto-strategy/experiments/{experiment_id}`
+        で確認可能です。
     """
 
     async def _generate_strategy():
@@ -196,7 +204,9 @@ async def generate_strategy(
                 backtest_config_dict=request.base_config,
                 task_scheduler=background_tasks,
             )
-            logger.info(f"戦略生成タスクをバックグラウンドで開始: {experiment_id}")
+            logger.info(
+                f"戦略生成タスクをバックグラウンドで開始: {experiment_id}"
+            )
 
             return result_response(
                 success=True,
@@ -209,7 +219,10 @@ async def generate_strategy(
             return result_response(
                 success=False,
                 message=f"戦略生成に失敗しました: {str(e)}",
-                details={"error_type": type(e).__name__, "error_details": str(e)},
+                details={
+                    "error_type": type(e).__name__,
+                    "error_details": str(e),
+                },
                 data={},
             )
 
@@ -218,7 +231,9 @@ async def generate_strategy(
 
 @router.get("/experiments", response_model=ListExperimentsResponse)
 async def list_experiments(
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+    auto_strategy_service: AutoStrategyService = Depends(
+        get_auto_strategy_service
+    ),
 ):
     """
     実験一覧を取得
@@ -248,7 +263,9 @@ async def list_experiments(
 )
 async def stop_experiment(
     experiment_id: str,
-    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+    auto_strategy_service: AutoStrategyService = Depends(
+        get_auto_strategy_service
+    ),
 ):
     """
     実験を停止

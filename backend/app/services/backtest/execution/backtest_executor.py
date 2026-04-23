@@ -102,7 +102,9 @@ class BacktestExecutor:
             if preloaded_data is not None:
                 data = preloaded_data
             else:
-                data = self._get_backtest_data(symbol, timeframe, start_date, end_date)
+                data = self._get_backtest_data(
+                    symbol, timeframe, start_date, end_date
+                )
 
             # バックテスト設定
             bt = self._create_backtest_instance(
@@ -123,10 +125,16 @@ class BacktestExecutor:
             raise
         except Exception as e:
             logger.error(f"バックテスト実行エラー: {e}")
-            raise BacktestExecutionError(f"バックテストの実行に失敗しました: {e}")
+            raise BacktestExecutionError(
+                f"バックテストの実行に失敗しました: {e}"
+            )
 
     def _get_backtest_data(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """
         バックテストに使用する市場データを取得します。

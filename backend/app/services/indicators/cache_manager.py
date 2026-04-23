@@ -71,7 +71,9 @@ class IndicatorCacheManager:
         """
         try:
             # パラメータをソートされた不変セットに変換
-            cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
+            cache_params = frozenset(
+                sorted([(k, str(v)) for k, v in params.items()])
+            )
 
             # データのメタデータを抽出
             data_meta: tuple
@@ -129,7 +131,9 @@ class IndicatorCacheManager:
     def get_cache_statistics(self) -> Dict[str, Any]:
         """キャッシュ統計を取得"""
         total_requests = self._cache_hits + self._cache_misses
-        hit_rate = self._cache_hits / total_requests if total_requests > 0 else 0.0
+        hit_rate = (
+            self._cache_hits / total_requests if total_requests > 0 else 0.0
+        )
         return {
             "cache_size": len(self._calculation_cache),
             "cache_hits": self._cache_hits,

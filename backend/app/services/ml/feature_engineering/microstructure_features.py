@@ -102,7 +102,9 @@ class MicrostructureFeatureCalculator:
             df["LS_Acceleration"] = ls.diff().diff()
 
             # C. LS Price Incongruence
-            df["LS_Price_Incongruence"] = ohlcv["close"].pct_change(4) * ls.diff(4) * -1
+            df["LS_Price_Incongruence"] = (
+                ohlcv["close"].pct_change(4) * ls.diff(4) * -1
+            )
 
             # D. LS FR Stress Index
             if "FR_Extremity_Zscore" in df.columns:
@@ -134,10 +136,15 @@ class MicrostructureFeatureCalculator:
         returns = df["close"].pct_change().abs()
         dollar_volume = df["volume"] * df["close"]
         return (
-            (returns / (dollar_volume + 1e-9)).rolling(window=window).mean().fillna(0)
+            (returns / (dollar_volume + 1e-9))
+            .rolling(window=window)
+            .mean()
+            .fillna(0)
         )
 
-    def calculate_kyles_lambda(self, df: pd.DataFrame, window: int = 20) -> pd.Series:
+    def calculate_kyles_lambda(
+        self, df: pd.DataFrame, window: int = 20
+    ) -> pd.Series:
         """Kyle's Lambda（価格インパクト指標）を計算する。
 
         リターンと符号付き出来高の共分散を、符号付き出来高の分散で割ることで、

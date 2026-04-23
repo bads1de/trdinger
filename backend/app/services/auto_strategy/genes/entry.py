@@ -163,10 +163,12 @@ class EntryGene:
             # パラメータの摂動
             if random.random() < 0.5:
                 gene.limit_offset_pct = max(
-                    0.0, min(0.1, gene.limit_offset_pct * random.uniform(0.8, 1.2))
+                    0.0,
+                    min(0.1, gene.limit_offset_pct * random.uniform(0.8, 1.2)),
                 )
                 gene.stop_offset_pct = max(
-                    0.0, min(0.1, gene.stop_offset_pct * random.uniform(0.8, 1.2))
+                    0.0,
+                    min(0.1, gene.stop_offset_pct * random.uniform(0.8, 1.2)),
                 )
 
             # 有効期限の変更
@@ -175,7 +177,9 @@ class EntryGene:
                     1,
                     min(
                         100,
-                        int(gene.order_validity_bars * random.uniform(0.8, 1.2)),
+                        int(
+                            gene.order_validity_bars * random.uniform(0.8, 1.2)
+                        ),
                     ),
                 )
 
@@ -220,7 +224,9 @@ def create_random_entry_gene(config: Optional[Any] = None) -> EntryGene:
             try:
                 custom_weights = config.entry_type_weights
                 if custom_weights:
-                    weights = {EntryType(k): v for k, v in custom_weights.items()}
+                    weights = {
+                        EntryType(k): v for k, v in custom_weights.items()
+                    }
             except AttributeError:
                 pass
 
@@ -235,7 +241,8 @@ def create_random_entry_gene(config: Optional[Any] = None) -> EntryGene:
 
         # 有効期限をランダム生成
         order_validity_bars = random.randint(
-            int(ranges["order_validity_bars"][0]), int(ranges["order_validity_bars"][1])
+            int(ranges["order_validity_bars"][0]),
+            int(ranges["order_validity_bars"][1]),
         )
 
         return EntryGene(

@@ -30,7 +30,10 @@ class BacktestResultConverter:
     """
 
     def __init__(self) -> None:
-        from .data_transformers import EquityCurveTransformer, TradeHistoryTransformer
+        from .data_transformers import (
+            EquityCurveTransformer,
+            TradeHistoryTransformer,
+        )
         from .statistics_calculator import BacktestStatisticsCalculator
 
         self._stats_calculator = BacktestStatisticsCalculator()
@@ -87,11 +90,17 @@ class BacktestResultConverter:
                 "performance_metrics": self._stats_calculator.calculate_statistics(
                     actual_stats
                 ),
-                "trade_history": self._trade_transformer.transform(actual_stats),
-                "equity_curve": self._equity_transformer.transform(actual_stats),
+                "trade_history": self._trade_transformer.transform(
+                    actual_stats
+                ),
+                "equity_curve": self._equity_transformer.transform(
+                    actual_stats
+                ),
             }
 
             return result
         except Exception as e:
             logger.error(f"バックテスト結果変換エラー: {e}")
-            raise BacktestResultConversionError(f"結果の変換に失敗しました: {e}")
+            raise BacktestResultConversionError(
+                f"結果の変換に失敗しました: {e}"
+            )

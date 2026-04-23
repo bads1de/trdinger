@@ -55,7 +55,8 @@ class StrategyValidator:
         )
 
         if not (
-            strategy_gene.long_entry_conditions or strategy_gene.short_entry_conditions
+            strategy_gene.long_entry_conditions
+            or strategy_gene.short_entry_conditions
         ):
             errors.append("エントリー条件が設定されていません")
 
@@ -82,7 +83,9 @@ class StrategyValidator:
 
         return len(errors) == 0, errors
 
-    def _validate_all_conditions(self, cond_list: List, label: str, errors: List[str]):
+    def _validate_all_conditions(
+        self, cond_list: List, label: str, errors: List[str]
+    ):
         """条件リストを再帰的に検証"""
         from ..conditions import ConditionGroup
 
@@ -92,7 +95,9 @@ class StrategyValidator:
                     _recursive(sub, f"{path} -> グループ{j}")
             else:
                 self.condition_validator.clean_condition(cond)
-                valid, detail = self.condition_validator.validate_condition(cond)
+                valid, detail = self.condition_validator.validate_condition(
+                    cond
+                )
                 if not valid:
                     errors.append(f"{path}が無効: {detail}")
 

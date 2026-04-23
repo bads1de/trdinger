@@ -101,12 +101,16 @@ class StrategyParameterTuner:
 
         # 目的関数
         def objective(params: Dict[str, Any]) -> float:
-            tuned = self.parameter_space_builder.apply_params_to_gene(gene, params)
+            tuned = self.parameter_space_builder.apply_params_to_gene(
+                gene, params
+            )
             self._refresh_tuned_gene_identity(tuned, gene)
             return self._evaluate_gene(tuned)
 
         try:
-            res = self.optimizer.optimize(objective, parameter_space, self.n_trials)
+            res = self.optimizer.optimize(
+                objective, parameter_space, self.n_trials
+            )
 
             # 最適パラメータの適用とメタデータ更新
             best_gene = self.parameter_space_builder.apply_params_to_gene(
@@ -142,12 +146,19 @@ class StrategyParameterTuner:
         """
         try:
             # WFA評価が有効な場合
-            if self.use_wfa and self.config.evaluation_config.enable_walk_forward:
+            if (
+                self.use_wfa
+                and self.config.evaluation_config.enable_walk_forward
+            ):
                 # WFA設定を一時的に有効化したconfigを使用
                 wfa_config = self._create_wfa_config()
-                fitness_tuple = self.evaluator.evaluate_individual(gene, wfa_config)
+                fitness_tuple = self.evaluator.evaluate_individual(
+                    gene, wfa_config
+                )
             else:
-                fitness_tuple = self.evaluator.evaluate_individual(gene, self.config)
+                fitness_tuple = self.evaluator.evaluate_individual(
+                    gene, self.config
+                )
 
             fitness = extract_primary_fitness_from_result(fitness_tuple)
             return fitness

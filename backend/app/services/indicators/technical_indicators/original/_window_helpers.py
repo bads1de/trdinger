@@ -72,7 +72,9 @@ def _window_mean_and_std_finite(  # pyright: ignore[reportUnusedFunction]
 
 
 @njit(cache=True)
-def _window_min_max(values: np.ndarray, start: int, end: int) -> tuple[float, float]:
+def _window_min_max(
+    values: np.ndarray, start: int, end: int
+) -> tuple[float, float]:
     min_val = values[start]
     max_val = values[start]
     for idx in range(start + 1, end):

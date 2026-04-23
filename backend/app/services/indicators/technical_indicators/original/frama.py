@@ -74,7 +74,9 @@ def frama(close: pd.Series, length: int = 16, slow: int = 200) -> pd.Series:
 
     validation = validate_series_params(close, length, min_data_length=length)
     if validation is not None:
-        return pd.Series(np.full(len(close), np.nan), index=close.index, name="FRAMA")
+        return pd.Series(
+            np.full(len(close), np.nan), index=close.index, name="FRAMA"
+        )
 
     prices = close.astype(float).to_numpy()
     half = length // 2

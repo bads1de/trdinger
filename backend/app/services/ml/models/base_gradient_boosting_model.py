@@ -10,7 +10,10 @@ from sklearn.utils.class_weight import compute_sample_weight
 
 from app.utils.error_handler import ModelError
 
-from ..common.utils import get_feature_importance_unified, predict_class_from_proba
+from ..common.utils import (
+    get_feature_importance_unified,
+    predict_class_from_proba,
+)
 from ..evaluation.metrics import metrics_collector
 
 logger = logging.getLogger(__name__)
@@ -129,7 +132,9 @@ class BaseGradientBoostingModel(ABC):
                 **kwargs,
             )
 
-            self.classes_ = None if self._is_regression_task() else np.unique(y)
+            self.classes_ = (
+                None if self._is_regression_task() else np.unique(y)
+            )
             return self
 
         except Exception as e:
@@ -172,7 +177,9 @@ class BaseGradientBoostingModel(ABC):
                             f"class_weight={class_weight} を適用してsample_weightを計算しました"
                         )
                     except Exception as e:
-                        logger.warning(f"sample_weightの計算に失敗しました: {e}")
+                        logger.warning(
+                            f"sample_weightの計算に失敗しました: {e}"
+                        )
 
             # モデル固有のデータセット作成
             train_data = self._create_dataset(X_train, y_train, sample_weight)
@@ -200,14 +207,18 @@ class BaseGradientBoostingModel(ABC):
 
             # 予測と評価 (検証データがある場合のみ)
             detailed_metrics = {}
-            if valid_data is not None and y_test is not None and X_test is not None:
+            if (
+                valid_data is not None
+                and y_test is not None
+                and X_test is not None
+            ):
                 if is_regression:
-                    y_pred = np.asarray(self.predict(cast(pd.DataFrame, X_test)))
-                    detailed_metrics = (
-                        metrics_collector.calculate_volatility_regression_metrics(
-                            np.asarray(y_test),
-                            y_pred,
-                        )
+                    y_pred = np.asarray(
+                        self.predict(cast(pd.DataFrame, X_test))
+                    )
+                    detailed_metrics = metrics_collector.calculate_volatility_regression_metrics(
+                        np.asarray(y_test),
+                        y_pred,
                     )
                     logger.info(
                         f"{self.ALGORITHM_NAME}回帰モデル学習完了: "
@@ -231,7 +242,9 @@ class BaseGradientBoostingModel(ABC):
                         f"{self.ALGORITHM_NAME}モデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
                     )
             else:
-                logger.info(f"{self.ALGORITHM_NAME}モデル学習完了 (検証データなし)")
+                logger.info(
+                    f"{self.ALGORITHM_NAME}モデル学習完了 (検証データなし)"
+                )
 
             # 特徴量重要度
             feature_importance = self.get_feature_importance()
@@ -251,7 +264,9 @@ class BaseGradientBoostingModel(ABC):
             }
 
             # best_iterationなど、モデル固有の属性を結果に追加
-            if self.model is not None and hasattr(self.model, "best_iteration"):
+            if self.model is not None and hasattr(
+                self.model, "best_iteration"
+            ):
                 result["best_iteration"] = self.model.best_iteration
 
             self.last_training_result = result
@@ -259,7 +274,9 @@ class BaseGradientBoostingModel(ABC):
 
         except Exception as e:
             logger.error(f"{self.ALGORITHM_NAME}モデル学習エラー: {e}")
-            raise ModelError(f"{self.ALGORITHM_NAME}モデル学習に失敗しました: {e}")
+            raise ModelError(
+                f"{self.ALGORITHM_NAME}モデル学習に失敗しました: {e}"
+            )
 
     def _handle_class_weight_for_catboost(
         self, class_weight: Any, kwargs: Dict[str, Any]
@@ -290,7 +307,9 @@ class BaseGradientBoostingModel(ABC):
         """
 
     @abstractmethod
-    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, object]:
+    def _get_model_params(
+        self, num_classes: int, **kwargs
+    ) -> Dict[str, object]:
         """
         モデル固有のパラメータディクショナリを生成します。
         """

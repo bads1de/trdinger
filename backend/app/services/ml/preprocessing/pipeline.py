@@ -69,10 +69,15 @@ def create_ml_pipeline(
         mutual_info_regression,
     )
 
-    logger.info(f"{'分類' if is_classification else '回帰'}パイプラインを作成中...")
+    logger.info(
+        f"{'分類' if is_classification else '回帰'}パイプラインを作成中..."
+    )
 
     steps: list[tuple[str, Any]] = [
-        ("preprocessing", create_preprocessing_pipeline(**(preprocessing_params or {})))
+        (
+            "preprocessing",
+            create_preprocessing_pipeline(**(preprocessing_params or {})),
+        )
     ]
 
     # 特徴量選択
@@ -81,15 +86,21 @@ def create_ml_pipeline(
             "f_regression": f_regression,
             "f_classif": f_classif,
             "mutual_info": (
-                mutual_info_classif if is_classification else mutual_info_regression
+                mutual_info_classif
+                if is_classification
+                else mutual_info_regression
             ),
         }
         if selection_method not in selectors:
-            raise ValueError(f"サポートされていない選択方法: {selection_method}")
+            raise ValueError(
+                f"サポートされていない選択方法: {selection_method}"
+            )
         steps.append(
             (
                 "feature_selection",
-                SelectKBest(score_func=selectors[selection_method], k=n_features),
+                SelectKBest(
+                    score_func=selectors[selection_method], k=n_features
+                ),
             )
         )
 
@@ -101,7 +112,9 @@ def create_ml_pipeline(
             "minmax": MinMaxScaler(),
         }
         if scaling_method not in scalers:
-            raise ValueError(f"サポートされていないスケーリング方法: {scaling_method}")
+            raise ValueError(
+                f"サポートされていないスケーリング方法: {scaling_method}"
+            )
         steps.append(("scaler", scalers[scaling_method]))
 
     return Pipeline(steps)
@@ -161,7 +174,8 @@ def get_ml_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
         "pipeline_type": "ml",
         "n_steps": len(pipeline.steps),
         "step_names": [step[0] for step in pipeline.steps],
-        "has_preprocessing": "preprocessing" in [step[0] for step in pipeline.steps],
+        "has_preprocessing": "preprocessing"
+        in [step[0] for step in pipeline.steps],
         "has_feature_selection": "feature_selection"
         in [step[0] for step in pipeline.steps],
         "has_scaling": "scaler" in [step[0] for step in pipeline.steps],

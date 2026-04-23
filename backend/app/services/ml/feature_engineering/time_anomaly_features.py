@@ -72,11 +72,17 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
         # 仮想通貨は24時間動くが、法定通貨ペアや機関投資家の動きは主要市場に依存する
         hours = index.hour  # type: ignore[reportAttributeAccessIssue]
         # アジア (東京/香港): 00:00 - 09:00 UTC
-        new_features["time_session_asia"] = ((hours >= 0) & (hours < 9)).astype(int)
+        new_features["time_session_asia"] = (
+            (hours >= 0) & (hours < 9)
+        ).astype(int)
         # 欧州 (ロンドン): 08:00 - 16:00 UTC
-        new_features["time_session_europe"] = ((hours >= 8) & (hours < 16)).astype(int)
+        new_features["time_session_europe"] = (
+            (hours >= 8) & (hours < 16)
+        ).astype(int)
         # 米国 (ニューヨーク): 13:00 - 21:00 UTC
-        new_features["time_session_us"] = ((hours >= 13) & (hours < 21)).astype(int)
+        new_features["time_session_us"] = (
+            (hours >= 13) & (hours < 21)
+        ).astype(int)
         # セッションの重なり (最も流動性が高まりやすい)
         new_features["time_session_overlap"] = (
             ((hours >= 8) & (hours < 9)) | ((hours >= 13) & (hours < 16))
@@ -142,12 +148,16 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
             # 本来は groupby(hour) だが、未来のデータを使わないよう rolling で実装
             # 24h, 48h, 72h... 前のボラティリティの平均
             historical_vol = (
-                current_vol.shift(24) + current_vol.shift(48) + current_vol.shift(72)
+                current_vol.shift(24)
+                + current_vol.shift(48)
+                + current_vol.shift(72)
             ) / 3
             fallback_historical_vol = current_vol.rolling(
                 window=24, min_periods=1
             ).mean()
-            historical_vol = historical_vol.fillna(fallback_historical_vol).fillna(0)
+            historical_vol = historical_vol.fillna(
+                fallback_historical_vol
+            ).fillna(0)
 
             # 相対ボラティリティ比 (Relative Volatility Ratio)
             # 1.0 > : 普段より動いている（異常検知）

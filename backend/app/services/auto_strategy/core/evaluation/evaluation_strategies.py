@@ -39,7 +39,9 @@ class EvaluationStrategy:
     通常評価、OOS検証、Walk-Forward 分析のいずれかに振り分けます。
     """
 
-    def __init__(self, evaluator: "IndividualEvaluator", max_workers: int = 2) -> None:
+    def __init__(
+        self, evaluator: "IndividualEvaluator", max_workers: int = 2
+    ) -> None:
         self._evaluator = evaluator
         self._max_workers = max_workers
         self._date_cache: Dict[str, Tuple[str, str, str]] = {}
@@ -102,7 +104,9 @@ class EvaluationStrategy:
                 gene, base_backtest_config, config, oos_ratio, oos_weight
             )
         else:
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+            return self._evaluate_single_report(
+                gene, base_backtest_config, config
+            )
 
     def execute_robustness_report(
         self, gene: Any, base_backtest_config: Dict[str, Any], config: GAConfig
@@ -118,9 +122,12 @@ class EvaluationStrategy:
             [
                 (
                     order,
-                    lambda scenario_name=scenario_name, scenario_config=scenario_config, metadata=metadata: self._evaluate_robustness_scenario_report(
-                        gene,
-                        scenario_name,
+                    lambda scenario_name=scenario_name,
+                           scenario_config=scenario_config,
+                           metadata=metadata:
+                        self._evaluate_robustness_scenario_report(
+                            gene,
+                            scenario_name,
                         scenario_config,
                         config,
                         metadata,
@@ -136,11 +143,14 @@ class EvaluationStrategy:
             return self.execute_report(gene, base_backtest_config, config)
 
         scenario_reports.sort(
-            key=lambda scenario: int(scenario.metadata.get("scenario_order", -1))
+            key=lambda scenario: int(
+                scenario.metadata.get("scenario_order", -1)
+            )
         )
         robustness_config = getattr(config, "robustness_config", None)
         aggregate_method = str(
-            getattr(robustness_config, "aggregate_method", "robust") or "robust"
+            getattr(robustness_config, "aggregate_method", "robust")
+            or "robust"
         )
         return EvaluationReport.aggregate(
             mode="robustness",
@@ -172,7 +182,10 @@ class EvaluationStrategy:
     @staticmethod
     def _get_execution_spread(backtest_config: Dict[str, Any]) -> float:
         """spread/slippage 互換キーから execution spread を取得する。"""
-        if "spread" in backtest_config and backtest_config.get("spread") is not None:
+        if (
+            "spread" in backtest_config
+            and backtest_config.get("spread") is not None
+        ):
             return float(backtest_config.get("spread", 0.0) or 0.0)
         return float(backtest_config.get("slippage", 0.0) or 0.0)
 
@@ -213,12 +226,16 @@ class EvaluationStrategy:
             if scenario_key in seen_keys:
                 return
             seen_keys.add(scenario_key)
-            scenario_definitions.append((order, name, scenario_config, metadata))
+            scenario_definitions.append(
+                (order, name, scenario_config, metadata)
+            )
             order += 1
 
         base_symbol = str(base_backtest_config.get("symbol", "") or "")
         base_spread = self._get_execution_spread(base_backtest_config)
-        base_commission = float(base_backtest_config.get("commission_rate", 0.0) or 0.0)
+        base_commission = float(
+            base_backtest_config.get("commission_rate", 0.0) or 0.0
+        )
         base_start_date = str(base_backtest_config.get("start_date", "") or "")
         base_end_date = str(base_backtest_config.get("end_date", "") or "")
         self._set_execution_spread(base_backtest_config, base_spread)
@@ -301,7 +318,10 @@ class EvaluationStrategy:
             )
 
         for multiplier in (
-            getattr(config.robustness_config, "stress_commission_multipliers", []) or []
+            getattr(
+                config.robustness_config, "stress_commission_multipliers", []
+            )
+            or []
         ):
             multiplier_value = float(multiplier)
             scenario_config = base_backtest_config.copy()
@@ -343,10 +363,14 @@ class EvaluationStrategy:
             }
         )
         two_stage_config = getattr(config, "two_stage_selection_config", None)
-        min_pass_rate = float(getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0)
+        min_pass_rate = float(
+            getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0
+        )
         return ScenarioEvaluation(
             name=scenario_name,
-            fitness=tuple(float(value) for value in scenario_report.aggregated_fitness),
+            fitness=tuple(
+                float(value) for value in scenario_report.aggregated_fitness
+            ),
             passed=scenario_report.pass_rate >= min_pass_rate,
             metadata=scenario_metadata,
         )
@@ -366,7 +390,9 @@ class EvaluationStrategy:
         with ThreadPoolExecutor(
             max_workers=min(self._max_workers, len(tasks))
         ) as executor:
-            future_to_order = {executor.submit(task): order for order, task in tasks}
+            future_to_order = {
+                executor.submit(task): order for order, task in tasks
+            }
 
             for future in as_completed(future_to_order):
                 order = future_to_order[future]
@@ -434,7 +460,9 @@ class EvaluationStrategy:
             self._evaluator, "_perform_single_evaluation", None
         )
         if callable(legacy_attr):
-            legacy_method = getattr(self._evaluator, "_perform_single_evaluation")
+            legacy_method = getattr(
+                self._evaluator, "_perform_single_evaluation"
+            )
             fitness = legacy_method(gene, backtest_config, config)
             if isinstance(fitness, ScenarioEvaluation):
                 merged_metadata = fitness.metadata.copy()
@@ -468,9 +496,13 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """Out-of-Sample (OOS) 検証を含む評価を実行する。"""
         try:
-            date_range = self._resolve_backtest_date_range(base_backtest_config)
+            date_range = self._resolve_backtest_date_range(
+                base_backtest_config
+            )
             if date_range is None:
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene, base_backtest_config, config
+                )
             start_date, end_date = date_range
 
             cache_key = f"{start_date}_{end_date}_{oos_ratio}"
@@ -501,7 +533,9 @@ class EvaluationStrategy:
                     e,
                 )
                 bar_offset = pd.Timedelta(hours=1)
-            oos_start = cast(pd.Timestamp, pd.Timestamp(split_str) + bar_offset)
+            oos_start = cast(
+                pd.Timestamp, pd.Timestamp(split_str) + bar_offset
+            )
             oos_config["start_date"] = oos_start.strftime(_DATETIME_FORMAT)
             oos_config["end_date"] = end_str
 
@@ -544,7 +578,9 @@ class EvaluationStrategy:
 
         except Exception as e:
             logger.error(f"OOS評価中エラー: {e}")
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+            return self._evaluate_single_report(
+                gene, base_backtest_config, config
+            )
 
     def _evaluate_with_walk_forward_report(
         self,
@@ -554,12 +590,16 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """Walk-Forward Analysis による評価を並列実行する。"""
         try:
-            date_range = self._resolve_backtest_date_range(base_backtest_config)
+            date_range = self._resolve_backtest_date_range(
+                base_backtest_config
+            )
             if date_range is None:
                 logger.warning(
                     "WFA: 期間が不明または無効なため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene, base_backtest_config, config
+                )
             start_date, end_date = date_range
 
             evaluation_config = getattr(config, "evaluation_config", None)
@@ -580,7 +620,9 @@ class EvaluationStrategy:
                 logger.warning(
                     "WFA: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene, base_backtest_config, config
+                )
 
             scenario_reports = self._run_parallel_scenario_tasks(
                 [
@@ -603,10 +645,14 @@ class EvaluationStrategy:
                 logger.warning(
                     "WFA: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene, base_backtest_config, config
+                )
 
             scenario_reports.sort(
-                key=lambda scenario: int(scenario.metadata.get("fold_index", -1))
+                key=lambda scenario: int(
+                    scenario.metadata.get("fold_index", -1)
+                )
             )
             report = EvaluationReport.aggregate(
                 mode="walk_forward",
@@ -627,7 +673,9 @@ class EvaluationStrategy:
 
         except Exception as e:
             logger.error(f"WFA評価中エラー: {e}")
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+            return self._evaluate_single_report(
+                gene, base_backtest_config, config
+            )
 
     def _precompute_fold_configs(
         self,
@@ -682,8 +730,12 @@ class EvaluationStrategy:
                 continue
 
             test_config = base_backtest_config.copy()
-            test_config["start_date"] = cast(pd.Timestamp, test_start).strftime(_DATETIME_FORMAT)
-            test_config["end_date"] = cast(pd.Timestamp, test_end).strftime(_DATETIME_FORMAT)
+            test_config["start_date"] = cast(
+                pd.Timestamp, test_start
+            ).strftime(_DATETIME_FORMAT)
+            test_config["end_date"] = cast(pd.Timestamp, test_end).strftime(
+                _DATETIME_FORMAT
+            )
             fold_configs.append((fold_idx, test_config))
 
         return fold_configs
@@ -699,12 +751,16 @@ class EvaluationStrategy:
             n_splits = getattr(config, "purged_kfold_splits", 5)
             embargo_pct = getattr(config, "purged_kfold_embargo", 0.01)
 
-            date_range = self._resolve_backtest_date_range(base_backtest_config)
+            date_range = self._resolve_backtest_date_range(
+                base_backtest_config
+            )
             if date_range is None:
                 logger.warning(
                     "PurgedKFold: 期間が不明または無効なため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene, base_backtest_config, config
+                )
             start_date, end_date = date_range
 
             fold_configs = self._precompute_purged_kfold_configs(
@@ -719,7 +775,9 @@ class EvaluationStrategy:
                 logger.warning(
                     "PurgedKFold: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene, base_backtest_config, config
+                )
 
             scenario_reports = self._run_parallel_scenario_tasks(
                 [
@@ -742,10 +800,14 @@ class EvaluationStrategy:
                 logger.warning(
                     "PurgedKFold: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene, base_backtest_config, config
+                )
 
             scenario_reports.sort(
-                key=lambda scenario: int(scenario.metadata.get("fold_index", -1))
+                key=lambda scenario: int(
+                    scenario.metadata.get("fold_index", -1)
+                )
             )
             report = EvaluationReport.aggregate(
                 mode="purged_kfold",
@@ -766,7 +828,9 @@ class EvaluationStrategy:
 
         except Exception as e:
             logger.error(f"PurgedKFold評価中エラー: {e}")
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+            return self._evaluate_single_report(
+                gene, base_backtest_config, config
+            )
 
     def _precompute_purged_kfold_configs(
         self,
@@ -787,7 +851,9 @@ class EvaluationStrategy:
 
         embargo_pct = max(0.0, float(embargo_pct or 0.0))
         embargo_duration = total_duration * embargo_pct
-        usable_duration = total_duration - embargo_duration * max(0, n_splits - 1)
+        usable_duration = total_duration - embargo_duration * max(
+            0, n_splits - 1
+        )
         if usable_duration <= pd.Timedelta(0):
             return fold_configs
 
@@ -808,8 +874,12 @@ class EvaluationStrategy:
                 continue
 
             test_config = base_backtest_config.copy()
-            test_config["start_date"] = effective_test_start.strftime(_DATETIME_FORMAT)
-            test_config["end_date"] = effective_test_end.strftime(_DATETIME_FORMAT)
+            test_config["start_date"] = effective_test_start.strftime(
+                _DATETIME_FORMAT
+            )
+            test_config["end_date"] = effective_test_end.strftime(
+                _DATETIME_FORMAT
+            )
             fold_configs.append((fold_idx, test_config))
             current_start = effective_test_end + embargo_duration
 

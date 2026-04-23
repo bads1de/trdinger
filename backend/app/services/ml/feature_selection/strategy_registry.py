@@ -20,7 +20,9 @@ def default_staged_methods() -> List[SelectionMethod]:
     return SelectionMethod.default_staged_methods()
 
 
-def build_staged_strategy_map() -> Dict[SelectionMethod, "BaseSelectionStrategy"]:
+def build_staged_strategy_map() -> (
+    Dict[SelectionMethod, "BaseSelectionStrategy"]
+):
     """Staged 選択で使う戦略の対応表を返す。"""
     from .strategies.lasso import LassoStrategy
     from .strategies.permutation import PermutationStrategy
@@ -44,7 +46,9 @@ def build_staged_strategy_map() -> Dict[SelectionMethod, "BaseSelectionStrategy"
     }
 
 
-def build_selection_strategy_map() -> Dict[SelectionMethod, "BaseSelectionStrategy"]:
+def build_selection_strategy_map() -> (
+    Dict[SelectionMethod, "BaseSelectionStrategy"]
+):
     """FeatureSelector 用の戦略対応表を返す。"""
     from .strategies.staged import StagedStrategy
 

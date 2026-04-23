@@ -30,7 +30,11 @@ class FRMerger:
         self.fr_repo = fr_repo
 
     def merge_fr_data(
-        self, df: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """
         Funding Rate データをマージ
@@ -75,7 +79,9 @@ class FRMerger:
 
         return df
 
-    def _convert_fr_to_dataframe(self, fr_data: List[FundingRateData]) -> pd.DataFrame:
+    def _convert_fr_to_dataframe(
+        self, fr_data: List[FundingRateData]
+    ) -> pd.DataFrame:
         """
         FundingRateDataリストをpandas.DataFrameに変換
 

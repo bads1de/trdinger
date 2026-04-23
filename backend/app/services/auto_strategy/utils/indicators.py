@@ -7,14 +7,15 @@
 import logging
 from typing import Dict, List
 
-from app.services.indicators import TechnicalIndicatorService
 from app.services.auto_strategy.config.helpers import (
     normalize_robustness_regime_windows,
 )
+from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config.indicator_config import (
     get_cached_indicators,
     indicator_registry,
 )
+
 from ..config.constants import COMPOSITE_INDICATORS
 
 # =============================================================================
@@ -96,10 +97,15 @@ def get_all_indicator_ids() -> Dict[str, int]:
     """
     try:
         indicator_service = TechnicalIndicatorService()
-        technical_indicators = list(indicator_service.get_supported_indicators().keys())
+        technical_indicators = list(
+            indicator_service.get_supported_indicators().keys()
+        )
 
         # IDマッピングを作成（空文字列は0、その他は1から開始）
-        return {"": 0, **{ind: i + 1 for i, ind in enumerate(technical_indicators)}}
+        return {
+            "": 0,
+            **{ind: i + 1 for i, ind in enumerate(technical_indicators)},
+        }
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"指標ID取得エラー: {e}")

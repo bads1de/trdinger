@@ -25,7 +25,9 @@ def evaluate_meta_labeling(
     """メタラベリング用の評価指標を計算"""
     y_t = y_true.values if hasattr(y_true, "values") else y_true
     res = (
-        metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba)
+        metrics_collector.calculate_comprehensive_metrics(
+            y_t, y_pred, y_pred_proba
+        )
         or {}
     )
 
@@ -42,7 +44,9 @@ def evaluate_meta_labeling(
         "false_negatives",
     ]:
         if key not in res:
-            res[key] = 0.0 if "positives" not in key and "negatives" not in key else 0
+            res[key] = (
+                0.0 if "positives" not in key and "negatives" not in key else 0
+            )
 
     p = res.get("precision", 0.0)
     res.update(
@@ -141,7 +145,12 @@ def find_optimal_threshold(
     valid_indices = recalls[:-1] >= min_recall
     if not np.any(valid_indices):
         logger.warning(f"Recall >= {min_recall} を満たす閾値が見つかりません")
-        return {"optimal_threshold": 0.5, "precision": 0.0, "recall": 0.0, "f1": 0.0}
+        return {
+            "optimal_threshold": 0.5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+        }
 
     valid_precisions = precisions[:-1][valid_indices]
     valid_recalls = recalls[:-1][valid_indices]

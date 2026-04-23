@@ -24,7 +24,9 @@ class DataConversionError(ValueError):
     より具体的に表現するために使用します。
     """
 
-    def __init__(self, message: str, original_error: Optional[Exception] = None):
+    def __init__(
+        self, message: str, original_error: Optional[Exception] = None
+    ):
         """
         DataConversionError クラスの初期化
 
@@ -44,9 +46,13 @@ class DataConversionService:
     """
 
     @safe_operation(
-        context="OHLCV DataFrame変換", is_api_call=False, default_return=pd.DataFrame()
+        context="OHLCV DataFrame変換",
+        is_api_call=False,
+        default_return=pd.DataFrame(),
     )
-    def convert_ohlcv_to_dataframe(self, ohlcv_data: List[OHLCVData]) -> pd.DataFrame:
+    def convert_ohlcv_to_dataframe(
+        self, ohlcv_data: List[OHLCVData]
+    ) -> pd.DataFrame:
         """
         OHLCVデータをDataFrameに変換
 
@@ -111,6 +117,8 @@ class DataConversionService:
 
         # ボリュームは整数でも可
         if "volume" in df.columns:
-            df["volume"] = df["volume"].astype("float64")  # 小数点以下がある場合を考慮
+            df["volume"] = df["volume"].astype(
+                "float64"
+            )  # 小数点以下がある場合を考慮
 
         return df

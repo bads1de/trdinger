@@ -75,4 +75,6 @@ def hurst_exponent(
         )
 
     result = _njit_hurst_loop(close.to_numpy(dtype=float), length, max_lag)
-    return pd.Series(result, index=close.index, name=f"HURST_{length}_{max_lag}")
+    return pd.Series(
+        result, index=close.index, name=f"HURST_{length}_{max_lag}"
+    )

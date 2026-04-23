@@ -58,7 +58,9 @@ class CusumSignalGenerator:
             # 動的閾値（ボラティリティ）
             h = volatility * vol_multiplier
         else:
-            raise ValueError("Either threshold or volatility must be provided.")
+            raise ValueError(
+                "Either threshold or volatility must be provided."
+            )
 
         # CUSUM計算
         t_events = []
@@ -96,7 +98,9 @@ class CusumSignalGenerator:
 
         return pd.DatetimeIndex(t_events)
 
-    def get_daily_volatility(self, close: pd.Series, span: int = 100) -> pd.Series:
+    def get_daily_volatility(
+        self, close: pd.Series, span: int = 100
+    ) -> pd.Series:
         """ローカルボラティリティを計算する（EWM Std of Log Returns）。
 
         対数リターンの指数移動平均（EWM）標準偏差を使用して、

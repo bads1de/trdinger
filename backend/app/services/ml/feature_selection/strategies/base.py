@@ -30,7 +30,10 @@ class BaseSelectionStrategy(ABC):
         pass
 
     def _limit_features(
-        self, mask: np.ndarray, scores: np.ndarray, config: FeatureSelectionConfig
+        self,
+        mask: np.ndarray,
+        scores: np.ndarray,
+        config: FeatureSelectionConfig,
     ) -> np.ndarray:
         """最大個数制限を適用するヘルパー"""
         if config.max_features is None or mask.sum() <= config.max_features:

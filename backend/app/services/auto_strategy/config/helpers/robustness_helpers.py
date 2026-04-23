@@ -149,7 +149,9 @@ def validate_robustness_regime_window(window: Mapping[str, Any]) -> list[str]:
     start_date = window.get("start_date")
     end_date = window.get("end_date")
     if not isinstance(start_date, str) or not isinstance(end_date, str):
-        return ["robustness の regime window は start_date/end_date が必要です"]
+        return [
+            "robustness の regime window は start_date/end_date が必要です"
+        ]
 
     normalized = normalize_robustness_regime_window(window)
     if normalized is None:

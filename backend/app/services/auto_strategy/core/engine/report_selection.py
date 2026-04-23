@@ -58,7 +58,9 @@ def get_two_stage_elite_count(config: object, population_size: int) -> int:
     return min(population_size, ceiling, rerank_budget)
 
 
-def get_two_stage_pool_size(candidate_count: int, elite_count: int, config: object) -> int:
+def get_two_stage_pool_size(
+    candidate_count: int, elite_count: int, config: object
+) -> int:
     """二段階選抜で再ランクする候補数を返す。
 
     エリート数と設定から、再ランク（再評価）対象となる候補数を計算します。
@@ -149,7 +151,9 @@ def build_report_rank_key_from_primary_fitness(
     if objective_count <= 1:
         objective = report.objectives[0] if report.objectives else ""
         scenario_values = [
-            objective_registry.to_selection_space(float(scenario.fitness[0]), objective)
+            objective_registry.to_selection_space(
+                float(scenario.fitness[0]), objective
+            )
             for scenario in report.scenarios
             if scenario.fitness
         ]
@@ -167,7 +171,9 @@ def build_report_rank_key_from_primary_fitness(
 
     rank_components: list[float] = [pass_gate, pass_rate]
     for index in range(objective_count):
-        objective = report.objectives[index] if index < len(report.objectives) else ""
+        objective = (
+            report.objectives[index] if index < len(report.objectives) else ""
+        )
         scenario_values = [
             objective_registry.to_selection_space(
                 float(scenario.fitness[index]), objective

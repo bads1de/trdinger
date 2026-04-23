@@ -123,6 +123,10 @@ def create_deap_mutate_wrapper(
                 config, mutation_rate=config.mutation_rate
             )
 
-        return (individual_class(**GeneticUtils.extract_gene_params(mutated_strategy)),)
+        return (
+            individual_class(
+                **GeneticUtils.extract_gene_params(mutated_strategy)
+            ),
+        )
 
     return mutate_wrapper

@@ -13,7 +13,9 @@ from sqlalchemy.orm import Session
 from app.utils.error_handler import safe_operation
 from app.utils.response import api_response
 from database.models import OpenInterestData
-from database.repositories.open_interest_repository import OpenInterestRepository
+from database.repositories.open_interest_repository import (
+    OpenInterestRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +58,13 @@ class OICollectionOrchestrator:
             # デフォルトのバリデーション（テスト用）
             from app.config.unified_config import unified_config
 
-            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
-            if normalized_symbol not in unified_config.market.supported_symbols:
+            normalized_symbol = unified_config.market.symbol_mapping.get(
+                symbol, symbol
+            )
+            if (
+                normalized_symbol
+                not in unified_config.market.supported_symbols
+            ):
                 raise ValueError(f"サポートされていないシンボル: {symbol}")
             if interval not in unified_config.market.supported_timeframes:
                 raise ValueError(f"無効な時間軸: {interval}")
@@ -122,7 +129,8 @@ class OICollectionOrchestrator:
 
         except Exception as e:
             logger.error(
-                f"OI履歴データ収集中にエラーが発生しました: {symbol} {interval}", e
+                f"OI履歴データ収集中にエラーが発生しました: {symbol} {interval}",
+                e,
             )
         finally:
             if hasattr(db, "close"):

@@ -159,7 +159,9 @@ class TrendIndicators:
 
         return cast(
             pd.Series,
-            run_multi_series_indicator({"high": high, "low": low}, None, compute),
+            run_multi_series_indicator(
+                {"high": high, "low": low}, None, compute
+            ),
         )
 
     @staticmethod
@@ -407,7 +409,9 @@ class TrendIndicators:
         if isinstance(result, tuple):
             return cast(Tuple[pd.Series, pd.Series], result)
 
-        return cast(Tuple[pd.Series, pd.Series], (result.iloc[:, 0], result.iloc[:, 1]))
+        return cast(
+            Tuple[pd.Series, pd.Series], (result.iloc[:, 0], result.iloc[:, 1])
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -420,7 +424,9 @@ class TrendIndicators:
         return cast(
             pd.Series,
             run_series_indicator(
-                close, length, lambda: ta.decay(close=close, length=length, mode=mode)
+                close,
+                length,
+                lambda: ta.decay(close=close, length=length, mode=mode),
             ),
         )
 
@@ -453,7 +459,9 @@ class TrendIndicators:
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
-            lambda: ta.ttm_trend(high=high, low=low, close=close, length=length),
+            lambda: ta.ttm_trend(
+                high=high, low=low, close=close, length=length
+            ),
         )
 
         if hasattr(result, "empty") and getattr(result, "empty", False):
@@ -476,7 +484,9 @@ class TrendIndicators:
         if close is None:
             return pd.Series([], dtype=float)
 
-        result = ta.decreasing(close=close, length=length, strict=strict, asint=as_int)
+        result = ta.decreasing(
+            close=close, length=length, strict=strict, asint=as_int
+        )
         if result is None:
             return create_nan_series_like(close)
         return cast(pd.Series, result)
@@ -493,7 +503,9 @@ class TrendIndicators:
         if close is None:
             return pd.Series([], dtype=float)
 
-        result = ta.increasing(close=close, length=length, strict=strict, asint=as_int)
+        result = ta.increasing(
+            close=close, length=length, strict=strict, asint=as_int
+        )
         if result is None:
             return create_nan_series_like(close)
         return result

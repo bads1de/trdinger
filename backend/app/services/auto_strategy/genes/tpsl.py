@@ -12,7 +12,10 @@ from app.utils.serialization import dataclass_to_dict
 
 from ..config.constants import TPSLMethod
 from .base_gene import BaseGene
-from .gene_constants import PRIORITY_GENERATION_RANGE, TPSL_METHOD_WEIGHT_RANGES
+from .gene_constants import (
+    PRIORITY_GENERATION_RANGE,
+    TPSL_METHOD_WEIGHT_RANGES,
+)
 from .gene_ranges import TPSL_GENERATION_RANGES, TPSL_VALIDATION_RANGES
 
 logger = logging.getLogger(__name__)
@@ -73,7 +76,9 @@ class TPSLGene(BaseGene):
     # トレーリングストップ関連パラメータ
     trailing_stop: bool = False  # トレーリングストップ有効化フラグ
     trailing_step_pct: float = 0.01  # トレーリング更新幅（1% = 0.01）
-    trailing_take_profit: bool = False  # トレーリングTP有効化（TP到達後も利益を伸ばす）
+    trailing_take_profit: bool = (
+        False  # トレーリングTP有効化（TP到達後も利益を伸ばす）
+    )
 
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
@@ -84,12 +89,16 @@ class TPSLGene(BaseGene):
         for field_name, (min_val, max_val) in self.NUMERIC_RANGES.items():
             value = getattr(self, field_name, None)
             if value is not None:
-                self._validate_range(value, min_val, max_val, field_name, errors)
+                self._validate_range(
+                    value, min_val, max_val, field_name, errors
+                )
 
         # method_weightsの検証
         for key, value in self.method_weights.items():
             if value < 0:
-                errors.append(f"method_weights[{key}]は0以上である必要があります")
+                errors.append(
+                    f"method_weights[{key}]は0以上である必要があります"
+                )
 
         required_keys = {"fixed", "risk_reward", "volatility", "statistical"}
         missing_keys = required_keys - set(self.method_weights.keys())
@@ -122,8 +131,8 @@ class TPSLGene(BaseGene):
             for key in mutated_gene.method_weights:
                 current_weight = mutated_gene.method_weights[key]
                 # 現在の値を中心とした範囲で変動
-                mutated_gene.method_weights[key] = current_weight * random.uniform(
-                    0.8, 1.2
+                mutated_gene.method_weights[key] = (
+                    current_weight * random.uniform(0.8, 1.2)
                 )
 
             # 合計が1.0になるよう正規化
@@ -165,7 +174,9 @@ class TPSLGene(BaseGene):
         # BLX-α交叉: 親の値の範囲内でランダムに重みを生成
         p1: "TPSLGene" = parent1  # type: ignore[assignment]
         p2: "TPSLGene" = parent2  # type: ignore[assignment]
-        all_keys = set(p1.method_weights.keys()) | set(p2.method_weights.keys())
+        all_keys = set(p1.method_weights.keys()) | set(
+            p2.method_weights.keys()
+        )
 
         for key in all_keys:
             if key in p1.method_weights and key in p2.method_weights:
@@ -176,11 +187,15 @@ class TPSLGene(BaseGene):
                 # 親の範囲内（または少し外側）でランダムに選択
                 child1.method_weights[key] = max(
                     0.0,
-                    min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v),
+                    min_v
+                    - 0.1 * range_v
+                    + random.random() * (range_v + 0.2 * range_v),
                 )
                 child2.method_weights[key] = max(
                     0.0,
-                    min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v),
+                    min_v
+                    - 0.1 * range_v
+                    + random.random() * (range_v + 0.2 * range_v),
                 )
             else:
                 # 片方しかない場合、そのまま継承
@@ -281,7 +296,8 @@ def create_random_tpsl_gene() -> TPSLGene:
             int(ranges["atr_period"][0]), int(ranges["atr_period"][1])
         ),
         lookback_period=random.randint(
-            int(ranges["lookback_period"][0]), int(ranges["lookback_period"][1])
+            int(ranges["lookback_period"][0]),
+            int(ranges["lookback_period"][1]),
         ),
         confidence_threshold=random.uniform(*ranges["confidence_threshold"]),
         method_weights=method_weights,

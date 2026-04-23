@@ -17,7 +17,9 @@ import pandas as pd
 
 from app.services.ml.common.utils import generate_cache_key, optimize_dtypes
 
-from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
+from ...indicators.technical_indicators.advanced_features import (
+    AdvancedFeatures,
+)
 from ..common.exceptions import MLFeatureError
 from .advanced_rolling_stats import AdvancedRollingStatsCalculator
 from .base_feature_calculator import sanitize_numeric_dataframe
@@ -122,7 +124,9 @@ class FeatureEngineeringService:
             if not isinstance(ohlcv_data.index, pd.DatetimeIndex):
                 if "timestamp" in ohlcv_data.columns:
                     ohlcv_data = ohlcv_data.copy()
-                    timestamp = pd.to_datetime(ohlcv_data["timestamp"], errors="coerce")
+                    timestamp = pd.to_datetime(
+                        ohlcv_data["timestamp"], errors="coerce"
+                    )
                     if timestamp.isna().any():
                         raise MLFeatureError(
                             "timestampカラムに無効な日時が含まれています"
@@ -159,7 +163,9 @@ class FeatureEngineeringService:
 
             # データ頻度統一処理
             logger.info("データ頻度統一処理を開始")
-            ohlcv_timeframe = self.frequency_manager.detect_ohlcv_timeframe(ohlcv_data)
+            ohlcv_timeframe = self.frequency_manager.detect_ohlcv_timeframe(
+                ohlcv_data
+            )
 
             # データ整合性検証
             validation_result = self.frequency_manager.validate_data_alignment(
@@ -174,12 +180,18 @@ class FeatureEngineeringService:
             # データ頻度を統一
             funding_rate_data, open_interest_data = (
                 self.frequency_manager.align_data_frequencies(
-                    ohlcv_data, funding_rate_data, open_interest_data, ohlcv_timeframe
+                    ohlcv_data,
+                    funding_rate_data,
+                    open_interest_data,
+                    ohlcv_timeframe,
                 )
             )
 
             # LS Ratioの再配置
-            if long_short_ratio_data is not None and not long_short_ratio_data.empty:
+            if (
+                long_short_ratio_data is not None
+                and not long_short_ratio_data.empty
+            ):
                 long_short_ratio_data = sanitize_numeric_dataframe(
                     long_short_ratio_data.reindex(ohlcv_data.index),
                     fill_value=0.0,
@@ -204,8 +216,14 @@ class FeatureEngineeringService:
 
             # 1. 基本的な特徴量計算（result_dfを直接更新するタイプ）
             core_calculators = [
-                (self.price_calculator, {"lookback_periods": lookback_periods}),
-                (self.technical_calculator, {"lookback_periods": lookback_periods}),
+                (
+                    self.price_calculator,
+                    {"lookback_periods": lookback_periods},
+                ),
+                (
+                    self.technical_calculator,
+                    {"lookback_periods": lookback_periods},
+                ),
                 (
                     self.market_data_calculator,
                     {
@@ -257,7 +275,9 @@ class FeatureEngineeringService:
                     feat_df = calc.calculate_features(*args)
                     additional_features_list.append(feat_df)
                 except Exception as e:
-                    logger.error(f"{calc.__class__.__name__} の計算中にエラー: {e}")
+                    logger.error(
+                        f"{calc.__class__.__name__} の計算中にエラー: {e}"
+                    )
 
             # === 分数次差分特徴量 (Fractional Differentiation) ===
             logger.info("分数次差分特徴量を計算中...")
@@ -266,30 +286,43 @@ class FeatureEngineeringService:
                 frac_price = AdvancedFeatures.frac_diff_ffd(
                     cast(pd.Series, result_df["close"]), d=0.4, window=2000
                 )
-                additional_features_list.append(frac_price.rename("FracDiff_Price"))
+                additional_features_list.append(
+                    frac_price.rename("FracDiff_Price")
+                )
 
                 # OIの分数差分（存在する場合）
-                if open_interest_data is not None and not open_interest_data.empty:
+                if (
+                    open_interest_data is not None
+                    and not open_interest_data.empty
+                ):
                     # OIデータのカラム名を特定（通常は open_interest）
                     oi_col = open_interest_data.columns[0]
                     oi_series = cast(pd.Series, open_interest_data[oi_col])
                     frac_oi = AdvancedFeatures.frac_diff_ffd(
                         oi_series, d=0.4, window=2000
                     )
-                    additional_features_list.append(frac_oi.rename("FracDiff_OI"))
+                    additional_features_list.append(
+                        frac_oi.rename("FracDiff_OI")
+                    )
             except Exception as e:
                 logger.error(f"分数次差分計算中にエラー: {e}")
 
             # 一度だけconcatを実行
             if additional_features_list:
-                result_df = pd.concat([result_df] + additional_features_list, axis=1)
+                result_df = pd.concat(
+                    [result_df] + additional_features_list, axis=1
+                )
 
             # 重複カラムを削除（新しい値を優先）
-            result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
+            result_df = result_df.loc[
+                :, ~result_df.columns.duplicated(keep="last")
+            ]
 
             # 特徴量選択（動的選択）への橋渡し：ここではフィルタリングせず、すべてを返す
             # ALLOWLISTによる手動制限は廃止し、後続のFeatureSelectorに委ねる
-            logger.info(f"生成された全特徴量を使用します: {len(result_df.columns)}個")
+            logger.info(
+                f"生成された全特徴量を使用します: {len(result_df.columns)}個"
+            )
 
             # データ前処理
             logger.info("統計的手法による特徴量前処理を実行中...")
@@ -331,11 +364,15 @@ class FeatureEngineeringService:
             )
             return ohlcv_data
 
-    def aggregate_intraday_features(self, ohlcv_1m: pd.DataFrame) -> pd.DataFrame:
+    def aggregate_intraday_features(
+        self, ohlcv_1m: pd.DataFrame
+    ) -> pd.DataFrame:
         """
         1分足データから1時間足用の統計量を算出する (高速ベクトル化版)。
         """
-        logger.info(f"1分足データから日中統計量を算出中... ({len(ohlcv_1m)} rows)")
+        logger.info(
+            f"1分足データから日中統計量を算出中... ({len(ohlcv_1m)} rows)"
+        )
 
         # 1. 1分足レベルでの計算
         returns_1m = ohlcv_1m["close"].pct_change()
@@ -364,7 +401,8 @@ class FeatureEngineeringService:
 
         # 吸収力 (Absorption): 1価格単位を動かすのに必要な出来高
         price_range = cast(
-            pd.Series, (ohlcv_1m["high"] - ohlcv_1m["low"]).groupby(hour_labels).sum()
+            pd.Series,
+            (ohlcv_1m["high"] - ohlcv_1m["low"]).groupby(hour_labels).sum(),
         )
         agg_features["Intraday_Absorption"] = cast(
             pd.Series, hour_grouped_vol.sum()
@@ -378,8 +416,12 @@ class FeatureEngineeringService:
         # 最大逆行幅 (Intraday Max Pullback) - ベクトル化
         # 1時間ごとの区切りで最高値を更新しつつ、安値との乖離を計算
         hour_cummax_high = ohlcv_1m["high"].groupby(hour_labels).cummax()
-        drawdown_1m = (ohlcv_1m["low"] - hour_cummax_high) / (hour_cummax_high + 1e-9)
-        agg_features["Intraday_Max_Pullback"] = drawdown_1m.groupby(hour_labels).min()
+        drawdown_1m = (ohlcv_1m["low"] - hour_cummax_high) / (
+            hour_cummax_high + 1e-9
+        )
+        agg_features["Intraday_Max_Pullback"] = drawdown_1m.groupby(
+            hour_labels
+        ).min()
 
         return agg_features
 
@@ -411,17 +453,24 @@ class FeatureEngineeringService:
         if frac_diff_d_values is None:
             frac_diff_d_values = [0.3, 0.4, 0.5, 0.6]
 
-        logger.info(f"スーパーセット生成開始: FracDiff d values = {frac_diff_d_values}")
+        logger.info(
+            f"スーパーセット生成開始: FracDiff d values = {frac_diff_d_values}"
+        )
 
         # 1. 基本特徴量を生成（既存のcalculate_advanced_featuresを活用）
         #    ただし、内部で生成される FracDiff_Price/FracDiff_OI は後で置換するため
         #    一旦そのまま生成
         result_df = self.calculate_advanced_features(
-            ohlcv_data, funding_rate_data, open_interest_data, long_short_ratio_data
+            ohlcv_data,
+            funding_rate_data,
+            open_interest_data,
+            long_short_ratio_data,
         )
 
         # 2. 既存の単一d値のFracDiff列を削除（後で複数d値で再生成）
-        cols_to_drop = [c for c in result_df.columns if c.startswith("FracDiff_")]
+        cols_to_drop = [
+            c for c in result_df.columns if c.startswith("FracDiff_")
+        ]
         if cols_to_drop:
             result_df = result_df.drop(columns=cols_to_drop)
             logger.debug(f"既存のFracDiff列を削除: {cols_to_drop}")
@@ -435,7 +484,9 @@ class FeatureEngineeringService:
                 frac_price = AdvancedFeatures.frac_diff_ffd(
                     cast(pd.Series, result_df["close"]), d=d, window=2000
                 )
-                frac_diff_features.append(frac_price.rename(f"FracDiff_Price_d{d}"))
+                frac_diff_features.append(
+                    frac_price.rename(f"FracDiff_Price_d{d}")
+                )
             except Exception as e:
                 logger.warning(f"FracDiff_Price_d{d} 計算失敗: {e}")
 
@@ -452,13 +503,17 @@ class FeatureEngineeringService:
                         oi_col = open_interest_data.columns[0]
                         oi_series = cast(
                             pd.Series,
-                            open_interest_data[oi_col].reindex(result_df.index).ffill(),
+                            open_interest_data[oi_col]
+                            .reindex(result_df.index)
+                            .ffill(),
                         )
 
                     frac_oi = AdvancedFeatures.frac_diff_ffd(
                         cast(pd.Series, oi_series), d=d, window=2000
                     )
-                    frac_diff_features.append(frac_oi.rename(f"FracDiff_OI_d{d}"))
+                    frac_diff_features.append(
+                        frac_oi.rename(f"FracDiff_OI_d{d}")
+                    )
                 except Exception as e:
                     logger.warning(f"FracDiff_OI_d{d} 計算失敗: {e}")
 
@@ -467,7 +522,9 @@ class FeatureEngineeringService:
             result_df = pd.concat([result_df] + frac_diff_features, axis=1)
 
         # 5. 重複カラムの削除と欠損値処理
-        result_df = result_df.loc[:, ~result_df.columns.duplicated(keep="last")]
+        result_df = result_df.loc[
+            :, ~result_df.columns.duplicated(keep="last")
+        ]
 
         result_df = sanitize_numeric_dataframe(
             result_df, fill_value=0.0, forward_fill=True
@@ -481,7 +538,9 @@ class FeatureEngineeringService:
         return result_df
 
     @staticmethod
-    def get_frac_diff_columns_for_d(columns: List[str], d_value: float) -> List[str]:
+    def get_frac_diff_columns_for_d(
+        columns: List[str], d_value: float
+    ) -> List[str]:
         """
         指定されたd値に対応するFracDiffカラムを選択するヘルパー
 
@@ -496,10 +555,16 @@ class FeatureEngineeringService:
             d_valueに対応するFracDiffカラム名のリスト
         """
         target_suffix = f"_d{d_value}"
-        return [c for c in columns if c.startswith("FracDiff_") and target_suffix in c]
+        return [
+            c
+            for c in columns
+            if c.startswith("FracDiff_") and target_suffix in c
+        ]
 
     @staticmethod
-    def filter_superset_for_d(df: pd.DataFrame, d_value: float) -> pd.DataFrame:
+    def filter_superset_for_d(
+        df: pd.DataFrame, d_value: float
+    ) -> pd.DataFrame:
         """
         スーパーセットから特定のd値に対応するカラムのみを抽出
 
@@ -516,16 +581,21 @@ class FeatureEngineeringService:
         target_suffix = f"_d{d_value}"
 
         # FracDiff列以外は全て残す
-        non_frac_cols = [c for c in df.columns if not c.startswith("FracDiff_")]
+        non_frac_cols = [
+            c for c in df.columns if not c.startswith("FracDiff_")
+        ]
 
         # 指定されたd値のFracDiff列のみ選択
         target_frac_cols = [
-            c for c in df.columns if c.startswith("FracDiff_") and target_suffix in c
+            c
+            for c in df.columns
+            if c.startswith("FracDiff_") and target_suffix in c
         ]
 
         selected_cols = non_frac_cols + target_frac_cols
         return cast(
-            pd.DataFrame, df[selected_cols] if selected_cols else df.iloc[:, :0]
+            pd.DataFrame,
+            df[selected_cols] if selected_cols else df.iloc[:, :0],
         )
 
     def expand_features(
@@ -534,7 +604,9 @@ class FeatureEngineeringService:
         """
         特徴量セットを全方位に爆発させる (v4: 1,500個規模)
         """
-        logger.info(f"特徴量全方位拡張(v4)を開始: 初期カラム数 = {len(df.columns)}")
+        logger.info(
+            f"特徴量全方位拡張(v4)を開始: 初期カラム数 = {len(df.columns)}"
+        )
         expanded_df = df.copy()
 
         # --- 1. 全特徴量に対する多重ラグ (Global Lagging) ---
@@ -545,7 +617,14 @@ class FeatureEngineeringService:
             lag_dfs.append(lag_df)
 
         # --- 2. 高度な加速度 & 統計的変化 ---
-        for col in ["close", "volume", "RSI", "ATR", "ADX", "Intraday_Volatility"]:
+        for col in [
+            "close",
+            "volume",
+            "RSI",
+            "ATR",
+            "ADX",
+            "Intraday_Volatility",
+        ]:
             if col in df.columns:
                 vel = df[col].diff(1)
                 expanded_df[f"{col}_Accel"] = vel.diff(1)
@@ -556,7 +635,10 @@ class FeatureEngineeringService:
         # --- 3. 大規模相互作用 (Massive Interaction) ---
         # 重要指標の上位30個をピックアップ
         interactors = df.columns[:top_n_for_interaction].tolist()
-        if "primary_proba" in df.columns and "primary_proba" not in interactors:
+        if (
+            "primary_proba" in df.columns
+            and "primary_proba" not in interactors
+        ):
             interactors.append("primary_proba")
 
         interaction_dict = {}
@@ -570,7 +652,9 @@ class FeatureEngineeringService:
         # --- 4. 統合 ---
         if interaction_dict:
             interaction_df = pd.DataFrame(interaction_dict, index=df.index)
-            expanded_df = pd.concat([expanded_df] + lag_dfs + [interaction_df], axis=1)
+            expanded_df = pd.concat(
+                [expanded_df] + lag_dfs + [interaction_df], axis=1
+            )
 
         # クリーンアップ
         expanded_df = sanitize_numeric_dataframe(
@@ -588,7 +672,9 @@ class FeatureEngineeringService:
         """キャッシュからデータを取得"""
         if key in self.feature_cache:
             entry = self.feature_cache[key]
-            if (datetime.now() - entry["timestamp"]).total_seconds() < self.cache_ttl:
+            if (
+                datetime.now() - entry["timestamp"]
+            ).total_seconds() < self.cache_ttl:
                 logger.debug("特徴量キャッシュヒット")
                 return entry["data"].copy(deep=True)
             else:

@@ -35,7 +35,9 @@ class TradeHistoryTransformer:
         try:
             trades_df = getattr(stats, "_trades", None)
 
-            if trades_df is None or (hasattr(trades_df, "empty") and trades_df.empty):
+            if trades_df is None or (
+                hasattr(trades_df, "empty") and trades_df.empty
+            ):
                 logger.debug("バックテストで取引が発生しませんでした")
                 return []
 
@@ -79,11 +81,14 @@ class TradeHistoryTransformer:
                     "duration",
                     "Duration",
                     lambda s: (
-                        pd.to_timedelta(s).dt.total_seconds().fillna(0).astype(int)
+                        pd.to_timedelta(s)
+                        .dt.total_seconds()
+                        .fillna(0)
+                        .astype(int)
                         if pd.api.types.is_timedelta64_dtype(s)
-                        else cast(pd.Series, pd.to_numeric(s, errors="coerce")).fillna(
-                            0
-                        )
+                        else cast(
+                            pd.Series, pd.to_numeric(s, errors="coerce")
+                        ).fillna(0)
                     ).astype(int),
                 ),
             ]
@@ -99,13 +104,21 @@ class TradeHistoryTransformer:
 
             if pnl_source_col is not None:
                 try:
-                    df["pnl"] = pd.to_numeric(df[pnl_source_col], errors="coerce")
+                    df["pnl"] = pd.to_numeric(
+                        df[pnl_source_col], errors="coerce"
+                    )
                 except Exception:
                     df["pnl"] = 0.0
             else:
                 df["pnl"] = 0.0
 
-            num_cols = ["entry_price", "exit_price", "size", "pnl", "return_pct"]
+            num_cols = [
+                "entry_price",
+                "exit_price",
+                "size",
+                "pnl",
+                "return_pct",
+            ]
             for col in num_cols:
                 df[col] = df[col].fillna(0.0)
 
@@ -128,7 +141,9 @@ class TradeHistoryTransformer:
 class EquityCurveTransformer:
     """エクイティカーブ変換専門クラス"""
 
-    def transform(self, stats: Any, max_points: int = 1000) -> List[Dict[str, Any]]:
+    def transform(
+        self, stats: Any, max_points: int = 1000
+    ) -> List[Dict[str, Any]]:
         """
         エクイティカーブを辞書リストに変換
 
@@ -149,7 +164,9 @@ class EquityCurveTransformer:
                 step = len(df) // max_points
                 df = df.iloc[::step]
 
-            df["timestamp"] = [self._safe_timestamp_conversion(t) for t in df.index]
+            df["timestamp"] = [
+                self._safe_timestamp_conversion(t) for t in df.index
+            ]
             # Equity 列が存在しない場合は最後の数値列をフォールバックとする
             equity_col = (
                 "Equity"
@@ -163,7 +180,8 @@ class EquityCurveTransformer:
                     pd.Series, pd.to_numeric(df[equity_col], errors="coerce")
                 ).fillna(0.0)
             df["drawdown"] = cast(
-                pd.Series, pd.to_numeric(df.get("DrawdownPct", 0), errors="coerce")
+                pd.Series,
+                pd.to_numeric(df.get("DrawdownPct", 0), errors="coerce"),
             ).fillna(0.0)
 
             result_cols = ["timestamp", "equity", "drawdown"]

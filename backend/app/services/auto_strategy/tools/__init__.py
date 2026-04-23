@@ -5,11 +5,17 @@
 """
 
 from .base import BaseTool, ToolContext, ToolDefinition
-from .beginning_of_month_filter import BeginningOfMonthFilter, beginning_of_month_filter
+from .beginning_of_month_filter import (
+    BeginningOfMonthFilter,
+    beginning_of_month_filter,
+)
 from .end_of_month_filter import EndOfMonthFilter, end_of_month_filter
 from .funding_rate_filter import FundingRateFilter, funding_rate_filter
 from .london_fix_filter import LondonFixFilter, london_fix_filter
-from .monday_reversal_filter import MondayReversalFilter, monday_reversal_filter
+from .monday_reversal_filter import (
+    MondayReversalFilter,
+    monday_reversal_filter,
+)
 from .registry import ToolRegistry, register_tool, tool_registry
 from .specific_day_filter import SpecificDayFilter, specific_day_filter
 from .trend_filter import TrendFilter, trend_filter

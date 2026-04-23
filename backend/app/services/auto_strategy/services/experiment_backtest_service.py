@@ -65,7 +65,9 @@ class ExperimentBacktestService:
 
         best_strategy = result["best_strategy"]
         best_fitness = result["best_fitness"]
-        experiment_data = experiment_info if isinstance(experiment_info, dict) else {}
+        experiment_data = (
+            experiment_info if isinstance(experiment_info, dict) else {}
+        )
 
         experiment_name = str(experiment_data.get("name", experiment_id))
         db_experiment_id = int(experiment_data.get("db_id", 0) or 0)
@@ -90,7 +92,9 @@ class ExperimentBacktestService:
             evaluation_summary=evaluation_summary,
         )
 
-    def _normalize_fitness_score(self, best_fitness: object, ga_config: GAConfig) -> float:
+    def _normalize_fitness_score(
+        self, best_fitness: object, ga_config: GAConfig
+    ) -> float:
         """GA結果から保存用の代表スコアを抽出する"""
         if isinstance(best_fitness, (list, tuple)):
             return float(best_fitness[0]) if best_fitness else 0.0
@@ -168,7 +172,9 @@ class ExperimentBacktestService:
             "initial_capital": config["initial_capital"],
             "commission_rate": config.get("commission_rate", 0.001),
             "config_json": config_json,
-            "performance_metrics": detailed_result.get("performance_metrics", {}),
+            "performance_metrics": detailed_result.get(
+                "performance_metrics", {}
+            ),
             "equity_curve": detailed_result.get("equity_curve", []),
             "trade_history": detailed_result.get("trade_history", []),
             "execution_time": detailed_result.get("execution_time"),

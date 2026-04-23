@@ -30,7 +30,9 @@ class IndicatorCalculator:
 
     def __init__(
         self,
-        technical_indicator_service: Optional[TechnicalIndicatorService] = None,
+        technical_indicator_service: Optional[
+            TechnicalIndicatorService
+        ] = None,
         mtf_data_provider: Optional[MultiTimeframeDataProvider] = None,
     ):
         """
@@ -69,7 +71,9 @@ class IndicatorCalculator:
         """
         from app.utils.error_handler import safe_operation
 
-        @safe_operation(context=f"指標計算 ({indicator_type})", is_api_call=False)
+        @safe_operation(
+            context=f"指標計算 ({indicator_type})", is_api_call=False
+        )
         def _calculate_indicator() -> Union[
             np.ndarray,
             pd.Series,
@@ -80,7 +84,9 @@ class IndicatorCalculator:
         ]:
             # backtesting.pyのデータオブジェクトをDataFrameに変換
             if data is None:
-                raise ValueError(f"データオブジェクトがNoneです: {indicator_type}")
+                raise ValueError(
+                    f"データオブジェクトがNoneです: {indicator_type}"
+                )
             return self._calculate_indicator_from_dataframe(
                 data.df, indicator_type, parameters
             )
@@ -150,7 +156,9 @@ class IndicatorCalculator:
             )
 
         except Exception as e:
-            logger.error(f"MTF指標計算エラー ({indicator_type}): {e}", exc_info=True)
+            logger.error(
+                f"MTF指標計算エラー ({indicator_type}): {e}", exc_info=True
+            )
             return None
 
     def init_indicator(self, indicator_gene: IndicatorGene, strategy_instance):
@@ -181,7 +189,9 @@ class IndicatorCalculator:
             # )
 
             if strategy_instance is None:
-                raise ValueError(f"戦略インスタンスがNoneです: {indicator_gene.type}")
+                raise ValueError(
+                    f"戦略インスタンスがNoneです: {indicator_gene.type}"
+                )
 
             # MTF対応: タイムフレームに応じたデータを取得
             if indicator_timeframe and self.mtf_data_provider:
@@ -228,18 +238,22 @@ class IndicatorCalculator:
                         shifted = series.shift(1)
 
                         # タイムゾーン情報を合わせる（必要な場合）
-                        if isinstance(shifted.index, pd.DatetimeIndex) and isinstance(
-                            base_index, pd.DatetimeIndex
-                        ):
+                        if isinstance(
+                            shifted.index, pd.DatetimeIndex
+                        ) and isinstance(base_index, pd.DatetimeIndex):
                             if shifted.index.tz != base_index.tz:
                                 try:
                                     shifted.index = shifted.index.tz_convert(
                                         base_index.tz
                                     )
                                 except Exception as e:
-                                    logger.warning(f"タイムゾーン変換失敗: {e}")
+                                    logger.warning(
+                                        f"タイムゾーン変換失敗: {e}"
+                                    )
 
-                        return cast(pd.Series, shifted.reindex(base_index).ffill())
+                        return cast(
+                            pd.Series, shifted.reindex(base_index).ffill()
+                        )
 
                     if isinstance(raw_result, tuple):
                         result = tuple(_align_to_base(s) for s in raw_result)
@@ -279,11 +293,15 @@ class IndicatorCalculator:
                         )
                 else:
                     # 単一出力の指標
-                    _register(build_indicator_reference_name(indicator_gene), result)
+                    _register(
+                        build_indicator_reference_name(indicator_gene), result
+                    )
 
                 # logger.debug(f"指標登録完了: {base_indicator_name}")
             else:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
-                raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")
+                raise ValueError(
+                    f"指標計算に失敗しました: {indicator_gene.type}"
+                )
 
         _init_indicator()

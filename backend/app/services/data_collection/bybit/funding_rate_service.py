@@ -9,7 +9,9 @@ import logging
 from typing import Any, Dict, List, Optional
 
 from app.services.data_collection.bybit.bybit_service import BybitService
-from app.services.data_collection.bybit.data_config import get_funding_rate_config
+from app.services.data_collection.bybit.data_config import (
+    get_funding_rate_config,
+)
 from database.repositories.funding_rate_repository import FundingRateRepository
 
 logger = logging.getLogger(__name__)
@@ -86,7 +88,9 @@ class BybitFundingRateService(BybitService):
             limit,
         )
 
-    async def fetch_all_funding_rate_history(self, symbol: str) -> List[Dict[str, Any]]:
+    async def fetch_all_funding_rate_history(
+        self, symbol: str
+    ) -> List[Dict[str, Any]]:
         """
         全期間のファンディングレート履歴を取得
 
@@ -103,7 +107,9 @@ class BybitFundingRateService(BybitService):
             symbol=normalized_symbol,
         )
         return await self._fetch_paginated_data(
-            fetch_func=getattr(self.exchange, self.config.fetch_history_method_name),
+            fetch_func=getattr(
+                self.exchange, self.config.fetch_history_method_name
+            ),
             symbol=normalized_symbol,
             page_limit=self.config.page_limit,
             max_pages=self.config.max_pages,

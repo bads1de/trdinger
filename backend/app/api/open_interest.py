@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_open_interest_orchestration_service
 from app.config.constants import DEFAULT_MARKET_SYMBOL
-from app.services.data_collection.orchestration.open_interest_orchestration_service import (
+from app.services.data_collection.orchestration.open_interest_orchestration_service import (  # noqa: E501
     OpenInterestOrchestrationService,
 )
 from app.utils.error_handler import api_safe_execute, ensure_db_initialized
@@ -28,7 +28,9 @@ router = APIRouter(
 @router.get("/")
 @api_safe_execute(message="オープンインタレストデータ取得エラー")
 async def get_open_interest_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
+    symbol: str = Query(
+        ..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"
+    ),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
     limit: Optional[int] = Query(1000, description="取得件数制限（最大1000）"),
@@ -69,11 +71,16 @@ async def get_open_interest_data(
 @router.post("/collect")
 @api_safe_execute(message="オープンインタレストデータ収集エラー")
 async def collect_open_interest_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
-    limit: Optional[int] = Query(
-        100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"
+    symbol: str = Query(
+        ..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"
     ),
-    fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
+    limit: Optional[int] = Query(
+        100,
+        description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）",
+    ),
+    fetch_all: bool = Query(
+        False, description="全期間のデータを取得するかどうか"
+    ),
     orchestration_service: OpenInterestOrchestrationService = Depends(
         get_open_interest_orchestration_service
     ),

@@ -13,11 +13,15 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_backtest_orchestration_service
 from app.services.backtest.config import BacktestConfig
-from app.services.backtest.orchestration.backtest_orchestration_service import (
+from app.services.backtest.orchestration.backtest_orchestration_service import (  # noqa: E501
     BacktestOrchestrationService,
 )
 from app.utils.error_handler import ErrorHandler
-from app.utils.response import ensure_response_dict, extract_response_data, now_iso
+from app.utils.response import (
+    ensure_response_dict,
+    extract_response_data,
+    now_iso,
+)
 from database.connection import get_db
 
 router = APIRouter(prefix="/api/backtest", tags=["backtest"])
@@ -78,7 +82,8 @@ async def get_backtest_results(
 
     async def _get_results():
         """バックテスト結果一覧を取得するためのメインロジックを実行します。"""
-        # orchestration_service returns api_response with data field: {"results": [...], "total": N}
+        # orchestration_service returns api_response with data field:
+        # {"results": [...], "total": N}
         resp = await orchestration_service.get_backtest_results(
             db=db,
             limit=limit,
@@ -87,7 +92,8 @@ async def get_backtest_results(
             strategy_name=strategy_name,
         )
 
-        # orchestration_service now returns normalized response with top-level `results` and `total`
+        # orchestration_service now returns normalized response with
+        # top-level `results` and `total`
         return resp
 
     return await ErrorHandler.safe_execute_async(_get_results)

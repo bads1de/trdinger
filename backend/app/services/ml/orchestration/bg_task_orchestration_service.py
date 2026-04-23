@@ -157,7 +157,9 @@ class BackgroundTaskManager:
         for task_id in task_ids:
             self.unregister_task(task_id, force_cleanup=True)
 
-        logger.info(f"全バックグラウンドタスククリーンアップ完了: {len(task_ids)}個")
+        logger.info(
+            f"全バックグラウンドタスククリーンアップ完了: {len(task_ids)}個"
+        )
 
     def _get_memory_usage(self) -> float:
         """

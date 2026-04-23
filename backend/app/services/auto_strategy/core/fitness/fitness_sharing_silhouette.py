@@ -82,7 +82,9 @@ def silhouette_based_sharing(
         if n_clusters < 2:
             return population
 
-        kmeans = KMeans(n_clusters=n_clusters, random_state=RANDOM_STATE, n_init="auto")
+        kmeans = KMeans(
+            n_clusters=n_clusters, random_state=RANDOM_STATE, n_init="auto"
+        )
         labels = kmeans.fit_predict(vectors_array)
 
         silhouette_vals = silhouette_samples(vectors_array, labels)
@@ -91,8 +93,12 @@ def silhouette_based_sharing(
             individual = population[idx]
             if has_valid_fitness(individual):
                 silhouette_score = silhouette_vals[j]
-                normalized_silhouette = (silhouette_score + SILHOUETTE_OFFSET) / SILHOUETTE_DIVISOR
-                adjustment_factor = max(MIN_ADJUSTMENT_FACTOR, 1.0 - normalized_silhouette)
+                normalized_silhouette = (
+                    silhouette_score + SILHOUETTE_OFFSET
+                ) / SILHOUETTE_DIVISOR
+                adjustment_factor = max(
+                    MIN_ADJUSTMENT_FACTOR, 1.0 - normalized_silhouette
+                )
 
                 original_fitness_values = individual.fitness.values
                 adjusted_values = tuple(

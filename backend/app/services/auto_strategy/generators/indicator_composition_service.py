@@ -50,13 +50,17 @@ class IndicatorCompositionService:
         try:
             # 現在のMA指標数をカウント
             ma_count = sum(
-                1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS
+                1
+                for ind in indicators
+                if ind.type in MOVING_AVERAGE_INDICATORS
             )
 
             # 確率的にMAクロスを導入（強制的ではない）
             rnd_val = random.random()
 
-            if ma_count < 2 and rnd_val < self.MA_CROSS_PROBABILITY:  # 25%の確率で導入
+            if (
+                ma_count < 2 and rnd_val < self.MA_CROSS_PROBABILITY
+            ):  # 25%の確率で導入
                 # MA指標プールを準備
                 ma_pool = [
                     name
@@ -144,7 +148,9 @@ class IndicatorCompositionService:
         """
         try:
             # 優先MAから選択
-            preferred = [name for name in ma_pool if name in PREFERRED_MA_INDICATORS]
+            preferred = [
+                name for name in ma_pool if name in PREFERRED_MA_INDICATORS
+            ]
             candidates = preferred or ma_pool
 
             # ランダムに選択

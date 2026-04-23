@@ -138,14 +138,18 @@ class CatBoostModel(BaseGradientBoostingModel):
         sample_weight_train = train_data[2] if len(train_data) > 2 else None
 
         # CatBoostのPoolオブジェクトに変換（sample_weightを含む）
-        train_pool = cb.Pool(data=X_train, label=y_train, weight=sample_weight_train)
+        train_pool = cb.Pool(
+            data=X_train, label=y_train, weight=sample_weight_train
+        )
 
         # eval_setの準備
         eval_set = None
         if valid_data is not None:
             X_val, y_val = valid_data[0], valid_data[1]
             sample_weight_val = valid_data[2] if len(valid_data) > 2 else None
-            eval_pool = cb.Pool(data=X_val, label=y_val, weight=sample_weight_val)
+            eval_pool = cb.Pool(
+                data=X_val, label=y_val, weight=sample_weight_val
+            )
             eval_set = [eval_pool]
 
         # CatBoostRegressorを作成（回帰タスク専用）

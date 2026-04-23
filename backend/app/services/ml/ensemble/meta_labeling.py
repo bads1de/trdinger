@@ -83,7 +83,10 @@ class MetaLabelingService:
         return X_meta
 
     def create_meta_labels(
-        self, primary_preds_proba: pd.Series, y_true: pd.Series, threshold: float = 0.5
+        self,
+        primary_preds_proba: pd.Series,
+        y_true: pd.Series,
+        threshold: float = 0.5,
     ) -> Tuple[pd.Series, pd.Series]:
         """
         メタラベルとフィルタリング用のマスクを作成します。
@@ -104,7 +107,9 @@ class MetaLabelingService:
         indices: pd.Index = pd.Index(primary_preds_proba.index[trend_mask])
 
         if len(indices) == 0:
-            logger.warning("一次モデルがトレンドと予測したサンプルがありません。")
+            logger.warning(
+                "一次モデルがトレンドと予測したサンプルがありません。"
+            )
             return pd.Series(dtype=bool), pd.Series()
 
         # メタラベルの生成
@@ -185,10 +190,14 @@ class MetaLabelingService:
 
         # 自動特徴量選択
         if self.use_feature_selection:
-            from ..feature_selection.dynamic_meta_selector import DynamicMetaSelector
+            from ..feature_selection.dynamic_meta_selector import (
+                DynamicMetaSelector,
+            )
 
             # メタラベル専用の自律型動的セレクターを使用
-            self.selector = DynamicMetaSelector(**(self.feature_selection_params or {}))
+            self.selector = DynamicMetaSelector(
+                **(self.feature_selection_params or {})
+            )
             X_meta = self.selector.fit_transform(X_meta, y_meta)
             self.selected_features = X_meta.columns.tolist()
             logger.info(
@@ -291,7 +300,9 @@ class MetaLabelingService:
                     DynamicMetaSelector,
                 )
 
-                fold_selector = DynamicMetaSelector(**self.feature_selection_params)
+                fold_selector = DynamicMetaSelector(
+                    **self.feature_selection_params
+                )
                 X_tr = fold_selector.fit_transform(X_tr, y_tr)
                 X_val = fold_selector.transform(X_val)
 
@@ -338,8 +349,12 @@ class MetaLabelingService:
             "improvement_precision": m_met["precision"] - p_met["precision"],
             "improvement_recall": m_met["recall"] - p_met["recall"],
             "improvement_f1": m_met["f1_score"] - p_met["f1_score"],
-            "meta_classification_report": m_met.get("classification_report", {}),
-            "primary_classification_report": p_met.get("classification_report", {}),
+            "meta_classification_report": m_met.get(
+                "classification_report", {}
+            ),
+            "primary_classification_report": p_met.get(
+                "classification_report", {}
+            ),
             "meta_balanced_accuracy": m_met.get("balanced_accuracy", 0.0),
             "primary_balanced_accuracy": p_met.get("balanced_accuracy", 0.0),
         }

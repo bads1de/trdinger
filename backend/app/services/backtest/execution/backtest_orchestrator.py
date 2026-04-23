@@ -12,7 +12,10 @@ from typing import Any, Dict, Optional
 import pandas as pd
 from pydantic import ValidationError
 
-from ..config.backtest_config import BacktestRunConfig, BacktestRunConfigValidationError
+from ..config.backtest_config import (
+    BacktestRunConfig,
+    BacktestRunConfigValidationError,
+)
 from ..conversion.backtest_result_converter import (
     BacktestResultConversionError,
     BacktestResultConverter,
@@ -48,7 +51,9 @@ class BacktestOrchestrator:
         self._executor = BacktestExecutor(data_service)
 
     def run(
-        self, config: Dict[str, Any], preloaded_data: Optional[pd.DataFrame] = None
+        self,
+        config: Dict[str, Any],
+        preloaded_data: Optional[pd.DataFrame] = None,
     ) -> Dict[str, Any]:
         """
         バックテストを実行
@@ -76,7 +81,9 @@ class BacktestOrchestrator:
             if skip_validation:
                 # バリデーションスキップ（GAなど信頼できる内部呼び出し用）
                 # model_constructでバリデーションをスキップしつつPydanticモデルインスタンスを取得
-                backtest_config = BacktestRunConfig.model_construct(**working_config)
+                backtest_config = BacktestRunConfig.model_construct(
+                    **working_config
+                )
                 # datetime 変換を保証する（文字列の場合は変換）
                 if isinstance(backtest_config.start_date, str):
                     backtest_config.start_date = pd.to_datetime(
@@ -92,12 +99,16 @@ class BacktestOrchestrator:
                 try:
                     backtest_config = BacktestRunConfig(**working_config)
                 except ValidationError as e:
-                    raise BacktestRunConfigValidationError(f"設定が無効です: {e}")
+                    raise BacktestRunConfigValidationError(
+                        f"設定が無効です: {e}"
+                    )
 
                 # 2. 戦略クラス取得または生成
                 # StrategyClassFactoryはまだ辞書を期待しているため、一部辞書に戻す
                 # strategy_configオブジェクトを辞書に変換
-                strategy_config_dict = backtest_config.strategy_config.model_dump()
+                strategy_config_dict = (
+                    backtest_config.strategy_config.model_dump()
+                )
 
             # strategy_class が config に直接含まれている場合の対応（GAエンジンからの直接渡しなど）
             # Pydanticモデルには含まれていないため、元のconfig辞書を確認
@@ -108,8 +119,10 @@ class BacktestOrchestrator:
                 strategy_class = self._strategy_factory.create_strategy_class(
                     strategy_config_dict
                 )
-                strategy_parameters = self._strategy_factory.get_strategy_parameters(
-                    strategy_config_dict
+                strategy_parameters = (
+                    self._strategy_factory.get_strategy_parameters(
+                        strategy_config_dict
+                    )
                 )
 
             # 3. バックテスト実行

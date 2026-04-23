@@ -44,7 +44,10 @@ def compute_niche_counts_vectorized(
         radius=distance_threshold,
     )
     niche_counts = np.array(
-        [max(DEFAULT_NICHE_COUNT, float(len(neighbors))) for neighbors in neighbors_list]
+        [
+            max(DEFAULT_NICHE_COUNT, float(len(neighbors)))
+            for neighbors in neighbors_list
+        ]
     )
     return niche_counts
 
@@ -100,7 +103,9 @@ def compute_niche_counts_sampling(
         sample_vectors = vectors[sample_indices]
 
         sample_tree = cKDTree(sample_vectors)
-        distances, _ = sample_tree.query(vectors, k=min(DEFAULT_K_NEIGHBORS, len(sample_indices)))
+        distances, _ = sample_tree.query(
+            vectors, k=min(DEFAULT_K_NEIGHBORS, len(sample_indices))
+        )
         distances = cast(np.ndarray, distances)
 
         if distances.ndim == 1:
@@ -109,7 +114,9 @@ def compute_niche_counts_sampling(
         neighbors_in_sample = np.sum(distances < distance_threshold, axis=1)
 
         scale_factor = n_individuals / len(sample_indices)
-        niche_counts = np.maximum(DEFAULT_NICHE_COUNT, neighbors_in_sample * scale_factor)
+        niche_counts = np.maximum(
+            DEFAULT_NICHE_COUNT, neighbors_in_sample * scale_factor
+        )
         return niche_counts
     finally:
         np.random.set_state(rng_state)

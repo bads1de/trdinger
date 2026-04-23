@@ -26,7 +26,9 @@ class MLDataError(MLBaseError):
 class MLValidationError(MLBaseError):
     """MLバリデーション関連のエラー"""
 
-    def __init__(self, message: str, validation_details: Optional[dict] = None):
+    def __init__(
+        self, message: str, validation_details: Optional[dict] = None
+    ):
         self.validation_details = validation_details or {}
         super().__init__(message, "ML_VALIDATION_ERROR")
 

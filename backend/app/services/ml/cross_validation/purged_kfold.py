@@ -35,7 +35,9 @@ class PurgedKFold(_BaseKFold):
     ):
         if not isinstance(t1, pd.Series):
             raise ValueError("t1 must be a pandas Series with DatetimeIndex.")
-        if not all(isinstance(idx, (pd.Timestamp, np.datetime64)) for idx in t1.index):
+        if not all(
+            isinstance(idx, (pd.Timestamp, np.datetime64)) for idx in t1.index
+        ):
             raise ValueError("t1 index must be of type DatetimeIndex.")
         if not all(
             isinstance(val, (pd.Timestamp, np.datetime64)) or pd.isna(val)
@@ -75,8 +77,12 @@ class PurgedKFold(_BaseKFold):
             tuple[np.ndarray, np.ndarray]: (訓練インデックス, テストインデックス) のペア。
         """
         _ = groups
-        if not isinstance(X, pd.DataFrame) or not X.index.equals(self.t1.index):
-            raise ValueError("X must be a DataFrame and have the same index as t1.")
+        if not isinstance(X, pd.DataFrame) or not X.index.equals(
+            self.t1.index
+        ):
+            raise ValueError(
+                "X must be a DataFrame and have the same index as t1."
+            )
 
         indices = np.arange(len(X))
         fold_size = len(X) // self.n_splits
@@ -101,7 +107,9 @@ class PurgedKFold(_BaseKFold):
             test_max_t1_ns = np.max(t1_subset_ints)  # type: ignore
 
             if test_max_t1_ns < 0:  # 全てNaTの場合
-                test_max_t1_ns = x_index_ints[end - 1]  # テストセットの末尾を使用
+                test_max_t1_ns = x_index_ints[
+                    end - 1
+                ]  # テストセットの末尾を使用
 
             # エンバーゴ期間計算 (ベクトル化)
             embargo_sec = (

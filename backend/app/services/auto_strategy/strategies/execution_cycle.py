@@ -22,7 +22,9 @@ class StrategyExecutionCycle:
 
         self.process_bar_setup()
 
-        handled_open_position = self.strategy.position_manager.handle_open_position()
+        handled_open_position = (
+            self.strategy.position_manager.handle_open_position()
+        )
         self.strategy._check_early_termination()
         if handled_open_position:
             return
@@ -37,7 +39,9 @@ class StrategyExecutionCycle:
                 return
 
         # ポジションなし → エントリー条件チェック
-        direction = self.strategy.entry_decision_engine.determine_entry_direction()
+        direction = (
+            self.strategy.entry_decision_engine.determine_entry_direction()
+        )
         if direction == 0.0:
             return
 

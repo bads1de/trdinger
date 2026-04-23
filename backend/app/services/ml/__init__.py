@@ -11,7 +11,9 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .orchestration.ml_training_orchestration_service import MLTrainingService
+    from .orchestration.ml_training_orchestration_service import (
+        MLTrainingService,
+    )
 
 _ATTRIBUTE_EXPORTS = {
     "MLTrainingService": ".orchestration.ml_training_orchestration_service",

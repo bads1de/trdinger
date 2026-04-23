@@ -54,7 +54,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             cache_size = self.DEFAULT_CACHE_SIZE
         super().__init__(backtest_service)
         self.predictor = predictor
-        self.feature_adapter = feature_adapter or self._create_feature_adapter()
+        self.feature_adapter = (
+            feature_adapter or self._create_feature_adapter()
+        )
         self._prediction_cache: Dict[str, Any] = {}
         self._feature_cache: Dict[str, Any] = {}
         self._cache_size = cache_size
@@ -231,7 +233,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 if ml_filter_model.is_trained():
                     return True, ml_filter_model
             except Exception as e:
-                logger.debug(f"MLモデルのロードまたは初期化に失敗しました: {e}")
+                logger.debug(
+                    f"MLモデルのロードまたは初期化に失敗しました: {e}"
+                )
                 return False, None
 
         if self.predictor and self.predictor.is_trained():

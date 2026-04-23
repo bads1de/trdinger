@@ -38,14 +38,26 @@ class ParameterSpace:
     categories: Optional[list] = None
 
 
-def build_lightgbm_parameter_space(prefix: str = "") -> Dict[str, ParameterSpace]:
+def build_lightgbm_parameter_space(
+    prefix: str = "",
+) -> Dict[str, ParameterSpace]:
     """LightGBM のパラメータ空間を構築する。"""
     return {
-        f"{prefix}num_leaves": ParameterSpace(type="integer", low=10, high=100),
-        f"{prefix}learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
-        f"{prefix}feature_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
-        f"{prefix}bagging_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
-        f"{prefix}min_data_in_leaf": ParameterSpace(type="integer", low=5, high=50),
+        f"{prefix}num_leaves": ParameterSpace(
+            type="integer", low=10, high=100
+        ),
+        f"{prefix}learning_rate": ParameterSpace(
+            type="real", low=0.01, high=0.3
+        ),
+        f"{prefix}feature_fraction": ParameterSpace(
+            type="real", low=0.5, high=1.0
+        ),
+        f"{prefix}bagging_fraction": ParameterSpace(
+            type="real", low=0.5, high=1.0
+        ),
+        f"{prefix}min_data_in_leaf": ParameterSpace(
+            type="integer", low=5, high=50
+        ),
         f"{prefix}max_depth": ParameterSpace(type="integer", low=3, high=15),
     }
 
@@ -128,7 +140,9 @@ class OptunaOptimizer:
 
         best_score = best_trial.value if best_trial.value is not None else 0.0
         if best_trial.value is None:
-            logger.warning("ベスト試行の値がNoneです。デフォルト値0.0を使用します")
+            logger.warning(
+                "ベスト試行の値がNoneです。デフォルト値0.0を使用します"
+            )
 
         result = OptimizationResult(
             best_params=best_trial.params,
@@ -215,7 +229,9 @@ class OptunaOptimizer:
         return params
 
     @staticmethod
-    @safe_operation(context="アンサンブルパラメータ空間取得", is_api_call=False)
+    @safe_operation(
+        context="アンサンブルパラメータ空間取得", is_api_call=False
+    )
     def get_ensemble_parameter_space(
         ensemble_method: str, enabled_models: list
     ) -> Dict[str, ParameterSpace]:

@@ -13,8 +13,12 @@ from sqlalchemy.orm import Session
 
 from app.utils.error_handler import safe_operation
 from app.utils.response import api_response
-from database.repositories.backtest_result_repository import BacktestResultRepository
-from database.repositories.ga_experiment_repository import GAExperimentRepository
+from database.repositories.backtest_result_repository import (
+    BacktestResultRepository,
+)
+from database.repositories.ga_experiment_repository import (
+    GAExperimentRepository,
+)
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
@@ -73,7 +77,10 @@ class BacktestOrchestrationService:
             backtest_repo = BacktestResultRepository(db)
 
             results = backtest_repo.get_backtest_results(
-                limit=limit, offset=offset, symbol=symbol, strategy_name=strategy_name
+                limit=limit,
+                offset=offset,
+                symbol=symbol,
+                strategy_name=strategy_name,
             )
 
             total = backtest_repo.count_backtest_results(
@@ -111,7 +118,9 @@ class BacktestOrchestrationService:
 
             if result is None:
                 return api_response(
-                    success=False, error="Backtest result not found", status_code=404
+                    success=False,
+                    error="Backtest result not found",
+                    status_code=404,
                 )
 
             return api_response(success=True, data=result)
@@ -145,10 +154,14 @@ class BacktestOrchestrationService:
 
             if not success:
                 return api_response(
-                    success=False, error="Backtest result not found", status_code=404
+                    success=False,
+                    error="Backtest result not found",
+                    status_code=404,
                 )
 
-            return api_response(success=True, message="バックテスト結果を削除しました")
+            return api_response(
+                success=True, message="バックテスト結果を削除しました"
+            )
 
         return _delete_backtest_result()
 
@@ -171,7 +184,9 @@ class BacktestOrchestrationService:
 
             # 関連テーブルのデータをすべて削除
             # 1. 生成された戦略を削除
-            generated_strategy_count = generated_strategy_repo.delete_all_strategies()
+            generated_strategy_count = (
+                generated_strategy_repo.delete_all_strategies()
+            )
 
             # 2. GA実験を削除
             ga_experiment_count = ga_experiment_repo.delete_all_experiments()
@@ -203,6 +218,8 @@ class BacktestOrchestrationService:
         def _get_supported_strategies():
             from ..config.constants import SUPPORTED_STRATEGIES
 
-            return api_response(success=True, data={"strategies": SUPPORTED_STRATEGIES})
+            return api_response(
+                success=True, data={"strategies": SUPPORTED_STRATEGIES}
+            )
 
         return _get_supported_strategies()

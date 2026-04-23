@@ -142,7 +142,9 @@ class LowerTimeframeSimulator:
 
         # インデックスがDatetimeIndexの場合
         if isinstance(minute_data.index, pd.DatetimeIndex):
-            mask = (minute_data.index >= bar_start) & (minute_data.index < bar_end)
+            mask = (minute_data.index >= bar_start) & (
+                minute_data.index < bar_end
+            )
             return minute_data.loc[mask]
 
         return minute_data

@@ -286,7 +286,9 @@ def get_feature_importance_unified(
             model.feature_importance
         ):
             try:
-                importance_scores = model.feature_importance(importance_type="gain")
+                importance_scores = model.feature_importance(
+                    importance_type="gain"
+                )
             except Exception:
                 try:
                     importance_scores = model.feature_importance()
@@ -327,16 +329,18 @@ def get_feature_importance_unified(
                 res = model.get_feature_importance(top_n=top_n)
                 if isinstance(res, dict):
                     return dict(
-                        sorted(res.items(), key=lambda x: x[1], reverse=True)[:top_n]
+                        sorted(res.items(), key=lambda x: x[1], reverse=True)[
+                            :top_n
+                        ]
                     )
                 return {}
             except TypeError:
                 all_imp = model.get_feature_importance()
                 if isinstance(all_imp, dict):
                     return dict(
-                        sorted(all_imp.items(), key=lambda x: x[1], reverse=True)[
-                            :top_n
-                        ]
+                        sorted(
+                            all_imp.items(), key=lambda x: x[1], reverse=True
+                        )[:top_n]
                     )
                 return {}
         return {}
@@ -411,7 +415,8 @@ def calculate_volatility_std(
     if min_periods is None:
         min_periods = window
     return cast(
-        pd.Series, returns.rolling(window=window, min_periods=min_periods).std()
+        pd.Series,
+        returns.rolling(window=window, min_periods=min_periods).std(),
     )
 
 
@@ -447,9 +452,9 @@ def calculate_volatility_atr(
     if len(high) == 0:
         return pd.Series([], dtype=float)
     pc = close.shift(1)
-    tr = pd.concat([high - low, (high - pc).abs(), (low - pc).abs()], axis=1).max(
-        axis=1
-    )
+    tr = pd.concat(
+        [high - low, (high - pc).abs(), (low - pc).abs()], axis=1
+    ).max(axis=1)
     atr = tr.rolling(window=window).mean()
     return atr / close if as_percentage else atr
 

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_funding_rate_orchestration_service
 from app.config.constants import DEFAULT_MARKET_SYMBOL
-from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
+from app.services.data_collection.orchestration.funding_rate_orchestration_service import (  # noqa: E501
     FundingRateOrchestrationService,
 )
 from app.utils.error_handler import api_safe_execute, ensure_db_initialized
@@ -27,8 +27,12 @@ router = APIRouter(
 @router.get("/")
 @api_safe_execute(message="ファンディングレートデータ取得エラー")
 async def get_funding_rates(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
-    limit: Optional[int] = Query(100, description="取得するデータ数（1-1000）"),
+    symbol: str = Query(
+        ..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"
+    ),
+    limit: Optional[int] = Query(
+        100, description="取得するデータ数（1-1000）"
+    ),
     start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
     end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
     orchestration_service: FundingRateOrchestrationService = Depends(
@@ -75,11 +79,16 @@ async def get_funding_rates(
 @router.post("/collect")
 @api_safe_execute(message="ファンディングレートデータ収集エラー")
 async def collect_funding_rate_data(
-    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
-    limit: Optional[int] = Query(
-        100, description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）"
+    symbol: str = Query(
+        ..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"
     ),
-    fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
+    limit: Optional[int] = Query(
+        100,
+        description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）",
+    ),
+    fetch_all: bool = Query(
+        False, description="全期間のデータを取得するかどうか"
+    ),
     orchestration_service: FundingRateOrchestrationService = Depends(
         get_funding_rate_orchestration_service
     ),

@@ -93,16 +93,22 @@ class DataIntegrationService:
             統合・清浄化済みのマーケットデータを含む DataFrame
         """
         # 1. OHLCVデータを取得・変換
-        df = self._get_base_ohlcv_dataframe(symbol, timeframe, start_date, end_date)
+        df = self._get_base_ohlcv_dataframe(
+            symbol, timeframe, start_date, end_date
+        )
 
         # 2. 追加データを統合
         if include_oi:
-            df = self._integrate_open_interest_data(df, symbol, start_date, end_date)
+            df = self._integrate_open_interest_data(
+                df, symbol, start_date, end_date
+            )
         else:
             df["open_interest"] = 0.0
 
         if include_fr:
-            df = self._integrate_funding_rate_data(df, symbol, start_date, end_date)
+            df = self._integrate_funding_rate_data(
+                df, symbol, start_date, end_date
+            )
         else:
             df["funding_rate"] = 0.0
 
@@ -146,7 +152,11 @@ class DataIntegrationService:
 
     @safe_operation(context="ベースOHLCVデータ取得", is_api_call=False)
     def _get_base_ohlcv_dataframe(
-        self, symbol: str, timeframe: str, start_date: datetime, end_date: datetime
+        self,
+        symbol: str,
+        timeframe: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """ベースとなるOHLCVデータのDataFrameを取得"""
         ohlcv_data = self.retrieval_service.get_ohlcv_data(
@@ -157,7 +167,11 @@ class DataIntegrationService:
 
     @safe_operation(context="Open Interestデータ統合", is_api_call=False)
     def _integrate_open_interest_data(
-        self, df: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """Open Interestデータを統合"""
         if self.oi_merger:
@@ -169,12 +183,18 @@ class DataIntegrationService:
         return df
 
     def _integrate_funding_rate_data(
-        self, df: pd.DataFrame, symbol: str, start_date: datetime, end_date: datetime
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        start_date: datetime,
+        end_date: datetime,
     ) -> pd.DataFrame:
         """Funding Rateデータを統合"""
         try:
             if self.fr_merger:
-                df = self.fr_merger.merge_fr_data(df, symbol, start_date, end_date)
+                df = self.fr_merger.merge_fr_data(
+                    df, symbol, start_date, end_date
+                )
             else:
                 df["funding_rate"] = 0.0
         except Exception as e:
@@ -229,7 +249,9 @@ class DataIntegrationService:
         except Exception as e:
             raise
 
-    @safe_operation(context="データ概要取得", is_api_call=False, default_return={})
+    @safe_operation(
+        context="データ概要取得", is_api_call=False, default_return={}
+    )
     def get_data_summary(self, df: pd.DataFrame) -> dict:
         """
         データの概要情報を取得
@@ -245,7 +267,9 @@ class DataIntegrationService:
 
         # 安全に日付を取得
         start_date_val: pd.Timestamp = pd.to_datetime(df.index.min(), errors="coerce")  # type: ignore
-        start_date = start_date_val.isoformat() if pd.notna(start_date_val) else None
+        start_date = (
+            start_date_val.isoformat() if pd.notna(start_date_val) else None
+        )
 
         end_date_val: pd.Timestamp = pd.to_datetime(df.index.max(), errors="coerce")  # type: ignore
         end_date = end_date_val.isoformat() if pd.notna(end_date_val) else None
@@ -264,12 +288,18 @@ class DataIntegrationService:
             "price_range": {
                 "min": float(df[low_col].min()) if not df.empty else None,
                 "max": float(df[high_col].max()) if not df.empty else None,
-                "first_close": float(df[close_col].iloc[0]) if not df.empty else None,
-                "last_close": float(df[close_col].iloc[-1]) if not df.empty else None,
+                "first_close": (
+                    float(df[close_col].iloc[0]) if not df.empty else None
+                ),
+                "last_close": (
+                    float(df[close_col].iloc[-1]) if not df.empty else None
+                ),
             },
             "volume_stats": {
                 "total": float(df[volume_col].sum()) if not df.empty else 0.0,
-                "average": float(df[volume_col].mean()) if not df.empty else 0.0,
+                "average": (
+                    float(df[volume_col].mean()) if not df.empty else 0.0
+                ),
                 "max": float(df[volume_col].max()) if not df.empty else 0.0,
             },
         }

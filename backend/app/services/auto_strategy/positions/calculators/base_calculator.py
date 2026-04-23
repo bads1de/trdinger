@@ -35,11 +35,17 @@ class BaseCalculator(ABC):
             "var_confidence": self._get_param(gene, "var_confidence", 0.95),
             "var_lookback": self._get_param(gene, "var_lookback", 100),
             "max_var_ratio": self._get_param(gene, "max_var_ratio", 0.0),
-            "max_es_ratio": self._get_param(gene, "max_expected_shortfall_ratio", 0.0),
+            "max_es_ratio": self._get_param(
+                gene, "max_expected_shortfall_ratio", 0.0
+            ),
         }
 
     def _apply_size_limits_and_finalize(
-        self, position_size: float, details: Dict[str, Any], warnings: List[str], gene
+        self,
+        position_size: float,
+        details: Dict[str, Any],
+        warnings: List[str],
+        gene,
     ) -> Dict[str, Any]:
         """
         計算されたサイズに対して最小・最大制限を適用し、最終結果を構築
@@ -97,7 +103,11 @@ class BaseCalculator(ABC):
             return fallback_value
 
     def _create_calculation_result(
-        self, position_size: float, details: Dict[str, Any], warnings: List[str], gene
+        self,
+        position_size: float,
+        details: Dict[str, Any],
+        warnings: List[str],
+        gene,
     ) -> Dict[str, Any]:
         """計算結果の統一作成"""
         return self._apply_size_limits_and_finalize(

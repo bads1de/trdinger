@@ -92,12 +92,19 @@ def triple_barrier_method_preset(
         else:
             vol = cast(
                 pd.Series,
-                calculate_volatility_std(close.pct_change(), volatility_window),
+                calculate_volatility_std(
+                    close.pct_change(), volatility_window
+                ),
             )
 
-        t_ev = t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
+        t_ev = (
+            t_events
+            if t_events is not None
+            else cast(pd.DatetimeIndex, close.index)
+        )
         v_bar = cast(
-            pd.Series, pd.Series(close.index, index=close.index).shift(-horizon_n)
+            pd.Series,
+            pd.Series(close.index, index=close.index).shift(-horizon_n),
         )
 
         tb = TripleBarrier(pt=pt, sl=sl, min_ret=min_ret)
@@ -147,7 +154,11 @@ def trend_scanning_preset(
     try:
         close = cast(pd.Series, df[price_column])
         ts = TrendScanning(min_window, horizon_n, window_step, threshold)
-        labels = cast(pd.Series, ts.get_labels(close, t_events)["bin"]).abs().astype(int)
+        labels = (
+            cast(pd.Series, ts.get_labels(close, t_events)["bin"])
+            .abs()
+            .astype(int)
+        )
 
         _log_distribution("TSラベル生成", labels)
         return labels

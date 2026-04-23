@@ -75,7 +75,9 @@ class EnsembleTrainer(BaseMLTrainer):
         super().__init__()
 
         self.ensemble_config = ensemble_config
-        self.ensemble_method: str = str(ensemble_config.get("method", "stacking"))
+        self.ensemble_method: str = str(
+            ensemble_config.get("method", "stacking")
+        )
         self.ensemble_model: Optional[StackingEnsemble] = None
         self.meta_labeling_service: Optional[MetaLabelingService] = (
             None  # メタラベリング サービスを追加
@@ -127,7 +129,9 @@ class EnsembleTrainer(BaseMLTrainer):
                 logger.error(f"アンサンブル確率予測エラー: {e}")
                 raise ModelError(f"アンサンブル確率予測に失敗しました: {e}")
 
-            logger.warning(f"確率予測に失敗したためゼロ配列でフォールバックします: {e}")
+            logger.warning(
+                f"確率予測に失敗したためゼロ配列でフォールバックします: {e}"
+            )
             return np.zeros((len(features_df), 2))
 
     def _extract_optimized_parameters(
@@ -200,7 +204,9 @@ class EnsembleTrainer(BaseMLTrainer):
             },
             "catboost": {
                 "random_seed": random_state,
-                "thread_count": n_jobs if isinstance(n_jobs, int) and n_jobs > 0 else 1,
+                "thread_count": (
+                    n_jobs if isinstance(n_jobs, int) and n_jobs > 0 else 1
+                ),
             },
         }
 
@@ -222,7 +228,9 @@ class EnsembleTrainer(BaseMLTrainer):
 
         return {
             model_name: {
-                key: value for key, value in params.items() if value is not None
+                key: value
+                for key, value in params.items()
+                if value is not None
             }
             for model_name, params in base_model_params.items()
         }
@@ -249,7 +257,9 @@ class EnsembleTrainer(BaseMLTrainer):
             features_scaled = features_df  # アンサンブルモデルは主にLightGBMベースなのでスケーリング不要
 
             # StackingEnsembleから予測確率を取得
-            predictions_proba = self.ensemble_model.predict_proba(features_scaled)
+            predictions_proba = self.ensemble_model.predict_proba(
+                features_scaled
+            )
 
             # ポジティブクラス（Trend）の確率を取得
             primary_proba = predictions_proba[:, 1]
@@ -258,19 +268,28 @@ class EnsembleTrainer(BaseMLTrainer):
             )  # ここで定義
 
             # メタラベリング適用
-            if self.meta_labeling_service and self.meta_labeling_service.is_trained:
-                logger.debug("メタラベリングによる予測フィルタリングを適用中...")
+            if (
+                self.meta_labeling_service
+                and self.meta_labeling_service.is_trained
+            ):
+                logger.debug(
+                    "メタラベリングによる予測フィルタリングを適用中..."
+                )
 
                 # 各ベースモデルの予測確率を取得
 
                 try:
-                    base_model_probs_df = self.ensemble_model.predict_base_models_proba(
-                        features_scaled
+                    base_model_probs_df = (
+                        self.ensemble_model.predict_base_models_proba(
+                            features_scaled
+                        )
                     )
                 except Exception as e:
                     if self.strict_error_mode:
                         # 厳格モード: 明示的にエラーを発生させる
-                        logger.error(f"ベースモデル予測確率の取得に失敗しました: {e}")
+                        logger.error(
+                            f"ベースモデル予測確率の取得に失敗しました: {e}"
+                        )
                         raise ModelError(
                             f"ベースモデル予測確率の取得に失敗しました。"
                             f"メタラベリングには完全な入力データが必要です: {e}"
@@ -289,7 +308,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     primary_proba=primary_proba_series,
                     base_model_probs_df=base_model_probs_df,
                 )
-                return filtered_predictions.to_numpy()  # Seriesをnp.ndarrayに変換
+                return (
+                    filtered_predictions.to_numpy()
+                )  # Seriesをnp.ndarrayに変換
             else:
                 # メタラベリングが有効でない場合は、予測確率をそのまま返す
                 return predictions_proba
@@ -331,12 +352,18 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.info(f"アンサンブル学習開始: method={self.ensemble_method}")
 
             # 入力データの検証（共通関数を使用）
-            validate_training_inputs(X_train, y_train, X_test, y_test, log_info=True)
+            validate_training_inputs(
+                X_train, y_train, X_test, y_test, log_info=True
+            )
 
             # ハイパーパラメータ最適化からのパラメータを分離
-            optimized_params = self._extract_optimized_parameters(training_params)
+            optimized_params = self._extract_optimized_parameters(
+                training_params
+            )
             base_model_params = self._build_base_model_params(training_params)
-            for model_name, params in optimized_params.get("base_models", {}).items():
+            for model_name, params in optimized_params.get(
+                "base_models", {}
+            ).items():
                 base_model_params.setdefault(model_name, {}).update(params)
 
             # スタッキングアンサンブルモデルを作成
@@ -355,8 +382,12 @@ class EnsembleTrainer(BaseMLTrainer):
 
                 stacking_config.update(
                     {
-                        "random_state": training_params.get("random_state", 42),
-                        "n_jobs": training_params.get("n_jobs", -1),  # 並列処理を有効化
+                        "random_state": training_params.get(
+                            "random_state", 42
+                        ),
+                        "n_jobs": training_params.get(
+                            "n_jobs", -1
+                        ),  # 並列処理を有効化
                     }
                 )
 
@@ -380,17 +411,21 @@ class EnsembleTrainer(BaseMLTrainer):
                 logger.info("アンサンブルモデルの学習が完了")
             except Exception as e:
                 logger.error(f"アンサンブルモデル学習エラー: {e}")
-                raise ModelError(f"アンサンブルモデルの学習に失敗しました: {e}")
+                raise ModelError(
+                    f"アンサンブルモデルの学習に失敗しました: {e}"
+                )
 
             # 予測と評価
             y_pred_proba = self.ensemble_model.predict_proba(X_test)
             y_pred = predict_class_from_proba(y_pred_proba)
 
             # 統一された評価システムを使用
-            detailed_metrics = metrics_collector.calculate_comprehensive_metrics(
-                y_true=y_test,
-                y_pred=y_pred,
-                y_proba=y_pred_proba,
+            detailed_metrics = (
+                metrics_collector.calculate_comprehensive_metrics(
+                    y_true=y_test,
+                    y_pred=y_pred,
+                    y_proba=y_pred_proba,
+                )
             )
 
             # 分類レポート
@@ -434,7 +469,9 @@ class EnsembleTrainer(BaseMLTrainer):
             try:
                 logger.info("メタラベリングモデルの学習を開始...")
                 # アンサンブルモデルのOOF予測値を取得 (これが一次モデルの確信度となる)
-                primary_oof_proba_train = self.ensemble_model.get_oof_predictions()
+                primary_oof_proba_train = (
+                    self.ensemble_model.get_oof_predictions()
+                )
                 primary_oof_series_train = pd.Series(
                     primary_oof_proba_train, index=X_train.index
                 )  # X_trainのindexを使う
@@ -442,8 +479,12 @@ class EnsembleTrainer(BaseMLTrainer):
                 oof_base_model_probs_df = (
                     self.ensemble_model.get_oof_base_model_predictions()
                 )
-                X_train_original_for_meta = self.ensemble_model.get_X_train_original()
-                y_train_original_for_meta = self.ensemble_model.get_y_train_original()
+                X_train_original_for_meta = (
+                    self.ensemble_model.get_X_train_original()
+                )
+                y_train_original_for_meta = (
+                    self.ensemble_model.get_y_train_original()
+                )
 
                 if (
                     oof_base_model_probs_df is None
@@ -462,8 +503,12 @@ class EnsembleTrainer(BaseMLTrainer):
                     if isinstance(meta_params_raw, dict)
                     else {}
                 )
-                meta_model_type: str = str(meta_config.get("model_type", "lightgbm"))
-                meta_params: Dict[str, Any] = meta_config.get("model_params", {}).copy()
+                meta_model_type: str = str(
+                    meta_config.get("model_type", "lightgbm")
+                )
+                meta_params: Dict[str, Any] = meta_config.get(
+                    "model_params", {}
+                ).copy()
 
                 # 最適化されたパラメータがあれば適用
                 if (
@@ -492,7 +537,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     )
             except Exception as e:
                 logger.error(f"メタラベリングモデル学習エラー: {e}")
-                logger.warning("メタラベリングモデルの学習をスキップしました。")
+                logger.warning(
+                    "メタラベリングモデルの学習をスキップしました。"
+                )
 
             # メタラベリング学習完了後、StackingEnsemble内の学習データを解放
             # これによりメモリリークを防ぎ、保存されるモデルファイルのサイズを削減
@@ -515,7 +562,9 @@ class EnsembleTrainer(BaseMLTrainer):
             return {}
 
         algorithm_name: str = str(
-            algorithm_registry.get_algorithm_name(type(self.ensemble_model).__name__)
+            algorithm_registry.get_algorithm_name(
+                type(self.ensemble_model).__name__
+            )
         )
         if algorithm_name == "unknown":
             algorithm_name = str(self.ensemble_method).lower()
@@ -525,13 +574,18 @@ class EnsembleTrainer(BaseMLTrainer):
             "trainer_type": "ensemble",
             "ensemble_method": self.ensemble_method,
             "best_algorithm": algorithm_name,
-            "best_model_score": getattr(self.ensemble_model, "best_model_score", None),
+            "best_model_score": getattr(
+                self.ensemble_model, "best_model_score", None
+            ),
             "selected_model_only": True,
             "ensemble_config": self.ensemble_config,
         }
 
         # メタラベリングモデルの保存
-        if self.meta_labeling_service and self.meta_labeling_service.is_trained:
+        if (
+            self.meta_labeling_service
+            and self.meta_labeling_service.is_trained
+        ):
             try:
                 from ..models.model_manager import model_manager
 
@@ -569,11 +623,15 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # メタデータから設定を復元
             metadata = (
-                self.current_model_metadata or getattr(self, "metadata", {}) or {}
+                self.current_model_metadata
+                or getattr(self, "metadata", {})
+                or {}
             )
             self.metadata = metadata
             self.ensemble_config = metadata.get("ensemble_config", {})  # type: ignore[assignment]
-            self.ensemble_method = str(metadata.get("ensemble_method", "stacking"))
+            self.ensemble_method = str(
+                metadata.get("ensemble_method", "stacking")
+            )
 
             # メタラベリングモデルのロード
             meta_model_path_raw = metadata.get("meta_model_path")
@@ -593,7 +651,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     # 1. 直接パス（絶対パス）でのロードを試行
                     if os.path.exists(meta_model_path):
                         try:
-                            meta_data = model_manager.load_model(meta_model_path)
+                            meta_data = model_manager.load_model(
+                                meta_model_path
+                            )
                         except Exception:
                             logger.warning(
                                 f"絶対パスでのロードに失敗、相対パスを試行します: {meta_model_path}"

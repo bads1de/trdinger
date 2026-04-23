@@ -13,7 +13,9 @@ import numpy as np
 from app.services.auto_strategy.config.constants import OPERATORS
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
-from app.services.auto_strategy.utils.indicators import get_valid_indicator_types
+from app.services.auto_strategy.utils.indicators import (
+    get_valid_indicator_types,
+)
 
 from .fitness_sharing_niche import (
     compute_niche_counts_sampling as _compute_niche_counts_sampling,
@@ -21,7 +23,9 @@ from .fitness_sharing_niche import (
 from .fitness_sharing_niche import (
     compute_niche_counts_vectorized as _compute_niche_counts_vectorized,
 )
-from .fitness_sharing_niche import find_neighbors_kdtree as _find_neighbors_kdtree
+from .fitness_sharing_niche import (
+    find_neighbors_kdtree as _find_neighbors_kdtree
+)
 from .fitness_sharing_niche import normalize_vectors as _normalize_vectors
 from .fitness_sharing_silhouette import (
     _collect_gene_vectors,
@@ -36,15 +40,20 @@ from .fitness_sharing_similarity import (
     calculate_indicator_similarity as _calculate_indicator_similarity,
 )
 from .fitness_sharing_similarity import (
-    calculate_position_sizing_similarity as _calculate_position_sizing_similarity,
+    calc_position_sizing_similarity as _calc_position_sizing_similarity,
 )
+
 from .fitness_sharing_similarity import (
     calculate_risk_management_similarity as _calculate_risk_management_similarity,
 )
-from .fitness_sharing_similarity import calculate_similarity as _calculate_similarity
+
+from .fitness_sharing_similarity import (
+    calculate_similarity as _calculate_similarity,
+)
 from .fitness_sharing_similarity import (
     calculate_tpsl_similarity as _calculate_tpsl_similarity,
 )
+from .fitness_sharing_similarity import check_none_similarity as _check_none_similarity
 from .fitness_sharing_similarity import check_none_similarity as _check_none_similarity
 from .fitness_sharing_vectorizer import (
     _count_operand_types,
@@ -104,7 +113,9 @@ class FitnessSharing:
             else self.DEFAULT_SAMPLING_THRESHOLD
         )
         self.sampling_ratio = (
-            sampling_ratio if sampling_ratio is not None else self.SAMPLING_RATIO
+            sampling_ratio
+            if sampling_ratio is not None
+            else self.SAMPLING_RATIO
         )
         self._feature_vector_cache: dict[_FrozenKey, np.ndarray] = {}
         self._evaluation_report_provider = evaluation_report_provider
@@ -126,7 +137,9 @@ class FitnessSharing:
             self.operator_types = OPERATORS.copy()
             self.operator_types.extend(["AND", "OR"])
             self.operator_types.sort()
-            self.operator_map = {op: i for i, op in enumerate(self.operator_types)}
+            self.operator_map = {
+                op: i for i, op in enumerate(self.operator_types)
+            }
         except Exception as e:
             logger.warning(f"オペレータタイプ取得失敗: {e}")
             self.operator_types = []
@@ -161,7 +174,9 @@ class FitnessSharing:
             if len(vectors) < 2:
                 return population
 
-            max_dim = max(v.shape[0] for v in vectors if isinstance(v, np.ndarray))
+            max_dim = max(
+                v.shape[0] for v in vectors if isinstance(v, np.ndarray)
+            )
             vectors_padded: list[np.ndarray] = []
             for v in vectors:
                 if v.shape[0] < max_dim:
@@ -208,7 +223,11 @@ class FitnessSharing:
                 if i in original_fitness and hasattr(individual, "fitness"):
                     silhouette_ratio = (
                         tuple(
-                            float(np.divide(s, o, out=np.zeros_like(s), where=o != 0))
+                            float(
+                                np.divide(
+                                    s, o, out=np.zeros_like(s), where=o != 0
+                                )
+                            )
                             for s, o in zip(
                                 individual.fitness.values, original_fitness[i]
                             )
@@ -217,7 +236,8 @@ class FitnessSharing:
                         else original_fitness[i]
                     )
                     individual.fitness.values = tuple(
-                        o * r for o, r in zip(original_fitness[i], silhouette_ratio)
+                        o * r
+                        for o, r in zip(original_fitness[i], silhouette_ratio)
                     )
 
             return result
@@ -246,7 +266,9 @@ class FitnessSharing:
             )
             return base_key, behavior_signature
         except Exception as e:
-            logger.debug(f"特徴ベクトルキャッシュキーの生成に失敗しました: {e}")
+            logger.debug(
+                f"特徴ベクトルキャッシュキーの生成に失敗しました: {e}"
+            )
             return str(id(gene))
 
     def _get_feature_vector_cache_key(
@@ -368,7 +390,9 @@ class FitnessSharing:
             for index in range(len(vector_keys))
         }
 
-    def compute_niche_counts_vectorized(self, vectors: np.ndarray) -> np.ndarray:
+    def compute_niche_counts_vectorized(
+        self, vectors: np.ndarray
+    ) -> np.ndarray:
         """
         ベクトル化されたニッチカウント計算（O(N log N)）
         """
@@ -405,7 +429,9 @@ class FitnessSharing:
             sampling_ratio=self.sampling_ratio,
         )
 
-    def _calculate_similarity(self, gene1: StrategyGene, gene2: StrategyGene) -> float:
+    def _calculate_similarity(
+        self, gene1: StrategyGene, gene2: StrategyGene
+    ) -> float:
         """
         2つの戦略遺伝子間の類似度を計算
         """
@@ -445,7 +471,9 @@ class FitnessSharing:
         """TP/SL遺伝子の類似度を計算"""
         return _calculate_tpsl_similarity(tpsl1, tpsl2)
 
-    def _calculate_position_sizing_similarity(self, ps1: Any, ps2: Any) -> float:
+    def _calculate_position_sizing_similarity(
+        self, ps1: Any, ps2: Any
+    ) -> float:
         """ポジションサイジング遺伝子の類似度を計算"""
         return _calculate_position_sizing_similarity(ps1, ps2)
 
@@ -457,7 +485,9 @@ class FitnessSharing:
 
         def resolve_vector(gene: StrategyGene) -> np.ndarray:
             behavior_profile = behavior_profiles.get(id(gene))
-            return self._vectorize_gene(gene, behavior_profile=behavior_profile)
+            return self._vectorize_gene(
+                gene, behavior_profile=behavior_profile
+            )
 
         return _silhouette_based_sharing(
             population,
@@ -482,11 +512,15 @@ class FitnessSharing:
             behavior_profile=behavior_profile,
         )
 
-    def _count_operators(self, conditions: List[Any], vector: np.ndarray) -> None:
+    def _count_operators(
+        self, conditions: List[Any], vector: np.ndarray
+    ) -> None:
         """条件リスト内のオペレータを再帰的にカウント"""
         _count_operators(conditions, self.operator_map, vector)
 
-    def _count_operand_types(self, conditions: List[Any]) -> tuple[float, float]:
+    def _count_operand_types(
+        self, conditions: List[Any]
+    ) -> tuple[float, float]:
         """
         オペランドのタイプ（数値/動的）をカウント
         """

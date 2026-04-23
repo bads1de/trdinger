@@ -57,11 +57,15 @@ class DataCollectionOrchestrationService:
         self.historical_orchestrator = HistoricalDataOrchestrator()
         self.bulk_data_orchestrator = BulkDataOrchestrator()
         # 差分更新用サービス
-        self.historical_service = self.bulk_data_orchestrator.historical_service
+        self.historical_service = (
+            self.bulk_data_orchestrator.historical_service
+        )
         self.collection_status_checker = CollectionStatusChecker()
         self.oi_collection_orchestrator = OICollectionOrchestrator()
 
-    def validate_symbol_and_timeframe(self, symbol: str, timeframe: str) -> str:
+    def validate_symbol_and_timeframe(
+        self, symbol: str, timeframe: str
+    ) -> str:
         """
         シンボルと時間軸のバリデーション
 
@@ -87,7 +91,9 @@ class DataCollectionOrchestrationService:
             unified_config as validator_config,
         )
 
-        normalized_symbol = validator_config.market.symbol_mapping.get(symbol, symbol)
+        normalized_symbol = validator_config.market.symbol_mapping.get(
+            symbol, symbol
+        )
         if normalized_symbol not in validator_config.market.supported_symbols:
             raise ValueError(f"サポートされていないシンボル: {symbol}")
 
@@ -114,7 +120,9 @@ class DataCollectionOrchestrationService:
         if OHLCVRepository is not _BASE_OHLCV_REPOSITORY:
             return OHLCVRepository
 
-        historical_repository = historical_data_orchestrator_module.OHLCVRepository
+        historical_repository = (
+            historical_data_orchestrator_module.OHLCVRepository
+        )
         if historical_repository is not _BASE_OHLCV_REPOSITORY:
             return historical_repository
 
@@ -194,8 +202,10 @@ class DataCollectionOrchestrationService:
         Raises:
             Exception: 取引所APIへの通信エラーや、DB書き込み時の致命的なエラー。
         """
-        return await self.bulk_data_orchestrator.execute_bulk_incremental_update(
-            symbol, db
+        return (
+            await self.bulk_data_orchestrator.execute_bulk_incremental_update(
+                symbol, db
+            )
         )
 
     async def start_bitcoin_full_data_collection(
@@ -241,7 +251,11 @@ class DataCollectionOrchestrationService:
             発行された全タスク数と、対象シンボル・時間軸のリスト
         """
         return await self.bulk_data_orchestrator.start_bulk_historical_data_collection(
-            background_tasks, db, force_update, start_date, self.historical_orchestrator
+            background_tasks,
+            db,
+            force_update,
+            start_date,
+            self.historical_orchestrator,
         )
 
     async def get_collection_status(
@@ -288,8 +302,10 @@ class DataCollectionOrchestrationService:
         Returns:
             収集開始レスポンス
         """
-        return await self.bulk_data_orchestrator.start_all_data_bulk_collection(
-            background_tasks, db
+        return (
+            await self.bulk_data_orchestrator.start_all_data_bulk_collection(
+                background_tasks, db
+            )
         )
 
     async def start_historical_oi_collection(

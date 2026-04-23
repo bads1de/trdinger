@@ -12,7 +12,9 @@ import pandas as pd
 
 from app.utils.error_handler import ErrorHandler
 from database.models import LongShortRatioData
-from database.repositories.long_short_ratio_repository import LongShortRatioRepository
+from database.repositories.long_short_ratio_repository import (
+    LongShortRatioRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,10 @@ class LSRMerger:
         """
         try:
             lsr_data = self.lsr_repo.get_long_short_ratio_data(
-                symbol=symbol, period=period, start_time=start_date, end_time=end_date
+                symbol=symbol,
+                period=period,
+                start_time=start_date,
+                end_time=end_date,
             )
 
             if lsr_data:

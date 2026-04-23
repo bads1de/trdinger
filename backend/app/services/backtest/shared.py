@@ -236,11 +236,15 @@ def normalize_ohlcv_columns(
         normalized_name = column.lower()
         if normalized_name not in OHLCV_COLUMNS:
             continue
-        target_name = normalized_name if lowercase else normalized_name.capitalize()
+        target_name = (
+            normalized_name if lowercase else normalized_name.capitalize()
+        )
         if column != target_name:
             rename_map[column] = target_name
 
-    normalized = data_frame.rename(columns=rename_map) if rename_map else data_frame
+    normalized = (
+        data_frame.rename(columns=rename_map) if rename_map else data_frame
+    )
     volume_column = "volume" if lowercase else "Volume"
     if ensure_volume and volume_column not in normalized.columns:
         normalized = normalized.copy()

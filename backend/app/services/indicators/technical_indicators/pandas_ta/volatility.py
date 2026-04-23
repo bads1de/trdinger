@@ -60,7 +60,9 @@ class VolatilityIndicators:
             """ATR を計算するヘルパー関数"""
             result = ta.atr(high=high, low=low, close=close, length=length)
             if result is None:
-                logger.error("ATR: Calculation returned None - returning NaN series")
+                logger.error(
+                    "ATR: Calculation returned None - returning NaN series"
+                )
             return result
 
         return cast(
@@ -87,7 +89,9 @@ class VolatilityIndicators:
             run_multi_series_indicator(
                 {"high": high, "low": low, "close": close},
                 length,
-                lambda: ta.natr(high=high, low=low, close=close, length=length),
+                lambda: ta.natr(
+                    high=high, low=low, close=close, length=length
+                ),
                 min_data_length=length,
             ),
         )
@@ -112,7 +116,9 @@ class VolatilityIndicators:
             return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
         if result is None:
-            logger.error("BBands: Calculation returned None - returning NaN series")
+            logger.error(
+                "BBands: Calculation returned None - returning NaN series"
+            )
             return cast(
                 tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(data, 3),
@@ -259,7 +265,9 @@ class VolatilityIndicators:
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             period,
-            lambda: ta.accbands(high=high, low=low, close=close, length=period),
+            lambda: ta.accbands(
+                high=high, low=low, close=close, length=period
+            ),
             fallback_factory=nan_result,
         )
 
@@ -285,7 +293,9 @@ class VolatilityIndicators:
         """Ulcer Index"""
         return cast(
             pd.Series,
-            run_series_indicator(data, None, lambda: ta.ui(data, window=period)),
+            run_series_indicator(
+                data, None, lambda: ta.ui(data, window=period)
+            ),
         )
 
     @staticmethod
@@ -337,7 +347,9 @@ class VolatilityIndicators:
             run_multi_series_indicator(
                 {"high": high, "low": low, "close": close},
                 None,
-                lambda: ta.true_range(high=high, low=low, close=close, drift=drift),
+                lambda: ta.true_range(
+                    high=high, low=low, close=close, drift=drift
+                ),
             ),
         )
 
@@ -389,7 +401,11 @@ class VolatilityIndicators:
             {"high": high, "low": low, "close": close},
             max(length, atr_length),
             lambda: ta.aberration(
-                high=high, low=low, close=close, length=length, atr_length=atr_length
+                high=high,
+                low=low,
+                close=close,
+                length=length,
+                atr_length=atr_length,
             ),
             fallback_factory=lambda: cast(
                 tuple[pd.Series, pd.Series, pd.Series, pd.Series],
@@ -398,7 +414,9 @@ class VolatilityIndicators:
         )
 
         if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
+            return cast(
+                tuple[pd.Series, pd.Series, pd.Series, pd.Series], result
+            )
 
         if hasattr(result, "empty") and getattr(result, "empty", False):
             return cast(
@@ -501,7 +519,9 @@ class VolatilityIndicators:
         )
 
         if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
+            return cast(
+                tuple[pd.Series, pd.Series, pd.Series, pd.Series], result
+            )
 
         if hasattr(result, "empty") and getattr(result, "empty", False):
             return cast(

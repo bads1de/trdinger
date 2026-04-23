@@ -101,7 +101,9 @@ def resolve_ml_gate_settings(source: Mapping[str, Any]) -> MLGateSettings:
     return MLGateSettings(enabled=gate_enabled, model_path=model_path)
 
 
-def normalize_ml_gate_fields(source: Mapping[str, Any]) -> dict[str, Optional[str] | bool]:
+def normalize_ml_gate_fields(
+    source: Mapping[str, Any],
+) -> dict[str, Optional[str] | bool]:
     """
     volatility gate 設定を正規化する
 

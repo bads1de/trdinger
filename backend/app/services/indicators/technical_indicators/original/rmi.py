@@ -89,4 +89,6 @@ def rmi(
         length,
         momentum,
     )
-    return pd.Series(result, index=close.index, name=f"RMI_{length}_{momentum}")
+    return pd.Series(
+        result, index=close.index, name=f"RMI_{length}_{momentum}"
+    )

@@ -141,7 +141,9 @@ class DataFrequencyManager:
             # OHLCVのインデックスをDatetimeIndexに統一
             ohlcv_indexed = ohlcv_data.copy()
             if "timestamp" in ohlcv_indexed.columns:
-                ohlcv_indexed["timestamp"] = pd.to_datetime(ohlcv_indexed["timestamp"])
+                ohlcv_indexed["timestamp"] = pd.to_datetime(
+                    ohlcv_indexed["timestamp"]
+                )
                 # カラムをインデックスに設定する前に重複チェック
                 ohlcv_indexed = ohlcv_indexed.set_index("timestamp")
 
@@ -246,10 +248,14 @@ class DataFrequencyManager:
                 resampled = fr_data_indexed.resample(resample_tf).ffill()
             elif target_timeframe in ["4h"]:
                 # 4時間間隔への集約（平均値）
-                resampled = fr_data_indexed.resample(resample_tf).mean().shift(1)
+                resampled = (
+                    fr_data_indexed.resample(resample_tf).mean().shift(1)
+                )
             elif target_timeframe == "1d":
                 # 日次への集約（平均値）
-                resampled = fr_data_indexed.resample(resample_tf).mean().shift(1)
+                resampled = (
+                    fr_data_indexed.resample(resample_tf).mean().shift(1)
+                )
             else:
                 # デフォルトは前方補完
                 resampled = fr_data_indexed.resample(resample_tf).ffill()
@@ -302,7 +308,9 @@ class DataFrequencyManager:
                 resampled = oi_data_indexed
             elif target_timeframe in ["4h", "1d"]:
                 # より粗い間隔への集約（平均値）
-                resampled = oi_data_indexed.resample(resample_tf).mean().shift(1)
+                resampled = (
+                    oi_data_indexed.resample(resample_tf).mean().shift(1)
+                )
             else:
                 # デフォルトは前方補完
                 resampled = oi_data_indexed.resample(resample_tf).ffill()
@@ -351,20 +359,28 @@ class DataFrequencyManager:
                 return validation_result
 
             ohlcv_timeframe = self.detect_ohlcv_timeframe(ohlcv_data)
-            validation_result["statistics"]["ohlcv_timeframe"] = ohlcv_timeframe
+            validation_result["statistics"][
+                "ohlcv_timeframe"
+            ] = ohlcv_timeframe
             validation_result["statistics"]["ohlcv_rows"] = len(ohlcv_data)
 
             # ファンディングレートデータの検証
             if funding_rate_data is not None and not funding_rate_data.empty:
-                validation_result["statistics"]["fr_rows"] = len(funding_rate_data)
+                validation_result["statistics"]["fr_rows"] = len(
+                    funding_rate_data
+                )
                 # データ範囲の重複チェック
                 # 実装は簡略化
 
             # 建玉残高データの検証
             if open_interest_data is not None and not open_interest_data.empty:
-                validation_result["statistics"]["oi_rows"] = len(open_interest_data)
+                validation_result["statistics"]["oi_rows"] = len(
+                    open_interest_data
+                )
 
-            logger.info(f"データ整合性検証完了: {validation_result['statistics']}")
+            logger.info(
+                f"データ整合性検証完了: {validation_result['statistics']}"
+            )
 
         except Exception as e:
             validation_result["errors"].append(f"検証エラー: {e}")

@@ -81,7 +81,9 @@ def setup_lazy_import(
         """
         module_path = exports.get(name)
         if module_path is None:
-            raise AttributeError(f"module {module_name!r} has no attribute {name!r}")
+            raise AttributeError(
+                f"module {module_name!r} has no attribute {name!r}"
+            )
 
         module = import_module(module_path, module_name)
         value = getattr(module, name)

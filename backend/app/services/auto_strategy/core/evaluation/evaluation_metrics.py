@@ -86,7 +86,11 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
     try:
         dd_array = np.array(
             [
-                float(p.get("drawdown", 0.0) or 0.0) if isinstance(p, Mapping) else 0.0
+                (
+                    float(p.get("drawdown", 0.0) or 0.0)
+                    if isinstance(p, Mapping)
+                    else 0.0
+                )
                 for p in equity_curve
             ],
             dtype=np.float64,
@@ -120,7 +124,9 @@ def calculate_trade_frequency_penalty(
         total_trades (int): バックテスト期間中の総取引回数。
         start_date (Optional[object]): テスト開始日時。
         end_date (Optional[object]): テスト終了日時。
-        trade_history (Optional[Iterable]): 個別のトレード詳細。`total_trades` が 0 の場合の代替カウントに使用。
+        trade_history (Optional[Iterable]):
+            個別のトレード詳細。
+            `total_trades` が 0 の場合の代替カウントに使用。
 
     Returns:
         float: 0.0（ペナルティなし）から 1.0 未満（最大ペナルティ）の範囲の数値。
@@ -136,7 +142,11 @@ def calculate_trade_frequency_penalty(
     parsed_start = _ensure_datetime(start_date)
     parsed_end = _ensure_datetime(end_date)
 
-    if parsed_start is None or parsed_end is None or parsed_end <= parsed_start:
+    if (
+        parsed_start is None
+        or parsed_end is None
+        or parsed_end <= parsed_start
+    ):
         duration_days = NORMALIZATION_THRESHOLD
     else:
         duration_days = max(

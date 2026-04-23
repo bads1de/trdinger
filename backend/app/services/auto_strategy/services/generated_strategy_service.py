@@ -82,7 +82,9 @@ class GeneratedStrategyService:
             paginated_strategies = [
                 s
                 for s in (
-                    self._convert_generated_strategy_to_display_format(strategy)
+                    self._convert_generated_strategy_to_display_format(
+                        strategy
+                    )
                     for strategy in strategies_from_db
                 )
                 if s is not None
@@ -96,7 +98,8 @@ class GeneratedStrategyService:
 
         except Exception as e:
             logger.error(
-                f"生成済み戦略の取得中にエラーが発生しました: {e}", exc_info=True
+                f"生成済み戦略の取得中にエラーが発生しました: {e}",
+                exc_info=True,
             )
             raise
 
@@ -150,7 +153,9 @@ class GeneratedStrategyService:
             parameters = self._extract_parameters(gene_data)
 
             # パフォーマンス指標の抽出
-            performance_metrics = self._extract_performance_metrics(backtest_result)
+            performance_metrics = self._extract_performance_metrics(
+                backtest_result
+            )
 
             # リスクレベルの計算
             risk_level = self._calculate_risk_level(performance_metrics)
@@ -163,7 +168,9 @@ class GeneratedStrategyService:
                 "category": "auto_generated",
                 "indicators": indicators,
                 "parameters": parameters,
-                "expected_return": performance_metrics.get("total_return", 0.0),
+                "expected_return": performance_metrics.get(
+                    "total_return", 0.0
+                ),
                 "sharpe_ratio": performance_metrics.get("sharpe_ratio", 0.0),
                 "max_drawdown": performance_metrics.get("max_drawdown", 0.0),
                 "win_rate": performance_metrics.get("win_rate", 0.0),
@@ -215,9 +222,7 @@ class GeneratedStrategyService:
         enabled_indicators = self._extract_enabled_indicator_names(gene_data)
 
         if enabled_indicators:
-            return (
-                f"遺伝的アルゴリズムで生成された{'+'.join(enabled_indicators)}複合戦略"
-            )
+            return f"遺伝的アルゴリズムで生成された{'+'.join(enabled_indicators)}複合戦略"
         else:
             return "遺伝的アルゴリズムで生成された戦略"
 
@@ -225,7 +230,9 @@ class GeneratedStrategyService:
         """使用指標を抽出"""
         return self._extract_enabled_indicator_names(gene_data)
 
-    def _extract_enabled_indicator_names(self, gene_data: Dict[str, Any]) -> List[str]:
+    def _extract_enabled_indicator_names(
+        self, gene_data: Dict[str, Any]
+    ) -> List[str]:
         """有効な指標名を抽出"""
         indicators = gene_data.get("indicators", [])
         return [
@@ -239,8 +246,12 @@ class GeneratedStrategyService:
         parameters = {
             "indicators": gene_data.get("indicators", []),
             "risk_management": gene_data.get("risk_management", {}),
-            "long_entry_conditions": gene_data.get("long_entry_conditions", {}),
-            "short_entry_conditions": gene_data.get("short_entry_conditions", {}),
+            "long_entry_conditions": gene_data.get(
+                "long_entry_conditions", {}
+            ),
+            "short_entry_conditions": gene_data.get(
+                "short_entry_conditions", {}
+            ),
         }
         for field_name in StrategyGene.sub_gene_field_names():
             parameters[field_name] = gene_data.get(field_name)
@@ -256,7 +267,10 @@ class GeneratedStrategyService:
         self, backtest_result: Optional[BacktestResult]
     ) -> Dict[str, float]:
         """パフォーマンス指標を抽出"""
-        if backtest_result is None or backtest_result.performance_metrics is None:
+        if (
+            backtest_result is None
+            or backtest_result.performance_metrics is None
+        ):
             return {
                 "total_return": 0.0,
                 "sharpe_ratio": 0.0,
@@ -276,7 +290,9 @@ class GeneratedStrategyService:
             "total_trades": metrics.get("total_trades", 0),
         }
 
-    def _calculate_risk_level(self, performance_metrics: Dict[str, float]) -> str:
+    def _calculate_risk_level(
+        self, performance_metrics: Dict[str, float]
+    ) -> str:
         """リスクレベルを計算"""
         max_drawdown = performance_metrics.get("max_drawdown", 0.0)
 

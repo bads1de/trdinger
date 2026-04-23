@@ -10,8 +10,13 @@ from typing import Any, Dict, cast
 
 import pandas as pd
 
-from ...indicators.technical_indicators.advanced_features import AdvancedFeatures
-from .base_feature_calculator import BaseFeatureCalculator, sanitize_numeric_dataframe
+from ...indicators.technical_indicators.advanced_features import (
+    AdvancedFeatures,
+)
+from .base_feature_calculator import (
+    BaseFeatureCalculator,
+    sanitize_numeric_dataframe,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,34 +63,44 @@ class ComplexityFeatureCalculator(BaseFeatureCalculator):
 
         # 2. フラクタル次元 (Fractal Dimension)
         logger.info("Complexity: Fractal Dimension を計算中...")
-        new_features[f"Fractal_Dim_{short_p}"] = AdvancedFeatures.fractal_dimension(
-            cast(pd.Series, df["close"]), window=short_p
+        new_features[f"Fractal_Dim_{short_p}"] = (
+            AdvancedFeatures.fractal_dimension(
+                cast(pd.Series, df["close"]), window=short_p
+            )
         )
-        new_features[f"Fractal_Dim_{mid_p}"] = AdvancedFeatures.fractal_dimension(
-            cast(pd.Series, df["close"]), window=mid_p
+        new_features[f"Fractal_Dim_{mid_p}"] = (
+            AdvancedFeatures.fractal_dimension(
+                cast(pd.Series, df["close"]), window=mid_p
+            )
         )
 
         # 3. サンプル・エントロピー (Sample Entropy)
         # 計算コストが高いため、比較的小さな窓幅で計算
         logger.info("Complexity: Sample Entropy を計算中...")
-        new_features[f"Sample_Entropy_{short_p}"] = AdvancedFeatures.sample_entropy(
-            cast(pd.Series, df["close"]), window=short_p
+        new_features[f"Sample_Entropy_{short_p}"] = (
+            AdvancedFeatures.sample_entropy(
+                cast(pd.Series, df["close"]), window=short_p
+            )
         )
 
         # 4. 近似 VPIN (Order Flow Imbalance)
         logger.info("Complexity: VPIN Approximation を計算中...")
         new_features[f"VPIN_{short_p}"] = AdvancedFeatures.vpin_approximation(
-            cast(pd.Series, df["close"]), cast(pd.Series, df["volume"]), window=short_p
+            cast(pd.Series, df["close"]),
+            cast(pd.Series, df["volume"]),
+            window=short_p,
         )
         new_features[f"VPIN_{mid_p}"] = AdvancedFeatures.vpin_approximation(
-            cast(pd.Series, df["close"]), cast(pd.Series, df["volume"]), window=mid_p
+            cast(pd.Series, df["close"]),
+            cast(pd.Series, df["volume"]),
+            window=mid_p,
         )
 
         # 5. 複合指標 (Interaction)
         # Hurstが高い(トレンド)かつEntropyが低い(秩序)時、トレンドの信頼性が高い
-        new_features["Complexity_Trend_Trust"] = new_features[f"Hurst_{mid_p}"] / (
-            new_features[f"Sample_Entropy_{short_p}"] + 1e-9
-        )
+        new_features["Complexity_Trend_Trust"] = new_features[
+            f"Hurst_{mid_p}"
+        ] / (new_features[f"Sample_Entropy_{short_p}"] + 1e-9)
 
         # 6. 効率性レシオの高度版 (Complexity-Adjusted Efficiency)
         # 従来のEfficiency Ratioをフラクタル次元で重み付け

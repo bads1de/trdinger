@@ -37,7 +37,9 @@ class USMarketOpenFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(
+        self, context: ToolContext, params: Dict[str, Any]
+    ) -> bool:
         """
         米国市場オープン前後かどうかを判定
 
@@ -54,7 +56,9 @@ class USMarketOpenFilter(BaseTool):
             return False
 
         try:
-            current_minutes = to_timezone_minutes(context.timestamp, "US/Eastern")
+            current_minutes = to_timezone_minutes(
+                context.timestamp, "US/Eastern"
+            )
             open_minutes = 9 * 60 + 30  # 09:30 = 570分
 
             window = params.get("window_minutes", 30)
@@ -63,7 +67,9 @@ class USMarketOpenFilter(BaseTool):
             return is_within_window(current_minutes, open_minutes, window)
 
         except Exception as e:
-            logger.debug(f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}")
+            logger.debug(
+                f"タイムゾーン変換に失敗しました（フォールバック適用）: {e}"
+            )
             from .time_windows import is_summer_time_by_month
 
             is_summer = is_summer_time_by_month(context.timestamp)

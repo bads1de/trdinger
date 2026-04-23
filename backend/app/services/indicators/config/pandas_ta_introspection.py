@@ -172,8 +172,12 @@ def _run_indicator_on_sample_frame(
         FutureWarningを抑制して実行します。
     """
     # キャッシュキーを生成（funcはhashableではないので名前ベース）
-    func_id = getattr(func, "__name__", None) or getattr(func, "__qualname__", id(func))
-    params_key = tuple(sorted(default_params.items())) if default_params else ()
+    func_id = getattr(func, "__name__", None) or getattr(
+        func, "__qualname__", id(func)
+    )
+    params_key = (
+        tuple(sorted(default_params.items())) if default_params else ()
+    )
     cache_key = (func_id, rows, params_key, walk_close, with_datetime_index)
 
     if cache_key in _sample_run_cache:
@@ -229,7 +233,8 @@ def extract_min_length_expression(indicator_name: str) -> Optional[str]:
             if "verify_series" in line and "," in line:
                 # verify_series(xxx, yyy) から yyy を抽出
                 match = re.search(
-                    r"verify_series\s*\(\s*\w+\s*,\s*(.+?)\s*\)\s*$", line.strip()
+                    r"verify_series\s*\(\s*\w+\s*,\s*(.+?)\s*\)\s*$",
+                    line.strip(),
                 )
 
                 if match:
@@ -422,7 +427,10 @@ def is_multi_column_indicator(indicator_name: str) -> bool:
 
         # docstringとコメントを除去
         source_clean = re.sub(
-            r'("""[\s\S]*?"""|"""[\s\S]*?"""|#.*$)', "", source, flags=re.MULTILINE
+            r'("""[\s\S]*?"""|"""[\s\S]*?"""|#.*$)',
+            "",
+            source,
+            flags=re.MULTILINE,
         )
 
         # DataFrameを返す特徴的なキーワードを検索

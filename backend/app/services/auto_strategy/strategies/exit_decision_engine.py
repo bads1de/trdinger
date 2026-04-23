@@ -68,7 +68,10 @@ class ExitDecisionEngine:
 
         if exit_type == ExitType.PARTIAL and exit_gene.partial_exit_enabled:
             return self._execute_partial_exit(direction, exit_gene)
-        elif exit_type == ExitType.TRAILING and exit_gene.trailing_stop_activation:
+        elif (
+            exit_type == ExitType.TRAILING
+            and exit_gene.trailing_stop_activation
+        ):
             return self._activate_trailing_stop(direction, exit_gene)
         else:
             return self._execute_full_exit(direction)
@@ -103,7 +106,9 @@ class ExitDecisionEngine:
                 if self._evaluate_condition_group(condition_group, evaluator):
                     return True
             elif isinstance(condition_group, Condition):
-                if evaluator.evaluate_single_condition(condition_group, self.strategy):
+                if evaluator.evaluate_single_condition(
+                    condition_group, self.strategy
+                ):
                     return True
 
         return False
@@ -141,10 +146,14 @@ class ExitDecisionEngine:
                 return signals.iloc[current_bar]
             return signals[current_bar]
         except Exception as e:
-            logger.debug("キャッシュ済みExitシグナルの取得に失敗しました: %s", e)
+            logger.debug(
+                "キャッシュ済みExitシグナルの取得に失敗しました: %s", e
+            )
             return None
 
-    def _evaluate_condition_group(self, group: ConditionGroup, evaluator) -> bool:
+    def _evaluate_condition_group(
+        self, group: ConditionGroup, evaluator
+    ) -> bool:
         """ConditionGroupを再帰的に評価。"""
         if not group.conditions:
             return False

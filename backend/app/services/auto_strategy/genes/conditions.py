@@ -86,7 +86,9 @@ class ConditionGroup:
     """
 
     operator: str = "OR"
-    conditions: List[Union[Condition, "ConditionGroup"]] = field(default_factory=list)
+    conditions: List[Union[Condition, "ConditionGroup"]] = field(
+        default_factory=list
+    )
 
     def is_empty(self) -> bool:
         """グループ内に条件が含まれているかを確認"""
@@ -137,7 +139,9 @@ class StateTracker:
 
     def __init__(self):
         """初期化"""
-        self._events: Dict[str, int] = {}  # event_name -> last_triggered_bar_index
+        self._events: Dict[str, int] = (
+            {}
+        )  # event_name -> last_triggered_bar_index
 
     def record_event(self, event_name: str, bar_index: int) -> None:
         """
@@ -171,7 +175,9 @@ class StateTracker:
 
         return 0 <= bars_since_trigger <= lookback_bars
 
-    def get_bars_since_event(self, event_name: str, current_bar: int) -> Optional[int]:
+    def get_bars_since_event(
+        self, event_name: str, current_bar: int
+    ) -> Optional[int]:
         """
         イベント発生からの経過バー数を取得
 

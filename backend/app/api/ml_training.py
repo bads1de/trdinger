@@ -16,7 +16,11 @@ from app.services.ml.orchestration.ml_training_orchestration_service import (
     MLTrainingService,
 )
 from app.utils.error_handler import ErrorHandler
-from app.utils.response import ensure_response_dict, extract_response_data, now_iso
+from app.utils.response import (
+    ensure_response_dict,
+    extract_response_data,
+    now_iso,
+)
 from database.connection import get_db
 
 logger = logging.getLogger(__name__)
@@ -27,10 +31,14 @@ router = APIRouter(prefix="/api/ml-training", tags=["ML Training"])
 class ParameterSpaceConfig(BaseModel):
     """パラメータ空間設定"""
 
-    type: str = Field(..., description="パラメータ型 (real, integer, categorical)")
+    type: str = Field(
+        ..., description="パラメータ型 (real, integer, categorical)"
+    )
     low: Optional[float] = Field(None, description="最小値 (real, integer)")
     high: Optional[float] = Field(None, description="最大値 (real, integer)")
-    categories: Optional[list] = Field(None, description="カテゴリ一覧 (categorical)")
+    categories: Optional[list] = Field(
+        None, description="カテゴリ一覧 (categorical)"
+    )
 
 
 class OptimizationSettingsConfig(BaseModel):
@@ -57,9 +65,12 @@ class StackingParamsConfig(BaseModel):
     )
     cv_folds: int = Field(default=5, description="クロスバリデーション分割数")
     stack_method: str = Field(
-        default="predict_proba", description="スタック方法（predict_proba, predict）"
+        default="predict_proba",
+        description="スタック方法（predict_proba, predict）",
     )
-    random_state: Optional[int] = Field(default=42, description="ランダムシード")
+    random_state: Optional[int] = Field(
+        default=42, description="ランダムシード"
+    )
     n_jobs: int = Field(default=-1, description="並列処理数（-1で全CPU使用）")
     passthrough: bool = Field(
         default=False, description="元の特徴量をメタモデルに渡すか"
@@ -74,10 +85,15 @@ class EnsembleRequest(BaseModel):
         とは異なり、APIリクエストボディのスキーマを定義します。
     """
 
-    enabled: bool = Field(default=True, description="アンサンブル学習を有効にするか")
-    method: str = Field(default="stacking", description="アンサンブル手法 (stacking)")
+    enabled: bool = Field(
+        default=True, description="アンサンブル学習を有効にするか"
+    )
+    method: str = Field(
+        default="stacking", description="アンサンブル手法 (stacking)"
+    )
     stacking_params: StackingParamsConfig = Field(
-        default_factory=StackingParamsConfig, description="スタッキングパラメータ"
+        default_factory=StackingParamsConfig,
+        description="スタッキングパラメータ",
     )
 
 
@@ -109,7 +125,9 @@ class MLTrainingRequest(BaseModel):
     timeframe: str = Field(default="1h", description="時間軸")
     start_date: str = Field(..., description="開始日（YYYY-MM-DD）")
     end_date: str = Field(..., description="終了日（YYYY-MM-DD）")
-    validation_split: float = Field(default=0.2, description="検証データ分割比率")
+    validation_split: float = Field(
+        default=0.2, description="検証データ分割比率"
+    )
     prediction_horizon: int = Field(default=24, description="予測期間（時間）")
     task_type: str = Field(
         default="volatility_regression",
@@ -132,7 +150,9 @@ class MLTrainingRequest(BaseModel):
         default=5, description="クロスバリデーション分割数"
     )
     random_state: int = Field(default=42, description="ランダムシード")
-    early_stopping_rounds: int = Field(default=100, description="早期停止ラウンド数")
+    early_stopping_rounds: int = Field(
+        default=100, description="早期停止ラウンド数"
+    )
     max_depth: int = Field(default=10, description="最大深度")
     n_estimators: int = Field(default=100, description="推定器数")
     learning_rate: float = Field(default=0.1, description="学習率")
@@ -216,7 +236,8 @@ async def start_ml_training(
         return MLTrainingResponse(
             success=result.get("success", False),
             message=result.get("message", ""),
-            training_id=result.get("training_id") or payload.get("training_id"),
+            training_id=result.get("training_id")
+            or payload.get("training_id"),
             timestamp=result.get("timestamp", now_iso()),
         )
 

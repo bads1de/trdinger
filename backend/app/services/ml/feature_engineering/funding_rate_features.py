@@ -40,7 +40,9 @@ class FundingRateFeatureCalculator:
             f"ベースライン金利={self.baseline_rate}"
         )
 
-    def calculate_features(self, df: pd.DataFrame, f_df: pd.DataFrame) -> pd.DataFrame:
+    def calculate_features(
+        self, df: pd.DataFrame, f_df: pd.DataFrame
+    ) -> pd.DataFrame:
         """全特徴量を計算"""
         if f_df is None or f_df.empty:
             return df.copy()
@@ -60,7 +62,9 @@ class FundingRateFeatureCalculator:
         df_temp.index = pd.DatetimeIndex(df_temp.index).tz_localize(None)
 
         f_temp = f_df.sort_values("timestamp").copy()
-        f_temp["timestamp"] = pd.to_datetime(f_temp["timestamp"]).dt.tz_localize(None)
+        f_temp["timestamp"] = pd.to_datetime(
+            f_temp["timestamp"]
+        ).dt.tz_localize(None)
 
         # 高速マージ
         merged = pd.merge_asof(
@@ -103,14 +107,18 @@ class FundingRateFeatureCalculator:
         )
 
         # 相関とZ-Score (ベクトル化)
-        close_series = cast(pd.Series, res["close"]) if "close" in res.columns else None
+        close_series = (
+            cast(pd.Series, res["close"]) if "close" in res.columns else None
+        )
         for w in [72, 168]:
             roll = res["fr_bps"].rolling(window=w, min_periods=1)
             # Z-Score
             m = roll.mean()
             s = roll.std(ddof=0)
             res[f"fr_zscore_{w}h"] = (
-                ((res["fr_bps"] - m) / s).fillna(0.0).replace([np.inf, -np.inf], 0.0)
+                ((res["fr_bps"] - m) / s)
+                .fillna(0.0)
+                .replace([np.inf, -np.inf], 0.0)
             )
 
             # 相関 (価格がある場合)

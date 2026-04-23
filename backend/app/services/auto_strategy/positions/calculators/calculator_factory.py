@@ -40,7 +40,8 @@ class CalculatorFactory:
         method_str = normalize_enum_name(method)
 
         calculator_class = cast(
-            Type[BaseCalculator], method_map.get(method_str, FixedRatioCalculator)
+            Type[BaseCalculator],
+            method_map.get(method_str, FixedRatioCalculator),
         )
         return calculator_class()
 

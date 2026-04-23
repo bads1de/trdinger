@@ -58,7 +58,11 @@ class StrategyParameterSpace:
     # 条件の閾値パラメータの範囲（スケールタイプ別）
     THRESHOLD_RANGES: Dict[str, Dict[str, Any]] = {
         "oscillator_0_100": {"low": 10.0, "high": 90.0, "type": "real"},
-        "oscillator_plus_minus_100": {"low": -80.0, "high": 80.0, "type": "real"},
+        "oscillator_plus_minus_100": {
+            "low": -80.0,
+            "high": 80.0,
+            "type": "real",
+        },
         "momentum_zero_centered": {"low": -1.0, "high": 1.0, "type": "real"},
         "default": {"low": -100.0, "high": 100.0, "type": "real"},
     }
@@ -118,7 +122,9 @@ class StrategyParameterSpace:
             )
             parameter_space.update(short_threshold_params)
 
-        logger.debug(f"構築されたパラメータ空間: {len(parameter_space)} 個のパラメータ")
+        logger.debug(
+            f"構築されたパラメータ空間: {len(parameter_space)} 個のパラメータ"
+        )
         return parameter_space
 
     def _build_indicator_params(
@@ -147,7 +153,9 @@ class StrategyParameterSpace:
 
             # レジストリから設定を取得
             config = indicator_registry.get_indicator_config(indicator_type)
-            param_ranges = self._get_indicator_param_ranges(config, indicator_type)
+            param_ranges = self._get_indicator_param_ranges(
+                config, indicator_type
+            )
 
             for param_name, param_value in indicator.parameters.items():
                 # 数値パラメータのみ対象
@@ -214,9 +222,13 @@ class StrategyParameterSpace:
                         and param_config.max_value is not None
                     ):
                         # 整数か浮動小数点かを判定
-                        default_val = getattr(param_config, "default_value", 14)
+                        default_val = getattr(
+                            param_config, "default_value", 14
+                        )
                         param_type = (
-                            "integer" if isinstance(default_val, int) else "real"
+                            "integer"
+                            if isinstance(default_val, int)
+                            else "real"
                         )
 
                         ranges[param_name] = {
@@ -381,7 +393,9 @@ class StrategyParameterSpace:
         for condition in conditions:
             if isinstance(condition, ConditionGroup):
                 self._apply_threshold_params(
-                    condition.conditions, params, f"{prefix}_grp{threshold_idx}"
+                    condition.conditions,
+                    params,
+                    f"{prefix}_grp{threshold_idx}",
                 )
                 threshold_idx += 1
             elif isinstance(condition, Condition):

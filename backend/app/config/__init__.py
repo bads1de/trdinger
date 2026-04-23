@@ -11,7 +11,7 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 # 共通定数
-from .constants import ( 
+from .constants import (
     DEFAULT_DATA_LIMIT,
     DEFAULT_ENSEMBLE_ALGORITHMS,
     DEFAULT_MARKET_EXCHANGE,

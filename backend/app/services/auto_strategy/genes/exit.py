@@ -32,7 +32,11 @@ class ExitGene:
     # 遺伝的操作のための設定
     NUMERIC_FIELDS = ["partial_exit_pct", "priority"]
     ENUM_FIELDS = ["exit_type"]
-    CHOICE_FIELDS = ["partial_exit_enabled", "trailing_stop_activation", "enabled"]
+    CHOICE_FIELDS = [
+        "partial_exit_enabled",
+        "trailing_stop_activation",
+        "enabled",
+    ]
     NUMERIC_RANGES = {
         "partial_exit_pct": (0.1, 0.9),
         "priority": (0.5, 1.5),
@@ -113,7 +117,9 @@ class ExitGene:
             exit_type=exit_type,
             partial_exit_pct=data.get("partial_exit_pct", 0.5),
             partial_exit_enabled=data.get("partial_exit_enabled", False),
-            trailing_stop_activation=data.get("trailing_stop_activation", False),
+            trailing_stop_activation=data.get(
+                "trailing_stop_activation", False
+            ),
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
         )
@@ -143,14 +149,17 @@ class ExitGene:
             # 部分決済割合の摂動
             if random.random() < 0.5:
                 gene.partial_exit_pct = max(
-                    0.1, min(0.9, gene.partial_exit_pct * random.uniform(0.8, 1.2))
+                    0.1,
+                    min(0.9, gene.partial_exit_pct * random.uniform(0.8, 1.2)),
                 )
 
             # フラグのトグル
             if random.random() < 0.2:
                 gene.partial_exit_enabled = not gene.partial_exit_enabled
             if random.random() < 0.2:
-                gene.trailing_stop_activation = not gene.trailing_stop_activation
+                gene.trailing_stop_activation = (
+                    not gene.trailing_stop_activation
+                )
 
         return gene
 
@@ -192,7 +201,9 @@ def create_random_exit_gene(config: Optional[Any] = None) -> ExitGene:
             try:
                 custom_weights = config.exit_type_weights
                 if custom_weights:
-                    weights = {ExitType(k): v for k, v in custom_weights.items()}
+                    weights = {
+                        ExitType(k): v for k, v in custom_weights.items()
+                    }
             except AttributeError:
                 pass
 
@@ -205,7 +216,9 @@ def create_random_exit_gene(config: Optional[Any] = None) -> ExitGene:
         partial_exit_pct = random.uniform(*ranges["partial_exit_pct"])
 
         # フラグをランダムに設定
-        partial_exit_enabled = random.random() < EXIT_PARTIAL_ENABLED_PROBABILITY
+        partial_exit_enabled = (
+            random.random() < EXIT_PARTIAL_ENABLED_PROBABILITY
+        )
         trailing_stop_activation = (
             random.random() < EXIT_TRAILING_ACTIVATION_PROBABILITY
         )

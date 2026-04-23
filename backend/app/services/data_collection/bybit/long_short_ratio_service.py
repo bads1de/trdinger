@@ -9,7 +9,9 @@ from typing import Any, Dict, List, Optional
 
 import ccxt.async_support as ccxt
 
-from database.repositories.long_short_ratio_repository import LongShortRatioRepository
+from database.repositories.long_short_ratio_repository import (
+    LongShortRatioRepository,
+)
 
 from .bybit_service import BybitService
 
@@ -73,7 +75,11 @@ class BybitLongShortRatioService(BybitService):
             )
             return []
 
-        if not response or "result" not in response or "list" not in response["result"]:
+        if (
+            not response
+            or "result" not in response
+            or "list" not in response["result"]
+        ):
             logger.warning(
                 f"ロング/ショート比率データの取得に失敗またはデータなし: {symbol}"
             )
@@ -136,7 +142,9 @@ class BybitLongShortRatioService(BybitService):
                     "saved_count": 0,
                     "success": True,
                     "latest_timestamp": (
-                        latest_db_record.timestamp if latest_db_record else None
+                        latest_db_record.timestamp
+                        if latest_db_record
+                        else None
                     ),
                 }
 
@@ -234,7 +242,9 @@ class BybitLongShortRatioService(BybitService):
                     )
 
                     if data_list:
-                        saved = repository.insert_long_short_ratio_data(data_list)
+                        saved = repository.insert_long_short_ratio_data(
+                            data_list
+                        )
                         total_saved += saved
                         logger.info(
                             f"Chunk {current_cursor} - {next_cursor}: {len(data_list)} fetched, {saved} saved."

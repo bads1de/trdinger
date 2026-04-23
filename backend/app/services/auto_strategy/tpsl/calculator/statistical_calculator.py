@@ -94,9 +94,9 @@ class StatisticalCalculator(BaseTPSLCalculator):
             # 価格変化の分布を計算
             price_changes = []
             for i in range(1, len(recent_prices)):
-                change_pct = (recent_prices[i] - recent_prices[i - 1]) / recent_prices[
-                    i - 1
-                ]
+                change_pct = (
+                    recent_prices[i] - recent_prices[i - 1]
+                ) / recent_prices[i - 1]
                 price_changes.append(change_pct)
 
             if not price_changes:
@@ -104,9 +104,9 @@ class StatisticalCalculator(BaseTPSLCalculator):
 
             # 標準偏差を計算
             mean_change = sum(price_changes) / len(price_changes)
-            variance = sum((x - mean_change) ** 2 for x in price_changes) / len(
-                price_changes
-            )
+            variance = sum(
+                (x - mean_change) ** 2 for x in price_changes
+            ) / len(price_changes)
             std_dev = variance**0.5
 
             # 信頼区間に基づいてSL/TPを設定
