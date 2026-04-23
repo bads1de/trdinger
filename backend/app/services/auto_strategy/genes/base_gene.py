@@ -49,10 +49,13 @@ class BaseGene(ABC):
         result = {}
 
         keys: List[str] = []
-        if hasattr(self, "__slots__"):
+        try:
             keys = list(self.__slots__)
-        elif hasattr(self, "__dict__"):
-            keys = list(self.__dict__.keys())
+        except AttributeError:
+            try:
+                keys = list(self.__dict__.keys())
+            except AttributeError:
+                keys = []
 
         for key in keys:
             if key.startswith("_"):
@@ -60,9 +63,14 @@ class BaseGene(ABC):
 
             value = getattr(self, key, None)
 
-            if value is not None and hasattr(value, "value"):
-                result[key] = value.value
-            elif isinstance(value, datetime):
+            if value is not None:
+                try:
+                    result[key] = value.value
+                    continue
+                except AttributeError:
+                    pass
+
+            if isinstance(value, datetime):
                 result[key] = value.isoformat()
             else:
                 result[key] = value
@@ -226,10 +234,12 @@ class BaseGene(ABC):
 
         try:
             # 基本的な属性チェック
-            if hasattr(self, "enabled") and not isinstance(
-                getattr(self, "enabled", True), bool
-            ):
-                errors.append("enabled属性がbool型である必要があります")
+            try:
+                enabled = self.enabled  # type: ignore[attr-defined]
+                if not isinstance(enabled, bool):
+                    errors.append("enabled属性がbool型である必要があります")
+            except AttributeError:
+                pass
 
             # サブクラス固有の検証を呼び出し
             self._validate_parameters(errors)

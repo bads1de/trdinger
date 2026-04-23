@@ -73,7 +73,7 @@ class PositionSizingGene(BaseGene):
     priority: float = 1.0
 
     @classmethod
-    def from_dict(cls, data: dict) -> "PositionSizingGene":
+    def from_dict(cls, data: dict[str, Any]) -> "PositionSizingGene":
         """辞書から復元。無効な method はデフォルトにフォールバック。"""
         from .base_gene import BaseGene
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 from .conditions import Condition, ConditionGroup, StatefulCondition
 from .entry import EntryGene
@@ -198,11 +198,6 @@ class StrategyGene:
     @classmethod
     def sub_gene_class_map(cls) -> Dict[str, Any]:
         """サブ遺伝子フィールドと対応クラスの対応表を返す。"""
-        from .entry import EntryGene
-        from .exit import ExitGene
-        from .position_sizing import PositionSizingGene
-        from .tpsl import TPSLGene
-
         return {
             "tpsl_gene": TPSLGene,
             "long_tpsl_gene": TPSLGene,
@@ -216,8 +211,6 @@ class StrategyGene:
 
     def clone(self, keep_id: bool = False) -> "StrategyGene":
         """軽量コピーを作成。"""
-        from typing import cast
-
         from .genetic_utils import GeneticUtils
 
         cloned_fields = {
@@ -234,7 +227,10 @@ class StrategyGene:
         return mutate_strategy_gene(self, config, mutation_rate=mutation_rate)
 
     def adaptive_mutate(
-        self, population: List["StrategyGene"], config: GAConfig, base_mutation_rate: float = 0.1
+        self,
+        population: List["StrategyGene"],
+        config: GAConfig,
+        base_mutation_rate: float = 0.1,
     ) -> "StrategyGene":
         """集団の多様性に基づいて変異率を調整する。"""
         from .operators import adaptive_mutate_strategy_gene

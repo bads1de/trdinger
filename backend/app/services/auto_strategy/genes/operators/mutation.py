@@ -258,12 +258,13 @@ def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
             elif condition.conditions:
                 idx = random.randint(0, len(condition.conditions) - 1)
                 mutate_item(condition.conditions[idx])
-        elif hasattr(condition, "operator"):
-            condition.operator = random.choice(
-                config.mutation_config.valid_condition_operators
-            )
         else:
-            logger.debug(f"条件変異をスキップ: 未知の型 {type(condition).__name__}")
+            try:
+                condition.operator = random.choice(
+                    config.mutation_config.valid_condition_operators
+                )
+            except AttributeError:
+                logger.debug(f"条件変異をスキップ: 未知の型 {type(condition).__name__}")
 
     mutation_threshold = (
         mutation_rate * config.mutation_config.condition_change_multiplier
@@ -293,25 +294,33 @@ def mutate_indicators_batch(
     """指標遺伝子の突然変異処理（バッチ版）。"""
     results: List["StrategyGene"] = []
     for individual in individuals:
-        mutated = individual.clone() if hasattr(individual, "clone") else individual
+        try:
+            mutated = individual.clone()
+        except AttributeError:
+            mutated = individual
         mutate_indicators(mutated, mutation_rate, config)
         results.append(mutated)
     return results
 
 
 def mutate_conditions_batch(
-    individuals: List["StrategyGene"], mutation_rate: float, config: "GAConfig"
-) -> List["StrategyGene"]:
+    individuals: List[StrategyGene], mutation_rate: float, config: GAConfig
+) -> List[StrategyGene]:
     """条件の突然変異処理（バッチ版）。"""
-    results: List["StrategyGene"] = []
+    results: List[StrategyGene] = []
     for individual in individuals:
-        mutated = individual.clone() if hasattr(individual, "clone") else individual
+        try:
+            mutated = individual.clone()
+        except AttributeError:
+            mutated = individual
         mutate_conditions(mutated, mutation_rate, config)
         results.append(mutated)
     return results
 
 
-def mutate_strategy_gene(gene, config: GAConfig, mutation_rate: float = 0.1):
+def mutate_strategy_gene(
+    gene: StrategyGene, config: GAConfig, mutation_rate: float = 0.1
+) -> StrategyGene:
     """戦略遺伝子の「突然変異（Mutation）」を実行し、新しい個体を生成する。"""
     try:
         mutated = gene.clone()
@@ -368,6 +377,7 @@ def mutate_strategy_gene(gene, config: GAConfig, mutation_rate: float = 0.1):
 
             # フィルター数制限を強制
             from ...generators.random_gene_generator import RandomGeneGenerator
+
             generator = RandomGeneGenerator(config)
             mutated.tool_genes = generator._enforce_filter_limit(mutated.tool_genes)
 
@@ -379,15 +389,15 @@ def mutate_strategy_gene(gene, config: GAConfig, mutation_rate: float = 0.1):
 
     except Exception as e:
         logger.error(f"戦略遺伝子突然変異エラー: {e}")
-        mutated = gene.clone() if hasattr(gene, "clone") else gene
         try:
-            if hasattr(mutated, "fitness") and hasattr(mutated.fitness, "values"):
-                del mutated.fitness.values
-            return mutated
-
-        except Exception as inner_e:
-            logger.error(f"戦略遺伝子クローン作成エラー: {inner_e}")
-            return gene
+            mutated = gene.clone()
+        except AttributeError:
+            mutated = gene
+        try:
+            del mutated.fitness.values  # type: ignore[attr-defined]
+        except AttributeError:
+            pass
+        return mutated
 
 
 def mutate_strategy_gene_batch(
@@ -410,8 +420,11 @@ def adaptive_mutate_strategy_gene(
     try:
         fitnesses = []
         for ind in population:
-            if hasattr(ind, "fitness") and ind.fitness and ind.fitness.values:
-                fitnesses.append(ind.fitness.values[0])
+            try:
+                if ind.fitness and ind.fitness.values:
+                    fitnesses.append(ind.fitness.values[0])
+            except AttributeError:
+                pass
 
         if not fitnesses:
             adaptive_rate = base_mutation_rate

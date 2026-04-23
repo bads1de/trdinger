@@ -9,7 +9,7 @@ import gc
 import heapq
 import logging
 import random
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Sequence, cast
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, cast
 
 if TYPE_CHECKING:
     from ...config.ga.ga_config import GAConfig
@@ -54,8 +54,9 @@ def _invalidate_individual_cache(individual: Any) -> None:
     交叉・突然変異後に呼ばれ、個体に紐づくキャッシュデータをクリアする。
     """
     try:
-        if hasattr(individual, "_cache"):
-            individual._cache = {}
+        individual._cache = {}
+    except AttributeError:
+        pass
     except Exception as e:
         logger.debug("個体キャッシュのクリアに失敗しました: %s", e)
 
@@ -83,8 +84,8 @@ class EvolutionRunner:
 
     def __init__(
         self,
-        toolbox,
-        stats,
+        toolbox: Any,
+        stats: Any,
         fitness_sharing: Optional[FitnessSharing] = None,
         population: Optional[List[Any]] = None,
         parallel_evaluator: Optional[ParallelEvaluator] = None,
@@ -219,7 +220,9 @@ class EvolutionRunner:
             # GCを完全に無効化するのではなく、閾値を上げて頻度を下げる
             # デフォルト: (700, 10, 10) → 評価中は(2000, 20, 20)に変更
             original_threshold = gc.get_threshold()
-            gc.set_threshold(GC_THRESHOLD_GENERATIONS, GC_THRESHOLD_DIVISIONS, GC_THRESHOLD_DIVISIONS)
+            gc.set_threshold(
+                GC_THRESHOLD_GENERATIONS, GC_THRESHOLD_DIVISIONS, GC_THRESHOLD_DIVISIONS
+            )
 
             try:
                 logger.debug("世代 %s/%s を開始", gen + 1, config.generations)
@@ -292,7 +295,9 @@ class EvolutionRunner:
         logger.info("進化アルゴリズム完了")
         return population, logbook
 
-    def _apply_crossover_batch(self, offspring: List[Any], config: "GAConfig") -> List[Any]:
+    def _apply_crossover_batch(
+        self, offspring: List[Any], config: "GAConfig"
+    ) -> List[Any]:
         """
         交叉のバッチ処理
 
@@ -320,7 +325,9 @@ class EvolutionRunner:
 
         return offspring
 
-    def _apply_mutation_batch(self, offspring: List[Any], config: "GAConfig") -> List[Any]:
+    def _apply_mutation_batch(
+        self, offspring: List[Any], config: "GAConfig"
+    ) -> List[Any]:
         """
         突然変異のバッチ処理
 
@@ -398,7 +405,7 @@ class EvolutionRunner:
     def _evaluate_population(
         self,
         population: List[Any],
-        config: Optional[Any] = None,
+        config: Optional["GAConfig"] = None,
     ) -> List[Any]:
         """
         個体群の適応度評価（並列評価対応）
@@ -438,7 +445,7 @@ class EvolutionRunner:
     def _evaluate_invalid_individuals(
         self,
         invalid_ind: List[Any],
-        config: Optional[Any] = None,
+        config: Optional["GAConfig"] = None,
     ) -> None:
         """
         適応度が無効な個体のみを評価（並列評価対応）
@@ -471,7 +478,7 @@ class EvolutionRunner:
     def _evaluate_individuals_with_config(
         self,
         individuals: List[Any],
-        config: Optional[Any],
+        config: Optional["GAConfig"],
     ) -> List[tuple[float, ...]]:
         """
         設定に応じて個体列を評価する
@@ -509,7 +516,7 @@ class EvolutionRunner:
     def _promote_top_candidates_with_full_fidelity(
         self,
         candidate_population: List[Any],
-        config: Optional[Any],
+        config: Optional["GAConfig"],
     ) -> None:
         """
         粗評価上位だけ full fidelity で再評価する
@@ -611,7 +618,10 @@ class EvolutionRunner:
 
             average_value = float(np.mean(values))
             if objective_registry.is_dynamic_scalar_objective(objective):
-                scalars[objective] = min(DYNAMIC_SCALAR_MAX, DEFAULT_SCALAR_VALUE + max(average_value, DEFAULT_MIN_PASS_RATE))
+                scalars[objective] = min(
+                    DYNAMIC_SCALAR_MAX,
+                    DEFAULT_SCALAR_VALUE + max(average_value, DEFAULT_MIN_PASS_RATE),
+                )
             else:
                 scalars[objective] = DEFAULT_SCALAR_VALUE
 

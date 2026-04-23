@@ -33,8 +33,9 @@ from .evolution_runner import EvolutionRunner, EvolutionStoppedError
 from .fitness_utils import (
     extract_result_fitness,
 )
+from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
+
 from .ga_utils import (
-    _gene_kwargs,
     create_deap_mutate_wrapper,
     crossover_strategy_genes,
     mutate_strategy_gene,
@@ -272,7 +273,9 @@ class GeneticAlgorithmEngine:
                     if individual_class is not None:
                         for i in range(num_to_inject):
                             seed = seeds[i % len(seeds)]
-                            population[i] = individual_class(**_gene_kwargs(seed))
+                            population[i] = individual_class(
+                                **GeneticUtils.extract_gene_params(seed)
+                            )
                     else:
                         logger.warning(
                             "個体クラスが未初期化のため、シード戦略の注入をスキップしました"
@@ -286,6 +289,10 @@ class GeneticAlgorithmEngine:
 
             # 適応的突然変異用mutate_wrapperの設定
             individual_class = self.deap_setup.get_individual_class()
+            if individual_class is None:
+                raise RuntimeError(
+                    "Individual class must be initialized before registering mutate operator."
+                )
             mutate_wrapper = create_deap_mutate_wrapper(
                 individual_class, population, config
             )
@@ -438,7 +445,9 @@ class GeneticAlgorithmEngine:
         parallel_evaluator = ParallelEvaluator(
             evaluate_func=worker_evaluate_individual,  # type: ignore[arg-type]  # トップレベル関数を指定
             max_workers=getattr(evaluation_config, "max_workers", None),
-            timeout_per_individual=getattr(evaluation_config, "timeout", DEFAULT_TIMEOUT_PER_INDIVIDUAL),
+            timeout_per_individual=getattr(
+                evaluation_config, "timeout", DEFAULT_TIMEOUT_PER_INDIVIDUAL
+            ),
             worker_initializer=initialize_worker_process,  # トップレベル関数を指定
             worker_initargs=worker_initargs,
         )
@@ -592,9 +601,7 @@ class GeneticAlgorithmEngine:
             "best_evaluation_summary": best_evaluation_summary,
         }
 
-        ranked_population = self.result_processor.sort_population(
-            population
-        )
+        ranked_population = self.result_processor.sort_population(population)
         persisted_population = ranked_population[:MAX_PERSISTED_POPULATION_SIZE]
         result["all_strategies"] = persisted_population
         result["fitness_scores"] = [
@@ -635,13 +642,13 @@ class GeneticAlgorithmEngine:
             # RandomGeneGeneratorを使用して遺伝子を生成
             gene = self.gene_generator.generate_random_gene()
 
-            if not self.individual_class:
+            if self.individual_class is None:
                 raise TypeError("個体クラス 'Individual' が初期化されていません。")
 
             # StrategyGeneのフィールドを使ってIndividualインスタンスを作成
             # IndividualはStrategyGeneを継承しているため、キーワード引数で初期化可能
             # asdictは再帰的に辞書化してしまうため使用しない
-            return self.individual_class(**_gene_kwargs(gene))
+            return self.individual_class(**GeneticUtils.extract_gene_params(gene))
 
         except Exception as e:
             logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")

@@ -9,12 +9,13 @@ from __future__ import annotations
 import logging
 import random
 import uuid
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type
 
 from ..entry import EntryGene
 from ..exit import ExitGene
 from ..genetic_utils import GeneticUtils
 from ..position_sizing import PositionSizingGene
+from ..strategy import StrategyGene
 from ..tpsl import TPSLGene
 
 if TYPE_CHECKING:
@@ -58,12 +59,12 @@ def crossover_exit_genes(
 
 
 def crossover_strategy_genes(
-    strategy_gene_class,
-    parent1,
-    parent2,
+    strategy_gene_class: Type[StrategyGene],
+    parent1: StrategyGene,
+    parent2: StrategyGene,
     config: GAConfig,
     crossover_type: str = "uniform",
-):
+) -> Tuple[StrategyGene, StrategyGene]:
     """2つの親個体から新しい2つの子個体を交叉により生成する。"""
     try:
         if crossover_type == "uniform":
@@ -71,11 +72,19 @@ def crossover_strategy_genes(
         return single_point_crossover(strategy_gene_class, parent1, parent2, config)
     except Exception as e:
         logger.error(f"戦略遺伝子交叉エラー: {e}")
-        child1 = parent1.clone() if hasattr(parent1, "clone") else parent1
-        child2 = parent2.clone() if hasattr(parent2, "clone") else parent2
+        try:
+            child1 = parent1.clone()
+        except AttributeError:
+            child1 = parent1
+        try:
+            child2 = parent2.clone()
+        except AttributeError:
+            child2 = parent2
         for child in (child1, child2):
-            if hasattr(child, "fitness"):
-                del child.fitness.values
+            try:
+                del child.fitness.values  # type: ignore[attr-defined]
+            except AttributeError:
+                pass
         return child1, child2
 
 
@@ -117,11 +126,10 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
     child1_params: dict[str, Any] = {"id": str(uuid.uuid4())}
     child2_params: dict[str, Any] = {"id": str(uuid.uuid4())}
 
-    fields = (
-        strategy_gene_class.crossover_field_names()
-        if hasattr(strategy_gene_class, "crossover_field_names")
-        else ()
-    )
+    try:
+        fields = strategy_gene_class.crossover_field_names()
+    except AttributeError:
+        fields = ()
 
     for field_name in fields:
         val1 = getattr(parent1, field_name)
@@ -238,6 +246,7 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: GAConf
 
     # フィルター数制限を強制
     from ...generators.random_gene_generator import RandomGeneGenerator
+
     generator = RandomGeneGenerator(config)
     c1_tool = generator._enforce_filter_limit(c1_tool)
     c2_tool = generator._enforce_filter_limit(c2_tool)
@@ -291,7 +300,7 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: GAConf
         long_entry_gene=c2_long_entry,
         short_entry_gene=c2_short_entry,
         exit_gene=c2_exit,
-        long_exit_conditions=c1_long_exit_cond,
+        long_exit_conditions=c2_long_exit_cond,
         short_exit_conditions=c2_short_exit_cond,
         tool_genes=c2_tool,
         metadata=c2_meta,

@@ -7,8 +7,7 @@
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional, Protocol, Tuple, TypeVar, cast
-
+from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
 from app.types import SerializableValue
 
 T = TypeVar("T")
@@ -88,14 +87,24 @@ class GeneticUtils:
         """
         params = {}
         # 1. __slots__ から取得
-        if hasattr(gene, "__slots__"):
-            for k in gene.__slots__:
+        try:
+            slots = gene.__slots__
+        except AttributeError:
+            pass
+        else:
+            for k in slots:
                 if not k.startswith("_"):
                     params[k] = getattr(gene, k)
+            return params
+
         # 2. __dict__ から取得 (fallback)
-        elif hasattr(gene, "__dict__"):
+        try:
+            items = gene.__dict__.items()
+        except AttributeError:
+            pass
+        else:
             # プライベート属性を除外してコピー
-            for k, v in gene.__dict__.items():
+            for k, v in items:
                 if not k.startswith("_"):
                     params[k] = v
         return params
@@ -240,10 +249,12 @@ class GeneticUtils:
 
         # 全フィールドを取得
         all_fields = set(parent1_dict.keys()) & set(parent2_dict.keys())
+        # choice_fields と enum_fields は同じ「ランダム選択」処理を行う
+        random_choice_fields = set(choice_fields) | set(enum_fields)
 
         for field in all_fields:
-            if field in choice_fields:
-                # どちらかを選択
+            if field in random_choice_fields:
+                # ランダムにどちらかの親から継承
                 child1_params[field] = random.choice(
                     [parent1_dict[field], parent2_dict[field]]
                 )
@@ -260,14 +271,6 @@ class GeneticUtils:
                 else:
                     child1_params[field] = val1
                     child2_params[field] = val2
-            elif field in enum_fields:
-                # Enumフィールドはランダム選択
-                child1_params[field] = random.choice(
-                    [parent1_dict[field], parent2_dict[field]]
-                )
-                child2_params[field] = random.choice(
-                    [parent1_dict[field], parent2_dict[field]]
-                )
             else:
                 # デフォルト：交互に選択
                 if random.random() < 0.5:
@@ -309,8 +312,6 @@ class GeneticUtils:
         Returns:
             突然変異後の新しい遺伝子インスタンス
         """
-        import random
-
         if numeric_fields is None:
             numeric_fields = []
         if enum_fields is None:

@@ -154,14 +154,12 @@ class TPSLGene(BaseGene):
         )
 
         # 共有参照を防ぐため、method_weightsをコピー
-        if hasattr(child1, "method_weights") and isinstance(
-            child1.method_weights, dict
-        ):
-            child1.method_weights = child1.method_weights.copy()
-        if hasattr(child2, "method_weights") and isinstance(
-            child2.method_weights, dict
-        ):
-            child2.method_weights = child2.method_weights.copy()
+        for child in (child1, child2):
+            try:
+                if isinstance(child.method_weights, dict):
+                    child.method_weights = child.method_weights.copy()
+            except AttributeError:
+                pass
 
         # method_weightsの特殊処理
         # BLX-α交叉: 親の値の範囲内でランダムに重みを生成
@@ -279,8 +277,12 @@ def create_random_tpsl_gene() -> TPSLGene:
         base_stop_loss=random.uniform(*ranges["base_stop_loss"]),
         atr_multiplier_sl=random.uniform(*ranges["atr_multiplier_sl"]),
         atr_multiplier_tp=random.uniform(*ranges["atr_multiplier_tp"]),
-        atr_period=random.randint(int(ranges["atr_period"][0]), int(ranges["atr_period"][1])),
-        lookback_period=random.randint(int(ranges["lookback_period"][0]), int(ranges["lookback_period"][1])),
+        atr_period=random.randint(
+            int(ranges["atr_period"][0]), int(ranges["atr_period"][1])
+        ),
+        lookback_period=random.randint(
+            int(ranges["lookback_period"][0]), int(ranges["lookback_period"][1])
+        ),
         confidence_threshold=random.uniform(*ranges["confidence_threshold"]),
         method_weights=method_weights,
         enabled=True,

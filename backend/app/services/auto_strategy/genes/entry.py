@@ -111,7 +111,7 @@ class EntryGene:
         return dataclass_to_dict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "EntryGene":
+    def from_dict(cls, data: dict[str, Any]) -> "EntryGene":
         """
         辞書形式から復元
 
@@ -198,7 +198,7 @@ class EntryGene:
         )
 
 
-def create_random_entry_gene(config: Any = None) -> EntryGene:
+def create_random_entry_gene(config: Optional[Any] = None) -> EntryGene:
     """
     ランダムなエントリー遺伝子を生成
 
@@ -216,10 +216,13 @@ def create_random_entry_gene(config: Any = None) -> EntryGene:
     try:
         # 重み付きでエントリータイプを選択
         weights = default_weights
-        if config and hasattr(config, "entry_type_weights"):
-            custom_weights = config.entry_type_weights
-            if custom_weights:
-                weights = {EntryType(k): v for k, v in custom_weights.items()}
+        if config is not None:
+            try:
+                custom_weights = config.entry_type_weights
+                if custom_weights:
+                    weights = {EntryType(k): v for k, v in custom_weights.items()}
+            except AttributeError:
+                pass
 
         types = list(weights.keys())
         type_weights = list(weights.values())
@@ -231,7 +234,9 @@ def create_random_entry_gene(config: Any = None) -> EntryGene:
         stop_offset_pct = random.uniform(*ranges["stop_offset_pct"])
 
         # 有効期限をランダム生成
-        order_validity_bars = random.randint(int(ranges["order_validity_bars"][0]), int(ranges["order_validity_bars"][1]))
+        order_validity_bars = random.randint(
+            int(ranges["order_validity_bars"][0]), int(ranges["order_validity_bars"][1])
+        )
 
         return EntryGene(
             entry_type=entry_type,

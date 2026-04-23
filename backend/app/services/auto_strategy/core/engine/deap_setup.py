@@ -6,7 +6,7 @@ DEAPライブラリの設定とツールボックスの初期化を担当するD
 
 import logging
 import uuid
-from typing import Optional
+from typing import Callable, Optional, Tuple
 
 from deap import base, creator, tools
 
@@ -39,11 +39,11 @@ class DEAPSetup:
     def setup_deap(
         self,
         config: GAConfig,
-        create_individual_func,
-        evaluate_func,
-        crossover_func,
-        mutate_func,
-    ):
+        create_individual_func: Callable[[], StrategyGene],
+        evaluate_func: Callable[[StrategyGene], Tuple[float, ...]],
+        crossover_func: Callable[..., Tuple[StrategyGene, StrategyGene]],
+        mutate_func: Callable[..., StrategyGene],
+    ) -> None:
         """DEAP環境のセットアップ。
 
         DEAPライブラリの設定を行い、ツールボックスを初期化します。
@@ -163,14 +163,14 @@ class DEAPSetup:
         """
         return self.toolbox
 
-    def get_individual_class(self):
+    def get_individual_class(self) -> Optional[type]:
         """生成された個体クラスを取得
 
         DEAPのcreator.createによって生成された個体クラスを返します。
         このクラスはStrategyGeneを継承し、fitness属性を持っています。
 
         Returns:
-            Any: 生成されたIndividualクラス。StrategyGeneを継承し、
+            type: 生成されたIndividualクラス。StrategyGeneを継承し、
                 fitness属性（FitnessMulti型）を持つ。未生成の場合はNone。
         """
         return self.Individual

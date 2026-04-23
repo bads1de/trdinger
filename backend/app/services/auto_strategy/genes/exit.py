@@ -7,10 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
-
-if TYPE_CHECKING:
-    from ..config.ga.ga_config import GAConfig
+from typing import Any, List, Optional, Tuple
 
 from app.utils.serialization import dataclass_to_dict
 
@@ -94,7 +91,7 @@ class ExitGene:
         return dataclass_to_dict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "ExitGene":
+    def from_dict(cls, data: dict[str, Any]) -> "ExitGene":
         """
         辞書形式から復元
 
@@ -174,7 +171,7 @@ class ExitGene:
         )
 
 
-def create_random_exit_gene(config: Any = None) -> ExitGene:
+def create_random_exit_gene(config: Optional[Any] = None) -> ExitGene:
     """
     ランダムなイグジット遺伝子を生成
 
@@ -191,10 +188,13 @@ def create_random_exit_gene(config: Any = None) -> ExitGene:
 
     try:
         weights = default_weights
-        if config and hasattr(config, "exit_type_weights"):
-            custom_weights = config.exit_type_weights
-            if custom_weights:
-                weights = {ExitType(k): v for k, v in custom_weights.items()}
+        if config is not None:
+            try:
+                custom_weights = config.exit_type_weights
+                if custom_weights:
+                    weights = {ExitType(k): v for k, v in custom_weights.items()}
+            except AttributeError:
+                pass
 
         types = list(weights.keys())
         type_weights = list(weights.values())
@@ -206,7 +206,9 @@ def create_random_exit_gene(config: Any = None) -> ExitGene:
 
         # フラグをランダムに設定
         partial_exit_enabled = random.random() < EXIT_PARTIAL_ENABLED_PROBABILITY
-        trailing_stop_activation = random.random() < EXIT_TRAILING_ACTIVATION_PROBABILITY
+        trailing_stop_activation = (
+            random.random() < EXIT_TRAILING_ACTIVATION_PROBABILITY
+        )
 
         return ExitGene(
             exit_type=exit_type,
