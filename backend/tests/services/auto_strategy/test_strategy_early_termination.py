@@ -74,6 +74,8 @@ class TestStrategyEarlyTerminationController:
             min_expectancy=-0.01,
             expectancy_min_trades=2,
             expectancy_progress=0.6,
+            min_trades=1,
+            min_trade_check_progress=0.0,
         )
         strategy._current_bar_index = 8
         strategy.closed_trades = [

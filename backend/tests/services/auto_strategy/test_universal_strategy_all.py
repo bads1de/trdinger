@@ -91,7 +91,10 @@ class TestUniversalStrategyAll:
             )
 
     def test_entry_logic(self, mock_broker, mock_data, valid_gene):
-        params = {"strategy_gene": valid_gene}
+        params = {
+            "strategy_gene": valid_gene,
+            "early_termination_settings": EarlyTerminationSettings(enabled=False),
+        }
         with patch(
             "app.services.auto_strategy.strategies.universal_strategy.ConditionEvaluator"
         ) as MockEval:
@@ -304,7 +307,10 @@ class TestUniversalStrategyAll:
             enabled=True, method=TPSLMethod.VOLATILITY_BASED, atr_period=50
         )
         strategy = UniversalStrategy(
-            mock_broker, mock_data_large, {"strategy_gene": valid_gene}
+            mock_broker, mock_data_large, {
+                "strategy_gene": valid_gene,
+                "early_termination_settings": EarlyTerminationSettings(enabled=False),
+            }
         )
 
         with patch.object(

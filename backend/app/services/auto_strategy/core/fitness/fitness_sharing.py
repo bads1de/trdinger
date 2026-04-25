@@ -40,7 +40,7 @@ from .fitness_sharing_similarity import (
     calculate_indicator_similarity as _calculate_indicator_similarity,
 )
 from .fitness_sharing_similarity import (
-    calc_position_sizing_similarity as _calc_position_sizing_similarity,
+    calculate_position_sizing_similarity as _calc_position_sizing_similarity,
 )
 
 from .fitness_sharing_similarity import (

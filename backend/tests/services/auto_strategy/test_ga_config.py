@@ -64,10 +64,10 @@ class TestGAConfig:
         assert config.robustness_config.aggregate_method == "robust"
         assert config.evaluation_config.enable_multi_fidelity_evaluation is False
         assert config.evaluation_config.multi_fidelity_window_ratio == 0.3
-        assert config.evaluation_config.early_termination_settings.enabled is False
+        assert config.evaluation_config.early_termination_settings.enabled is True
         assert (
             config.evaluation_config.early_termination_settings.expectancy_min_trades
-            == 5
+            == 10
         )
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
@@ -420,9 +420,9 @@ class TestGAConfig:
         with pytest.raises(AttributeError):
             config.wfa_anchored = True
 
-        assert config.evaluation_config.early_termination_settings.enabled is False
-        assert config.evaluation_config.early_termination_settings.max_drawdown is None
-        assert config.evaluation_config.early_termination_settings.min_trades is None
+        assert config.evaluation_config.early_termination_settings.enabled is True
+        assert config.evaluation_config.early_termination_settings.max_drawdown == 0.15
+        assert config.evaluation_config.early_termination_settings.min_trades == 30
 
     def test_mutation_settings_defaults(self):
         """突然変異関連のデフォルト設定が正しいことを確認"""
