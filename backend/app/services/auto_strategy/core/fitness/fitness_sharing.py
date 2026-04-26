@@ -33,33 +33,7 @@ from .fitness_sharing_silhouette import (
 from .fitness_sharing_silhouette import (
     silhouette_based_sharing as _silhouette_based_sharing,
 )
-from .fitness_sharing_similarity import (
-    calculate_condition_similarity as _calculate_condition_similarity,
-)
-from .fitness_sharing_similarity import (
-    calculate_indicator_similarity as _calculate_indicator_similarity,
-)
-from .fitness_sharing_similarity import (
-    calculate_position_sizing_similarity as _calc_position_sizing_similarity,
-)
-
-from .fitness_sharing_similarity import (
-    calculate_risk_management_similarity as _calculate_risk_management_similarity,
-)
-
-from .fitness_sharing_similarity import (
-    calculate_similarity as _calculate_similarity,
-)
-from .fitness_sharing_similarity import (
-    calculate_tpsl_similarity as _calculate_tpsl_similarity,
-)
-from .fitness_sharing_similarity import check_none_similarity as _check_none_similarity
-from .fitness_sharing_similarity import check_none_similarity as _check_none_similarity
-from .fitness_sharing_vectorizer import (
-    _count_operand_types,
-    _count_operators,
-    build_behavior_profile,
-)
+from .fitness_sharing_vectorizer import build_behavior_profile
 from .fitness_sharing_vectorizer import vectorize_gene as _vectorize_gene
 from .fitness_utils import has_valid_fitness
 
@@ -429,54 +403,6 @@ class FitnessSharing:
             sampling_ratio=self.sampling_ratio,
         )
 
-    def _calculate_similarity(
-        self, gene1: StrategyGene, gene2: StrategyGene
-    ) -> float:
-        """
-        2つの戦略遺伝子間の類似度を計算
-        """
-        return _calculate_similarity(gene1, gene2)
-
-    def _check_none_similarity(self, val1: Any, val2: Any) -> Optional[float]:
-        """
-        None値に対する類似度チェックの共通処理
-        """
-        return _check_none_similarity(val1, val2)
-
-    def _calculate_indicator_similarity(
-        self, indicators1: List[Any], indicators2: List[Any]
-    ) -> float:
-        """
-        2つの指標セット間の類似度を計算
-        """
-        return _calculate_indicator_similarity(indicators1, indicators2)
-
-    def _calculate_condition_similarity(
-        self, conditions1: List[Any], conditions2: List[Any]
-    ) -> float:
-        """
-        2つの条件リスト間の類似度を計算
-        """
-        return _calculate_condition_similarity(conditions1, conditions2)
-
-    def _calculate_risk_management_similarity(
-        self, risk1: Dict[str, Any], risk2: Dict[str, Any]
-    ) -> float:
-        """
-        リスク管理設定の類似度を計算
-        """
-        return _calculate_risk_management_similarity(risk1, risk2)
-
-    def _calculate_tpsl_similarity(self, tpsl1: Any, tpsl2: Any) -> float:
-        """TP/SL遺伝子の類似度を計算"""
-        return _calculate_tpsl_similarity(tpsl1, tpsl2)
-
-    def _calculate_position_sizing_similarity(
-        self, ps1: Any, ps2: Any
-    ) -> float:
-        """ポジションサイジング遺伝子の類似度を計算"""
-        return _calculate_position_sizing_similarity(ps1, ps2)
-
     def silhouette_based_sharing(self, population: List[Any]) -> List[Any]:
         """
         シルエットベースの共有
@@ -512,16 +438,3 @@ class FitnessSharing:
             behavior_profile=behavior_profile,
         )
 
-    def _count_operators(
-        self, conditions: List[Any], vector: np.ndarray
-    ) -> None:
-        """条件リスト内のオペレータを再帰的にカウント"""
-        _count_operators(conditions, self.operator_map, vector)
-
-    def _count_operand_types(
-        self, conditions: List[Any]
-    ) -> tuple[float, float]:
-        """
-        オペランドのタイプ（数値/動的）をカウント
-        """
-        return _count_operand_types(conditions)

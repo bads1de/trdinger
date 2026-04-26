@@ -10,6 +10,7 @@ import DataCollectionButton, {
 import DataResetPanel from "@/components/common/DataResetPanel";
 
 import { TradingPair, TimeFrame } from "@/types/market-data";
+import { DataStatusResponse } from "@/hooks/useDataStatus";
 
 interface DataControlsProps {
   symbols: TradingPair[];
@@ -47,7 +48,7 @@ interface DataControlsProps {
   externalMarketCollectionMessage: string;
   allDataCollectionMessage: string;
   incrementalUpdateMessage: string;
-  dataStatus: any; // TODO: より具体的な型を指定する
+  dataStatus: DataStatusResponse | null;
 }
 
 const DataControls: React.FC<DataControlsProps> = ({

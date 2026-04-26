@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
 import pandas as pd
-from sqlalchemy.orm import Session, load_only, defer
+from sqlalchemy.orm import Session, defer, load_only
 
 from database.models import BacktestResult
 from app.types import SerializableValue
@@ -364,10 +364,16 @@ class BacktestResultRepository(BaseRepository):
                 .order_by(BacktestResult.created_at.desc())
                 .limit(limit)
             )
-            
-            # defer/load_onlyは型定義の問題により一時的に無効化
-            # TODO: SQLAlchemyの型定義が修正されたら再導入を検討
-            
+
+            if not include_heavy_json:
+                # SQLAlchemy 2.0.23 では defer/load_only に文字列ではなく
+                # クラスバインド属性を渡す必要がある
+                # Pyright は Column[Any] を QueryableAttribute として認識しないため type: ignore
+                query = query.options(
+                    defer(BacktestResult.equity_curve),  # type: ignore[arg-type]
+                    defer(BacktestResult.trade_history),  # type: ignore[arg-type]
+                )
+
             results = query.all()
             # 取得した結果を辞書形式のリストに変換して返します。
             return [self.to_dict(result) for result in results]

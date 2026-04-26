@@ -2,9 +2,44 @@ import { useState, useCallback, useEffect } from "react";
 import { useApiCall } from "./useApiCall";
 import { BACKEND_API_URL } from "@/constants";
 
+export interface DataStatusTimeframeDetail {
+  count: number;
+  latest_timestamp?: string | null;
+  oldest_timestamp?: string | null;
+}
+
+export interface DataStatusData {
+  data_counts: {
+    ohlcv: number;
+    funding_rates: number;
+    open_interest: number;
+  };
+  total_records: number;
+  details: {
+    ohlcv: {
+      symbol: string;
+      timeframes: Record<string, DataStatusTimeframeDetail>;
+      total_count: number;
+    };
+    funding_rates: {
+      symbol: string;
+      count: number;
+      latest_timestamp?: string | null;
+      oldest_timestamp?: string | null;
+    };
+    open_interest: {
+      symbol: string;
+      count: number;
+      latest_timestamp?: string | null;
+      oldest_timestamp?: string | null;
+    };
+  };
+}
+
 export interface DataStatusResponse {
   success?: boolean;
-  [key: string]: any;
+  data: DataStatusData;
+  message?: string;
 }
 
 /**
