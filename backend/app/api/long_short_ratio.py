@@ -18,6 +18,7 @@ from app.utils.datetime_utils import parse_datetime_optional
 from database.repositories.long_short_ratio_repository import (
     LongShortRatioRepository,
 )
+from app.utils.error_handler import ErrorHandler
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ router = APIRouter(prefix="/api/long-short-ratio", tags=["long-short-ratio"])
 
 
 @router.get("/")
+@ErrorHandler.api_endpoint("ロング/ショート比率データの取得に失敗しました")
 async def get_long_short_ratio_data(
     symbol: str = Query(..., description="取引ペア（例: BTC/USDT:USDT）"),
     period: str = Query(..., description="期間（例: 5min, 1h, 1d）"),
@@ -55,33 +57,33 @@ async def get_long_short_ratio_data(
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-    try:
-        start_dt = parse_datetime_optional(start_date)
-        if start_date and start_dt is None:
-            raise ValueError(f"無効なstart_dateです: {start_date}")
-
-        end_dt = parse_datetime_optional(end_date)
-        if end_date and end_dt is None:
-            raise ValueError(f"無効なend_dateです: {end_date}")
-
-        # データベースから取得
-        records = repository.get_long_short_ratio_data(
-            symbol=symbol,
-            period=period,
-            limit=limit,
-            start_time=start_dt,
-            end_time=end_dt,
+    start_dt = parse_datetime_optional(start_date)
+    if start_date and start_dt is None:
+        raise HTTPException(
+            status_code=400, detail=f"無効なstart_dateです: {start_date}"
         )
 
-        # 辞書形式に変換して返却
-        return [repository.to_dict(record) for record in records]
+    end_dt = parse_datetime_optional(end_date)
+    if end_date and end_dt is None:
+        raise HTTPException(
+            status_code=400, detail=f"無効なend_dateです: {end_date}"
+        )
 
-    except Exception as e:
-        logger.error(f"データ取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # データベースから取得
+    records = repository.get_long_short_ratio_data(
+        symbol=symbol,
+        period=period,
+        limit=limit,
+        start_time=start_dt,
+        end_time=end_dt,
+    )
+
+    # 辞書形式に変換して返却
+    return [repository.to_dict(record) for record in records]
 
 
 @router.post("/collect")
+@ErrorHandler.api_endpoint("ロング/ショート比率データの収集開始に失敗しました")
 async def collect_long_short_ratio_data(
     background_tasks: BackgroundTasks,
     symbol: str = Query(..., description="取引ペア（例: BTC/USDT:USDT）"),

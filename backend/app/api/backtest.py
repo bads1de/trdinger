@@ -47,6 +47,7 @@ class BacktestResultsResponse(BaseModel):
 
 
 @router.get("/results", response_model=BacktestResultsResponse)
+@ErrorHandler.api_endpoint("バックテスト結果一覧の取得に失敗しました")
 async def get_backtest_results(
     limit: int = Query(
         _BACKTEST_CONFIG.default_results_limit,
@@ -79,27 +80,23 @@ async def get_backtest_results(
     Returns:
         BacktestResultsResponse: バックテスト結果一覧と合計件数
     """
+    # orchestration_service returns api_response with data field:
+    # {"results": [...], "total": N}
+    resp = await orchestration_service.get_backtest_results(
+        db=db,
+        limit=limit,
+        offset=offset,
+        symbol=symbol,
+        strategy_name=strategy_name,
+    )
 
-    async def _get_results():
-        """バックテスト結果一覧を取得するためのメインロジックを実行します。"""
-        # orchestration_service returns api_response with data field:
-        # {"results": [...], "total": N}
-        resp = await orchestration_service.get_backtest_results(
-            db=db,
-            limit=limit,
-            offset=offset,
-            symbol=symbol,
-            strategy_name=strategy_name,
-        )
-
-        # orchestration_service now returns normalized response with
-        # top-level `results` and `total`
-        return resp
-
-    return await ErrorHandler.safe_execute_async(_get_results)
+    # orchestration_service now returns normalized response with
+    # top-level `results` and `total`
+    return resp
 
 
 @router.delete("/results-all")
+@ErrorHandler.api_endpoint("全バックテスト結果の削除に失敗しました")
 async def delete_all_backtest_results(
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
@@ -116,15 +113,11 @@ async def delete_all_backtest_results(
     Returns:
         削除結果
     """
-
-    async def _delete_all_results():
-        """すべてのバックテスト結果を削除するためのメインロジックを実行します。"""
-        return await orchestration_service.delete_all_backtest_results(db=db)
-
-    return await ErrorHandler.safe_execute_async(_delete_all_results)
+    return await orchestration_service.delete_all_backtest_results(db=db)
 
 
 @router.get("/results/{result_id}/", response_model=BacktestResponse)
+@ErrorHandler.api_endpoint("バックテスト結果の取得に失敗しました")
 async def get_backtest_result_by_id(
     result_id: int,
     db: Session = Depends(get_db),
@@ -143,34 +136,30 @@ async def get_backtest_result_by_id(
     Returns:
         バックテスト結果
     """
+    result = ensure_response_dict(
+        await orchestration_service.get_backtest_result_by_id(
+            db=db, result_id=result_id
+        )
+    )
 
-    async def _get_by_id():
-        """ID指定でバックテスト結果を取得するためのメインロジックを実行します。"""
-        result = ensure_response_dict(
-            await orchestration_service.get_backtest_result_by_id(
-                db=db, result_id=result_id
-            )
+    # エラーハンドリング
+    if not result.get("success", False):
+        raise HTTPException(
+            status_code=result.get("status_code", 500),
+            detail=result.get("error", "Unknown error"),
         )
 
-        # エラーハンドリング
-        if not result.get("success", False):
-            raise HTTPException(
-                status_code=result.get("status_code", 500),
-                detail=result.get("error", "Unknown error"),
-            )
-
-        payload = extract_response_data(result)
-        return BacktestResponse(
-            success=result.get("success", False),
-            result=result.get("result") or payload or None,
-            error=result.get("error"),
-            timestamp=result.get("timestamp", now_iso()),
-        )
-
-    return await ErrorHandler.safe_execute_async(_get_by_id)
+    payload = extract_response_data(result)
+    return BacktestResponse(
+        success=result.get("success", False),
+        result=result.get("result") or payload or None,
+        error=result.get("error"),
+        timestamp=result.get("timestamp", now_iso()),
+    )
 
 
 @router.delete("/results/{result_id}/")
+@ErrorHandler.api_endpoint("バックテスト結果の削除に失敗しました")
 async def delete_backtest_result(
     result_id: int,
     db: Session = Depends(get_db),
@@ -189,26 +178,22 @@ async def delete_backtest_result(
     Returns:
         削除結果
     """
+    result = await orchestration_service.delete_backtest_result(
+        db=db, result_id=result_id
+    )
 
-    async def _delete_result():
-        """バックテスト結果を削除するためのメインロジックを実行します。"""
-        result = await orchestration_service.delete_backtest_result(
-            db=db, result_id=result_id
+    # エラーハンドリング
+    if not result["success"]:
+        raise HTTPException(
+            status_code=result.get("status_code", 500),
+            detail=result.get("error", "Unknown error"),
         )
 
-        # エラーハンドリング
-        if not result["success"]:
-            raise HTTPException(
-                status_code=result.get("status_code", 500),
-                detail=result.get("error", "Unknown error"),
-            )
-
-        return result
-
-    return await ErrorHandler.safe_execute_async(_delete_result)
+    return result
 
 
 @router.get("/strategies")
+@ErrorHandler.api_endpoint("サポートされている戦略一覧の取得に失敗しました")
 async def get_supported_strategies(
     orchestration_service: BacktestOrchestrationService = Depends(
         get_backtest_orchestration_service
@@ -223,9 +208,4 @@ async def get_supported_strategies(
     Returns:
         戦略一覧
     """
-
-    async def _get_strategies():
-        """サポートされている戦略一覧を取得するためのメインロジックを実行します。"""
-        return await orchestration_service.get_supported_strategies()
-
-    return await ErrorHandler.safe_execute_async(_get_strategies)
+    return await orchestration_service.get_supported_strategies()

@@ -48,6 +48,7 @@ class StrategyStatsResponse(BaseModel):
 
 
 @router.get("/", response_model=StrategiesResponse)
+@ErrorHandler.api_endpoint("生成された戦略の一覧取得に失敗しました")
 async def get_strategies(
     limit: int = Query(
         DEFAULT_STRATEGIES_LIMIT,
@@ -92,23 +93,18 @@ async def get_strategies(
     Returns:
         生成された戦略データ
     """
+    result = strategy_service.get_strategies(
+        limit=limit,
+        offset=offset,
+        risk_level=risk_level,
+        experiment_id=experiment_id,
+        min_fitness=min_fitness,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
 
-    async def _get_strategies():
-        """生成された戦略の一覧を取得するためのメインロジックを実行します。"""
-        result = strategy_service.get_strategies(
-            limit=limit,
-            offset=offset,
-            risk_level=risk_level,
-            experiment_id=experiment_id,
-            min_fitness=min_fitness,
-            sort_by=sort_by,
-            sort_order=sort_order,
-        )
-
-        return StrategiesResponse(
-            strategies=result.get("strategies", []),
-            total_count=result.get("total_count", 0),
-            has_more=result.get("has_more", False),
-        )
-
-    return await ErrorHandler.safe_execute_async(_get_strategies)
+    return StrategiesResponse(
+        strategies=result.get("strategies", []),
+        total_count=result.get("total_count", 0),
+        has_more=result.get("has_more", False),
+    )

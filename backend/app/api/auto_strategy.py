@@ -7,7 +7,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.api.dependencies import (
@@ -108,11 +108,11 @@ class ExperimentDetailResponse(BaseModel):
     completed_at: Optional[str] = None
 
 
-# APIエンドポイント
 @router.get(
     "/experiments/{experiment_id}",
     response_model=ExperimentDetailResponse,
 )
+@ErrorHandler.api_endpoint("実験詳細の取得に失敗しました")
 async def get_experiment_detail(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(
@@ -135,18 +135,13 @@ async def get_experiment_detail(
     Raises:
         HTTPException: 実験が見つからない場合
     """
-    from fastapi import HTTPException
-
-    async def _get_detail():
-        detail = auto_strategy_service.get_experiment_detail(experiment_id)
-        if not detail:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"実験が見つかりません: {experiment_id}",
-            )
-        return ExperimentDetailResponse(**detail)
-
-    return await ErrorHandler.safe_execute_async(_get_detail)
+    detail = auto_strategy_service.get_experiment_detail(experiment_id)
+    if not detail:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"実験が見つかりません: {experiment_id}",
+        )
+    return ExperimentDetailResponse(**detail)
 
 
 @router.post(
@@ -230,6 +225,7 @@ async def generate_strategy(
 
 
 @router.get("/experiments", response_model=ListExperimentsResponse)
+@ErrorHandler.api_endpoint("実験一覧の取得に失敗しました")
 async def list_experiments(
     auto_strategy_service: AutoStrategyService = Depends(
         get_auto_strategy_service
@@ -247,13 +243,8 @@ async def list_experiments(
     Returns:
         ListExperimentsResponse: 実験一覧情報
     """
-
-    async def _list_experiments():
-        """実験一覧を取得します。"""
-        experiments = auto_strategy_service.list_experiments()
-        return ListExperimentsResponse(experiments=experiments)
-
-    return await ErrorHandler.safe_execute_async(_list_experiments)
+    experiments = auto_strategy_service.list_experiments()
+    return ListExperimentsResponse(experiments=experiments)
 
 
 @router.post(
@@ -261,6 +252,7 @@ async def list_experiments(
     response_model=StopExperimentResponse,
     status_code=status.HTTP_200_OK,
 )
+@ErrorHandler.api_endpoint("実験の停止に失敗しました")
 async def stop_experiment(
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(
@@ -283,21 +275,14 @@ async def stop_experiment(
     Raises:
         HTTPException: 実験IDが存在しない場合や既に完了している場合
     """
-
-    async def _stop_experiment():
-        """指定された実験を停止します。"""
-        try:
-            result = auto_strategy_service.stop_experiment(experiment_id)
-            return StopExperimentResponse(
-                success=result.get("success", False),
-                message=result.get("message", "実験を停止しました"),
-            )
-        except ValueError as e:
-            from fastapi import HTTPException
-
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
-
-    return await ErrorHandler.safe_execute_async(_stop_experiment)
+    try:
+        result = auto_strategy_service.stop_experiment(experiment_id)
+        return StopExperimentResponse(
+            success=result.get("success", False),
+            message=result.get("message", "実験を停止しました"),
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )

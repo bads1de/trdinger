@@ -201,6 +201,7 @@ class MLStatusResponse(BaseModel):
 
 
 @router.post("/train", response_model=MLTrainingResponse)
+@ErrorHandler.api_endpoint("MLトレーニングの開始に失敗しました")
 async def start_ml_training(
     config: MLTrainingRequest,
     background_tasks: BackgroundTasks,
@@ -223,28 +224,24 @@ async def start_ml_training(
     Returns:
         MLTrainingResponse: トレーニング開始応答
     """
-
-    async def _start_training():
-        """MLトレーニングを開始するためのメインロジックを実行します。"""
-        result = ensure_response_dict(
-            await ml_service.start_training(
-                config=config, background_tasks=background_tasks, db=db
-            )
+    result = ensure_response_dict(
+        await ml_service.start_training(
+            config=config, background_tasks=background_tasks, db=db
         )
+    )
 
-        payload = extract_response_data(result)
-        return MLTrainingResponse(
-            success=result.get("success", False),
-            message=result.get("message", ""),
-            training_id=result.get("training_id")
-            or payload.get("training_id"),
-            timestamp=result.get("timestamp", now_iso()),
-        )
-
-    return await ErrorHandler.safe_execute_async(_start_training)
+    payload = extract_response_data(result)
+    return MLTrainingResponse(
+        success=result.get("success", False),
+        message=result.get("message", ""),
+        training_id=result.get("training_id")
+        or payload.get("training_id"),
+        timestamp=result.get("timestamp", now_iso()),
+    )
 
 
 @router.get("/training/status", response_model=MLStatusResponse)
+@ErrorHandler.api_endpoint("MLトレーニング状態の取得に失敗しました")
 async def get_ml_training_status(
     ml_service: MLTrainingService = Depends(get_ml_training_service),
 ):
@@ -265,6 +262,7 @@ async def get_ml_training_status(
 
 
 @router.get("/model-info")
+@ErrorHandler.api_endpoint("MLモデル情報の取得に失敗しました")
 async def get_ml_model_info(
     ml_service: MLTrainingService = Depends(get_ml_training_service),
 ):
@@ -280,15 +278,11 @@ async def get_ml_model_info(
     Returns:
         MLモデルの詳細情報を含むJSONレスポンス
     """
-
-    async def _get_model_info():
-        """現在のMLモデル情報を取得するためのメインロジックを実行します。"""
-        return await ml_service.get_model_info()
-
-    return await ErrorHandler.safe_execute_async(_get_model_info)
+    return await ml_service.get_model_info()
 
 
 @router.post("/stop")
+@ErrorHandler.api_endpoint("MLトレーニングの停止に失敗しました")
 async def stop_ml_training(
     ml_service: MLTrainingService = Depends(get_ml_training_service),
 ):
@@ -304,9 +298,4 @@ async def stop_ml_training(
     Returns:
         停止処理結果を含むJSONレスポンス
     """
-
-    async def _stop_training():
-        """MLトレーニングを停止するためのメインロジックを実行します。"""
-        return await ml_service.stop_training()
-
-    return await ErrorHandler.safe_execute_async(_stop_training)
+    return await ml_service.stop_training()

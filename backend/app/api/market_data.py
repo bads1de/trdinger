@@ -24,6 +24,7 @@ router = APIRouter(prefix="/api/market-data", tags=["market-data"])
 
 
 @router.get("/ohlcv")
+@ErrorHandler.api_endpoint("OHLCVデータ取得エラー")
 async def get_ohlcv_data(
     symbol: str = Query(
         ..., description="取引ペアシンボル（例: BTC/USDT:USDT）"
@@ -62,21 +63,15 @@ async def get_ohlcv_data(
         service: 市場データオーケストレーションサービス
 
     Returns:
-        OHLCVデータを含むJSONレスポンス
+        OHLCVデータを含む JSONレスポンス
 
     Raises:
         HTTPException: パラメータが無効な場合やデータベースエラーが発生した場合
     """
-
-    async def _get_ohlcv():
-        return await service.get_ohlcv_data(
-            symbol=symbol,
-            timeframe=timeframe,
-            limit=limit,
-            start_date=start_date,
-            end_date=end_date,
-        )
-
-    return await ErrorHandler.safe_execute_async(
-        _get_ohlcv, message="OHLCVデータ取得エラー"
+    return await service.get_ohlcv_data(
+        symbol=symbol,
+        timeframe=timeframe,
+        limit=limit,
+        start_date=start_date,
+        end_date=end_date,
     )
