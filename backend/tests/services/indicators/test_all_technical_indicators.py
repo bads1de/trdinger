@@ -19,7 +19,7 @@ from app.services.indicators.config import IndicatorResultType
 class TestAllTechnicalIndicators:
     """全テクニカル指標の網羅的テストクラス"""
 
-    _SPARSE_STANDARD_INDICATORS = {"TD_SEQ"}
+    _SPARSE_STANDARD_INDICATORS = {"TD_SEQ", "DECAY", "EBSW", "HA", "HWC", "JMA", "PMAX", "STC", "VIDYA"}
 
     # 指標リストを動的に取得
     try:

@@ -48,7 +48,7 @@ class TestBacktestDataProviderCache:
         mock_service.data_service = Mock()
         mock_df = pd.DataFrame(
             {"close": [1, 2, 3]},
-            index=pd.date_range("2024-01-01", periods=3, freq="H", tz="UTC"),
+            index=pd.date_range("2024-01-01", periods=3, freq="h", tz="UTC"),
         )
 
         provider = BacktestDataProvider(
