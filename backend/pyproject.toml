@@ -92,6 +92,12 @@ dependencies = [
 
     # 非同期DNSリゾルバの互換性維持
     "pycares<5.0.0",
+
+    # AI Agent関連
+    "langgraph>=0.2.0",
+    "langchain-google-genai>=2.0.0",
+    "langchain-core>=0.3.0",
+    "sse-starlette>=2.0.0",
 ]
 
 [project.optional-dependencies]

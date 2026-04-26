@@ -402,7 +402,7 @@ class TestErrorHandling:
         # アサーション（HTTPExceptionでハンドリングされる）
         assert response.status_code == 500
         data = response.json()
-        assert "Database error" in data.get("detail", "")
+        assert "ロング/ショート比率データの取得に失敗しました" in data.get("detail", "")
 
 
 class TestPeriodsValidation:
