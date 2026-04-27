@@ -107,6 +107,7 @@ test = [
     "pytest-cov",
     "pytest-env",
     "httpx",
+    "pyright",
 ]
 dev = [
     "black",

@@ -499,20 +499,13 @@ class TestATRCalculationAccuracy:
         atr = VolatilityIndicators.atr(high, low, close, length=length)
         tr = VolatilityIndicators.true_range(high, low, close)
 
-        # RMA（Wilder's smoothing）でATRを手動計算
-        # pandas-taの実装に合わせる:
-        # 1. tr.dropna() で有効なTR値のみ取得
-        # 2. 最初のATRは、NaNを含むTRの先頭にNaNを追加した後、ewmで計算
-        # 実際には: pandas-taは tr.dropna() した後、先頭にNaNを追加して ewm(alpha=1/length, min_periods=length)
-
+        # pandas-taのATR実装: RMA (Wilder's smoothing)
+        # ATRはインデックスlengthから始まり、最初のATRは最初のlength個のTRの平均
         tr_valid = tr.dropna()
-        alpha = 1.0 / length
 
-        # 正しい期待値: pandas-taは内部的に talibまたは同等の計算を使用
-        # 単純に最初のlength個のTRのSMAから始まり、その後Wilder's smoothing
         if len(tr_valid) >= length:
             expected_rma_values = []
-            # 最初のRMA値（length番目のTRまでの単純平均）
+            # 最初のATR値（最初のlength個のTRの平均）
             first_rma = tr_valid.iloc[:length].mean()
             expected_rma_values.append(first_rma)
 
