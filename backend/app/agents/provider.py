@@ -4,11 +4,11 @@ import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 
-def get_llm_provider(model: str = "gemma-4-31b-it") -> ChatGoogleGenerativeAI:
+def get_llm_provider(model: str = "gemini-2.0-flash-exp") -> ChatGoogleGenerativeAI:
     """Get configured LLM provider for the agent.
 
     Args:
-        model: The model name to use. Defaults to "gemma-4-31b-it".
+        model: The model name to use. Defaults to "gemini-2.0-flash-exp".
 
     Returns:
         ChatGoogleGenerativeAI: Configured LLM instance.
