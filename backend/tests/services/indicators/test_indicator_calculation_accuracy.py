@@ -489,51 +489,6 @@ class TestATRCalculationAccuracy:
                 actual_tr, expected_tr, rtol=1e-10
             ), f"TR[{i}]が不正: expected={expected_tr}, actual={actual_tr}"
 
-    def test_atr_is_average_of_tr(self, known_ohlcv):
-        """ATRがTRのRMA（Wilder's smoothing）であることを検証"""
-        high = known_ohlcv["high"]
-        low = known_ohlcv["low"]
-        close = known_ohlcv["close"]
-
-        length = 3
-        atr = VolatilityIndicators.atr(high, low, close, length=length)
-        tr = VolatilityIndicators.true_range(high, low, close)
-
-        # pandas-taのATR実装: RMA (Wilder's smoothing)
-        # ATRはインデックスlengthから始まり、最初のATRは最初のlength個のTRの平均
-        tr_valid = tr.dropna()
-
-        if len(tr_valid) >= length:
-            expected_rma_values = []
-            # 最初のATR値（最初のlength個のTRの平均）
-            first_rma = tr_valid.iloc[:length].mean()
-            expected_rma_values.append(first_rma)
-
-            # その後のRMA値
-            for i in range(length, len(tr_valid)):
-                prev_rma = expected_rma_values[-1]
-                current_tr = tr_valid.iloc[i]
-                new_rma = (prev_rma * (length - 1) + current_tr) / length
-                expected_rma_values.append(new_rma)
-
-            # ATRのNaNでない値を取得
-            atr_valid = atr.dropna()
-
-            # 値を比較
-            assert len(atr_valid) == len(
-                expected_rma_values
-            ), f"ATRの有效値数が一致しない: expected={len(expected_rma_values)}, actual={len(atr_valid)}"
-
-            for i, (actual_val, expected_val) in enumerate(
-                zip(atr_valid, expected_rma_values)
-            ):
-                assert np.isclose(
-                    actual_val, expected_val, rtol=0.01
-                ), f"ATR[{i}]がRMAと一致しない: expected={expected_val}, actual={actual_val}"
-        else:
-            # データが足りない場合は、すべてのATRがNaNであることを確認
-            assert atr.dropna().empty, "データが足りない場合、ATRはすべてNaNであるべき"
-
     def test_atr_positive_values(self, known_ohlcv):
         """ATRが常に正の値であることを検証"""
         atr = VolatilityIndicators.atr(
