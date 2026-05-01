@@ -5,7 +5,6 @@ BaseDataCollectionOrchestrationService のテストモジュール
 - _parse_datetime: 日付文字列パース
 - _get_db_session: DBセッション管理
 - _create_success_response / _create_error_response: レスポンス生成
-- _normalize_derivative_symbol: シンボル正規化
 """
 
 from datetime import datetime
@@ -206,39 +205,3 @@ class TestCreateErrorResponse:
 
         assert result["success"] is False
         assert result["data"]["partial_count"] == 5
-
-
-class TestNormalizeDerivativeSymbol:
-    """_normalize_derivative_symbol のテスト"""
-
-    def test_already_normalized(self, service: BaseDataCollectionOrchestrationService):
-        """既にコロン記法のシンボルはそのまま返される"""
-        assert service._normalize_derivative_symbol("BTC/USDT:USDT") == "BTC/USDT:USDT"
-        assert service._normalize_derivative_symbol("ETH/USD:USD") == "ETH/USD:USD"
-
-    def test_usdt_pair_adds_suffix(
-        self, service: BaseDataCollectionOrchestrationService
-    ):
-        """USDT ペアにサフィックスが付与される"""
-        assert service._normalize_derivative_symbol("BTC/USDT") == "BTC/USDT:USDT"
-        assert service._normalize_derivative_symbol("ETH/USDT") == "ETH/USDT:USDT"
-
-    def test_usd_pair_adds_suffix(
-        self, service: BaseDataCollectionOrchestrationService
-    ):
-        """USD ペアにサフィックスが付与される"""
-        assert service._normalize_derivative_symbol("BTC/USD") == "BTC/USD:USD"
-        assert service._normalize_derivative_symbol("ETH/USD") == "ETH/USD:USD"
-
-    def test_plain_symbol_adds_usdt_suffix(
-        self, service: BaseDataCollectionOrchestrationService
-    ):
-        """プレーンシンボルには :USDT が付与される"""
-        assert service._normalize_derivative_symbol("BTC") == "BTC:USDT"
-        assert service._normalize_derivative_symbol("SOL") == "SOL:USDT"
-
-    def test_various_symbols(self, service: BaseDataCollectionOrchestrationService):
-        """様々なシンボル形式が正しく正規化される"""
-        assert service._normalize_derivative_symbol("DOGE/USDT") == "DOGE/USDT:USDT"
-        assert service._normalize_derivative_symbol("XRP/USD") == "XRP/USD:USD"
-        assert service._normalize_derivative_symbol("BTC/USDT:USDT") == "BTC/USDT:USDT"

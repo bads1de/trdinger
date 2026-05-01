@@ -14,6 +14,7 @@ from typing import Any, Callable, Dict, List, Optional
 import ccxt.async_support as ccxt
 
 from app.config.unified_config import unified_config
+from app.utils.data_conversion import normalize_market_symbol
 from app.utils.error_handler import (
     DataError,
     ErrorHandler,
@@ -488,27 +489,6 @@ class BybitService(ABC):
             api_symbol = api_symbol.split(":")[0]
         return api_symbol
 
-    def _normalize_symbol_for_ccxt(self, symbol: str) -> str:
-        """
-        シンボルをCCXT/Bybit用の形式に正規化する
-
-        Args:
-            symbol: 取引ペアシンボル
-
-        Returns:
-            CCXT/Bybit用のシンボル
-        """
-        if not isinstance(symbol, str):
-            symbol = str(symbol)
-
-        if ":" in symbol:
-            return symbol
-        if symbol.endswith("/USDT"):
-            return f"{symbol}:USDT"
-        if symbol.endswith("/USD"):
-            return f"{symbol}:USD"
-        return f"{symbol}:USDT"
-
     async def _execute_with_db_session(
         self, func: Callable[..., Any], **kwargs: Any
     ) -> Any:
@@ -600,7 +580,7 @@ class BybitService(ABC):
 
         # 履歴取得メソッドを取得
         # シンボルを正規化
-        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
+        normalized_symbol = normalize_market_symbol(symbol)
         fetch_history_method = getattr(
             self.exchange, config.fetch_history_method_name
         )
@@ -709,7 +689,7 @@ class BybitService(ABC):
             取得・保存結果を含む辞書
         """
         # シンボルを正規化
-        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
+        normalized_symbol = normalize_market_symbol(symbol)
         if fetch_all:
             # 全期間データを取得
             latest_timestamp = await self._get_latest_timestamp_from_db(

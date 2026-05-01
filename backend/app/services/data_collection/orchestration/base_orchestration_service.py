@@ -13,6 +13,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
+from app.utils.data_conversion import normalize_market_symbol
 from app.utils.response import api_response, error_response
 from database.connection import get_db
 
@@ -125,30 +126,3 @@ class BaseDataCollectionOrchestrationService:
             context=context,
             data=data,
         )
-
-    def _normalize_derivative_symbol(self, symbol: str) -> str:
-        """
-        永続化済みのデリバティブシンボル形式に正規化する。
-
-        シンボルをBybitの標準形式（BTC/USDT:USDT）に正規化します。
-        コロンが含まれていない場合は、通貨ペアに基づいて適切なサフィックスを追加します。
-
-        Args:
-            symbol: 正規化するシンボル（例: 'BTC/USDT', 'BTC/USDT:USDT'）
-
-        Returns:
-            str: 正規化されたシンボル（例: 'BTC/USDT:USDT'）
-
-        変換ルール:
-            - 既にコロン付き（例: BTC/USDT:USDT）: そのまま返す
-            - /USDTで終わる: :USDTを追加
-            - /USDで終わる: :USDを追加
-            - その他: :USDTを追加
-        """
-        if ":" in symbol:
-            return symbol
-        if symbol.endswith("/USDT"):
-            return f"{symbol}:USDT"
-        if symbol.endswith("/USD"):
-            return f"{symbol}:USD"
-        return f"{symbol}:USDT"

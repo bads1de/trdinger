@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.services.data_collection.orchestration.base_orchestration_service import (
     BaseDataCollectionOrchestrationService,
 )
+from app.utils.data_conversion import normalize_market_symbol
 from database.repositories.open_interest_repository import (
     OpenInterestRepository,
 )
@@ -141,7 +142,7 @@ class OpenInterestOrchestrationService(BaseDataCollectionOrchestrationService):
                 start_time = self._parse_datetime(start_date)
                 end_time = self._parse_datetime(end_date)
 
-                normalized_symbol = self._normalize_derivative_symbol(symbol)
+                normalized_symbol = normalize_market_symbol(symbol)
 
                 records = repository.get_open_interest_data(
                     symbol=normalized_symbol,

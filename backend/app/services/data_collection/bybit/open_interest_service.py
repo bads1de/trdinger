@@ -12,6 +12,7 @@ from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import (
     get_open_interest_config,
 )
+from app.utils.data_conversion import normalize_market_symbol
 from database.repositories.open_interest_repository import (
     OpenInterestRepository,
 )
@@ -61,7 +62,7 @@ class BybitOpenInterestService(BybitService):
             ValueError: パラメータが無効な場合
         """
         self._validate_parameters(symbol, limit)
-        normalized_symbol = self._normalize_symbol_for_ccxt(symbol)
+        normalized_symbol = normalize_market_symbol(symbol)
         return await self._handle_ccxt_errors(
             f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
             self.exchange.fetch_open_interest_history,  # type: ignore[reportAttributeAccessIssue]

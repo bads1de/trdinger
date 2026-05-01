@@ -282,13 +282,6 @@ class TestHelperMethods:
         result = service._convert_to_api_symbol(123)
         assert result == "123"
 
-    async def test_normalize_symbol_for_ccxt(self, service):
-        """CCXT用シンボル正規化を確認"""
-        assert service._normalize_symbol_for_ccxt("BTC/USDT:USDT") == "BTC/USDT:USDT"
-        assert service._normalize_symbol_for_ccxt("BTC/USDT") == "BTC/USDT:USDT"
-        assert service._normalize_symbol_for_ccxt("BTC/USD") == "BTC/USD:USD"
-        assert service._normalize_symbol_for_ccxt(123) == "123:USDT"
-
 
 @pytest.mark.asyncio
 class TestProcessPageData:

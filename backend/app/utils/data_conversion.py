@@ -287,7 +287,7 @@ def normalize_market_symbol(symbol: Any) -> str:
     様々な形式のシンボル表記をBybitの標準形式（BTC/USDT:USDT）に正規化します。
     BybitService._normalize_symbol_for_ccxt および
     BaseDataCollectionOrchestrationService._normalize_derivative_symbol
-    の共通化を目的とする。
+    を共通化した関数。
 
     Args:
         symbol: 正規化するシンボル（例: "BTC/USDT", "BTCUSDT", "BTC/USDT:USDT"）
