@@ -7,7 +7,9 @@ from __future__ import annotations
 import logging
 import random
 from dataclasses import dataclass
-from typing import Any, Dict, List, cast
+from typing import Dict, List, cast
+
+from app.types import SerializableValue, StrategyGeneDict
 
 from ..config.constants import PositionSizingMethod
 from .base_gene import BaseGene
@@ -17,7 +19,7 @@ from .gene_ranges import (
 )
 
 
-def _ensure_position_size_bounds(params: Dict[str, Any]) -> None:
+def _ensure_position_size_bounds(params: Dict[str, SerializableValue]) -> None:
     """min/max_position_size の論理整合性を補正する。"""
     min_size = params.get("min_position_size")
     max_size = params.get("max_position_size")
@@ -75,7 +77,7 @@ class PositionSizingGene(BaseGene):
     priority: float = 1.0
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "PositionSizingGene":
+    def from_dict(cls, data: StrategyGeneDict) -> "PositionSizingGene":
         """辞書から復元。無効な method はデフォルトにフォールバック。"""
         from .base_gene import BaseGene
 

@@ -6,8 +6,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
+from app.types import StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
 
 from ..config.constants import TPSLMethod
@@ -48,7 +49,7 @@ class TPSLGene(BaseGene):
     NUMERIC_RANGES = dict(TPSL_VALIDATION_RANGES)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> TPSLGene:
+    def from_dict(cls, data: StrategyGeneDict) -> TPSLGene:
         """辞書形式からTPSLGeneオブジェクトを復元"""
         return BaseGene.from_dict.__func__(cls, data)
 

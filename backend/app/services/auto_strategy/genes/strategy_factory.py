@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
+
+from app.types import SerializableValue
 
 from .conditions import Condition, ConditionGroup
 from .entry import EntryGene
@@ -65,8 +67,8 @@ def assemble_strategy_gene(
         List[Union[Condition, ConditionGroup]]
     ] = None,
     tool_genes: Optional[List[ToolGene]] = None,
-    risk_management: Optional[Dict[str, Any]] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    risk_management: Optional[Dict[str, SerializableValue]] = None,
+    metadata: Optional[Dict[str, SerializableValue]] = None,
 ):
     """部品から StrategyGene を構築する。"""
     final_metadata = dict(metadata or {})

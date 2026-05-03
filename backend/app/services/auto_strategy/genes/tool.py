@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Dict
 
+from app.types import SerializableValue, StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
 
 
@@ -29,9 +30,9 @@ class ToolGene:
     enabled: bool = True
 
     # ツール固有のパラメータ
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: Dict[str, SerializableValue] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> StrategyGeneDict:
         """
         辞書形式に変換
 
@@ -41,7 +42,7 @@ class ToolGene:
         return dataclass_to_dict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ToolGene":
+    def from_dict(cls, data: StrategyGeneDict) -> "ToolGene":
         """
         辞書から生成
 

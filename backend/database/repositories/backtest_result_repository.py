@@ -13,7 +13,7 @@ import pandas as pd
 from sqlalchemy.orm import Session, defer, load_only
 
 from database.models import BacktestResult
-from app.types import SerializableValue
+from app.types import BacktestResultDict, SerializableValue
 
 from .base_repository import BaseRepository
 
@@ -26,7 +26,7 @@ class BacktestResultRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, BacktestResult)
 
-    def to_dict(self, model_instance: BacktestResult) -> dict:
+    def to_dict(self, model_instance: BacktestResult) -> BacktestResultDict:
         """バックテスト結果を辞書に変換
 
         Args:

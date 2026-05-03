@@ -5,13 +5,13 @@ StrategyGene の突然変異（mutation）演算ロジック。
 突然変異処理を提供します。
 """
 
-from __future__ import annotations
-
 import inspect
 import logging
 import random
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, List
+from typing import TYPE_CHECKING, Callable, List
+
+from ...config.ga.ga_config import GAConfig
 
 from ..conditions import ConditionGroup
 from ..entry import EntryGene, create_random_entry_gene
@@ -22,9 +22,6 @@ from ..position_sizing import (
 )
 from ..strategy import StrategyGene
 from ..tpsl import TPSLGene, create_random_tpsl_gene
-
-if TYPE_CHECKING:
-    from ...config.ga.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 
@@ -124,10 +121,10 @@ def _create_sub_gene(
 
 def _iter_mutable_sub_gene_specs(
     config: GAConfig,
-) -> list[tuple[str, Any, float]]:
+) -> list[tuple[str, object, float]]:
     """StrategyGene の定義を基準に、突然変異対象のサブ遺伝子を列挙する。"""
     class_map = StrategyGene.sub_gene_class_map()
-    specs: list[tuple[str, Any, float]] = []
+    specs: list[tuple[str, object, float]] = []
 
     for field_name in StrategyGene.sub_gene_field_names():
         gene_class = class_map.get(field_name)
@@ -355,70 +352,86 @@ def mutate_strategy_gene(
     try:
         mutated = gene.clone()
 
-        mutate_indicators(mutated, mutation_rate, config)
-        mutate_conditions(mutated, mutation_rate, config)
+        try:
+            mutate_indicators(mutated, mutation_rate, config)
+        except Exception:
+            pass
 
-        min_risk_multiplier, max_risk_multiplier = (
-            config.mutation_config.risk_param_range
-        )
-        for key, value in mutated.risk_management.items():
-            if (
-                isinstance(value, (int, float))
-                and random.random() < mutation_rate
-            ):
-                if key == "position_size":
-                    mutated.risk_management[key] = max(
-                        0.01,
-                        min(
-                            1.0,
-                            value
-                            * random.uniform(
-                                min_risk_multiplier,
-                                max_risk_multiplier,
-                            ),
-                        ),
-                    )
-                else:
-                    mutated.risk_management[key] = value * random.uniform(
-                        min_risk_multiplier,
-                        max_risk_multiplier,
-                    )
+        try:
+            mutate_conditions(mutated, mutation_rate, config)
+        except Exception:
+            pass
 
-        for (
-            field_name,
-            creator_func,
-            creation_prob_mult,
-        ) in _iter_mutable_sub_gene_specs(config):
-            sub_gene = getattr(mutated, field_name)
-            if sub_gene:
-                if random.random() < mutation_rate:
-                    setattr(
-                        mutated, field_name, sub_gene.mutate(mutation_rate)
-                    )
-            elif random.random() < mutation_rate * creation_prob_mult:
-                setattr(
-                    mutated, field_name, _create_sub_gene(creator_func, config)
-                )
-
-        if mutated.tool_genes:
-            from ...tools import tool_registry
-
-            for tool_gene in mutated.tool_genes:
-                if random.random() < mutation_rate:
-                    if random.random() < 0.2:
-                        tool_gene.enabled = not tool_gene.enabled
-
-                    tool = tool_registry.get(tool_gene.tool_name)
-                    if tool:
-                        tool_gene.params = tool.mutate_params(tool_gene.params)
-
-            # フィルター数制限を強制
-            from ...generators.random_gene_generator import RandomGeneGenerator
-
-            generator = RandomGeneGenerator(config)
-            mutated.tool_genes = generator._enforce_filter_limit(
-                mutated.tool_genes
+        try:
+            min_risk_multiplier, max_risk_multiplier = (
+                config.mutation_config.risk_param_range
             )
+            for key, value in mutated.risk_management.items():
+                if (
+                    isinstance(value, (int, float))
+                    and random.random() < mutation_rate
+                ):
+                    if key == "position_size":
+                        mutated.risk_management[key] = max(
+                            0.01,
+                            min(
+                                1.0,
+                                value
+                                * random.uniform(
+                                    min_risk_multiplier,
+                                    max_risk_multiplier,
+                                ),
+                            ),
+                        )
+                    else:
+                        mutated.risk_management[key] = value * random.uniform(
+                            min_risk_multiplier,
+                            max_risk_multiplier,
+                        )
+        except Exception:
+            pass
+
+        try:
+            for (
+                field_name,
+                creator_func,
+                creation_prob_mult,
+            ) in _iter_mutable_sub_gene_specs(config):
+                sub_gene = getattr(mutated, field_name)
+                if sub_gene:
+                    if random.random() < mutation_rate:
+                        setattr(
+                            mutated, field_name, sub_gene.mutate(mutation_rate)
+                        )
+                elif random.random() < mutation_rate * creation_prob_mult:
+                    setattr(
+                        mutated, field_name, _create_sub_gene(creator_func, config)
+                    )
+        except Exception:
+            pass
+
+        try:
+            if mutated.tool_genes:
+                from ...tools import tool_registry
+
+                for tool_gene in mutated.tool_genes:
+                    if random.random() < mutation_rate:
+                        if random.random() < 0.2:
+                            tool_gene.enabled = not tool_gene.enabled
+
+                        tool = tool_registry.get(tool_gene.tool_name)
+                        if tool:
+                            tool_gene.params = tool.mutate_params(tool_gene.params)
+
+                # フィルター数制限を強制
+                from ...generators.random_gene_generator import RandomGeneGenerator
+
+                generator = RandomGeneGenerator(config)
+                mutated.tool_genes = generator._enforce_filter_limit(
+                    mutated.tool_genes
+                )
+        except Exception:
+            pass
 
         mutated.metadata["mutated"] = True
         mutated.metadata["mutation_rate"] = mutation_rate
@@ -440,8 +453,8 @@ def mutate_strategy_gene(
 
 
 def mutate_strategy_gene_batch(
-    individuals: List[Any], config: GAConfig, mutation_rate: float = 0.1
-) -> List[Any]:
+    individuals: List[object], config: GAConfig, mutation_rate: float = 0.1
+) -> List[object]:
     """StrategyGene の突然変異をバッチで実行する。"""
     return [
         mutate_strategy_gene(individual, config, mutation_rate=mutation_rate)

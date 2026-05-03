@@ -7,8 +7,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
+from app.types import StrategyGeneDict
 if TYPE_CHECKING:
     from ..config.ga.ga_config import GAConfig
 
@@ -101,7 +102,7 @@ class EntryGene:
 
         return len(errors) == 0, errors
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> StrategyGeneDict:
         """
         辞書形式に変換
 
@@ -111,7 +112,7 @@ class EntryGene:
         return dataclass_to_dict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "EntryGene":
+    def from_dict(cls, data: StrategyGeneDict) -> "EntryGene":
         """
         辞書形式から復元
 

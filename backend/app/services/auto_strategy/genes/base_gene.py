@@ -15,7 +15,7 @@ from typing import Dict, List, Tuple, Union, get_type_hints
 
 from typing_extensions import Self
 
-from app.types import SerializableValue
+from app.types import SerializableValue, StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class BaseGene(ABC):
     NUMERIC_RANGES: Dict[str, Tuple[float, float]] = {}
     _SKIP_FIELD_CONVERSION = object()
 
-    def to_dict(self) -> dict[str, SerializableValue]:
+    def to_dict(self) -> StrategyGeneDict:
         """オブジェクトを辞書形式に変換"""
         # dataclass サブクラスは汎用ユーティリティに委譲
         if is_dataclass(self):
@@ -215,7 +215,7 @@ class BaseGene(ABC):
         return annotations
 
     @classmethod
-    def from_dict(cls, data: dict[str, SerializableValue]) -> Self:
+    def from_dict(cls, data: StrategyGeneDict) -> Self:
         """辞書形式からオブジェクトを復元"""
         init_params = {}
         skipped_fields = set()

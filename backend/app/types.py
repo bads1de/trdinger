@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Protocol, TypeVar, Union
+from typing import TYPE_CHECKING, Protocol, Union
 
 import numpy as np
 import pandas as pd
@@ -30,35 +30,20 @@ SerializableValue = Union[
 # ─────────────────────────────────────────────
 # MLモデル関連
 # ─────────────────────────────────────────────
-# 勾配ブースティングモデルの共通インターフェース
-ModelType = TypeVar(
-    "ModelType",
-    "LGBMBooster",
-    "XGBBooster",
-    "CatBoostModel",
-    covariant=True,
-)
-
-# 学習済みモデル（具体的な型）
-TrainedModel = Union["LGBMBooster", "XGBBooster", "CatBoostModel"]
-
-# 予測メタデータ
-PredictionMetadata = dict[str, Union[float, int, str, list[float]]]
-
-
 class MLModelProtocol(Protocol):
     """MLモデルの共通インターフェースを定義するProtocol"""
 
-    @property
-    def is_trained(self) -> bool: ...
-
-    @property
-    def feature_columns(self) -> list[str] | None: ...
+    is_trained: bool
+    feature_columns: list[str] | None
 
     def predict(self, X: pd.DataFrame) -> np.ndarray: ...
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray: ...
 
+
+# 学習済みモデル（具体的な型）
+# MLModelProtocol を実装するモデルまたは生のBoosterモデル
+TrainedModel = Union[MLModelProtocol, "LGBMBooster", "XGBBooster", "CatBoostModel"]
 
 # ─────────────────────────────────────────────
 # バックテスト・戦略関連
@@ -71,9 +56,4 @@ StrategyGeneDict = dict[str, SerializableValue]
 # ─────────────────────────────────────────────
 DatetimeLike = Union[datetime, str, float, int]
 
-# ─────────────────────────────────────────────
-# 汎用ジェネリクス
-# ─────────────────────────────────────────────
-T = TypeVar("T")
-K = TypeVar("K")
-V = TypeVar("V")
+

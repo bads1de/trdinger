@@ -11,7 +11,9 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, cast
+
+from app.types import SerializableValue
 
 from .conditions import Condition, ConditionGroup, StatefulCondition
 from .entry import EntryGene
@@ -59,7 +61,7 @@ class StrategyGene:
         default_factory=list
     )
     stateful_conditions: List[StatefulCondition] = field(default_factory=list)
-    risk_management: Dict[str, Any] = field(default_factory=dict)
+    risk_management: Dict[str, SerializableValue] = field(default_factory=dict)
     tpsl_gene: Optional[TPSLGene] = None
     long_tpsl_gene: Optional[TPSLGene] = None
     short_tpsl_gene: Optional[TPSLGene] = None
@@ -75,7 +77,7 @@ class StrategyGene:
         default_factory=list
     )
     tool_genes: List[ToolGene] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, SerializableValue] = field(default_factory=dict)
 
     @classmethod
     def create_default(cls) -> "StrategyGene":
@@ -112,8 +114,8 @@ class StrategyGene:
             List[Union[Condition, ConditionGroup]]
         ] = None,
         tool_genes: Optional[List[ToolGene]] = None,
-        risk_management: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        risk_management: Optional[Dict[str, SerializableValue]] = None,
+        metadata: Optional[Dict[str, SerializableValue]] = None,
     ) -> "StrategyGene":
         """
         個別の遺伝子パーツから、一つの完結した `StrategyGene` オブジェクトを組み立てます。
@@ -202,7 +204,7 @@ class StrategyGene:
         )
 
     @classmethod
-    def sub_gene_class_map(cls) -> Dict[str, Any]:
+    def sub_gene_class_map(cls) -> Dict[str, type]:
         """サブ遺伝子フィールドと対応クラスの対応表を返す。"""
         return {
             "tpsl_gene": TPSLGene,
@@ -224,7 +226,7 @@ class StrategyGene:
             for field_name in self.clone_field_names()
         }
         cloned_fields["id"] = self.id if keep_id else str(uuid.uuid4())
-        return type(self)(**cast(Dict[str, Any], cloned_fields))  # type: ignore[arg-type]
+        return type(self)(**cast(Dict[str, SerializableValue], cloned_fields))  # type: ignore[arg-type]
 
     def mutate(
         self, config: GAConfig, mutation_rate: float = 0.1

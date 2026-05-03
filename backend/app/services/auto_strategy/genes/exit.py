@@ -7,8 +7,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
+from app.types import StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
 
 from ..config.constants import ExitType
@@ -85,7 +86,7 @@ class ExitGene:
 
         return len(errors) == 0, errors
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> StrategyGeneDict:
         """
         辞書形式に変換
 
@@ -95,7 +96,7 @@ class ExitGene:
         return dataclass_to_dict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ExitGene":
+    def from_dict(cls, data: StrategyGeneDict) -> "ExitGene":
         """
         辞書形式から復元
 
