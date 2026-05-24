@@ -1,6 +1,6 @@
-import { useCallback } from "react";
 import { FundingRateData } from "@/types/funding-rate";
 import { useParameterizedDataFetching } from "./useDataFetching";
+import { useSetLimit } from "@/utils/hookUtils";
 
 interface FundingRateParams {
   symbol: string;
@@ -73,12 +73,7 @@ export const useFundingRateData = (symbol: string, initialLimit = 100) => {
     }
   );
 
-  const setLimit = useCallback(
-    (newLimit: number) => {
-      setParams({ limit: newLimit });
-    },
-    [setParams]
-  );
+  const setLimit = useSetLimit(setParams);
 
   return {
     /** ファンディングレートデータの配列 */

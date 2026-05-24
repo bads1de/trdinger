@@ -1,6 +1,6 @@
-import { useCallback } from "react";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { useParameterizedDataFetching } from "./useDataFetching";
+import { useSetLimit } from "@/utils/hookUtils";
 
 /**
  * OHLCVパラメータインターフェース
@@ -104,12 +104,7 @@ export const useOhlcvData = (
    *
    * @param {number} newLimit - 新しい取得数
    */
-  const setLimit = useCallback(
-    (newLimit: number) => {
-      setParams({ limit: newLimit });
-    },
-    [setParams]
-  );
+  const setLimit = useSetLimit(setParams);
 
   return {
     /** OHLCVデータ */

@@ -1,6 +1,6 @@
-import { useCallback } from "react";
 import { OpenInterestData } from "@/types/open-interest";
 import { useParameterizedDataFetching } from "./useDataFetching";
+import { useSetLimit } from "@/utils/hookUtils";
 
 /**
  * オープンインタレストパラメータインターフェース
@@ -71,17 +71,7 @@ export const useOpenInterestData = (symbol: string, initialLimit = 100) => {
     }
   );
 
-  /**
-   * 取得数を設定
-   *
-   * @param {number} newLimit - 新しい取得数
-   */
-  const setLimit = useCallback(
-    (newLimit: number) => {
-      setParams({ limit: newLimit });
-    },
-    [setParams]
-  );
+  const setLimit = useSetLimit(setParams);
 
   return {
     /** オープンインタレストデータ */

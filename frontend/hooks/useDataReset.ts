@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useDataFetching } from "./useDataFetching";
+import { wrapInArray } from "@/utils/hookUtils";
 import { DataResetResult } from "@/components/button/DataResetButton";
 
 interface DataStatus {
@@ -75,7 +76,7 @@ export const useDataReset = (isVisible: boolean) => {
     endpoint: "/api/data-reset/status",
     disableAutoFetch: !isVisible, // isVisibleがfalseの場合は自動取得しない
     dependencies: [isVisible],
-    transform: (response) => [response], // 単一オブジェクトを配列に変換
+    transform: wrapInArray, // 単一オブジェクトを配列に変換
     errorMessage: "データステータスの取得中にエラーが発生しました",
   });
 

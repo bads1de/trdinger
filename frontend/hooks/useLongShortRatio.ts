@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { LongShortRatioData } from "@/types/long-short-ratio";
 import { useParameterizedDataFetching } from "./useDataFetching";
+import { useSetLimit } from "@/utils/hookUtils";
 import { useApiCall } from "./useApiCall";
 
 interface LongShortRatioParams {
@@ -46,12 +47,7 @@ export const useLongShortRatio = (symbol: string, period: string, initialLimit =
     }
   );
 
-  const setLimit = useCallback(
-    (newLimit: number) => {
-      setParams({ limit: newLimit });
-    },
-    [setParams]
-  );
+  const setLimit = useSetLimit(setParams);
   
   const setPeriod = useCallback(
     (newPeriod: string) => {
