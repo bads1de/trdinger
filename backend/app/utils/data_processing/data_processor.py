@@ -199,7 +199,7 @@ class DataProcessor:
 
         # カテゴリカルカラムの補間（ベクトル化）
         categorical_columns = result_df.select_dtypes(
-            include=["object", "category"]
+            include=["object", "category", "string"]
         ).columns
 
         for col in categorical_columns:

@@ -344,8 +344,10 @@ class AdvancedFeatures:
             upper_shadow = high - close
             lower_shadow = close - low
             imbalance = upper_shadow / (lower_shadow + 1e-9)
+            # imbalanceが負になる異常データに備えてクリップ
+            safe_imbalance = np.clip(imbalance, a_min=0.0, a_max=None)
             return pd.Series(
-                np.log(imbalance + 1e-9), index=close.index
+                np.log(safe_imbalance + 1e-9), index=close.index
             ).fillna(0.0)
 
         return cast(

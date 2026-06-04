@@ -227,7 +227,9 @@ class TrendScanning:
 
         # 対数価格の使用 (トレンド強度の一貫性向上のため推奨)
         if use_log_price:
-            close_values = np.log(close.values.astype(np.float64))
+            # 0以下の値によるlogのゼロ除算/負値警告を防止するためクリップ
+            clipped_close = np.clip(close.values.astype(np.float64), a_min=1e-8, a_max=None)
+            close_values = np.log(clipped_close)
         else:
             close_values = close.values.astype(np.float64)
 
@@ -264,7 +266,9 @@ class TrendScanning:
         # return計算 (元の価格ベース)
         p1 = np.asarray(close.values[valid_t1_idxs], dtype=np.float64)
         p0 = np.asarray(close.values[valid_t0_idxs], dtype=np.float64)
-        returns = (p1 / p0) - 1.0
+        # p0が0以下の場合のゼロ除算警告防止
+        safe_p0 = np.where(p0 <= 0, 1e-8, p0)
+        returns = (p1 / safe_p0) - 1.0
 
         out = pd.DataFrame(index=valid_t0)
         out["t1"] = valid_t1

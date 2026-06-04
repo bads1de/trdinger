@@ -46,8 +46,10 @@ class DataFrequencyManager:
     def _normalize_timeframe(self, timeframe: str) -> str:
         """
         pandasのresample用にtimeframe文字列を正規化
-        例: '15m' -> '15min'
+        例: '15m' -> '15min', '1d' -> 'D', 'd' -> 'D'
         """
+        if timeframe in ["1d", "d"]:
+            return "D"
         if timeframe.endswith("m") and not timeframe.endswith("min"):
             return timeframe.replace("m", "min")
         return timeframe
