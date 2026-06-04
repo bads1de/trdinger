@@ -179,7 +179,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         self, df: pd.DataFrame, lookback_periods: Dict[str, int]
     ) -> pd.DataFrame:
         """出来高特徴量を計算 (公開API)"""
-        features = self._calculate_volume_features_internal(
+        features: Dict[str, Any] = self._calculate_volume_features_internal(
             df, lookback_periods
         )
         return self.create_result_dataframe_efficient(df, features)

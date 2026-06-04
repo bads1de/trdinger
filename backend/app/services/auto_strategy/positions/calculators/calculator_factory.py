@@ -5,7 +5,7 @@
 """
 
 from enum import Enum
-from typing import Any, Dict, Type, Union, cast
+from typing import Dict, Type, Union, cast
 
 from ...utils.normalization import normalize_enum_name
 from .base_calculator import BaseCalculator

@@ -5,10 +5,8 @@ APIレスポンス生成関数のテストモジュール
 """
 
 from datetime import datetime
-from typing import Any, Dict
 from unittest.mock import patch
 
-import pytest
 
 from app.utils.response import (
     _build_response,

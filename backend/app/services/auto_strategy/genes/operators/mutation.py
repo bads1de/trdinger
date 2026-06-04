@@ -9,7 +9,7 @@ import inspect
 import logging
 import random
 import uuid
-from typing import TYPE_CHECKING, Callable, List
+from typing import Callable, List
 
 from ...config.ga.ga_config import GAConfig
 

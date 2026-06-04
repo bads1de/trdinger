@@ -2,7 +2,6 @@
 フィットネス計算器のテスト
 """
 
-from unittest.mock import Mock, patch
 
 import pytest
 

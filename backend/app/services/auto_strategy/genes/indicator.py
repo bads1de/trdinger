@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
-    from ..config.ga.ga_config import GAConfig
+    pass
 
 from app.services.indicators.config import indicator_registry
 from app.utils.error_handler import safe_operation
@@ -158,9 +158,9 @@ def generate_random_indicators(config: Any) -> List[IndicatorGene]:
     num_indicators = random.randint(
         config.min_indicators, config.max_indicators
     )
-    indicators = []
 
     # トレンド系指標を優先するためのリスト作成
+    indicators: List[Any] = []
     trend_indicators = []
     preferred_trend_names = PREFERRED_TREND_INDICATORS
 

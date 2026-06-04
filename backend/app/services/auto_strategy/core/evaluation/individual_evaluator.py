@@ -677,7 +677,7 @@ class IndividualEvaluator(EvaluationWindowService):
                 result = self.backtest_service.run_backtest(
                     config=run_config, preloaded_data=data
                 )
-            except Exception as e:
+            except Exception:
                 raise
 
             if (

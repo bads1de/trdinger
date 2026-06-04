@@ -228,7 +228,6 @@ class TestUpdateCache:
     def test_updates_cache_with_new_values(self):
         """新しい値でキャッシュを更新"""
         from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataCache,
             MarketDataHandler,
         )
 

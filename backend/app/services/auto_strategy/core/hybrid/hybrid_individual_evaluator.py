@@ -2,7 +2,7 @@
 
 import importlib
 import logging
-from typing import Any, Dict, Optional, Tuple, Type
+from typing import Any, Dict, Optional, Type
 
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config.helpers import (

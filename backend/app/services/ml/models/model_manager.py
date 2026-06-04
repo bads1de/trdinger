@@ -474,7 +474,9 @@ class ModelManager:
 
         try:
             if metadata is None:
-                model_data = self.load_model(model_path)
+                model_data: Optional[Dict[str, Any]] = self.load_model(
+                    model_path
+                )
                 if not model_data or "metadata" not in model_data:
                     return get_default_metrics()
                 metadata = model_data["metadata"]
@@ -624,7 +626,7 @@ class ModelManager:
         """
         try:
             # load_modelを使用してモデル全体を読み込む
-            model_data = self.load_model(model_path)
+            model_data: Optional[Dict[str, Any]] = self.load_model(model_path)
 
             if not model_data:
                 return None

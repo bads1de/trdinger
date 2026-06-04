@@ -312,7 +312,7 @@ class BulkDataOrchestrator:
                         f"Funding Rate収集失敗: {symbol} - {funding_result.get('message')}"
                     )
 
-            except Exception as e:
+            except Exception:
                 logger.error(
                     f"Funding Rate収集エラー: {symbol}", exc_info=True
                 )
@@ -343,7 +343,7 @@ class BulkDataOrchestrator:
                         f"Open Interest収集失敗: {symbol} {timeframe} - {oi_result.get('message')}"
                     )
 
-            except Exception as e:
+            except Exception:
                 logger.error(
                     f"Open Interest収集エラー: {symbol} {timeframe}",
                     exc_info=True,

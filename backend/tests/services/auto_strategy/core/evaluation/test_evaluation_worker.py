@@ -10,8 +10,6 @@ import pytest
 
 import app.services.auto_strategy.core.evaluation.evaluation_worker as ew_module
 from app.services.auto_strategy.core.evaluation.evaluation_worker import (
-    _WORKER_CONFIG,
-    _WORKER_EVALUATOR,
     initialize_worker_process,
     worker_evaluate_individual,
 )

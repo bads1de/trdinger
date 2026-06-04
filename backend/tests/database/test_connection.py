@@ -6,7 +6,6 @@ database/connection.pyの各関数をテストします。
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from sqlalchemy.exc import OperationalError
 
 # モジュールをインポート

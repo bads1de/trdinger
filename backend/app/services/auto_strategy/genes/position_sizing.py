@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-import logging
 import random
 from dataclasses import dataclass
-from typing import Dict, List, cast
+from typing import Any, Dict, List, cast
 
 from app.types import SerializableValue, StrategyGeneDict
 

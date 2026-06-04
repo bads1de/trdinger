@@ -7,11 +7,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 from app.types import StrategyGeneDict
 if TYPE_CHECKING:
-    from ..config.ga.ga_config import GAConfig
+    pass
 
 from app.utils.serialization import dataclass_to_dict
 

@@ -6,7 +6,6 @@ Indicator Utils Tests
 
 from unittest.mock import patch
 
-import pytest
 
 from app.services.auto_strategy.utils.indicators import (
     get_all_indicator_ids,

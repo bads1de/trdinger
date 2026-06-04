@@ -8,8 +8,7 @@ BackgroundTaskManager のユニットテスト
 - リソース管理、コールバック実行
 """
 
-import gc
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

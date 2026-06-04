@@ -17,7 +17,6 @@ from app.services.auto_strategy.genes import (
     TPSLGene,
     TPSLMethod,
 )
-from app.services.auto_strategy.genes.conditions import Condition
 from app.services.auto_strategy.strategies.universal_strategy import UniversalStrategy
 
 

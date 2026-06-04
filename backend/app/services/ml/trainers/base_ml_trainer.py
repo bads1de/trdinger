@@ -527,15 +527,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 X_train_selected, X_test_selected, scaler
             )
 
-            fold_result = self._train_fold_with_error_handling(
-                fold + 1,
-                X_train_scaled,
-                X_test_scaled,
-                y_train_cv,
-                y_test_cv,
-                X_train_cv,
-                X_test_cv,
-                training_params,
+            fold_result: Dict[str, SerializableValue] = (
+                self._train_fold_with_error_handling(
+                    fold + 1,
+                    X_train_scaled,
+                    X_test_scaled,
+                    y_train_cv,
+                    y_test_cv,
+                    X_train_cv,
+                    X_test_cv,
+                    training_params,
+                )
             )
 
             fold_results.append(fold_result)
@@ -687,7 +689,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             )
             model_to_save = self
 
-        model_path = model_manager.save_model(
+        model_path: str = model_manager.save_model(
             model=model_to_save,
             model_name=model_name,
             metadata=final_metadata,
@@ -733,7 +735,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     )
     def load_model(self, model_path: str) -> bool:
         """モデルを読み込み"""
-        model_data = model_manager.load_model(model_path)
+        model_data: Optional[Dict[str, Any]] = model_manager.load_model(
+            model_path
+        )
 
         if model_data is None:
             return False

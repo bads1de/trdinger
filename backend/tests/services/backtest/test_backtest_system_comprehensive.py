@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from app.services.backtest.config.backtest_config import (
     BacktestRunConfig,
-    BacktestRunConfigValidationError,
 )
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,

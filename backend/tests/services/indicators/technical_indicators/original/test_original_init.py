@@ -4,7 +4,6 @@ originalパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-import pytest
 
 import app.services.indicators.technical_indicators.original as original_package
 

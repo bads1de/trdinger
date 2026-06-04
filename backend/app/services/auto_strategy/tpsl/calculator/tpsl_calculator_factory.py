@@ -5,7 +5,7 @@ TPSL計算機ファクトリ
 """
 
 from enum import Enum
-from typing import Any, Dict, Union
+from typing import Dict, Union
 
 from ...utils.normalization import normalize_enum_name
 from .adaptive_calculator import AdaptiveCalculator

@@ -5,10 +5,9 @@ Tests for indicator generation logic integrated into genes/indicator.py,
 including multi-timeframe (MTF) functionality.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional
 
-import pytest
 
 from app.services.auto_strategy.genes import (
     IndicatorGene,

@@ -4,7 +4,6 @@ appパッケージの__init__.pyのテスト
 バージョン情報とモジュール属性を確認します。
 """
 
-import pytest
 
 import app as app_package
 

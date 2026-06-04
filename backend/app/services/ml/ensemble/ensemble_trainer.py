@@ -589,7 +589,7 @@ class EnsembleTrainer(BaseMLTrainer):
             try:
                 from ..models.model_manager import model_manager
 
-                meta_model_path = model_manager.save_model(
+                meta_model_path: str = model_manager.save_model(
                     model=self.meta_labeling_service,
                     model_name=f"{model_name}_meta",
                     metadata={"primary_model_name": model_name},

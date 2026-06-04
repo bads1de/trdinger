@@ -4,7 +4,6 @@ meta_labeling_utils.py のテスト
 app/services/ml/evaluation/meta_labeling_utils.py のテストモジュール
 """
 
-from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd

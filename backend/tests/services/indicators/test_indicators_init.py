@@ -4,7 +4,6 @@ indicatorsパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-import pytest
 
 import app.services.indicators as indicators_package
 

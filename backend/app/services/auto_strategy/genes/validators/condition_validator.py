@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Tuple
+from typing import Tuple
 
 import numpy as np
 

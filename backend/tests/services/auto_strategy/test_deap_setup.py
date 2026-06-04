@@ -5,7 +5,7 @@ DEAPSetupクラスの機能をテストする。
 """
 
 from types import SimpleNamespace
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from deap import base

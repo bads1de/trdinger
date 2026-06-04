@@ -39,7 +39,25 @@ class TestAllTechnicalIndicators:
         arrays = result if isinstance(result, tuple) else (result,)
         finite_count = 0
         for array in arrays:
-            finite_count += int(np.isfinite(np.asarray(array)).sum())
+            if isinstance(array, pd.DataFrame):
+                for col in array.columns:
+                    series = array[col]
+                    if pd.api.types.is_numeric_dtype(series):
+                        finite_count += int(
+                            np.isfinite(series.to_numpy()).sum()
+                        )
+            elif isinstance(array, pd.Series):
+                if pd.api.types.is_numeric_dtype(array):
+                    finite_count += int(
+                        np.isfinite(array.to_numpy()).sum()
+                    )
+            else:
+                try:
+                    arr = np.asarray(array)
+                    if np.issubdtype(arr.dtype, np.number):
+                        finite_count += int(np.isfinite(arr).sum())
+                except (TypeError, ValueError):
+                    pass
         return finite_count
 
     @staticmethod

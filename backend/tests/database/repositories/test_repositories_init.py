@@ -4,7 +4,6 @@
 エクスポート定義を確認します。
 """
 
-import pytest
 
 import database.repositories as repos_package
 

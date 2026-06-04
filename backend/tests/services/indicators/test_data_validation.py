@@ -17,7 +17,6 @@ from app.services.indicators.data_validation import (
     _run_indicator_with_validation,
     _validate_positive_length,
     _validate_series_collection,
-    create_nan_result,
     create_nan_series_bundle,
     create_nan_series_like,
     create_nan_series_map,

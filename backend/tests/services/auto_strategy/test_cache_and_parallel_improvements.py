@@ -5,7 +5,7 @@ LRUキャッシュのエビクションポリシーと
 ProcessPoolExecutorのタイムアウト処理を検証します。
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 from cachetools import LRUCache

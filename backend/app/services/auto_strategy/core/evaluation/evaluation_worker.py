@@ -6,7 +6,7 @@ Windowsのmultiprocessing (spawn) に対応するため、
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 # 遅延インポートなどで循環参照を避ける
 from app.services.auto_strategy.core.fitness.fitness_sharing_vectorizer import (

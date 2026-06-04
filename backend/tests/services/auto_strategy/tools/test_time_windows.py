@@ -5,7 +5,6 @@ app/services/auto_strategy/tools/time_windows.py のテストモジュール
 """
 
 import pandas as pd
-import pytest
 
 from app.services.auto_strategy.tools.time_windows import (
     is_within_any_window,

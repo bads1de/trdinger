@@ -235,7 +235,7 @@ class ConfigValidator:
         Returns:
             エラーメッセージのリスト
         """
-        errors = []
+        errors: List[str] = []
         evaluation_config = config.evaluation_config
 
         # OOSが無効な場合は検証をスキップ
@@ -422,7 +422,7 @@ class ConfigValidator:
     @staticmethod
     def _validate_ga_multi_fidelity_settings(config: GAConfig) -> List[str]:
         """multi-fidelity 評価設定の検証"""
-        errors = []
+        errors: List[str] = []
         evaluation_config = config.evaluation_config
         if not getattr(
             evaluation_config, "enable_multi_fidelity_evaluation", False
@@ -484,7 +484,7 @@ class ConfigValidator:
     @staticmethod
     def _validate_ga_early_termination_settings(config: GAConfig) -> List[str]:
         """早期打ち切り設定の検証"""
-        errors = []
+        errors: List[str] = []
         settings = config.evaluation_config.early_termination_settings
         if not settings.enabled:
             return errors
@@ -556,7 +556,7 @@ class ConfigValidator:
         Returns:
             List[str]: エラーメッセージのリスト。問題がなければ空リスト。
         """
-        errors = []
+        errors: List[str] = []
         two_stage_config = config.two_stage_selection_config
         if not two_stage_config.enabled:
             return errors
@@ -621,7 +621,7 @@ class ConfigValidator:
         Returns:
             List[str]: エラーメッセージのリスト。問題がなければ空リスト。
         """
-        errors = []
+        errors: List[str] = []
         validation_symbols = config.robustness_config.validation_symbols
         if validation_symbols is not None and not isinstance(
             validation_symbols, list

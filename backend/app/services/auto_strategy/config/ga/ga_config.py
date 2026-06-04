@@ -311,7 +311,7 @@ class GAConfig:
         if isinstance(mutation_config, MutationConfig):
             mutation_config.bind_parent(self)
 
-        provided_keys = getattr(self, "_provided_keys", set())
+        provided_keys: set[str] = getattr(self, "_provided_keys", set())
         if "mutation_config" in provided_keys:
             object.__setattr__(self, "mutation_rate", mutation_config.rate)
         else:

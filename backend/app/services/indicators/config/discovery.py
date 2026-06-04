@@ -948,7 +948,7 @@ class DynamicIndicatorDiscovery:
 
         # technical_indicators パッケージ内の全モジュールをスキャン
         # pandas_ta サブパッケージへ移した互換ラッパーも含めてすべて検出
-        skipped_wrapper_modules = set()
+        skipped_wrapper_modules: set[str] = set()
 
         # pandas_taサブパッケージもスキャン対象に追加
         scan_paths = list(technical_indicators.__path__)

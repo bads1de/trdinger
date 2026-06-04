@@ -916,7 +916,7 @@ class MLTrainingService(BaseResourceManager):
             **best_params,
             **kwargs,
         }
-        result = self.trainer.train_model(
+        result: Dict[str, SerializableValue] = self.trainer.train_model(
             ohlcv,
             funding_rate_data=fr,
             open_interest_data=oi,

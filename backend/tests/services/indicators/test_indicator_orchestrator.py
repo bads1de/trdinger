@@ -13,9 +13,6 @@ import pytest
 
 import app.services.indicators.indicator_orchestrator as indicator_orchestrator
 from app.services.indicators.config import IndicatorConfig, IndicatorResultType
-from app.services.indicators.indicator_orchestrator import (
-    TechnicalIndicatorService,
-)
 
 
 class TestTechnicalIndicatorService:

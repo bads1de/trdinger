@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import random
 from types import SimpleNamespace
 from typing import Sequence
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, call, patch
 
 import numpy as np
 import pytest

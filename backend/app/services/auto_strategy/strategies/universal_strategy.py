@@ -7,7 +7,7 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import Any, Optional, Tuple, Union, cast
+from typing import Optional, Tuple, Union, cast
 
 import pandas as pd
 from backtesting import Strategy

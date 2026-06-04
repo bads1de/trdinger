@@ -358,7 +358,7 @@ def calculate_min_length(indicator_name: str, params: Dict[str, Any]) -> int:
         int: 最小必要データ長
 
     Note:
-        式の抽出に失敗した場合、lengthまたはperiodパラメータを返します。
+        式の抽出に失敗した場合、length/periodパラメータ、または全数値パラメータの最大値を返します。
     """
     # デフォルト値を取得してマージ
     defaults = _get_indicator_defaults(indicator_name)
@@ -372,8 +372,25 @@ def calculate_min_length(indicator_name: str, params: Dict[str, Any]) -> int:
         if result is not None:
             return result
 
-    # フォールバック: lengthまたはperiodパラメータを使用
-    return merged_params.get("length", merged_params.get("period", 1))
+    # フォールバック1: length または period パラメータ
+    for key in ("length", "period"):
+        if key in merged_params:
+            value = merged_params[key]
+            if isinstance(value, (int, float)) and value > 0:
+                return int(value)
+
+    # フォールバック2: 全数値パラメータの最大値
+    # (例: MACD の {fast: 12, slow: 26, signal: 9} → 26)
+    numeric_values = [
+        int(v)
+        for v in merged_params.values()
+        if isinstance(v, (int, float)) and v > 0
+    ]
+    if numeric_values:
+        return max(numeric_values)
+
+    # 最終フォールバック
+    return 1
 
 
 # =============================================================================

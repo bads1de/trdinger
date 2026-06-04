@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from enum import Enum
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 if TYPE_CHECKING:
     from ..config.ga.ga_config import GAConfig

@@ -7,9 +7,6 @@
 import logging
 from typing import Dict, List
 
-from app.services.auto_strategy.config.helpers import (
-    normalize_robustness_regime_windows,
-)
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config.indicator_config import (
     get_cached_indicators,

@@ -4,7 +4,6 @@ indicators/configパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-import pytest
 
 import app.services.indicators.config as config_package
 

@@ -246,7 +246,7 @@ class DataIntegrationService:
             )
 
             return df
-        except Exception as e:
+        except Exception:
             raise
 
     @safe_operation(

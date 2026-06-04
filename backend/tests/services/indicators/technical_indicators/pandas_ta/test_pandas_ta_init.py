@@ -4,7 +4,6 @@ pandas_taパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-import pytest
 
 import app.services.indicators.technical_indicators.pandas_ta as pandas_ta_package
 

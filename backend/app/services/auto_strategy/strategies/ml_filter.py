@@ -6,7 +6,6 @@ UniversalStrategyのMLフィルター関連ロジックを担当します。
 """
 
 import logging
-from typing import Any
 
 import pandas as pd
 

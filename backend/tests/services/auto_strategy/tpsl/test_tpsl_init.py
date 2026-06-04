@@ -4,7 +4,6 @@ tpslパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-import pytest
 
 import app.services.auto_strategy.tpsl as tpsl_package
 

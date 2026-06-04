@@ -6,7 +6,7 @@ GA戦略で複数タイムフレームの指標を使用可能にします。
 """
 
 import logging
-from typing import Any, Dict, List, Optional, cast
+from typing import Dict, List, Optional, cast
 
 import pandas as pd
 

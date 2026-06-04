@@ -2,7 +2,7 @@
 AdaptiveCalculator のテスト (修正版)
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

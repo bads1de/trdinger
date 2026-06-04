@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Callable, List, Mapping, Optional, Sequence
 
 import numpy as np
 

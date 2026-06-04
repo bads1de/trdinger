@@ -359,8 +359,8 @@ class FeatureEngineeringService:
             # エラー時は元のDataFrameを返す（最低限の動作保証）
             # 警告レベルを上げて、呼び出し元が検知しやすくする
             logger.warning(
-                f"特徴量計算が失敗したため、生のOHLCVデータのみを返します。"
-                f"モデルの予測性能が低下する可能性があります。"
+                "特徴量計算が失敗したため、生のOHLCVデータのみを返します。"
+                "モデルの予測性能が低下する可能性があります。"
             )
             return ohlcv_data
 

@@ -113,7 +113,7 @@ class OptunaOptimizer:
 
         # 目的関数をOptunaに適応
         def optuna_objective(trial: optuna.Trial) -> float:
-            logger.info(f"=== optuna_objective called ===")
+            logger.info("=== optuna_objective called ===")
             params = self._suggest_parameters(trial, parameter_space)
             logger.info(f"Parameters: {params}")
             try:

@@ -3,7 +3,7 @@ AutoStrategyServiceのエンドツーエンドフローテスト
 API呼び出しからバックグラウンド実行、結果保存までのフローを確認する
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import BackgroundTasks

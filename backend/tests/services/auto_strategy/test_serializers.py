@@ -6,7 +6,6 @@ import pytest
 from app.services.auto_strategy.genes import (
     Condition,
     ConditionGroup,
-    EntryGene,
     ExitGene,
     IndicatorGene,
     PositionSizingGene,

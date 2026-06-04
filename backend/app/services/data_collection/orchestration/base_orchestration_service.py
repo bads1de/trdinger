@@ -13,7 +13,6 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.utils.data_conversion import normalize_market_symbol
 from app.utils.response import api_response, error_response
 from database.connection import get_db
 
