@@ -121,6 +121,7 @@ env.bak/
 venv.bak/
 .pytest_cache/
 .venv/
+*.egg-info/
 
 # Database
 *.db
@@ -130,11 +131,9 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
+# uv
+# .python-version は uv で使用するため track する
+# uv.lock も track する (再現性の肝)
 
 # pytest
 .pytest_cache/

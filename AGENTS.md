@@ -1,6 +1,6 @@
 # Trdinger プロジェクト (`GEMINI.md`)
 
-> ✅ **重要**: このプロジェクトは **Conda 環境 `trading`** を使用します。すべてのバックエンド作業は `conda activate trading` で環境をアクティベートしてから実行してください。
+> ✅ **重要**: このプロジェクトのバックエンドは **[uv](https://docs.astral.sh/uv/)** で管理されます。すべてのバックエンド作業は `backend/` ディレクトリで `uv sync` を実行してから行ってください。
 
 このドキュメントは、Trdinger プロジェクトの包括的な概要、構造、および開発規約を提供し、AI 主導の開発のための基本的なコンテキストとして機能します。
 
@@ -69,39 +69,67 @@ trading/
 
 ### バックエンドの実行
 
-バックエンドは、**Conda 環境 `trading`** で管理されます。開発作業時には `conda activate trading` を使用して環境をアクティベートしてください。
+バックエンドは、**[uv](https://docs.astral.sh/uv/)** で管理されます。`backend/` ディレクトリ配下の `.venv` に Python 3.11 の仮想環境が自動生成されます。
 
-1. **開発サーバーの起動**: アプリケーションは Uvicorn を使用して提供されます。
+1. **環境セットアップ** (初回 or `pyproject.toml` / `uv.lock` 更新後):
 
    ```powershell
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   cd backend
+   uv sync --all-extras
    ```
 
-2. **テストの実行**: テストは `pytest` を使用して実行されます。
+2. **開発サーバーの起動**: アプリケーションは Uvicorn を使用して提供されます。
 
    ```powershell
+   cd backend
+   uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+3. **テストの実行**: テストは `pytest` を使用して実行されます。
+
+   ```powershell
+   cd backend
+
    # すべてのテスト
-   pytest backend/tests/
+   uv run pytest tests/
 
    # カバレッジ付き
-   pytest --cov=app backend/tests/
+   uv run pytest --cov=app tests/
 
    # 文字化け対策（日本語出力が正しく表示されない場合）
-   $env:PYTHONIOENCODING="utf-8"; pytest backend/tests/ -v
+   $env:PYTHONIOENCODING="utf-8"; uv run pytest tests/ -v
    ```
 
-3. **リンティングとフォーマット**:
+4. **リンティングとフォーマット**:
 
    ```powershell
+   cd backend
+
    # フォーマット
-   black backend/app backend/tests
-   isort backend/app backend/tests
+   uv run black app tests
+   uv run isort app tests
 
    # リンティング
-   flake8 backend/app backend/tests
+   uv run ruff check app tests
+   uv run flake8 app tests
 
    # 型チェック
-   mypy backend/app
+   uv run mypy app
+   ```
+
+5. **依存関係の追加**:
+
+   ```powershell
+   cd backend
+
+   # 通常の依存関係
+   uv add <package>
+
+   # 開発用依存関係
+   uv add --dev <package>
+
+   # テスト用依存関係
+   uv add --group test <package>
    ```
 
 ### フロントエンドの実行

@@ -306,6 +306,8 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
             r"(\w+)\s*=\s*int\s*\(\s*\1\s*\)\s+if\s+\1\s+and\s+\1\s*>\s*0\s+else\s+(\d+)",
             r"(\w+)\s*=\s*\1\s+if\s+\1\s+and\s+\1\s*>\s*0\s+else\s+(\d+)",
             r"(\w+)\s*=\s*float\s*\(\s*\1\s*\)\s+if\s+\1(?:\s+and|\s*\)).*?else\s+(\d+(?:\.\d+)?)",
+            r"(\w+)\s*=\s*_pos_int\s*\(\s*\1\s*,\s*(\d+)\s*\)",
+            r"(\w+)\s*=\s*_pos_float\s*\(\s*\1\s*,\s*(\d+(?:\.\d+)?)\s*\)",
         ]
 
         for pattern in patterns:
