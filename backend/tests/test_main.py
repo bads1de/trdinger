@@ -72,7 +72,7 @@ class TestWarningFilters:
             filter_warnings = warnings.filters
             # FutureWarningが無視設定されているか
             future_warnings = [
-                f for f in filter_warnings if f[0] == "ignore" and f[2] == FutureWarning
+                f for f in filter_warnings if f[0] == "ignore" and f[2] is FutureWarning
             ]
             assert len(future_warnings) > 0
 
@@ -106,7 +106,6 @@ class TestUvicornConfiguration:
         """__name__ == '__main__'の場合にuvicorn.runが呼ばれる"""
         # main.pyを新しいコンテキストで実行
         import importlib.util
-        import sys
 
         spec = importlib.util.spec_from_file_location(
             "main_test", Path(__file__).parent.parent / "main.py"

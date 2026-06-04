@@ -120,8 +120,6 @@ class PositionSizingGene(BaseGene):
         mutation_rate: float = 0.1,
     ) -> PositionSizingGene:
         """突然変異する。パラメータはGAが自動的に最適化する。"""
-        import random
-
         from .genetic_utils import GeneticUtils
 
         mutated_params = GeneticUtils.extract_gene_params(self)
@@ -169,8 +167,6 @@ class PositionSizingGene(BaseGene):
 
 def create_random_position_sizing_gene() -> PositionSizingGene:
     """ランダムなポジションサイジング遺伝子を生成"""
-    import random
-
     method = random.choice(list(PositionSizingMethod))
     ranges = POSITION_SIZING_GENERATION_RANGES
 

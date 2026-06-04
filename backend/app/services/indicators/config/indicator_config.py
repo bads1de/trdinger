@@ -498,7 +498,6 @@ _cache_lock = threading.Lock()
 
 def get_cached_indicators() -> List[str]:
     """キャッシュされたインジケーターリストを取得"""
-    global _indicator_cache
     with _cache_lock:
         if "indicators" not in _indicator_cache:
             _indicator_cache["indicators"] = (

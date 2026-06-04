@@ -177,7 +177,7 @@ class EntryDecisionEngine:
                 # モックの場合はfloatにキャスト
                 try:
                     account_balance = float(account_balance)
-                except:
+                except (TypeError, ValueError):
                     account_balance = 100000.0
                 market_data = {}
                 try:
@@ -256,7 +256,7 @@ class EntryDecisionEngine:
                 # モックの場合はfloatにキャスト
                 try:
                     equity = float(equity)
-                except:
+                except (TypeError, ValueError):
                     equity = 100000.0
                 if equity > 0:
                     fraction = (final_units * current_price) / equity

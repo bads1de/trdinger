@@ -77,8 +77,6 @@ def worker_evaluate_individual(individual: Any) -> ParallelEvaluationResult:
     Returns:
         フィットネス値のタプル
     """
-    global _WORKER_EVALUATOR, _WORKER_CONFIG
-
     if _WORKER_EVALUATOR is None or _WORKER_CONFIG is None:
         logger.error("Worker evaluator or config not initialized!")
         return ParallelEvaluationResult(fitness=(0.0,))
