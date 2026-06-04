@@ -70,7 +70,7 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
 
         total_similarity = 0.0
         for val1, val2, calc_func, weight in components:
-            similarity = calc_func(val1, val2)  # type: ignore[arg-type]
+            similarity = calc_func(val1, val2)  # type: ignore[operator,arg-type]
             total_similarity += similarity * weight
 
         return max(0.0, min(1.0, total_similarity))

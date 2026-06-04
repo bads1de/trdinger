@@ -92,7 +92,7 @@ class PositionSizingGene(BaseGene):
                     cleaned["method"] = PositionSizingMethod.VOLATILITY_BASED
             else:
                 cleaned["method"] = PositionSizingMethod.VOLATILITY_BASED
-        return BaseGene.from_dict.__func__(cls, cleaned)  # type: ignore[return-value]
+        return BaseGene.from_dict.__func__(cls, cleaned)  # type: ignore[attr-defined,return-value]
 
     def _validate_parameters(self, errors: List[str]) -> None:
         """パラメータ固有の検証を実装"""
@@ -230,4 +230,4 @@ def create_random_position_sizing_gene() -> PositionSizingGene:
     }
 
     _ensure_position_size_bounds(gene_params)
-    return PositionSizingGene(**gene_params)
+    return PositionSizingGene(**gene_params)  # type: ignore[arg-type]

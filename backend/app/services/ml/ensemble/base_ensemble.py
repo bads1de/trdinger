@@ -360,7 +360,7 @@ class BaseEnsemble(ABC):
                 "feature_count": len(self.feature_columns or []),
                 "fitted_base_models": list(self._fitted_base_models.keys()),
             }
-            path = model_manager.save_model(
+            path: str = model_manager.save_model(
                 model=data,
                 model_name=m_name,
                 metadata=meta,
@@ -376,7 +376,7 @@ class BaseEnsemble(ABC):
                 "feature_columns": self.feature_columns,
                 "is_fitted": self.is_fitted,
             }
-            path = model_manager.save_model(
+            path: str = model_manager.save_model(  # type: ignore[no-redef]
                 model=data,
                 model_name=m_name,
                 metadata={"ensemble_type": "StackingEnsemble"},

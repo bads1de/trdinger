@@ -18,8 +18,8 @@ try:
     LIGHTGBM_AVAILABLE = True
 except ImportError:
     LIGHTGBM_AVAILABLE = False
-    LGBMClassifier = None
-    LGBMRegressor = None
+    LGBMClassifier = None  # type: ignore[assignment,misc]
+    LGBMRegressor = None  # type: ignore[assignment,misc]
 
 
 def is_regression_target(y: np.ndarray) -> bool:

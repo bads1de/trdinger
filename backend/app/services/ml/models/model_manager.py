@@ -166,7 +166,7 @@ class ModelManager:
 
         return "unknown"
 
-    @safe_ml_operation(
+    @safe_ml_operation(  # type: ignore[misc,arg-type]
         default_return=None, context="モデル保存でエラーが発生しました"
     )
     def save_model(
@@ -264,7 +264,7 @@ class ModelManager:
             logger.error(f"モデル保存エラー: {e}")
             raise MLModelError(f"モデル保存に失敗しました: {e}")
 
-    @safe_ml_operation(
+    @safe_ml_operation(  # type: ignore[misc,arg-type]
         default_return=None, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> Optional[Dict[str, Any]]:

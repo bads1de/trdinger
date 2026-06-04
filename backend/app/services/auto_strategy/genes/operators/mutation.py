@@ -128,7 +128,7 @@ def _iter_mutable_sub_gene_specs(
 
     for field_name in StrategyGene.sub_gene_field_names():
         gene_class = class_map.get(field_name)
-        rule = _SUB_GENE_MUTATION_RULES.get(gene_class)
+        rule = _SUB_GENE_MUTATION_RULES.get(gene_class)  # type: ignore[arg-type]
 
         if rule is None and field_name in _LONG_SHORT_SUB_GENE_RULES:
             _, creator_func, creation_prob_attr = _LONG_SHORT_SUB_GENE_RULES[
@@ -405,7 +405,9 @@ def mutate_strategy_gene(
                         )
                 elif random.random() < mutation_rate * creation_prob_mult:
                     setattr(
-                        mutated, field_name, _create_sub_gene(creator_func, config)
+                        mutated,
+                        field_name,
+                        _create_sub_gene(creator_func, config),  # type: ignore[arg-type]
                     )
         except Exception:
             pass
@@ -457,7 +459,11 @@ def mutate_strategy_gene_batch(
 ) -> List[object]:
     """StrategyGene の突然変異をバッチで実行する。"""
     return [
-        mutate_strategy_gene(individual, config, mutation_rate=mutation_rate)
+        mutate_strategy_gene(  # type: ignore[arg-type]
+            individual,  # type: ignore[arg-type]
+            config,
+            mutation_rate=mutation_rate,
+        )
         for individual in individuals
     ]
 

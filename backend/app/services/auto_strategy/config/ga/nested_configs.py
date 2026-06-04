@@ -6,7 +6,7 @@ GAConfig にぶら下がる設定 dataclass 群を定義する。
 import copy
 import logging
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Optional, cast
 
 from ..constants import GA_DEFAULT_CONFIG, GA_MUTATION_SETTINGS, OPERATORS
 
@@ -105,57 +105,60 @@ class EarlyTerminationSettings(NestedConfigMixin):
 class MutationConfig(NestedConfigMixin):
     """突然変異関連設定。"""
 
-    rate: float = float(GA_DEFAULT_CONFIG["mutation_rate"])  # type: ignore[arg-type]
+    rate: float = float(cast(float, GA_DEFAULT_CONFIG["mutation_rate"]))
     crossover_field_selection_probability: float = float(
-        GA_MUTATION_SETTINGS["crossover_field_selection_probability"]
-    )  # type: ignore[arg-type]
+        cast(float, GA_MUTATION_SETTINGS["crossover_field_selection_probability"])
+    )
     indicator_param_range: List[float] = field(
         default_factory=lambda: list(
-            GA_MUTATION_SETTINGS["indicator_param_mutation_range"]
-        )  # type: ignore[arg-type]
+            cast(Iterable[float], GA_MUTATION_SETTINGS["indicator_param_mutation_range"])
+        )
     )
     risk_param_range: List[float] = field(
         default_factory=lambda: list(
-            GA_MUTATION_SETTINGS["risk_param_mutation_range"]
-        )  # type: ignore[arg-type]
+            cast(Iterable[float], GA_MUTATION_SETTINGS["risk_param_mutation_range"])
+        )
     )
     indicator_add_delete_probability: float = float(
-        GA_MUTATION_SETTINGS["indicator_add_delete_probability"]
-    )  # type: ignore[arg-type]
+        cast(float, GA_MUTATION_SETTINGS["indicator_add_delete_probability"])
+    )
     indicator_add_vs_delete_probability: float = float(
-        GA_MUTATION_SETTINGS["indicator_add_vs_delete_probability"]
+        cast(float, GA_MUTATION_SETTINGS["indicator_add_vs_delete_probability"])
     )
     condition_change_multiplier: float = float(
-        GA_MUTATION_SETTINGS["condition_change_probability_multiplier"]
+        cast(float, GA_MUTATION_SETTINGS["condition_change_probability_multiplier"])
     )
     condition_selection_probability: float = float(
-        GA_MUTATION_SETTINGS["condition_selection_probability"]
+        cast(float, GA_MUTATION_SETTINGS["condition_selection_probability"])
     )
     condition_operator_switch_probability: float = float(
-        GA_MUTATION_SETTINGS["condition_operator_switch_probability"]
+        cast(float, GA_MUTATION_SETTINGS["condition_operator_switch_probability"])
     )
     tpsl_gene_creation_multiplier: float = float(
-        GA_MUTATION_SETTINGS["tpsl_gene_creation_probability_multiplier"]
+        cast(float, GA_MUTATION_SETTINGS["tpsl_gene_creation_probability_multiplier"])
     )
     position_sizing_gene_creation_multiplier: float = float(
-        GA_MUTATION_SETTINGS[
-            "position_sizing_gene_creation_probability_multiplier"
-        ]
+        cast(
+            float,
+            GA_MUTATION_SETTINGS[
+                "position_sizing_gene_creation_probability_multiplier"
+            ],
+        )
     )
     entry_gene_creation_multiplier: float = float(
-        GA_MUTATION_SETTINGS["entry_gene_creation_probability_multiplier"]
+        cast(float, GA_MUTATION_SETTINGS["entry_gene_creation_probability_multiplier"])
     )
     exit_gene_creation_multiplier: float = float(
-        GA_MUTATION_SETTINGS["exit_gene_creation_probability_multiplier"]
+        cast(float, GA_MUTATION_SETTINGS["exit_gene_creation_probability_multiplier"])
     )
     adaptive_variance_threshold: float = float(
-        GA_MUTATION_SETTINGS["adaptive_mutation_variance_threshold"]
+        cast(float, GA_MUTATION_SETTINGS["adaptive_mutation_variance_threshold"])
     )
     adaptive_decrease_multiplier: float = float(
-        GA_MUTATION_SETTINGS["adaptive_mutation_rate_decrease_multiplier"]
+        cast(float, GA_MUTATION_SETTINGS["adaptive_mutation_rate_decrease_multiplier"])
     )
     adaptive_increase_multiplier: float = float(
-        GA_MUTATION_SETTINGS["adaptive_mutation_rate_increase_multiplier"]
+        cast(float, GA_MUTATION_SETTINGS["adaptive_mutation_rate_increase_multiplier"])
     )
     valid_condition_operators: List[str] = field(
         default_factory=lambda: OPERATORS.copy()

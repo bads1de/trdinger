@@ -148,7 +148,7 @@ class StrategyGeneDictCodec:
                 logger.warning(
                     "戦略遺伝子データが空です。デフォルト戦略遺伝子を返します。"
                 )
-                return strategy_gene_class.create_default()
+                return strategy_gene_class.create_default()  # type: ignore[attr-defined]
 
             indicators = [
                 self.converter.dict_to_indicator_gene(ind_data)

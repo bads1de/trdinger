@@ -128,9 +128,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     @staticmethod
     def _create_feature_selector() -> FeatureSelector:
         """特徴量選択器のインスタンスを生成する。"""
-        return FeatureSelector(**_FEATURE_SELECTION_PARAMS)
+        return FeatureSelector(**_FEATURE_SELECTION_PARAMS)  # type: ignore[arg-type]
 
-    @safe_ml_operation(
+    @safe_ml_operation(  # type: ignore[misc,arg-type]
         default_return={"success": False},
         context="MLモデル学習でエラーが発生しました",
     )
@@ -730,7 +730,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self._model, self.feature_columns, top_n=top_n
         )
 
-    @safe_ml_operation(
+    @safe_ml_operation(  # type: ignore[arg-type]
         default_return=False, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> bool:
@@ -802,7 +802,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.current_model_metadata = None
             self.metadata = None
 
-    @safe_ml_operation(
+    @safe_ml_operation(  # type: ignore[arg-type]
         default_return={
             "fold": 0,
             "error": "フォールド学習でエラーが発生しました",

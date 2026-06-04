@@ -30,6 +30,7 @@ from app.services.ml.orchestration.training_config_validator import (
 from app.utils.datetime_utils import parse_datetime_range_optional
 from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response, ensure_response_dict
+from app.types import SerializableValue
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
@@ -262,7 +263,7 @@ class MLTrainingService(BaseResourceManager):
                 "model_type": model_type,
                 "models": [model_type],
                 "method": "stacking",
-                **single_model_config,
+                **single_model_config,  # type: ignore[typeddict-item]
             }
         else:
             raise ValueError(

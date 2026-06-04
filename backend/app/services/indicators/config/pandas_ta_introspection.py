@@ -274,15 +274,32 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
         - int(param) if param and param > 0 else default
         - param if param and param > 0 else default
         - float(param) if param ... else default
+        - inspect.signature から直接取得したデフォルト値
     """
     func: Any = getattr(ta, indicator_name.lower(), None)
 
     if func is None:
         return {}
 
+    defaults: Dict[str, Any] = {}
+
+    # 1. inspect.signature から数値デフォルト値を取得 (最も信頼性が高い)
+    try:
+        sig = inspect.signature(func)
+        for name, param in sig.parameters.items():
+            if param.default is inspect.Parameter.empty:
+                continue
+            value = param.default
+            if isinstance(value, bool):
+                continue
+            if isinstance(value, (int, float)):
+                defaults[name] = value
+    except (TypeError, ValueError):
+        pass
+
+    # 2. ソースコード解析でシグネチャにないデフォルト値を補完
     try:
         source = inspect.getsource(func)
-        defaults = {}
 
         # 抽出用パターンリスト
         patterns = [
@@ -304,10 +321,10 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
                     except ValueError:
                         pass
 
-        return defaults
-
     except Exception:
-        return {}
+        pass
+
+    return defaults
 
 
 def _evaluate_expression(expr: str, params: Dict[str, Any]) -> Optional[int]:

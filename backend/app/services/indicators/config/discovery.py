@@ -12,7 +12,7 @@ import logging
 import os
 import pickle
 import pkgutil
-from typing import Any, Dict, List, Optional, Type, cast
+from typing import Any, Callable, Dict, List, Optional, Type, cast
 
 import numpy as np
 import pandas as pd
@@ -100,7 +100,7 @@ def _load_cache() -> Optional[List[IndicatorConfig]]:
                     ]
                 )
                 if "min_length_func" in overrides:
-                    config.min_length_func = overrides["min_length_func"]
+                    config.min_length_func = overrides["min_length_func"]  # type: ignore[assignment]
             # customカテゴリのインジケーターのadapter_functionを再構成
             if config.category == "custom" and config.adapter_function is None:
                 try:
@@ -1046,9 +1046,10 @@ class DynamicIndicatorDiscovery:
 
         # 1. 最小データ長と戻り値カラムの動的取得
         if config.pandas_function or hasattr(ta, name_lower):
-            config.min_length_func = (
-                lambda p, ind=name_lower: calculate_min_length(ind, p)
-            )  # type: ignore[misc]
+            config.min_length_func = cast(
+                Callable[[Dict[str, Any]], int],
+                lambda p, ind=name_lower: calculate_min_length(ind, p),
+            )
 
             if not config.return_cols:
                 cols = get_return_column_names(name_lower)

@@ -582,7 +582,7 @@ class MomentumIndicators:
         cycle: int = 10,
         d1: int = 3,
         d2: int = 3,
-    ) -> pd.Series:
+    ) -> pd.DataFrame:
         """Schaff Trend Cycle"""
         if fast <= 0 or slow <= 0:
             raise ValueError("fast and slow must be positive")
@@ -603,11 +603,8 @@ class MomentumIndicators:
         )
 
         if isinstance(result, pd.DataFrame):
-            series = result.iloc[:, 0]
-        else:
-            series = result
-
-        return series
+            return result
+        return result.to_frame()
 
     @staticmethod
     @handle_pandas_ta_errors

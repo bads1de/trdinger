@@ -51,7 +51,7 @@ class TPSLGene(BaseGene):
     @classmethod
     def from_dict(cls, data: StrategyGeneDict) -> TPSLGene:
         """辞書形式からTPSLGeneオブジェクトを復元"""
-        return BaseGene.from_dict.__func__(cls, data)
+        return BaseGene.from_dict.__func__(cls, data)  # type: ignore[attr-defined]
 
     method: TPSLMethod = TPSLMethod.RISK_REWARD_RATIO
     stop_loss_pct: float = 0.03

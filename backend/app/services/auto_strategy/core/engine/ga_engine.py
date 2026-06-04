@@ -104,7 +104,7 @@ class GeneticAlgorithmEngine:
             )
         else:
             logger.info("[Standard] 標準GAモードで起動")
-            self.individual_evaluator = IndividualEvaluator(backtest_service)
+            self.individual_evaluator = IndividualEvaluator(backtest_service)  # type: ignore[assignment]
 
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing: Any = None  # setup_deap時に初期化
@@ -142,7 +142,7 @@ class GeneticAlgorithmEngine:
         )
 
         # 個体クラスを取得（個体生成時に使用）
-        self.individual_class = self.deap_setup.get_individual_class()
+        self.individual_class = self.deap_setup.get_individual_class()  # type: ignore[assignment]
 
         # フィットネス共有の初期化
         fitness_sharing_config = config.fitness_sharing

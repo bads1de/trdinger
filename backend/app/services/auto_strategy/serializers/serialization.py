@@ -92,9 +92,11 @@ class DictConverter:
             )
 
         if isinstance(value, set):
-            frozen_items = [self._freeze_for_cache_key(item) for item in value]
-            frozen_items.sort(key=repr)
-            return ("set", tuple(frozen_items))
+            set_items: List[Any] = [
+                self._freeze_for_cache_key(item) for item in value
+            ]
+            set_items.sort(key=repr)
+            return ("set", tuple(set_items))
 
         if is_dataclass(value) and not isinstance(value, type):
             return (

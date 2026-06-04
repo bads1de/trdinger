@@ -230,7 +230,7 @@ class BaseFeatureCalculator(ABC):
         ):
             safe_denominators = denominators.replace(0, np.nan)
             result = numerators / safe_denominators
-            return result.fillna(fill_value)
+            return result.fillna(fill_value)  # type: ignore[attr-defined,union-attr]
 
         return {} if isinstance(numerators, dict) else pd.Series(dtype=float)
 

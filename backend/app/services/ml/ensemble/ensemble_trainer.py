@@ -603,7 +603,7 @@ class EnsembleTrainer(BaseMLTrainer):
 
         return metadata
 
-    def load_model(self, model_path: str) -> bool:
+    def load_model(self, model_path: str) -> bool:  # type: ignore[override]
         """
         アンサンブルモデルを読み込み
 
