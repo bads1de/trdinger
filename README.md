@@ -99,36 +99,25 @@ trading/
 
 #### 1. Backend Setup
 
-本プロジェクトは Conda 環境での実行を推奨しています。
+本プロジェクトは [uv](https://docs.astral.sh/uv/) での依存管理を推奨しています。
 
 ```bash
 
-# Create environment
-
-conda create -n trading python=3.10
-
-conda activate trading
-
-
+# Install uv (初回のみ)
+# Windows (PowerShell)
+irm https://astral.sh/uv/install.ps1 | iex
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install dependencies & tools
-
 cd backend
-
-pip install -e .[dev,test]
-
-
+uv sync --all-extras
 
 # Run DB Migrations
-
-alembic upgrade head
-
-
+uv run alembic upgrade head
 
 # Start Development Server
-
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 #### 2. Frontend Setup

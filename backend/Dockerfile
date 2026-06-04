@@ -1,25 +1,25 @@
-# ベースイメージとしてPython 3.10を使用
-FROM python:3.10-slim-buster
+# uv公式のPythonイメージを使用してビルドステージでuvをセットアップ
+FROM python:3.11-slim-bookworm
+
+# uvを公式インストール
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # 作業ディレクトリを設定
 WORKDIR /usr/src/app
 
-# pyproject.tomlをコピーして依存関係をインストール
-# backendディレクトリを全てコピーする前にpyproject.tomlをコピーしてpip install .を実行することで、
-# pyproject.tomlに変更がなければ依存関係のインストール層がキャッシュされるようにする。
-COPY backend/pyproject.toml ./pyproject.toml
+# uv関連ファイルを先にコピーして依存関係インストール層をキャッシュ
+COPY backend/pyproject.toml backend/uv.lock ./
 
-# 依存関係をインストール
-# setuptoolsを使用しているため、pip install . でプロジェクトの依存関係をインストール可能
-# --no-cache-dir オプションでキャッシュを無効にし、コンテナイメージサイズを削減
-RUN pip install --no-cache-dir .
+# 依存関係をインストール (システム全体にインストール、本番用)
+RUN uv sync --frozen --no-dev --no-install-project
 
-# backendディレクトリの残りのファイルを全てコピー
+# プロジェクト本体をインストール
 COPY backend/ .
+RUN uv sync --frozen --no-dev
 
 # FastAPIのデフォルトポートを公開
 EXPOSE 8000
 
 # コンテナ起動時にFastAPIアプリケーションを起動
 # Uvicornでリロードなしで起動（本番環境想定）
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

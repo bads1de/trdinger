@@ -189,5 +189,76 @@ trading/
 
 ### Git & CI/CD
 
-- **CI パイプライン**: GitHub Actions は、バックエンドとフロントエンドの両方 (`.github/workflows/`) に設定されています。パイプラインは、`main` ブランチへのすべてのプッシュおよびプルリクエストで、リンティング、型チェック、テスト、およびビルド検証を自動的に実行します。
-- **コミット**: 明示的に強制されていませんが、コミットメッセージは明確で記述的であるべきで、変更の「内容」と「理由」を説明する必要があります。
+#### ワークフロー概要
+
+Trdinger プロジェクトの CI/CD パイプラインは GitHub Actions を使用しており、`main` ブランチへの push / PR 時に自動でコード品質チェックとテストが走ります。バックエンド・フロントエンドは独立して並列実行されます。
+
+| ワークフロー | トリガー | チェック内容 |
+|------------|---------|------------|
+| `backend-ci.yml` | `backend/**` の変更 | uv セットアップ → pytest (uv run) |
+| `frontend-ci.yml` | `frontend/**` の変更 | TypeScript 型チェック → ESLint → Jest → Next.js ビルド |
+
+#### ワークフロー詳細
+
+**バックエンド CI** (`backend-ci.yml`):
+
+1. リポジトリをチェックアウト
+2. [`astral-sh/setup-uv`](https://github.com/astral-sh/setup-uv) で Python 3.11 + uv をセットアップ
+3. `uv sync --all-extras` で依存解決 (`uv.lock` で完全固定)
+4. `uv run pytest` でテスト実行
+
+**フロントエンド CI** (`frontend-ci.yml`):
+
+1. Node.js 20.x をセットアップ
+2. `npm ci` で依存解決 (`package-lock.json` 固定)
+3. TypeScript 型チェック → ESLint → Jest → 本番ビルド
+
+#### ローカルで同じチェックを動かす
+
+PR 作成前にローカルで全チェックを走らせると、CI での失敗を防げます。
+
+**バックエンド**:
+
+```powershell
+cd backend
+
+# フォーマット + リント + 型チェック
+uv run black --check .
+uv run isort --check-only .
+uv run ruff check app tests
+uv run mypy app
+
+# テスト
+uv run pytest --cov=app --cov-report=term
+```
+
+**フロントエンド**:
+
+```bash
+cd frontend
+
+# 型チェック + リント
+npx tsc --noEmit
+npm run lint
+
+# テスト
+npm test -- --ci
+
+# ビルド
+npm run build
+```
+
+#### トラブルシューティング
+
+| 症状 | 原因 | 対処 |
+|------|------|------|
+| `uv.lock` 関連のエラー | lockfile が古い | `uv lock --upgrade` で更新 |
+| Black / isort フォーマット違反 | 自動修正可能 | `uv run black .` → `uv run isort .` |
+| MyPy 型エラー | 型注釈の不備 | 型を修正 or `# type: ignore` (非推奨) |
+| pytest 失敗 | テストの不具合 | `uv run pytest -v` で詳細確認、特定テストは `uv run pytest tests/test_x.py::test_y -v` |
+| カバレッジ不足 (< 80%) | テスト不足 | HTML レポート確認: `uv run pytest --cov=app --cov-report=html` |
+| GitHub Actions でのみ失敗 | 環境差 (Ubuntu vs Windows) | 改行コード・パス区切りを確認、ワークフローログ参照 |
+
+#### コミット規約
+
+明示的に強制されていませんが、コミットメッセージは明確で記述的であるべきで、変更の「内容」と「理由」を説明する必要があります。`<type>(<scope>): <subject>` 形式を推奨 (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`, `build:`, `ci:`)。
