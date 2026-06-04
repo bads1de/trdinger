@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -40,12 +40,12 @@ class GeneratedStrategyService:
         self,
         limit: int = 50,
         offset: int = 0,
-        risk_level: Optional[str] = None,
-        experiment_id: Optional[int] = None,
-        min_fitness: Optional[float] = None,
+        risk_level: str | None = None,
+        experiment_id: int | None = None,
+        min_fitness: float | None = None,
         sort_by: str = "fitness_score",
         sort_order: str = "desc",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         生成済み戦略の一覧を取得
 
@@ -82,9 +82,7 @@ class GeneratedStrategyService:
             paginated_strategies = [
                 s
                 for s in (
-                    self._convert_generated_strategy_to_display_format(
-                        strategy
-                    )
+                    self._convert_generated_strategy_to_display_format(strategy)
                     for strategy in strategies_from_db
                 )
                 if s is not None
@@ -107,12 +105,12 @@ class GeneratedStrategyService:
         self,
         limit: int = 50,
         offset: int = 0,
-        risk_level: Optional[str] = None,
-        experiment_id: Optional[int] = None,
-        min_fitness: Optional[float] = None,
+        risk_level: str | None = None,
+        experiment_id: int | None = None,
+        min_fitness: float | None = None,
         sort_by: str = "fitness_score",
         sort_order: str = "desc",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         生成済み戦略を API レスポンス形式で返す互換メソッド。
 
@@ -132,7 +130,7 @@ class GeneratedStrategyService:
 
     def _convert_generated_strategy_to_display_format(
         self, strategy: GeneratedStrategy
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         GeneratedStrategyを表示用の形式に変換します。
 
@@ -143,7 +141,7 @@ class GeneratedStrategyService:
             表示形式の戦略データ
         """
         try:
-            gene_data = cast(Dict[str, Any], strategy.gene_data)
+            gene_data = cast(dict[str, Any], strategy.gene_data)
             backtest_result = strategy.backtest_result
 
             # 基本情報の抽出
@@ -153,9 +151,7 @@ class GeneratedStrategyService:
             parameters = self._extract_parameters(gene_data)
 
             # パフォーマンス指標の抽出
-            performance_metrics = self._extract_performance_metrics(
-                backtest_result
-            )
+            performance_metrics = self._extract_performance_metrics(backtest_result)
 
             # リスクレベルの計算
             risk_level = self._calculate_risk_level(performance_metrics)
@@ -168,9 +164,7 @@ class GeneratedStrategyService:
                 "category": "auto_generated",
                 "indicators": indicators,
                 "parameters": parameters,
-                "expected_return": performance_metrics.get(
-                    "total_return", 0.0
-                ),
+                "expected_return": performance_metrics.get("total_return", 0.0),
                 "sharpe_ratio": performance_metrics.get("sharpe_ratio", 0.0),
                 "max_drawdown": performance_metrics.get("max_drawdown", 0.0),
                 "win_rate": performance_metrics.get("win_rate", 0.0),
@@ -208,7 +202,7 @@ class GeneratedStrategyService:
             logger.error(f"戦略の変換中にエラーが発生しました: {e}")
             return None
 
-    def _extract_strategy_name(self, gene_data: Dict[str, Any]) -> str:
+    def _extract_strategy_name(self, gene_data: dict[str, Any]) -> str:
         """戦略名を抽出"""
         indicator_names = self._extract_enabled_indicator_names(gene_data)
 
@@ -217,22 +211,22 @@ class GeneratedStrategyService:
         else:
             return "GA生成戦略"
 
-    def _generate_strategy_description(self, gene_data: Dict[str, Any]) -> str:
+    def _generate_strategy_description(self, gene_data: dict[str, Any]) -> str:
         """戦略の説明を生成"""
         enabled_indicators = self._extract_enabled_indicator_names(gene_data)
 
         if enabled_indicators:
-            return f"遺伝的アルゴリズムで生成された{'+'.join(enabled_indicators)}複合戦略"
+            return (
+                f"遺伝的アルゴリズムで生成された{'+'.join(enabled_indicators)}複合戦略"
+            )
         else:
             return "遺伝的アルゴリズムで生成された戦略"
 
-    def _extract_indicators(self, gene_data: Dict[str, Any]) -> List[str]:
+    def _extract_indicators(self, gene_data: dict[str, Any]) -> list[str]:
         """使用指標を抽出"""
         return self._extract_enabled_indicator_names(gene_data)
 
-    def _extract_enabled_indicator_names(
-        self, gene_data: Dict[str, Any]
-    ) -> List[str]:
+    def _extract_enabled_indicator_names(self, gene_data: dict[str, Any]) -> list[str]:
         """有効な指標名を抽出"""
         indicators = gene_data.get("indicators", [])
         return [
@@ -241,36 +235,29 @@ class GeneratedStrategyService:
             if indicator.get("enabled", False)
         ]
 
-    def _extract_parameters(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _extract_parameters(self, gene_data: dict[str, Any]) -> dict[str, Any]:
         """パラメータを抽出"""
         parameters = {
             "indicators": gene_data.get("indicators", []),
             "risk_management": gene_data.get("risk_management", {}),
-            "long_entry_conditions": gene_data.get(
-                "long_entry_conditions", {}
-            ),
-            "short_entry_conditions": gene_data.get(
-                "short_entry_conditions", {}
-            ),
+            "long_entry_conditions": gene_data.get("long_entry_conditions", {}),
+            "short_entry_conditions": gene_data.get("short_entry_conditions", {}),
         }
         for field_name in StrategyGene.sub_gene_field_names():
             parameters[field_name] = gene_data.get(field_name)
         return parameters
 
     def _extract_evaluation_summary(
-        self, gene_data: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self, gene_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """保存済みの評価 summary を取得する。"""
         return extract_evaluation_summary(gene_data)
 
     def _extract_performance_metrics(
-        self, backtest_result: Optional[BacktestResult]
-    ) -> Dict[str, float]:
+        self, backtest_result: BacktestResult | None
+    ) -> dict[str, float]:
         """パフォーマンス指標を抽出"""
-        if (
-            backtest_result is None
-            or backtest_result.performance_metrics is None
-        ):
+        if backtest_result is None or backtest_result.performance_metrics is None:
             return {
                 "total_return": 0.0,
                 "sharpe_ratio": 0.0,
@@ -290,9 +277,7 @@ class GeneratedStrategyService:
             "total_trades": metrics.get("total_trades", 0),
         }
 
-    def _calculate_risk_level(
-        self, performance_metrics: Dict[str, float]
-    ) -> str:
+    def _calculate_risk_level(self, performance_metrics: dict[str, float]) -> str:
         """リスクレベルを計算"""
         max_drawdown = performance_metrics.get("max_drawdown", 0.0)
 

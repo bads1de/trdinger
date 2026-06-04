@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from types import SimpleNamespace
-from typing import Sequence
 from unittest.mock import Mock, call, patch
 
 import numpy as np
@@ -328,7 +328,9 @@ class TestEvolutionRunner:
 
         with patch(
             "app.services.auto_strategy.core.engine.evolution_runner.sorted",
-            side_effect=AssertionError("sorted should not be used for partial selection"),
+            side_effect=AssertionError(
+                "sorted should not be used for partial selection"
+            ),
             create=True,
         ):
             top_candidates = runner._select_top_candidates(candidates, 2)
@@ -354,8 +356,8 @@ class TestEvolutionRunner:
         """Test fitness sharing application during evolution."""
         config.fitness_sharing = {"enable_fitness_sharing": True}
         mock_fitness_sharing = Mock()
-        mock_fitness_sharing.apply_fitness_sharing.side_effect = (
-            lambda pop: pop
+        mock_fitness_sharing.apply_fitness_sharing.side_effect = lambda pop: (
+            pop
         )  # Identity
 
         runner = EvolutionRunner(
@@ -383,7 +385,7 @@ class TestEvolutionRunner:
         mock_individual_evaluator = Mock()
         mock_individual_evaluator.get_cached_evaluation_report.return_value = "report"
 
-        runner = EvolutionRunner(
+        EvolutionRunner(
             toolbox=mock_toolbox,
             stats=None,
             fitness_sharing=mock_fitness_sharing,

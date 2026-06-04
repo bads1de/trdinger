@@ -5,7 +5,7 @@
 クリプト市場の週末は流動性が低く、ノイズが増える傾向があるため有効です。
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
@@ -26,9 +26,7 @@ class WeekendFilter(BaseTool):
         priority="essential",
     )
 
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """週末かどうかを判定してエントリースキップを決定"""
         if not params.get("enabled", True) or context.timestamp is None:
             return False

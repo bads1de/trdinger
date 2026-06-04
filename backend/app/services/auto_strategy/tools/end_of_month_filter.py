@@ -7,7 +7,7 @@
 
 import calendar
 import random
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
@@ -27,9 +27,7 @@ class EndOfMonthFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """
         月末かどうかを判定
 
@@ -63,7 +61,7 @@ class EndOfMonthFilter(BaseTool):
         # days_left == 0 (最終日) <= 0 -> True
         return days_left <= days_before
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         パラメータを突然変異
 

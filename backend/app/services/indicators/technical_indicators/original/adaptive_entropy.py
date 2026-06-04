@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -53,7 +53,7 @@ def adaptive_entropy(
     short_length: int = 14,
     long_length: int = 28,
     signal_length: int = 5,
-) -> Tuple[pd.Series, pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series, pd.Series]:
     """Adaptive Entropy Oscillator."""
     if short_length < 5:
         raise ValueError("short_length must be >= 5")
@@ -64,9 +64,7 @@ def adaptive_entropy(
     if short_length >= long_length:
         raise ValueError("short_length must be < long_length")
 
-    validation = validate_series_params(
-        close, long_length, min_data_length=long_length
-    )
+    validation = validate_series_params(close, long_length, min_data_length=long_length)
     if validation is not None:
         nan_osc = pd.Series(
             np.full(len(close), np.nan),
@@ -116,6 +114,4 @@ def adaptive_entropy(
         name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}",
     )
 
-    return cast(
-        Tuple[pd.Series, pd.Series, pd.Series], (oscillator, signal, ratio)
-    )
+    return cast(tuple[pd.Series, pd.Series, pd.Series], (oscillator, signal, ratio))

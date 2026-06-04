@@ -6,7 +6,6 @@ UniversalStrategyのステートフル条件評価ロジックを担当します
 """
 
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +75,7 @@ class StatefulConditionsEvaluator:
 
         return False
 
-    def get_stateful_entry_direction(self) -> Optional[float]:
+    def get_stateful_entry_direction(self) -> float | None:
         """
         成立したステートフル条件からエントリー方向を取得
 

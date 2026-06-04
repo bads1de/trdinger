@@ -79,9 +79,7 @@ class OriginalIndicators:
     pfe = staticmethod(pfe)
     mmi = staticmethod(mmi)
     ehlers_cyber_cycle = staticmethod(ehlers_cyber_cycle)
-    ehlers_instantaneous_trendline = staticmethod(
-        ehlers_instantaneous_trendline
-    )
+    ehlers_instantaneous_trendline = staticmethod(ehlers_instantaneous_trendline)
     smoothed_adaptive_momentum = staticmethod(smoothed_adaptive_momentum)
     vortex_rsi = staticmethod(vortex_rsi)
     ttf = staticmethod(ttf)

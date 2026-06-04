@@ -90,7 +90,7 @@ class TestPessimisticExit:
     @pytest.fixture
     def gene_with_tpsl(self):
         """TPSL設定付きの戦略遺伝子"""
-        dummy_cond = Condition(left_operand="close", operator=">", right_operand="sma")
+        Condition(left_operand="close", operator=">", right_operand="sma")
         tpsl_gene = TPSLGene(
             enabled=True,
             stop_loss_pct=0.05,  # SL: 5% -> 95
@@ -116,9 +116,7 @@ class TestPessimisticExit:
 
         with patch(
             "app.services.auto_strategy.strategies.universal_strategy.ConditionEvaluator"
-        ) as MockEval:
-            mock_evaluator = MockEval.return_value
-
+        ):
             strategy = UniversalStrategy(mock_broker, mock_data_both_tpsl_hit, params)
 
             # ポジションありの状態をモック
@@ -153,9 +151,7 @@ class TestPessimisticExit:
 
         with patch(
             "app.services.auto_strategy.strategies.universal_strategy.ConditionEvaluator"
-        ) as MockEval:
-            mock_evaluator = MockEval.return_value
-
+        ):
             strategy = UniversalStrategy(mock_broker, mock_data_only_tp_hit, params)
 
             mock_position = MagicMock()
@@ -186,9 +182,7 @@ class TestPessimisticExit:
 
         with patch(
             "app.services.auto_strategy.strategies.universal_strategy.ConditionEvaluator"
-        ) as MockEval:
-            mock_evaluator = MockEval.return_value
-
+        ):
             strategy = UniversalStrategy(mock_broker, mock_data_only_sl_hit, params)
 
             mock_position = MagicMock()
@@ -274,7 +268,7 @@ class TestTrailingStop:
     @pytest.fixture
     def gene_with_trailing_stop(self):
         """トレーリングストップ設定付きの戦略遺伝子"""
-        dummy_cond = Condition(left_operand="close", operator=">", right_operand="sma")
+        Condition(left_operand="close", operator=">", right_operand="sma")
         tpsl_gene = TPSLGene(
             enabled=True,
             stop_loss_pct=0.05,
@@ -403,7 +397,7 @@ class TestTrailingTakeProfit:
     @pytest.fixture
     def gene_with_trailing_tp(self):
         """トレーリングTP設定付きの戦略遺伝子"""
-        dummy_cond = Condition(left_operand="close", operator=">", right_operand="sma")
+        Condition(left_operand="close", operator=">", right_operand="sma")
         tpsl_gene = TPSLGene(
             enabled=True,
             stop_loss_pct=0.05,  # SL: 5%

@@ -1,5 +1,6 @@
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, Dict, Mapping, Optional
+from typing import Any
 
 
 def now_iso() -> str:
@@ -12,7 +13,7 @@ def now_iso() -> str:
     return datetime.now().isoformat()
 
 
-def ensure_response_dict(result: Any) -> Dict[str, Any]:
+def ensure_response_dict(result: Any) -> dict[str, Any]:
     """
     辞書互換のレスポンス値を dict に正規化する
 
@@ -47,7 +48,7 @@ def ensure_response_dict(result: Any) -> Dict[str, Any]:
 def extract_response_data(
     result: Mapping[str, Any],
     key: str = "data",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     レスポンスのネストされた dict ペイロードを取り出す
 
@@ -68,8 +69,8 @@ def extract_response_data(
 
 def _build_response(
     success: bool,
-    fields: Dict[str, Any],
-) -> Dict[str, Any]:
+    fields: dict[str, Any],
+) -> dict[str, Any]:
     """レスポンス辞書を構築する内部ヘルパー関数。
 
     成功/失敗フラグと追加フィールドから、標準化されたAPIレスポンス辞書を生成します。
@@ -86,7 +87,7 @@ def _build_response(
             常に "success"（bool）と "timestamp"（ISO形式文字列）を含み、
             それに加えて有効なfieldsのキーが含まれる。
     """
-    response: Dict[str, Any] = {"success": success}
+    response: dict[str, Any] = {"success": success}
 
     for key, value in fields.items():
         if value is not None and value != "":
@@ -98,11 +99,11 @@ def _build_response(
 
 def error_response(
     message: str,
-    error_code: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None,
-    context: Optional[str] = None,
-    data: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    error_code: str | None = None,
+    details: dict[str, Any] | None = None,
+    context: str | None = None,
+    data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     エラーレスポンスを生成
 
@@ -140,13 +141,13 @@ def error_response(
 def result_response(
     success: bool,
     message: str,
-    data: Optional[Dict[str, Any]] = None,
-    error_code: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None,
-    context: Optional[str] = None,
-    status: Optional[str] = None,
-    status_code: Optional[int] = None,
-) -> Dict[str, Any]:
+    data: dict[str, Any] | None = None,
+    error_code: str | None = None,
+    details: dict[str, Any] | None = None,
+    context: str | None = None,
+    status: str | None = None,
+    status_code: int | None = None,
+) -> dict[str, Any]:
     """
     成功/失敗どちらのレスポンスもまとめて生成する統一関数
 
@@ -186,11 +187,11 @@ def result_response(
 def api_response(
     success: bool,
     message: str = "",
-    status: Optional[str] = None,
-    data: Optional[Dict[str, Any]] = None,
-    error: Optional[str] = None,
-    status_code: Optional[int] = None,
-) -> Dict[str, Any]:
+    status: str | None = None,
+    data: dict[str, Any] | None = None,
+    error: str | None = None,
+    status_code: int | None = None,
+) -> dict[str, Any]:
     """
     汎用APIレスポンス生成ユーティリティ
 

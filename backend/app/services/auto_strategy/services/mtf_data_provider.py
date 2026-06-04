@@ -6,7 +6,7 @@ GA戦略で複数タイムフレームの指標を使用可能にします。
 """
 
 import logging
-from typing import Dict, List, Optional, cast
+from typing import cast
 
 import pandas as pd
 
@@ -45,7 +45,7 @@ class MultiTimeframeDataProvider:
         self,
         base_data: pd.DataFrame,
         base_timeframe: str = "1h",
-        available_timeframes: Optional[List[str]] = None,
+        available_timeframes: list[str] | None = None,
     ):
         """
         初期化
@@ -56,7 +56,7 @@ class MultiTimeframeDataProvider:
             available_timeframes: 利用可能なタイムフレームのリスト
         """
         self.base_timeframe = base_timeframe
-        self._cache: Dict[str, pd.DataFrame] = {}
+        self._cache: dict[str, pd.DataFrame] = {}
 
         # base_dataをDataFrameに変換して保持
         if hasattr(base_data, "df"):
@@ -71,9 +71,7 @@ class MultiTimeframeDataProvider:
             )
 
         # 利用可能なタイムフレームを設定
-        self.available_timeframes = (
-            available_timeframes or SUPPORTED_TIMEFRAMES.copy()
-        )
+        self.available_timeframes = available_timeframes or SUPPORTED_TIMEFRAMES.copy()
 
         # ベースタイムフレームのデータをキャッシュに追加
         self._cache[base_timeframe] = self.base_df
@@ -83,7 +81,7 @@ class MultiTimeframeDataProvider:
             f"data_rows={len(self.base_df)}"
         )
 
-    def get_data(self, timeframe: Optional[str] = None) -> pd.DataFrame:
+    def get_data(self, timeframe: str | None = None) -> pd.DataFrame:
         """
         指定されたタイムフレームのデータを取得
 
@@ -213,6 +211,6 @@ class MultiTimeframeDataProvider:
         logger.debug("MTFデータキャッシュをクリアしました")
 
     @property
-    def cached_timeframes(self) -> List[str]:
+    def cached_timeframes(self) -> list[str]:
         """キャッシュされているタイムフレームのリスト"""
         return list(self._cache.keys())

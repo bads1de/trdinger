@@ -6,7 +6,7 @@ ML関連設定クラス
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,7 +29,7 @@ class EnsembleConfig(BaseSettings):
         alias="ENABLED",
         description="アンサンブル学習を有効にするか",
     )
-    algorithms: List[str] = Field(
+    algorithms: list[str] = Field(
         default_factory=lambda: list(DEFAULT_ENSEMBLE_ALGORITHMS),
         alias="ALGORITHMS",
         description="使用するアルゴリズム",
@@ -46,7 +46,7 @@ class EnsembleConfig(BaseSettings):
     )
 
     # スタッキング設定
-    stacking_base_models: List[str] = Field(
+    stacking_base_models: list[str] = Field(
         default_factory=lambda: list(DEFAULT_ENSEMBLE_ALGORITHMS),
         alias="STACKING_BASE_MODELS",
     )
@@ -74,9 +74,7 @@ class EnsembleConfig(BaseSettings):
         description="元特徴量をメタモデルに渡すか",
     )
 
-    model_config = SettingsConfigDict(
-        env_prefix="ML_ENSEMBLE_", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_prefix="ML_ENSEMBLE_", extra="ignore")
 
 
 class MLDataProcessingConfig(BaseSettings):
@@ -97,13 +95,9 @@ class MLDataProcessingConfig(BaseSettings):
     model_training_timeout: int = Field(
         default=7200, description="2時間", alias="MODEL_TRAINING_TIMEOUT"
     )
-    model_prediction_timeout: int = Field(
-        default=10, alias="MODEL_PREDICTION_TIMEOUT"
-    )
+    model_prediction_timeout: int = Field(default=10, alias="MODEL_PREDICTION_TIMEOUT")
 
-    model_config = SettingsConfigDict(
-        env_prefix="ML_DATA_PROCESSING_", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_prefix="ML_DATA_PROCESSING_", extra="ignore")
 
 
 class MLModelConfig(BaseSettings):
@@ -113,12 +107,8 @@ class MLModelConfig(BaseSettings):
     """
 
     model_save_path: str = Field(default="models/", alias="MODEL_SAVE_PATH")
-    model_file_extension: str = Field(
-        default=".pkl", alias="MODEL_FILE_EXTENSION"
-    )
-    model_name_prefix: str = Field(
-        default="ml_signal_model", alias="MODEL_NAME_PREFIX"
-    )
+    model_file_extension: str = Field(default=".pkl", alias="MODEL_FILE_EXTENSION")
+    model_name_prefix: str = Field(default="ml_signal_model", alias="MODEL_NAME_PREFIX")
     auto_strategy_model_name: str = Field(
         default="auto_strategy_ml_model", alias="AUTO_STRATEGY_MODEL_NAME"
     )
@@ -157,14 +147,10 @@ class MLPredictionConfig(BaseSettings):
 
     min_probability: float = Field(default=0.0, alias="MIN_PROBABILITY")
     max_probability: float = Field(default=1.0, alias="MAX_PROBABILITY")
-    expand_to_data_length: bool = Field(
-        default=True, alias="EXPAND_TO_DATA_LENGTH"
-    )
-    default_indicator_length: int = Field(
-        default=100, alias="DEFAULT_INDICATOR_LENGTH"
-    )
+    expand_to_data_length: bool = Field(default=True, alias="EXPAND_TO_DATA_LENGTH")
+    default_indicator_length: int = Field(default=100, alias="DEFAULT_INDICATOR_LENGTH")
 
-    def get_default_predictions(self) -> Dict[str, float]:
+    def get_default_predictions(self) -> dict[str, float]:
         """デフォルトの予測値を取得します。
 
         Returns:
@@ -179,7 +165,7 @@ class MLPredictionConfig(BaseSettings):
             "gate_open": self.default_gate_open,
         }
 
-    def get_fallback_predictions(self) -> Dict[str, float]:
+    def get_fallback_predictions(self) -> dict[str, float]:
         """フォールバック予測値を取得します。
 
         Returns:
@@ -194,9 +180,7 @@ class MLPredictionConfig(BaseSettings):
             "gate_open": self.fallback_gate_open,
         }
 
-    model_config = SettingsConfigDict(
-        env_prefix="ML_PREDICTION_", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_prefix="ML_PREDICTION_", extra="ignore")
 
 
 @dataclass
@@ -273,7 +257,7 @@ class LabelGenerationConfig:
                     f"利用可能なプリセット: {', '.join(sorted(available_presets.keys()))}"
                 )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """辞書形式に変換。
 
         Returns:
@@ -296,19 +280,11 @@ class MLTrainingConfig(BaseSettings):
     lgb_objective: str = Field(default="regression", description="目的関数")
     lgb_num_class: int = Field(default=1, description="クラス数")
     lgb_metric: str = Field(default="rmse", description="評価指標")
-    lgb_boosting_type: str = Field(
-        default="gbdt", description="ブースティングタイプ"
-    )
-    lgb_feature_fraction: float = Field(
-        default=0.9, description="特徴量採用率"
-    )
-    lgb_bagging_fraction: float = Field(
-        default=0.8, description="バギング採用率"
-    )
+    lgb_boosting_type: str = Field(default="gbdt", description="ブースティングタイプ")
+    lgb_feature_fraction: float = Field(default=0.9, description="特徴量採用率")
+    lgb_bagging_fraction: float = Field(default=0.8, description="バギング採用率")
     lgb_bagging_freq: int = Field(default=5, description="バギング頻度")
-    lgb_early_stopping_rounds: int = Field(
-        default=50, description="早期終了ラウンド数"
-    )
+    lgb_early_stopping_rounds: int = Field(default=50, description="早期終了ラウンド数")
     lgb_verbose: int = Field(default=-1, description="詳細出力レベル")
 
     # XGBoost デフォルトパラメータ
@@ -342,9 +318,7 @@ class MLTrainingConfig(BaseSettings):
         default=10, description="最小限に緩和", alias="MIN_TRAINING_SAMPLES"
     )
 
-    performance_threshold: float = Field(
-        default=0.05, alias="PERFORMANCE_THRESHOLD"
-    )
+    performance_threshold: float = Field(default=0.05, alias="PERFORMANCE_THRESHOLD")
     validation_split: float = Field(default=0.2, alias="VALIDATION_SPLIT")
 
     # 正規タスク設定
@@ -372,9 +346,7 @@ class MLTrainingConfig(BaseSettings):
         default="balanced",
         description="class_weightモード ('balanced' or custom dict)",
     )
-    use_smote: bool = Field(
-        default=False, description="SMOTE/ADASYNを使用するか"
-    )
+    use_smote: bool = Field(default=False, description="SMOTE/ADASYNを使用するか")
     smote_method: str = Field(
         default="smote", description="サンプリング方法 ('smote' or 'adasyn')"
     )
@@ -401,10 +373,7 @@ class MLTrainingConfig(BaseSettings):
         Raises:
             ValueError: バリデーションエラーの場合
         """
-        if (
-            hasattr(v, "__class__")
-            and v.__class__.__name__ == "LabelGenerationConfig"
-        ):
+        if hasattr(v, "__class__") and v.__class__.__name__ == "LabelGenerationConfig":
             return v
         if isinstance(v, dict):
             return LabelGenerationConfig(**v)
@@ -438,14 +407,10 @@ class MLTrainingConfig(BaseSettings):
     @classmethod
     def validate_gate_quantile(cls, v: float) -> float:
         if not 0.0 < v < 1.0:
-            raise ValueError(
-                "gate_quantile は 0 より大きく 1 未満である必要があります"
-            )
+            raise ValueError("gate_quantile は 0 より大きく 1 未満である必要があります")
         return v
 
-    model_config = SettingsConfigDict(
-        env_prefix="ML_TRAINING_", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_prefix="ML_TRAINING_", extra="ignore")
 
 
 class MLConfig(BaseSettings):
@@ -462,7 +427,7 @@ class MLConfig(BaseSettings):
     training: MLTrainingConfig = Field(default_factory=MLTrainingConfig)
     ensemble: EnsembleConfig = Field(default_factory=EnsembleConfig)
 
-    def get_model_search_paths(self) -> List[str]:
+    def get_model_search_paths(self) -> list[str]:
         """モデル検索パスのリストを取得"""
         import os
 

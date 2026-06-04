@@ -68,7 +68,6 @@ def test_prepare_model_data_with_none_ohlcv_1m(
         patch.object(module, "FeatureEngineeringService") as mock_fe_service_cls,
         patch.object(module, "FeatureSelector") as mock_selector_cls,
     ):
-
         # ohlcv_1m を None に設定
         mock_fetch.return_value = (mock_data, None, None, None, None)
 

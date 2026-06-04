@@ -94,9 +94,9 @@ class TestSMACalculationAccuracy:
         for idx, expected in expected_values.items():
             actual = result.iloc[idx]
             assert not np.isnan(actual), f"SMA[{idx}]がNaNです"
-            assert np.isclose(
-                actual, expected, rtol=1e-10
-            ), f"SMA[{idx}]の値が不正: expected={expected}, actual={actual}"
+            assert np.isclose(actual, expected, rtol=1e-10), (
+                f"SMA[{idx}]の値が不正: expected={expected}, actual={actual}"
+            )
 
     def test_sma_initial_nan_values(self, known_prices):
         """SMAの最初の(length-1)個がNaNであることを検証"""
@@ -150,12 +150,12 @@ class TestWMACalculationAccuracy:
 
         assert not np.isnan(actual_2), "WMA[2]がNaNです"
         assert not np.isnan(actual_3), "WMA[3]がNaNです"
-        assert np.isclose(
-            actual_2, expected_wma_2, rtol=1e-5
-        ), f"WMA[2]の値が不正: expected={expected_wma_2}, actual={actual_2}"
-        assert np.isclose(
-            actual_3, expected_wma_3, rtol=1e-5
-        ), f"WMA[3]の値が不正: expected={expected_wma_3}, actual={actual_3}"
+        assert np.isclose(actual_2, expected_wma_2, rtol=1e-5), (
+            f"WMA[2]の値が不正: expected={expected_wma_2}, actual={actual_2}"
+        )
+        assert np.isclose(actual_3, expected_wma_3, rtol=1e-5), (
+            f"WMA[3]の値が不正: expected={expected_wma_3}, actual={actual_3}"
+        )
 
 
 # =============================================================================
@@ -194,9 +194,9 @@ class TestRSICalculationAccuracy:
         valid_values = result.dropna()
         assert len(valid_values) > 0, "RSIの有効な値がありません"
         # 全て上昇なのでRSIは100に近い値になる
-        assert (
-            valid_values.iloc[-1] > 90
-        ), f"全て上昇の場合RSIは90以上であるべき: {valid_values.iloc[-1]}"
+        assert valid_values.iloc[-1] > 90, (
+            f"全て上昇の場合RSIは90以上であるべき: {valid_values.iloc[-1]}"
+        )
 
     def test_rsi_all_losses(self):
         """全て下落の場合、RSIは0に近づくことを検証"""
@@ -226,9 +226,9 @@ class TestRSICalculationAccuracy:
         valid_values = result.dropna()
         assert len(valid_values) > 0, "RSIの有効な値がありません"
         # 全て下落なのでRSIは0に近い値になる
-        assert (
-            valid_values.iloc[-1] < 10
-        ), f"全て下落の場合RSIは10以下であるべき: {valid_values.iloc[-1]}"
+        assert valid_values.iloc[-1] < 10, (
+            f"全て下落の場合RSIは10以下であるべき: {valid_values.iloc[-1]}"
+        )
 
     def test_rsi_constant_prices(self):
         """一定価格ではRSIは計算できない（変動なし）ことを検証"""
@@ -238,9 +238,9 @@ class TestRSICalculationAccuracy:
         valid_values = result.dropna()
         # 変動がない場合、pandas-taのRSIはNaNを返す（損益ゼロのため）
         # これは正常な動作
-        assert len(valid_values) == 0 or np.allclose(
-            valid_values, 50.0, atol=1.0
-        ), "一定価格のRSIはNaNまたは50付近であるべき"
+        assert len(valid_values) == 0 or np.allclose(valid_values, 50.0, atol=1.0), (
+            "一定価格のRSIはNaNまたは50付近であるべき"
+        )
 
     def test_rsi_range(self, known_prices):
         """RSIが0-100の範囲にあることを検証"""
@@ -290,9 +290,9 @@ class TestMACDCalculationAccuracy:
             ):
                 expected_macd = ema_fast.iloc[i] - ema_slow.iloc[i]
                 actual_macd = macd_line.iloc[i]
-                assert np.isclose(
-                    actual_macd, expected_macd, rtol=1e-5
-                ), f"MACD[{i}]がFast-Slowと一致しない: expected={expected_macd}, actual={actual_macd}"
+                assert np.isclose(actual_macd, expected_macd, rtol=1e-5), (
+                    f"MACD[{i}]がFast-Slowと一致しない: expected={expected_macd}, actual={actual_macd}"
+                )
 
     def test_macd_histogram_is_macd_minus_signal(self, known_prices):
         """ヒストグラム = MACD - Signalであることを検証"""
@@ -305,9 +305,9 @@ class TestMACDCalculationAccuracy:
             if valid_indices.iloc[i]:
                 expected_histogram = macd_line.iloc[i] - signal.iloc[i]
                 actual_histogram = histogram.iloc[i]
-                assert np.isclose(
-                    actual_histogram, expected_histogram, rtol=1e-5
-                ), f"Histogram[{i}]がMACD-Signalと一致しない: expected={expected_histogram}, actual={actual_histogram}"
+                assert np.isclose(actual_histogram, expected_histogram, rtol=1e-5), (
+                    f"Histogram[{i}]がMACD-Signalと一致しない: expected={expected_histogram}, actual={actual_histogram}"
+                )
 
 
 # =============================================================================
@@ -368,7 +368,7 @@ class TestAdditionalMomentumIndicatorsAccuracy:
 
         if not valid.any():
             pytest.skip("TRIXHが有効な値を返しません（データ長不足）")
-        
+
         assert np.allclose(
             trix_hist[valid],
             trix_line[valid] - trix_signal[valid],
@@ -417,9 +417,9 @@ class TestBollingerBandsAccuracy:
         # 中間線がSMAと一致するか検証
         for i in range(len(known_prices)):
             if not np.isnan(middle.iloc[i]):
-                assert np.isclose(
-                    middle.iloc[i], sma.iloc[i], rtol=1e-10
-                ), f"BB middle[{i}]がSMAと一致しない: middle={middle.iloc[i]}, sma={sma.iloc[i]}"
+                assert np.isclose(middle.iloc[i], sma.iloc[i], rtol=1e-10), (
+                    f"BB middle[{i}]がSMAと一致しない: middle={middle.iloc[i]}, sma={sma.iloc[i]}"
+                )
 
     def test_bbands_upper_lower_symmetry(self, known_prices):
         """BBの上下バンドがSMA±k*stdの関係にあることを検証"""
@@ -437,12 +437,12 @@ class TestBollingerBandsAccuracy:
                 expected_upper = middle.iloc[i] + std_dev * rolling_std.iloc[i]
                 expected_lower = middle.iloc[i] - std_dev * rolling_std.iloc[i]
 
-                assert np.isclose(
-                    upper.iloc[i], expected_upper, rtol=1e-5
-                ), f"BB upper[{i}]がSMA+{std_dev}*stdと一致しない"
-                assert np.isclose(
-                    lower.iloc[i], expected_lower, rtol=1e-5
-                ), f"BB lower[{i}]がSMA-{std_dev}*stdと一致しない"
+                assert np.isclose(upper.iloc[i], expected_upper, rtol=1e-5), (
+                    f"BB upper[{i}]がSMA+{std_dev}*stdと一致しない"
+                )
+                assert np.isclose(lower.iloc[i], expected_lower, rtol=1e-5), (
+                    f"BB lower[{i}]がSMA-{std_dev}*stdと一致しない"
+                )
 
     def test_bbands_order(self, known_prices):
         """BBで upper >= middle >= lower が成り立つことを検証"""
@@ -451,12 +451,12 @@ class TestBollingerBandsAccuracy:
         )
 
         valid = ~(np.isnan(upper) | np.isnan(middle) | np.isnan(lower))
-        assert (
-            upper[valid] >= middle[valid] - 1e-10
-        ).all(), "upper >= middle が成り立たない"
-        assert (
-            middle[valid] >= lower[valid] - 1e-10
-        ).all(), "middle >= lower が成り立たない"
+        assert (upper[valid] >= middle[valid] - 1e-10).all(), (
+            "upper >= middle が成り立たない"
+        )
+        assert (middle[valid] >= lower[valid] - 1e-10).all(), (
+            "middle >= lower が成り立たない"
+        )
 
 
 # =============================================================================
@@ -485,9 +485,9 @@ class TestATRCalculationAccuracy:
             lc = abs(low.iloc[i] - close.iloc[i - 1])
             expected_tr = max(hl, hc, lc)
             actual_tr = tr.iloc[i]
-            assert np.isclose(
-                actual_tr, expected_tr, rtol=1e-10
-            ), f"TR[{i}]が不正: expected={expected_tr}, actual={actual_tr}"
+            assert np.isclose(actual_tr, expected_tr, rtol=1e-10), (
+                f"TR[{i}]が不正: expected={expected_tr}, actual={actual_tr}"
+            )
 
     def test_atr_positive_values(self, known_ohlcv):
         """ATRが常に正の値であることを検証"""
@@ -527,9 +527,9 @@ class TestVWAPCalculationAccuracy:
         for i in range(len(known_ohlcv)):
             actual = vwap.iloc[i]
             expected = expected_vwap.iloc[i]
-            assert np.isclose(
-                actual, expected, rtol=1e-5
-            ), f"VWAP[{i}]が不正: expected={expected}, actual={actual}"
+            assert np.isclose(actual, expected, rtol=1e-5), (
+                f"VWAP[{i}]が不正: expected={expected}, actual={actual}"
+            )
 
     def test_vwap_constant_prices(self):
         """一定価格ではVWAPもその価格になることを検証"""
@@ -572,12 +572,12 @@ class TestStochasticAccuracy:
         valid_k = k.dropna()
         valid_d = d.dropna()
 
-        assert (valid_k >= 0).all() and (
-            valid_k <= 100
-        ).all(), f"%Kが範囲外: {valid_k.min()}-{valid_k.max()}"
-        assert (valid_d >= 0).all() and (
-            valid_d <= 100
-        ).all(), f"%Dが範囲外: {valid_d.min()}-{valid_d.max()}"
+        assert (valid_k >= 0).all() and (valid_k <= 100).all(), (
+            f"%Kが範囲外: {valid_k.min()}-{valid_k.max()}"
+        )
+        assert (valid_d >= 0).all() and (valid_d <= 100).all(), (
+            f"%Dが範囲外: {valid_d.min()}-{valid_d.max()}"
+        )
 
     def test_stochastic_at_high(self):
         """最高値でStochasticが100に近いことを検証"""
@@ -683,9 +683,9 @@ class TestRMACalculationAccuracy:
         rma_variance = valid_rma.var()
         price_variance = valid_prices.var()
 
-        assert (
-            rma_variance < price_variance
-        ), f"RMAの分散({rma_variance})は元データの分散({price_variance})より小さいべき"
+        assert rma_variance < price_variance, (
+            f"RMAの分散({rma_variance})は元データの分散({price_variance})より小さいべき"
+        )
 
 
 # =============================================================================
@@ -798,9 +798,9 @@ class TestIndicatorConsistency:
         for i in range(length - 1, len(known_prices)):
             expected_sma = known_prices.iloc[i - length + 1 : i + 1].mean()
             actual_sma = sma.iloc[i]
-            assert np.isclose(
-                actual_sma, expected_sma, rtol=1e-10
-            ), f"SMA[{i}]が平均と一致しない"
+            assert np.isclose(actual_sma, expected_sma, rtol=1e-10), (
+                f"SMA[{i}]が平均と一致しない"
+            )
 
     def test_bb_width_increases_with_std_multiplier(self, known_prices):
         """BBのstd倍数が大きいほどバンド幅が広がることを検証"""
@@ -811,6 +811,6 @@ class TestIndicatorConsistency:
         width2 = upper2 - lower2
 
         valid = ~(np.isnan(width1) | np.isnan(width2))
-        assert (
-            width2[valid] > width1[valid]
-        ).all(), "std倍数が大きいほどバンド幅は広がるべき"
+        assert (width2[valid] > width1[valid]).all(), (
+            "std倍数が大きいほどバンド幅は広がるべき"
+        )

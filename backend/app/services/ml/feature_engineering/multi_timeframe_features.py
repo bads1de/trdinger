@@ -5,7 +5,7 @@ Multi-Timeframe Features
 上位時間足のトレンドとの一致が強力な予測因子となることが実証されています。
 """
 
-from typing import Dict, Optional, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -22,7 +22,7 @@ class MultiTimeframeFeatureCalculator:
     """
 
     def calculate_features(
-        self, df: pd.DataFrame, config: Optional[Dict] = None
+        self, df: pd.DataFrame, config: dict | None = None
     ) -> pd.DataFrame:
         """
         Multi-Timeframe特徴量を計算
@@ -62,9 +62,7 @@ class MultiTimeframeFeatureCalculator:
         ]
 
         # 4時間足のRSI
-        df_4h["RSI"] = self._calculate_rsi(
-            cast(pd.Series, df_4h["close"]), period=14
-        )
+        df_4h["RSI"] = self._calculate_rsi(cast(pd.Series, df_4h["close"]), period=14)
 
         # === 1日足の情報を合成 ===
         df_1d = self._resample_to_timeframe(df, "1D")
@@ -114,15 +112,14 @@ class MultiTimeframeFeatureCalculator:
         # 6. Timeframe Alignment Score（時間足アライメント）
         # 全時間足が同じ方向を向いているか
         alignment_score = (
-            (
-                df["trend_direction_1h"] == df_4h_expanded["trend_direction"]
-            ).astype(float)
+            (df["trend_direction_1h"] == df_4h_expanded["trend_direction"]).astype(
+                float
+            )
+            + (df["trend_direction_1h"] == df_1d_expanded["trend_direction"]).astype(
+                float
+            )
             + (
-                df["trend_direction_1h"] == df_1d_expanded["trend_direction"]
-            ).astype(float)
-            + (
-                df_4h_expanded["trend_direction"]
-                == df_1d_expanded["trend_direction"]
+                df_4h_expanded["trend_direction"] == df_1d_expanded["trend_direction"]
             ).astype(float)
         ) / 3.0  # 0.0～1.0の範囲に正規化
 
@@ -167,15 +164,11 @@ class MultiTimeframeFeatureCalculator:
         ) / df_1d_expanded["SMA_50"]
 
         # 欠損値・inf値の処理
-        result = sanitize_numeric_dataframe(
-            result, fill_value=0.0, forward_fill=False
-        )
+        result = sanitize_numeric_dataframe(result, fill_value=0.0, forward_fill=False)
 
         return result
 
-    def _resample_to_timeframe(
-        self, df: pd.DataFrame, timeframe: str
-    ) -> pd.DataFrame:
+    def _resample_to_timeframe(self, df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         """1時間足データを指定時間足にリサンプル"""
         resampled = df.resample(timeframe).agg(
             {
@@ -190,9 +183,9 @@ class MultiTimeframeFeatureCalculator:
 
     def _calculate_rsi(self, prices: pd.Series, period: int = 14) -> pd.Series:
         """RSIを計算"""
-        delta = cast(
-            pd.Series, pd.to_numeric(prices.diff(), errors="coerce")
-        ).fillna(0.0)
+        delta = cast(pd.Series, pd.to_numeric(prices.diff(), errors="coerce")).fillna(
+            0.0
+        )
         gain = (delta.where(delta > 0, 0.0)).rolling(window=period).mean()
         loss = (-delta.where(delta < 0, 0.0)).rolling(window=period).mean()
 

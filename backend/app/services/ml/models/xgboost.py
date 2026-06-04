@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -36,16 +36,14 @@ class XGBoostModel(BaseGradientBoostingModel):
         self.max_depth = max_depth
         self.learning_rate = learning_rate
         self.n_estimators = n_estimators
-        self.feature_names: Optional[List[str]] = None
-        self.best_iteration: Optional[int] = (
-            None  # 早期停止の最適イテレーション
-        )
+        self.feature_names: list[str] | None = None
+        self.best_iteration: int | None = None  # 早期停止の最適イテレーション
 
     def _create_dataset(
         self,
-        X: Union[pd.DataFrame, np.ndarray],
-        y: Optional[Union[pd.Series, np.ndarray]] = None,
-        sample_weight: Optional[np.ndarray] = None,
+        X: pd.DataFrame | np.ndarray,
+        y: pd.Series | np.ndarray | None = None,
+        sample_weight: np.ndarray | None = None,
     ) -> xgb.DMatrix:
         """XGBoost固有のデータセットを作成"""
         # 基底クラスで既にDataFrame化されているはずだが、念のため
@@ -57,7 +55,7 @@ class XGBoostModel(BaseGradientBoostingModel):
             X, label=y, feature_names=self.feature_names, weight=sample_weight
         )
 
-    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
+    def _get_model_params(self, num_classes: int, **kwargs) -> dict[str, Any]:
         """
         XGBoost固有のパラメータディクショナリを生成します。
         """
@@ -66,14 +64,10 @@ class XGBoostModel(BaseGradientBoostingModel):
             "objective": (
                 "reg:squarederror"
                 if is_regression
-                else (
-                    "multi:softprob" if num_classes > 2 else "binary:logistic"
-                )
+                else ("multi:softprob" if num_classes > 2 else "binary:logistic")
             ),
             "num_class": (
-                None
-                if is_regression
-                else (num_classes if num_classes > 2 else None)
+                None if is_regression else (num_classes if num_classes > 2 else None)
             ),
             "eval_metric": (
                 "rmse"
@@ -94,9 +88,9 @@ class XGBoostModel(BaseGradientBoostingModel):
     def _train_internal(
         self,
         train_data: xgb.DMatrix,
-        valid_data: Optional[xgb.DMatrix],
-        params: Dict[str, Any],
-        early_stopping_rounds: Optional[int] = None,
+        valid_data: xgb.DMatrix | None,
+        params: dict[str, Any],
+        early_stopping_rounds: int | None = None,
         **kwargs,
     ) -> xgb.Booster:
         """
@@ -106,9 +100,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         if valid_data:
             evals.append((valid_data, "eval"))
 
-        actual_early_stopping_rounds = (
-            early_stopping_rounds if valid_data else None
-        )
+        actual_early_stopping_rounds = early_stopping_rounds if valid_data else None
 
         model = xgb.train(
             params,
@@ -123,7 +115,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         if hasattr(model, "best_iteration"):
             self.best_iteration = model.best_iteration
         elif hasattr(model, "best_ntree_limit"):
-            self.best_iteration = getattr(model, "best_ntree_limit")
+            self.best_iteration = model.best_ntree_limit
 
         return model
 
@@ -149,16 +141,14 @@ class XGBoostModel(BaseGradientBoostingModel):
 
             if missing_cols:
                 logger.warning(
-                    f"予測時に特徴量が不足しています: {missing_cols}。"
-                    f"0で補完します。"
+                    f"予測時に特徴量が不足しています: {missing_cols}。0で補完します。"
                 )
                 for col in missing_cols:
                     X[col] = 0.0
 
             if extra_cols:
                 logger.debug(
-                    f"予測時に不要な特徴量が含まれています: {extra_cols}。"
-                    f"削除します。"
+                    f"予測時に不要な特徴量が含まれています: {extra_cols}。削除します。"
                 )
 
             # 訓練時と同じ順序に列を並べ替える

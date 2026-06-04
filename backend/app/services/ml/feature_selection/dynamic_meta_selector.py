@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -33,11 +32,11 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         self.min_features = min_features
         self.n_shadow_iterations = n_shadow_iterations
         self.random_state = random_state
-        self.support_mask_: Optional[np.ndarray] = None
+        self.support_mask_: np.ndarray | None = None
         self.feature_names_in_ = None
         self.selected_features_ = None
 
-    def _cluster_features(self, X: pd.DataFrame) -> Dict[int, List[str]]:
+    def _cluster_features(self, X: pd.DataFrame) -> dict[int, list[str]]:
         # ... (既存のコードと同じ)
         corr = X.corr().fillna(0)
         dist = 1 - np.abs(corr.values)
@@ -48,7 +47,7 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         cluster_labels = fcluster(
             linkage_matrix, 1 - self.clustering_threshold, criterion="distance"
         )
-        clusters: Dict[int, List[str]] = {}
+        clusters: dict[int, list[str]] = {}
         for _i, label in enumerate(cluster_labels):
             if label not in clusters:
                 clusters[label] = []
@@ -99,14 +98,10 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
 
         # 全て落とされた場合のセーフティ
         if not support_mask.any():
-            logger.warning(
-                "All features failed shadow test. Falling back to top 5."
-            )
+            logger.warning("All features failed shadow test. Falling back to top 5.")
             # 単純な重要度順でTop 5を返す
             model.fit(X.values, y)
-            top_indices = np.argsort(model.feature_importances_)[
-                -self.min_features :
-            ]
+            top_indices = np.argsort(model.feature_importances_)[-self.min_features :]
             support_mask = np.zeros(n_features, dtype=bool)
             support_mask[top_indices] = True
 
@@ -138,9 +133,7 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         # 2. 各クラスタから代表者を選定 (ターゲットへの相互情報量が最大のもの)
         from sklearn.feature_selection import mutual_info_regression
 
-        mi_scores = mutual_info_regression(
-            X, y, random_state=self.random_state
-        )
+        mi_scores = mutual_info_regression(X, y, random_state=self.random_state)
         mi_series = pd.Series(mi_scores, index=X.columns)
 
         representative_features = []
@@ -182,32 +175,22 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         self.selected_features_ = final_candidates
 
         # support_mask_ の作成
-        feature_names: List[str] = (
-            self.feature_names_in_
-            if self.feature_names_in_ is not None
-            else []
+        feature_names: list[str] = (
+            self.feature_names_in_ if self.feature_names_in_ is not None else []
         )
-        self.support_mask_ = np.array(
-            [f in final_candidates for f in feature_names]
-        )
+        self.support_mask_ = np.array([f in final_candidates for f in feature_names])
 
         logger.info(
             f"DynamicMetaSelector complete: Selected {len(final_candidates)} features."
         )
         return self
 
-    def transform(
-        self, X: Union[pd.DataFrame, np.ndarray]
-    ) -> Union[pd.DataFrame, np.ndarray]:
+    def transform(self, X: pd.DataFrame | np.ndarray) -> pd.DataFrame | np.ndarray:
         """選択された特徴量を抽出する"""
         if isinstance(X, pd.DataFrame):
             result = X[self.selected_features_]
             # 単一列選択時に Series になるのを防ぐ
-            return (
-                result
-                if isinstance(result, pd.DataFrame)
-                else result.to_frame()
-            )
+            return result if isinstance(result, pd.DataFrame) else result.to_frame()
 
         # NumPy配列の場合はマスクを適用
         return X[:, self.support_mask_]

@@ -21,7 +21,7 @@ class TestStrategyParameterTuner:
     @pytest.fixture
     def mock_config(self):
         from app.services.auto_strategy.config.ga.nested_configs import TuningConfig
-        
+
         config = GAConfig(
             evaluation_config=EvaluationConfig(
                 enable_walk_forward=False,

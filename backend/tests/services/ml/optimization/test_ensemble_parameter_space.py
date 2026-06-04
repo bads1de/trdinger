@@ -4,7 +4,7 @@ EnsembleParameterSpaceのテストモジュール
 アンサンブル学習用ハイパーパラメータ空間定義の各機能をテストします。
 """
 
-from typing import Any, Dict
+from typing import Any
 
 from app.services.ml.optimization.ensemble_parameter_space import EnsembleParameterSpace
 
@@ -234,7 +234,7 @@ class TestIntegrationWithOptuna:
         optimizer = OptunaOptimizer()
         space = EnsembleParameterSpace.get_lightgbm_parameter_space()
 
-        def objective(params: Dict[str, Any]) -> float:
+        def objective(params: dict[str, Any]) -> float:
             # LightGBMパラメータの簡易評価
             score = (
                 params["lgb_learning_rate"] * 5
@@ -267,7 +267,7 @@ class TestIntegrationWithOptuna:
         optimizer = OptunaOptimizer()
         space = EnsembleParameterSpace.get_xgboost_parameter_space()
 
-        def objective(params: Dict[str, Any]) -> float:
+        def objective(params: dict[str, Any]) -> float:
             # XGBoostパラメータの簡易評価
             score = (
                 params["xgb_learning_rate"] * 5
@@ -302,7 +302,7 @@ class TestIntegrationWithOptuna:
             ensemble_method="stacking", enabled_models=["lightgbm", "xgboost"]
         )
 
-        def objective(params: Dict[str, Any]) -> float:
+        def objective(params: dict[str, Any]) -> float:
             # 全パラメータを考慮した評価
             lgb_score = params["lgb_learning_rate"] * 3 + params["lgb_num_leaves"] / 50
             xgb_score = params["xgb_learning_rate"] * 3 + params["xgb_max_depth"] / 10

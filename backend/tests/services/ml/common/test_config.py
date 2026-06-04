@@ -9,7 +9,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-
 from app.services.ml.common.config import (
     MLConfigManager,
     get_default_ensemble_config,
@@ -93,7 +92,7 @@ class TestMLConfigManager:
             assert config_path.exists()
 
             # 保存された内容を確認
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 saved_data = json.load(f)
                 assert "_metadata" in saved_data
 

@@ -53,7 +53,9 @@ class TestParallelEvaluator:
             max_workers=1,
             use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
         )
-        result = evaluator.evaluate_population([mock_individual], default_fitness=(0.0,))
+        result = evaluator.evaluate_population(
+            [mock_individual], default_fitness=(0.0,)
+        )
         assert len(result) == 1
         assert result[0] == (0.5,)
 
@@ -126,7 +128,7 @@ class TestParallelEvaluator:
         individuals = [MagicMock() for _ in range(5)]
         delays = [0.12, 0.01, 0.01, 0.01, 0.01]
 
-        for i, (ind, delay) in enumerate(zip(individuals, delays)):
+        for i, (ind, delay) in enumerate(zip(individuals, delays, strict=False)):
             ind.id = f"ind_{i}"
             ind.delay = delay
             ind.fitness_value = (float(i),)

@@ -5,7 +5,7 @@ Adaptive Calculator
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ...genes import TPSLGene
 from ...utils.normalization import normalize_enum_name
@@ -36,11 +36,11 @@ class AdaptiveCalculator(BaseTPSLCalculator):
     def _do_calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]],
+        tpsl_gene: TPSLGene | None,
+        market_data: dict[str, Any] | None,
         position_direction: float,
         **kwargs,
-    ) -> Tuple[float, float, float, Dict[str, Any]]:
+    ) -> tuple[float, float, float, dict[str, Any]]:
         """
         適応的アルゴリズムによるTP/SL計算の実装
 
@@ -79,8 +79,8 @@ class AdaptiveCalculator(BaseTPSLCalculator):
 
     def _select_best_method(
         self,
-        market_data: Optional[Dict[str, Any]],
-        tpsl_gene: Optional[TPSLGene],
+        market_data: dict[str, Any] | None,
+        tpsl_gene: TPSLGene | None,
     ) -> str:
         """最適な計算方式を選択"""
         try:

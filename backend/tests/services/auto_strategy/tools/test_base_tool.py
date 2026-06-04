@@ -4,7 +4,7 @@ BaseTool のユニットテスト
 mutate_params のデフォルト実装（enabled 反転）をテストします。
 """
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -25,7 +25,7 @@ class ConcreteTool(BaseTool):
         default_params={"enabled": True},
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         return False
 
 
@@ -38,10 +38,10 @@ class ConcreteToolWithCustomMutation(BaseTool):
         default_params={"enabled": True, "window_minutes": 15},
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         return False
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         new_params = super().mutate_params(params)
         # 固有パラメータの変異
         if __import__("random").random() < 0.2:

@@ -5,7 +5,7 @@ MLManagementOrchestrationServiceの正常系、異常系、エッジケースを
 """
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import patch
 from urllib.parse import quote
 
@@ -29,7 +29,7 @@ def orchestration_service() -> MLManagementOrchestrationService:
 
 
 @pytest.fixture
-def sample_model_list() -> List[Dict[str, Any]]:
+def sample_model_list() -> list[dict[str, Any]]:
     """
     サンプルモデルリスト
 
@@ -55,7 +55,7 @@ def sample_model_list() -> List[Dict[str, Any]]:
 
 
 @pytest.fixture
-def sample_model_metadata() -> Dict[str, Any]:
+def sample_model_metadata() -> dict[str, Any]:
     """
     サンプルモデルメタデータ
 
@@ -103,8 +103,8 @@ class TestGetFormattedModels:
     async def test_get_formatted_models_success(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
-        sample_model_metadata: Dict[str, Any],
+        sample_model_list: list[dict[str, Any]],
+        sample_model_metadata: dict[str, Any],
     ):
         """
         正常系: モデル一覧が正常に取得される
@@ -169,7 +169,7 @@ class TestGetFormattedModels:
     async def test_get_formatted_models_with_load_error(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: モデル読み込みエラーでもデフォルト値を返す
@@ -205,7 +205,7 @@ class TestDeleteModel:
     async def test_delete_model_success(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: モデルが正常に削除される
@@ -235,7 +235,7 @@ class TestDeleteModel:
     async def test_delete_model_not_found(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         異常系: 存在しないモデルで404エラー
@@ -258,7 +258,7 @@ class TestDeleteModel:
     async def test_delete_model_with_url_encoded_name(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: URLエンコードされたモデル名でも削除できる
@@ -285,7 +285,7 @@ class TestDeleteModel:
     async def test_delete_model_file_not_exists(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         異常系: モデルファイルが存在しない場合
@@ -311,7 +311,7 @@ class TestDeleteModel:
     async def test_delete_model_race_condition(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         異常系: ファイル削除時にFileNotFoundErrorが発生した場合
@@ -343,7 +343,7 @@ class TestDeleteAllModels:
     async def test_delete_all_models_success(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: 全モデルが正常に削除される
@@ -391,7 +391,7 @@ class TestDeleteAllModels:
     async def test_delete_all_models_with_failures(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: 一部のモデル削除が失敗した場合
@@ -466,7 +466,7 @@ class TestGetMLStatus:
     async def test_get_ml_status_with_model(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_metadata: Dict[str, Any],
+        sample_model_metadata: dict[str, Any],
     ):
         """
         正常系: モデルが存在する場合の状態取得
@@ -558,7 +558,7 @@ class TestGetMLStatus:
     async def test_get_ml_status_with_missing_metrics_key(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_metadata: Dict[str, Any],
+        sample_model_metadata: dict[str, Any],
     ):
         """
         異常系: model_info_dataにmetricsキーがない場合でもエラーにならない
@@ -807,7 +807,7 @@ class TestLoadModel:
     async def test_load_model_success(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: モデルが正常に読み込まれる
@@ -840,7 +840,7 @@ class TestLoadModel:
     async def test_load_model_calls_training_service(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: モデル読み込み時にMLTrainingService.load_modelが呼び出される
@@ -874,7 +874,7 @@ class TestLoadModel:
     async def test_load_model_not_found(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         異常系: 存在しないモデルの読み込み
@@ -901,7 +901,7 @@ class TestGetCurrentModelInfo:
     async def test_get_current_model_info_success(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_metadata: Dict[str, Any],
+        sample_model_metadata: dict[str, Any],
     ):
         """
         正常系: 現在のモデル情報が正常に取得される
@@ -920,7 +920,6 @@ class TestGetCurrentModelInfo:
             patch("os.path.exists", return_value=True),
             patch("os.stat") as mock_stat,
         ):
-
             mock_training_service.get_current_model_path.return_value = (
                 "/models/latest.pkl"
             )
@@ -1165,7 +1164,7 @@ class TestIsActiveModel:
     def test_is_active_model_true(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: ロードされているモデルとパスが一致する場合
@@ -1184,7 +1183,7 @@ class TestIsActiveModel:
     def test_is_active_model_false(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: ロードされているモデルとパスが一致しない場合
@@ -1203,7 +1202,7 @@ class TestIsActiveModel:
     def test_is_active_model_none(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         正常系: モデルがロードされていない場合
@@ -1282,7 +1281,7 @@ class TestEdgeCases:
     async def test_delete_model_with_special_characters(
         self,
         orchestration_service: MLManagementOrchestrationService,
-        sample_model_list: List[Dict[str, Any]],
+        sample_model_list: list[dict[str, Any]],
     ):
         """
         エッジケース: 特殊文字を含むモデル名の削除

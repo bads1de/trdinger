@@ -139,9 +139,9 @@ class TestDataLeakComprehensive:
         critical_cols = [
             col for col, _ in failed_cols if "illiquidity" not in col.lower()
         ]
-        assert (
-            len(critical_cols) == 0
-        ), f"重要な特徴量でデータリークが検出されました: {critical_cols}"
+        assert len(critical_cols) == 0, (
+            f"重要な特徴量でデータリークが検出されました: {critical_cols}"
+        )
 
     # ---------------------------------------------------------------------------
     # 因果関係のテスト (ローリング計算など)
@@ -214,6 +214,6 @@ class TestDataLeakComprehensive:
             result_df = service.calculate_advanced_features(df, profile="research")
 
         imputed_value = result_df.iloc[9]["close"]
-        assert (
-            imputed_value < 100
-        ), f"Imputed value {imputed_value} suggests leakage from future data"
+        assert imputed_value < 100, (
+            f"Imputed value {imputed_value} suggests leakage from future data"
+        )

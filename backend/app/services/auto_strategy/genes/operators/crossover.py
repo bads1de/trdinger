@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import random
 import uuid
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any
 
 from ..entry import EntryGene
 from ..exit import ExitGene
@@ -25,19 +25,17 @@ logger = logging.getLogger(__name__)
 
 
 def crossover_tpsl_genes(
-    parent1_tpsl: Optional[TPSLGene],
-    parent2_tpsl: Optional[TPSLGene],
-) -> Tuple[Optional[TPSLGene], Optional[TPSLGene]]:
+    parent1_tpsl: TPSLGene | None,
+    parent2_tpsl: TPSLGene | None,
+) -> tuple[TPSLGene | None, TPSLGene | None]:
     """TPSL遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(
-        parent1_tpsl, parent2_tpsl, TPSLGene
-    )
+    return GeneticUtils.crossover_optional_gene(parent1_tpsl, parent2_tpsl, TPSLGene)
 
 
 def crossover_position_sizing_genes(
-    parent1_ps: Optional[PositionSizingGene],
-    parent2_ps: Optional[PositionSizingGene],
-) -> Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]:
+    parent1_ps: PositionSizingGene | None,
+    parent2_ps: PositionSizingGene | None,
+) -> tuple[PositionSizingGene | None, PositionSizingGene | None]:
     """ポジションサイジング遺伝子の交叉を実行する。"""
     return GeneticUtils.crossover_optional_gene(
         parent1_ps, parent2_ps, PositionSizingGene
@@ -45,41 +43,33 @@ def crossover_position_sizing_genes(
 
 
 def crossover_entry_genes(
-    parent1_entry: Optional[EntryGene],
-    parent2_entry: Optional[EntryGene],
-) -> Tuple[Optional[EntryGene], Optional[EntryGene]]:
+    parent1_entry: EntryGene | None,
+    parent2_entry: EntryGene | None,
+) -> tuple[EntryGene | None, EntryGene | None]:
     """エントリー遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(
-        parent1_entry, parent2_entry, EntryGene
-    )
+    return GeneticUtils.crossover_optional_gene(parent1_entry, parent2_entry, EntryGene)
 
 
 def crossover_exit_genes(
-    parent1_exit: Optional[ExitGene],
-    parent2_exit: Optional[ExitGene],
-) -> Tuple[Optional[ExitGene], Optional[ExitGene]]:
+    parent1_exit: ExitGene | None,
+    parent2_exit: ExitGene | None,
+) -> tuple[ExitGene | None, ExitGene | None]:
     """イグジット遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(
-        parent1_exit, parent2_exit, ExitGene
-    )
+    return GeneticUtils.crossover_optional_gene(parent1_exit, parent2_exit, ExitGene)
 
 
 def crossover_strategy_genes(
-    strategy_gene_class: Type[StrategyGene],
+    strategy_gene_class: type[StrategyGene],
     parent1: StrategyGene,
     parent2: StrategyGene,
     config: GAConfig,
     crossover_type: str = "uniform",
-) -> Tuple[StrategyGene, StrategyGene]:
+) -> tuple[StrategyGene, StrategyGene]:
     """2つの親個体から新しい2つの子個体を交叉により生成する。"""
     try:
         if crossover_type == "uniform":
-            return uniform_crossover(
-                strategy_gene_class, parent1, parent2, config
-            )
-        return single_point_crossover(
-            strategy_gene_class, parent1, parent2, config
-        )
+            return uniform_crossover(strategy_gene_class, parent1, parent2, config)
+        return single_point_crossover(strategy_gene_class, parent1, parent2, config)
     except Exception as e:
         logger.error(f"戦略遺伝子交叉エラー: {e}")
         try:
@@ -99,15 +89,13 @@ def crossover_strategy_genes(
 
 
 def crossover_strategy_genes_batch(
-    individuals: List[Any], config: GAConfig, crossover_rate: float = 0.8
-) -> List[Tuple[Any, Any]]:
+    individuals: list[Any], config: GAConfig, crossover_rate: float = 0.8
+) -> list[tuple[Any, Any]]:
     """StrategyGene の交叉をバッチで実行する。"""
-    results: List[Tuple[Any, Any]] = []
+    results: list[tuple[Any, Any]] = []
     num_individuals = len(individuals)
     last_pair_index = (
-        num_individuals - 1
-        if num_individuals % 2 == 0
-        else num_individuals - 2
+        num_individuals - 1 if num_individuals % 2 == 0 else num_individuals - 2
     )
 
     for i in range(0, last_pair_index, 2):
@@ -133,9 +121,7 @@ def crossover_strategy_genes_batch(
 
 def uniform_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
     """ユニフォーム交叉（一様交叉）。"""
-    selection_prob = (
-        config.mutation_config.crossover_field_selection_probability
-    )
+    selection_prob = config.mutation_config.crossover_field_selection_probability
 
     child1_params: dict[str, Any] = {"id": str(uuid.uuid4())}
     child2_params: dict[str, Any] = {"id": str(uuid.uuid4())}
@@ -156,20 +142,14 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
             child1_params[field_name] = GeneticUtils.smart_copy(val2)
             child2_params[field_name] = GeneticUtils.smart_copy(val1)
 
-    c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(
-        parent1, parent2
-    )
+    c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
     child1_params["metadata"] = c1_meta
     child2_params["metadata"] = c2_meta
 
-    return strategy_gene_class(**child1_params), strategy_gene_class(
-        **child2_params
-    )
+    return strategy_gene_class(**child1_params), strategy_gene_class(**child2_params)
 
 
-def single_point_crossover(
-    strategy_gene_class, parent1, parent2, config: GAConfig
-):
+def single_point_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
     """一点交叉。"""
     max_indicators_parent1 = len(parent1.indicators)
     max_indicators_parent2 = len(parent2.indicators)
@@ -195,9 +175,7 @@ def single_point_crossover(
 
     c1_risk = {}
     c2_risk = {}
-    all_keys = set(parent1.risk_management.keys()) | set(
-        parent2.risk_management.keys()
-    )
+    all_keys = set(parent1.risk_management.keys()) | set(parent2.risk_management.keys())
     for key in all_keys:
         val1 = parent1.risk_management.get(key, 0)
         val2 = parent2.risk_management.get(key, 0)
@@ -212,9 +190,7 @@ def single_point_crossover(
             c1_risk[key] = val1 if random.random() < 0.5 else val2
             c2_risk[key] = val2 if random.random() < 0.5 else val1
 
-    c1_tpsl, c2_tpsl = crossover_tpsl_genes(
-        parent1.tpsl_gene, parent2.tpsl_gene
-    )
+    c1_tpsl, c2_tpsl = crossover_tpsl_genes(parent1.tpsl_gene, parent2.tpsl_gene)
     c1_long_tpsl, c2_long_tpsl = crossover_tpsl_genes(
         parent1.long_tpsl_gene,
         parent2.long_tpsl_gene,
@@ -227,9 +203,7 @@ def single_point_crossover(
         parent1.position_sizing_gene,
         parent2.position_sizing_gene,
     )
-    c1_entry, c2_entry = crossover_entry_genes(
-        parent1.entry_gene, parent2.entry_gene
-    )
+    c1_entry, c2_entry = crossover_entry_genes(parent1.entry_gene, parent2.entry_gene)
     c1_long_entry, c2_long_entry = crossover_entry_genes(
         parent1.long_entry_gene,
         parent2.long_entry_gene,
@@ -238,58 +212,30 @@ def single_point_crossover(
         parent1.short_entry_gene,
         parent2.short_entry_gene,
     )
-    c1_exit, c2_exit = crossover_exit_genes(
-        parent1.exit_gene, parent2.exit_gene
-    )
+    c1_exit, c2_exit = crossover_exit_genes(parent1.exit_gene, parent2.exit_gene)
 
-    c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(
-        parent1, parent2
-    )
+    c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
 
     if random.random() < 0.5:
-        c1_long_cond = GeneticUtils.copy_conditions(
-            parent1.long_entry_conditions
-        )
-        c2_long_cond = GeneticUtils.copy_conditions(
-            parent2.long_entry_conditions
-        )
+        c1_long_cond = GeneticUtils.copy_conditions(parent1.long_entry_conditions)
+        c2_long_cond = GeneticUtils.copy_conditions(parent2.long_entry_conditions)
     else:
-        c1_long_cond = GeneticUtils.copy_conditions(
-            parent2.long_entry_conditions
-        )
-        c2_long_cond = GeneticUtils.copy_conditions(
-            parent1.long_entry_conditions
-        )
+        c1_long_cond = GeneticUtils.copy_conditions(parent2.long_entry_conditions)
+        c2_long_cond = GeneticUtils.copy_conditions(parent1.long_entry_conditions)
 
     if random.random() < 0.5:
-        c1_short_cond = GeneticUtils.copy_conditions(
-            parent1.short_entry_conditions
-        )
-        c2_short_cond = GeneticUtils.copy_conditions(
-            parent2.short_entry_conditions
-        )
+        c1_short_cond = GeneticUtils.copy_conditions(parent1.short_entry_conditions)
+        c2_short_cond = GeneticUtils.copy_conditions(parent2.short_entry_conditions)
     else:
-        c1_short_cond = GeneticUtils.copy_conditions(
-            parent2.short_entry_conditions
-        )
-        c2_short_cond = GeneticUtils.copy_conditions(
-            parent1.short_entry_conditions
-        )
+        c1_short_cond = GeneticUtils.copy_conditions(parent2.short_entry_conditions)
+        c2_short_cond = GeneticUtils.copy_conditions(parent1.short_entry_conditions)
 
     if random.random() < 0.5:
-        c1_stateful = GeneticUtils.copy_stateful_conditions(
-            parent1.stateful_conditions
-        )
-        c2_stateful = GeneticUtils.copy_stateful_conditions(
-            parent2.stateful_conditions
-        )
+        c1_stateful = GeneticUtils.copy_stateful_conditions(parent1.stateful_conditions)
+        c2_stateful = GeneticUtils.copy_stateful_conditions(parent2.stateful_conditions)
     else:
-        c1_stateful = GeneticUtils.copy_stateful_conditions(
-            parent2.stateful_conditions
-        )
-        c2_stateful = GeneticUtils.copy_stateful_conditions(
-            parent1.stateful_conditions
-        )
+        c1_stateful = GeneticUtils.copy_stateful_conditions(parent2.stateful_conditions)
+        c2_stateful = GeneticUtils.copy_stateful_conditions(parent1.stateful_conditions)
 
     if random.random() < 0.5:
         c1_tool = GeneticUtils.copy_tool_genes(parent1.tool_genes)
@@ -306,34 +252,18 @@ def single_point_crossover(
     c2_tool = generator._enforce_filter_limit(c2_tool)
 
     if random.random() < 0.5:
-        c1_long_exit_cond = GeneticUtils.copy_conditions(
-            parent1.long_exit_conditions
-        )
-        c2_long_exit_cond = GeneticUtils.copy_conditions(
-            parent2.long_exit_conditions
-        )
+        c1_long_exit_cond = GeneticUtils.copy_conditions(parent1.long_exit_conditions)
+        c2_long_exit_cond = GeneticUtils.copy_conditions(parent2.long_exit_conditions)
     else:
-        c1_long_exit_cond = GeneticUtils.copy_conditions(
-            parent2.long_exit_conditions
-        )
-        c2_long_exit_cond = GeneticUtils.copy_conditions(
-            parent1.long_exit_conditions
-        )
+        c1_long_exit_cond = GeneticUtils.copy_conditions(parent2.long_exit_conditions)
+        c2_long_exit_cond = GeneticUtils.copy_conditions(parent1.long_exit_conditions)
 
     if random.random() < 0.5:
-        c1_short_exit_cond = GeneticUtils.copy_conditions(
-            parent1.short_exit_conditions
-        )
-        c2_short_exit_cond = GeneticUtils.copy_conditions(
-            parent2.short_exit_conditions
-        )
+        c1_short_exit_cond = GeneticUtils.copy_conditions(parent1.short_exit_conditions)
+        c2_short_exit_cond = GeneticUtils.copy_conditions(parent2.short_exit_conditions)
     else:
-        c1_short_exit_cond = GeneticUtils.copy_conditions(
-            parent2.short_exit_conditions
-        )
-        c2_short_exit_cond = GeneticUtils.copy_conditions(
-            parent1.short_exit_conditions
-        )
+        c1_short_exit_cond = GeneticUtils.copy_conditions(parent2.short_exit_conditions)
+        c2_short_exit_cond = GeneticUtils.copy_conditions(parent1.short_exit_conditions)
 
     child1 = strategy_gene_class(
         id=str(uuid.uuid4()),

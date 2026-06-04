@@ -7,7 +7,6 @@ APIレスポンス生成関数のテストモジュール
 from datetime import datetime
 from unittest.mock import patch
 
-
 from app.utils.response import (
     _build_response,
     api_response,

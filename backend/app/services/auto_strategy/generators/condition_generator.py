@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, cast
 
 from app.services.indicators.config import (
     IndicatorScaleType,
@@ -42,7 +42,7 @@ class ConditionGenerator:
     EXIT_MOMENTUM_LOW_THRESHOLD = -10.0
 
     @safe_operation(context="ConditionGenerator初期化", is_api_call=False)
-    def __init__(self, ga_config: Optional[Any] = None):
+    def __init__(self, ga_config: Any | None = None):
         """
         初期化（統合後）
 
@@ -52,7 +52,7 @@ class ConditionGenerator:
         self.logger = logger
         self.ga_config_obj = ga_config  # GAConfigオブジェクトを保持
 
-        self.context: Dict[str, Any] = {
+        self.context: dict[str, Any] = {
             "timeframe": None,
             "symbol": None,
             "threshold_profile": "normal",
@@ -86,11 +86,11 @@ class ConditionGenerator:
     @safe_operation(context="条件正規化", is_api_call=False)
     def normalize_conditions(
         self,
-        conds: List[Union[Condition, ConditionGroup]],
+        conds: list[Condition | ConditionGroup],
         side: str,
-        indicators: List[IndicatorGene],
+        indicators: list[IndicatorGene],
         purpose: str = "entry",
-    ) -> List[Union[Condition, ConditionGroup]]:
+    ) -> list[Condition | ConditionGroup]:
         """
         生成された生の条件リストを、戦略として実行可能な形式に正規化し、堅牢性を高めるフォールバックを注入します。
 
@@ -139,11 +139,11 @@ class ConditionGenerator:
 
         if len(flat) == 1 and isinstance(flat[0], Condition):
             return cast(
-                List[Union[Condition, ConditionGroup]],
+                list[Condition | ConditionGroup],
                 flat if exists else flat + [fallback],
             )
 
-        top_level: List[Union[Condition, ConditionGroup]] = [
+        top_level: list[Condition | ConditionGroup] = [
             ConditionGroup(operator="OR", conditions=flat)
         ]
         # 存在していてもトップレベルに1本は追加して可視化と成立性の底上げを図る
@@ -152,12 +152,12 @@ class ConditionGenerator:
 
     def _select_trend_indicator(
         self,
-        indicators: List[IndicatorGene],
-    ) -> Optional[IndicatorGene]:
+        indicators: list[IndicatorGene],
+    ) -> IndicatorGene | None:
         """フォールバックに使うトレンド系指標を選ぶ。"""
         trend_pref = ("SMA", "EMA")
         trend_categories = {"trend", "overlap", "custom"}
-        trend_pool: List[IndicatorGene] = []
+        trend_pool: list[IndicatorGene] = []
         for ind in indicators or []:
             if not getattr(ind, "enabled", True):
                 continue
@@ -185,7 +185,7 @@ class ConditionGenerator:
     def _build_fallback_condition(
         self,
         side: str,
-        indicators: List[IndicatorGene],
+        indicators: list[IndicatorGene],
         *,
         purpose: str = "entry",
     ) -> Condition:
@@ -204,11 +204,11 @@ class ConditionGenerator:
 
     @safe_operation(context="バランス条件生成", is_api_call=False)
     def generate_balanced_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+        list[Condition],
     ]:
         """
         与えられたテクニカル指標群から、統計的にバランスの取れたロング・ショート条件を「スマートに」生成します。
@@ -234,9 +234,7 @@ class ConditionGenerator:
         # 1. 複雑な組み合わせ戦略
         try:
             strategy = ComplexConditionsStrategy(self)
-            complex_longs, complex_shorts, _ = strategy.generate_conditions(
-                indicators
-            )
+            complex_longs, complex_shorts, _ = strategy.generate_conditions(indicators)
             longs.extend(complex_longs)
             shorts.extend(complex_shorts)
         except Exception as e:
@@ -245,30 +243,26 @@ class ConditionGenerator:
         # 2. MTF戦略
         try:
             mtf_strategy = MTFStrategy(self)
-            mtf_longs, mtf_shorts, _ = mtf_strategy.generate_conditions(
-                indicators
-            )
+            mtf_longs, mtf_shorts, _ = mtf_strategy.generate_conditions(indicators)
             longs.extend(mtf_longs)
             shorts.extend(mtf_shorts)
         except Exception as e:
             logger.debug(f"MTFStrategy生成スキップ: {e}")
 
         # 3. 制限とフォールバック
-        return self._finalize_conditions(
-            longs, shorts, indicators, purpose="entry"
-        )
+        return self._finalize_conditions(longs, shorts, indicators, purpose="entry")
 
     def _finalize_conditions(
         self,
-        longs: List[Union[Condition, ConditionGroup]],
-        shorts: List[Union[Condition, ConditionGroup]],
-        indicators: List[IndicatorGene],
+        longs: list[Condition | ConditionGroup],
+        shorts: list[Condition | ConditionGroup],
+        indicators: list[IndicatorGene],
         *,
         purpose: str = "entry",
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+        list[Condition],
     ]:
         """
         条件リストを最終化する（共通メソッド）
@@ -286,25 +280,19 @@ class ConditionGenerator:
 
         def _finalize(lst, side):
             if not lst:
-                return self.normalize_conditions(
-                    [], side, indicators, purpose=purpose
-                )
-            res = (
-                random.sample(lst, max_conds) if len(lst) > max_conds else lst
-            )
-            return self.normalize_conditions(
-                res, side, indicators, purpose=purpose
-            )
+                return self.normalize_conditions([], side, indicators, purpose=purpose)
+            res = random.sample(lst, max_conds) if len(lst) > max_conds else lst
+            return self.normalize_conditions(res, side, indicators, purpose=purpose)
 
         return _finalize(longs, "long"), _finalize(shorts, "short"), []
 
     @safe_operation(context="イグジット条件生成", is_api_call=False)
     def generate_exit_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+        list[Condition],
     ]:
         """
         保有ポジションの解消を目的にした exit 条件を生成する。
@@ -318,34 +306,28 @@ class ConditionGenerator:
         if not indicators:
             return self.generate_fallback_exit_conditions(indicators)
 
-        longs: List[Union[Condition, ConditionGroup]] = []
-        shorts: List[Union[Condition, ConditionGroup]] = []
+        longs: list[Condition | ConditionGroup] = []
+        shorts: list[Condition | ConditionGroup] = []
 
-        trend_longs, trend_shorts = (
-            self._create_trend_reversal_exit_conditions(indicators)
+        trend_longs, trend_shorts = self._create_trend_reversal_exit_conditions(
+            indicators
         )
         longs.extend(trend_longs)
         shorts.extend(trend_shorts)
 
-        cross_longs, cross_shorts = self._create_cross_exit_conditions(
-            indicators
-        )
+        cross_longs, cross_shorts = self._create_cross_exit_conditions(indicators)
         longs.extend(cross_longs)
         shorts.extend(cross_shorts)
 
-        tp_longs, tp_shorts = self._create_take_profit_exit_conditions(
-            indicators
-        )
+        tp_longs, tp_shorts = self._create_take_profit_exit_conditions(indicators)
         longs.extend(tp_longs)
         shorts.extend(tp_shorts)
 
-        return self._finalize_conditions(
-            longs, shorts, indicators, purpose="exit"
-        )
+        return self._finalize_conditions(longs, shorts, indicators, purpose="exit")
 
     def generate_fallback_exit_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[List, List, List]:
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[list, list, list]:
         """exit 条件が作れない場合のフォールバック。"""
         return (
             self.normalize_conditions([], "long", indicators, purpose="exit"),
@@ -354,8 +336,8 @@ class ConditionGenerator:
         )
 
     def generate_fallback_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[List, List, List]:
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[list, list, list]:
         """従来の生成ロジック（フォールバック）"""
         longs, shorts = [], []
         for ind in indicators:
@@ -367,14 +349,14 @@ class ConditionGenerator:
         return longs, shorts, []
 
     def _create_trend_reversal_exit_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
     ]:
         """トレンド破綻やモメンタム反転を exit 条件として生成する。"""
-        longs: List[Union[Condition, ConditionGroup]] = []
-        shorts: List[Union[Condition, ConditionGroup]] = []
+        longs: list[Condition | ConditionGroup] = []
+        shorts: list[Condition | ConditionGroup] = []
 
         classified = self._classify_indicators(indicators)
         trend_candidates = classified[IndicatorType.TREND]
@@ -438,14 +420,14 @@ class ConditionGenerator:
         return longs, shorts
 
     def _create_cross_exit_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
     ]:
         """移動平均の逆行クロスを exit 条件として生成する。"""
-        longs: List[Union[Condition, ConditionGroup]] = []
-        shorts: List[Union[Condition, ConditionGroup]] = []
+        longs: list[Condition | ConditionGroup] = []
+        shorts: list[Condition | ConditionGroup] = []
 
         price_inds = [
             indicator
@@ -465,26 +447,22 @@ class ConditionGenerator:
         slow_name = self._get_indicator_name(slow_ma)
 
         longs.append(
-            Condition(
-                left_operand=fast_name, operator="<", right_operand=slow_name
-            )
+            Condition(left_operand=fast_name, operator="<", right_operand=slow_name)
         )
         shorts.append(
-            Condition(
-                left_operand=fast_name, operator=">", right_operand=slow_name
-            )
+            Condition(left_operand=fast_name, operator=">", right_operand=slow_name)
         )
         return longs, shorts
 
     def _create_take_profit_exit_conditions(
-        self, indicators: List[IndicatorGene]
-    ) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
     ]:
         """利確寄りの到達条件を exit 候補として生成する。"""
-        longs: List[Union[Condition, ConditionGroup]] = []
-        shorts: List[Union[Condition, ConditionGroup]] = []
+        longs: list[Condition | ConditionGroup] = []
+        shorts: list[Condition | ConditionGroup] = []
 
         band_candidates = [
             indicator
@@ -539,7 +517,7 @@ class ConditionGenerator:
         """IndicatorCalculatorと一致する一意な指標名を取得"""
         return build_indicator_reference_name(indicator)
 
-    def _get_band_names(self, indicator: IndicatorGene) -> Tuple[str, str]:
+    def _get_band_names(self, indicator: IndicatorGene) -> tuple[str, str]:
         """バンド指標のUpper/Lower名を取得"""
         cfg = indicator_registry.get_indicator_config(indicator.type)
         up_idx, low_idx = 2, 0  # デフォルト [lower, mid, upper]
@@ -577,21 +555,16 @@ class ConditionGenerator:
         cfg = indicator_registry.get_indicator_config(indicator.type)
         if cfg and cfg.return_cols and len(cfg.return_cols) >= 2:
             cols = [c.lower() for c in cfg.return_cols]
-            has_up = any(
-                k in c for c in cols for k in ["upper", "top", "high"]
-            )
-            has_low = any(
-                k in c for c in cols for k in ["lower", "bottom", "low"]
-            )
+            has_up = any(k in c for c in cols for k in ["upper", "top", "high"])
+            has_low = any(k in c for c in cols for k in ["lower", "bottom", "low"])
             if has_up and has_low:
                 return True
         return any(
-            k in indicator.type.upper()
-            for k in ["BB", "BAND", "KELTNER", "DONCHIAN"]
+            k in indicator.type.upper() for k in ["BB", "BAND", "KELTNER", "DONCHIAN"]
         )
 
     def _create_side_condition(
-        self, indicator: IndicatorGene, side: str, name: Optional[str] = None
+        self, indicator: IndicatorGene, side: str, name: str | None = None
     ) -> Condition:
         """単一のサイド別条件を生成（ヘルパー）"""
         conds = self._create_side_conditions(indicator, side)
@@ -602,9 +575,9 @@ class ConditionGenerator:
 
     def _build_and_groups(
         self,
-        long_conditions: List[Union[Condition, ConditionGroup]],
-        short_conditions: List[Union[Condition, ConditionGroup]],
-    ) -> Tuple[ConditionGroup, ConditionGroup]:
+        long_conditions: list[Condition | ConditionGroup],
+        short_conditions: list[Condition | ConditionGroup],
+    ) -> tuple[ConditionGroup, ConditionGroup]:
         """ロング/ショートの条件リストを同じ構造の AND グループにする。"""
         return (
             ConditionGroup(operator="AND", conditions=long_conditions),
@@ -613,14 +586,14 @@ class ConditionGenerator:
 
     @safe_operation(context="サイド別条件生成", is_api_call=False)
     def _create_side_conditions(
-        self, indicator: IndicatorGene, side: str, name: Optional[str] = None
-    ) -> List[Condition]:
+        self, indicator: IndicatorGene, side: str, name: str | None = None
+    ) -> list[Condition]:
         """統合されたサイド別条件生成ロジック"""
         target_name = name or indicator.type
 
         # 直接レジストリから設定オブジェクトを取得
         config_obj = indicator_registry.get_indicator_config(indicator.type)
-        threshold: Union[float, str] = 0.0
+        threshold: float | str = 0.0
 
         if config_obj:
             # 設定から閾値を取得を試みる
@@ -655,9 +628,7 @@ class ConditionGenerator:
                 elif scale_type == IndicatorScaleType.OSCILLATOR_0_100:
                     # 0-100オシレーターなら50を基準
                     threshold = self.OSCILLATOR_MIDPOINT
-                elif (
-                    scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100
-                ):
+                elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
                     # ±100なら0でOK
                     threshold = self.ZERO_THRESHOLD
                 elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
@@ -682,18 +653,15 @@ class ConditionGenerator:
         ]
 
     def _structure_conditions(
-        self, conditions: List[Union[Condition, ConditionGroup]]
-    ) -> List[Union[Condition, ConditionGroup]]:
+        self, conditions: list[Condition | ConditionGroup]
+    ) -> list[Condition | ConditionGroup]:
         """条件リストを確率的に階層化"""
         if len(conditions) < 2:
             return conditions
-        res: List[Union[Condition, ConditionGroup]] = []
+        res: list[Condition | ConditionGroup] = []
         i = 0
         while i < len(conditions):
-            if (
-                i + 1 < len(conditions)
-                and random.random() < self.OR_GROUP_PROBABILITY
-            ):
+            if i + 1 < len(conditions) and random.random() < self.OR_GROUP_PROBABILITY:
                 res.append(
                     ConditionGroup(
                         operator="OR",
@@ -707,18 +675,12 @@ class ConditionGenerator:
         return res
 
     @safe_operation(context="指標タイプ取得", is_api_call=False)
-    def _get_indicator_type(
-        self, indicator: Union[IndicatorGene, str]
-    ) -> IndicatorType:
+    def _get_indicator_type(self, indicator: IndicatorGene | str) -> IndicatorType:
         """
         指標のタイプを取得（統合版）
         優先順位: indicator_registry
         """
-        raw_name = (
-            indicator.type
-            if isinstance(indicator, IndicatorGene)
-            else indicator
-        )
+        raw_name = indicator.type if isinstance(indicator, IndicatorGene) else indicator
         # レジストリがエイリアス解決を自動で行う
         indicator_name = raw_name.upper()
 
@@ -743,8 +705,7 @@ class ConditionGenerator:
                 ):
                     return IndicatorType.MOMENTUM
                 elif any(
-                    k in cat
-                    for k in ["trend", "overlap", "moving average", "candles"]
+                    k in cat for k in ["trend", "overlap", "moving average", "candles"]
                 ):
                     return IndicatorType.TREND
                 elif any(k in cat for k in ["volatility", "statistics"]):
@@ -755,10 +716,10 @@ class ConditionGenerator:
 
     @safe_operation(context="動的指標分類", is_api_call=False)
     def _dynamic_classify(
-        self, indicators: List[IndicatorGene]
-    ) -> Dict[IndicatorType, List[IndicatorGene]]:
+        self, indicators: list[IndicatorGene]
+    ) -> dict[IndicatorType, list[IndicatorGene]]:
         """動的指標分類（統合されたタイプ取得メソッドを使用）"""
-        categorized: Dict[IndicatorType, List[IndicatorGene]] = {
+        categorized: dict[IndicatorType, list[IndicatorGene]] = {
             IndicatorType.MOMENTUM: [],
             IndicatorType.TREND: [],
             IndicatorType.VOLATILITY: [],
@@ -778,7 +739,7 @@ class ConditionGenerator:
         return categorized
 
     def _classify_indicators(
-        self, indicators: List[IndicatorGene]
-    ) -> Dict[IndicatorType, List[IndicatorGene]]:
+        self, indicators: list[IndicatorGene]
+    ) -> dict[IndicatorType, list[IndicatorGene]]:
         """_dynamic_classify のエイリアス（ComplexConditionsStrategy互換用）"""
         return self._dynamic_classify(indicators)

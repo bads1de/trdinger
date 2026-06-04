@@ -61,7 +61,7 @@ def sample_fr_data():
     ]
     rates = [0.0001, 0.0002, 0.00015]
 
-    for ts, rate in zip(timestamps, rates):
+    for ts, rate in zip(timestamps, rates, strict=False):
         fr = MagicMock(spec=FundingRateData)
         fr.funding_timestamp = ts
         fr.funding_rate = rate

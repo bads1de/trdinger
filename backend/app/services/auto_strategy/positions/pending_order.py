@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from ..config.constants import EntryType
 
@@ -28,10 +27,10 @@ class PendingOrder:
     direction: float
 
     # 指値価格（LIMIT, STOP_LIMIT で使用）
-    limit_price: Optional[float] = None
+    limit_price: float | None = None
 
     # 逆指値価格（STOP, STOP_LIMIT で使用）
-    stop_price: Optional[float] = None
+    stop_price: float | None = None
 
     # ポジションサイズ
     size: float = 0.01
@@ -43,10 +42,10 @@ class PendingOrder:
     validity_bars: int = 5
 
     # 約定時に設定するSL価格
-    sl_price: Optional[float] = None
+    sl_price: float | None = None
 
     # 約定時に設定するTP価格
-    tp_price: Optional[float] = None
+    tp_price: float | None = None
 
     # STOP_LIMIT用: ストップ発動済みフラグ
     stop_triggered: bool = False

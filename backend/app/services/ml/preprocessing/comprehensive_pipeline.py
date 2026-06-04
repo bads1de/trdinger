@@ -14,7 +14,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pandas as pd
 from sklearn.pipeline import Pipeline
@@ -35,7 +35,7 @@ def create_comprehensive_pipeline(
     optimize_dtypes: bool = True,
     # MLパイプライン パラメータ
     feature_selection: bool = False,
-    n_features: Optional[int] = None,
+    n_features: int | None = None,
     selection_method: str = "f_regression",
     scaling: bool = False,
     scaling_method: str = "standard",
@@ -44,9 +44,9 @@ def create_comprehensive_pipeline(
     polynomial_degree: int = 2,
     interaction_only: bool = False,
     # カスタム パラメータ
-    preprocessing_params: Optional[Dict[str, Any]] = None,
-    ml_params: Optional[Dict[str, Any]] = None,
-    target_column: Optional[str] = None,
+    preprocessing_params: dict[str, Any] | None = None,
+    ml_params: dict[str, Any] | None = None,
+    target_column: str | None = None,
     **kwargs: Any,
 ) -> Pipeline:
     """
@@ -160,7 +160,7 @@ def create_comprehensive_pipeline(
 def create_production_pipeline(
     target_column: str,
     feature_selection: bool = True,
-    n_features: Optional[int] = None,
+    n_features: int | None = None,
     scaling_method: str = "robust",
     include_polynomial: bool = False,
 ) -> Pipeline:
@@ -229,7 +229,7 @@ def create_eda_pipeline(
     )
 
 
-def get_comprehensive_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
+def get_comprehensive_pipeline_info(pipeline: Pipeline) -> dict[str, Any]:
     """
     包括的パイプラインの詳細情報を取得。
 
@@ -249,16 +249,10 @@ def get_comprehensive_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
     step_names = [step[0] for step in pipeline.steps]
     info.update(
         {
-            "has_preprocessing": any(
-                "preprocess" in name for name in step_names
-            ),
-            "has_feature_selection": any(
-                "selection" in name for name in step_names
-            ),
+            "has_preprocessing": any("preprocess" in name for name in step_names),
+            "has_feature_selection": any("selection" in name for name in step_names),
             "has_scaling": any("scaler" in name for name in step_names),
-            "has_polynomial_features": any(
-                "polynomial" in name for name in step_names
-            ),
+            "has_polynomial_features": any("polynomial" in name for name in step_names),
         }
     )
 
@@ -291,8 +285,8 @@ def get_comprehensive_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
 
 
 def validate_comprehensive_pipeline(
-    pipeline: Pipeline, X: pd.DataFrame, y: Optional[pd.Series] = None
-) -> Dict[str, Any]:
+    pipeline: Pipeline, X: pd.DataFrame, y: pd.Series | None = None
+) -> dict[str, Any]:
     """
     サンプルデータで包括的パイプラインを検証。
 
@@ -306,7 +300,7 @@ def validate_comprehensive_pipeline(
     """
     logger.info("包括的パイプラインを検証中...")
 
-    validation_results: Dict[str, Any] = {
+    validation_results: dict[str, Any] = {
         "pipeline_creation": True,
         "fit_success": False,
         "transform_success": False,
@@ -390,9 +384,7 @@ def optimize_comprehensive_pipeline(
         outlier_removal=outlier_removal,
         feature_selection=feature_selection,
         n_features=n_features_opt,
-        selection_method=(
-            "f_regression" if task_type == "regression" else "f_classif"
-        ),
+        selection_method=("f_regression" if task_type == "regression" else "f_classif"),
         scaling=True,
         scaling_method=scaling_method,
         polynomial_features=False,  # Disable by default for optimization

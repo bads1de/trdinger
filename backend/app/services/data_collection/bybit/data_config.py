@@ -6,7 +6,7 @@ Bybitデータ収集サービスの設定クラス
 """
 
 from dataclasses import dataclass
-from typing import Any, Type
+from typing import Any
 
 
 @dataclass
@@ -14,11 +14,11 @@ class DataServiceConfig:
     """データサービスの設定"""
 
     # リポジトリ関連
-    repository_class: Type[Any]
+    repository_class: type[Any]
     get_timestamp_method_name: str
 
     # データ変換関連
-    data_converter_class: Type[Any]
+    data_converter_class: type[Any]
     converter_method_name: str
 
     # API関連

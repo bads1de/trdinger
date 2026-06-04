@@ -2,7 +2,7 @@
 L1正則化による埋め込み選択戦略
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import numpy as np
 from sklearn.feature_selection import SelectFromModel
@@ -25,9 +25,9 @@ class LassoStrategy(BaseSelectionStrategy):
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: List[str],
+        feature_names: list[str],
         config: FeatureSelectionConfig,
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         """Lasso回帰の係数に基づいて特徴量を選択する。
 
         LassoCVでモデルを学習し、係数の絶対値がthreshold以上の特徴量を

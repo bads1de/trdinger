@@ -6,7 +6,7 @@
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import ccxt
 
@@ -31,9 +31,7 @@ class HistoricalDataService:
     データの一貫性と完全性を保証しながら、効率的なデータ収集を行います。
     """
 
-    def __init__(
-        self, market_service: Optional[BybitMarketDataService] = None
-    ):
+    def __init__(self, market_service: BybitMarketDataService | None = None):
         self.market_service = market_service or BybitMarketDataService()
         self.request_delay = 0.2
 
@@ -41,8 +39,8 @@ class HistoricalDataService:
         self,
         symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
-        repository: Optional[OHLCVRepository] = None,
-        since_timestamp: Optional[int] = None,
+        repository: OHLCVRepository | None = None,
+        since_timestamp: int | None = None,
     ) -> int:
         """
         指定シンボルの履歴データを包括的に収集
@@ -72,9 +70,7 @@ class HistoricalDataService:
             )
 
         except ccxt.BadSymbol as e:
-            logger.error(
-                f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}"
-            )
+            logger.error(f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}")
             raise
         except ccxt.NetworkError as e:
             logger.error(f"ネットワークエラーによる履歴データ収集エラー: {e}")
@@ -86,16 +82,14 @@ class HistoricalDataService:
             logger.error(f"パラメータ検証エラー: {e}")
             raise
         except Exception as e:
-            ErrorHandler.handle_model_error(
-                e, context="collect_historical_data"
-            )
+            ErrorHandler.handle_model_error(e, context="collect_historical_data")
             return 0
 
     async def collect_historical_data_with_start_date(
         self,
         symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
-        repository: Optional[OHLCVRepository] = None,
+        repository: OHLCVRepository | None = None,
     ) -> int:
         """
         ページネーションで全期間の履歴データを包括的に収集
@@ -118,9 +112,7 @@ class HistoricalDataService:
             raise ValueError("リポジトリが必要です")
 
         try:
-            logger.info(
-                f"ページネーションで全期間データ収集開始: {symbol} {timeframe}"
-            )
+            logger.info(f"ページネーションで全期間データ収集開始: {symbol} {timeframe}")
             return await self._collect_historical_batches(
                 symbol=symbol,
                 timeframe=timeframe,
@@ -131,9 +123,7 @@ class HistoricalDataService:
             )
 
         except ccxt.BadSymbol as e:
-            logger.error(
-                f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}"
-            )
+            logger.error(f"無効なシンボルによる履歴データ収集エラー: {symbol} - {e}")
             raise
         except ccxt.NetworkError as e:
             logger.error(f"ネットワークエラーによる履歴データ収集エラー: {e}")
@@ -186,15 +176,11 @@ class HistoricalDataService:
             )
             if latest_db_ts:
                 historical_data = [
-                    d
-                    for d in historical_data
-                    if d[0] < latest_db_ts.timestamp() * 1000
+                    d for d in historical_data if d[0] < latest_db_ts.timestamp() * 1000
                 ]
 
             if not historical_data:
-                logger.info(
-                    f"全期間データ取得完了: バッチ{i + 1}で重複データのみ"
-                )
+                logger.info(f"全期間データ取得完了: バッチ{i + 1}で重複データのみ")
                 break
 
             saved_count = await self.market_service._save_ohlcv_to_database(
@@ -222,9 +208,9 @@ class HistoricalDataService:
         self,
         symbol: str = DEFAULT_MARKET_SYMBOL,
         timeframe: str = "1h",
-        ohlcv_repository: Optional[OHLCVRepository] = None,
-        funding_rate_repository: Optional[FundingRateRepository] = None,
-        open_interest_repository: Optional[OpenInterestRepository] = None,
+        ohlcv_repository: OHLCVRepository | None = None,
+        funding_rate_repository: FundingRateRepository | None = None,
+        open_interest_repository: OpenInterestRepository | None = None,
     ) -> dict:
         """
         一括差分データを収集（OHLCV、FR、OI）
@@ -317,9 +303,7 @@ class HistoricalDataService:
                     await asyncio.sleep(0.1)
 
                 except Exception as e:
-                    logger.error(
-                        f"OHLCV差分データ収集エラー: {symbol} {tf} - {e}"
-                    )
+                    logger.error(f"OHLCV差分データ収集エラー: {symbol} {tf} - {e}")
                     ohlcv_results[tf] = {
                         "symbol": symbol,
                         "timeframe": tf,
@@ -334,9 +318,7 @@ class HistoricalDataService:
             )
 
         # OHLCV結果の集計
-        successful_timeframes = [
-            r for r in ohlcv_results.values() if r["success"]
-        ]
+        successful_timeframes = [r for r in ohlcv_results.values() if r["success"]]
         logger.info(
             f"OHLCV処理完了: 総保存件数={total_ohlcv_saved}, 成功時間足数={len(successful_timeframes)}/{len(timeframes)}"
         )
@@ -359,8 +341,10 @@ class HistoricalDataService:
             try:
                 logger.info(f"FR差分データ収集開始: {symbol}")
                 funding_rate_service = BybitFundingRateService()
-                fr_result = await funding_rate_service.fetch_incremental_funding_rate_data(
-                    symbol, funding_rate_repository
+                fr_result = (
+                    await funding_rate_service.fetch_incremental_funding_rate_data(
+                        symbol, funding_rate_repository
+                    )
                 )
 
                 results["data"]["funding_rate"] = {
@@ -370,9 +354,7 @@ class HistoricalDataService:
                     "latest_timestamp": fr_result.get("latest_timestamp"),
                 }
                 results["total_saved_count"] += fr_result["saved_count"]
-                logger.info(
-                    f"FR差分データ収集完了: {fr_result['saved_count']}件保存"
-                )
+                logger.info(f"FR差分データ収集完了: {fr_result['saved_count']}件保存")
 
             except Exception as e:
                 logger.error(f"FR差分データ収集エラー: {e}")
@@ -458,9 +440,7 @@ class HistoricalDataService:
         # 全体の成功判定
         if results["errors"]:
             results["success"] = False
-            logger.warning(
-                f"一括差分データ収集で一部エラー: {results['errors']}"
-            )
+            logger.warning(f"一括差分データ収集で一部エラー: {results['errors']}")
 
         logger.info(
             f"一括差分データ収集完了: {symbol} {timeframe} - "

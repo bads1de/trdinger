@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from enum import Enum
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..config.ga.ga_config import GAConfig
@@ -29,33 +29,27 @@ class GeneValidator:
     def __init__(self) -> None:
         """初期化"""
         self._indicator_validator = IndicatorValidator()
-        self._condition_validator = ConditionValidator(
-            self._indicator_validator
-        )
+        self._condition_validator = ConditionValidator(self._indicator_validator)
         self._strategy_validator = StrategyValidator(
             self._indicator_validator, self._condition_validator
         )
 
     def validate_indicator_gene(self, indicator_gene: object) -> bool:
         """指標遺伝子の妥当性を検証"""
-        return self._indicator_validator.validate_indicator_gene(
-            indicator_gene
-        )
+        return self._indicator_validator.validate_indicator_gene(indicator_gene)
 
     def validate_indicator_gene_for_generation(
         self,
         indicator_gene: object,
-        indicator_universe_mode: Union[str, Enum] = "curated",
-        allowed_indicators: Optional[Collection[str]] = None,
+        indicator_universe_mode: str | Enum = "curated",
+        allowed_indicators: Collection[str] | None = None,
     ) -> bool:
         """GA 生成・変異で使う指標遺伝子をユニバース込みで検証する。"""
-        return (
-            self._indicator_validator.validate_indicator_gene_for_generation(
-                indicator_gene, indicator_universe_mode, allowed_indicators
-            )
+        return self._indicator_validator.validate_indicator_gene_for_generation(
+            indicator_gene, indicator_universe_mode, allowed_indicators
         )
 
-    def validate_condition(self, condition: object) -> Tuple[bool, str]:
+    def validate_condition(self, condition: object) -> tuple[bool, str]:
         """条件の妥当性を検証"""
         return self._condition_validator.validate_condition(condition)
 
@@ -64,9 +58,7 @@ class GeneValidator:
         return self._condition_validator.clean_condition(condition)
 
     def validate_strategy_gene(
-        self, strategy_gene: object, config: Optional["GAConfig"] = None
-    ) -> Tuple[bool, List[str]]:
+        self, strategy_gene: object, config: GAConfig | None = None
+    ) -> tuple[bool, list[str]]:
         """戦略遺伝子の妥当性を検証"""
-        return self._strategy_validator.validate_strategy_gene(
-            strategy_gene, config
-        )
+        return self._strategy_validator.validate_strategy_gene(strategy_gene, config)

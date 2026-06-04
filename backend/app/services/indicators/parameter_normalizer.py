@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ class ParameterNormalizer:
     """
 
     def normalize_params(
-        self, params: Dict[str, Any], config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], config: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         入力パラメータをpandas-taが期待する形式に正規化
 
@@ -62,7 +62,7 @@ class ParameterNormalizer:
         return normalized
 
     def _apply_min_length_guard(
-        self, param_name: str, value: object, config: Dict[str, object]
+        self, param_name: str, value: object, config: dict[str, object]
     ) -> object:
         """
         min_lengthガードを適用

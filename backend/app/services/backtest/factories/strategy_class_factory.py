@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import Any, Dict, Type
+from typing import Any
 
 from backtesting import Strategy
 
@@ -27,9 +27,7 @@ class StrategyClassFactory:
     def __init__(self) -> None:
         self._auto_strategy_loader = AutoStrategyLoader()
 
-    def create_strategy_class(
-        self, strategy_config: Dict[str, Any]
-    ) -> Type[Strategy]:
+    def create_strategy_class(self, strategy_config: dict[str, Any]) -> type[Strategy]:
         """
         戦略設定から戦略クラスを生成
 
@@ -46,10 +44,8 @@ class StrategyClassFactory:
             # オートストラテジーの場合
             if self._is_auto_strategy(strategy_config):
                 try:
-                    return (
-                        self._auto_strategy_loader.create_auto_strategy_class(
-                            strategy_config
-                        )
+                    return self._auto_strategy_loader.create_auto_strategy_class(
+                        strategy_config
                     )
                 except AutoStrategyLoaderError as e:
                     raise StrategyClassCreationError(
@@ -65,11 +61,9 @@ class StrategyClassFactory:
             raise
         except Exception as e:
             logger.error(f"戦略クラス生成エラー: {e}")
-            raise StrategyClassCreationError(
-                f"戦略クラスの生成に失敗しました: {e}"
-            )
+            raise StrategyClassCreationError(f"戦略クラスの生成に失敗しました: {e}")
 
-    def _is_auto_strategy(self, strategy_config: Dict[str, Any]) -> bool:
+    def _is_auto_strategy(self, strategy_config: dict[str, Any]) -> bool:
         """オートストラテジーかどうかを判定"""
         return "strategy_gene" in strategy_config or (
             "parameters" in strategy_config
@@ -77,8 +71,8 @@ class StrategyClassFactory:
         )
 
     def get_strategy_parameters(
-        self, strategy_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, strategy_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         戦略設定からパラメータを抽出
 

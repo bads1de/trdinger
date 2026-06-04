@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -18,7 +18,7 @@ class MockTool(BaseTool):
         default_params={"should_skip": False, "tags": []},
     )
 
-    def should_skip_entry(self, context: ToolContext, params: Dict[str, Any]) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         return params.get("should_skip", False)
 
 

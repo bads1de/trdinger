@@ -10,7 +10,7 @@ import logging
 import os
 import threading
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Any, cast
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -27,10 +27,10 @@ from app.services.ml.orchestration.bg_task_orchestration_service import (
 from app.services.ml.orchestration.training_config_validator import (
     validate_training_config,
 )
+from app.types import SerializableValue
 from app.utils.datetime_utils import parse_datetime_range_optional
 from app.utils.error_handler import safe_ml_operation
 from app.utils.response import api_response, ensure_response_dict
-from app.types import SerializableValue
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 # --- モデル情報取得ユーティリティ (旧orchestration_utilsより統合) ---
 
 
-def load_model_metadata_safely(model_path: str) -> Optional[Dict[str, Any]]:
+def load_model_metadata_safely(model_path: str) -> dict[str, Any] | None:
     """モデルファイルからメタデータを安全に読み込む"""
     try:
         metadata_data = model_manager.load_metadata_only(model_path)
@@ -64,7 +64,7 @@ def load_model_metadata_safely(model_path: str) -> Optional[Dict[str, Any]]:
 
 def get_latest_model_with_info(
     model_name_pattern: str = "*",
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """最新モデルの情報とメトリクスを取得"""
     try:
         latest_model = model_manager.get_latest_model(
@@ -87,9 +87,7 @@ def get_latest_model_with_info(
         )
         file_info = {
             "size_mb": os.path.getsize(latest_model) / (1024 * 1024),
-            "modified_at": datetime.fromtimestamp(
-                os.path.getmtime(latest_model)
-            ),
+            "modified_at": datetime.fromtimestamp(os.path.getmtime(latest_model)),
         }
         return {
             "path": latest_model,
@@ -103,8 +101,8 @@ def get_latest_model_with_info(
 
 
 def get_model_info_with_defaults(
-    model_info: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    model_info: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """モデル情報にデフォルト値を適用"""
     from ..evaluation.metrics import get_default_metrics
 
@@ -173,8 +171,8 @@ class MLTrainingService(BaseResourceManager):
     def __init__(
         self,
         trainer_type: str = "ensemble",
-        ensemble_config: Optional[Dict[str, Any]] = None,
-        single_model_config: Optional[Dict[str, Any]] = None,
+        ensemble_config: dict[str, Any] | None = None,
+        single_model_config: dict[str, Any] | None = None,
     ):
         """
         MLTrainingServiceを初期化
@@ -193,11 +191,9 @@ class MLTrainingService(BaseResourceManager):
         """
         super().__init__()
         self.trainer_type = trainer_type
-        self.trainer: Union[VolatilityRegressionTrainer, EnsembleTrainer]
+        self.trainer: VolatilityRegressionTrainer | EnsembleTrainer
         if trainer_type == "single":
-            model_type = (single_model_config or {}).get(
-                "model_type", "lightgbm"
-            )
+            model_type = (single_model_config or {}).get("model_type", "lightgbm")
             self.trainer = VolatilityRegressionTrainer(
                 model_type=model_type,
                 model_params=single_model_config or {},
@@ -206,17 +202,15 @@ class MLTrainingService(BaseResourceManager):
             config = self._create_trainer_config(
                 trainer_type, ensemble_config, single_model_config
             )
-            self.trainer = EnsembleTrainer(
-                ensemble_config=cast(EnsembleConfig, config)
-            )
+            self.trainer = EnsembleTrainer(ensemble_config=cast(EnsembleConfig, config))
         self.optimization_service = OptimizationService()
 
     def _create_trainer_config(
         self,
         trainer_type: str,
-        ensemble_config: Optional[Dict[str, Any]],
-        single_model_config: Optional[Dict[str, Any]],
-    ) -> Union[EnsembleConfig, Dict[str, Any]]:
+        ensemble_config: dict[str, Any] | None,
+        single_model_config: dict[str, Any] | None,
+    ) -> EnsembleConfig | dict[str, Any]:
         """
         設定に基づいてトレーナー設定を作成
 
@@ -242,17 +236,11 @@ class MLTrainingService(BaseResourceManager):
         """
         if trainer_type == "ensemble":
             if ensemble_config is None:
-                ensemble_config = (
-                    ml_config_manager.config.ensemble.model_dump()
-                )
+                ensemble_config = ml_config_manager.config.ensemble.model_dump()
                 if "default_method" in ensemble_config:
-                    ensemble_config["method"] = ensemble_config.pop(
-                        "default_method"
-                    )
+                    ensemble_config["method"] = ensemble_config.pop("default_method")
                 if "algorithms" in ensemble_config:
-                    ensemble_config["models"] = ensemble_config.pop(
-                        "algorithms"
-                    )
+                    ensemble_config["models"] = ensemble_config.pop("algorithms")
             return cast(EnsembleConfig, ensemble_config)
 
         elif trainer_type == "single":
@@ -266,15 +254,13 @@ class MLTrainingService(BaseResourceManager):
                 **single_model_config,  # type: ignore[typeddict-item]
             }
         else:
-            raise ValueError(
-                f"サポートされていないトレーナータイプ: {trainer_type}"
-            )
+            raise ValueError(f"サポートされていないトレーナータイプ: {trainer_type}")
 
     # --- オーケストレーション（API向け）機能 ---
 
     async def start_training(
         self, config, background_tasks, db: Session
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         MLトレーニングをバックグラウンドタスクとして開始します。
 
@@ -300,9 +286,7 @@ class MLTrainingService(BaseResourceManager):
             # 設定の検証
             self._validate_training_config(config)
 
-            training_id = (
-                f"training_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
-            )
+            training_id = f"training_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
 
             # 実行開始前に状態を確保して、連打による二重起動を防ぐ
             with training_status_lock:
@@ -370,7 +354,7 @@ class MLTrainingService(BaseResourceManager):
         """
         validate_training_config(config)
 
-    async def get_training_status(self) -> Dict[str, Any]:
+    async def get_training_status(self) -> dict[str, Any]:
         """
         トレーニング状態を取得
 
@@ -393,7 +377,7 @@ class MLTrainingService(BaseResourceManager):
         with training_status_lock:
             return dict(training_status)
 
-    async def get_model_info(self) -> Dict[str, Any]:
+    async def get_model_info(self) -> dict[str, Any]:
         """
         現在のモデル情報を取得
 
@@ -417,9 +401,7 @@ class MLTrainingService(BaseResourceManager):
 
             model_status = {
                 "is_loaded": model_info_data is not None,
-                "model_path": (
-                    model_info_data["path"] if model_info_data else None
-                ),
+                "model_path": (model_info_data["path"] if model_info_data else None),
                 **model_status_base,
             }
             return api_response(
@@ -434,11 +416,9 @@ class MLTrainingService(BaseResourceManager):
             logger.error(f"MLモデル情報取得エラー: {e}")
             default_status = get_model_info_with_defaults(None)
             default_status.update({"is_loaded": False, "model_path": None})
-            return api_response(
-                success=True, data={"model_status": default_status}
-            )
+            return api_response(success=True, data={"model_status": default_status})
 
-    async def stop_training(self) -> Dict[str, Any]:
+    async def stop_training(self) -> dict[str, Any]:
         """
         トレーニングを停止
 
@@ -473,9 +453,7 @@ class MLTrainingService(BaseResourceManager):
             )
 
         background_task_manager.cleanup_all_tasks()
-        return api_response(
-            success=True, message="MLトレーニングを停止しました"
-        )
+        return api_response(success=True, message="MLトレーニングを停止しました")
 
     async def _train_in_background(self, config, training_id: str):
         """
@@ -554,9 +532,7 @@ class MLTrainingService(BaseResourceManager):
                         config.start_date, config.end_date
                     )
                     if date_range is None:
-                        raise ValueError(
-                            "開始日は終了日より前である必要があります"
-                        )
+                        raise ValueError("開始日は終了日より前である必要があります")
 
                     training_data = data_service.get_ml_training_data(
                         symbol=config.symbol,
@@ -616,7 +592,7 @@ class MLTrainingService(BaseResourceManager):
 
     def _determine_trainer_config(
         self, config: Any
-    ) -> Tuple[str, Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    ) -> tuple[str, dict[str, Any] | None, dict[str, Any] | None]:
         """
         設定からトレーナータイプ等を決定
 
@@ -680,7 +656,7 @@ class MLTrainingService(BaseResourceManager):
         """
         # 現在のインスタンスを更新
         self.trainer_type = trainer_type
-        self.trainer: Union[VolatilityRegressionTrainer, EnsembleTrainer]
+        self.trainer: VolatilityRegressionTrainer | EnsembleTrainer
         if config.task_type == "volatility_regression":
             model_type = (single_cfg or {}).get("model_type", "lightgbm")
             self.trainer = VolatilityRegressionTrainer(
@@ -688,17 +664,12 @@ class MLTrainingService(BaseResourceManager):
                 model_params=single_cfg or {},
             )
         else:
-            cfg = self._create_trainer_config(
-                trainer_type, ensemble_cfg, single_cfg
-            )
-            self.trainer = EnsembleTrainer(
-                ensemble_config=cast(EnsembleConfig, cfg)
-            )
+            cfg = self._create_trainer_config(trainer_type, ensemble_cfg, single_cfg)
+            self.trainer = EnsembleTrainer(ensemble_config=cast(EnsembleConfig, cfg))
 
         opt_settings = (
             config.optimization_settings
-            if config.optimization_settings
-            and config.optimization_settings.enabled
+            if config.optimization_settings and config.optimization_settings.enabled
             else None
         )
 
@@ -780,7 +751,7 @@ class MLTrainingService(BaseResourceManager):
                 }
             )
 
-    def _build_training_params(self, config: Any) -> Dict[str, Any]:
+    def _build_training_params(self, config: Any) -> dict[str, Any]:
         """
         APIリクエスト設定を学習用パラメータに変換する
 
@@ -850,11 +821,11 @@ class MLTrainingService(BaseResourceManager):
         self,
         training_data: Any,
         save_model: bool = True,
-        optimization_settings: Optional[OptimizationSettings] = None,
+        optimization_settings: OptimizationSettings | None = None,
         test_size: float = 0.2,
         random_state: int = 42,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         モデルの学習、ハイパーパラメータ最適化（オプション）、評価を実行します。
 
@@ -889,9 +860,7 @@ class MLTrainingService(BaseResourceManager):
 
         best_params, is_optimized, opt_result = {}, False, None
         if optimization_settings and optimization_settings.enabled:
-            task_type = kwargs.get(
-                "task_type", self.trainer.config.training.task_type
-            )
+            task_type = kwargs.get("task_type", self.trainer.config.training.task_type)
             if task_type == "volatility_regression":
                 raise ValueError(
                     "volatility_regression では optimization_settings をサポートしていません"
@@ -917,7 +886,7 @@ class MLTrainingService(BaseResourceManager):
             **best_params,
             **kwargs,
         }
-        result: Dict[str, SerializableValue] = self.trainer.train_model(
+        result: dict[str, SerializableValue] = self.trainer.train_model(
             ohlcv,
             funding_rate_data=fr,
             open_interest_data=oi,
@@ -931,7 +900,7 @@ class MLTrainingService(BaseResourceManager):
                 result["optimization_result"] = opt_result
         return result
 
-    def generate_forecast(self, features_df: pd.DataFrame) -> Dict[str, float]:
+    def generate_forecast(self, features_df: pd.DataFrame) -> dict[str, float]:
         """ボラティリティ予測を生成"""
         return self.trainer.predict_volatility(features_df)
 
@@ -939,7 +908,7 @@ class MLTrainingService(BaseResourceManager):
         """モデルを読み込む"""
         return self.trainer.load_model(model_path)
 
-    def get_current_model_path(self) -> Optional[str]:
+    def get_current_model_path(self) -> str | None:
         """読み込まれているモデルのパスを取得"""
         metadata = getattr(self.trainer, "metadata", None)
         if not metadata:
@@ -948,7 +917,7 @@ class MLTrainingService(BaseResourceManager):
         model_path = metadata.get("model_path")
         return model_path if isinstance(model_path, str) else None
 
-    def get_current_model_info(self) -> Optional[Dict[str, Any]]:
+    def get_current_model_info(self) -> dict[str, Any] | None:
         """読み込まれているモデルのメタデータを取得"""
         return getattr(self.trainer, "metadata", None)
 

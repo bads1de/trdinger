@@ -6,7 +6,6 @@ Long Short Ratio データのマージロジックを提供します。
 
 import logging
 from datetime import datetime
-from typing import List
 
 import pandas as pd
 
@@ -89,7 +88,7 @@ class LSRMerger:
         return df
 
     def _convert_lsr_to_dataframe(
-        self, lsr_data: List[LongShortRatioData]
+        self, lsr_data: list[LongShortRatioData]
     ) -> pd.DataFrame:
         """
         LongShortRatioDataリストをpandas.DataFrameに変換

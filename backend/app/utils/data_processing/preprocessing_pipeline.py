@@ -8,7 +8,7 @@ dtype最適化のための複数のトランスフォーマーを組み合わせ
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -545,7 +545,7 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
 
 
 def create_preprocessing_pipeline(
-    outlier_method: Optional[str] = "isolation_forest",
+    outlier_method: str | None = "isolation_forest",
     outlier_contamination: float = 0.1,
     numeric_strategy: str = "median",
     categorical_strategy: str = "most_frequent",
@@ -609,7 +609,7 @@ def create_preprocessing_pipeline(
     preprocessor = MixedTypeTransformer(numeric_pipeline, categorical_pipeline)
 
     # Main pipeline
-    steps: List[Tuple[str, Any]] = [("preprocessor", preprocessor)]
+    steps: list[tuple[str, Any]] = [("preprocessor", preprocessor)]
 
     # Optional dtype optimization
     if optimize_dtypes:
@@ -642,7 +642,7 @@ def create_basic_preprocessing_pipeline(
     # Simple imputation pipeline
     imputer = SimpleImputer(strategy=impute_strategy)
 
-    steps: List[Tuple[str, Any]] = [("imputer", imputer)]
+    steps: list[tuple[str, Any]] = [("imputer", imputer)]
 
     if encode_categorical:
         steps.append(("encoder", CategoricalEncoderTransformer(encoding_type="label")))
@@ -652,7 +652,7 @@ def create_basic_preprocessing_pipeline(
     return pipeline
 
 
-def get_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
+def get_pipeline_info(pipeline: Pipeline) -> dict[str, Any]:
     """
     適合済みのパイプラインの情報を取得
 

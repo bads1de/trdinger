@@ -2,7 +2,7 @@
 
 import importlib
 import logging
-from typing import Any, Dict, Optional, Type
+from typing import Any, Optional
 
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config.helpers import (
@@ -38,9 +38,9 @@ class HybridIndividualEvaluator(IndividualEvaluator):
     def __init__(
         self,
         backtest_service: BacktestService,
-        predictor: Optional[HybridPredictor] = None,
+        predictor: HybridPredictor | None = None,
         feature_adapter: Optional["HybridFeatureAdapter"] = None,
-        cache_size: Optional[int] = None,
+        cache_size: int | None = None,
     ):
         """
         初期化
@@ -54,16 +54,14 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             cache_size = self.DEFAULT_CACHE_SIZE
         super().__init__(backtest_service)
         self.predictor = predictor
-        self.feature_adapter = (
-            feature_adapter or self._create_feature_adapter()
-        )
-        self._prediction_cache: Dict[str, Any] = {}
-        self._feature_cache: Dict[str, Any] = {}
+        self.feature_adapter = feature_adapter or self._create_feature_adapter()
+        self._prediction_cache: dict[str, Any] = {}
+        self._feature_cache: dict[str, Any] = {}
         self._cache_size = cache_size
 
     def _prepare_run_config(
-        self, gene, backtest_config: Dict[str, Any], config: GAConfig
-    ) -> Optional[Dict[str, Any]]:
+        self, gene, backtest_config: dict[str, Any], config: GAConfig
+    ) -> dict[str, Any] | None:
         """
         ハイブリッド評価用のバックテスト実行設定を構築します。
 
@@ -77,7 +75,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         Returns:
             準備された実行設定辞書
         """
-        defaults: Dict[str, Any] = {
+        defaults: dict[str, Any] = {
             "symbol": (
                 getattr(config, "target_symbol", None)
                 or getattr(config, "base_symbol", None)
@@ -105,8 +103,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         )
 
     def _get_evaluation_context(
-        self, gene, backtest_config: Dict[str, Any], config: GAConfig
-    ) -> Dict[str, Any]:
+        self, gene, backtest_config: dict[str, Any], config: GAConfig
+    ) -> dict[str, Any]:
         """
         評価計算に必要な追加コンテキスト（ML予測シグナル等）を取得します。
 
@@ -124,8 +122,8 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _inject_external_objects(
         self,
-        run_config: Dict[str, Any],
-        backtest_config: Dict[str, Any],
+        run_config: dict[str, Any],
+        backtest_config: dict[str, Any],
         config: GAConfig,
     ) -> None:
         """実行設定への外部オブジェクト注入（1分足データ、MLモデル）"""
@@ -141,7 +139,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _create_feature_adapter(
         self,
-        wavelet_config: Optional[Dict[str, Any]] = None,
+        wavelet_config: dict[str, Any] | None = None,
         use_derived_features: bool = True,
     ) -> "HybridFeatureAdapter":
         adapter_cls = self._resolve_feature_adapter_cls()
@@ -150,11 +148,11 @@ class HybridIndividualEvaluator(IndividualEvaluator):
             use_derived_features=use_derived_features,
         )
 
-    def _resolve_feature_adapter_cls(self) -> Type["HybridFeatureAdapter"]:
+    def _resolve_feature_adapter_cls(self) -> type["HybridFeatureAdapter"]:
         module = importlib.import_module(
             "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter"
         )
-        return getattr(module, "HybridFeatureAdapter")
+        return module.HybridFeatureAdapter
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""
@@ -166,7 +164,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _fetch_ohlcv_data(
         self,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
         ga_config: GAConfig,
     ):
         """
@@ -192,7 +190,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         self._prediction_cache.clear()
         self._feature_cache.clear()
 
-    def get_cache_statistics(self) -> Dict[str, Any]:
+    def get_cache_statistics(self) -> dict[str, Any]:
         """ハイブリッド評価用のキャッシュ統計を返す。"""
         return {
             "prediction_cache_size": len(self._prediction_cache),
@@ -202,10 +200,10 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     @staticmethod
     def _set_ml_gate_state(
-        run_config: Dict[str, Any],
+        run_config: dict[str, Any],
         *,
         enabled: bool,
-        predictor: Optional[Any] = None,
+        predictor: Any | None = None,
     ) -> None:
         """MLゲート関連フラグをまとめて更新する。"""
         parameters = run_config["strategy_config"]["parameters"]
@@ -218,7 +216,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
 
     def _resolve_ml_gate_runtime_state(
         self, config: GAConfig
-    ) -> tuple[bool, Optional[Any]]:
+    ) -> tuple[bool, Any | None]:
         """ML gate の実行時状態を解決する。"""
         ml_gate_settings = resolve_ml_gate_settings(config)
         if not ml_gate_settings.enabled:
@@ -233,9 +231,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
                 if ml_filter_model.is_trained():
                     return True, ml_filter_model
             except Exception as e:
-                logger.debug(
-                    f"MLモデルのロードまたは初期化に失敗しました: {e}"
-                )
+                logger.debug(f"MLモデルのロードまたは初期化に失敗しました: {e}")
                 return False, None
 
         if self.predictor and self.predictor.is_trained():

@@ -2,7 +2,7 @@
 分散に基づくフィルタリング戦略（定数・準定数の削除）
 """
 
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 from sklearn.feature_selection import VarianceThreshold
@@ -23,9 +23,9 @@ class VarianceStrategy(BaseSelectionStrategy):
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: List[str],
+        feature_names: list[str],
         config: FeatureSelectionConfig,
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         """分散閾値に基づいて特徴量を選択する。
 
         各特徴量の分散を計算し、config.variance_threshold以上の分散を持つ

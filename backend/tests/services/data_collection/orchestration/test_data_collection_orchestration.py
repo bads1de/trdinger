@@ -707,6 +707,7 @@ class TestStartHistoricalOiCollection:
     ):
         """異常系: 無効なシンボルでエラーが発生"""
         from fastapi import HTTPException
+
         with patch(
             "app.services.data_collection.orchestration.data_validator.unified_config"
         ) as mock_config:

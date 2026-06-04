@@ -65,9 +65,7 @@ class TestEntryDecisionEngine:
     def test_determine_entry_direction_uses_stateful_fallback(self, engine, strategy):
         engine.tools_block_entry = MagicMock(return_value=False)
         engine.check_entry_conditions = MagicMock(side_effect=[False, False])
-        strategy.stateful_conditions_evaluator.get_stateful_entry_direction.return_value = (
-            -1.0
-        )
+        strategy.stateful_conditions_evaluator.get_stateful_entry_direction.return_value = -1.0
 
         direction = engine.determine_entry_direction()
 

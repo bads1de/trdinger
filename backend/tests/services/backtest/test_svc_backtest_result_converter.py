@@ -308,7 +308,7 @@ class TestPerformanceMetricsExtraction:
 
         # 勝ちトレードのみ
         trades_data = []
-        for i in range(5):
+        for _i in range(5):
             trades_data.append(
                 {
                     "PnL": 100.0,
@@ -336,7 +336,7 @@ class TestPerformanceMetricsExtraction:
 
         # 負けトレードのみ
         trades_data = []
-        for i in range(5):
+        for _i in range(5):
             trades_data.append(
                 {
                     "PnL": -50.0,

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -67,7 +67,7 @@ def fibonacci_cycle(
     close: pd.Series,
     cycle_periods: list[int] | None = None,
     fib_ratios: list[float] | None = None,
-) -> Tuple[pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series]:
     """Fibonacci Cycle Indicator."""
     if cycle_periods is None:
         cycle_periods = [8, 13, 21, 34, 55]
@@ -109,4 +109,4 @@ def fibonacci_cycle(
     signal = fibonacci_cycle_result.rolling(window=3).mean()
     signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"  # type: ignore[reportAttributeAccessIssue]
 
-    return cast(Tuple[pd.Series, pd.Series], (fibonacci_cycle_result, signal))
+    return cast(tuple[pd.Series, pd.Series], (fibonacci_cycle_result, signal))

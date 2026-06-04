@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Collection
-from typing import Any, Optional
+from typing import Any
 
 from app.utils.error_handler import safe_operation
 
@@ -34,9 +34,7 @@ class IndicatorValidator:
             return False
 
         if not isinstance(indicator_gene.parameters, dict):
-            logger.warning(
-                f"指標パラメータが無効: {indicator_gene.parameters}"
-            )
+            logger.warning(f"指標パラメータが無効: {indicator_gene.parameters}")
             return False
 
         # ログ: 指標タイプが有効リストに含まれているかを確認
@@ -73,13 +71,9 @@ class IndicatorValidator:
 
         config = indicator_registry.get_indicator_config(indicator_gene.type)
         if config and config.parameter_constraints:
-            is_valid, errors = config.validate_constraints(
-                indicator_gene.parameters
-            )
+            is_valid, errors = config.validate_constraints(indicator_gene.parameters)
             if not is_valid:
-                logger.warning(
-                    f"パラメータ制約違反 ({indicator_gene.type}): {errors}"
-                )
+                logger.warning(f"パラメータ制約違反 ({indicator_gene.type}): {errors}")
                 return False
 
         logger.debug(f"指標タイプ {indicator_gene.type} は有効です")
@@ -94,7 +88,7 @@ class IndicatorValidator:
         self,
         indicator_gene,
         indicator_universe_mode: Any = "curated",
-        allowed_indicators: Optional[Collection[str]] = None,
+        allowed_indicators: Collection[str] | None = None,
     ) -> bool:
         """GA 生成・変異で使う指標遺伝子をユニバース込みで検証する。"""
         if not self.validate_indicator_gene(indicator_gene):
@@ -102,15 +96,11 @@ class IndicatorValidator:
 
         if allowed_indicators is not None:
             try:
-                normalized_allowed = {
-                    str(name).upper() for name in allowed_indicators
-                }
+                normalized_allowed = {str(name).upper() for name in allowed_indicators}
             except TypeError:
                 return False
             return str(indicator_gene.type).upper() in normalized_allowed
 
         from ...config.indicator_universe import is_indicator_in_universe
 
-        return is_indicator_in_universe(
-            indicator_gene.type, indicator_universe_mode
-        )
+        return is_indicator_in_universe(indicator_gene.type, indicator_universe_mode)

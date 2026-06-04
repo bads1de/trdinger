@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
@@ -37,9 +37,7 @@ class FundingRateFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """
         ファンディングレートが極端ならエントリーをスキップ
 
@@ -65,7 +63,7 @@ class FundingRateFilter(BaseTool):
         # データがない場合はスキップしない
         return False
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """パラメータの突然変異"""
         import random
 

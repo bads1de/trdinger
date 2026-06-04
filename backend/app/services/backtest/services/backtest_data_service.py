@@ -5,7 +5,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -37,10 +37,10 @@ class BacktestDataService:
 
     def __init__(
         self,
-        ohlcv_repo: Optional[OHLCVRepository] = None,
-        oi_repo: Optional[OpenInterestRepository] = None,
-        fr_repo: Optional[FundingRateRepository] = None,
-        event_label_generator: Optional[EventDrivenLabelGenerator] = None,
+        ohlcv_repo: OHLCVRepository | None = None,
+        oi_repo: OpenInterestRepository | None = None,
+        fr_repo: FundingRateRepository | None = None,
+        event_label_generator: EventDrivenLabelGenerator | None = None,
     ):
         """
         初期化
@@ -179,9 +179,7 @@ class BacktestDataService:
             )
         except DataIntegrationError as e:
             logger.error(f"MLトレーニング用データ作成エラー: {e}")
-            raise ValueError(
-                f"MLトレーニング用データの作成に失敗しました: {e}"
-            )
+            raise ValueError(f"MLトレーニング用データの作成に失敗しました: {e}")
 
     def get_event_labeled_training_data(
         self,
@@ -189,7 +187,7 @@ class BacktestDataService:
         timeframe: str,
         start_date: datetime,
         end_date: datetime,
-    ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
+    ) -> tuple[pd.DataFrame, dict[str, Any]]:
         """
         ボラティリティ等の特定イベントに基づきラベリングされた学習データを取得
 
@@ -215,21 +213,15 @@ class BacktestDataService:
             )
         except DataIntegrationError as exc:
             logger.error(f"イベントラベル用データ作成エラー: {exc}")
-            raise ValueError(
-                f"イベントラベル付きデータの作成に失敗しました: {exc}"
-            )
+            raise ValueError(f"イベントラベル付きデータの作成に失敗しました: {exc}")
 
         if market_df.empty:
-            logger.warning(
-                "取得データが空のためイベントラベリングをスキップします"
-            )
+            logger.warning("取得データが空のためイベントラベリングをスキップします")
             return market_df, {"regime_profiles": {}, "label_distribution": {}}
 
-        labels_df, profile_info = (
-            self._event_label_generator.generate_hrhp_lrlp_labels(
-                market_df,
-                regime_labels=None,
-            )
+        labels_df, profile_info = self._event_label_generator.generate_hrhp_lrlp_labels(
+            market_df,
+            regime_labels=None,
         )
 
         aligned_market = market_df.loc[labels_df.index].copy()

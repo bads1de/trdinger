@@ -27,7 +27,7 @@ pandas-ta の trend カテゴリに対応。
 """
 
 import logging
-from typing import Any, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -159,9 +159,7 @@ class TrendIndicators:
 
         return cast(
             pd.Series,
-            run_multi_series_indicator(
-                {"high": high, "low": low}, None, compute
-            ),
+            run_multi_series_indicator({"high": high, "low": low}, None, compute),
         )
 
     @staticmethod
@@ -215,7 +213,7 @@ class TrendIndicators:
         length: int = 14,
         drift: int = 1,
         offset: int = 0,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """Vortex Indicator"""
         if drift <= 0:
             raise ValueError(f"drift must be positive: {drift}")
@@ -250,12 +248,12 @@ class TrendIndicators:
         lensig: int = 14,
         scalar: float = 100.0,
         mamode: str = "rma",
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """ADX: returns (adx, dmp, dmn)"""
 
-        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(high, 3),
             )
 
@@ -297,12 +295,12 @@ class TrendIndicators:
         low: pd.Series,
         length: int = 14,
         scalar: float = 100.0,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
 
-        def nan_result() -> Tuple[pd.Series, pd.Series, pd.Series]:
+        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
             return cast(
-                Tuple[pd.Series, pd.Series, pd.Series],
+                tuple[pd.Series, pd.Series, pd.Series],
                 create_nan_series_bundle(high, 3),
             )
 
@@ -395,23 +393,21 @@ class TrendIndicators:
         p: int = 10,
         x: float = 1.0,
         q: int = 9,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """Chande Kroll Stop"""
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             p,
             lambda: ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q),
             fallback_factory=lambda: cast(
-                Tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
             ),
         )
 
         if isinstance(result, tuple):
-            return cast(Tuple[pd.Series, pd.Series], result)
+            return cast(tuple[pd.Series, pd.Series], result)
 
-        return cast(
-            Tuple[pd.Series, pd.Series], (result.iloc[:, 0], result.iloc[:, 1])
-        )
+        return cast(tuple[pd.Series, pd.Series], (result.iloc[:, 0], result.iloc[:, 1]))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -459,9 +455,7 @@ class TrendIndicators:
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
             length,
-            lambda: ta.ttm_trend(
-                high=high, low=low, close=close, length=length
-            ),
+            lambda: ta.ttm_trend(high=high, low=low, close=close, length=length),
         )
 
         if hasattr(result, "empty") and getattr(result, "empty", False):
@@ -484,9 +478,7 @@ class TrendIndicators:
         if close is None:
             return pd.Series([], dtype=float)
 
-        result = ta.decreasing(
-            close=close, length=length, strict=strict, asint=as_int
-        )
+        result = ta.decreasing(close=close, length=length, strict=strict, asint=as_int)
         if result is None:
             return create_nan_series_like(close)
         return cast(pd.Series, result)
@@ -503,9 +495,7 @@ class TrendIndicators:
         if close is None:
             return pd.Series([], dtype=float)
 
-        result = ta.increasing(
-            close=close, length=length, strict=strict, asint=as_int
-        )
+        result = ta.increasing(close=close, length=length, strict=strict, asint=as_int)
         if result is None:
             return create_nan_series_like(close)
         return result

@@ -10,7 +10,8 @@ import logging
 import random
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from deap import tools
@@ -64,8 +65,8 @@ class GeneticAlgorithmEngine:
         backtest_service: BacktestService,
         gene_generator: RandomGeneGenerator,
         hybrid_mode: bool = False,
-        hybrid_predictor: Optional[Any] = None,
-        hybrid_feature_adapter: Optional[Any] = None,
+        hybrid_predictor: Any | None = None,
+        hybrid_feature_adapter: Any | None = None,
     ):
         """初期化します。
 
@@ -108,8 +109,8 @@ class GeneticAlgorithmEngine:
 
         self.individual_class = None  # setup_deap時に設定
         self.fitness_sharing: Any = None  # setup_deap時に初期化
-        self.parameter_tuning_manager: ParameterTuningManager = (
-            ParameterTuningManager(self.individual_evaluator)
+        self.parameter_tuning_manager: ParameterTuningManager = ParameterTuningManager(
+            self.individual_evaluator
         )
 
     def setup_deap(self, config: GAConfig) -> None:
@@ -148,9 +149,7 @@ class GeneticAlgorithmEngine:
         fitness_sharing_config = config.fitness_sharing
         if fitness_sharing_config.get("enable_fitness_sharing", False):
             self.fitness_sharing = FitnessSharing(
-                sharing_radius=fitness_sharing_config.get(
-                    "sharing_radius", 0.1
-                ),
+                sharing_radius=fitness_sharing_config.get("sharing_radius", 0.1),
                 alpha=fitness_sharing_config.get("sharing_alpha", 1.0),
                 sampling_threshold=fitness_sharing_config.get(
                     "sampling_threshold", 200
@@ -179,11 +178,9 @@ class GeneticAlgorithmEngine:
     def run_evolution(
         self,
         config: GAConfig,
-        backtest_config: Dict[str, Any],
-        progress_callback: Optional[
-            Callable[[int, int, Optional[float]], None]
-        ] = None,
-    ) -> Dict[str, Any]:
+        backtest_config: dict[str, Any],
+        progress_callback: Callable[[int, int, float | None], None] | None = None,
+    ) -> dict[str, Any]:
         """
         進化計算プロセスを開始し、最適な取引戦略を探索します。
 
@@ -238,8 +235,7 @@ class GeneticAlgorithmEngine:
             if "end_date" not in backtest_config:
                 backtest_config["end_date"] = config.fallback_end_date
                 logger.info(
-                    f"GA Engine - Using fallback "
-                    f"end_date: {config.fallback_end_date}"
+                    f"GA Engine - Using fallback end_date: {config.fallback_end_date}"
                 )
 
             self._raise_if_stop_requested("バックテスト設定準備後")
@@ -265,9 +261,7 @@ class GeneticAlgorithmEngine:
             stats = self._create_statistics()
 
             # 初期個体群の生成（評価なし）
-            population = toolbox.population(
-                n=config.population_size
-            )  # type: ignore[attr-defined]
+            population = toolbox.population(n=config.population_size)  # type: ignore[attr-defined]
 
             # シード戦略の注入（ハイブリッド初期化）
             if config.use_seed_strategies:
@@ -336,9 +330,7 @@ class GeneticAlgorithmEngine:
                     population, config, logbook, start_time, halloffame
                 )
 
-                logger.info(
-                    f"進化完了 - 実行時間: {result['execution_time']:.2f}秒"
-                )
+                logger.info(f"進化完了 - 実行時間: {result['execution_time']:.2f}秒")
                 return result
 
             finally:
@@ -355,7 +347,7 @@ class GeneticAlgorithmEngine:
         finally:
             self.is_running = False
 
-    def _set_generator_context(self, backtest_config: Dict[str, Any]):
+    def _set_generator_context(self, backtest_config: dict[str, Any]):
         """ジェネレーターにコンテキストを設定します。
 
         Args:
@@ -365,17 +357,13 @@ class GeneticAlgorithmEngine:
             tf = backtest_config.get("timeframe")
             sym = backtest_config.get("symbol")
             if hasattr(self.gene_generator, "smart_condition_generator"):
-                smart_gen = getattr(
-                    self.gene_generator, "smart_condition_generator"
-                )
+                smart_gen = self.gene_generator.smart_condition_generator
                 if smart_gen and hasattr(smart_gen, "set_context"):
                     smart_gen.set_context(timeframe=tf, symbol=sym)
         except (AttributeError, TypeError) as e:
             logger.debug(f"コンテキスト設定スキップ: {e}")
 
-    def _get_seed_strategies_for_injection(
-        self, config: GAConfig
-    ) -> List[Any]:
+    def _get_seed_strategies_for_injection(self, config: GAConfig) -> list[Any]:
         """初期集団へ注入する seed 戦略を、
         固定順の偏りが出ないよう整列します。
 
@@ -447,10 +435,8 @@ class GeneticAlgorithmEngine:
                 if is_multi_fidelity_enabled(config)
                 else config
             )
-            worker_initargs = (
-                self.individual_evaluator.build_parallel_worker_initargs(
-                    worker_config
-                )
+            worker_initargs = self.individual_evaluator.build_parallel_worker_initargs(
+                worker_config
             )
             if not worker_initargs:
                 logger.warning(
@@ -461,10 +447,7 @@ class GeneticAlgorithmEngine:
             logger.info("並列ワーカー用の初期化パラメータを準備しました")
 
         except Exception as e:
-            logger.warning(
-                f"並列ワーカー用データ準備中に"
-                f"エラーが発生しました: {e}"
-            )
+            logger.warning(f"並列ワーカー用データ準備中にエラーが発生しました: {e}")
             return None
 
         parallel_evaluator = ParallelEvaluator(
@@ -518,9 +501,7 @@ class GeneticAlgorithmEngine:
         runner: EvolutionRunner,
         population,
         config: GAConfig,
-        progress_callback: Optional[
-            Callable[[int, int, Optional[float]], None]
-        ] = None,
+        progress_callback: Callable[[int, int, float | None], None] | None = None,
     ):
         """独立したEvolutionRunnerを使用して最適化アルゴリズムを実行します。
 
@@ -576,21 +557,16 @@ class GeneticAlgorithmEngine:
 
         if best_individual is not None and is_multi_fidelity_enabled(config):
             try:
-                refreshed = (
-                    self.parameter_tuning_manager
-                    .evaluate_individual_with_full_fidelity(
-                        best_individual,
-                        config,
-                    )
+                refreshed = self.parameter_tuning_manager.evaluate_individual_with_full_fidelity(
+                    best_individual,
+                    config,
                 )
                 if getattr(best_individual, "fitness", None) is not None:
                     best_individual.fitness.values = tuple(refreshed)
             except Exception as exc:
                 logger.warning("最終候補の full 評価に失敗しました: %s", exc)
 
-        best_fitness_value = self._extract_result_best_fitness(
-            best_individual, config
-        )
+        best_fitness_value = self._extract_result_best_fitness(best_individual, config)
         best_evaluation_summary = (
             self.parameter_tuning_manager.build_individual_evaluation_summary(
                 best_individual, config
@@ -611,12 +587,12 @@ class GeneticAlgorithmEngine:
                 fallback_summary=best_evaluation_summary,
             )
         elif best_evaluation_summary is None:
-            best_evaluation_summary = self.parameter_tuning_manager.build_individual_evaluation_summary(
-                best_gene,
-                config,
-                force_robustness=bool(
-                    config.two_stage_selection_config.enabled
-                ),
+            best_evaluation_summary = (
+                self.parameter_tuning_manager.build_individual_evaluation_summary(
+                    best_gene,
+                    config,
+                    force_robustness=bool(config.two_stage_selection_config.enabled),
+                )
             )
 
         execution_time = time.time() - start_time
@@ -634,19 +610,14 @@ class GeneticAlgorithmEngine:
         }
 
         ranked_population = self.result_processor.sort_population(population)
-        persisted_population = ranked_population[
-            :MAX_PERSISTED_POPULATION_SIZE
-        ]
+        persisted_population = ranked_population[:MAX_PERSISTED_POPULATION_SIZE]
         result["all_strategies"] = persisted_population
         result["fitness_scores"] = [
-            extract_primary_fitness(individual)
-            for individual in persisted_population
+            extract_primary_fitness(individual) for individual in persisted_population
         ]
-        result["evaluation_summaries"] = (
-            self._collect_population_evaluation_summaries(
-                persisted_population,
-                config,
-            )
+        result["evaluation_summaries"] = self._collect_population_evaluation_summaries(
+            persisted_population,
+            config,
         )
         result["pareto_front"] = best_strategies or []
         result["objectives"] = config.objectives
@@ -666,9 +637,7 @@ class GeneticAlgorithmEngine:
         """停止要求がある場合は EvolutionStoppedError を送出します。"""
         if self._stop_event.is_set():
             if context:
-                raise EvolutionStoppedError(
-                    f"停止要求により中断されました: {context}"
-                )
+                raise EvolutionStoppedError(f"停止要求により中断されました: {context}")
             raise EvolutionStoppedError("停止要求により中断されました")
 
     def _create_strategy_individual(self):
@@ -682,16 +651,12 @@ class GeneticAlgorithmEngine:
             gene = self.gene_generator.generate_random_gene()
 
             if self.individual_class is None:
-                raise TypeError(
-                    "個体クラス 'Individual' が初期化されていません。"
-                )
+                raise TypeError("個体クラス 'Individual' が初期化されていません。")
 
             # StrategyGeneのフィールドを使ってIndividualインスタンスを作成
             # IndividualはStrategyGeneを継承しているため、キーワード引数で初期化可能
             # asdictは再帰的に辞書化してしまうため使用しない
-            return self.individual_class(
-                **GeneticUtils.extract_gene_params(gene)
-            )
+            return self.individual_class(**GeneticUtils.extract_gene_params(gene))
 
         except Exception as e:
             logger.error(f"個体生成中に致命的なエラーが発生しました: {e}")
@@ -706,20 +671,18 @@ class GeneticAlgorithmEngine:
 
     def _collect_population_evaluation_summaries(
         self,
-        population: List[Any],
+        population: list[Any],
         config: GAConfig,
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """保存対象個体の評価 summary を収集する。"""
-        summaries: Dict[str, Dict[str, Any]] = {}
+        summaries: dict[str, dict[str, Any]] = {}
         for individual in population:
             summary = self.parameter_tuning_manager.build_individual_evaluation_summary(
                 individual, config
             )
             if not summary:
                 continue
-            strategy_key = self.result_processor.get_strategy_result_key(
-                individual
-            )
+            strategy_key = self.result_processor.get_strategy_result_key(individual)
             summaries[strategy_key] = summary
         return summaries
 
@@ -729,27 +692,25 @@ class GeneticAlgorithmEngine:
         config: GAConfig,
         *,
         force_robustness: bool = False,
-        primary_fitness: Optional[float] = None,
-        selection_rank_override: Optional[int] = None,
-        selection_score_override: Optional[Tuple[float, ...]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        primary_fitness: float | None = None,
+        selection_rank_override: int | None = None,
+        selection_score_override: tuple[float, ...] | None = None,
+    ) -> dict[str, Any] | None:
         """個体の評価 report から保存向け summary を構築する。"""
-        return (
-            self.parameter_tuning_manager.build_individual_evaluation_summary(
-                individual,
-                config,
-                force_robustness=force_robustness,
-                primary_fitness=primary_fitness,
-                selection_rank_override=selection_rank_override,
-                selection_score_override=selection_score_override,
-            )
+        return self.parameter_tuning_manager.build_individual_evaluation_summary(
+            individual,
+            config,
+            force_robustness=force_robustness,
+            primary_fitness=primary_fitness,
+            selection_rank_override=selection_rank_override,
+            selection_score_override=selection_score_override,
         )
 
     def _evaluate_individual_with_full_fidelity(
         self,
         individual: Any,
         config: GAConfig,
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """必要に応じて full fidelity で個体を再評価する。"""
         return self.parameter_tuning_manager.evaluate_individual_with_full_fidelity(
             individual, config
@@ -757,11 +718,7 @@ class GeneticAlgorithmEngine:
 
     def _extract_primary_fitness_from_result(self, result: Any) -> float:
         """評価結果から主 fitness を取り出す。"""
-        return (
-            self.parameter_tuning_manager.extract_primary_fitness_from_result(
-                result
-            )
-        )
+        return self.parameter_tuning_manager.extract_primary_fitness_from_result(result)
 
     def _get_strategy_result_key(self, strategy: Any) -> str:
         """result 内部で戦略 summary を対応付けるキーを返す。"""

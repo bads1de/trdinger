@@ -7,7 +7,7 @@ OHLCV、OI、FR、FGデータの期間不一致を適切に処理し、
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -23,7 +23,7 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     """暗号通貨特化の特徴量エンジニアリング"""
 
     def calculate_features(
-        self, df: pd.DataFrame, config: Dict[str, Any]
+        self, df: pd.DataFrame, config: dict[str, Any]
     ) -> pd.DataFrame:
         """特徴量を計算"""
         return self.create_crypto_features(df)
@@ -31,16 +31,14 @@ class CryptoFeatureCalculator(BaseFeatureCalculator):
     def create_crypto_features(
         self,
         df: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
+        funding_rate_data: pd.DataFrame | None = None,
+        open_interest_data: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
         """暗号通貨特化特徴量を生成"""
         logger.info("暗号通貨特化特徴量を計算中...")
 
         # 必須カラムチェック
-        if not self.validate_input_data(
-            df, ["open", "high", "low", "close", "volume"]
-        ):
+        if not self.validate_input_data(df, ["open", "high", "low", "close", "volume"]):
             return df
 
         result_df = df.copy()

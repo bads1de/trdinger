@@ -6,7 +6,6 @@ Volume Profile Feature Calculator
 """
 
 import logging
-from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -40,7 +39,7 @@ def _numba_rolling_volume_profile(
     volume_arr: np.ndarray,
     window: int,
     num_bins: int,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     n = len(close_arr)
     poc_arr, vah_arr, val_arr = (
         np.full(n, np.nan),
@@ -95,7 +94,7 @@ def _numba_detect_volume_nodes_signed(
     volume_arr: np.ndarray,
     window: int,
     num_bins: int,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     n = len(close_arr)
     hvn_dist, lvn_dist = np.zeros(n), np.zeros(n)
     for i in range(window, n):
@@ -139,7 +138,7 @@ def _numba_detect_volume_nodes_signed(
 @jit(nopython=True)
 def _numba_vp_skewness_kurtosis(
     close_arr: np.ndarray, volume_arr: np.ndarray, window: int
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     n = len(close_arr)
     skew_arr, kurt_arr = np.zeros(n), np.zeros(n)
     for i in range(window, n):
@@ -169,7 +168,7 @@ class VolumeProfileFeatureCalculator:
         self.num_bins = num_bins
 
     def calculate_features(
-        self, df: pd.DataFrame, lookback_periods: Optional[list] = None
+        self, df: pd.DataFrame, lookback_periods: list | None = None
     ) -> pd.DataFrame:
         high_arr = df["high"].values.astype(np.float64)
         low_arr = df["low"].values.astype(np.float64)
@@ -189,12 +188,7 @@ class VolumeProfileFeatureCalculator:
 
             # 手動でのNaN埋めをベクトル化 (Forward fill)
             def safe_fill(arr: np.ndarray) -> np.ndarray:
-                return (
-                    pd.Series(arr)
-                    .ffill()
-                    .fillna(0.0)
-                    .to_numpy(dtype=np.float64)
-                )
+                return pd.Series(arr).ffill().fillna(0.0).to_numpy(dtype=np.float64)
 
             poc_f, vah_f, val_f = (
                 safe_fill(poc),

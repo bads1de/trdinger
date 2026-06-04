@@ -5,7 +5,6 @@ CV スプリッター ファクトリー
 """
 
 import logging
-from typing import Optional
 
 import pandas as pd
 from sklearn.model_selection import KFold, StratifiedKFold
@@ -48,7 +47,7 @@ def infer_timeframe(index: pd.DatetimeIndex) -> str:
 
 
 def get_t1_series(
-    indices: pd.DatetimeIndex, horizon_n: int, timeframe: Optional[str] = None
+    indices: pd.DatetimeIndex, horizon_n: int, timeframe: str | None = None
 ) -> pd.Series:
     """PurgedKFold 用の t1（ラベリング終了時刻）を計算する。
 
@@ -86,10 +85,10 @@ def create_temporal_cv_splitter(
     n_splits: int,
     index: pd.DatetimeIndex,
     *,
-    t1: Optional[pd.Series] = None,
+    t1: pd.Series | None = None,
     pct_embargo: float = 0.01,
-    horizon_n: Optional[int] = None,
-    timeframe: Optional[str] = None,
+    horizon_n: int | None = None,
+    timeframe: str | None = None,
 ):
     """時系列向けのCV splitterを一元生成する。
 

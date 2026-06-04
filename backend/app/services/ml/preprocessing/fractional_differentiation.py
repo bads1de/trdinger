@@ -7,7 +7,6 @@ NumPyのconvolveを用いた高速ベクトル化実装を提供します。
 """
 
 import logging
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -65,9 +64,7 @@ class FractionalDifferentiation:
             w.append(w_k)
         return np.array(w)
 
-    def transform(
-        self, data: Union[pd.DataFrame, pd.Series]
-    ) -> Union[pd.DataFrame, pd.Series]:
+    def transform(self, data: pd.DataFrame | pd.Series) -> pd.DataFrame | pd.Series:
         """データに対して分数次差分を適用する"""
         if isinstance(data, pd.Series):
             return self._transform_series(data)

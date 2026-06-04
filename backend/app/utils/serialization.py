@@ -13,7 +13,7 @@ import math
 from dataclasses import fields, is_dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Type, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 from ..types import SerializableValue
 
@@ -112,7 +112,7 @@ def dataclass_to_json(obj: object, *, indent: int = 2) -> str:
         return "{}"
 
 
-def dataclass_from_json(cls: Type[T], json_str: str) -> T:
+def dataclass_from_json(cls: type[T], json_str: str) -> T:
     """
     JSON 文字列から dataclass インスタンスを復元する。
 
@@ -138,7 +138,7 @@ def dataclass_from_json(cls: Type[T], json_str: str) -> T:
     return dataclass_from_dict(cls, data)
 
 
-def dataclass_from_dict(cls: Type[T], data: Dict[str, SerializableValue]) -> T:
+def dataclass_from_dict(cls: type[T], data: dict[str, SerializableValue]) -> T:
     """
     辞書から dataclass インスタンスを復元する。
 
@@ -153,7 +153,7 @@ def dataclass_from_dict(cls: Type[T], data: Dict[str, SerializableValue]) -> T:
     """
     try:
         # クラス側に from_dict があればそちらを優先
-        if hasattr(cls, "from_dict") and callable(getattr(cls, "from_dict")):
+        if hasattr(cls, "from_dict") and callable(cls.from_dict):
             return cls.from_dict(data)  # type: ignore[attr-defined, return-value]
 
         # フォールバック: デフォルトインスタンスを作って setattr

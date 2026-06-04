@@ -5,7 +5,7 @@ OpenInterestRepositoryのテストモジュール
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -56,7 +56,7 @@ def sample_open_interest_model() -> OpenInterestData:
 
 
 @pytest.fixture
-def sample_open_interest_records() -> List[Dict[str, Any]]:
+def sample_open_interest_records() -> list[dict[str, Any]]:
     """サンプルオープンインタレストレコードリスト"""
     base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     return [
@@ -108,7 +108,7 @@ class TestInsertOpenInterestData:
     def test_insert_open_interest_data_success(
         self,
         repository: OpenInterestRepository,
-        sample_open_interest_records: List[Dict[str, Any]],
+        sample_open_interest_records: list[dict[str, Any]],
     ) -> None:
         """オープンインタレストデータが正常に挿入される"""
         mock_result = MagicMock()
@@ -241,7 +241,7 @@ class TestErrorHandling:
     def test_insert_handles_db_error(
         self,
         repository: OpenInterestRepository,
-        sample_open_interest_records: List[Dict[str, Any]],
+        sample_open_interest_records: list[dict[str, Any]],
     ) -> None:
         """データベースエラーが処理される（safe_operationが例外をキャッチ）"""
         repository.db.execute.side_effect = Exception("DB Error")

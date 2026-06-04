@@ -4,8 +4,9 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 """
 
 import logging
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -43,7 +44,7 @@ class ExperimentPersistenceService:
         self.db_session_factory = db_session_factory
         self.serializer = GeneSerializer()
         # GA実行中にセッションを再利用するためのキャッシュ
-        self._active_session: Optional[Session] = None
+        self._active_session: Session | None = None
 
     @contextmanager
     def _get_db_session(self) -> Generator[Session, None, None]:
@@ -88,7 +89,7 @@ class ExperimentPersistenceService:
         experiment_id: str,
         experiment_name: str,
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
     ) -> str:
         """
         実験を作成
@@ -115,10 +116,10 @@ class ExperimentPersistenceService:
     def save_experiment_result(
         self,
         experiment_id: str,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
-        experiment_info: Optional[Dict[str, Any]] = None,
+        backtest_config: dict[str, Any],
+        experiment_info: dict[str, Any] | None = None,
     ) -> None:
         """実験結果をデータベースに保存"""
         if not isinstance(experiment_info, dict):
@@ -141,7 +142,7 @@ class ExperimentPersistenceService:
 
         logger.info(f"実験結果保存完了: {experiment_id}")
 
-    def save_backtest_result(self, result_data: Dict[str, Any]) -> None:
+    def save_backtest_result(self, result_data: dict[str, Any]) -> None:
         """詳細バックテスト結果をデータベースに保存"""
         if not result_data:
             logger.warning("保存対象のバックテスト結果がありません")
@@ -156,8 +157,8 @@ class ExperimentPersistenceService:
         self,
         db: Session,
         experiment_id: str,
-        experiment_info: Dict[str, Any],
-        result: Dict[str, Any],
+        experiment_info: dict[str, Any],
+        result: dict[str, Any],
         ga_config: GAConfig,
     ):
         """最良戦略を保存する"""
@@ -193,8 +194,8 @@ class ExperimentPersistenceService:
     def _save_other_strategies(
         self,
         db: Session,
-        experiment_info: Dict[str, Any],
-        result: Dict[str, Any],
+        experiment_info: dict[str, Any],
+        result: dict[str, Any],
         ga_config: GAConfig,
     ):
         """最良戦略以外の戦略をバッチ保存する"""
@@ -212,9 +213,7 @@ class ExperimentPersistenceService:
         for i, strategy in enumerate(all_strategies[:100]):  # 上位100件に制限
             if strategy.id != best_strategy.id:
                 # fitness_scoresの範囲内にあるかチェック
-                fitness_score = (
-                    fitness_scores[i] if i < len(fitness_scores) else 0.0
-                )
+                fitness_score = fitness_scores[i] if i < len(fitness_scores) else 0.0
                 strategy_key = self._get_strategy_result_key(strategy)
                 gene_data = self.serializer.strategy_gene_to_dict(strategy)
                 gene_data = attach_evaluation_summary(
@@ -231,16 +230,14 @@ class ExperimentPersistenceService:
                 )
 
         if strategies_data:
-            saved_count = generated_strategy_repo.save_strategies_batch(
-                strategies_data
-            )
+            saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
             logger.info(f"追加戦略を一括保存しました: {saved_count} 件")
 
     def _save_pareto_front(
         self,
         db: Session,
-        experiment_info: Dict[str, Any],
-        result: Dict[str, Any],
+        experiment_info: dict[str, Any],
+        result: dict[str, Any],
         ga_config: GAConfig,
     ):
         """パレート最適解を保存する"""
@@ -269,17 +266,13 @@ class ExperimentPersistenceService:
                         "experiment_id": db_experiment_id,
                         "gene_data": gene_data,
                         "generation": ga_config.generations,
-                        "fitness_score": (
-                            fitness_values[0] if fitness_values else 0.0
-                        ),
+                        "fitness_score": (fitness_values[0] if fitness_values else 0.0),
                         "fitness_values": fitness_values,
                     }
                 )
 
         if strategies_data:
-            saved_count = generated_strategy_repo.save_strategies_batch(
-                strategies_data
-            )
+            saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
             logger.info(f"パレート最適解を一括保存しました: {saved_count} 件")
 
     def complete_experiment(self, experiment_id: str):
@@ -294,9 +287,7 @@ class ExperimentPersistenceService:
         """実験を停止状態にする"""
         self._update_experiment_status(experiment_id, "stopped")
 
-    def _update_experiment_status(
-        self, experiment_id: str, status: str
-    ) -> None:
+    def _update_experiment_status(self, experiment_id: str, status: str) -> None:
         """実験ステータス更新の共通処理。"""
         experiment_info = self.get_experiment_info(experiment_id)
         if experiment_info:
@@ -310,7 +301,7 @@ class ExperimentPersistenceService:
         experiment_id: str,
         current_generation: int,
         total_generations: int,
-        best_fitness: Optional[float] = None,
+        best_fitness: float | None = None,
     ) -> bool:
         """実験の進捗状況を更新する"""
         experiment_info = self.get_experiment_info(experiment_id)
@@ -325,7 +316,7 @@ class ExperimentPersistenceService:
                 best_fitness,
             )
 
-    def list_experiments(self) -> List[Dict[str, Any]]:
+    def list_experiments(self) -> list[dict[str, Any]]:
         """実験一覧を取得"""
         with self.db_session_factory() as db:
             repo = GAExperimentRepository(db)
@@ -353,9 +344,7 @@ class ExperimentPersistenceService:
                 for exp in experiments
             ]
 
-    def get_experiment_detail(
-        self, experiment_id: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_experiment_detail(self, experiment_id: str) -> dict[str, Any] | None:
         """実験詳細を取得（進捗情報を含む）"""
         with self.db_session_factory() as db:
             repo = GAExperimentRepository(db)
@@ -372,9 +361,7 @@ class ExperimentPersistenceService:
                 "total_generations": exp.total_generations,
                 "best_fitness": exp.best_fitness,
                 "created_at": (
-                    exp.created_at.isoformat()
-                    if exp.created_at is not None
-                    else None
+                    exp.created_at.isoformat() if exp.created_at is not None else None
                 ),
                 "completed_at": (
                     exp.completed_at.isoformat()
@@ -383,9 +370,7 @@ class ExperimentPersistenceService:
                 ),
             }
 
-    def get_experiment_info(
-        self, experiment_id: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_experiment_info(self, experiment_id: str) -> dict[str, Any] | None:
         """実験情報を取得（experiment_idカラムによる高速検索）。"""
         with self.db_session_factory() as db:
             repo = GAExperimentRepository(db)
@@ -398,7 +383,7 @@ class ExperimentPersistenceService:
             logger.warning(f"実験が見つかりません: {experiment_id}")
             return None
 
-    def _map_experiment_info(self, exp: Any) -> Dict[str, Any]:
+    def _map_experiment_info(self, exp: Any) -> dict[str, Any]:
         """DBモデルから辞書形式に変換"""
         return {
             "db_id": exp.id,

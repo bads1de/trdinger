@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 from numbers import Real
-from typing import Any, Optional, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -63,7 +63,7 @@ def parse_datetime_value(value: Any) -> datetime:
     raise ValueError(f"サポートされていない日付形式: {type(value)}")
 
 
-def parse_datetime_optional(value: Any) -> Optional[datetime]:
+def parse_datetime_optional(value: Any) -> datetime | None:
     """
     値を datetime に変換し、失敗時は None を返す。
 
@@ -91,7 +91,7 @@ def parse_datetime_optional(value: Any) -> Optional[datetime]:
 def parse_datetime_range_optional(
     start_date: Any,
     end_date: Any,
-) -> Optional[Tuple[datetime, datetime]]:
+) -> tuple[datetime, datetime] | None:
     """
     開始・終了日時をまとめて変換し、比較可能な形で返す。
 
@@ -122,7 +122,7 @@ def parse_datetime_range_optional(
     return normalized_start, normalized_end
 
 
-def parse_timestamp_safe(value: Any) -> Optional[datetime]:
+def parse_timestamp_safe(value: Any) -> datetime | None:
     """
     ミリ秒 timestamp や日時表現を安全に datetime へ変換する。
 
@@ -175,7 +175,7 @@ def parse_timestamp_safe(value: Any) -> Optional[datetime]:
 
 def normalize_datetimes_for_comparison(
     start_date: datetime, end_date: datetime
-) -> Tuple[datetime, datetime]:
+) -> tuple[datetime, datetime]:
     """
     aware / naive が混在しても比較できるように正規化する。
 

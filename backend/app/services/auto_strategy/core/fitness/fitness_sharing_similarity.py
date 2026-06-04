@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.services.auto_strategy.genes import StrategyGene
 
@@ -79,7 +79,7 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
         return 0.0
 
 
-def check_none_similarity(val1: object, val2: object) -> Optional[float]:
+def check_none_similarity(val1: object, val2: object) -> float | None:
     """
     None値に対する類似度チェックの共通処理。
     """
@@ -91,7 +91,7 @@ def check_none_similarity(val1: object, val2: object) -> Optional[float]:
 
 
 def calculate_indicator_similarity(
-    indicators1: List[Any], indicators2: List[Any]
+    indicators1: list[Any], indicators2: list[Any]
 ) -> float:
     """
     2つの指標セット間の類似度を計算する。
@@ -107,7 +107,7 @@ def calculate_indicator_similarity(
 
 
 def calculate_condition_similarity(
-    conditions1: List[Any], conditions2: List[Any]
+    conditions1: list[Any], conditions2: list[Any]
 ) -> float:
     """
     2つの条件リスト間の類似度を計算する。
@@ -121,7 +121,7 @@ def calculate_condition_similarity(
     if total == 0:
         return 1.0
 
-    for c1, c2 in zip(conditions1, conditions2):
+    for c1, c2 in zip(conditions1, conditions2, strict=False):
         if getattr(c1, "operator", None) == getattr(c2, "operator", None):
             similar_count += OPERATOR_SIMILARITY_SCORE
         if str(type(getattr(c1, "left_operand", None))) == str(
@@ -133,7 +133,7 @@ def calculate_condition_similarity(
 
 
 def calculate_risk_management_similarity(
-    risk1: Dict[str, Any], risk2: Dict[str, Any]
+    risk1: dict[str, Any], risk2: dict[str, Any]
 ) -> float:
     """
     リスク管理設定の類似度を計算する。
@@ -154,9 +154,7 @@ def calculate_risk_management_similarity(
                 score += 1.0
             else:
                 max_v = max(abs(v1), abs(v2))
-                score += (
-                    max(0.0, 1.0 - abs(v1 - v2) / max_v) if max_v > 0 else 1.0
-                )
+                score += max(0.0, 1.0 - abs(v1 - v2) / max_v) if max_v > 0 else 1.0
         elif v1 == v2:
             score += 1.0
 
@@ -174,9 +172,7 @@ def calculate_tpsl_similarity(tpsl1: Any, tpsl2: Any) -> float:
         v1, v2 = getattr(tpsl1, attr, None), getattr(tpsl2, attr, None)
         if v1 is not None and v2 is not None:
             diff = abs(v1 - v2)
-            score += max(
-                0.0, TPSL_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON))
-            )
+            score += max(0.0, TPSL_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON)))
     return min(1.0, score)
 
 
@@ -187,14 +183,11 @@ def calculate_position_sizing_similarity(ps1: Any, ps2: Any) -> float:
         return res
 
     score = METHOD_MATCH_SCORE if ps1.method == ps2.method else 0.0
-    v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(
-        ps2, "risk_per_trade", None
-    )
+    v1, v2 = getattr(ps1, "risk_per_trade", None), getattr(ps2, "risk_per_trade", None)
     if v1 is not None and v2 is not None:
         diff = abs(v1 - v2)
         score += max(
             0.0,
-            POSITION_SIZING_ATTRIBUTE_WEIGHT
-            * (1 - diff / max(v1, v2, EPSILON)),
+            POSITION_SIZING_ATTRIBUTE_WEIGHT * (1 - diff / max(v1, v2, EPSILON)),
         )
     return min(1.0, score)

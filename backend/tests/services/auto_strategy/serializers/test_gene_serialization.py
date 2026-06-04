@@ -239,9 +239,9 @@ class TestGeneSerializerCacheIntegration:
         }
 
         restored_first = serializer.dict_to_strategy_gene(data, StrategyGene)
-        restored_first.long_entry_conditions[0].left_operand["source"][
-            "name"
-        ] = "changed"
+        restored_first.long_entry_conditions[0].left_operand["source"]["name"] = (
+            "changed"
+        )
 
         restored_second = serializer.dict_to_strategy_gene(data, StrategyGene)
 

@@ -8,8 +8,9 @@ import gc
 import logging
 import threading
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -23,17 +24,17 @@ class BackgroundTaskManager:
     """
 
     def __init__(self):
-        self._active_tasks: Dict[str, Dict[str, Any]] = {}
-        self._task_resources: Dict[str, List[Any]] = {}
-        self._cleanup_callbacks: Dict[str, List[Callable[[], None]]] = {}
+        self._active_tasks: dict[str, dict[str, Any]] = {}
+        self._task_resources: dict[str, list[Any]] = {}
+        self._cleanup_callbacks: dict[str, list[Callable[[], None]]] = {}
         self._lock = threading.Lock()
 
     def register_task(
         self,
-        task_id: Optional[str] = None,
+        task_id: str | None = None,
         task_name: str = "Unknown Task",
-        resources: Optional[List[Any]] = None,
-        cleanup_callbacks: Optional[List[Callable[[], None]]] = None,
+        resources: list[Any] | None = None,
+        cleanup_callbacks: list[Callable[[], None]] | None = None,
     ) -> str:
         """
         バックグラウンドタスクを登録
@@ -125,8 +126,8 @@ class BackgroundTaskManager:
     def managed_task(
         self,
         task_name: str,
-        resources: Optional[List[Any]] = None,
-        cleanup_callbacks: Optional[List[Callable[[], None]]] = None,
+        resources: list[Any] | None = None,
+        cleanup_callbacks: list[Callable[[], None]] | None = None,
     ):
         """
         管理されたバックグラウンドタスクのコンテキストマネージャー
@@ -157,9 +158,7 @@ class BackgroundTaskManager:
         for task_id in task_ids:
             self.unregister_task(task_id, force_cleanup=True)
 
-        logger.info(
-            f"全バックグラウンドタスククリーンアップ完了: {len(task_ids)}個"
-        )
+        logger.info(f"全バックグラウンドタスククリーンアップ完了: {len(task_ids)}個")
 
     def _get_memory_usage(self) -> float:
         """

@@ -5,7 +5,7 @@ OHLCV履歴データの収集を担当します。
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
@@ -36,10 +36,10 @@ class HistoricalDataOrchestrator:
         background_tasks: BackgroundTasks,
         db: Session,
         force_update: bool = False,
-        start_date: Optional[str] = None,
+        start_date: str | None = None,
         data_validator: Any = None,
         ohlcv_repository_class: Any = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         特定のシンボルと時間軸の過去価格データ（OHLCV）を収集
 
@@ -70,22 +70,15 @@ class HistoricalDataOrchestrator:
             # デフォルトのバリデーション（テスト用）
             from app.config.unified_config import unified_config
 
-            normalized_symbol = unified_config.market.symbol_mapping.get(
-                symbol, symbol
-            )
-            if (
-                normalized_symbol
-                not in unified_config.market.supported_symbols
-            ):
+            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+            if normalized_symbol not in unified_config.market.supported_symbols:
                 raise ValueError(f"サポートされていないシンボル: {symbol}")
             if timeframe not in unified_config.market.supported_timeframes:
                 raise ValueError(f"無効な時間軸: {timeframe}")
 
         # データ存在チェック
         repository = repository_class(db)
-        data_exists = (
-            repository.get_data_count(normalized_symbol, timeframe) > 0
-        )
+        data_exists = repository.get_data_count(normalized_symbol, timeframe) > 0
 
         if data_exists and not force_update:
             logger.info(
@@ -98,14 +91,10 @@ class HistoricalDataOrchestrator:
             )
 
         if data_exists and force_update:
-            logger.info(
-                f"{normalized_symbol} {timeframe} のデータを強制更新します。"
-            )
+            logger.info(f"{normalized_symbol} {timeframe} のデータを強制更新します。")
             # 既存データを削除
-            deleted_count = (
-                repository.clear_ohlcv_data_by_symbol_and_timeframe(
-                    normalized_symbol, timeframe
-                )
+            deleted_count = repository.clear_ohlcv_data_by_symbol_and_timeframe(
+                normalized_symbol, timeframe
             )
             logger.info(f"既存データを{deleted_count}件削除しました。")
 
@@ -136,7 +125,7 @@ class HistoricalDataOrchestrator:
         symbol: str,
         timeframe: str,
         db: Session,
-        start_date: Optional[str] = None,
+        start_date: str | None = None,
         ohlcv_repository_class: Any = None,
     ):
         """バックグラウンドでの履歴データ収集（ページネーションで全期間取得）"""
@@ -148,10 +137,12 @@ class HistoricalDataOrchestrator:
 
             logger.info("ページネーションで全期間データを取得します")
 
-            result = await self.historical_service.collect_historical_data_with_start_date(
-                symbol,
-                timeframe,
-                repository,
+            result = (
+                await self.historical_service.collect_historical_data_with_start_date(
+                    symbol,
+                    timeframe,
+                    repository,
+                )
             )
 
             if result is not None and result >= 0:

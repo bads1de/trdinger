@@ -29,7 +29,7 @@ pandas-ta の volume カテゴリに対応。
 """
 
 import logging
-from typing import Union, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -160,9 +160,7 @@ class VolumeIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def obv(
-        close: pd.Series, volume: pd.Series, period: int = 14
-    ) -> pd.Series:
+    def obv(close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
         """オンバランスボリューム
 
         ゼロボリュームのバーではOBVは変化させない（前の値を維持）。
@@ -249,9 +247,9 @@ class VolumeIndicators:
             typical_price = (high + low + close) / 3
             cumulative_pv = (typical_price * volume).cumsum()
             cumulative_volume = volume.cumsum()
-            return (
-                cumulative_pv / cumulative_volume.replace(0, np.nan)
-            ).fillna(typical_price)
+            return (cumulative_pv / cumulative_volume.replace(0, np.nan)).fillna(
+                typical_price
+            )
 
         return cast(
             pd.Series,
@@ -502,9 +500,7 @@ class VolumeIndicators:
         """
 
         def _calculate_vwap_z_score() -> pd.Series:
-            vwap_series = VolumeIndicators.vwap(
-                high, low, close, volume, period=period
-            )
+            vwap_series = VolumeIndicators.vwap(high, low, close, volume, period=period)
             deviation = close - vwap_series
             sigma = deviation.rolling(window=period).std()
             # ゼロ除算回避: 標準偏差が0またはNaNの場合はNaNを返す
@@ -535,12 +531,10 @@ class VolumeIndicators:
                 try:
                     # 時間情報を秒単位のインデックスに変換 (0 - 86400)
                     idx = volume.index
-                    _h = getattr(idx, "hour")
-                    _m = getattr(idx, "minute")
-                    _s = getattr(idx, "second")
-                    time_indices = (_h * 3600 + _m * 60 + _s).values.astype(
-                        np.int32
-                    )
+                    _h = idx.hour
+                    _m = idx.minute
+                    _s = idx.second
+                    time_indices = (_h * 3600 + _m * 60 + _s).values.astype(np.int32)
                     vol_arr = volume.values.astype(np.float64)
 
                     res_arr = _njit_rvol_loop(vol_arr, time_indices, window)
@@ -558,9 +552,7 @@ class VolumeIndicators:
             rvol = volume / avg_vol
             return normalize_non_finite(rvol)
 
-        return cast(
-            pd.Series, run_series_indicator(volume, window, _calculate_rvol)
-        )
+        return cast(pd.Series, run_series_indicator(volume, window, _calculate_rvol))
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -637,9 +629,7 @@ class VolumeIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def pvi(
-        close: pd.Series, volume: pd.Series, length: int = 13
-    ) -> pd.Series:
+    def pvi(close: pd.Series, volume: pd.Series, length: int = 13) -> pd.Series:
         """Positive Volume Index"""
         return cast(
             pd.Series,
@@ -743,7 +733,7 @@ class VolumeIndicators:
             Volume Profile の DataFrame（Price Level と Volume の列）
         """
 
-        def _calculate_vp() -> Union[pd.DataFrame, pd.Series, None]:
+        def _calculate_vp() -> pd.DataFrame | pd.Series | None:
             result = ta.vp(close=close, volume=volume, bins=bins, width=width)
             if isinstance(result, pd.Series):
                 return result.to_frame()

@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -91,7 +91,9 @@ def test_strategy_gene_round_trip_dict(
     assert restored.id == base_strategy_gene.id
     # 指標
     assert len(restored.indicators) == len(base_strategy_gene.indicators)
-    for orig, got in zip(base_strategy_gene.indicators, restored.indicators):
+    for orig, got in zip(
+        base_strategy_gene.indicators, restored.indicators, strict=False
+    ):
         assert got.type == orig.type
         assert got.parameters == orig.parameters
         assert got.enabled is orig.enabled
@@ -132,7 +134,7 @@ def test_strategy_gene_round_trip_json(
 ) -> None:
     """JsonConverter経由のラウンドトリップ."""
     json_str = serializer.strategy_gene_to_json(base_strategy_gene)
-    loaded: Dict[str, Any] = json.loads(json_str)
+    loaded: dict[str, Any] = json.loads(json_str)
     assert loaded["id"] == base_strategy_gene.id
 
     restored = serializer.json_to_strategy_gene(json_str, StrategyGene)

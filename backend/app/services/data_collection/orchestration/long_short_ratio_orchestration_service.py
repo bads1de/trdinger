@@ -6,7 +6,6 @@
 """
 
 import logging
-from typing import List, Optional
 
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -25,18 +24,14 @@ from database.repositories.long_short_ratio_repository import (
 logger = logging.getLogger(__name__)
 
 
-class LongShortRatioOrchestrationService(
-    BaseDataCollectionOrchestrationService
-):
+class LongShortRatioOrchestrationService(BaseDataCollectionOrchestrationService):
     """
     ロング/ショート比率データの収集と管理を統括するサービスクラス
     """
 
     def __init__(
         self,
-        bybit_service: BybitLongShortRatioService = Depends(
-            BybitLongShortRatioService
-        ),
+        bybit_service: BybitLongShortRatioService = Depends(BybitLongShortRatioService),
     ):
         """
         サービスの初期化
@@ -51,10 +46,10 @@ class LongShortRatioOrchestrationService(
         symbol: str,
         period: str,
         limit: int,
-        start_date: Optional[str],
-        end_date: Optional[str],
+        start_date: str | None,
+        end_date: str | None,
         db_session: Session,
-    ) -> List[LongShortRatioData]:
+    ) -> list[LongShortRatioData]:
         """
         指定された条件でロング/ショート比率データを取得する
 
@@ -111,17 +106,21 @@ class LongShortRatioOrchestrationService(
         try:
             if fetch_all:
                 # 履歴データの一括収集
-                saved_count = await self.bybit_service.collect_historical_long_short_ratio_data(
-                    symbol=symbol,
-                    period=period,
-                    repository=repo,
+                saved_count = (
+                    await self.bybit_service.collect_historical_long_short_ratio_data(
+                        symbol=symbol,
+                        period=period,
+                        repository=repo,
+                    )
                 )
             else:
                 # 差分更新
-                result = await self.bybit_service.fetch_incremental_long_short_ratio_data(
-                    symbol=symbol,
-                    period=period,
-                    repository=repo,
+                result = (
+                    await self.bybit_service.fetch_incremental_long_short_ratio_data(
+                        symbol=symbol,
+                        period=period,
+                        repository=repo,
+                    )
                 )
                 saved_count = result.get("saved_count", 0)
 
@@ -143,7 +142,7 @@ class LongShortRatioOrchestrationService(
 
     async def collect_bulk_long_short_ratio_data(
         self,
-        symbols: List[str],
+        symbols: list[str],
         period: str,
         fetch_all: bool,
         db_session: Session,
@@ -160,9 +159,7 @@ class LongShortRatioOrchestrationService(
         Returns:
             収集結果
         """
-        logger.info(
-            f"{len(symbols)}シンボル ({period}) の一括データ収集を開始します"
-        )
+        logger.info(f"{len(symbols)}シンボル ({period}) の一括データ収集を開始します")
         total_count = 0
 
         for symbol in symbols:
@@ -178,13 +175,9 @@ class LongShortRatioOrchestrationService(
                     total_count += result["data"].get("count", 0)
 
             except Exception as e:
-                logger.error(
-                    f"{symbol}のデータ収集中にエラーが発生しました: {e}"
-                )
+                logger.error(f"{symbol}のデータ収集中にエラーが発生しました: {e}")
 
-        logger.info(
-            f"一括データ収集完了。合計{total_count}件のデータを保存しました"
-        )
+        logger.info(f"一括データ収集完了。合計{total_count}件のデータを保存しました")
 
         return self._create_success_response(
             "一括データ収集完了", data={"total_count": total_count}

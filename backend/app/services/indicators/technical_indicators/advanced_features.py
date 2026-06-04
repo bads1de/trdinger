@@ -316,9 +316,7 @@ class AdvancedFeatures:
                 lambda: (
                     AdvancedFeatures.z_score(open_interest, window)
                     + AdvancedFeatures.z_score(funding_rate, window)
-                    + AdvancedFeatures.z_score(
-                        ls_ratio_divergence - 1.0, window
-                    )
+                    + AdvancedFeatures.z_score(ls_ratio_divergence - 1.0, window)
                 ),
             ),
         )
@@ -346,9 +344,9 @@ class AdvancedFeatures:
             imbalance = upper_shadow / (lower_shadow + 1e-9)
             # imbalanceが負になる異常データに備えてクリップ
             safe_imbalance = np.clip(imbalance, a_min=0.0, a_max=None)
-            return pd.Series(
-                np.log(safe_imbalance + 1e-9), index=close.index
-            ).fillna(0.0)
+            return pd.Series(np.log(safe_imbalance + 1e-9), index=close.index).fillna(
+                0.0
+            )
 
         return cast(
             pd.Series,
@@ -496,9 +494,7 @@ class AdvancedFeatures:
             buy_ratio = 1 / (1 + np.exp(-z_score))
             buy_vol = volume * buy_ratio
             sell_vol = volume * (1 - buy_ratio)
-            abs_imbalance = pd.Series(
-                np.abs(buy_vol - sell_vol), index=close.index
-            )
+            abs_imbalance = pd.Series(np.abs(buy_vol - sell_vol), index=close.index)
             result = abs_imbalance.rolling(window=window).sum() / (
                 volume.rolling(window=window).sum() + 1e-9
             )
@@ -622,12 +618,8 @@ class AdvancedFeatures:
                 index=close.index,
                 dtype=float,
             )
-            delta_oi_factor = (
-                open_interest.diff().clip(lower=0.0).astype(float)
-            )
-            price_location = (
-                close - low.rolling(window=lookback).min()
-            ).astype(float)
+            delta_oi_factor = open_interest.diff().clip(lower=0.0).astype(float)
+            price_location = (close - low.rolling(window=lookback).min()).astype(float)
             result = neg_fr_factor * delta_oi_factor * price_location
             return pd.Series(
                 np.where(np.isnan(result), 0.0, result),
@@ -664,9 +656,7 @@ class AdvancedFeatures:
             """
             トレンド品質の計算ロジック。
             """
-            result = (
-                close.diff().rolling(window=window).corr(open_interest.diff())
-            )
+            result = close.diff().rolling(window=window).corr(open_interest.diff())
             if isinstance(result, pd.DataFrame):
                 return result.iloc[:, 0].fillna(0.0)  # type: ignore
             return result.fillna(0.0)
@@ -790,16 +780,16 @@ class AdvancedFeatures:
             run_multi_series_indicator(
                 {"close": close, "open_interest": open_interest},
                 None,
-                lambda: np.sign(close.diff().fillna(0.0).astype(float))
-                * open_interest.diff().fillna(0.0).astype(float),
+                lambda: (
+                    np.sign(close.diff().fillna(0.0).astype(float))
+                    * open_interest.diff().fillna(0.0).astype(float)
+                ),
             ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def liquidity_efficiency(
-        open_interest: pd.Series, volume: pd.Series
-    ) -> pd.Series:
+    def liquidity_efficiency(open_interest: pd.Series, volume: pd.Series) -> pd.Series:
         """
         流動性効率（Open Interest / Volume）
         """
@@ -808,17 +798,13 @@ class AdvancedFeatures:
             run_multi_series_indicator(
                 {"open_interest": open_interest, "volume": volume},
                 None,
-                lambda: normalize_non_finite(
-                    open_interest / volume, fill_value=0
-                ),
+                lambda: normalize_non_finite(open_interest / volume, fill_value=0),
             ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def leverage_ratio(
-        open_interest: pd.Series, market_cap: pd.Series
-    ) -> pd.Series:
+    def leverage_ratio(open_interest: pd.Series, market_cap: pd.Series) -> pd.Series:
         """
         推定レバレッジ比率（Total OI / Estimated Market Cap）
         """
@@ -827,8 +813,6 @@ class AdvancedFeatures:
             run_multi_series_indicator(
                 {"open_interest": open_interest, "market_cap": market_cap},
                 None,
-                lambda: normalize_non_finite(
-                    open_interest / market_cap, fill_value=0
-                ),
+                lambda: normalize_non_finite(open_interest / market_cap, fill_value=0),
             ),
         )

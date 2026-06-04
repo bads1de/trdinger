@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -25,9 +25,9 @@ class MarketDataOrchestrationService(BaseDataCollectionOrchestrationService):
         symbol: str,
         timeframe: str,
         limit: int,
-        start_date: Optional[str] = None,
-        end_date: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        start_date: str | None = None,
+        end_date: str | None = None,
+    ) -> dict[str, Any]:
         start_time = None
         end_time = None
 

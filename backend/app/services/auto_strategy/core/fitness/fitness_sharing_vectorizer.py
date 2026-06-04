@@ -2,7 +2,8 @@
 フィットネス共有の特徴ベクトル化ユーティリティ
 """
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -49,7 +50,7 @@ def build_behavior_profile(
     EvaluationReport が利用可能な場合は pass_rate やシナリオ別の
     パフォーマンス安定性も取り込む。
     """
-    profile = {name: 0.0 for name in BEHAVIOR_FEATURE_NAMES}
+    profile = dict.fromkeys(BEHAVIOR_FEATURE_NAMES, 0.0)
 
     sanitized_fitness = _sanitize_numeric_sequence(fitness_values)
     if sanitized_fitness:
@@ -100,9 +101,7 @@ def build_behavior_profile(
         "total_trades",
     )
     for metric_name in metric_names:
-        metric_values = _extract_scenario_metric_values(
-            scenario_list, metric_name
-        )
+        metric_values = _extract_scenario_metric_values(scenario_list, metric_name)
         if not metric_values:
             continue
 
@@ -122,10 +121,7 @@ def behavior_profile_to_vector(
     """behavior profile を固定順のベクトルへ変換する。"""
     if not behavior_profile:
         return [0.0] * len(BEHAVIOR_FEATURE_NAMES)
-    return [
-        float(behavior_profile.get(name, 0.0))
-        for name in BEHAVIOR_FEATURE_NAMES
-    ]
+    return [float(behavior_profile.get(name, 0.0)) for name in BEHAVIOR_FEATURE_NAMES]
 
 
 def vectorize_gene(
@@ -151,20 +147,14 @@ def vectorize_gene(
     # リスク管理パラメータ
     if gene.risk_management:
         features.append(
-            float(
-                gene.risk_management.get(
-                    "position_size", DEFAULT_POSITION_SIZE
-                )
-            )
+            float(gene.risk_management.get("position_size", DEFAULT_POSITION_SIZE))
         )
     else:
         features.append(DEFAULT_POSITION_SIZE)
 
     # TP/SLパラメータ
     if gene.tpsl_gene:
-        features.append(
-            float(gene.tpsl_gene.stop_loss_pct or DEFAULT_STOP_LOSS_PCT)
-        )
+        features.append(float(gene.tpsl_gene.stop_loss_pct or DEFAULT_STOP_LOSS_PCT))
         features.append(
             float(gene.tpsl_gene.take_profit_pct or DEFAULT_TAKE_PROFIT_PCT)
         )
@@ -177,10 +167,7 @@ def vectorize_gene(
         gene.position_sizing_gene, "risk_per_trade"
     ):
         features.append(
-            float(
-                gene.position_sizing_gene.risk_per_trade
-                or DEFAULT_RISK_PER_TRADE
-            )
+            float(gene.position_sizing_gene.risk_per_trade or DEFAULT_RISK_PER_TRADE)
         )
     else:
         features.append(DEFAULT_RISK_PER_TRADE)

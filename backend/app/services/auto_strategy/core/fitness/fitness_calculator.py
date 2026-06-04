@@ -9,7 +9,8 @@ import hashlib
 import json
 import logging
 import math
-from typing import Any, Dict, Mapping, Optional, Tuple, cast
+from collections.abc import Mapping
+from typing import Any, cast
 
 import numpy as np
 
@@ -50,13 +51,11 @@ class FitnessCalculator:
 
     def __init__(self) -> None:
         # メトリクスキャッシュ（同一 backtest_result の再計算を避ける）
-        self._metrics_cache: Dict[str, Dict[str, float]] = {}
+        self._metrics_cache: dict[str, dict[str, float]] = {}
         self._cache_enabled = True
-        self._recent_metrics_result: Optional[Dict[str, SerializableValue]] = (
-            None
-        )
+        self._recent_metrics_result: dict[str, SerializableValue] | None = None
         self._recent_metrics_signature: object = None
-        self._recent_metrics_value: Optional[Dict[str, float]] = None
+        self._recent_metrics_value: dict[str, float] | None = None
 
     def clear_cache(self) -> None:
         """メトリクスキャッシュをクリアする。"""
@@ -133,12 +132,10 @@ class FitnessCalculator:
             if idx not in indices:
                 indices.append(idx)
 
-        return tuple(
-            self._normalize_signature_value(value[idx]) for idx in indices
-        )
+        return tuple(self._normalize_signature_value(value[idx]) for idx in indices)
 
     def _build_recent_result_signature(
-        self, backtest_result: Dict[str, SerializableValue]
+        self, backtest_result: dict[str, SerializableValue]
     ) -> object:
         """同一resultの直近再利用判定に使う軽量シグネチャを作る。
 
@@ -177,35 +174,22 @@ class FitnessCalculator:
             tuple(
                 (
                     key,
-                    self._normalize_signature_value(
-                        perf_metrics_dict.get(key)
-                    ),
+                    self._normalize_signature_value(perf_metrics_dict.get(key)),
                 )
                 for key in metric_keys
             ),
-            (
-                len(equity_curve)
-                if isinstance(equity_curve, (list, tuple))
-                else None
-            ),
+            (len(equity_curve) if isinstance(equity_curve, (list, tuple)) else None),
             self._sample_sequence_signature(equity_curve),
-            (
-                len(trade_history)
-                if isinstance(trade_history, (list, tuple))
-                else None
-            ),
+            (len(trade_history) if isinstance(trade_history, (list, tuple)) else None),
             self._sample_sequence_signature(trade_history),
             self._normalize_signature_value(backtest_result.get("start_date")),
             self._normalize_signature_value(backtest_result.get("end_date")),
         )
 
-    def _generate_cache_key(
-        self, backtest_result: Dict[str, SerializableValue]
-    ) -> str:
+    def _generate_cache_key(self, backtest_result: dict[str, SerializableValue]) -> str:
         """バックテスト結果の内容から安定したキャッシュキーを生成する。"""
         payload = {
-            "performance_metrics": backtest_result.get("performance_metrics")
-            or {},
+            "performance_metrics": backtest_result.get("performance_metrics") or {},
             "equity_curve": backtest_result.get("equity_curve") or [],
             "trade_history": backtest_result.get("trade_history") or [],
             "start_date": backtest_result.get("start_date"),
@@ -224,7 +208,7 @@ class FitnessCalculator:
 
         return hashlib.sha256(cache_text.encode("utf-8")).hexdigest()
 
-    def get_penalty_values(self, config: "GAConfig") -> Tuple[float, ...]:
+    def get_penalty_values(self, config: "GAConfig") -> tuple[float, ...]:
         """一貫したペナルティ値のタプルを返す。
 
         評価エラー時や制約違反時に使用する。目的関数の方向性に応じて
@@ -239,8 +223,8 @@ class FitnessCalculator:
         return tuple(penalty_values)
 
     def extract_performance_metrics(
-        self, backtest_result: Dict[str, SerializableValue]
-    ) -> Dict[str, float]:
+        self, backtest_result: dict[str, SerializableValue]
+    ) -> dict[str, float]:
         """
         バックテスト結果からパフォーマンスメトリクスを抽出
 
@@ -285,9 +269,7 @@ class FitnessCalculator:
             if value is None or not isinstance(value, (int, float)):
                 return default
             value_float = float(value)
-            if isinstance(value_float, float) and not math.isfinite(
-                value_float
-            ):
+            if isinstance(value_float, float) and not math.isfinite(value_float):
                 return default
             return value_float
 
@@ -310,9 +292,7 @@ class FitnessCalculator:
             else []
         )
         ulcer_index = (
-            calculate_ulcer_index(equity_curve_list)
-            if equity_curve_list
-            else 0.0
+            calculate_ulcer_index(equity_curve_list) if equity_curve_list else 0.0
         )
 
         trade_history = backtest_result.get("trade_history")
@@ -370,9 +350,9 @@ class FitnessCalculator:
 
             max_drawdown_limit = constraints.get("max_drawdown_limit", None)
             max_drawdown = metrics.get("max_drawdown", 0.0)
-            if isinstance(
-                max_drawdown_limit, (float, int)
-            ) and max_drawdown > float(max_drawdown_limit):
+            if isinstance(max_drawdown_limit, (float, int)) and max_drawdown > float(
+                max_drawdown_limit
+            ):
                 return False
 
             total_return = metrics.get("total_return", 0.0)
@@ -380,9 +360,7 @@ class FitnessCalculator:
                 return False
 
             sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
-            min_sharpe_ratio = float(
-                constraints.get("min_sharpe_ratio", 0.0) or 0.0
-            )
+            min_sharpe_ratio = float(constraints.get("min_sharpe_ratio", 0.0) or 0.0)
             if sharpe_ratio < min_sharpe_ratio:
                 return False
 
@@ -392,7 +370,7 @@ class FitnessCalculator:
 
     def calculate_fitness(
         self,
-        backtest_result: Dict[str, SerializableValue],
+        backtest_result: dict[str, SerializableValue],
         config: GAConfig,
         **kwargs,
     ) -> float:
@@ -447,11 +425,7 @@ class FitnessCalculator:
                     )
                 )
                 * (1 - max_drawdown)
-                + float(
-                    fitness_weights.get(
-                        "win_rate", self.DEFAULT_WEIGHT_WIN_RATE
-                    )
-                )
+                + float(fitness_weights.get("win_rate", self.DEFAULT_WEIGHT_WIN_RATE))
                 * win_rate
                 + float(
                     fitness_weights.get(
@@ -465,13 +439,9 @@ class FitnessCalculator:
             ulcer_scale = 1.0
             trade_scale = 1.0
             if getattr(config, "dynamic_objective_reweighting", False):
-                dynamic_scalars = getattr(
-                    config, "objective_dynamic_scalars", {}
-                )
+                dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
                 ulcer_scale = float(dynamic_scalars.get("ulcer_index", 1.0))
-                trade_scale = float(
-                    dynamic_scalars.get("trade_frequency_penalty", 1.0)
-                )
+                trade_scale = float(dynamic_scalars.get("trade_frequency_penalty", 1.0))
 
             # ulcer_indexペナルティ（デフォルトで有効）
             fitness -= (
@@ -493,7 +463,7 @@ class FitnessCalculator:
             return config.constraint_violation_penalty
 
     def _calculate_balance_score_fast(
-        self, backtest_result: Dict[str, SerializableValue]
+        self, backtest_result: dict[str, SerializableValue]
     ) -> float:
         """ロング・ショートバランススコア計算（最適化版）。"""
         trade_history = backtest_result.get("trade_history")
@@ -614,7 +584,7 @@ class FitnessCalculator:
         return max(0.0, min(1.0, balance_score))
 
     def calculate_long_short_balance(
-        self, backtest_result: Dict[str, SerializableValue]
+        self, backtest_result: dict[str, SerializableValue]
     ) -> float:
         """
         ロング・ショートバランススコアを計算
@@ -629,17 +599,15 @@ class FitnessCalculator:
             return self._calculate_balance_score_fast(backtest_result)
 
         except (KeyError, TypeError, ValueError) as e:
-            logger.error(
-                f"ロング・ショートバランス計算エラー: {e}", exc_info=True
-            )
+            logger.error(f"ロング・ショートバランス計算エラー: {e}", exc_info=True)
             return 0.5
 
     def calculate_multi_objective_fitness(
         self,
-        backtest_result: Dict[str, SerializableValue],
+        backtest_result: dict[str, SerializableValue],
         config: GAConfig,
         **kwargs,
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         複数の目的関数（利益、リスク、安定性等）に基づいて個体の多次元適応度を計算します。
 
@@ -663,9 +631,7 @@ class FitnessCalculator:
             metrics = self.extract_performance_metrics(backtest_result)
             total_trades = int(metrics["total_trades"])
 
-            min_trades_req = int(
-                config.fitness_constraints.get("min_trades", 0)
-            )
+            min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
             if total_trades < min_trades_req:
                 return self.get_penalty_values(config)
 
@@ -673,9 +639,7 @@ class FitnessCalculator:
 
             for objective in config.objectives:
                 if objective == "weighted_score":
-                    value = self.calculate_fitness(
-                        backtest_result, config, **kwargs
-                    )
+                    value = self.calculate_fitness(backtest_result, config, **kwargs)
                 elif objective == "total_return":
                     value = metrics["total_return"]
                 elif objective == "sharpe_ratio":
@@ -700,15 +664,9 @@ class FitnessCalculator:
                     logger.warning(f"未知の目的: {objective}")
                     penalty = self.get_penalty_values(config)
                     penalty_idx = list(config.objectives).index(objective)
-                    value = (
-                        penalty[penalty_idx]
-                        if penalty_idx < len(penalty)
-                        else 0.0
-                    )
+                    value = penalty[penalty_idx] if penalty_idx < len(penalty) else 0.0
 
-                dynamic_scalars = getattr(
-                    config, "objective_dynamic_scalars", {}
-                )
+                dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})
                 scale = float(dynamic_scalars.get(objective, 1.0))
                 fitness_values.append(float(value) * scale)
 

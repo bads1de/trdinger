@@ -55,7 +55,9 @@ class TestCusumSignalGenerator:
         # 閾値を0.02 (2%) に設定
         # 21-40の上昇局面で、累積が2%を超えるごとにイベントが出るはず
         events = generator.get_events(
-            sample_data, threshold=0.02, volatility=None  # 固定閾値テストのためNone
+            sample_data,
+            threshold=0.02,
+            volatility=None,  # 固定閾値テストのためNone
         )
 
         # イベントが検出されていること
@@ -100,7 +102,9 @@ class TestCusumSignalGenerator:
 
         generator = CusumSignalGenerator()
         events = generator.get_events(
-            df, threshold=None, volatility=volatility  # Noneの場合、volatilityを使う
+            df,
+            threshold=None,
+            volatility=volatility,  # Noneの場合、volatilityを使う
         )
 
         # 何らかのイベントが検出されること（ランダムウォークなので確実ではないが、期間が長ければ出る）

@@ -5,7 +5,7 @@ OHLCVデータリポジトリの機能をテストします。
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -61,7 +61,7 @@ def sample_ohlcv_model() -> OHLCVData:
 
 
 @pytest.fixture
-def sample_ohlcv_records() -> List[Dict[str, Any]]:
+def sample_ohlcv_records() -> list[dict[str, Any]]:
     """サンプルOHLCVレコードリスト"""
     base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
     return [
@@ -106,7 +106,7 @@ class TestInsertOHLCVData:
         self,
         mock_validator: MagicMock,
         repository: OHLCVRepository,
-        sample_ohlcv_records: List[Dict[str, Any]],
+        sample_ohlcv_records: list[dict[str, Any]],
     ) -> None:
         """OHLCVデータが正常に挿入される"""
         mock_validator.validate_ohlcv_records_simple.return_value = True
@@ -130,7 +130,7 @@ class TestInsertOHLCVData:
         self,
         mock_validator: MagicMock,
         repository: OHLCVRepository,
-        sample_ohlcv_records: List[Dict[str, Any]],
+        sample_ohlcv_records: list[dict[str, Any]],
     ) -> None:
         """検証失敗時にエラーが発生する"""
         mock_validator.validate_ohlcv_records_simple.return_value = False
@@ -341,7 +341,7 @@ class TestSanitizeOHLCVData:
         self,
         mock_validator: MagicMock,
         repository: OHLCVRepository,
-        sample_ohlcv_records: List[Dict[str, Any]],
+        sample_ohlcv_records: list[dict[str, Any]],
     ) -> None:
         """OHLCVデータがサニタイズされる"""
         mock_validator.sanitize_ohlcv_data.return_value = sample_ohlcv_records
@@ -360,7 +360,7 @@ class TestErrorHandling:
         self,
         mock_validator: MagicMock,
         repository: OHLCVRepository,
-        sample_ohlcv_records: List[Dict[str, Any]],
+        sample_ohlcv_records: list[dict[str, Any]],
     ) -> None:
         """データベースエラーが処理される（safe_operationが例外をキャッチ）"""
         mock_validator.validate_ohlcv_records_simple.return_value = True

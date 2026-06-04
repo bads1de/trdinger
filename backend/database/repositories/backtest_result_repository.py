@@ -6,14 +6,13 @@
 import logging
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, cast
 
 import numpy as np
 import pandas as pd
-from sqlalchemy.orm import Session, defer, load_only
+from sqlalchemy.orm import Session, defer
 
-from database.models import BacktestResult
 from app.types import BacktestResultDict, SerializableValue
+from database.models import BacktestResult
 
 from .base_repository import BaseRepository
 
@@ -79,7 +78,9 @@ class BacktestResultRepository(BaseRepository):
         except Exception:
             return str(obj)
 
-    def _normalize_result_data(self, result_data: Dict[str, SerializableValue]) -> Dict[str, SerializableValue]:
+    def _normalize_result_data(
+        self, result_data: dict[str, SerializableValue]
+    ) -> dict[str, SerializableValue]:
         """
         生のバックテスト結果データを、データベースモデル `BacktestResult` が要求する形式に正規化します。
 
@@ -142,8 +143,12 @@ class BacktestResultRepository(BaseRepository):
             "strategy_name": result_data["strategy_name"],
             "symbol": result_data["symbol"],
             "timeframe": result_data["timeframe"],
-            "start_date": start_date.isoformat() if isinstance(start_date, (datetime, date)) else start_date,
-            "end_date": end_date.isoformat() if isinstance(end_date, (datetime, date)) else end_date,
+            "start_date": start_date.isoformat()
+            if isinstance(start_date, (datetime, date))
+            else start_date,
+            "end_date": end_date.isoformat()
+            if isinstance(end_date, (datetime, date))
+            else end_date,
             "initial_capital": result_data["initial_capital"],
             "commission_rate": result_data.get("commission_rate", 0.001),
             "config_json": config_json,
@@ -155,7 +160,9 @@ class BacktestResultRepository(BaseRepository):
             "error_message": result_data.get("error_message"),
         }
 
-    def save_backtest_result(self, result_data: Dict[str, SerializableValue]) -> Dict[str, SerializableValue]:
+    def save_backtest_result(
+        self, result_data: dict[str, SerializableValue]
+    ) -> dict[str, SerializableValue]:
         """
         バックテスト結果を保存
 
@@ -193,9 +200,9 @@ class BacktestResultRepository(BaseRepository):
         self,
         limit: int = 50,
         offset: int = 0,
-        symbol: Optional[str] = None,
-        strategy_name: Optional[str] = None,
-    ) -> List[Dict[str, SerializableValue]]:
+        symbol: str | None = None,
+        strategy_name: str | None = None,
+    ) -> list[dict[str, SerializableValue]]:
         """
         バックテスト結果一覧を取得
 
@@ -233,7 +240,9 @@ class BacktestResultRepository(BaseRepository):
 
         return _get_results()
 
-    def get_backtest_result_by_id(self, result_id: int) -> Optional[Dict[str, SerializableValue]]:
+    def get_backtest_result_by_id(
+        self, result_id: int
+    ) -> dict[str, SerializableValue] | None:
         """
         ID指定でバックテスト結果を取得
 
@@ -307,7 +316,7 @@ class BacktestResultRepository(BaseRepository):
         return _delete_all_results()
 
     def count_backtest_results(
-        self, symbol: Optional[str] = None, strategy_name: Optional[str] = None
+        self, symbol: str | None = None, strategy_name: str | None = None
     ) -> int:
         """
         バックテスト結果の総数を取得
@@ -339,7 +348,7 @@ class BacktestResultRepository(BaseRepository):
 
     def get_recent_backtest_results(
         self, limit: int = 10, include_heavy_json: bool = False
-    ) -> List[Dict[str, SerializableValue]]:
+    ) -> list[dict[str, SerializableValue]]:
         """
         最近のバックテスト結果を取得
 
@@ -379,6 +388,3 @@ class BacktestResultRepository(BaseRepository):
             return [self.to_dict(result) for result in results]
 
         return _get_recent_results()
-
-
-

@@ -6,9 +6,10 @@ EvaluationReport を保存・表示向けの軽量な summary へ変換する。
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from copy import deepcopy
 from math import isfinite
-from typing import Any, Dict, Mapping, Optional, Sequence, cast
+from typing import Any, cast
 
 from .evaluation_report import EvaluationReport
 
@@ -16,11 +17,11 @@ from .evaluation_report import EvaluationReport
 def build_report_summary(
     report: EvaluationReport,
     *,
-    selection_rank: Optional[int] = None,
-    selection_score: Optional[Sequence[float]] = None,
-    fitness_score: Optional[float] = None,
+    selection_rank: int | None = None,
+    selection_score: Sequence[float] | None = None,
+    fitness_score: float | None = None,
     max_scenarios: int = 20,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """EvaluationReport から保存向け summary を構築する。"""
     summary = report.to_summary_dict(max_scenarios=max_scenarios)
 
@@ -46,7 +47,7 @@ def build_report_summary(
                     }
                 )
             if extra_components:
-                cast(Dict[str, Any], summary["selection_components"])[
+                cast(dict[str, Any], summary["selection_components"])[
                     "objective_components"
                 ] = extra_components
 
@@ -59,9 +60,9 @@ def build_report_summary(
 
 
 def attach_evaluation_summary(
-    gene_data: Dict[str, Any],
-    summary: Optional[Mapping[str, Any]],
-) -> Dict[str, Any]:
+    gene_data: dict[str, Any],
+    summary: Mapping[str, Any] | None,
+) -> dict[str, Any]:
     """戦略 gene_data の metadata へ評価 summary を埋め込む。"""
     merged = deepcopy(gene_data)
     metadata = merged.get("metadata")
@@ -76,9 +77,9 @@ def attach_evaluation_summary(
 
 
 def attach_backtest_evaluation_summary(
-    config_json: Dict[str, Any],
-    summary: Optional[Mapping[str, Any]],
-) -> Dict[str, Any]:
+    config_json: dict[str, Any],
+    summary: Mapping[str, Any] | None,
+) -> dict[str, Any]:
     """backtest result の config_json へ評価 summary を埋め込む。"""
     merged = deepcopy(config_json)
     if isinstance(summary, Mapping):
@@ -88,7 +89,7 @@ def attach_backtest_evaluation_summary(
 
 def extract_evaluation_summary(
     gene_data: Mapping[str, Any],
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """gene_data.metadata から保存済み評価 summary を取り出す。"""
     metadata = gene_data.get("metadata")
     if not isinstance(metadata, Mapping):

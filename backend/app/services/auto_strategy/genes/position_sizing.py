@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from typing import Any, Dict, List, cast
+from typing import Any, cast
 
 from app.types import SerializableValue, StrategyGeneDict
 
@@ -18,13 +18,11 @@ from .gene_ranges import (
 )
 
 
-def _ensure_position_size_bounds(params: Dict[str, SerializableValue]) -> None:
+def _ensure_position_size_bounds(params: dict[str, SerializableValue]) -> None:
     """min/max_position_size の論理整合性を補正する。"""
     min_size = params.get("min_position_size")
     max_size = params.get("max_position_size")
-    if isinstance(min_size, (int, float)) and isinstance(
-        max_size, (int, float)
-    ):
+    if isinstance(min_size, (int, float)) and isinstance(max_size, (int, float)):
         if min_size > max_size:
             params["max_position_size"] = min_size
 
@@ -76,7 +74,7 @@ class PositionSizingGene(BaseGene):
     priority: float = 1.0
 
     @classmethod
-    def from_dict(cls, data: StrategyGeneDict) -> "PositionSizingGene":
+    def from_dict(cls, data: StrategyGeneDict) -> PositionSizingGene:
         """辞書から復元。無効な method はデフォルトにフォールバック。"""
         from .base_gene import BaseGene
 
@@ -94,20 +92,16 @@ class PositionSizingGene(BaseGene):
                 cleaned["method"] = PositionSizingMethod.VOLATILITY_BASED
         return BaseGene.from_dict.__func__(cls, cleaned)  # type: ignore[attr-defined,return-value]
 
-    def _validate_parameters(self, errors: List[str]) -> None:
+    def _validate_parameters(self, errors: list[str]) -> None:
         """パラメータ固有の検証を実装"""
         if not isinstance(self.method, PositionSizingMethod):
-            errors.append(
-                "methodは有効なPositionSizingMethodである必要があります"
-            )
+            errors.append("methodは有効なPositionSizingMethodである必要があります")
 
         # NUMERIC_RANGESを使用して検証（config非依存）
         for field_name, (min_val, max_val) in self.NUMERIC_RANGES.items():
             value = getattr(self, field_name, None)
             if value is not None:
-                self._validate_range(
-                    value, min_val, max_val, field_name, errors
-                )
+                self._validate_range(value, min_val, max_val, field_name, errors)
 
         if self.min_position_size > self.max_position_size:
             errors.append(
@@ -124,10 +118,7 @@ class PositionSizingGene(BaseGene):
         mutated_params = GeneticUtils.extract_gene_params(self)
 
         for field_name in self.NUMERIC_FIELDS:
-            if (
-                random.random() >= mutation_rate
-                or field_name not in mutated_params
-            ):
+            if random.random() >= mutation_rate or field_name not in mutated_params:
                 continue
 
             current_value = mutated_params[field_name]
@@ -140,7 +131,7 @@ class PositionSizingGene(BaseGene):
             mutated_params[field_name] = new_value
 
         _ensure_position_size_bounds(mutated_params)
-        return PositionSizingGene(**cast(Dict[str, Any], mutated_params))
+        return PositionSizingGene(**cast(dict[str, Any], mutated_params))
 
     def clone(self) -> PositionSizingGene:
         """軽量コピーを作成"""
@@ -224,9 +215,7 @@ def create_random_position_sizing_gene() -> PositionSizingGene:
             int(ranges["var_lookback"][1]),
         ),
         "enabled": True,
-        "priority": random.uniform(
-            ranges["priority"][0], ranges["priority"][1]
-        ),
+        "priority": random.uniform(ranges["priority"][0], ranges["priority"][1]),
     }
 
     _ensure_position_size_bounds(gene_params)

@@ -6,8 +6,6 @@ CUSUMフィルターは、時系列データにおける構造変化（レジー
 価格トレンドの転換点やボラティリティの急変を捉えるために使用されます。
 """
 
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 
@@ -21,8 +19,8 @@ class CusumSignalGenerator:
     def get_events(
         self,
         df: pd.DataFrame,
-        threshold: Optional[float] = None,
-        volatility: Optional[pd.Series] = None,
+        threshold: float | None = None,
+        volatility: pd.Series | None = None,
         price_column: str = "close",
         vol_multiplier: float = 1.0,
     ) -> pd.DatetimeIndex:
@@ -45,10 +43,9 @@ class CusumSignalGenerator:
         # r_t = ln(p_t / p_{t-1})
         shifted = prices.shift(1)
         log_returns: pd.Series = pd.Series(
-            np.log(prices.values / shifted.values), index=prices.index  # type: ignore[arg-type]
-        ).fillna(
-            0
-        )  # 最初は0
+            np.log(prices.values / shifted.values),
+            index=prices.index,  # type: ignore[arg-type]
+        ).fillna(0)  # 最初は0
 
         # 閾値の準備
         if threshold is not None:
@@ -58,9 +55,7 @@ class CusumSignalGenerator:
             # 動的閾値（ボラティリティ）
             h = volatility * vol_multiplier
         else:
-            raise ValueError(
-                "Either threshold or volatility must be provided."
-            )
+            raise ValueError("Either threshold or volatility must be provided.")
 
         # CUSUM計算
         t_events = []
@@ -98,9 +93,7 @@ class CusumSignalGenerator:
 
         return pd.DatetimeIndex(t_events)
 
-    def get_daily_volatility(
-        self, close: pd.Series, span: int = 100
-    ) -> pd.Series:
+    def get_daily_volatility(self, close: pd.Series, span: int = 100) -> pd.Series:
         """ローカルボラティリティを計算する（EWM Std of Log Returns）。
 
         対数リターンの指数移動平均（EWM）標準偏差を使用して、

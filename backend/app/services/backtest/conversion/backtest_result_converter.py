@@ -7,7 +7,7 @@ backtesting.pyの統計結果をデータベース保存用の形式に変換し
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any
 
 from app.services.backtest.shared import (
     parse_datetime_value,
@@ -49,8 +49,8 @@ class BacktestResultConverter:
         initial_capital: float,
         start_date: Any,
         end_date: Any,
-        config_json: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        config_json: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         バックテスト結果をデータベース形式に変換
 
@@ -90,17 +90,11 @@ class BacktestResultConverter:
                 "performance_metrics": self._stats_calculator.calculate_statistics(
                     actual_stats
                 ),
-                "trade_history": self._trade_transformer.transform(
-                    actual_stats
-                ),
-                "equity_curve": self._equity_transformer.transform(
-                    actual_stats
-                ),
+                "trade_history": self._trade_transformer.transform(actual_stats),
+                "equity_curve": self._equity_transformer.transform(actual_stats),
             }
 
             return result
         except Exception as e:
             logger.error(f"バックテスト結果変換エラー: {e}")
-            raise BacktestResultConversionError(
-                f"結果の変換に失敗しました: {e}"
-            )
+            raise BacktestResultConversionError(f"結果の変換に失敗しました: {e}")

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ class VolatilityTargetService:
         features_df: pd.DataFrame,
         ohlcv_df: pd.DataFrame,
         **training_params: Any,
-    ) -> Tuple[pd.DataFrame, pd.Series]:
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """
         市場データから回帰学習用のターゲット（将来の対数実現ボラティリティ）を生成し、特徴量と同期させます。
 
@@ -57,15 +57,11 @@ class VolatilityTargetService:
             )
         )
         if horizon < 1:
-            raise ValueError(
-                "prediction_horizon は 1 以上である必要があります"
-            )
+            raise ValueError("prediction_horizon は 1 以上である必要があります")
 
         price_col = str(training_params.get("price_column", "close")).lower()
         ohlcv_norm = ohlcv_df.copy()
-        ohlcv_norm.columns = [
-            str(column).lower() for column in ohlcv_norm.columns
-        ]
+        ohlcv_norm.columns = [str(column).lower() for column in ohlcv_norm.columns]
         if price_col not in ohlcv_norm.columns:
             raise ValueError(f"価格カラムが存在しません: {price_col}")
 
@@ -76,9 +72,7 @@ class VolatilityTargetService:
         log_returns = pd.Series(np.log(prices), index=prices.index).diff()
 
         forward_variance = pd.Series(0.0, index=log_returns.index, dtype=float)
-        valid_forward_window = pd.Series(
-            True, index=log_returns.index, dtype=bool
-        )
+        valid_forward_window = pd.Series(True, index=log_returns.index, dtype=bool)
         for offset in range(1, horizon + 1):
             shifted_returns = log_returns.shift(-offset)
             forward_variance = forward_variance.add(

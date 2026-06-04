@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Union, cast
+from typing import Any, cast
 
 import lightgbm as lgb
 import numpy as np
@@ -46,9 +46,9 @@ class LightGBMModel(BaseGradientBoostingModel):
 
     def _create_dataset(
         self,
-        X: Union[pd.DataFrame, np.ndarray],
-        y: Optional[Union[pd.Series, np.ndarray]] = None,
-        sample_weight: Optional[np.ndarray] = None,
+        X: pd.DataFrame | np.ndarray,
+        y: pd.Series | np.ndarray | None = None,
+        sample_weight: np.ndarray | None = None,
     ) -> lgb.Dataset:
         """
         LightGBM 専用のデータセットオブジェクトを作成します。
@@ -61,11 +61,9 @@ class LightGBMModel(BaseGradientBoostingModel):
         Returns:
             lgb.Dataset: LightGBM内部で使用される最適化されたデータ構造。
         """
-        return lgb.Dataset(
-            X, label=y, weight=sample_weight, free_raw_data=False
-        )
+        return lgb.Dataset(X, label=y, weight=sample_weight, free_raw_data=False)
 
-    def _get_model_params(self, num_classes: int, **kwargs) -> Dict[str, Any]:
+    def _get_model_params(self, num_classes: int, **kwargs) -> dict[str, Any]:
         """
         タスクタイプとクラス数に基づいて、LightGBM 固有のパラメータセットを生成します。
 
@@ -116,9 +114,9 @@ class LightGBMModel(BaseGradientBoostingModel):
     def _train_internal(
         self,
         train_data: lgb.Dataset,
-        valid_data: Optional[lgb.Dataset],
-        params: Dict[str, Any],
-        early_stopping_rounds: Optional[int] = None,
+        valid_data: lgb.Dataset | None,
+        params: dict[str, Any],
+        early_stopping_rounds: int | None = None,
         **kwargs,
     ) -> lgb.Booster:
         """
@@ -168,9 +166,7 @@ class LightGBMModel(BaseGradientBoostingModel):
 
         return cast(
             np.ndarray,
-            self.model.predict(
-                X_data, num_iteration=self.model.best_iteration
-            ),
+            self.model.predict(X_data, num_iteration=self.model.best_iteration),
         )
 
     def _prepare_input_for_prediction(self, X: pd.DataFrame) -> pd.DataFrame:

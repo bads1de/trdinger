@@ -7,9 +7,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any
 
 from app.types import StrategyGeneDict
+
 if TYPE_CHECKING:
     pass
 
@@ -66,14 +67,14 @@ class EntryGene:
     # 優先度（将来の拡張用）
     priority: float = 1.0
 
-    def validate(self) -> Tuple[bool, List[str]]:
+    def validate(self) -> tuple[bool, list[str]]:
         """
         エントリー遺伝子の妥当性を検証
 
         Returns:
             (is_valid, errors) のタプル
         """
-        errors: List[str] = []
+        errors: list[str] = []
 
         # limit_offset_pct の範囲チェック (0% ~ 10%)
         if self.limit_offset_pct < 0 or self.limit_offset_pct > 0.1:
@@ -112,7 +113,7 @@ class EntryGene:
         return dataclass_to_dict(self)
 
     @classmethod
-    def from_dict(cls, data: StrategyGeneDict) -> "EntryGene":
+    def from_dict(cls, data: StrategyGeneDict) -> EntryGene:
         """
         辞書形式から復元
 
@@ -150,7 +151,7 @@ class EntryGene:
             priority=self.priority,
         )
 
-    def mutate(self, mutation_rate: float = 0.1) -> "EntryGene":
+    def mutate(self, mutation_rate: float = 0.1) -> EntryGene:
         """突然変異"""
         import random
 
@@ -178,9 +179,7 @@ class EntryGene:
                     1,
                     min(
                         100,
-                        int(
-                            gene.order_validity_bars * random.uniform(0.8, 1.2)
-                        ),
+                        int(gene.order_validity_bars * random.uniform(0.8, 1.2)),
                     ),
                 )
 
@@ -188,8 +187,8 @@ class EntryGene:
 
     @classmethod
     def crossover(
-        cls, parent1: "EntryGene", parent2: "EntryGene"
-    ) -> Tuple["EntryGene", "EntryGene"]:
+        cls, parent1: EntryGene, parent2: EntryGene
+    ) -> tuple[EntryGene, EntryGene]:
         """エントリー遺伝子の交叉"""
         from .genetic_utils import GeneticUtils
 
@@ -203,7 +202,7 @@ class EntryGene:
         )
 
 
-def create_random_entry_gene(config: Optional[Any] = None) -> EntryGene:
+def create_random_entry_gene(config: Any | None = None) -> EntryGene:
     """
     ランダムなエントリー遺伝子を生成
 
@@ -225,9 +224,7 @@ def create_random_entry_gene(config: Optional[Any] = None) -> EntryGene:
             try:
                 custom_weights = config.entry_type_weights
                 if custom_weights:
-                    weights = {
-                        EntryType(k): v for k, v in custom_weights.items()
-                    }
+                    weights = {EntryType(k): v for k, v in custom_weights.items()}
             except AttributeError:
                 pass
 

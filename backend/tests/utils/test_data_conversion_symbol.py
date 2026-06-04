@@ -7,7 +7,6 @@ BaseDataCollectionOrchestrationService._normalize_derivative_symbol
 の共通化をカバーする。
 """
 
-
 from app.utils.data_conversion import normalize_market_symbol
 
 

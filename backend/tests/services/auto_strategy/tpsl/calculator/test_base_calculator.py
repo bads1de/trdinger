@@ -1,4 +1,3 @@
-
 import pytest
 
 from app.services.auto_strategy.genes.tpsl import TPSLResult

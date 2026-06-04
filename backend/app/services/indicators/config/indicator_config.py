@@ -7,9 +7,10 @@
 
 import logging
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,12 +19,8 @@ class IndicatorScaleType(Enum):
     """指標のスケールタイプ"""
 
     OSCILLATOR_0_100 = "oscillator_0_100"  # 0-100スケール（RSI, STOCH等）
-    OSCILLATOR_PLUS_MINUS_100 = (
-        "oscillator_plus_minus_100"  # ±100スケール（CCI等）
-    )
-    MOMENTUM_ZERO_CENTERED = (
-        "momentum_zero_centered"  # ゼロ近辺変動（TRIX, PPO等）
-    )
+    OSCILLATOR_PLUS_MINUS_100 = "oscillator_plus_minus_100"  # ±100スケール（CCI等）
+    MOMENTUM_ZERO_CENTERED = "momentum_zero_centered"  # ゼロ近辺変動（TRIX, PPO等）
     PRICE_RATIO = "price_ratio"  # 価格比率（SMA, EMA等）
     FUNDING_RATE = "funding_rate"  # ファンディングレート
     OPEN_INTEREST = "open_interest"  # オープンインタレスト
@@ -47,13 +44,13 @@ class ParameterConfig:
     """
 
     name: str  # パラメータ名（例：period, fast_period）
-    default_value: Union[int, float, str, bool]  # デフォルト値
-    min_value: Optional[Union[int, float]] = None  # 最小値
-    max_value: Optional[Union[int, float]] = None  # 最大値
-    description: Optional[str] = None  # パラメータの説明
+    default_value: int | float | str | bool  # デフォルト値
+    min_value: int | float | None = None  # 最小値
+    max_value: int | float | None = None  # 最大値
+    description: str | None = None  # パラメータの説明
     even_only: bool = False  # 偶数のみを許可するか（FRAMA等用）
     # 探索プリセット: 用途に応じた探索範囲（例: short_term, mid_term, long_term）
-    presets: Optional[Dict[str, tuple]] = None
+    presets: dict[str, tuple] | None = None
 
     def validate_value(self, value: Any) -> bool:
         """与えられた値がこのパラメータの制約（範囲など）を満たすか検証する"""
@@ -79,21 +76,15 @@ class ParameterConfig:
         # フォールバック：デフォルトの min/max 範囲を使用
         return (self.min_value, self.max_value)
 
-    def _apply_even_constraint(
-        self, value: Union[int, float]
-    ) -> Union[int, float]:
+    def _apply_even_constraint(self, value: int | float) -> int | float:
         """even_only 制約を満たすように値を調整する。"""
         if not self.even_only or int(value) % 2 == 0:
             return value
 
-        upper_bound = (
-            self.max_value if self.max_value is not None else float("inf")
-        )
+        upper_bound = self.max_value if self.max_value is not None else float("inf")
         return value + 1 if value < upper_bound else value - 1
 
-    def _normalize_numeric_value(
-        self, value: Union[int, float]
-    ) -> Union[int, float]:
+    def _normalize_numeric_value(self, value: int | float) -> int | float:
         """min/max と even_only をまとめて適用する。"""
         normalized = value
 
@@ -114,32 +105,32 @@ class IndicatorConfig:
     """
 
     indicator_name: str
-    adapter_function: Optional[Callable] = None
-    required_data: List[str] = field(default_factory=list)
+    adapter_function: Callable | None = None
+    required_data: list[str] = field(default_factory=list)
     result_type: IndicatorResultType = IndicatorResultType.SINGLE
     scale_type: IndicatorScaleType = IndicatorScaleType.PRICE_RATIO
-    category: Optional[str] = None
-    output_names: Optional[List[str]] = None
-    default_output: Optional[str] = None
-    aliases: Optional[List[str]] = None
-    param_map: Dict[str, Optional[str]] = field(default_factory=dict)
-    parameters: Dict[str, ParameterConfig] = field(default_factory=dict)
+    category: str | None = None
+    output_names: list[str] | None = None
+    default_output: str | None = None
+    aliases: list[str] | None = None
+    param_map: dict[str, str | None] = field(default_factory=dict)
+    parameters: dict[str, ParameterConfig] = field(default_factory=dict)
 
     # pandas-ta連携設定
-    pandas_function: Optional[str] = None
-    data_column: Optional[str] = None
-    data_columns: Optional[List[str]] = None
+    pandas_function: str | None = None
+    data_column: str | None = None
+    data_columns: list[str] | None = None
     returns: str = "single"
-    return_cols: Optional[List[str]] = None
+    return_cols: list[str] | None = None
     multi_column: bool = False
-    default_values: Dict[str, Any] = field(default_factory=dict)
-    min_length_func: Optional[Callable[[Dict[str, Any]], int]] = None
+    default_values: dict[str, Any] = field(default_factory=dict)
+    min_length_func: Callable[[dict[str, Any]], int] | None = None
 
     # パラメータ依存関係制約
-    parameter_constraints: Optional[List[Dict[str, Any]]] = None
+    parameter_constraints: list[dict[str, Any]] | None = None
 
     # GA用閾値設定
-    thresholds: Dict[str, Any] = field(default_factory=dict)
+    thresholds: dict[str, Any] = field(default_factory=dict)
 
     # 絶対的最小データ長
     absolute_min_length: int = 1
@@ -155,9 +146,7 @@ class IndicatorConfig:
 
         # 派生属性の判定と自動設定
         # returns (single / multiple)
-        if hasattr(self, "returns") and (
-            not self.returns or self.returns == "single"
-        ):
+        if hasattr(self, "returns") and (not self.returns or self.returns == "single"):
             if self.result_type == IndicatorResultType.COMPLEX:
                 self.returns = "multiple"
             else:
@@ -171,13 +160,9 @@ class IndicatorConfig:
             self.data_column = self.required_data[0].capitalize()
 
         if not self.data_columns and len(self.required_data) > 1:
-            self.data_columns = [
-                col.capitalize() for col in self.required_data
-            ]
+            self.data_columns = [col.capitalize() for col in self.required_data]
 
-    def validate_constraints(
-        self, params: Dict[str, Any]
-    ) -> tuple[bool, List[str]]:
+    def validate_constraints(self, params: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         パラメータ依存関係制約を検証
 
@@ -233,7 +218,7 @@ class IndicatorConfig:
 
         return len(errors) == 0, errors
 
-    def _get_default_thresholds(self) -> Dict[str, Any]:
+    def _get_default_thresholds(self) -> dict[str, Any]:
         """スケールタイプに基づくデフォルトの閾値設定を生成"""
         if self.scale_type == IndicatorScaleType.OSCILLATOR_0_100:
             return {
@@ -250,9 +235,9 @@ class IndicatorConfig:
             return {}
         return {}
 
-    def _build_parameters_from_defaults(self) -> Dict[str, ParameterConfig]:
+    def _build_parameters_from_defaults(self) -> dict[str, ParameterConfig]:
         """デフォルト値からパラメータを構築"""
-        params: Dict[str, ParameterConfig] = {}
+        params: dict[str, ParameterConfig] = {}
         required_data_keys = {name.lower() for name in self.required_data}
 
         # param_mapからパラメータ名を取得
@@ -276,8 +261,8 @@ class IndicatorConfig:
 
             # length/periodパラメータの特別処理
             if any(word in param_name for word in ["length", "period"]):
-                min_val: Optional[Union[int, float]] = 2
-                max_val: Optional[Union[int, float]] = 200
+                min_val: int | float | None = 2
+                max_val: int | float | None = 200
             else:
                 min_val = None
                 max_val = None
@@ -292,7 +277,7 @@ class IndicatorConfig:
 
         return params
 
-    def get_parameter_ranges(self) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_ranges(self) -> dict[str, dict[str, Any]]:
         """パラメータ範囲を取得（GA用）"""
         ranges = {}
 
@@ -305,7 +290,7 @@ class IndicatorConfig:
 
         return ranges
 
-    def normalize_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def normalize_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """パラメータ正規化
 
         エイリアスを解決し、範囲内に値を制限します。
@@ -315,11 +300,7 @@ class IndicatorConfig:
         # param_mapに基づいてエイリアスマッピング
         if self.param_map:
             for param_key, mapped_param in self.param_map.items():
-                if (
-                    param_key in params
-                    and mapped_param
-                    and mapped_param != param_key
-                ):
+                if param_key in params and mapped_param and mapped_param != param_key:
                     value = params[param_key]
                     normalized[mapped_param] = value
                     if param_key in normalized:
@@ -327,20 +308,16 @@ class IndicatorConfig:
 
         # パラメータ範囲チェック
         for param_name, param_config in self.parameters.items():
-            if param_name in normalized and isinstance(
-                param_config, ParameterConfig
-            ):
+            if param_name in normalized and isinstance(param_config, ParameterConfig):
                 value = normalized[param_name]
                 if isinstance(value, (int, float)):
-                    normalized[param_name] = (
-                        param_config._normalize_numeric_value(value)
+                    normalized[param_name] = param_config._normalize_numeric_value(
+                        value
                     )
 
         return normalized
 
-    def generate_random_parameters(
-        self, preset: str | None = None
-    ) -> Dict[str, Any]:
+    def generate_random_parameters(self, preset: str | None = None) -> dict[str, Any]:
         """
         ランダムなパラメータを生成（GA用）
 
@@ -374,13 +351,9 @@ class IndicatorConfig:
 
                 if isinstance(param_config.default_value, int):
                     val = random.randint(int(min_val), int(max_val))
-                    params[param_name] = param_config._apply_even_constraint(
-                        val
-                    )
+                    params[param_name] = param_config._apply_even_constraint(val)
                 else:
-                    params[param_name] = random.uniform(
-                        float(min_val), float(max_val)
-                    )
+                    params[param_name] = random.uniform(float(min_val), float(max_val))
             else:
                 params[param_name] = param_config.default_value  # type: ignore[assignment]
 
@@ -395,8 +368,8 @@ class IndicatorConfigRegistry:
     """
 
     def __init__(self):
-        self._configs: Dict[str, IndicatorConfig] = {}
-        self._aliases: Dict[str, IndicatorConfig] = {}
+        self._configs: dict[str, IndicatorConfig] = {}
+        self._aliases: dict[str, IndicatorConfig] = {}
         self._initialized: bool = False
         self._auto_initialize_on_access: bool = True
 
@@ -440,29 +413,25 @@ class IndicatorConfigRegistry:
         self._initialized = False
         self._auto_initialize_on_access = False
 
-    def get_indicator_config(
-        self, indicator_name: str
-    ) -> Optional[IndicatorConfig]:
+    def get_indicator_config(self, indicator_name: str) -> IndicatorConfig | None:
         """設定を取得"""
         self._ensure_ready()
         normalized_name = self._normalize_key(indicator_name)
-        return self._configs.get(normalized_name) or self._aliases.get(
-            normalized_name
-        )
+        return self._configs.get(normalized_name) or self._aliases.get(normalized_name)
 
-    def list_indicators(self) -> List[str]:
+    def list_indicators(self) -> list[str]:
         """登録されているインジケーター名のリストを取得"""
         self._ensure_ready()
         return list(self._configs.keys())
 
-    def get_all_indicators(self) -> Dict[str, IndicatorConfig]:
+    def get_all_indicators(self) -> dict[str, IndicatorConfig]:
         """登録済みインジケーターの辞書を取得"""
         self._ensure_ready()
         return dict(self._configs)
 
     def generate_parameters_for_indicator(
         self, indicator_type: str, preset: str | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         指標タイプに応じたランダムパラメータを生成（GA用）
 
@@ -492,17 +461,15 @@ class IndicatorConfigRegistry:
 indicator_registry = IndicatorConfigRegistry()
 
 # 初期化キャッシュ（プロセス間共有）
-_indicator_cache: Dict[str, Any] = {}
+_indicator_cache: dict[str, Any] = {}
 _cache_lock = threading.Lock()
 
 
-def get_cached_indicators() -> List[str]:
+def get_cached_indicators() -> list[str]:
     """キャッシュされたインジケーターリストを取得"""
     with _cache_lock:
         if "indicators" not in _indicator_cache:
-            _indicator_cache["indicators"] = (
-                indicator_registry.list_indicators()
-            )
+            _indicator_cache["indicators"] = indicator_registry.list_indicators()
         return _indicator_cache["indicators"]
 
 
@@ -519,9 +486,7 @@ def _initialize_registry(registry: IndicatorConfigRegistry) -> None:
         registry._initialized = True
 
     except ImportError as e:
-        logger.warning(
-            f"DynamicIndicatorDiscoveryのインポートに失敗しました: {e}"
-        )
+        logger.warning(f"DynamicIndicatorDiscoveryのインポートに失敗しました: {e}")
     except Exception as e:
         logger.error(f"インジケーター初期化エラー: {e}")
 

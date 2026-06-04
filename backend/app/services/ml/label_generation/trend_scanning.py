@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -197,7 +197,7 @@ class TrendScanning:
     def get_labels(
         self,
         close: pd.Series,
-        t_events: Optional[pd.DatetimeIndex] = None,
+        t_events: pd.DatetimeIndex | None = None,
         use_log_price: bool = True,  # 対数価格を使用するオプション
         return_t_value: bool = False,  # t値をそのまま返すオプション(回帰用)
     ) -> pd.DataFrame:
@@ -212,23 +212,19 @@ class TrendScanning:
                           binは離散ラベル(1, 0, -1) または t値そのもの
         """
         t_events_resolved: pd.DatetimeIndex = (
-            t_events
-            if t_events is not None
-            else cast(pd.DatetimeIndex, close.index)
+            t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
         )
         # t_eventsがclose.indexに含まれるものだけにフィルタ
-        t_events_resolved = t_events_resolved[
-            t_events_resolved.isin(close.index)
-        ]
+        t_events_resolved = t_events_resolved[t_events_resolved.isin(close.index)]
         if t_events_resolved.empty:
-            return pd.DataFrame(
-                columns=pd.Index(["t1", "t_value", "bin", "ret"])
-            )
+            return pd.DataFrame(columns=pd.Index(["t1", "t_value", "bin", "ret"]))
 
         # 対数価格の使用 (トレンド強度の一貫性向上のため推奨)
         if use_log_price:
             # 0以下の値によるlogのゼロ除算/負値警告を防止するためクリップ
-            clipped_close = np.clip(close.values.astype(np.float64), a_min=1e-8, a_max=None)
+            clipped_close = np.clip(
+                close.values.astype(np.float64), a_min=1e-8, a_max=None
+            )
             close_values = np.log(clipped_close)
         else:
             close_values = close.values.astype(np.float64)
@@ -250,9 +246,7 @@ class TrendScanning:
         valid_mask = t1_idxs != -1
 
         if not np.any(valid_mask):
-            return pd.DataFrame(
-                columns=pd.Index(["t1", "t_value", "bin", "ret"])
-            )
+            return pd.DataFrame(columns=pd.Index(["t1", "t_value", "bin", "ret"]))
 
         valid_t0 = t_events_resolved[valid_mask]
         valid_t1_idxs = t1_idxs[valid_mask]

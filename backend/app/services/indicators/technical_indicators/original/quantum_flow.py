@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -76,8 +76,7 @@ def _njit_quantum_flow_loop(
             sum_xy += vx * vy
 
         denom = np.sqrt(
-            (length * sum_x2 - sum_x * sum_x)
-            * (length * sum_y2 - sum_y * sum_y)
+            (length * sum_x2 - sum_x * sum_x) * (length * sum_y2 - sum_y * sum_y)
         )
         if denom > 1e-12:
             correlation_score[i] = (length * sum_xy - sum_x * sum_y) / denom
@@ -91,22 +90,16 @@ def _njit_quantum_flow_loop(
 
     raw_integrated = np.zeros(n)
     for i in prange(length, n):
-        wavelet_comp = (
-            wavelet_result[i] if np.isfinite(wavelet_result[i]) else 0.0
-        )
+        wavelet_comp = wavelet_result[i] if np.isfinite(wavelet_result[i]) else 0.0
         raw_integrated[i] = (
-            wavelet_comp * 0.4
-            + correlation_score[i] * 0.3
-            + volatility[i] * 0.3
+            wavelet_comp * 0.4 + correlation_score[i] * 0.3 + volatility[i] * 0.3
         )
 
     for i in range(length, n):
         integrated = raw_integrated[i]
         lookback = min(200, i)
         if lookback >= length:
-            _, std_val = _window_mean_and_std(
-                raw_integrated, i - lookback + 1, i + 1
-            )
+            _, std_val = _window_mean_and_std(raw_integrated, i - lookback + 1, i + 1)
             if std_val > 1e-12:
                 integrated = integrated / std_val * 0.5
         quantum_flow[i] = integrated
@@ -122,7 +115,7 @@ def quantum_flow(
     volume: pd.Series,
     length: int = 14,
     flow_length: int = 9,
-) -> Tuple[pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series]:
     """Quantum Flow Analysis."""
     length = int(length)
     flow_length = int(flow_length)
@@ -158,13 +151,9 @@ def quantum_flow(
     )
 
     signal = (
-        pd.Series(flow_values, index=close.index)
-        .rolling(window=flow_length)
-        .mean()
+        pd.Series(flow_values, index=close.index).rolling(window=flow_length).mean()
     )
     signal.name = "QUANTUM_FLOW_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
-    flow_series = pd.Series(
-        flow_values, index=close.index, name="QUANTUM_FLOW"
-    )
-    return cast(Tuple[pd.Series, pd.Series], (flow_series, signal))
+    flow_series = pd.Series(flow_values, index=close.index, name="QUANTUM_FLOW")
+    return cast(tuple[pd.Series, pd.Series], (flow_series, signal))

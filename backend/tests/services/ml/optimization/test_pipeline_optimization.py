@@ -74,7 +74,6 @@ class TestOptimizeFullPipeline:
                 "app.services.ml.label_generation.presets.triple_barrier_method_preset"
             ) as mock_tbm,
         ):
-
             # FeatureSelector モック
             mock_selector = MagicMock()
             # 最初の5カラムを返すようにモック
@@ -243,7 +242,6 @@ class TestEvaluateBaseline:
             ) as mock_selector_cls,
             patch("lightgbm.LGBMClassifier") as mock_lgbm_cls,
         ):
-
             # FeatureSelector モック
             mock_selector = MagicMock()
             mock_selector.fit_transform.side_effect = lambda X, y: X.iloc[

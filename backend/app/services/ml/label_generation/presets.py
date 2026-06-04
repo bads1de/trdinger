@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, cast
 
 import pandas as pd
 
@@ -49,7 +49,7 @@ def triple_barrier_method_preset(
     volatility_window: int = 20,
     use_atr: bool = False,
     atr_period: int = 14,
-    t_events: Optional[pd.DatetimeIndex] = None,
+    t_events: pd.DatetimeIndex | None = None,
 ) -> pd.Series:
     """Triple Barrier Method（TBM）ラベル生成プリセット。
 
@@ -92,16 +92,10 @@ def triple_barrier_method_preset(
         else:
             vol = cast(
                 pd.Series,
-                calculate_volatility_std(
-                    close.pct_change(), volatility_window
-                ),
+                calculate_volatility_std(close.pct_change(), volatility_window),
             )
 
-        t_ev = (
-            t_events
-            if t_events is not None
-            else cast(pd.DatetimeIndex, close.index)
-        )
+        t_ev = t_events if t_events is not None else cast(pd.DatetimeIndex, close.index)
         v_bar = cast(
             pd.Series,
             pd.Series(close.index, index=close.index).shift(-horizon_n),
@@ -127,7 +121,7 @@ def trend_scanning_preset(
     min_window: int = 10,
     window_step: int = 1,
     price_column: str = "close",
-    t_events: Optional[pd.DatetimeIndex] = None,
+    t_events: pd.DatetimeIndex | None = None,
 ) -> pd.Series:
     """Trend Scanningラベル生成プリセット。
 
@@ -155,9 +149,7 @@ def trend_scanning_preset(
         close = cast(pd.Series, df[price_column])
         ts = TrendScanning(min_window, horizon_n, window_step, threshold)
         labels = (
-            cast(pd.Series, ts.get_labels(close, t_events)["bin"])
-            .abs()
-            .astype(int)
+            cast(pd.Series, ts.get_labels(close, t_events)["bin"]).abs().astype(int)
         )
 
         _log_distribution("TSラベル生成", labels)
@@ -167,7 +159,7 @@ def trend_scanning_preset(
         raise
 
 
-def get_common_presets() -> Dict[str, Dict[str, Any]]:
+def get_common_presets() -> dict[str, dict[str, Any]]:
     """
     よく使うラベル生成パラメータのプリセットを取得。
 
@@ -277,7 +269,7 @@ def apply_preset_by_name(
     df: pd.DataFrame,
     preset_name: str,
     price_column: str = "close",
-) -> Tuple[pd.Series, Dict[str, Any]]:
+) -> tuple[pd.Series, dict[str, Any]]:
     """
     プリセット名でラベル生成を実行。
 

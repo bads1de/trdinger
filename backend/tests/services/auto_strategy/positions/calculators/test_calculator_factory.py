@@ -104,9 +104,9 @@ class TestCalculatorFactoryCreateCalculator:
 
         for method in methods:
             calculator = CalculatorFactory.create_calculator(method)
-            assert isinstance(
-                calculator, BaseCalculator
-            ), f"{method} should inherit from BaseCalculator"
+            assert isinstance(calculator, BaseCalculator), (
+                f"{method} should inherit from BaseCalculator"
+            )
 
 
 class TestCalculatorFactoryGetAvailableMethods:
@@ -171,9 +171,9 @@ class TestCalculatorFactoryIntegration:
         for method_key in methods.keys():
             calculator = CalculatorFactory.create_calculator(method_key)
             # calculateメソッドが存在することを確認（BaseCalculatorの抽象メソッド）
-            assert hasattr(
-                calculator, "calculate"
-            ), f"{method_key} should have calculate method"
+            assert hasattr(calculator, "calculate"), (
+                f"{method_key} should have calculate method"
+            )
 
     def test_create_calculator_is_static(self):
         """create_calculatorが静的メソッド"""

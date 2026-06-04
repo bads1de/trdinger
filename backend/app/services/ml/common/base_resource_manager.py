@@ -9,7 +9,7 @@ import gc
 import logging
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +33,7 @@ class BaseResourceManager(ABC):
         self._cleanup_level = CleanupLevel.STANDARD
         self._is_cleaned_up = False
 
-    def cleanup_resources(
-        self, level: Optional[CleanupLevel] = None
-    ) -> Dict[str, Any]:
+    def cleanup_resources(self, level: CleanupLevel | None = None) -> dict[str, Any]:
         """リソースの統一クリーンアップ"""
         if self._is_cleaned_up:
             return {"status": "already_cleaned", "memory_freed": 0}

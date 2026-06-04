@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Dict, List, Optional, Union
 
 from app.types import SerializableValue
 
@@ -21,9 +20,7 @@ from .tpsl import TPSLGene
 
 def create_default_strategy_gene(strategy_gene_class):
     """デフォルトの StrategyGene を構築する。"""
-    indicators = [
-        IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
-    ]
+    indicators = [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
 
     return strategy_gene_class(
         id=str(uuid.uuid4()),
@@ -35,9 +32,7 @@ def create_default_strategy_gene(strategy_gene_class):
             Condition(left_operand="close", operator="<", right_operand="open")
         ],
         risk_management={"position_size": 0.1},
-        tpsl_gene=TPSLGene(
-            take_profit_pct=0.01, stop_loss_pct=0.005, enabled=True
-        ),
+        tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005, enabled=True),
         position_sizing_gene=PositionSizingGene(
             method=PositionSizingMethod.FIXED_QUANTITY,
             fixed_quantity=1000,
@@ -49,26 +44,22 @@ def create_default_strategy_gene(strategy_gene_class):
 
 def assemble_strategy_gene(
     strategy_gene_class,
-    indicators: List[IndicatorGene],
-    long_entry_conditions: List[Union[Condition, ConditionGroup]],
-    short_entry_conditions: List[Union[Condition, ConditionGroup]],
-    tpsl_gene: Optional[TPSLGene] = None,
-    position_sizing_gene: Optional[PositionSizingGene] = None,
-    long_tpsl_gene: Optional[TPSLGene] = None,
-    short_tpsl_gene: Optional[TPSLGene] = None,
-    entry_gene: Optional[EntryGene] = None,
-    long_entry_gene: Optional[EntryGene] = None,
-    short_entry_gene: Optional[EntryGene] = None,
-    exit_gene: Optional[ExitGene] = None,
-    long_exit_conditions: Optional[
-        List[Union[Condition, ConditionGroup]]
-    ] = None,
-    short_exit_conditions: Optional[
-        List[Union[Condition, ConditionGroup]]
-    ] = None,
-    tool_genes: Optional[List[ToolGene]] = None,
-    risk_management: Optional[Dict[str, SerializableValue]] = None,
-    metadata: Optional[Dict[str, SerializableValue]] = None,
+    indicators: list[IndicatorGene],
+    long_entry_conditions: list[Condition | ConditionGroup],
+    short_entry_conditions: list[Condition | ConditionGroup],
+    tpsl_gene: TPSLGene | None = None,
+    position_sizing_gene: PositionSizingGene | None = None,
+    long_tpsl_gene: TPSLGene | None = None,
+    short_tpsl_gene: TPSLGene | None = None,
+    entry_gene: EntryGene | None = None,
+    long_entry_gene: EntryGene | None = None,
+    short_entry_gene: EntryGene | None = None,
+    exit_gene: ExitGene | None = None,
+    long_exit_conditions: list[Condition | ConditionGroup] | None = None,
+    short_exit_conditions: list[Condition | ConditionGroup] | None = None,
+    tool_genes: list[ToolGene] | None = None,
+    risk_management: dict[str, SerializableValue] | None = None,
+    metadata: dict[str, SerializableValue] | None = None,
 ):
     """部品から StrategyGene を構築する。"""
     final_metadata = dict(metadata or {})

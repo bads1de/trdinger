@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import pytest
 
@@ -35,11 +35,11 @@ class _TestableBaseCalculator(BaseTPSLCalculator):
     def _do_calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]],
+        tpsl_gene: TPSLGene | None,
+        market_data: dict[str, Any] | None,
         position_direction: float,
         **kwargs,
-    ) -> Tuple[float, float, float, Dict[str, Any]]:
+    ) -> tuple[float, float, float, dict[str, Any]]:
         # テスト用の固定値を返す
         return 0.03, 0.06, 0.9, {"test": True}
 
@@ -60,11 +60,11 @@ class _TestableBaseCalculator(BaseTPSLCalculator):
 )
 def test_base_calculator_make_prices_basic(
     current_price: float,
-    sl_pct: Optional[float],
-    tp_pct: Optional[float],
+    sl_pct: float | None,
+    tp_pct: float | None,
     direction: float,
-    expected_sl: Optional[float],
-    expected_tp: Optional[float],
+    expected_sl: float | None,
+    expected_tp: float | None,
 ) -> None:
     calc = _TestableBaseCalculator()
     sl_price, tp_price = calc._make_prices(current_price, sl_pct, tp_pct, direction)
@@ -98,14 +98,14 @@ class TestFixedPercentageCalculator:
     )
     def test_fixed_percentage_calculate_pct_resolution(
         self,
-        gene: Optional[TPSLGene],
-        kwargs_sl: Optional[float],
-        kwargs_tp: Optional[float],
+        gene: TPSLGene | None,
+        kwargs_sl: float | None,
+        kwargs_tp: float | None,
         expected_sl_pct: float,
         expected_tp_pct: float,
     ) -> None:
         calc = FixedPercentageCalculator()
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if kwargs_sl is not None:
             kwargs["stop_loss_pct"] = kwargs_sl
         if kwargs_tp is not None:
@@ -191,15 +191,15 @@ class TestRiskRewardCalculator:
     )
     def test_risk_reward_calculate_basic(
         self,
-        gene: Optional[TPSLGene],
-        kwargs_sl: Optional[float],
-        kwargs_base_sl: Optional[float],
-        kwargs_rr: Optional[float],
+        gene: TPSLGene | None,
+        kwargs_sl: float | None,
+        kwargs_base_sl: float | None,
+        kwargs_rr: float | None,
         expected_sl_pct: float,
         expected_tp_pct: float,
     ) -> None:
         calc = RiskRewardCalculator()
-        kwargs: Dict[str, Any] = {}
+        kwargs: dict[str, Any] = {}
         if kwargs_sl is not None:
             kwargs["stop_loss_pct"] = kwargs_sl
         if kwargs_base_sl is not None:

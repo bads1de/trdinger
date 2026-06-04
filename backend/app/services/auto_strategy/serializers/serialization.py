@@ -13,7 +13,7 @@ import math
 from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 from app.types import SerializableValue
 
@@ -92,9 +92,7 @@ class DictConverter:
             )
 
         if isinstance(value, set):
-            set_items: List[Any] = [
-                self._freeze_for_cache_key(item) for item in value
-            ]
+            set_items: list[Any] = [self._freeze_for_cache_key(item) for item in value]
             set_items.sort(key=repr)
             return ("set", tuple(set_items))
 
@@ -105,9 +103,7 @@ class DictConverter:
                 tuple(
                     (
                         field_info.name,
-                        self._freeze_for_cache_key(
-                            getattr(value, field_info.name)
-                        ),
+                        self._freeze_for_cache_key(getattr(value, field_info.name)),
                     )
                     for field_info in fields(value)
                 ),
@@ -147,9 +143,7 @@ class DictConverter:
 
         if isinstance(value, Mapping):
             return {
-                str(self._copy_cached_value(key)): self._copy_cached_value(
-                    item_value
-                )
+                str(self._copy_cached_value(key)): self._copy_cached_value(item_value)
                 for key, item_value in value.items()
             }
 
@@ -167,9 +161,7 @@ class DictConverter:
 
             return deepcopy(value)
         except Exception as e:
-            logger.debug(
-                "deepcopyに失敗しました、reprにフォールバックします: %s", e
-            )
+            logger.debug("deepcopyに失敗しました、reprにフォールバックします: %s", e)
             return repr(value)
 
     def _generate_cache_key(self, strategy_gene: object) -> _FrozenKey:
@@ -193,26 +185,22 @@ class DictConverter:
             )
             return ("object_id", id(data))
 
-    def strategy_gene_to_dict(
-        self, strategy_gene: StrategyGene
-    ) -> Dict[str, Any]:
+    def strategy_gene_to_dict(self, strategy_gene: StrategyGene) -> dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換"""
         try:
             cache_key = self._generate_cache_key(strategy_gene)
             if cache_key in self._serialize_cache:
                 result = self._serialize_cache[cache_key]
             else:
-                result = self._strategy_gene_codec.strategy_gene_to_dict(
-                    strategy_gene
-                )
+                result = self._strategy_gene_codec.strategy_gene_to_dict(strategy_gene)
                 if len(self._serialize_cache) < self._cache_size:
                     self._serialize_cache[cache_key] = result
-            return cast(Dict[str, Any], self._copy_cached_value(result))
+            return cast(dict[str, Any], self._copy_cached_value(result))
         except Exception as e:
             logger.error(f"戦略遺伝子辞書変換エラー: {e}")
             raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
 
-    def indicator_gene_to_dict(self, indicator_gene) -> Dict[str, Any]:
+    def indicator_gene_to_dict(self, indicator_gene) -> dict[str, Any]:
         """
         指標遺伝子を辞書形式に変換
         """
@@ -229,7 +217,7 @@ class DictConverter:
             logger.error("指標遺伝子辞書変換エラー: %s", e)
             raise ValueError(f"指標遺伝子辞書変換に失敗: {e}") from e
 
-    def dict_to_indicator_gene(self, data: Dict[str, Any]) -> "IndicatorGene":
+    def dict_to_indicator_gene(self, data: dict[str, Any]) -> IndicatorGene:
         """
         辞書形式から指標遺伝子を復元
         """
@@ -246,7 +234,7 @@ class DictConverter:
             logger.error("指標遺伝子復元エラー: %s", e)
             raise ValueError(f"指標遺伝子の復元に失敗: {e}") from e
 
-    def condition_to_dict(self, condition) -> Dict[str, Any]:
+    def condition_to_dict(self, condition) -> dict[str, Any]:
         """条件を辞書形式に変換"""
         try:
             result = {
@@ -261,7 +249,7 @@ class DictConverter:
             logger.error("条件辞書変換エラー: %s", e)
             raise ValueError(f"条件辞書変換に失敗: {e}") from e
 
-    def condition_or_group_to_dict(self, obj) -> Dict[str, Any]:
+    def condition_or_group_to_dict(self, obj) -> dict[str, Any]:
         """Condition または ConditionGroup を辞書に変換"""
         try:
             from ..genes import Condition, ConditionGroup
@@ -271,8 +259,7 @@ class DictConverter:
                     "type": "GROUP",
                     "operator": obj.operator,
                     "conditions": [
-                        self.condition_or_group_to_dict(c)
-                        for c in obj.conditions
+                        self.condition_or_group_to_dict(c) for c in obj.conditions
                     ],
                 }
             elif isinstance(obj, Condition) or hasattr(obj, "left_operand"):
@@ -283,7 +270,7 @@ class DictConverter:
             logger.error("条件/グループ辞書変換エラー: %s", e)
             raise ValueError(f"条件/グループ辞書変換に失敗: {e}") from e
 
-    def tpsl_gene_to_dict(self, tpsl_gene) -> Optional[Dict[str, Any]]:
+    def tpsl_gene_to_dict(self, tpsl_gene) -> dict[str, Any] | None:
         """TP/SL遺伝子を辞書形式に変換"""
         try:
             if tpsl_gene is None:
@@ -293,7 +280,7 @@ class DictConverter:
             logger.error("TP/SL遺伝子辞書変換エラー: %s", e)
             raise ValueError(f"TP/SL遺伝子辞書変換に失敗: {e}") from e
 
-    def dict_to_tpsl_gene(self, data: Dict[str, Any]) -> Optional["TPSLGene"]:
+    def dict_to_tpsl_gene(self, data: dict[str, Any]) -> TPSLGene | None:
         """辞書形式からTP/SL遺伝子を復元"""
         try:
             if data is None:
@@ -307,7 +294,7 @@ class DictConverter:
 
     def position_sizing_gene_to_dict(
         self, position_sizing_gene
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """ポジションサイジング遺伝子を辞書形式に変換"""
         try:
             if position_sizing_gene is None:
@@ -315,13 +302,11 @@ class DictConverter:
             return position_sizing_gene.to_dict()
         except Exception as e:
             logger.error("ポジションサイジング遺伝子辞書変換エラー: %s", e)
-            raise ValueError(
-                f"ポジションサイジング遺伝子辞書変換に失敗: {e}"
-            ) from e
+            raise ValueError(f"ポジションサイジング遺伝子辞書変換に失敗: {e}") from e
 
     def dict_to_position_sizing_gene(
-        self, data: Dict[str, Any]
-    ) -> Optional["PositionSizingGene"]:
+        self, data: dict[str, Any]
+    ) -> PositionSizingGene | None:
         """辞書形式からポジションサイジング遺伝子を復元"""
         try:
             if data is None:
@@ -331,11 +316,9 @@ class DictConverter:
             return PositionSizingGene.from_dict(data)
         except Exception as e:
             logger.error("ポジションサイジング遺伝子復元エラー: %s", e)
-            raise ValueError(
-                f"ポジションサイジング遺伝子の復元に失敗: {e}"
-            ) from e
+            raise ValueError(f"ポジションサイジング遺伝子の復元に失敗: {e}") from e
 
-    def entry_gene_to_dict(self, entry_gene) -> Optional[Dict[str, Any]]:
+    def entry_gene_to_dict(self, entry_gene) -> dict[str, Any] | None:
         """エントリー遺伝子を辞書形式に変換"""
         try:
             if entry_gene is None:
@@ -345,9 +328,7 @@ class DictConverter:
             logger.error("エントリー遺伝子辞書変換エラー: %s", e)
             raise ValueError(f"エントリー遺伝子辞書変換に失敗: {e}") from e
 
-    def dict_to_entry_gene(
-        self, data: Dict[str, Any]
-    ) -> Optional["EntryGene"]:
+    def dict_to_entry_gene(self, data: dict[str, Any]) -> EntryGene | None:
         """辞書形式からエントリー遺伝子を復元"""
         try:
             if data is None:
@@ -359,7 +340,7 @@ class DictConverter:
             logger.error("エントリー遺伝子復元エラー: %s", e)
             raise ValueError(f"エントリー遺伝子の復元に失敗: {e}") from e
 
-    def exit_gene_to_dict(self, exit_gene) -> Optional[Dict[str, Any]]:
+    def exit_gene_to_dict(self, exit_gene) -> dict[str, Any] | None:
         """イグジット遺伝子を辞書形式に変換"""
         try:
             if exit_gene is None:
@@ -369,7 +350,7 @@ class DictConverter:
             logger.error("イグジット遺伝子辞書変換エラー: %s", e)
             raise ValueError(f"イグジット遺伝子辞書変換に失敗: {e}") from e
 
-    def dict_to_exit_gene(self, data: Dict[str, Any]) -> Optional[ExitGene]:
+    def dict_to_exit_gene(self, data: dict[str, Any]) -> ExitGene | None:
         """辞書形式からイグジット遺伝子を復元"""
         try:
             if data is None:
@@ -379,17 +360,11 @@ class DictConverter:
             logger.error("イグジット遺伝子復元エラー: %s", e)
             raise ValueError(f"イグジット遺伝子の復元に失敗: {e}") from e
 
-    def _clean_risk_management(
-        self, risk_management: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _clean_risk_management(self, risk_management: dict[str, Any]) -> dict[str, Any]:
         """risk_managementからTP/SL関連の設定を除外"""
-        return self._strategy_gene_codec._clean_risk_management(
-            risk_management
-        )
+        return self._strategy_gene_codec._clean_risk_management(risk_management)
 
-    def dict_to_strategy_gene(
-        self, data: Dict[str, Any], strategy_gene_class: type
-    ):
+    def dict_to_strategy_gene(self, data: dict[str, Any], strategy_gene_class: type):
         """辞書形式のデータから戦略遺伝子オブジェクトを復元"""
         try:
             if strategy_gene_class is None:
@@ -411,13 +386,11 @@ class DictConverter:
             logger.error(f"戦略遺伝子復元エラー: {e}")
             raise ValueError(f"戦略遺伝子の復元に失敗: {e}")
 
-    def dict_to_condition(self, data: Dict[str, Any]) -> "Condition":
+    def dict_to_condition(self, data: dict[str, Any]) -> Condition:
         """辞書形式から条件を復元"""
         return self._strategy_gene_codec.dict_to_condition(data)
 
-    def stateful_condition_to_dict(
-        self, stateful_condition
-    ) -> Optional[Dict[str, Any]]:
+    def stateful_condition_to_dict(self, stateful_condition) -> dict[str, Any] | None:
         """
         StatefulCondition を辞書形式に変換
 
@@ -448,7 +421,7 @@ class DictConverter:
             logger.error(f"StatefulCondition辞書変換エラー: {e}")
             raise ValueError(f"StatefulConditionの辞書変換に失敗: {e}")
 
-    def dict_to_stateful_condition(self, data: Dict[str, Any]):
+    def dict_to_stateful_condition(self, data: dict[str, Any]):
         """
         辞書形式から StatefulCondition を復元
 
@@ -464,9 +437,7 @@ class DictConverter:
 
             from ..genes.conditions import StatefulCondition
 
-            trigger_condition = self.dict_to_condition(
-                data["trigger_condition"]
-            )
+            trigger_condition = self.dict_to_condition(data["trigger_condition"])
             follow_condition = self.dict_to_condition(data["follow_condition"])
 
             return StatefulCondition(
@@ -487,7 +458,7 @@ class DictConverter:
         self._serialize_cache.clear()
         self._deserialize_cache.clear()
 
-    def get_cache_statistics(self) -> Dict[str, Any]:
+    def get_cache_statistics(self) -> dict[str, Any]:
         """最適化されたキャッシュ統計を返す。"""
         return {
             "serialize_cache_size": len(self._serialize_cache),
@@ -508,8 +479,8 @@ class GeneSerializer(DictConverter):
         super().__init__(cache_size=cache_size)
 
     def from_list(
-        self, individual_list: List[Any], strategy_gene_class: type
-    ) -> Optional[StrategyGene]:
+        self, individual_list: list[Any], strategy_gene_class: type
+    ) -> StrategyGene | None:
         """
         リスト形式（DEAP個体）から戦略遺伝子を復元します。
 
@@ -530,9 +501,7 @@ class GeneSerializer(DictConverter):
             return individual_list
 
         # 2. リストの最初の要素がStrategyGeneである場合
-        if len(individual_list) > 0 and isinstance(
-            individual_list[0], StrategyGene
-        ):
+        if len(individual_list) > 0 and isinstance(individual_list[0], StrategyGene):
             return individual_list[0]
 
         # 3. 属性アクセスを試行（DEAP個体はStrategyGeneを継承している場合がある）

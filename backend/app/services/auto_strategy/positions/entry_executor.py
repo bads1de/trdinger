@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from ..config.constants import EntryType
 from ..genes.entry import EntryGene
@@ -23,10 +23,10 @@ class EntryExecutor:
 
     def calculate_entry_params(
         self,
-        entry_gene: Optional[EntryGene],
+        entry_gene: EntryGene | None,
         current_price: float,
         direction: float,  # 1.0=Long, -1.0=Short
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         backtesting.py の buy/sell メソッドに渡すパラメータを計算
 
@@ -103,14 +103,10 @@ class EntryExecutor:
         self, base_price: float, direction: float, offset_pct: float
     ) -> float:
         """指値価格を計算（有利な価格）"""
-        return self._calculate_offset_price(
-            base_price, direction, offset_pct, True
-        )
+        return self._calculate_offset_price(base_price, direction, offset_pct, True)
 
     def _calculate_stop_price(
         self, base_price: float, direction: float, offset_pct: float
     ) -> float:
         """逆指値価格を計算（ブレイクアウト価格）"""
-        return self._calculate_offset_price(
-            base_price, direction, offset_pct, False
-        )
+        return self._calculate_offset_price(base_price, direction, offset_pct, False)

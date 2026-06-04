@@ -6,7 +6,7 @@ Orchestration Serviceパターンに基づいて、API層とサービス層の�
 """
 
 import logging
-from typing import Callable, Optional, Type
+from collections.abc import Callable
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -29,9 +29,7 @@ from database.repositories.long_short_ratio_repository import (
 logger = logging.getLogger(__name__)
 
 
-def _create_service(
-    factory: Callable[[], object], service_name: str
-) -> object:
+def _create_service(factory: Callable[[], object], service_name: str) -> object:
     """
     サービス生成の定型エラーハンドリングをまとめるヘルパー関数
 
@@ -58,7 +56,7 @@ def _create_service(
         ) from exc
 
 
-def _lazy_import_service(module_path: str, class_name: str) -> Type:
+def _lazy_import_service(module_path: str, class_name: str) -> type:
     """
     サービスクラスの遅延インポートを実行するヘルパー関数
 
@@ -78,7 +76,7 @@ def _lazy_import_service(module_path: str, class_name: str) -> Type:
 def create_service_factory(
     module_path: str,
     class_name: str,
-    service_display_name: Optional[str] = None,
+    service_display_name: str | None = None,
 ) -> Callable[[], object]:
     """
     ジェネリックサービスファクトリを生成する高階関数
@@ -116,8 +114,8 @@ def create_service_factory(
 def create_service_factory_with_deps(
     module_path: str,
     class_name: str,
-    service_display_name: Optional[str] = None,
-    dep_factory: Optional[Callable] = None,
+    service_display_name: str | None = None,
+    dep_factory: Callable | None = None,
 ) -> Callable:
     """
     依存関係を持つサービスファクトリを生成する高階関数
@@ -182,9 +180,7 @@ def get_auto_strategy_service() -> AutoStrategyService:
     Raises:
         HTTPException: サービス初期化に失敗した場合
     """
-    return _create_service(
-        AutoStrategyService, "AutoStrategyService"
-    )  # type: ignore[return-value]
+    return _create_service(AutoStrategyService, "AutoStrategyService")  # type: ignore[return-value]
 
 
 def get_generated_strategy_service_with_db(
@@ -220,51 +216,44 @@ get_bybit_funding_rate_service = create_service_factory(
 )
 
 get_data_collection_orchestration_service = create_service_factory(
-    "app.services.data_collection.orchestration."
-    "data_collection_orchestration_service",
+    "app.services.data_collection.orchestration.data_collection_orchestration_service",
     "DataCollectionOrchestrationService",
     "DataCollectionOrchestrationService",
 )
 
 get_data_management_orchestration_service = create_service_factory(
-    ("app.services.data_collection.orchestration."
-     "data_management_orchestration_service"),
+    (
+        "app.services.data_collection.orchestration."
+        "data_management_orchestration_service"
+    ),
     "DataManagementOrchestrationService",
     "DataManagementOrchestrationService",
 )
 
-get_open_interest_orchestration_service = (
-    create_service_factory_with_deps(
-        "app.services.data_collection.orchestration."
-        "open_interest_orchestration_service",
-        "OpenInterestOrchestrationService",
-        "OpenInterestOrchestrationService",
-        dep_factory=get_bybit_open_interest_service,
-    )
+get_open_interest_orchestration_service = create_service_factory_with_deps(
+    "app.services.data_collection.orchestration.open_interest_orchestration_service",
+    "OpenInterestOrchestrationService",
+    "OpenInterestOrchestrationService",
+    dep_factory=get_bybit_open_interest_service,
 )
 
 get_ml_training_service = create_service_factory(
-    ("app.services.ml.orchestration."
-     "ml_training_orchestration_service"),
+    ("app.services.ml.orchestration.ml_training_orchestration_service"),
     "MLTrainingService",
     "MLTrainingService",
 )
 
 get_backtest_orchestration_service = create_service_factory(
-    ("app.services.backtest.orchestration."
-     "backtest_orchestration_service"),
+    ("app.services.backtest.orchestration.backtest_orchestration_service"),
     "BacktestOrchestrationService",
     "BacktestOrchestrationService",
 )
 
-get_funding_rate_orchestration_service = (
-    create_service_factory_with_deps(
-        ("app.services.data_collection.orchestration."
-         "funding_rate_orchestration_service"),
-        "FundingRateOrchestrationService",
-        "FundingRateOrchestrationService",
-        dep_factory=get_bybit_funding_rate_service,
-    )
+get_funding_rate_orchestration_service = create_service_factory_with_deps(
+    ("app.services.data_collection.orchestration.funding_rate_orchestration_service"),
+    "FundingRateOrchestrationService",
+    "FundingRateOrchestrationService",
+    dep_factory=get_bybit_funding_rate_service,
 )
 
 get_ml_management_orchestration_service = create_service_factory(

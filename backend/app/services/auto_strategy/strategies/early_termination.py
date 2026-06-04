@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from math import ceil
-from typing import Any, Optional, Union, cast
+from typing import Any, cast
 
 import pandas as pd
 
@@ -53,8 +53,8 @@ class StrategyEarlyTerminationController:
         self.strategy = strategy
 
     def normalize_evaluation_start(
-        self, value: Union[str, pd.Timestamp, None]
-    ) -> Optional[pd.Timestamp]:
+        self, value: str | pd.Timestamp | None
+    ) -> pd.Timestamp | None:
         """評価開始時刻をpandas.Timestampに正規化する。
 
         文字列やその他の形式で指定された評価開始時刻を、
@@ -92,9 +92,7 @@ class StrategyEarlyTerminationController:
             bool: 現在バーが評価開始時刻以降の場合はTrue。
                 評価開始時刻が未設定の場合もTrue。
         """
-        evaluation_start_raw = getattr(
-            self.strategy, "_evaluation_start", None
-        )
+        evaluation_start_raw = getattr(self.strategy, "_evaluation_start", None)
         if evaluation_start_raw is None:
             return True
 
@@ -115,7 +113,7 @@ class StrategyEarlyTerminationController:
     def initialize_evaluation_progress_bounds(
         self,
         data: object,
-    ) -> tuple[Optional[pd.DatetimeIndex], int, int]:
+    ) -> tuple[pd.DatetimeIndex | None, int, int]:
         """評価進捗計算に使う評価窓の境界を初期化する。
 
         評価開始時刻から現在時刻までの評価対象バー数を計算し、
@@ -144,9 +142,7 @@ class StrategyEarlyTerminationController:
         start_index = 0
         evaluation_start = getattr(self.strategy, "_evaluation_start", None)
         if evaluation_start is not None:
-            aligned_start = align_timestamp_to_index(
-                evaluation_start, full_index
-            )
+            aligned_start = align_timestamp_to_index(evaluation_start, full_index)
             start_index = int(
                 cast(pd.Index, full_index).searchsorted(
                     cast(Any, aligned_start), side="left"
@@ -175,14 +171,10 @@ class StrategyEarlyTerminationController:
     def get_progress_ratio(self) -> float:
         """現在までの評価進捗を返す。"""
         evaluation_index = getattr(self.strategy, "_evaluation_index", None)
-        eval_len = (
-            int(len(evaluation_index)) if evaluation_index is not None else 0
-        )
+        eval_len = int(len(evaluation_index)) if evaluation_index is not None else 0
         if isinstance(evaluation_index, pd.DatetimeIndex) and eval_len > 0:
             current_index = getattr(self.strategy.data, "index", None)
-            current_len = (
-                int(len(current_index)) if current_index is not None else 0
-            )
+            current_len = int(len(current_index)) if current_index is not None else 0
             if current_index is not None and current_len > 0:
                 try:
                     current_ts = pd.Timestamp(current_index[-1])
@@ -198,19 +190,13 @@ class StrategyEarlyTerminationController:
                         )
                     )
                     evaluation_start_index = int(
-                        getattr(self.strategy, "_evaluation_start_index", 0)
-                        or 0
+                        getattr(self.strategy, "_evaluation_start_index", 0) or 0
                     )
                     evaluation_total_bars = max(
                         1,
-                        int(
-                            getattr(self.strategy, "_evaluation_total_bars", 1)
-                            or 1
-                        ),
+                        int(getattr(self.strategy, "_evaluation_total_bars", 1) or 1),
                     )
-                    evaluated_bars = max(
-                        0, current_position - evaluation_start_index
-                    )
+                    evaluated_bars = max(0, current_position - evaluation_start_index)
                     return min(1.0, evaluated_bars / evaluation_total_bars)
                 except Exception as e:
                     logger.debug(
@@ -225,7 +211,7 @@ class StrategyEarlyTerminationController:
         )
         return min(1.0, current_bar / total_bars)
 
-    def calculate_closed_trade_expectancy(self) -> Optional[float]:
+    def calculate_closed_trade_expectancy(self) -> float | None:
         """クローズ済みトレードの平均期待値（期待リターン）を計算する。
 
         確定済みのトレードから平均リターン（%）を算出し、
@@ -269,9 +255,7 @@ class StrategyEarlyTerminationController:
                             self.strategy, "initial_capital", None
                         )
                         if initial_capital and initial_capital > 0:
-                            values.append(
-                                float(value) / initial_capital * 100.0
-                            )
+                            values.append(float(value) / initial_capital * 100.0)
                         else:
                             logger.debug(
                                 f"トレードP&Lのパーセント変換をスキップ: "
@@ -279,9 +263,7 @@ class StrategyEarlyTerminationController:
                             )
                         break
                     except Exception as e:
-                        logger.debug(
-                            "トレードP&Lのパーセント変換に失敗しました: %s", e
-                        )
+                        logger.debug("トレードP&Lのパーセント変換に失敗しました: %s", e)
                         continue
 
         if not values:
@@ -289,7 +271,7 @@ class StrategyEarlyTerminationController:
 
         return float(sum(values) / len(values))
 
-    def should_terminate_early(self) -> Optional[str]:
+    def should_terminate_early(self) -> str | None:
         """早期打ち切りすべきかどうかを判定する。
 
         設定された早期終了条件（最小取引数、最大ドローダウン、
@@ -299,9 +281,7 @@ class StrategyEarlyTerminationController:
         Returns:
             Optional[str]: 早期終了理由。条件を満たさない場合はNone。
         """
-        raw_settings = getattr(
-            self.strategy, "early_termination_settings", None
-        )
+        raw_settings = getattr(self.strategy, "early_termination_settings", None)
         if raw_settings is None:
             settings = EarlyTerminationSettings()
         elif isinstance(raw_settings, EarlyTerminationSettings):
@@ -312,9 +292,7 @@ class StrategyEarlyTerminationController:
             return None
 
         current_equity = self.get_current_equity(
-            default=float(
-                getattr(self.strategy, "_starting_equity", 0.0) or 0.0
-            )
+            default=float(getattr(self.strategy, "_starting_equity", 0.0) or 0.0)
         )
         self.strategy._max_equity_seen = max(
             float(getattr(self.strategy, "_max_equity_seen", current_equity)),
@@ -337,9 +315,7 @@ class StrategyEarlyTerminationController:
         if min_trades is not None and progress >= float(
             settings.min_trade_check_progress
         ):
-            closed_trade_count = len(
-                getattr(self.strategy, "closed_trades", []) or []
-            )
+            closed_trade_count = len(getattr(self.strategy, "closed_trades", []) or [])
             required_trade_count = max(
                 1,
                 int(
@@ -357,15 +333,11 @@ class StrategyEarlyTerminationController:
         if min_expectancy is not None and progress >= float(
             settings.expectancy_progress
         ):
-            closed_trade_count = len(
-                getattr(self.strategy, "closed_trades", []) or []
-            )
+            closed_trade_count = len(getattr(self.strategy, "closed_trades", []) or [])
             expectancy_min_trades = int(settings.expectancy_min_trades)
             if closed_trade_count >= expectancy_min_trades:
                 expectancy = self.calculate_closed_trade_expectancy()
-                if expectancy is not None and expectancy < float(
-                    min_expectancy
-                ):
+                if expectancy is not None and expectancy < float(min_expectancy):
                     return "expectancy"
 
         return None

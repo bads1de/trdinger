@@ -54,7 +54,6 @@ class TestSpecificDayFilter:
             patch("random.random", side_effect=[0.5, 0.1, 0.5, 0.1]),
             patch("random.randint", return_value=3),
         ):
-
             # 1回目: enabled変化なし, day追加 (リスト空 -> 3を追加)
             params = {"enabled": True, "skip_days": []}
             new_params = filter_tool.mutate_params(params)

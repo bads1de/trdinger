@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
     def __init__(
         self,
         model_type: str = "lightgbm",
-        model_params: Optional[Dict[str, Any]] = None,
+        model_params: dict[str, Any] | None = None,
     ):
         """
         トレーナーを初期化します。
@@ -58,9 +58,7 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
             return LightGBMModel(**params)
         if self.model_type == "xgboost":
             return XGBoostModel(**params)
-        raise ModelError(
-            f"サポートされていない回帰モデルです: {self.model_type}"
-        )
+        raise ModelError(f"サポートされていない回帰モデルです: {self.model_type}")
 
     def predict(self, features_df: pd.DataFrame) -> np.ndarray:
         """
@@ -86,7 +84,7 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
         y_train: pd.Series,
         y_test: pd.Series,
         **training_params,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         モデルの学習を実際に実行します。
 
@@ -107,9 +105,7 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
         model = cast(Any, self._build_model())
         self._model = cast(Any, model)
         eval_set = (
-            [(X_test, y_test)]
-            if X_test is not None and len(X_test) > 0
-            else None
+            [(X_test, y_test)] if X_test is not None and len(X_test) > 0 else None
         )
         model.fit(
             X_train,
@@ -120,17 +116,13 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
             learning_rate=training_params.get("learning_rate"),
             max_depth=training_params.get("max_depth"),
         )
-        self.feature_columns = list(
-            model.feature_columns or X_train.columns.tolist()
-        )
+        self.feature_columns = list(model.feature_columns or X_train.columns.tolist())
         self.is_trained = True
 
         result = dict(getattr(self._model, "last_training_result", {}) or {})
         result.setdefault("algorithm", self.model_type)
         result.setdefault("train_samples", len(X_train))
-        result.setdefault(
-            "test_samples", len(X_test) if X_test is not None else 0
-        )
+        result.setdefault("test_samples", len(X_test) if X_test is not None else 0)
         result.setdefault("feature_count", len(self.feature_columns))
         result.setdefault(
             "gate_cutoff_log_rv",

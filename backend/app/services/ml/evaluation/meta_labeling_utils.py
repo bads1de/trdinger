@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -20,14 +20,12 @@ logger = logging.getLogger(__name__)
 def evaluate_meta_labeling(
     y_true: pd.Series,
     y_pred: np.ndarray,
-    y_pred_proba: Optional[np.ndarray] = None,
-) -> Dict[str, Any]:
+    y_pred_proba: np.ndarray | None = None,
+) -> dict[str, Any]:
     """メタラベリング用の評価指標を計算"""
     y_t = y_true.values if hasattr(y_true, "values") else y_true
     res = (
-        metrics_collector.calculate_comprehensive_metrics(
-            y_t, y_pred, y_pred_proba
-        )
+        metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba)
         or {}
     )
 
@@ -44,9 +42,7 @@ def evaluate_meta_labeling(
         "false_negatives",
     ]:
         if key not in res:
-            res[key] = (
-                0.0 if "positives" not in key and "negatives" not in key else 0
-            )
+            res[key] = 0.0 if "positives" not in key and "negatives" not in key else 0
 
     p = res.get("precision", 0.0)
     res.update(
@@ -70,7 +66,7 @@ def evaluate_meta_labeling(
 def print_meta_labeling_report(
     y_true: pd.Series,
     y_pred: np.ndarray,
-    y_pred_proba: Optional[np.ndarray] = None,
+    y_pred_proba: np.ndarray | None = None,
 ) -> None:
     """メタラベリング評価レポートを出力"""
     metrics = evaluate_meta_labeling(y_true, y_pred, y_pred_proba)
@@ -129,7 +125,7 @@ def find_optimal_threshold(
     y_pred_proba: np.ndarray,
     metric: str = "precision",
     min_recall: float = 0.3,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """最適な確率閾値を見つける"""
     y_true_array = y_true.values if hasattr(y_true, "values") else y_true
 

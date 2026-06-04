@@ -66,7 +66,7 @@ def test_generate_hierarchical_structure():
     found_group_or_multiple = False
 
     # Try multiple times if randomness is involved
-    for iteration in range(50):  # 試行回数を増やす
+    for _iteration in range(50):  # 試行回数を増やす
         longs, shorts, exits = strategy.generate_conditions(indicators)
 
         # グループが見つかったか、または複数の条件が生成されたか
@@ -81,6 +81,6 @@ def test_generate_hierarchical_structure():
             break
 
     # 修正された期待値：ConditionGroupまたは複数の条件が生成されること
-    assert (
-        found_group_or_multiple
-    ), "ComplexConditionsStrategy should generate ConditionGroups or multiple conditions"
+    assert found_group_or_multiple, (
+        "ComplexConditionsStrategy should generate ConditionGroups or multiple conditions"
+    )

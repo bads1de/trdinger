@@ -6,7 +6,7 @@ Sample Entropy, Fractal Dimension, VPIN Approximation など、
 """
 
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import pandas as pd
 
@@ -27,7 +27,9 @@ class ComplexityFeatureCalculator(BaseFeatureCalculator):
     """
 
     def calculate_features(
-        self, df: pd.DataFrame, config: Dict[str, Any] = None  # type: ignore[assignment]
+        self,
+        df: pd.DataFrame,
+        config: dict[str, Any] = None,  # type: ignore[assignment]
     ) -> pd.DataFrame:
         """
         複雑性に関連する特徴量を計算
@@ -63,24 +65,18 @@ class ComplexityFeatureCalculator(BaseFeatureCalculator):
 
         # 2. フラクタル次元 (Fractal Dimension)
         logger.info("Complexity: Fractal Dimension を計算中...")
-        new_features[f"Fractal_Dim_{short_p}"] = (
-            AdvancedFeatures.fractal_dimension(
-                cast(pd.Series, df["close"]), window=short_p
-            )
+        new_features[f"Fractal_Dim_{short_p}"] = AdvancedFeatures.fractal_dimension(
+            cast(pd.Series, df["close"]), window=short_p
         )
-        new_features[f"Fractal_Dim_{mid_p}"] = (
-            AdvancedFeatures.fractal_dimension(
-                cast(pd.Series, df["close"]), window=mid_p
-            )
+        new_features[f"Fractal_Dim_{mid_p}"] = AdvancedFeatures.fractal_dimension(
+            cast(pd.Series, df["close"]), window=mid_p
         )
 
         # 3. サンプル・エントロピー (Sample Entropy)
         # 計算コストが高いため、比較的小さな窓幅で計算
         logger.info("Complexity: Sample Entropy を計算中...")
-        new_features[f"Sample_Entropy_{short_p}"] = (
-            AdvancedFeatures.sample_entropy(
-                cast(pd.Series, df["close"]), window=short_p
-            )
+        new_features[f"Sample_Entropy_{short_p}"] = AdvancedFeatures.sample_entropy(
+            cast(pd.Series, df["close"]), window=short_p
         )
 
         # 4. 近似 VPIN (Order Flow Imbalance)
@@ -98,9 +94,9 @@ class ComplexityFeatureCalculator(BaseFeatureCalculator):
 
         # 5. 複合指標 (Interaction)
         # Hurstが高い(トレンド)かつEntropyが低い(秩序)時、トレンドの信頼性が高い
-        new_features["Complexity_Trend_Trust"] = new_features[
-            f"Hurst_{mid_p}"
-        ] / (new_features[f"Sample_Entropy_{short_p}"] + 1e-9)
+        new_features["Complexity_Trend_Trust"] = new_features[f"Hurst_{mid_p}"] / (
+            new_features[f"Sample_Entropy_{short_p}"] + 1e-9
+        )
 
         # 6. 効率性レシオの高度版 (Complexity-Adjusted Efficiency)
         # 従来のEfficiency Ratioをフラクタル次元で重み付け

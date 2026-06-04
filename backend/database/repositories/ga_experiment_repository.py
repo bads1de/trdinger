@@ -6,7 +6,7 @@ GA実験リポジトリ
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -23,9 +23,7 @@ class GAExperimentRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, GAExperiment)
 
-    def get_by_experiment_id(
-        self, experiment_id: str
-    ) -> Optional[GAExperiment]:
+    def get_by_experiment_id(self, experiment_id: str) -> GAExperiment | None:
         """
         フロントエンド由来のexperiment_idで実験を取得
 
@@ -44,10 +42,10 @@ class GAExperimentRepository(BaseRepository):
     def create_experiment(
         self,
         name: str,
-        config: Dict[str, Any],
+        config: dict[str, Any],
         total_generations: int,
         status: str = "running",
-        experiment_id: Optional[str] = None,
+        experiment_id: str | None = None,
     ) -> GAExperiment:
         """
         新しいGA実験を作成
@@ -85,7 +83,7 @@ class GAExperimentRepository(BaseRepository):
         return _create_experiment()
 
     def update_experiment_status(
-        self, experiment_id: int, status: str, completed_at: Optional[datetime] = None
+        self, experiment_id: int, status: str, completed_at: datetime | None = None
     ) -> bool:
         """
         実験のステータスを更新
@@ -129,8 +127,8 @@ class GAExperimentRepository(BaseRepository):
         return _update_experiment_status()
 
     def get_experiments_by_status(
-        self, status: str, limit: Optional[int] = None
-    ) -> List[GAExperiment]:
+        self, status: str, limit: int | None = None
+    ) -> list[GAExperiment]:
         """
         ステータス別で実験を取得
 
@@ -157,7 +155,7 @@ class GAExperimentRepository(BaseRepository):
 
         return _get_experiments_by_status()
 
-    def get_recent_experiments(self, limit: int = 10) -> List[GAExperiment]:
+    def get_recent_experiments(self, limit: int = 10) -> list[GAExperiment]:
         """
         最近の実験を取得
 
@@ -226,8 +224,8 @@ class GAExperimentRepository(BaseRepository):
         experiment_id: int,
         current_generation: int,
         total_generations: int,
-        best_fitness: Optional[float] = None,
-        status: Optional[str] = None,
+        best_fitness: float | None = None,
+        status: str | None = None,
     ) -> bool:
         """
         実験の進捗状況を更新する
@@ -285,6 +283,3 @@ class GAExperimentRepository(BaseRepository):
             return deleted_count
 
         return _delete_all_experiments()
-
-
-

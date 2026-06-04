@@ -54,7 +54,8 @@ def setup_lazy_import(
 
         warnings.warn(
             f"Module {module_name} already has __getattr__. "
-            f"setup_lazy_import will not override it."
+            f"setup_lazy_import will not override it.",
+            stacklevel=2,
         )
         return
 
@@ -81,9 +82,7 @@ def setup_lazy_import(
         """
         module_path = exports.get(name)
         if module_path is None:
-            raise AttributeError(
-                f"module {module_name!r} has no attribute {name!r}"
-            )
+            raise AttributeError(f"module {module_name!r} has no attribute {name!r}")
 
         module = import_module(module_path, module_name)
         value = getattr(module, name)

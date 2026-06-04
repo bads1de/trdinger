@@ -11,7 +11,6 @@ import logging
 import os
 import sys
 
-
 from app.services.data_collection.orchestration.data_collection_orchestration_service import (
     DataCollectionOrchestrationService,
 )
@@ -127,6 +126,3 @@ def main():
 if __name__ == "__main__":
     exit_code = main()
     sys.exit(exit_code)
-
-
-

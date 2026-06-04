@@ -12,7 +12,8 @@ import logging
 import os
 import pickle
 import pkgutil
-from typing import Any, Callable, Dict, List, Optional, Type, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -59,7 +60,7 @@ def _ensure_cache_dir() -> None:
     os.makedirs(_CACHE_DIR, exist_ok=True)
 
 
-def _load_cache() -> Optional[List[IndicatorConfig]]:
+def _load_cache() -> list[IndicatorConfig] | None:
     """キャッシュからインジケーター設定をロード"""
     if not os.path.exists(_CACHE_FILE):
         return None
@@ -70,9 +71,7 @@ def _load_cache() -> Optional[List[IndicatorConfig]]:
 
         # バージョンチェック
         if cached_data.get("version") != _get_cache_version():
-            logger.info(
-                "pandas-taバージョンが変更されたためキャッシュを無効化します"
-            )
+            logger.info("pandas-taバージョンが変更されたためキャッシュを無効化します")
             return None
 
         config_dicts = cached_data["configs"]
@@ -85,20 +84,18 @@ def _load_cache() -> Optional[List[IndicatorConfig]]:
         for config_dict in config_dicts:
             config = IndicatorConfig(**config_dict)
             # unpickle可能でない関数を再構成
-            if config.pandas_function or hasattr(
-                ta, config.indicator_name.lower()
-            ):
-                config.min_length_func = lambda p, ind=config.indicator_name.lower(): calculate_min_length(ind, p)  # type: ignore[misc]
+            if config.pandas_function or hasattr(ta, config.indicator_name.lower()):
+                config.min_length_func = lambda p, ind=config.indicator_name.lower(): (
+                    calculate_min_length(ind, p)
+                )  # type: ignore[misc]
             # _SPECIAL_CONFIG_OVERRIDESにあるインジケーターのmin_length_funcも再構成
             elif (
                 config.indicator_name
                 in DynamicIndicatorDiscovery._SPECIAL_CONFIG_OVERRIDES
             ):
-                overrides = (
-                    DynamicIndicatorDiscovery._SPECIAL_CONFIG_OVERRIDES[
-                        config.indicator_name
-                    ]
-                )
+                overrides = DynamicIndicatorDiscovery._SPECIAL_CONFIG_OVERRIDES[
+                    config.indicator_name
+                ]
                 if "min_length_func" in overrides:
                     config.min_length_func = overrides["min_length_func"]  # type: ignore[assignment]
             # customカテゴリのインジケーターのadapter_functionを再構成
@@ -113,14 +110,14 @@ def _load_cache() -> Optional[List[IndicatorConfig]]:
                         if os.path.exists(pandas_ta_path):
                             scan_paths.append(pandas_ta_path)
                         for path in scan_paths:
-                            for _, module_name, _ in pkgutil.iter_modules(
-                                [path]
-                            ):
+                            for _, module_name, _ in pkgutil.iter_modules([path]):
                                 try:
                                     if path == pandas_ta_path:
                                         full_module_name = f"..technical_indicators.pandas_ta.{module_name}"
                                     else:
-                                        full_module_name = f"..technical_indicators.{module_name}"
+                                        full_module_name = (
+                                            f"..technical_indicators.{module_name}"
+                                        )
                                     module = importlib.import_module(
                                         full_module_name, __package__
                                     )
@@ -159,7 +156,7 @@ def _load_cache() -> Optional[List[IndicatorConfig]]:
         return None
 
 
-def _save_cache(configs: List[IndicatorConfig]) -> None:
+def _save_cache(configs: list[IndicatorConfig]) -> None:
     """インジケーター設定をキャッシュに保存（unpickle可能な関数を除外）"""
     _ensure_cache_dir()
     try:
@@ -198,9 +195,7 @@ def _save_cache(configs: List[IndicatorConfig]) -> None:
         }
         with open(_CACHE_FILE, "wb") as f:
             pickle.dump(cached_data, f)
-        logger.info(
-            f"キャッシュに {len(configs)} 個のインジケーターを保存しました"
-        )
+        logger.info(f"キャッシュに {len(configs)} 個のインジケーターを保存しました")
     except Exception as e:
         logger.warning(f"キャッシュの保存に失敗しました: {e}")
 
@@ -409,9 +404,7 @@ class DynamicIndicatorDiscovery:
             - 小数値パラメータ: (max(0.01, default*0.5), max(default*2.0, default+0.1))
             - 一般的な期間パラメータ: (max(2, int(default*0.2)), max(int(default*5), 50))
         """
-        if not isinstance(default_val, (int, float)) or isinstance(
-            default_val, bool
-        ):
+        if not isinstance(default_val, (int, float)) or isinstance(default_val, bool):
             return (1, 100)  # フォールバック
 
         name_lower = param_name.lower()
@@ -519,10 +512,7 @@ class DynamicIndicatorDiscovery:
                 return True
 
         # 2. デフォルト値による判定
-        if (
-            param.default != inspect.Parameter.empty
-            and param.default is not None
-        ):
+        if param.default != inspect.Parameter.empty and param.default is not None:
             # デフォルト値が数値ならデータ引数ではない
             if isinstance(param.default, (int, float)):
                 return False
@@ -622,7 +612,7 @@ class DynamicIndicatorDiscovery:
         cls,
         indicator_name: str,
         func: Any,
-        default_params: Optional[Dict[str, Any]] = None,
+        default_params: dict[str, Any] | None = None,
     ) -> bool:
         """
         エンジンで扱える時系列出力を返す関数だけを対象にする
@@ -656,17 +646,13 @@ class DynamicIndicatorDiscovery:
                 with_datetime_index=True,
             )
         except Exception as exc:
-            logger.debug(
-                "時系列互換性チェックに失敗: %s (%s)", indicator_name, exc
-            )
+            logger.debug("時系列互換性チェックに失敗: %s (%s)", indicator_name, exc)
             return False
 
         return cls._is_timeseries_compatible_result(result, sample_frame.index)
 
     @classmethod
-    def _is_timeseries_compatible_result(
-        cls, result: Any, expected_index: Any
-    ) -> bool:
+    def _is_timeseries_compatible_result(cls, result: Any, expected_index: Any) -> bool:
         """
         出力がサンプル入力長と整合する時系列結果かどうかを判定する
 
@@ -686,14 +672,10 @@ class DynamicIndicatorDiscovery:
             - tuple: 全要素が時系列互換か
         """
         if isinstance(result, pd.Series):
-            return cls._has_compatible_timeseries_index(
-                result.index, expected_index
-            )
+            return cls._has_compatible_timeseries_index(result.index, expected_index)
 
         if isinstance(result, pd.DataFrame):
-            return result.shape[
-                1
-            ] > 0 and cls._has_compatible_timeseries_index(
+            return result.shape[1] > 0 and cls._has_compatible_timeseries_index(
                 result.index, expected_index
             )
 
@@ -769,7 +751,7 @@ class DynamicIndicatorDiscovery:
         return result.shape[0] == len(expected_index)
 
     @classmethod
-    def _can_probe_with_sample(cls, required_data: List[str]) -> bool:
+    def _can_probe_with_sample(cls, required_data: list[str]) -> bool:
         """
         標準 OHLCV サンプルだけで関数を実行できるかを判定する
 
@@ -799,9 +781,9 @@ class DynamicIndicatorDiscovery:
         cls,
         indicator_name: str,
         func: Any,
-        required_data: List[str],
-        default_params: Optional[Dict[str, Any]] = None,
-    ) -> Optional[Any]:
+        required_data: list[str],
+        default_params: dict[str, Any] | None = None,
+    ) -> Any | None:
         """
         標準 OHLCV だけで評価できる指標はサンプル実行結果を返す
 
@@ -836,9 +818,7 @@ class DynamicIndicatorDiscovery:
             return None
 
     @classmethod
-    def _infer_result_type_from_output(
-        cls, result: Any
-    ) -> Optional[IndicatorResultType]:
+    def _infer_result_type_from_output(cls, result: Any) -> IndicatorResultType | None:
         """
         サンプル出力から result_type を推測する
 
@@ -901,7 +881,7 @@ class DynamicIndicatorDiscovery:
         return name_lower in cls._EXCLUDED_DISCOVERY_NAMES
 
     @classmethod
-    def discover_all(cls) -> List[IndicatorConfig]:
+    def discover_all(cls) -> list[IndicatorConfig]:
         """
         全ての指標を検出して設定リストを返す
 
@@ -957,9 +937,7 @@ class DynamicIndicatorDiscovery:
             scan_paths.append(pandas_ta_path)
 
         for scan_path in scan_paths:
-            for _loader, module_name, _is_pkg in pkgutil.iter_modules(
-                [scan_path]
-            ):
+            for _loader, module_name, _is_pkg in pkgutil.iter_modules([scan_path]):
                 if module_name in skipped_wrapper_modules:
                     continue
                 try:
@@ -969,23 +947,16 @@ class DynamicIndicatorDiscovery:
                             f"..technical_indicators.pandas_ta.{module_name}"
                         )
                     else:
-                        full_module_name = (
-                            f"..technical_indicators.{module_name}"
-                        )
-                    module = importlib.import_module(
-                        full_module_name, __package__
-                    )
+                        full_module_name = f"..technical_indicators.{module_name}"
+                    module = importlib.import_module(full_module_name, __package__)
 
                     # モジュール内の全クラスをチェック
-                    for name, obj in inspect.getmembers(
-                        module, inspect.isclass
-                    ):
+                    for name, obj in inspect.getmembers(module, inspect.isclass):
                         # 指標クラスを検出:
                         # - 末尾が Indicators
                         # - 高度特徴量クラス AdvancedFeatures
                         if (
-                            name.endswith("Indicators")
-                            and name != "Indicators"
+                            name.endswith("Indicators") and name != "Indicators"
                         ) or name == "AdvancedFeatures":
                             if module_name == "original":
                                 original_modules.append(obj)
@@ -993,9 +964,7 @@ class DynamicIndicatorDiscovery:
                                 custom_modules.append(obj)
                 except Exception as e:
                     pass
-                    logger.warning(
-                        f"モジュール {module_name} のスキャンに失敗: {e}"
-                    )
+                    logger.warning(f"モジュール {module_name} のスキャンに失敗: {e}")
 
         for module_class in custom_modules + original_modules:
             custom_configs = cls._discover_custom_class(module_class)
@@ -1005,15 +974,12 @@ class DynamicIndicatorDiscovery:
                 configs = [
                     c
                     for c in configs
-                    if c.indicator_name.upper()
-                    != config.indicator_name.upper()
+                    if c.indicator_name.upper() != config.indicator_name.upper()
                 ]
                 configs.append(config)
                 discovered_names.add(config.indicator_name.upper())
 
-        logger.info(
-            f"合計 {len(configs)} 個のインジケーターを動的検出しました"
-        )
+        logger.info(f"合計 {len(configs)} 個のインジケーターを動的検出しました")
 
         # キャッシュに保存
         _save_cache(configs)
@@ -1047,7 +1013,7 @@ class DynamicIndicatorDiscovery:
         # 1. 最小データ長と戻り値カラムの動的取得
         if config.pandas_function or hasattr(ta, name_lower):
             config.min_length_func = cast(
-                Callable[[Dict[str, Any]], int],
+                Callable[[dict[str, Any]], int],
                 lambda p, ind=name_lower: calculate_min_length(ind, p),
             )
 
@@ -1089,7 +1055,7 @@ class DynamicIndicatorDiscovery:
                 config.parameters["len"].even_only = True
 
     @classmethod
-    def _discover_pandas_ta(cls) -> List[IndicatorConfig]:
+    def _discover_pandas_ta(cls) -> list[IndicatorConfig]:
         """
         pandas-taの関数をスキャン
 
@@ -1147,7 +1113,7 @@ class DynamicIndicatorDiscovery:
         return configs
 
     @classmethod
-    def _discover_custom_class(cls, klass: Type) -> List[IndicatorConfig]:
+    def _discover_custom_class(cls, klass: type) -> list[IndicatorConfig]:
         """
         独自実装クラスをスキャン
 
@@ -1195,7 +1161,7 @@ class DynamicIndicatorDiscovery:
     @classmethod
     def _analyze_function(
         cls, name: str, func: Any, category: str
-    ) -> Optional[IndicatorConfig]:
+    ) -> IndicatorConfig | None:
         """
         関数を解析してIndicatorConfigを生成
 
@@ -1263,9 +1229,7 @@ class DynamicIndicatorDiscovery:
                     default_values[param_name] = default_val
 
                     # GA用パラメータ設定を作成
-                    param_config = cls._create_parameter_config(
-                        param_name, default_val
-                    )
+                    param_config = cls._create_parameter_config(param_name, default_val)
                     if param_config:
                         parameters[param_name] = param_config
 
@@ -1277,9 +1241,7 @@ class DynamicIndicatorDiscovery:
                 required_data,
                 default_params=default_values,
             )
-            inferred_result_type = cls._infer_result_type_from_output(
-                sample_result
-            )
+            inferred_result_type = cls._infer_result_type_from_output(sample_result)
             if inferred_result_type is not None:
                 result_type = inferred_result_type
             elif is_multi_column_indicator(name_lower):
@@ -1293,7 +1255,7 @@ class DynamicIndicatorDiscovery:
                 indicator_name=name.upper(),
                 category=category,
                 required_data=required_data,
-                param_map=cast(Dict[str, Optional[str]], param_map),
+                param_map=cast(dict[str, str | None], param_map),
                 parameters=parameters,
                 default_values=default_values,
                 result_type=result_type,
@@ -1309,7 +1271,7 @@ class DynamicIndicatorDiscovery:
     @classmethod
     def _create_parameter_config(
         cls, name: str, default_val: Any
-    ) -> Optional[ParameterConfig]:
+    ) -> ParameterConfig | None:
         """
         パラメータ名から設定を生成（動的範囲計算）
 
@@ -1327,9 +1289,7 @@ class DynamicIndicatorDiscovery:
             範囲は_calculate_param_rangeで動的に計算されます。
         """
         # 数値パラメータのみ対象
-        if not isinstance(default_val, (int, float)) or isinstance(
-            default_val, bool
-        ):
+        if not isinstance(default_val, (int, float)) or isinstance(default_val, bool):
             return None
 
         # 動的に範囲を計算

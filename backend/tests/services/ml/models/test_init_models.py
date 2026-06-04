@@ -2,7 +2,6 @@
 ML Models パッケージのテスト
 """
 
-
 from app.services.ml.models import (
     CatBoostModel,
     LightGBMModel,

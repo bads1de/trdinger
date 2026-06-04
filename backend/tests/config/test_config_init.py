@@ -41,7 +41,7 @@ class TestLazyLoadGetAttr:
         from app.config.unified_config import UnifiedConfig
 
         # __getattr__経由でアクセス
-        unified_config = getattr(config_package, "UnifiedConfig")
+        unified_config = config_package.UnifiedConfig
 
         assert unified_config is UnifiedConfig
 
@@ -49,7 +49,7 @@ class TestLazyLoadGetAttr:
         """AppConfigが遅延ロードされる"""
         from app.config.unified_config import AppConfig
 
-        app_config = getattr(config_package, "AppConfig")
+        app_config = config_package.AppConfig
 
         assert app_config is AppConfig
 
@@ -57,7 +57,7 @@ class TestLazyLoadGetAttr:
         """DatabaseConfigが遅延ロードされる"""
         from app.config.unified_config import DatabaseConfig
 
-        db_config = getattr(config_package, "DatabaseConfig")
+        db_config = config_package.DatabaseConfig
 
         assert db_config is DatabaseConfig
 
@@ -65,7 +65,7 @@ class TestLazyLoadGetAttr:
         """LoggingConfigが遅延ロードされる"""
         from app.config.unified_config import LoggingConfig
 
-        logging_config = getattr(config_package, "LoggingConfig")
+        logging_config = config_package.LoggingConfig
 
         assert logging_config is LoggingConfig
 
@@ -73,7 +73,7 @@ class TestLazyLoadGetAttr:
         """MarketConfigが遅延ロードされる"""
         from app.config.unified_config import MarketConfig
 
-        market_config = getattr(config_package, "MarketConfig")
+        market_config = config_package.MarketConfig
 
         assert market_config is MarketConfig
 
@@ -81,7 +81,7 @@ class TestLazyLoadGetAttr:
         """DataCollectionConfigが遅延ロードされる"""
         from app.config.unified_config import DataCollectionConfig
 
-        data_collection_config = getattr(config_package, "DataCollectionConfig")
+        data_collection_config = config_package.DataCollectionConfig
 
         assert data_collection_config is DataCollectionConfig
 

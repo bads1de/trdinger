@@ -6,7 +6,7 @@ StrategyGene から Optuna の探索空間を動的に構築します。
 
 import copy
 import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from app.services.indicators.config.indicator_config import (
     IndicatorConfig,
@@ -31,7 +31,7 @@ class StrategyParameterSpace:
     """
 
     # インジケーターパラメータのデフォルト範囲
-    DEFAULT_INDICATOR_RANGES: Dict[str, Dict[str, Any]] = {
+    DEFAULT_INDICATOR_RANGES: dict[str, dict[str, Any]] = {
         "length": {"low": 5, "high": 100, "type": "integer"},
         "period": {"low": 5, "high": 100, "type": "integer"},
         "fast": {"low": 5, "high": 50, "type": "integer"},
@@ -45,7 +45,7 @@ class StrategyParameterSpace:
     }
 
     # TPSLパラメータの範囲
-    TPSL_RANGES: Dict[str, Dict[str, Any]] = {
+    TPSL_RANGES: dict[str, dict[str, Any]] = {
         "stop_loss_pct": {"low": 0.005, "high": 0.10, "type": "real"},
         "take_profit_pct": {"low": 0.01, "high": 0.20, "type": "real"},
         "risk_reward_ratio": {"low": 1.0, "high": 5.0, "type": "real"},
@@ -56,7 +56,7 @@ class StrategyParameterSpace:
     }
 
     # 条件の閾値パラメータの範囲（スケールタイプ別）
-    THRESHOLD_RANGES: Dict[str, Dict[str, Any]] = {
+    THRESHOLD_RANGES: dict[str, dict[str, Any]] = {
         "oscillator_0_100": {"low": 10.0, "high": 90.0, "type": "real"},
         "oscillator_plus_minus_100": {
             "low": -80.0,
@@ -82,7 +82,7 @@ class StrategyParameterSpace:
         include_indicators: bool = True,
         include_tpsl: bool = True,
         include_thresholds: bool = False,
-    ) -> Dict[str, ParameterSpace]:
+    ) -> dict[str, ParameterSpace]:
         """
         StrategyGene からパラメータ空間を構築
 
@@ -95,7 +95,7 @@ class StrategyParameterSpace:
         Returns:
             Optuna用パラメータ空間の辞書
         """
-        parameter_space: Dict[str, ParameterSpace] = {}
+        parameter_space: dict[str, ParameterSpace] = {}
 
         if include_indicators:
             indicator_params = self._build_indicator_params(gene.indicators)
@@ -122,14 +122,12 @@ class StrategyParameterSpace:
             )
             parameter_space.update(short_threshold_params)
 
-        logger.debug(
-            f"構築されたパラメータ空間: {len(parameter_space)} 個のパラメータ"
-        )
+        logger.debug(f"構築されたパラメータ空間: {len(parameter_space)} 個のパラメータ")
         return parameter_space
 
     def _build_indicator_params(
-        self, indicators: List[IndicatorGene]
-    ) -> Dict[str, ParameterSpace]:
+        self, indicators: list[IndicatorGene]
+    ) -> dict[str, ParameterSpace]:
         """
         インジケーターパラメータ空間を構築
 
@@ -142,7 +140,7 @@ class StrategyParameterSpace:
         Returns:
             インジケーター用パラメータ空間
         """
-        params: Dict[str, ParameterSpace] = {}
+        params: dict[str, ParameterSpace] = {}
 
         for idx, indicator in enumerate(indicators):
             if not indicator.enabled:
@@ -153,9 +151,7 @@ class StrategyParameterSpace:
 
             # レジストリから設定を取得
             config = indicator_registry.get_indicator_config(indicator_type)
-            param_ranges = self._get_indicator_param_ranges(
-                config, indicator_type
-            )
+            param_ranges = self._get_indicator_param_ranges(config, indicator_type)
 
             for param_name, param_value in indicator.parameters.items():
                 # 数値パラメータのみ対象
@@ -174,7 +170,7 @@ class StrategyParameterSpace:
                 low = range_info.get("low", 2)
                 high = range_info.get("high", 100)
                 param_type = range_info.get("type", "integer")
-                step: Optional[int] = 1 if param_type == "integer" else None
+                step: int | None = 1 if param_type == "integer" else None
 
                 if config and param_name in config.parameters:
                     param_cfg = config.parameters[param_name]
@@ -196,8 +192,8 @@ class StrategyParameterSpace:
         return params
 
     def _get_indicator_param_ranges(
-        self, config: Optional[IndicatorConfig], indicator_type: str
-    ) -> Dict[str, Dict[str, Any]]:
+        self, config: IndicatorConfig | None, indicator_type: str
+    ) -> dict[str, dict[str, Any]]:
         """
         インジケーター設定からパラメータ範囲を取得
 
@@ -210,7 +206,7 @@ class StrategyParameterSpace:
         Returns:
             パラメータ名ごとの範囲情報辞書
         """
-        ranges: Dict[str, Dict[str, Any]] = {}
+        ranges: dict[str, dict[str, Any]] = {}
 
         if config and config.parameters:
             for param_name, param_config in config.parameters.items():
@@ -222,13 +218,9 @@ class StrategyParameterSpace:
                         and param_config.max_value is not None
                     ):
                         # 整数か浮動小数点かを判定
-                        default_val = getattr(
-                            param_config, "default_value", 14
-                        )
+                        default_val = getattr(param_config, "default_value", 14)
                         param_type = (
-                            "integer"
-                            if isinstance(default_val, int)
-                            else "real"
+                            "integer" if isinstance(default_val, int) else "real"
                         )
 
                         ranges[param_name] = {
@@ -241,7 +233,7 @@ class StrategyParameterSpace:
 
     def _build_tpsl_params(
         self, tpsl_gene: TPSLGene, prefix: str
-    ) -> Dict[str, ParameterSpace]:
+    ) -> dict[str, ParameterSpace]:
         """
         TPSLパラメータ空間を構築
 
@@ -255,7 +247,7 @@ class StrategyParameterSpace:
         Returns:
             TPSL用パラメータ空間
         """
-        params: Dict[str, ParameterSpace] = {}
+        params: dict[str, ParameterSpace] = {}
 
         for param_name, range_info in self.TPSL_RANGES.items():
             current_value = getattr(tpsl_gene, param_name, None)
@@ -273,9 +265,9 @@ class StrategyParameterSpace:
 
     def _build_threshold_params(
         self,
-        conditions: List[Union[Condition, ConditionGroup]],
+        conditions: list[Condition | ConditionGroup],
         prefix: str,
-    ) -> Dict[str, ParameterSpace]:
+    ) -> dict[str, ParameterSpace]:
         """
         条件の閾値パラメータ空間を構築
 
@@ -289,7 +281,7 @@ class StrategyParameterSpace:
         Returns:
             しきい値用パラメータ空間
         """
-        params: Dict[str, ParameterSpace] = {}
+        params: dict[str, ParameterSpace] = {}
         threshold_idx = 0
 
         for condition in conditions:
@@ -315,7 +307,7 @@ class StrategyParameterSpace:
         return params
 
     def apply_params_to_gene(
-        self, gene: StrategyGene, params: Dict[str, Any]
+        self, gene: StrategyGene, params: dict[str, Any]
     ) -> StrategyGene:
         """
         最適化されたパラメータを遺伝子に適用
@@ -351,7 +343,7 @@ class StrategyParameterSpace:
         return new_gene
 
     def _apply_indicator_params(
-        self, indicators: List[IndicatorGene], params: Dict[str, Any]
+        self, indicators: list[IndicatorGene], params: dict[str, Any]
     ) -> None:
         """インジケーターパラメータを適用"""
         for idx, indicator in enumerate(indicators):
@@ -373,7 +365,7 @@ class StrategyParameterSpace:
                         indicator.parameters[param_name] = float(new_value)
 
     def _apply_tpsl_params(
-        self, tpsl_gene: TPSLGene, params: Dict[str, Any], prefix: str
+        self, tpsl_gene: TPSLGene, params: dict[str, Any], prefix: str
     ) -> None:
         """TPSLパラメータを適用"""
         for param_name in self.TPSL_RANGES.keys():
@@ -383,8 +375,8 @@ class StrategyParameterSpace:
 
     def _apply_threshold_params(
         self,
-        conditions: List[Union[Condition, ConditionGroup]],
-        params: Dict[str, Any],
+        conditions: list[Condition | ConditionGroup],
+        params: dict[str, Any],
         prefix: str,
     ) -> None:
         """条件の閾値パラメータを適用"""

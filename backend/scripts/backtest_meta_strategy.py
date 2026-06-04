@@ -1,20 +1,19 @@
-from pathlib import Path
-import pandas as pd
-import numpy as np
-import joblib
 import json
 import logging
+from pathlib import Path
+
+import joblib
+import numpy as np
+import pandas as pd
 import pandas_ta_classic as ta
+from backtesting import Backtest, Strategy
+from backtesting.lib import crossover
 
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
 from scripts.feature_evaluation.common_feature_evaluator import CommonFeatureEvaluator
 from scripts.ml_optimization.run_ml_pipeline import MLPipeline
-
-
-from backtesting import Backtest, Strategy
-from backtesting.lib import crossover
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -121,7 +120,9 @@ class MetaEmaCrossStrategy(Strategy):
                 "_prob_min",
                 "_prob_max",
             ]
-            base_model_names_from_oof = getattr(self.meta_model, 'base_model_names', []) or []
+            base_model_names_from_oof = (
+                getattr(self.meta_model, "base_model_names", []) or []
+            )
 
             # meta_model.model (RandomForestClassifier) の feature_names_in_ を取得
             rf_feature_names = list(self.meta_model.model.feature_names_in_)
@@ -220,7 +221,7 @@ def run_backtest():
 
         meta_model = joblib.load(latest_dir / "meta_labeling_service.joblib")
 
-        with open(latest_dir / "best_params.json", "r", encoding="utf-8") as f:
+        with open(latest_dir / "best_params.json", encoding="utf-8") as f:
             best_params_data = json.load(f)
         meta_feature_names = best_params_data["feature_names"]
 

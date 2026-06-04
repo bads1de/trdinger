@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional, Sequence, Tuple, TypeGuard
+from collections.abc import Sequence
+from typing import Any, TypeGuard
 
 from app.services.auto_strategy.config import objective_registry
 
@@ -92,9 +93,9 @@ def get_two_stage_pool_size(
 
 def build_report_rank_key(
     individual: object,
-    report: Optional["EvaluationReport"],
+    report: EvaluationReport | None,
     min_pass_rate: float = 0.0,
-) -> Tuple[float, ...]:
+) -> tuple[float, ...]:
     """report を利用した再ランクキーを構築する。
 
     評価レポートの合格率と個体のフィットネス値を組み合わせて、
@@ -119,9 +120,9 @@ def build_report_rank_key(
 
 def build_report_rank_key_from_primary_fitness(
     primary_fitness: float,
-    report: Optional["EvaluationReport"],
+    report: EvaluationReport | None,
     min_pass_rate: float = 0.0,
-) -> Tuple[float, ...]:
+) -> tuple[float, ...]:
     """主fitness値とreportから再ランクキーを構築する。
 
     評価レポートの合格率、ワーストケーススコア、集約フィットネスなどを
@@ -151,9 +152,7 @@ def build_report_rank_key_from_primary_fitness(
     if objective_count <= 1:
         objective = report.objectives[0] if report.objectives else ""
         scenario_values = [
-            objective_registry.to_selection_space(
-                float(scenario.fitness[0]), objective
-            )
+            objective_registry.to_selection_space(float(scenario.fitness[0]), objective)
             for scenario in report.scenarios
             if scenario.fitness
         ]
@@ -171,9 +170,7 @@ def build_report_rank_key_from_primary_fitness(
 
     rank_components: list[float] = [pass_gate, pass_rate]
     for index in range(objective_count):
-        objective = (
-            report.objectives[index] if index < len(report.objectives) else ""
-        )
+        objective = report.objectives[index] if index < len(report.objectives) else ""
         scenario_values = [
             objective_registry.to_selection_space(
                 float(scenario.fitness[index]), objective
@@ -212,7 +209,7 @@ def get_individual_identity(individual: object) -> object:
     return individual_id if individual_id not in (None, "") else id(individual)
 
 
-def get_two_stage_rank(individual: object) -> Optional[int]:
+def get_two_stage_rank(individual: object) -> int | None:
     """個体に付与された二段階選抜順位を返す。"""
     for target in _iter_two_stage_metadata_targets(individual):
         rank = getattr(target, TWO_STAGE_RANK_ATTR, None)
@@ -221,7 +218,7 @@ def get_two_stage_rank(individual: object) -> Optional[int]:
     return None
 
 
-def get_two_stage_score(individual: object) -> Optional[Tuple[float, ...]]:
+def get_two_stage_score(individual: object) -> tuple[float, ...] | None:
     """個体に付与された二段階選抜スコアを返す。"""
     for target in _iter_two_stage_metadata_targets(individual):
         score = getattr(target, TWO_STAGE_SCORE_ATTR, None)
@@ -234,8 +231,8 @@ def get_two_stage_score(individual: object) -> Optional[Tuple[float, ...]]:
 
 def set_two_stage_metadata(
     individual: object,
-    rank: Optional[int],
-    score: Optional[object],
+    rank: int | None,
+    score: object | None,
 ) -> None:
     """二段階選抜メタデータを fitness 側へ保存する。"""
     target = _get_two_stage_metadata_target(individual)
@@ -279,7 +276,7 @@ def merge_reranked_elites(
     return merged[:population_size]
 
 
-def get_two_stage_best_individual(population: Sequence[Any]) -> Optional[Any]:
+def get_two_stage_best_individual(population: Sequence[Any]) -> Any | None:
     """二段階選抜で先頭に選ばれた個体を返す。"""
     ranked = []
     for individual in population:

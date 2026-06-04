@@ -1,4 +1,4 @@
-from typing import Dict, Mapping, Optional
+from collections.abc import Mapping
 
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -8,7 +8,7 @@ def _infer_integer_dtype(
     col_min: int,
     col_max: int,
     prefer_unsigned_integers: bool,
-) -> Optional[str]:
+) -> str | None:
     """
     整数列に対して、より省メモリな dtype 名を推定する
 
@@ -73,7 +73,7 @@ def build_optimized_dtype_map(
     *,
     prefer_unsigned_integers: bool = False,
     optimize_all_numeric: bool = False,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     DataFrame から最適化後の dtype マップを構築する
 
@@ -91,7 +91,7 @@ def build_optimized_dtype_map(
         - optimize_all_numeric=False: 既存のDtypeOptimizerと同等の挙動
         - optimize_all_numeric=True: preprocessing pipeline側のより積極的な最適化
     """
-    dtypes: Dict[str, str] = {}
+    dtypes: dict[str, str] = {}
 
     for col in df.columns:
         col_series = _get_column_series(df, col)

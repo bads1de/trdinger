@@ -6,7 +6,7 @@ ADX（Average Directional Index）等でトレンド強度を測定し、
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
@@ -40,9 +40,7 @@ class TrendFilter(BaseTool):
         priority="optional",
     )
 
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """
         トレンドが弱ければエントリーをスキップ
 
@@ -68,7 +66,7 @@ class TrendFilter(BaseTool):
         # データがない場合はスキップしない
         return False
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """パラメータの突然変異"""
         import random
 
@@ -87,10 +85,7 @@ class TrendFilter(BaseTool):
                 7,
                 min(
                     30,
-                    int(
-                        new_params.get("adx_period", 14)
-                        * random.uniform(0.8, 1.2)
-                    ),
+                    int(new_params.get("adx_period", 14) * random.uniform(0.8, 1.2)),
                 ),
             )
 

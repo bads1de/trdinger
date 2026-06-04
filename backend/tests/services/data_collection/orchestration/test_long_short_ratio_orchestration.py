@@ -11,7 +11,6 @@ LongShortRatioOrchestrationServiceの全機能をテストします:
 """
 
 from datetime import datetime
-from typing import List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -39,10 +38,10 @@ def orchestration_service(
 
 
 @pytest.fixture
-def sample_lsr_data() -> List[MagicMock]:
+def sample_lsr_data() -> list[MagicMock]:
     """サンプルLSRレコード"""
     records = []
-    for i, (ts, buy, sell) in enumerate(
+    for _i, (ts, buy, sell) in enumerate(
         [
             (datetime(2024, 1, 1, 0, 0), 0.6, 0.4),
             (datetime(2024, 1, 1, 1, 0), 0.55, 0.45),
@@ -86,7 +85,7 @@ class TestGetLongShortRatioData:
         self,
         orchestration_service: LongShortRatioOrchestrationService,
         mock_db_session: MagicMock,
-        sample_lsr_data: List[MagicMock],
+        sample_lsr_data: list[MagicMock],
     ):
         """正常系: LSRデータが取得できる"""
         with patch(

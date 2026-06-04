@@ -9,10 +9,9 @@ import inspect
 import logging
 import random
 import uuid
-from typing import Callable, List
+from collections.abc import Callable
 
 from ...config.ga.ga_config import GAConfig
-
 from ..conditions import ConditionGroup
 from ..entry import EntryGene, create_random_entry_gene
 from ..exit import ExitGene, create_random_exit_gene
@@ -83,9 +82,7 @@ _MUTATION_CONFIG_CREATION_ATTR_MAP = {
 }
 
 
-def _get_creation_probability_multiplier(
-    config: GAConfig, attr_name: str
-) -> float:
+def _get_creation_probability_multiplier(config: GAConfig, attr_name: str) -> float:
     """突然変異で使用する生成確率倍率を安全に取得する。"""
     nested_attr_name = _MUTATION_CONFIG_CREATION_ATTR_MAP.get(attr_name)
     mutation_config = getattr(config, "mutation_config", None)
@@ -105,9 +102,7 @@ def _get_creation_probability_multiplier(
     return 0.0
 
 
-def _create_sub_gene(
-    creator_func: Callable[..., object], config: object
-) -> object:
+def _create_sub_gene(creator_func: Callable[..., object], config: object) -> object:
     """生成関数のシグネチャに応じて設定を渡し分ける。"""
     try:
         signature = inspect.signature(creator_func)
@@ -131,9 +126,7 @@ def _iter_mutable_sub_gene_specs(
         rule = _SUB_GENE_MUTATION_RULES.get(gene_class)  # type: ignore[arg-type]
 
         if rule is None and field_name in _LONG_SHORT_SUB_GENE_RULES:
-            _, creator_func, creation_prob_attr = _LONG_SHORT_SUB_GENE_RULES[
-                field_name
-            ]
+            _, creator_func, creation_prob_attr = _LONG_SHORT_SUB_GENE_RULES[field_name]
             rule = (creator_func, creation_prob_attr)
 
         if rule is None:
@@ -144,9 +137,7 @@ def _iter_mutable_sub_gene_specs(
             (
                 field_name,
                 creator_func,
-                _get_creation_probability_multiplier(
-                    config, creation_prob_attr
-                ),
+                _get_creation_probability_multiplier(config, creation_prob_attr),
             )
         )
 
@@ -155,9 +146,7 @@ def _iter_mutable_sub_gene_specs(
 
 def mutate_indicators(mutated, mutation_rate: float, config: GAConfig) -> None:
     """指標遺伝子の突然変異処理。"""
-    min_multiplier, max_multiplier = (
-        config.mutation_config.indicator_param_range
-    )
+    min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
     integer_param_names = {
         "period",
@@ -205,30 +194,23 @@ def mutate_indicators(mutated, mutation_rate: float, config: GAConfig) -> None:
                                 max_p,
                                 int(
                                     param_value
-                                    * random.uniform(
-                                        min_multiplier, max_multiplier
-                                    )
+                                    * random.uniform(min_multiplier, max_multiplier)
                                 ),
                             ),
                         )
                     elif was_integer or param_name in integer_param_names:
                         new_value = int(
-                            param_value
-                            * random.uniform(min_multiplier, max_multiplier)
+                            param_value * random.uniform(min_multiplier, max_multiplier)
                         )
-                        mutated.indicators[i].parameters[param_name] = max(
-                            1, new_value
-                        )
+                        mutated.indicators[i].parameters[param_name] = max(1, new_value)
                     else:
                         mutated.indicators[i].parameters[param_name] = (
-                            param_value
-                            * random.uniform(min_multiplier, max_multiplier)
+                            param_value * random.uniform(min_multiplier, max_multiplier)
                         )
 
     if (
         random.random()
-        < mutation_rate
-        * config.mutation_config.indicator_add_delete_probability
+        < mutation_rate * config.mutation_config.indicator_add_delete_probability
     ):
         max_indicators = config.max_indicators
         if (
@@ -241,9 +223,7 @@ def mutate_indicators(mutated, mutation_rate: float, config: GAConfig) -> None:
 
             validator = GeneValidator()
             new_indicators = generate_random_indicators(config)
-            allowed_indicators = {
-                indicator.type for indicator in new_indicators
-            }
+            allowed_indicators = {indicator.type for indicator in new_indicators}
             valid_new_indicators = [
                 indicator
                 for indicator in new_indicators
@@ -257,14 +237,10 @@ def mutate_indicators(mutated, mutation_rate: float, config: GAConfig) -> None:
             ]
             if valid_new_indicators:
                 mutated.indicators.append(random.choice(valid_new_indicators))
-        elif len(
-            mutated.indicators
-        ) > config.min_indicators and random.random() < (
+        elif len(mutated.indicators) > config.min_indicators and random.random() < (
             1 - config.mutation_config.indicator_add_vs_delete_probability
         ):
-            mutated.indicators.pop(
-                random.randint(0, len(mutated.indicators) - 1)
-            )
+            mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
 
 def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
@@ -276,9 +252,7 @@ def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
                 random.random()
                 < config.mutation_config.condition_operator_switch_probability
             ):
-                condition.operator = (
-                    "AND" if condition.operator == "OR" else "OR"
-                )
+                condition.operator = "AND" if condition.operator == "OR" else "OR"
             elif condition.conditions:
                 idx = random.randint(0, len(condition.conditions) - 1)
                 mutate_item(condition.conditions[idx])
@@ -288,9 +262,7 @@ def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
                     config.mutation_config.valid_condition_operators
                 )
             except AttributeError:
-                logger.debug(
-                    f"条件変異をスキップ: 未知の型 {type(condition).__name__}"
-                )
+                logger.debug(f"条件変異をスキップ: 未知の型 {type(condition).__name__}")
 
     mutation_threshold = (
         mutation_rate * config.mutation_config.condition_change_multiplier
@@ -299,8 +271,7 @@ def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
     def maybe_mutate_branch(conditions):
         if (
             conditions
-            and random.random()
-            < config.mutation_config.condition_selection_probability
+            and random.random() < config.mutation_config.condition_selection_probability
         ):
             idx = random.randint(0, len(conditions) - 1)
             mutate_item(conditions[idx])
@@ -316,10 +287,10 @@ def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
 
 
 def mutate_indicators_batch(
-    individuals: List["StrategyGene"], mutation_rate: float, config: "GAConfig"
-) -> List["StrategyGene"]:
+    individuals: list["StrategyGene"], mutation_rate: float, config: "GAConfig"
+) -> list["StrategyGene"]:
     """指標遺伝子の突然変異処理（バッチ版）。"""
-    results: List["StrategyGene"] = []
+    results: list[StrategyGene] = []
     for individual in individuals:
         try:
             mutated = individual.clone()
@@ -331,10 +302,10 @@ def mutate_indicators_batch(
 
 
 def mutate_conditions_batch(
-    individuals: List[StrategyGene], mutation_rate: float, config: GAConfig
-) -> List[StrategyGene]:
+    individuals: list[StrategyGene], mutation_rate: float, config: GAConfig
+) -> list[StrategyGene]:
     """条件の突然変異処理（バッチ版）。"""
-    results: List[StrategyGene] = []
+    results: list[StrategyGene] = []
     for individual in individuals:
         try:
             mutated = individual.clone()
@@ -367,10 +338,7 @@ def mutate_strategy_gene(
                 config.mutation_config.risk_param_range
             )
             for key, value in mutated.risk_management.items():
-                if (
-                    isinstance(value, (int, float))
-                    and random.random() < mutation_rate
-                ):
+                if isinstance(value, (int, float)) and random.random() < mutation_rate:
                     if key == "position_size":
                         mutated.risk_management[key] = max(
                             0.01,
@@ -400,9 +368,7 @@ def mutate_strategy_gene(
                 sub_gene = getattr(mutated, field_name)
                 if sub_gene:
                     if random.random() < mutation_rate:
-                        setattr(
-                            mutated, field_name, sub_gene.mutate(mutation_rate)
-                        )
+                        setattr(mutated, field_name, sub_gene.mutate(mutation_rate))
                 elif random.random() < mutation_rate * creation_prob_mult:
                     setattr(
                         mutated,
@@ -429,9 +395,7 @@ def mutate_strategy_gene(
                 from ...generators.random_gene_generator import RandomGeneGenerator
 
                 generator = RandomGeneGenerator(config)
-                mutated.tool_genes = generator._enforce_filter_limit(
-                    mutated.tool_genes
-                )
+                mutated.tool_genes = generator._enforce_filter_limit(mutated.tool_genes)
         except Exception:
             pass
 
@@ -455,8 +419,8 @@ def mutate_strategy_gene(
 
 
 def mutate_strategy_gene_batch(
-    individuals: List[object], config: GAConfig, mutation_rate: float = 0.1
-) -> List[object]:
+    individuals: list[object], config: GAConfig, mutation_rate: float = 0.1
+) -> list[object]:
     """StrategyGene の突然変異をバッチで実行する。"""
     return [
         mutate_strategy_gene(  # type: ignore[arg-type]
@@ -490,9 +454,7 @@ def adaptive_mutate_strategy_gene(
             import numpy as np
 
             variance = np.var(fitnesses)
-            variance_threshold = (
-                config.mutation_config.adaptive_variance_threshold
-            )
+            variance_threshold = config.mutation_config.adaptive_variance_threshold
 
             if variance > variance_threshold:
                 adaptive_rate = (
@@ -507,14 +469,10 @@ def adaptive_mutate_strategy_gene(
 
             adaptive_rate = max(0.01, min(1.0, adaptive_rate))
 
-        mutated = mutate_strategy_gene(
-            gene, config, mutation_rate=adaptive_rate
-        )
+        mutated = mutate_strategy_gene(gene, config, mutation_rate=adaptive_rate)
         mutated.metadata["adaptive_mutation_rate"] = adaptive_rate
         return mutated
 
     except Exception as e:
         logger.error(f"適応的戦略遺伝子突然変異エラー: {e}")
-        return mutate_strategy_gene(
-            gene, config, mutation_rate=base_mutation_rate
-        )
+        return mutate_strategy_gene(gene, config, mutation_rate=base_mutation_rate)

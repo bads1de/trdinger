@@ -79,8 +79,8 @@ class TestLimitFeatures:
         result = strategy._limit_features(mask, scores, config)
         assert result.sum() == 2
         # スコアが高い特徴量（f2: 0.9, f4: 0.8）が選択されるはず
-        assert result[1] == True  # f2
-        assert result[3] == True  # f4
+        assert result[1]  # f2
+        assert result[3]  # f4
 
     def test_limit_preserves_highest_scores(self):
         """最高スコアの特徴量が保持されること"""
@@ -92,6 +92,6 @@ class TestLimitFeatures:
         result = strategy._limit_features(mask, scores, config)
         assert result.sum() == 3
         # スコアの高い順: f3(0.9), f5(0.7), f2(0.5)
-        assert result[2] == True  # f3
-        assert result[4] == True  # f5
-        assert result[1] == True  # f2
+        assert result[2]  # f3
+        assert result[4]  # f5
+        assert result[1]  # f2

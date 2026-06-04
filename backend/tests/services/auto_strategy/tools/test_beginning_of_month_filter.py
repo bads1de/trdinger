@@ -49,7 +49,6 @@ class TestBeginningOfMonthFilter:
             patch("random.random", side_effect=[0.5, 0.1, 0.5, 0.1]),
             patch("random.randint", return_value=1),
         ):
-
             # 1回目: enabled変化なし, days変化あり (+1)
             params = {"enabled": True, "days_from_start": 2}
             new_params = filter_tool.mutate_params(params)

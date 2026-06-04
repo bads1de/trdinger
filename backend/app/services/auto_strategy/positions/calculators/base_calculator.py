@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -22,31 +23,29 @@ class BaseCalculator(ABC):
     @abstractmethod
     def calculate(
         self, gene, account_balance: float, current_price: float, **kwargs
-    ) -> Dict[str, object]:
+    ) -> dict[str, object]:
         """計算実行（サブクラスで実装）"""
 
     def _get_param(self, gene, attr_name: str, default: Any) -> Any:
         """遺伝子から安全にパラメータを取得"""
         return getattr(gene, attr_name, default)
 
-    def _get_risk_params(self, gene) -> Dict[str, Any]:
+    def _get_risk_params(self, gene) -> dict[str, Any]:
         """共通のリスク管理パラメータを一括取得"""
         return {
             "var_confidence": self._get_param(gene, "var_confidence", 0.95),
             "var_lookback": self._get_param(gene, "var_lookback", 100),
             "max_var_ratio": self._get_param(gene, "max_var_ratio", 0.0),
-            "max_es_ratio": self._get_param(
-                gene, "max_expected_shortfall_ratio", 0.0
-            ),
+            "max_es_ratio": self._get_param(gene, "max_expected_shortfall_ratio", 0.0),
         }
 
     def _apply_size_limits_and_finalize(
         self,
         position_size: float,
-        details: Dict[str, Any],
-        warnings: List[str],
+        details: dict[str, Any],
+        warnings: list[str],
         gene,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         計算されたサイズに対して最小・最大制限を適用し、最終結果を構築
 
@@ -78,7 +77,7 @@ class BaseCalculator(ABC):
         current_price: float,
         fallback_value: float = 0,
         warning_msg: str = "現在価格が無効",
-        warnings_list: Optional[List[str]] = None,
+        warnings_list: list[str] | None = None,
     ) -> float:
         """
         現在価格の妥当性をチェックしてから計算を実行
@@ -105,10 +104,10 @@ class BaseCalculator(ABC):
     def _create_calculation_result(
         self,
         position_size: float,
-        details: Dict[str, Any],
-        warnings: List[str],
+        details: dict[str, Any],
+        warnings: list[str],
         gene,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """計算結果の統一作成"""
         return self._apply_size_limits_and_finalize(
             position_size, details, warnings, gene

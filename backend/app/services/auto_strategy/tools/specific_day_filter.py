@@ -6,7 +6,7 @@
 """
 
 import random
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
@@ -26,9 +26,7 @@ class SpecificDayFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """
         指定された曜日かどうかを判定
 
@@ -52,7 +50,7 @@ class SpecificDayFilter(BaseTool):
 
         return current_day in skip_days
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         パラメータを突然変異
 

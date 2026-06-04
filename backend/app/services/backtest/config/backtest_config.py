@@ -6,7 +6,7 @@
 
 from datetime import datetime
 from math import isclose
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -23,7 +23,7 @@ VALID_TIMEFRAMES = SUPPORTED_TIMEFRAMES
 class BacktestRunConfigValidationError(Exception):
     """バックテスト設定検証エラー"""
 
-    def __init__(self, message: str, errors: Optional[List[str]] = None):
+    def __init__(self, message: str, errors: list[str] | None = None):
         super().__init__(message)
         self.errors = errors or []
 
@@ -31,22 +31,18 @@ class BacktestRunConfigValidationError(Exception):
 class GeneratedGAParameters(BaseModel):
     """GA生成戦略のパラメータ"""
 
-    strategy_gene: Dict[
-        str, Any
-    ]  # 将来的にはStrategyGeneモデルそのものに置き換える
+    strategy_gene: dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
     volatility_gate_enabled: bool = False
-    volatility_model_path: Optional[str] = None
-    ml_predictor: Optional[Any] = None  # MLモデルインスタンス
-    evaluation_start: Optional[Any] = None
-    minute_data: Optional[Any] = (
-        None  # DataFrameなどはPydanticで検証しにくいためAny
-    )
+    volatility_model_path: str | None = None
+    ml_predictor: Any | None = None  # MLモデルインスタンス
+    evaluation_start: Any | None = None
+    minute_data: Any | None = None  # DataFrameなどはPydanticで検証しにくいためAny
     enable_early_termination: bool = False
-    early_termination_max_drawdown: Optional[float] = None
-    early_termination_min_trades: Optional[int] = None
+    early_termination_max_drawdown: float | None = None
+    early_termination_min_trades: int | None = None
     early_termination_min_trade_check_progress: float = 0.5
     early_termination_trade_pace_tolerance: float = 0.5
-    early_termination_min_expectancy: Optional[float] = None
+    early_termination_min_expectancy: float | None = None
     early_termination_expectancy_min_trades: int = 5
     early_termination_expectancy_progress: float = 0.6
 
@@ -55,7 +51,7 @@ class StrategyConfig(BaseModel):
     """戦略設定"""
 
     strategy_type: Literal["GENERATED_GA", "MANUAL"]
-    parameters: Union[GeneratedGAParameters, Dict[str, Any]]
+    parameters: GeneratedGAParameters | dict[str, Any]
 
     @field_validator("parameters", mode="before")
     @classmethod
@@ -104,12 +100,8 @@ class BacktestRunConfig(BaseModel):
                 slippage_value = float(slippage)
             except (TypeError, ValueError):
                 return working
-            if not isclose(
-                spread_value, slippage_value, rel_tol=0.0, abs_tol=1e-12
-            ):
-                raise ValueError(
-                    "spread と slippage は同じ値である必要があります"
-                )
+            if not isclose(spread_value, slippage_value, rel_tol=0.0, abs_tol=1e-12):
+                raise ValueError("spread と slippage は同じ値である必要があります")
             return working
 
         if spread is None and slippage is not None:
@@ -140,7 +132,7 @@ class BacktestRunConfig(BaseModel):
     @model_validator(mode="after")
     def validate_dates(self) -> "BacktestRunConfig":
         """日付の整合性を検証"""
-        errors: List[str] = []
+        errors: list[str] = []
 
         start_date, end_date = normalize_datetimes_for_comparison(
             self.start_date, self.end_date

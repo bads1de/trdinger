@@ -16,11 +16,13 @@ class TestEvaluationStrategy:
     def setup_method(self):
         self.evaluator = Mock()
         self.evaluator._perform_single_evaluation_report = Mock(
-            side_effect=lambda _gene, _backtest_config, _config, **kwargs: ScenarioEvaluation(
-                name=kwargs.get("scenario_name", "single"),
-                fitness=(0.0,),
-                passed=True,
-                metadata=(kwargs.get("metadata") or {}).copy(),
+            side_effect=lambda _gene, _backtest_config, _config, **kwargs: (
+                ScenarioEvaluation(
+                    name=kwargs.get("scenario_name", "single"),
+                    fitness=(0.0,),
+                    passed=True,
+                    metadata=(kwargs.get("metadata") or {}).copy(),
+                )
             )
         )
         self.strategy = EvaluationStrategy(self.evaluator)

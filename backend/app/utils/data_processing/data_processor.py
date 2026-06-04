@@ -6,7 +6,7 @@ transformers, pipelines, validatorsモジュールを統一的に操作可能。
 """
 
 import logging
-from typing import List, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -55,7 +55,7 @@ class DataProcessor:
     def clean_and_validate_data(
         self,
         df: pd.DataFrame,
-        required_columns: List[str],
+        required_columns: list[str],
         interpolate: bool = True,
         optimize: bool = True,
     ) -> pd.DataFrame:
@@ -171,7 +171,9 @@ class DataProcessor:
         # 特別なOHLCカラムの補間後検証と修正（ベクトル化）
         if all(col in result_df.columns for col in ["open", "high", "low", "close"]):
             # NaN値を含まない行のみ抽出
-            ohlc_mask = result_df[["open", "high", "low", "close"]].notnull().all(axis=1)
+            ohlc_mask = (
+                result_df[["open", "high", "low", "close"]].notnull().all(axis=1)
+            )
             ohlc_df = result_df.loc[ohlc_mask, ["open", "high", "low", "close"]].copy()
 
             if not ohlc_df.empty:
@@ -230,7 +232,9 @@ class DataProcessor:
         # funding_rateの範囲クリップ (-1から1)
         if "funding_rate" in result_df.columns:
             # NaNとinfを処理してからクリップ
-            funding_rate_clean = _replace_inf_with_nan(cast(pd.Series, result_df["funding_rate"]))
+            funding_rate_clean = _replace_inf_with_nan(
+                cast(pd.Series, result_df["funding_rate"])
+            )
             # Pandas Series比較を安全に行う
             below_min = (funding_rate_clean < -1).sum()
             above_max = (funding_rate_clean > 1).sum()
@@ -244,7 +248,9 @@ class DataProcessor:
 
         # open_interestは負値にならないようにクリップ
         if "open_interest" in result_df.columns:
-            oi_clean = _replace_inf_with_nan(cast(pd.Series, result_df["open_interest"]))
+            oi_clean = _replace_inf_with_nan(
+                cast(pd.Series, result_df["open_interest"])
+            )
             # Pandas Series比較を安全に行う
             before_count = (oi_clean < 0).sum()
             if before_count > 0:

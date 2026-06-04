@@ -5,7 +5,7 @@ Volatility Calculator
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ...genes import TPSLGene
 from .base_calculator import BaseTPSLCalculator
@@ -25,11 +25,11 @@ class VolatilityCalculator(BaseTPSLCalculator):
     def _do_calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]],
+        tpsl_gene: TPSLGene | None,
+        market_data: dict[str, Any] | None,
         position_direction: float,
         **kwargs,
-    ) -> Tuple[float, float, float, Dict[str, Any]]:
+    ) -> tuple[float, float, float, dict[str, Any]]:
         """
         ボラティリティ方式（ATR）によるTP/SL計算の実装
 
@@ -79,10 +79,10 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
     def _get_atr_value(
         self,
-        market_data: Optional[Dict[str, Any]],
+        market_data: dict[str, Any] | None,
         atr_period: int,
         current_price: float,
-    ) -> Optional[float]:
+    ) -> float | None:
         """ATR値を取得または計算"""
         if not market_data:
             return None
@@ -93,9 +93,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
         # OHLCデータからATRを計算
         if "ohlc_data" in market_data:
-            return self._calculate_atr_from_ohlc(
-                market_data["ohlc_data"], atr_period
-            )
+            return self._calculate_atr_from_ohlc(market_data["ohlc_data"], atr_period)
 
         # ボラティリティから推定
         if "volatility" in market_data:
@@ -105,7 +103,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
     def _calculate_atr_from_ohlc(
         self, ohlc_data: list, atr_period: int
-    ) -> Optional[float]:
+    ) -> float | None:
         """OHLCデータからATRを計算"""
         try:
             if len(ohlc_data) < atr_period:
@@ -117,9 +115,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
                 low = ohlc_data[i]["low"]
                 prev_close = ohlc_data[i - 1]["close"]
 
-                tr = max(
-                    high - low, abs(high - prev_close), abs(low - prev_close)
-                )
+                tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
                 true_ranges.append(tr)
 
             # ATR = 平均True Range

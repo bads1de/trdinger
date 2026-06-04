@@ -4,7 +4,6 @@ generatorsパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-
 import app.services.auto_strategy.generators as generators_package
 
 

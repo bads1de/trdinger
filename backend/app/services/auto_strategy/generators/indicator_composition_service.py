@@ -5,7 +5,6 @@ IndicatorCompositionService
 
 import logging
 import random
-from typing import List
 
 from app.services.indicators import TechnicalIndicatorService
 
@@ -35,8 +34,8 @@ class IndicatorCompositionService:
         self.indicator_service = TechnicalIndicatorService()
 
     def enhance_with_ma_cross_strategy(
-        self, indicators: List[IndicatorGene], available_indicators: List[str]
-    ) -> List[IndicatorGene]:
+        self, indicators: list[IndicatorGene], available_indicators: list[str]
+    ) -> list[IndicatorGene]:
         """
         MAクロス戦略を可能にするために複数のMA指標を追加（確率的アプローチ）。
 
@@ -50,17 +49,13 @@ class IndicatorCompositionService:
         try:
             # 現在のMA指標数をカウント
             ma_count = sum(
-                1
-                for ind in indicators
-                if ind.type in MOVING_AVERAGE_INDICATORS
+                1 for ind in indicators if ind.type in MOVING_AVERAGE_INDICATORS
             )
 
             # 確率的にMAクロスを導入（強制的ではない）
             rnd_val = random.random()
 
-            if (
-                ma_count < 2 and rnd_val < self.MA_CROSS_PROBABILITY
-            ):  # 25%の確率で導入
+            if ma_count < 2 and rnd_val < self.MA_CROSS_PROBABILITY:  # 25%の確率で導入
                 # MA指標プールを準備
                 ma_pool = [
                     name
@@ -115,7 +110,7 @@ class IndicatorCompositionService:
             logger.debug(f"デフォルトパラメータ取得エラー: {e}")
             return {"period": self.DEFAULT_MA_PERIOD}  # SMA用フォールバック
 
-    def _get_existing_periods(self, indicators: List[IndicatorGene]) -> set:
+    def _get_existing_periods(self, indicators: list[IndicatorGene]) -> set:
         """
         リスト内の指標が使用しているperiodパラメータの集合を取得
 
@@ -134,7 +129,7 @@ class IndicatorCompositionService:
         return periods
 
     def _choose_ma_with_unique_period(
-        self, ma_pool: List[str], existing_periods: set
+        self, ma_pool: list[str], existing_periods: set
     ) -> str | None:
         """
         既存の指標と重複しないperiodを持つMAを選択
@@ -148,9 +143,7 @@ class IndicatorCompositionService:
         """
         try:
             # 優先MAから選択
-            preferred = [
-                name for name in ma_pool if name in PREFERRED_MA_INDICATORS
-            ]
+            preferred = [name for name in ma_pool if name in PREFERRED_MA_INDICATORS]
             candidates = preferred or ma_pool
 
             # ランダムに選択
@@ -166,7 +159,7 @@ class IndicatorCompositionService:
             logger.error(f"MA選択エラー: {e}")
             return None
 
-    def _remove_non_ma_indicator(self, indicators: List[IndicatorGene]):
+    def _remove_non_ma_indicator(self, indicators: list[IndicatorGene]):
         """非MA指標を1つ削除"""
         for i, ind in enumerate(indicators):
             if ind.type not in MOVING_AVERAGE_INDICATORS:

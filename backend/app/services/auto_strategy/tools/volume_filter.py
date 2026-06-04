@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
@@ -41,9 +41,7 @@ class VolumeFilter(BaseTool):
         priority="optional",
     )
 
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """
         出来高が低ければエントリーをスキップ
 
@@ -67,27 +65,19 @@ class VolumeFilter(BaseTool):
         )
         avg_volume = context.extra_data.get("avg_volume")
 
-        if (
-            current_volume is not None
-            and avg_volume is not None
-            and avg_volume > 0
-        ):
+        if current_volume is not None and avg_volume is not None and avg_volume > 0:
             volume_ratio = current_volume / avg_volume
             return volume_ratio < min_volume_ratio
 
         # current_volumeがcontextから取れる場合（extra_dataがない場合）
-        if (
-            context.current_volume > 0
-            and avg_volume is not None
-            and avg_volume > 0
-        ):
+        if context.current_volume > 0 and avg_volume is not None and avg_volume > 0:
             volume_ratio = context.current_volume / avg_volume
             return volume_ratio < min_volume_ratio
 
         # データがない場合はスキップしない
         return False
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """パラメータの突然変異"""
         import random
 
@@ -98,8 +88,7 @@ class VolumeFilter(BaseTool):
                 0.1,
                 min(
                     1.5,
-                    new_params.get("min_volume_ratio", 0.5)
-                    * random.uniform(0.8, 1.2),
+                    new_params.get("min_volume_ratio", 0.5) * random.uniform(0.8, 1.2),
                 ),
             )
         if random.random() < 0.2:
@@ -107,10 +96,7 @@ class VolumeFilter(BaseTool):
                 5,
                 min(
                     60,
-                    int(
-                        new_params.get("volume_period", 20)
-                        * random.uniform(0.8, 1.2)
-                    ),
+                    int(new_params.get("volume_period", 20) * random.uniform(0.8, 1.2)),
                 ),
             )
 

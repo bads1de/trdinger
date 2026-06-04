@@ -8,7 +8,7 @@ TP/SL計算サービス
 import logging
 import math
 import threading
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ..genes import TPSLGene, TPSLMethod
 from .calculator import TPSLCalculatorFactory
@@ -26,7 +26,7 @@ class TPSLService:
     def __init__(self):
         """初期化"""
         # ファクトリーを使用して計算機を管理（スレッドセーフなキャッシュ）
-        self._calculator_cache: Dict[TPSLMethod, Any] = {}
+        self._calculator_cache: dict[TPSLMethod, Any] = {}
         self._cache_lock = threading.Lock()
 
     def _get_calculator(self, method: TPSLMethod):
@@ -51,13 +51,13 @@ class TPSLService:
     def calculate_tpsl_prices(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene] = None,
-        stop_loss_pct: Optional[float] = None,
-        take_profit_pct: Optional[float] = None,
-        risk_management: Optional[Dict[str, Any]] = None,
-        market_data: Optional[Dict[str, Any]] = None,
+        tpsl_gene: TPSLGene | None = None,
+        stop_loss_pct: float | None = None,
+        take_profit_pct: float | None = None,
+        risk_management: dict[str, Any] | None = None,
+        market_data: dict[str, Any] | None = None,
         position_direction: float = 1.0,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """
         統一的なTP/SL価格計算
 
@@ -78,18 +78,12 @@ class TPSLService:
         @safe_operation(
             context="TP/SL価格計算",
             is_api_call=False,
-            default_return=self._calculate_fallback(
-                current_price, position_direction
-            ),
+            default_return=self._calculate_fallback(current_price, position_direction),
         )
         def _calculate_tpsl_prices():
             """TP/SL価格計算の内部実行関数"""
             # TP/SL遺伝子が利用可能な場合（GA最適化対象）
-            if (
-                tpsl_gene
-                and hasattr(tpsl_gene, "enabled")
-                and tpsl_gene.enabled
-            ):
+            if tpsl_gene and hasattr(tpsl_gene, "enabled") and tpsl_gene.enabled:
                 return self._calculate_from_gene(
                     current_price, tpsl_gene, market_data, position_direction
                 )
@@ -109,9 +103,9 @@ class TPSLService:
         self,
         current_price: float,
         tpsl_gene: TPSLGene,
-        market_data: Optional[Dict[str, Any]],
+        market_data: dict[str, Any] | None,
         position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """
         TP/SL遺伝子からTP/SL価格を計算（リファクタリング済み）
 
@@ -129,9 +123,7 @@ class TPSLService:
         @safe_operation(
             context="CalculatorベースTP/SL計算",
             is_api_call=False,
-            default_return=self._calculate_fallback(
-                current_price, position_direction
-            ),
+            default_return=self._calculate_fallback(current_price, position_direction),
         )
         def _calculate_from_gene():
             """遺伝子ベースのTP/SL価格計算の内部実行関数"""
@@ -162,7 +154,7 @@ class TPSLService:
         self,
         current_price: float,
         position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """フォールバック計算（デフォルト値）"""
         default_sl_pct = 0.03  # 3%
         default_tp_pct = 0.06  # 6%
@@ -174,11 +166,11 @@ class TPSLService:
     def _calculate_basic_tpsl_prices(
         self,
         current_price: float,
-        stop_loss_pct: Optional[float],
-        take_profit_pct: Optional[float],
-        risk_management: Dict[str, Any],
+        stop_loss_pct: float | None,
+        take_profit_pct: float | None,
+        risk_management: dict[str, Any],
         position_direction: float = 1.0,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """
         基本的なTP/SL価格計算（従来方式）
 
@@ -229,10 +221,10 @@ class TPSLService:
     def _calculate_simple_tpsl_prices(
         self,
         current_price: float,
-        stop_loss_pct: Optional[float],
-        take_profit_pct: Optional[float],
+        stop_loss_pct: float | None,
+        take_profit_pct: float | None,
         position_direction: float = 1.0,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """基本的なTP/SL価格計算（エラーハンドリング強化版）"""
         try:
             # 入力値検証
@@ -263,7 +255,7 @@ class TPSLService:
             # フォールバック
             return self._calculate_fallback(current_price, position_direction)
 
-    def _is_advanced_tpsl_used(self, risk_management: Dict[str, Any]) -> bool:
+    def _is_advanced_tpsl_used(self, risk_management: dict[str, Any]) -> bool:
         """高度なTP/SL計算方式が使用されているかチェック"""
         return any(
             key in risk_management
@@ -278,11 +270,11 @@ class TPSLService:
     def _calculate_advanced_tpsl_prices(
         self,
         current_price: float,
-        stop_loss_pct: Optional[float],
-        take_profit_pct: Optional[float],
-        risk_management: Dict[str, Any],
+        stop_loss_pct: float | None,
+        take_profit_pct: float | None,
+        risk_management: dict[str, Any],
         position_direction: float = 1.0,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """高度なTP/SL価格計算（リスクリワード比、ボラティリティベースなど）"""
         try:
             # 使用された戦略を取得
@@ -323,10 +315,10 @@ class TPSLService:
     def _build_price_pair(
         self,
         current_price: float,
-        stop_loss_pct: Optional[float],
-        take_profit_pct: Optional[float],
+        stop_loss_pct: float | None,
+        take_profit_pct: float | None,
         position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """割合からSL/TP価格を生成する共通処理"""
         # ファクトリーを使用して固定パーセンテージ計算機を取得
         calculator = self._get_calculator(TPSLMethod.FIXED_PERCENTAGE)
@@ -340,10 +332,10 @@ class TPSLService:
     def _apply_volatility_adjustments(
         self,
         current_price: float,
-        sl_price: Optional[float],
-        tp_price: Optional[float],
-        risk_management: Dict[str, Any],
-    ) -> Tuple[Optional[float], Optional[float]]:
+        sl_price: float | None,
+        tp_price: float | None,
+        risk_management: dict[str, Any],
+    ) -> tuple[float | None, float | None]:
         """ボラティリティベース調整を適用"""
         # 現在は基本実装のみ（将来的にATRベース調整を追加）
         return sl_price, tp_price
@@ -351,10 +343,10 @@ class TPSLService:
     def _apply_risk_reward_adjustments(
         self,
         current_price: float,
-        sl_price: Optional[float],
-        tp_price: Optional[float],
-        risk_management: Dict[str, Any],
-    ) -> Tuple[Optional[float], Optional[float]]:
+        sl_price: float | None,
+        tp_price: float | None,
+        risk_management: dict[str, Any],
+    ) -> tuple[float | None, float | None]:
         """リスクリワード比ベース調整を適用"""
         try:
             target_rr_ratio = risk_management.get("_risk_reward_ratio")

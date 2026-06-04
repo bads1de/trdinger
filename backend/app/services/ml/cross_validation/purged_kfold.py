@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -30,14 +30,12 @@ class PurgedKFold(_BaseKFold):
     def __init__(
         self,
         n_splits: int = 5,
-        t1: Optional[pd.Series] = None,
+        t1: pd.Series | None = None,
         pct_embargo: float = 0.01,
     ):
         if not isinstance(t1, pd.Series):
             raise ValueError("t1 must be a pandas Series with DatetimeIndex.")
-        if not all(
-            isinstance(idx, (pd.Timestamp, np.datetime64)) for idx in t1.index
-        ):
+        if not all(isinstance(idx, (pd.Timestamp, np.datetime64)) for idx in t1.index):
             raise ValueError("t1 index must be of type DatetimeIndex.")
         if not all(
             isinstance(val, (pd.Timestamp, np.datetime64)) or pd.isna(val)
@@ -54,8 +52,8 @@ class PurgedKFold(_BaseKFold):
     def split(
         self,
         X: pd.DataFrame,
-        y: Optional[pd.Series] = None,
-        groups: Optional[Any] = None,
+        y: pd.Series | None = None,
+        groups: Any | None = None,
     ):
         """
         データを訓練セットとテストセットに分割するためのインデックスを生成します。
@@ -77,12 +75,8 @@ class PurgedKFold(_BaseKFold):
             tuple[np.ndarray, np.ndarray]: (訓練インデックス, テストインデックス) のペア。
         """
         _ = groups
-        if not isinstance(X, pd.DataFrame) or not X.index.equals(
-            self.t1.index
-        ):
-            raise ValueError(
-                "X must be a DataFrame and have the same index as t1."
-            )
+        if not isinstance(X, pd.DataFrame) or not X.index.equals(self.t1.index):
+            raise ValueError("X must be a DataFrame and have the same index as t1.")
 
         indices = np.arange(len(X))
         fold_size = len(X) // self.n_splits
@@ -107,9 +101,7 @@ class PurgedKFold(_BaseKFold):
             test_max_t1_ns = np.max(t1_subset_ints)  # type: ignore
 
             if test_max_t1_ns < 0:  # 全てNaTの場合
-                test_max_t1_ns = x_index_ints[
-                    end - 1
-                ]  # テストセットの末尾を使用
+                test_max_t1_ns = x_index_ints[end - 1]  # テストセットの末尾を使用
 
             # エンバーゴ期間計算 (ベクトル化)
             embargo_sec = (
@@ -125,7 +117,7 @@ class PurgedKFold(_BaseKFold):
             train_idx = indices[train_mask]
 
             if len(train_idx) == 0:
-                logger.warning(f"Fold {i+1}: Training set is empty. Skipping.")
+                logger.warning(f"Fold {i + 1}: Training set is empty. Skipping.")
                 continue
 
             yield train_idx, test_idx

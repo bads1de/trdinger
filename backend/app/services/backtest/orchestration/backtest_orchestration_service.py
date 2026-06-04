@@ -7,7 +7,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -52,9 +52,9 @@ class BacktestOrchestrationService:
         db: Session,
         limit: int = 50,
         offset: int = 0,
-        symbol: Optional[str] = None,
-        strategy_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        symbol: str | None = None,
+        strategy_name: str | None = None,
+    ) -> dict[str, Any]:
         """
         条件に合致するバックテスト結果の一覧を取得します。
 
@@ -97,7 +97,7 @@ class BacktestOrchestrationService:
 
     async def get_backtest_result_by_id(
         self, db: Session, result_id: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         ID指定でバックテスト結果を取得
 
@@ -129,7 +129,7 @@ class BacktestOrchestrationService:
 
     async def delete_backtest_result(
         self, db: Session, result_id: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         バックテスト結果を削除
 
@@ -159,13 +159,11 @@ class BacktestOrchestrationService:
                     status_code=404,
                 )
 
-            return api_response(
-                success=True, message="バックテスト結果を削除しました"
-            )
+            return api_response(success=True, message="バックテスト結果を削除しました")
 
         return _delete_backtest_result()
 
-    async def delete_all_backtest_results(self, db: Session) -> Dict[str, Any]:
+    async def delete_all_backtest_results(self, db: Session) -> dict[str, Any]:
         """
         すべてのバックテスト結果を削除
 
@@ -184,9 +182,7 @@ class BacktestOrchestrationService:
 
             # 関連テーブルのデータをすべて削除
             # 1. 生成された戦略を削除
-            generated_strategy_count = (
-                generated_strategy_repo.delete_all_strategies()
-            )
+            generated_strategy_count = generated_strategy_repo.delete_all_strategies()
 
             # 2. GA実験を削除
             ga_experiment_count = ga_experiment_repo.delete_all_experiments()
@@ -206,7 +202,7 @@ class BacktestOrchestrationService:
 
         return _delete_all_backtest_results()
 
-    async def get_supported_strategies(self) -> Dict[str, Any]:
+    async def get_supported_strategies(self) -> dict[str, Any]:
         """
         サポートされている戦略一覧を取得
 
@@ -218,8 +214,6 @@ class BacktestOrchestrationService:
         def _get_supported_strategies():
             from ..config.constants import SUPPORTED_STRATEGIES
 
-            return api_response(
-                success=True, data={"strategies": SUPPORTED_STRATEGIES}
-            )
+            return api_response(success=True, data={"strategies": SUPPORTED_STRATEGIES})
 
         return _get_supported_strategies()

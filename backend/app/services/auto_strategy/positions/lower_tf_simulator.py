@@ -5,7 +5,6 @@
 """
 
 import logging
-from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -29,7 +28,7 @@ class LowerTimeframeSimulator:
         self,
         order: PendingOrder,
         minute_data: pd.DataFrame,
-    ) -> Tuple[bool, Optional[float]]:
+    ) -> tuple[bool, float | None]:
         """
         1分足データを使用して注文の約定をチェック
 
@@ -86,7 +85,7 @@ class LowerTimeframeSimulator:
 
     def _check_stop_limit_fill_vectorized(
         self, order: PendingOrder, lows: pd.Series, highs: pd.Series
-    ) -> Tuple[bool, Optional[float]]:
+    ) -> tuple[bool, float | None]:
         """逆指値指値注文の約定判定（ベクトル化）"""
         if order.stop_price is None or order.limit_price is None:
             return False, None
@@ -142,9 +141,7 @@ class LowerTimeframeSimulator:
 
         # インデックスがDatetimeIndexの場合
         if isinstance(minute_data.index, pd.DatetimeIndex):
-            mask = (minute_data.index >= bar_start) & (
-                minute_data.index < bar_end
-            )
+            mask = (minute_data.index >= bar_start) & (minute_data.index < bar_end)
             return minute_data.loc[mask]
 
         return minute_data

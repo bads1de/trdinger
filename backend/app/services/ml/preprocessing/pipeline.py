@@ -8,7 +8,7 @@ MLアルゴリズムに最適化された機械学習中心のパイプライン
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pandas as pd
 from sklearn.feature_selection import SelectKBest
@@ -28,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 def create_ml_pipeline(
     feature_selection: bool = False,
-    n_features: Optional[int] = None,
+    n_features: int | None = None,
     selection_method: str = "f_regression",
     scaling: bool = True,
     scaling_method: str = "standard",
-    preprocessing_params: Optional[Dict[str, Any]] = None,
+    preprocessing_params: dict[str, Any] | None = None,
     is_classification: bool = False,
     **kwargs: Any,
 ) -> Pipeline:
@@ -69,9 +69,7 @@ def create_ml_pipeline(
         mutual_info_regression,
     )
 
-    logger.info(
-        f"{'分類' if is_classification else '回帰'}パイプラインを作成中..."
-    )
+    logger.info(f"{'分類' if is_classification else '回帰'}パイプラインを作成中...")
 
     steps: list[tuple[str, Any]] = [
         (
@@ -86,21 +84,15 @@ def create_ml_pipeline(
             "f_regression": f_regression,
             "f_classif": f_classif,
             "mutual_info": (
-                mutual_info_classif
-                if is_classification
-                else mutual_info_regression
+                mutual_info_classif if is_classification else mutual_info_regression
             ),
         }
         if selection_method not in selectors:
-            raise ValueError(
-                f"サポートされていない選択方法: {selection_method}"
-            )
+            raise ValueError(f"サポートされていない選択方法: {selection_method}")
         steps.append(
             (
                 "feature_selection",
-                SelectKBest(
-                    score_func=selectors[selection_method], k=n_features
-                ),
+                SelectKBest(score_func=selectors[selection_method], k=n_features),
             )
         )
 
@@ -112,9 +104,7 @@ def create_ml_pipeline(
             "minmax": MinMaxScaler(),
         }
         if scaling_method not in scalers:
-            raise ValueError(
-                f"サポートされていないスケーリング方法: {scaling_method}"
-            )
+            raise ValueError(f"サポートされていないスケーリング方法: {scaling_method}")
         steps.append(("scaler", scalers[scaling_method]))
 
     return Pipeline(steps)
@@ -150,7 +140,7 @@ def create_regression_pipeline(**kwargs) -> Pipeline:
     return create_ml_pipeline(is_classification=False, **kwargs)
 
 
-def get_ml_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
+def get_ml_pipeline_info(pipeline: Pipeline) -> dict[str, Any]:
     """MLパイプラインの構成情報を取得する。
 
     Pipelineに含まれるステップの種類、数、名前などの
@@ -174,8 +164,7 @@ def get_ml_pipeline_info(pipeline: Pipeline) -> Dict[str, Any]:
         "pipeline_type": "ml",
         "n_steps": len(pipeline.steps),
         "step_names": [step[0] for step in pipeline.steps],
-        "has_preprocessing": "preprocessing"
-        in [step[0] for step in pipeline.steps],
+        "has_preprocessing": "preprocessing" in [step[0] for step in pipeline.steps],
         "has_feature_selection": "feature_selection"
         in [step[0] for step in pipeline.steps],
         "has_scaling": "scaler" in [step[0] for step in pipeline.steps],
@@ -199,7 +188,7 @@ def optimize_ml_pipeline(
     X: pd.DataFrame,
     y: pd.Series,
     task_type: str = "regression",
-    max_features: Optional[int] = None,
+    max_features: int | None = None,
 ) -> Pipeline:
     """
     データ特性に基づいて最適化されたMLパイプラインを作成。

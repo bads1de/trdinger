@@ -6,7 +6,7 @@ GA実行からバックテストまでの完全なフローをテストします
 
 import time
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import Mock, patch
 
 import numpy as np
@@ -347,7 +347,7 @@ class TestExperimentManagement:
             }
             return exp_id
 
-        def get_experiment(exp_id: str) -> Dict[str, Any]:
+        def get_experiment(exp_id: str) -> dict[str, Any]:
             return service.experiments.get(exp_id)
 
         service.create_experiment = create_experiment
@@ -430,7 +430,7 @@ class TestAutoStrategyErrorHandling:
         mock_service = Mock()
         mock_service.run_backtest.side_effect = Exception("Backtest failed")
 
-        result: Dict[str, Any] = {"success": True, "error": ""}
+        result: dict[str, Any] = {"success": True, "error": ""}
         try:
             mock_service.run_backtest({})
         except Exception as e:

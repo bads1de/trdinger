@@ -3,7 +3,8 @@
 """
 
 import logging
-from typing import Any, Callable, List, Optional
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -26,10 +27,10 @@ MIN_ADJUSTMENT_FACTOR = 0.1
 
 
 def _collect_gene_vectors(
-    population: List[Any],
+    population: list[Any],
     gene_serializer: GeneSerializer,
     vectorize_gene: Callable[[StrategyGene], np.ndarray],
-    on_error: Optional[Callable[[Exception], None]] = None,
+    on_error: Callable[[Exception], None] | None = None,
 ) -> tuple[list[np.ndarray], list[int]]:
     """
     個体群から有効な遺伝子ベクトルを収集する。
@@ -57,10 +58,10 @@ def _collect_gene_vectors(
 
 
 def silhouette_based_sharing(
-    population: List[Any],
+    population: list[Any],
     gene_serializer: GeneSerializer,
     vectorize_gene: Callable[[StrategyGene], np.ndarray],
-) -> List[Any]:
+) -> list[Any]:
     """
     シルエットベースの共有を適用する。
     """
@@ -82,9 +83,7 @@ def silhouette_based_sharing(
         if n_clusters < 2:
             return population
 
-        kmeans = KMeans(
-            n_clusters=n_clusters, random_state=RANDOM_STATE, n_init="auto"
-        )
+        kmeans = KMeans(n_clusters=n_clusters, random_state=RANDOM_STATE, n_init="auto")
         labels = kmeans.fit_predict(vectors_array)
 
         silhouette_vals = silhouette_samples(vectors_array, labels)

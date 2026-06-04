@@ -4,7 +4,7 @@
 オープンインタレストAPIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -57,15 +57,15 @@ def override_dependencies(mock_db_session, mock_open_interest_orchestration_serv
         mock_open_interest_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_open_interest_orchestration_service] = (
-        lambda: mock_open_interest_orchestration_service
+    app.dependency_overrides[get_open_interest_orchestration_service] = lambda: (
+        mock_open_interest_orchestration_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_open_interest() -> Dict[str, Any]:
+def sample_open_interest() -> dict[str, Any]:
     """
     サンプルオープンインタレストデータ
 
@@ -82,8 +82,8 @@ def sample_open_interest() -> Dict[str, Any]:
 
 @pytest.fixture
 def sample_open_interest_list(
-    sample_open_interest: Dict[str, Any],
-) -> List[Dict[str, Any]]:
+    sample_open_interest: dict[str, Any],
+) -> list[dict[str, Any]]:
     """
     サンプルオープンインタレストリスト
 
@@ -108,7 +108,7 @@ class TestGetOpenInterestData:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_open_interest_orchestration_service: AsyncMock,
-        sample_open_interest_list: List[Dict[str, Any]],
+        sample_open_interest_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: オープンインタレストが正常に取得できる
@@ -145,7 +145,7 @@ class TestGetOpenInterestData:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_open_interest_orchestration_service: AsyncMock,
-        sample_open_interest: Dict[str, Any],
+        sample_open_interest: dict[str, Any],
     ) -> None:
         """
         正常系: 日付範囲指定でオープンインタレストが取得できる

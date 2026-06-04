@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -30,10 +30,8 @@ class GAGenerationRequest(BaseModel):
         ..., description="実験ID（フロントエンドで生成されたUUID）"
     )
     experiment_name: str = Field(..., description="実験名")
-    base_config: Dict[str, Any] = Field(
-        ..., description="基本バックテスト設定"
-    )
-    ga_config: Dict[str, Any] = Field(..., description="GA設定")
+    base_config: dict[str, Any] = Field(..., description="基本バックテスト設定")
+    ga_config: dict[str, Any] = Field(..., description="GA設定")
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -67,7 +65,7 @@ class GAGenerationResponse(BaseModel):
 
     success: bool
     message: str
-    data: Dict[str, Any]
+    data: dict[str, Any]
     timestamp: str
 
 
@@ -76,7 +74,7 @@ class GAResultResponse(BaseModel):
 
     success: bool
     message: str
-    data: Optional[Dict[str, Any]] = None
+    data: dict[str, Any] | None = None
     timestamp: str
 
 
@@ -90,22 +88,22 @@ class StopExperimentResponse(BaseModel):
 class ListExperimentsResponse(BaseModel):
     """実験一覧レスポンス"""
 
-    experiments: List[Dict[str, Any]]
+    experiments: list[dict[str, Any]]
 
 
 class ExperimentDetailResponse(BaseModel):
     """実験詳細レスポンス"""
 
-    id: Optional[int] = None
-    experiment_id: Optional[str] = None
-    name: Optional[str] = None
-    status: Optional[str] = None
-    progress: Optional[float] = None
-    current_generation: Optional[int] = None
-    total_generations: Optional[int] = None
-    best_fitness: Optional[float] = None
-    created_at: Optional[str] = None
-    completed_at: Optional[str] = None
+    id: int | None = None
+    experiment_id: str | None = None
+    name: str | None = None
+    status: str | None = None
+    progress: float | None = None
+    current_generation: int | None = None
+    total_generations: int | None = None
+    best_fitness: float | None = None
+    created_at: str | None = None
+    completed_at: str | None = None
 
 
 @router.get(
@@ -115,9 +113,7 @@ class ExperimentDetailResponse(BaseModel):
 @ErrorHandler.api_endpoint("実験詳細の取得に失敗しました")
 async def get_experiment_detail(
     experiment_id: str,
-    auto_strategy_service: AutoStrategyService = Depends(
-        get_auto_strategy_service
-    ),
+    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):
     """
     実験詳細を取得
@@ -152,9 +148,7 @@ async def get_experiment_detail(
 async def generate_strategy(
     request: GAGenerationRequest,
     background_tasks: BackgroundTasks,
-    auto_strategy_service: AutoStrategyService = Depends(
-        get_auto_strategy_service
-    ),
+    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):
     """
     遺伝的アルゴリズム（GA）を用いた取引戦略の自動生成を開始します。
@@ -199,9 +193,7 @@ async def generate_strategy(
                 backtest_config_dict=request.base_config,
                 task_scheduler=background_tasks,
             )
-            logger.info(
-                f"戦略生成タスクをバックグラウンドで開始: {experiment_id}"
-            )
+            logger.info(f"戦略生成タスクをバックグラウンドで開始: {experiment_id}")
 
             return result_response(
                 success=True,
@@ -227,9 +219,7 @@ async def generate_strategy(
 @router.get("/experiments", response_model=ListExperimentsResponse)
 @ErrorHandler.api_endpoint("実験一覧の取得に失敗しました")
 async def list_experiments(
-    auto_strategy_service: AutoStrategyService = Depends(
-        get_auto_strategy_service
-    ),
+    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):
     """
     実験一覧を取得
@@ -255,9 +245,7 @@ async def list_experiments(
 @ErrorHandler.api_endpoint("実験の停止に失敗しました")
 async def stop_experiment(
     experiment_id: str,
-    auto_strategy_service: AutoStrategyService = Depends(
-        get_auto_strategy_service
-    ),
+    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):
     """
     実験を停止

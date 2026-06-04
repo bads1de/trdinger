@@ -4,8 +4,6 @@
 ファンディングレートデータの取得・収集機能を提供するAPIエンドポイント
 """
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -27,14 +25,10 @@ router = APIRouter(
 @router.get("/")
 @api_safe_execute(message="ファンディングレートデータ取得エラー")
 async def get_funding_rates(
-    symbol: str = Query(
-        ..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"
-    ),
-    limit: Optional[int] = Query(
-        100, description="取得するデータ数（1-1000）"
-    ),
-    start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
-    end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
+    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
+    limit: int | None = Query(100, description="取得するデータ数（1-1000）"),
+    start_date: str | None = Query(None, description="開始日時（ISO形式）"),
+    end_date: str | None = Query(None, description="終了日時（ISO形式）"),
     orchestration_service: FundingRateOrchestrationService = Depends(
         get_funding_rate_orchestration_service
     ),
@@ -79,16 +73,12 @@ async def get_funding_rates(
 @router.post("/collect")
 @api_safe_execute(message="ファンディングレートデータ収集エラー")
 async def collect_funding_rate_data(
-    symbol: str = Query(
-        ..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"
-    ),
-    limit: Optional[int] = Query(
+    symbol: str = Query(..., description="取引ペアシンボル（例: 'BTC/USDT:USDT'）"),
+    limit: int | None = Query(
         100,
         description="取得するデータ数（1-1000、fetch_all=trueの場合は無視）",
     ),
-    fetch_all: bool = Query(
-        False, description="全期間のデータを取得するかどうか"
-    ),
+    fetch_all: bool = Query(False, description="全期間のデータを取得するかどうか"),
     orchestration_service: FundingRateOrchestrationService = Depends(
         get_funding_rate_orchestration_service
     ),

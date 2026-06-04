@@ -7,7 +7,7 @@ BacktestResultRepositoryのテストモジュール
 # pyright: reportAttributeAccessIssue=none
 
 from datetime import datetime, timezone
-from typing import Any, Dict, cast
+from typing import Any, cast
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -90,7 +90,7 @@ def sample_backtest_model() -> BacktestResult:
 
 
 @pytest.fixture
-def sample_backtest_data() -> Dict[str, Any]:
+def sample_backtest_data() -> dict[str, Any]:
     """
     サンプルバックテストデータ（辞書形式）
 
@@ -167,12 +167,12 @@ class TestSaveBacktestResult:
         self,
         mock_backtest_result_class: MagicMock,
         repository: BacktestResultRepository,
-        sample_backtest_data: Dict[str, Any],
+        sample_backtest_data: dict[str, Any],
         sample_backtest_model: BacktestResult,
     ) -> None:
         """バックテスト結果が正常に保存される"""
         mock_backtest_result_class.return_value = sample_backtest_model
-        setattr(sample_backtest_model, "id", 1)
+        sample_backtest_model.id = 1
 
         result = repository.save_backtest_result(sample_backtest_data)
 
@@ -184,7 +184,7 @@ class TestSaveBacktestResult:
     def test_save_backtest_result_with_iso_dates(
         self,
         repository: BacktestResultRepository,
-        sample_backtest_data: Dict[str, Any],
+        sample_backtest_data: dict[str, Any],
     ) -> None:
         """ISO形式の日付文字列が処理される"""
         sample_backtest_data["start_date"] = "2024-01-01T00:00:00+00:00"
@@ -428,7 +428,7 @@ class TestDataNormalization:
     def test_normalize_result_data_complete(
         self,
         repository: BacktestResultRepository,
-        sample_backtest_data: Dict[str, Any],
+        sample_backtest_data: dict[str, Any],
     ) -> None:
         """完全なデータが正規化される"""
         normalized = repository._normalize_result_data(sample_backtest_data)

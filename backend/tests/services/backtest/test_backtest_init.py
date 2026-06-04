@@ -4,7 +4,6 @@ backtestパッケージの__init__.pyのテスト
 モジュールエイリアスとエクスポート定義を確認します。
 """
 
-
 import app.services.backtest as backtest_package
 
 

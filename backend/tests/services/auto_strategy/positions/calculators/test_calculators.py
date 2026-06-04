@@ -48,7 +48,9 @@ class TestFixedRatioCalculator:
         calculator = FixedRatioCalculator()
 
         result = calculator.calculate(
-            gene=gene, account_balance=10000, current_price=100  # 価格100
+            gene=gene,
+            account_balance=10000,
+            current_price=100,  # 価格100
         )
 
         # 10000 * 0.1 / 100 = 10.0

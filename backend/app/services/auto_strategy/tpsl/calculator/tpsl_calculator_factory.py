@@ -5,7 +5,6 @@ TPSL計算機ファクトリ
 """
 
 from enum import Enum
-from typing import Dict, Union
 
 from ...utils.normalization import normalize_enum_name
 from .adaptive_calculator import AdaptiveCalculator
@@ -20,7 +19,7 @@ class TPSLCalculatorFactory:
     """TPSL計算機ファクトリ"""
 
     # 計算機マッピング（クラスレベルで定義）
-    _CALCULATORS: Dict[str, type[BaseTPSLCalculator]] = {
+    _CALCULATORS: dict[str, type[BaseTPSLCalculator]] = {
         "fixed_percentage": FixedPercentageCalculator,
         "risk_reward_ratio": RiskRewardCalculator,
         "volatility_based": VolatilityCalculator,
@@ -29,7 +28,7 @@ class TPSLCalculatorFactory:
     }
 
     @classmethod
-    def create_calculator(cls, method: Union[str, Enum]) -> BaseTPSLCalculator:
+    def create_calculator(cls, method: str | Enum) -> BaseTPSLCalculator:
         """
         手法名に対応したTPSL計算機インスタンスを生成
 
@@ -53,7 +52,7 @@ class TPSLCalculatorFactory:
         return calculator_class()
 
     @classmethod
-    def get_available_methods(cls) -> Dict[str, str]:
+    def get_available_methods(cls) -> dict[str, str]:
         """利用可能な手法を取得"""
         return {
             "fixed_percentage": "固定パーセンテージ",

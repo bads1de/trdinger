@@ -5,7 +5,7 @@
 """
 
 from enum import Enum
-from typing import Dict, Type, Union, cast
+from typing import cast
 
 from ...utils.normalization import normalize_enum_name
 from .base_calculator import BaseCalculator
@@ -19,7 +19,7 @@ class CalculatorFactory:
     """計算機ファクトリ"""
 
     @staticmethod
-    def create_calculator(method: Union[str, Enum]) -> BaseCalculator:
+    def create_calculator(method: str | Enum) -> BaseCalculator:
         """
         手法名に対応したポジションサイズ計算機インスタンスを生成
 
@@ -40,13 +40,13 @@ class CalculatorFactory:
         method_str = normalize_enum_name(method)
 
         calculator_class = cast(
-            Type[BaseCalculator],
+            type[BaseCalculator],
             method_map.get(method_str, FixedRatioCalculator),
         )
         return calculator_class()
 
     @staticmethod
-    def get_available_methods() -> Dict[str, str]:
+    def get_available_methods() -> dict[str, str]:
         """利用可能な手法を取得"""
         return {
             "half_optimal_f": "ハーフオプティマルF",

@@ -8,7 +8,6 @@ from app.services.auto_strategy.config.ga import GAConfig
 
 
 class TestConfigValidator:
-
     @pytest.fixture
     def base_config(self):
         return SimpleNamespace(

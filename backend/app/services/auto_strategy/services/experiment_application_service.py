@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Any, Dict, Protocol
+from typing import Any, Protocol
 
 from ..config.ga import GAConfig
 
@@ -29,16 +29,14 @@ class ExperimentApplicationService:
         experiment_id: str,
         experiment_name: str,
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
     ) -> None:
         """実験レコードを作成する。"""
         self.persistence_service.create_experiment(
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
-    def initialize_ga_engine(
-        self, experiment_id: str, ga_config: GAConfig
-    ) -> None:
+    def initialize_ga_engine(self, experiment_id: str, ga_config: GAConfig) -> None:
         """GA エンジンを初期化する。"""
         if not self.experiment_manager:
             raise RuntimeError("実験管理マネージャーが初期化されていません。")
@@ -48,7 +46,7 @@ class ExperimentApplicationService:
         self,
         experiment_id: str,
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
         task_scheduler: TaskScheduler,
     ) -> None:
         """実験実行タスクを登録する。"""
@@ -66,7 +64,7 @@ class ExperimentApplicationService:
         experiment_id: str,
         experiment_name: str,
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
         task_scheduler: TaskScheduler,
     ) -> str:
         """実験作成から非同期実行登録までを行う。"""
@@ -101,7 +99,7 @@ class ExperimentApplicationService:
         """実験詳細を取得する。"""
         return self.persistence_service.get_experiment_detail(experiment_id)
 
-    def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
+    def stop_experiment(self, experiment_id: str) -> dict[str, Any]:
         """実験停止結果を API 向け形式で返す。"""
         if not self.experiment_manager:
             return {

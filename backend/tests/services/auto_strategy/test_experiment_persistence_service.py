@@ -5,7 +5,6 @@ ExperimentPersistenceServiceのテスト
 from datetime import datetime
 from unittest.mock import MagicMock, Mock, patch
 
-
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.services.experiment_persistence_service import (
@@ -202,7 +201,6 @@ class TestExperimentPersistenceService:
                 return_value={"serialized": True},
             ) as mock_strategy_to_dict,
         ):
-
             mock_strat_repo = mock_strat_repo_cls.return_value
             mock_strat_repo.save_strategy.return_value = Mock(id=555)
 

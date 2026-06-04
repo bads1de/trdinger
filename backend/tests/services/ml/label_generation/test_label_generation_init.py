@@ -46,7 +46,7 @@ class TestLabelGenerationInitExports:
             LabelGenerationService,
         )
 
-        service = getattr(label_gen_package, "LabelGenerationService")
+        service = label_gen_package.LabelGenerationService
 
         assert service is LabelGenerationService
 

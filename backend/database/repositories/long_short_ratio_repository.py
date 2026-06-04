@@ -4,7 +4,6 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import List, Optional
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -21,7 +20,7 @@ class LongShortRatioRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, LongShortRatioData)
 
-    def insert_long_short_ratio_data(self, ratio_records: List[dict]) -> int:
+    def insert_long_short_ratio_data(self, ratio_records: list[dict]) -> int:
         """
         ロング/ショート比率データを一括挿入
 
@@ -44,15 +43,22 @@ class LongShortRatioRepository(BaseRepository):
                 timestamp_val = record.get("timestamp")
                 buy_ratio = record.get("buyRatio")
                 sell_ratio = record.get("sellRatio")
-                
+
                 # period は APIレスポンスには含まれない場合があるため、
                 # 呼び出し元が補完して渡してくることを想定するか、
                 # record内に 'period' キーが存在することを確認する
                 period = record.get("period")
 
-                if (symbol is None or timestamp_val is None or 
-                    buy_ratio is None or sell_ratio is None or period is None):
-                    logger.debug(f"必須項目が不足しているためレコードをスキップ: {record}")
+                if (
+                    symbol is None
+                    or timestamp_val is None
+                    or buy_ratio is None
+                    or sell_ratio is None
+                    or period is None
+                ):
+                    logger.debug(
+                        f"必須項目が不足しているためレコードをスキップ: {record}"
+                    )
                     continue
 
                 # --- 2. データ変換 ---
@@ -90,7 +96,7 @@ class LongShortRatioRepository(BaseRepository):
         def _insert_data():
             # 重複チェック対象のカラム
             conflict_columns = ["symbol", "period", "timestamp"]
-            
+
             inserted_count = self.bulk_insert_with_conflict_handling(
                 processed_records, conflict_columns
             )
@@ -103,10 +109,10 @@ class LongShortRatioRepository(BaseRepository):
         self,
         symbol: str,
         period: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> List[LongShortRatioData]:
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[LongShortRatioData]:
         """
         ロング/ショート比率データを取得
 
@@ -131,7 +137,7 @@ class LongShortRatioRepository(BaseRepository):
             limit=limit,
         )
 
-    def get_latest_ratio(self, symbol: str, period: str) -> Optional[LongShortRatioData]:
+    def get_latest_ratio(self, symbol: str, period: str) -> LongShortRatioData | None:
         """
         最新のロング/ショート比率データを取得
 
@@ -149,7 +155,7 @@ class LongShortRatioRepository(BaseRepository):
         )
         return records[0] if records else None
 
-    def get_oldest_ratio_timestamp(self, symbol: str, period: str) -> Optional[datetime]:
+    def get_oldest_ratio_timestamp(self, symbol: str, period: str) -> datetime | None:
         """
         最古のデータタイムスタンプを取得
 
@@ -161,17 +167,16 @@ class LongShortRatioRepository(BaseRepository):
             最古のタイムスタンプ
         """
         return self.get_oldest_timestamp(
-            "timestamp", 
-            filter_conditions={"symbol": symbol, "period": period}
+            "timestamp", filter_conditions={"symbol": symbol, "period": period}
         )
 
     def get_ratio_dataframe(
         self,
         symbol: str,
         period: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
     ) -> pd.DataFrame:
         """
         ロング/ショート比率データをDataFrameとして取得
@@ -202,12 +207,12 @@ class LongShortRatioRepository(BaseRepository):
             column_mapping=column_mapping,
             index_column="timestamp",
         )
-        
+
         # 追加で計算カラムを入れると便利（例: LS比）
         if not df.empty:
-             # ゼロ除算回避
-            df["ls_ratio"] = df["buy_ratio"] / df["sell_ratio"].replace(0, float('nan'))
-            
+            # ゼロ除算回避
+            df["ls_ratio"] = df["buy_ratio"] / df["sell_ratio"].replace(0, float("nan"))
+
         return df
 
     def clear_data(self, symbol: str, period: str) -> int:
@@ -223,11 +228,9 @@ class LongShortRatioRepository(BaseRepository):
         """
         filters = {"symbol": symbol, "period": period}
         deleted_count = self.delete_by_date_range(
-            timestamp_column="timestamp",
-            additional_filters=filters
+            timestamp_column="timestamp", additional_filters=filters
         )
-        logger.info(f"ロング/ショート比率データを削除しました ({symbol}, {period}): {deleted_count}件")
+        logger.info(
+            f"ロング/ショート比率データを削除しました ({symbol}, {period}): {deleted_count}件"
+        )
         return deleted_count
-
-
-

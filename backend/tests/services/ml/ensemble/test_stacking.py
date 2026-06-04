@@ -158,7 +158,6 @@ class TestStackingEnsemble:
             patch("os.path.getmtime", return_value=123.4),
             patch("builtins.open", mock_open(read_data="{}")),
         ):
-
             success = ensemble.load_models(base_path)
             assert success is True
             assert ensemble.is_fitted is True

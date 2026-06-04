@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, cast
 
 from app.types import SerializableValue
 
@@ -53,34 +53,32 @@ class StrategyGene:
     """
 
     id: str = ""
-    indicators: List[IndicatorGene] = field(default_factory=list)
-    long_entry_conditions: List[Union[Condition, ConditionGroup]] = field(
+    indicators: list[IndicatorGene] = field(default_factory=list)
+    long_entry_conditions: list[Condition | ConditionGroup] = field(
         default_factory=list
     )
-    short_entry_conditions: List[Union[Condition, ConditionGroup]] = field(
+    short_entry_conditions: list[Condition | ConditionGroup] = field(
         default_factory=list
     )
-    stateful_conditions: List[StatefulCondition] = field(default_factory=list)
-    risk_management: Dict[str, SerializableValue] = field(default_factory=dict)
-    tpsl_gene: Optional[TPSLGene] = None
-    long_tpsl_gene: Optional[TPSLGene] = None
-    short_tpsl_gene: Optional[TPSLGene] = None
-    position_sizing_gene: Optional[PositionSizingGene] = None
-    entry_gene: Optional[EntryGene] = None
-    long_entry_gene: Optional[EntryGene] = None
-    short_entry_gene: Optional[EntryGene] = None
-    exit_gene: Optional[ExitGene] = None
-    long_exit_conditions: List[Union[Condition, ConditionGroup]] = field(
+    stateful_conditions: list[StatefulCondition] = field(default_factory=list)
+    risk_management: dict[str, SerializableValue] = field(default_factory=dict)
+    tpsl_gene: TPSLGene | None = None
+    long_tpsl_gene: TPSLGene | None = None
+    short_tpsl_gene: TPSLGene | None = None
+    position_sizing_gene: PositionSizingGene | None = None
+    entry_gene: EntryGene | None = None
+    long_entry_gene: EntryGene | None = None
+    short_entry_gene: EntryGene | None = None
+    exit_gene: ExitGene | None = None
+    long_exit_conditions: list[Condition | ConditionGroup] = field(default_factory=list)
+    short_exit_conditions: list[Condition | ConditionGroup] = field(
         default_factory=list
     )
-    short_exit_conditions: List[Union[Condition, ConditionGroup]] = field(
-        default_factory=list
-    )
-    tool_genes: List[ToolGene] = field(default_factory=list)
-    metadata: Dict[str, SerializableValue] = field(default_factory=dict)
+    tool_genes: list[ToolGene] = field(default_factory=list)
+    metadata: dict[str, SerializableValue] = field(default_factory=dict)
 
     @classmethod
-    def create_default(cls) -> "StrategyGene":
+    def create_default(cls) -> StrategyGene:
         """デフォルトの戦略遺伝子を作成する。
 
         安全なデフォルト値を持つStrategyGeneインスタンスを生成します。
@@ -96,27 +94,23 @@ class StrategyGene:
     @classmethod
     def assemble(
         cls,
-        indicators: List[IndicatorGene],
-        long_entry_conditions: List[Union[Condition, ConditionGroup]],
-        short_entry_conditions: List[Union[Condition, ConditionGroup]],
-        tpsl_gene: Optional[TPSLGene] = None,
-        position_sizing_gene: Optional[PositionSizingGene] = None,
-        long_tpsl_gene: Optional[TPSLGene] = None,
-        short_tpsl_gene: Optional[TPSLGene] = None,
-        entry_gene: Optional[EntryGene] = None,
-        long_entry_gene: Optional[EntryGene] = None,
-        short_entry_gene: Optional[EntryGene] = None,
-        exit_gene: Optional[ExitGene] = None,
-        long_exit_conditions: Optional[
-            List[Union[Condition, ConditionGroup]]
-        ] = None,
-        short_exit_conditions: Optional[
-            List[Union[Condition, ConditionGroup]]
-        ] = None,
-        tool_genes: Optional[List[ToolGene]] = None,
-        risk_management: Optional[Dict[str, SerializableValue]] = None,
-        metadata: Optional[Dict[str, SerializableValue]] = None,
-    ) -> "StrategyGene":
+        indicators: list[IndicatorGene],
+        long_entry_conditions: list[Condition | ConditionGroup],
+        short_entry_conditions: list[Condition | ConditionGroup],
+        tpsl_gene: TPSLGene | None = None,
+        position_sizing_gene: PositionSizingGene | None = None,
+        long_tpsl_gene: TPSLGene | None = None,
+        short_tpsl_gene: TPSLGene | None = None,
+        entry_gene: EntryGene | None = None,
+        long_entry_gene: EntryGene | None = None,
+        short_entry_gene: EntryGene | None = None,
+        exit_gene: ExitGene | None = None,
+        long_exit_conditions: list[Condition | ConditionGroup] | None = None,
+        short_exit_conditions: list[Condition | ConditionGroup] | None = None,
+        tool_genes: list[ToolGene] | None = None,
+        risk_management: dict[str, SerializableValue] | None = None,
+        metadata: dict[str, SerializableValue] | None = None,
+    ) -> StrategyGene:
         """
         個別の遺伝子パーツから、一つの完結した `StrategyGene` オブジェクトを組み立てます。
 
@@ -167,7 +161,7 @@ class StrategyGene:
         """ロング・ショート条件が分離されているかチェック（常にTrue）。"""
         return True
 
-    def validate(self) -> Tuple[bool, List[str]]:
+    def validate(self) -> tuple[bool, list[str]]:
         """戦略遺伝子の妥当性を検証し、(is_valid, errors) を返す。"""
         from .validator import GeneValidator
 
@@ -176,21 +170,21 @@ class StrategyGene:
         return is_valid, errors
 
     @classmethod
-    def clone_field_names(cls) -> Tuple[str, ...]:
+    def clone_field_names(cls) -> tuple[str, ...]:
         """clone 対象となるフィールド名を返す。"""
         return tuple(
-            field_info.name for field_info in fields(cls) if field_info.name != "id"  # type: ignore[arg-type]
+            field_info.name
+            for field_info in fields(cls)
+            if field_info.name != "id"  # type: ignore[arg-type]
         )
 
     @classmethod
-    def crossover_field_names(cls) -> Tuple[str, ...]:
+    def crossover_field_names(cls) -> tuple[str, ...]:
         """uniform crossover 対象となるフィールド名を返す。"""
-        return tuple(
-            name for name in cls.clone_field_names() if name != "metadata"
-        )
+        return tuple(name for name in cls.clone_field_names() if name != "metadata")
 
     @classmethod
-    def sub_gene_field_names(cls) -> Tuple[str, ...]:
+    def sub_gene_field_names(cls) -> tuple[str, ...]:
         """StrategyGene が保持するサブ遺伝子のフィールド名を返す。"""
         return (
             "tpsl_gene",
@@ -204,7 +198,7 @@ class StrategyGene:
         )
 
     @classmethod
-    def sub_gene_class_map(cls) -> Dict[str, type]:
+    def sub_gene_class_map(cls) -> dict[str, type]:
         """サブ遺伝子フィールドと対応クラスの対応表を返す。"""
         return {
             "tpsl_gene": TPSLGene,
@@ -217,7 +211,7 @@ class StrategyGene:
             "exit_gene": ExitGene,
         }
 
-    def clone(self, keep_id: bool = False) -> "StrategyGene":
+    def clone(self, keep_id: bool = False) -> StrategyGene:
         """軽量コピーを作成。"""
         from .genetic_utils import GeneticUtils
 
@@ -226,11 +220,9 @@ class StrategyGene:
             for field_name in self.clone_field_names()
         }
         cloned_fields["id"] = self.id if keep_id else str(uuid.uuid4())
-        return type(self)(**cast(Dict[str, SerializableValue], cloned_fields))  # type: ignore[arg-type]
+        return type(self)(**cast(dict[str, SerializableValue], cloned_fields))  # type: ignore[arg-type]
 
-    def mutate(
-        self, config: GAConfig, mutation_rate: float = 0.1
-    ) -> "StrategyGene":
+    def mutate(self, config: GAConfig, mutation_rate: float = 0.1) -> StrategyGene:
         """戦略遺伝子の突然変異を実行する。"""
         from .operators import mutate_strategy_gene
 
@@ -238,10 +230,10 @@ class StrategyGene:
 
     def adaptive_mutate(
         self,
-        population: List["StrategyGene"],
+        population: list[StrategyGene],
         config: GAConfig,
         base_mutation_rate: float = 0.1,
-    ) -> "StrategyGene":
+    ) -> StrategyGene:
         """集団の多様性に基づいて変異率を調整する。"""
         from .operators import adaptive_mutate_strategy_gene
 
@@ -255,11 +247,11 @@ class StrategyGene:
     @classmethod
     def crossover(
         cls,
-        parent1: "StrategyGene",
-        parent2: "StrategyGene",
+        parent1: StrategyGene,
+        parent2: StrategyGene,
         config: GAConfig,
         crossover_type: str = "uniform",
-    ) -> Tuple["StrategyGene", "StrategyGene"]:
+    ) -> tuple[StrategyGene, StrategyGene]:
         """2つの親個体から交叉により新しい子個体を生成する。"""
         from .operators import crossover_strategy_genes
 
@@ -273,7 +265,7 @@ class StrategyGene:
 
     @staticmethod
     def _mutate_indicators(
-        mutated: "StrategyGene", mutation_rate: float, config: GAConfig
+        mutated: StrategyGene, mutation_rate: float, config: GAConfig
     ) -> None:
         """指標遺伝子の突然変異処理。"""
         from .operators import mutate_indicators
@@ -282,7 +274,7 @@ class StrategyGene:
 
     @staticmethod
     def _mutate_conditions(
-        mutated: "StrategyGene", mutation_rate: float, config: GAConfig
+        mutated: StrategyGene, mutation_rate: float, config: GAConfig
     ) -> None:
         """取引条件の突然変異処理。"""
         from .operators import mutate_conditions
@@ -291,9 +283,9 @@ class StrategyGene:
 
     @staticmethod
     def _crossover_tpsl_genes(
-        parent1_tpsl: Optional[TPSLGene],
-        parent2_tpsl: Optional[TPSLGene],
-    ) -> Tuple[Optional[TPSLGene], Optional[TPSLGene]]:
+        parent1_tpsl: TPSLGene | None,
+        parent2_tpsl: TPSLGene | None,
+    ) -> tuple[TPSLGene | None, TPSLGene | None]:
         """TPSL 遺伝子の交叉処理。"""
         from .operators import crossover_tpsl_genes
 
@@ -301,9 +293,9 @@ class StrategyGene:
 
     @staticmethod
     def _crossover_position_sizing_genes(
-        parent1_ps: Optional[PositionSizingGene],
-        parent2_ps: Optional[PositionSizingGene],
-    ) -> Tuple[Optional[PositionSizingGene], Optional[PositionSizingGene]]:
+        parent1_ps: PositionSizingGene | None,
+        parent2_ps: PositionSizingGene | None,
+    ) -> tuple[PositionSizingGene | None, PositionSizingGene | None]:
         """ポジションサイズ遺伝子の交叉処理。"""
         from .operators import crossover_position_sizing_genes
 
@@ -311,9 +303,9 @@ class StrategyGene:
 
     @staticmethod
     def _crossover_entry_genes(
-        parent1_entry: Optional[EntryGene],
-        parent2_entry: Optional[EntryGene],
-    ) -> Tuple[Optional[EntryGene], Optional[EntryGene]]:
+        parent1_entry: EntryGene | None,
+        parent2_entry: EntryGene | None,
+    ) -> tuple[EntryGene | None, EntryGene | None]:
         """エントリー遺伝子の交叉処理。"""
         from .operators import crossover_entry_genes
 
@@ -322,10 +314,10 @@ class StrategyGene:
     @classmethod
     def _uniform_crossover(
         cls,
-        parent1: "StrategyGene",
-        parent2: "StrategyGene",
+        parent1: StrategyGene,
+        parent2: StrategyGene,
         config: GAConfig,
-    ) -> Tuple["StrategyGene", "StrategyGene"]:
+    ) -> tuple[StrategyGene, StrategyGene]:
         """ユニフォーム交叉。"""
         from .operators import uniform_crossover
 
@@ -334,10 +326,10 @@ class StrategyGene:
     @classmethod
     def _single_point_crossover(
         cls,
-        parent1: "StrategyGene",
-        parent2: "StrategyGene",
+        parent1: StrategyGene,
+        parent2: StrategyGene,
         config: GAConfig,
-    ) -> Tuple["StrategyGene", "StrategyGene"]:
+    ) -> tuple[StrategyGene, StrategyGene]:
         """一点交叉。"""
         from .operators import single_point_crossover
 

@@ -3,7 +3,7 @@
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from ..risk_metrics import (
     calculate_expected_shortfall,
@@ -19,7 +19,7 @@ class VolatilityBasedCalculator(BaseCalculator):
 
     def calculate(
         self, gene, account_balance: float, current_price: float, **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         ボラティリティ（ATR）に基づいてポジションサイズを計算
 
@@ -37,7 +37,7 @@ class VolatilityBasedCalculator(BaseCalculator):
             計算結果を含む辞書
         """
         market_data = kwargs.get("market_data", {})
-        details: Dict[str, Any] = {"method": "volatility_based"}
+        details: dict[str, Any] = {"method": "volatility_based"}
         warnings = []
 
         # 1. 基本パラメータ取得
@@ -46,12 +46,8 @@ class VolatilityBasedCalculator(BaseCalculator):
         atr_pct = atr_value / current_price if current_price > 0 else 0.02
 
         # 2. 基本ポジションサイズの計算
-        risk_amount = account_balance * self._get_param(
-            gene, "risk_per_trade", 0.02
-        )
-        volatility_factor = atr_pct * self._get_param(
-            gene, "atr_multiplier", 2.0
-        )
+        risk_amount = account_balance * self._get_param(gene, "risk_per_trade", 0.02)
+        volatility_factor = atr_pct * self._get_param(gene, "atr_multiplier", 2.0)
 
         if volatility_factor > 0:
             position_size = risk_amount / (current_price * volatility_factor)

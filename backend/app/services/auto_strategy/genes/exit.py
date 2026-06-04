@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from app.types import StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
@@ -62,14 +62,14 @@ class ExitGene:
     # 優先度（将来の拡張用）
     priority: float = 1.0
 
-    def validate(self) -> Tuple[bool, List[str]]:
+    def validate(self) -> tuple[bool, list[str]]:
         """
         イグジット遺伝子の妥当性を検証
 
         Returns:
             (is_valid, errors) のタプル
         """
-        errors: List[str] = []
+        errors: list[str] = []
 
         # partial_exit_pct の範囲チェック (10% ~ 90%)
         if self.partial_exit_pct < 0.1 or self.partial_exit_pct > 0.9:
@@ -96,7 +96,7 @@ class ExitGene:
         return dataclass_to_dict(self)
 
     @classmethod
-    def from_dict(cls, data: StrategyGeneDict) -> "ExitGene":
+    def from_dict(cls, data: StrategyGeneDict) -> ExitGene:
         """
         辞書形式から復元
 
@@ -118,9 +118,7 @@ class ExitGene:
             exit_type=exit_type,
             partial_exit_pct=data.get("partial_exit_pct", 0.5),
             partial_exit_enabled=data.get("partial_exit_enabled", False),
-            trailing_stop_activation=data.get(
-                "trailing_stop_activation", False
-            ),
+            trailing_stop_activation=data.get("trailing_stop_activation", False),
             enabled=data.get("enabled", True),
             priority=data.get("priority", 1.0),
         )
@@ -136,7 +134,7 @@ class ExitGene:
             priority=self.priority,
         )
 
-    def mutate(self, mutation_rate: float = 0.1) -> "ExitGene":
+    def mutate(self, mutation_rate: float = 0.1) -> ExitGene:
         """突然変異"""
         import random
 
@@ -158,16 +156,14 @@ class ExitGene:
             if random.random() < 0.2:
                 gene.partial_exit_enabled = not gene.partial_exit_enabled
             if random.random() < 0.2:
-                gene.trailing_stop_activation = (
-                    not gene.trailing_stop_activation
-                )
+                gene.trailing_stop_activation = not gene.trailing_stop_activation
 
         return gene
 
     @classmethod
     def crossover(
-        cls, parent1: "ExitGene", parent2: "ExitGene"
-    ) -> Tuple["ExitGene", "ExitGene"]:
+        cls, parent1: ExitGene, parent2: ExitGene
+    ) -> tuple[ExitGene, ExitGene]:
         """イグジット遺伝子の交叉"""
         from .genetic_utils import GeneticUtils
 
@@ -181,7 +177,7 @@ class ExitGene:
         )
 
 
-def create_random_exit_gene(config: Optional[Any] = None) -> ExitGene:
+def create_random_exit_gene(config: Any | None = None) -> ExitGene:
     """
     ランダムなイグジット遺伝子を生成
 
@@ -202,9 +198,7 @@ def create_random_exit_gene(config: Optional[Any] = None) -> ExitGene:
             try:
                 custom_weights = config.exit_type_weights
                 if custom_weights:
-                    weights = {
-                        ExitType(k): v for k, v in custom_weights.items()
-                    }
+                    weights = {ExitType(k): v for k, v in custom_weights.items()}
             except AttributeError:
                 pass
 
@@ -217,9 +211,7 @@ def create_random_exit_gene(config: Optional[Any] = None) -> ExitGene:
         partial_exit_pct = random.uniform(*ranges["partial_exit_pct"])
 
         # フラグをランダムに設定
-        partial_exit_enabled = (
-            random.random() < EXIT_PARTIAL_ENABLED_PROBABILITY
-        )
+        partial_exit_enabled = random.random() < EXIT_PARTIAL_ENABLED_PROBABILITY
         trailing_stop_activation = (
             random.random() < EXIT_TRAILING_ACTIVATION_PROBABILITY
         )

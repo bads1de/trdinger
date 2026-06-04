@@ -5,7 +5,7 @@ StrategyGene の dict encode/decode helper。
 import logging
 import uuid
 from collections.abc import Iterable, Mapping
-from typing import Any, Dict, Tuple, cast
+from typing import Any, cast
 
 from ..genes import StrategyGene
 
@@ -21,7 +21,7 @@ class StrategyGeneDictCodec:
     @staticmethod
     def _get_sub_gene_field_names(
         strategy_gene_class: type,
-    ) -> Tuple[str, ...]:
+    ) -> tuple[str, ...]:
         """StrategyGene 系クラスのサブ遺伝子フィールド名を取得する。"""
         getter = getattr(strategy_gene_class, "sub_gene_field_names", None)
         if callable(getter):
@@ -39,12 +39,12 @@ class StrategyGeneDictCodec:
                     "sub_gene_field_names は str のみで構成されたコレクションを返す必要があります。"
                 )
 
-            return cast(Tuple[str, ...], field_names)
+            return cast(tuple[str, ...], field_names)
 
         return StrategyGene.sub_gene_field_names()
 
     @staticmethod
-    def _get_sub_gene_class_map(strategy_gene_class: type) -> Dict[str, Any]:
+    def _get_sub_gene_class_map(strategy_gene_class: type) -> dict[str, Any]:
         """StrategyGene 系クラスのサブ遺伝子クラス対応表を取得する。"""
         getter = getattr(strategy_gene_class, "sub_gene_class_map", None)
         if callable(getter):
@@ -54,9 +54,7 @@ class StrategyGeneDictCodec:
                     "sub_gene_class_map は Mapping[str, Any] を返す必要があります。"
                 )
 
-            if not all(
-                isinstance(field_name, str) for field_name in raw_class_map
-            ):
+            if not all(isinstance(field_name, str) for field_name in raw_class_map):
                 raise TypeError(
                     "sub_gene_class_map のキーはすべて str である必要があります。"
                 )
@@ -65,9 +63,7 @@ class StrategyGeneDictCodec:
 
         return StrategyGene.sub_gene_class_map()
 
-    def strategy_gene_to_dict(
-        self, strategy_gene: StrategyGene
-    ) -> Dict[str, Any]:
+    def strategy_gene_to_dict(self, strategy_gene: StrategyGene) -> dict[str, Any]:
         """戦略遺伝子オブジェクトをシリアライズ可能な辞書形式に変換。"""
         try:
             clean_risk_management = self._clean_risk_management(
@@ -90,15 +86,11 @@ class StrategyGeneDictCodec:
                 ],
                 "long_exit_conditions": [
                     self.converter.condition_or_group_to_dict(cond)
-                    for cond in getattr(
-                        strategy_gene, "long_exit_conditions", []
-                    )
+                    for cond in getattr(strategy_gene, "long_exit_conditions", [])
                 ],
                 "short_exit_conditions": [
                     self.converter.condition_or_group_to_dict(cond)
-                    for cond in getattr(
-                        strategy_gene, "short_exit_conditions", []
-                    )
+                    for cond in getattr(strategy_gene, "short_exit_conditions", [])
                 ],
                 "risk_management": clean_risk_management,
                 "stateful_conditions": [
@@ -106,15 +98,12 @@ class StrategyGeneDictCodec:
                     for sc in getattr(strategy_gene, "stateful_conditions", [])
                 ],
                 "tool_genes": [
-                    tg.to_dict()
-                    for tg in getattr(strategy_gene, "tool_genes", [])
+                    tg.to_dict() for tg in getattr(strategy_gene, "tool_genes", [])
                 ],
                 "metadata": strategy_gene.metadata,
             }
 
-            sub_gene_fields = self._get_sub_gene_field_names(
-                type(strategy_gene)
-            )
+            sub_gene_fields = self._get_sub_gene_field_names(type(strategy_gene))
             for field in sub_gene_fields:
                 gene_obj = getattr(strategy_gene, field, None)
                 result[field] = gene_obj.to_dict() if gene_obj else None
@@ -125,17 +114,13 @@ class StrategyGeneDictCodec:
             logger.error(f"戦略遺伝子辞書変換エラー: {e}")
             raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
 
-    def dict_to_strategy_gene(
-        self, data: Dict[str, Any], strategy_gene_class: type
-    ):
+    def dict_to_strategy_gene(self, data: dict[str, Any], strategy_gene_class: type):
         """辞書形式のデータから戦略遺伝子オブジェクトを復元。"""
         try:
             if isinstance(data, strategy_gene_class):
                 return data
 
-            if hasattr(data, "indicators") and hasattr(
-                data, "long_entry_conditions"
-            ):
+            if hasattr(data, "indicators") and hasattr(data, "long_entry_conditions"):
                 return data
 
             if not isinstance(data, dict):
@@ -173,9 +158,7 @@ class StrategyGeneDictCodec:
                         if cond_data.get("type") == "OR_GROUP"
                         else cond_data.get("operator", "OR")
                     )
-                    return ConditionGroup(
-                        operator=operator, conditions=conditions
-                    )
+                    return ConditionGroup(operator=operator, conditions=conditions)
                 return self.dict_to_condition(cond_data)
 
             long_entry_conditions = [
@@ -214,9 +197,7 @@ class StrategyGeneDictCodec:
             ]
 
             tool_genes = [
-                ToolGene.from_dict(tg)
-                for tg in data.get("tool_genes", [])
-                if tg
+                ToolGene.from_dict(tg) for tg in data.get("tool_genes", []) if tg
             ]
 
             return strategy_gene_class(
@@ -228,9 +209,7 @@ class StrategyGeneDictCodec:
                 short_exit_conditions=short_exit_conditions,
                 stateful_conditions=stateful_conditions,
                 tool_genes=tool_genes,
-                risk_management=data.get(
-                    "risk_management", {"position_size": 0.1}
-                ),
+                risk_management=data.get("risk_management", {"position_size": 0.1}),
                 metadata=data.get("metadata", {}),
                 **sub_genes,
             )
@@ -239,7 +218,7 @@ class StrategyGeneDictCodec:
             logger.error(f"戦略遺伝子辞書復元エラー: {e}")
             raise ValueError(f"戦略遺伝子の復元に失敗: {e}") from e
 
-    def dict_to_condition(self, data: Dict[str, Any]):
+    def dict_to_condition(self, data: dict[str, Any]):
         """辞書形式から条件を復元。"""
         try:
             from ..genes import Condition
@@ -255,9 +234,7 @@ class StrategyGeneDictCodec:
             logger.error(f"条件辞書復元エラー: {e}")
             raise ValueError(f"条件の復元に失敗: {e}")
 
-    def _clean_risk_management(
-        self, risk_management: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _clean_risk_management(self, risk_management: dict[str, Any]) -> dict[str, Any]:
         """risk_management から TP/SL 関連の設定を除外。"""
         tpsl_keys = {
             "stop_loss",

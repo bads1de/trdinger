@@ -27,6 +27,7 @@ SerializableValue = Union[
     dict[str, "SerializableValue"],
 ]
 
+
 # ─────────────────────────────────────────────
 # MLモデル関連
 # ─────────────────────────────────────────────
@@ -55,5 +56,3 @@ StrategyGeneDict = dict[str, SerializableValue]
 # 日時関連
 # ─────────────────────────────────────────────
 DatetimeLike = Union[datetime, str, float, int]
-
-

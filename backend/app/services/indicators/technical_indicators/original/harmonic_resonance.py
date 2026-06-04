@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -81,9 +81,7 @@ def _njit_find_dominant_freqs(prices: np.ndarray) -> np.ndarray:
 
 
 @njit(cache=True)
-def _njit_apply_bandpass_res(
-    x: np.ndarray, freq: float, q: float = 2.0
-) -> np.ndarray:
+def _njit_apply_bandpass_res(x: np.ndarray, freq: float, q: float = 2.0) -> np.ndarray:
     n = len(x)
     y = np.zeros(n, dtype=np.float64)
 
@@ -223,7 +221,7 @@ def harmonic_resonance(
     length: int = 20,
     resonance_bands: int = 5,
     signal_length: int = 3,
-) -> Tuple[pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series]:
     """Harmonic Resonance Indicator (HRI)."""
     if length < 10:
         raise ValueError("length must be >= 10")
@@ -254,10 +252,8 @@ def harmonic_resonance(
         prices, length, resonance_bands, min_period
     )
 
-    hri_series = pd.Series(
-        hri_values, index=close.index, name="HARMONIC_RESONANCE"
-    )
+    hri_series = pd.Series(hri_values, index=close.index, name="HARMONIC_RESONANCE")
     signal = hri_series.rolling(window=signal_length, min_periods=1).mean()
     signal.name = "HRI_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
-    return cast(Tuple[pd.Series, pd.Series], (hri_series, signal))
+    return cast(tuple[pd.Series, pd.Series], (hri_series, signal))

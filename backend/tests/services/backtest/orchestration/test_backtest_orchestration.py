@@ -4,7 +4,7 @@
 BacktestOrchestrationServiceの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -59,7 +59,7 @@ def orchestration_service() -> BacktestOrchestrationService:
 
 
 @pytest.fixture
-def sample_backtest_result() -> Dict[str, Any]:
+def sample_backtest_result() -> dict[str, Any]:
     """
     サンプルバックテスト結果
 
@@ -108,7 +108,7 @@ class TestGetBacktestResults:
         self,
         orchestration_service: BacktestOrchestrationService,
         mock_db_session: MagicMock,
-        sample_backtest_result: Dict[str, Any],
+        sample_backtest_result: dict[str, Any],
     ):
         """
         正常系: バックテスト結果一覧が正常に取得できる
@@ -140,7 +140,7 @@ class TestGetBacktestResults:
         self,
         orchestration_service: BacktestOrchestrationService,
         mock_db_session: MagicMock,
-        sample_backtest_result: Dict[str, Any],
+        sample_backtest_result: dict[str, Any],
     ):
         """
         正常系: フィルター付きでバックテスト結果が取得できる
@@ -213,7 +213,7 @@ class TestGetBacktestResultById:
         self,
         orchestration_service: BacktestOrchestrationService,
         mock_db_session: MagicMock,
-        sample_backtest_result: Dict[str, Any],
+        sample_backtest_result: dict[str, Any],
     ):
         """
         正常系: ID指定でバックテスト結果が取得できる

@@ -7,7 +7,6 @@
 
 import logging
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class OperandGroupingSystem:
     DEFAULT_MIN_COMPATIBILITY = 0.8
 
     # 指標とグループのマッピング（クラス定数として定義）
-    GROUP_PATTERNS: Dict[OperandGroup, List[str]] = {
+    GROUP_PATTERNS: dict[OperandGroup, list[str]] = {
         OperandGroup.PRICE_BASED: [
             "SMA",
             "EMA",
@@ -92,7 +91,7 @@ class OperandGroupingSystem:
         内部で使用するマッピングと互換性マトリックスを生成します。
         """
         # パターンから逆引きマップを作成
-        self._group_mappings: Dict[str, OperandGroup] = {}
+        self._group_mappings: dict[str, OperandGroup] = {}
         for group, patterns in self.GROUP_PATTERNS.items():
             for p in patterns:
                 self._group_mappings[p] = group
@@ -102,7 +101,7 @@ class OperandGroupingSystem:
 
     def _initialize_compatibility_matrix(
         self,
-    ) -> Dict[Tuple[OperandGroup, OperandGroup], float]:
+    ) -> dict[tuple[OperandGroup, OperandGroup], float]:
         """
         グループ間の互換性マトリックスを初期化
 
@@ -126,17 +125,17 @@ class OperandGroupingSystem:
         )
 
         # 0-100%オシレーター同士は高い互換性
-        matrix[
-            (OperandGroup.PERCENTAGE_0_100, OperandGroup.PERCENTAGE_0_100)
-        ] = self.PERFECT_COMPATIBILITY
+        matrix[(OperandGroup.PERCENTAGE_0_100, OperandGroup.PERCENTAGE_0_100)] = (
+            self.PERFECT_COMPATIBILITY
+        )
 
         # ±100オシレーターとゼロ中心は中程度の互換性
-        matrix[
-            (OperandGroup.PERCENTAGE_NEG100_100, OperandGroup.ZERO_CENTERED)
-        ] = self.MEDIUM_COMPATIBILITY
-        matrix[
-            (OperandGroup.ZERO_CENTERED, OperandGroup.PERCENTAGE_NEG100_100)
-        ] = self.MEDIUM_COMPATIBILITY
+        matrix[(OperandGroup.PERCENTAGE_NEG100_100, OperandGroup.ZERO_CENTERED)] = (
+            self.MEDIUM_COMPATIBILITY
+        )
+        matrix[(OperandGroup.ZERO_CENTERED, OperandGroup.PERCENTAGE_NEG100_100)] = (
+            self.MEDIUM_COMPATIBILITY
+        )
 
         # 特殊スケール同士は低い互換性
         matrix[(OperandGroup.SPECIAL_SCALE, OperandGroup.SPECIAL_SCALE)] = (
@@ -191,18 +190,16 @@ class OperandGroupingSystem:
         group1 = self.get_operand_group(operand1)
         group2 = self.get_operand_group(operand2)
 
-        score = self._compatibility_matrix.get(
-            (group1, group2), self.LOW_COMPATIBILITY
-        )
+        score = self._compatibility_matrix.get((group1, group2), self.LOW_COMPATIBILITY)
 
         return score
 
     def get_compatible_operands(
         self,
         target_operand: str,
-        available_operands: List[str],
-        min_compatibility: Optional[float] = None,
-    ) -> List[str]:
+        available_operands: list[str],
+        min_compatibility: float | None = None,
+    ) -> list[str]:
         """指定されたオペランドと互換性の高いオペランドリストを取得
 
         Args:
@@ -229,7 +226,7 @@ class OperandGroupingSystem:
 
     def validate_condition(
         self, left_operand: str, right_operand: str
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """条件の妥当性を検証
 
         Args:
@@ -243,9 +240,7 @@ class OperandGroupingSystem:
             # 数値との比較は常に有効
             return True, "数値との比較"
 
-        compatibility = self.get_compatibility_score(
-            left_operand, str(right_operand)
-        )
+        compatibility = self.get_compatibility_score(left_operand, str(right_operand))
 
         if compatibility >= self.HIGH_COMPATIBILITY:
             return True, f"高い互換性 (スコア: {compatibility:.2f})"
@@ -287,7 +282,7 @@ def get_compatibility_score(operand1: str, operand2: str) -> float:
     return operand_grouping_system.get_compatibility_score(operand1, operand2)
 
 
-def validate_condition(left_operand: str, right_operand) -> Tuple[bool, str]:
+def validate_condition(left_operand: str, right_operand) -> tuple[bool, str]:
     """
     条件の妥当性を検証（グローバルインターフェース）
 
@@ -298,6 +293,4 @@ def validate_condition(left_operand: str, right_operand) -> Tuple[bool, str]:
     Returns:
         (妥当性, 理由)のタプル
     """
-    return operand_grouping_system.validate_condition(
-        left_operand, right_operand
-    )
+    return operand_grouping_system.validate_condition(left_operand, right_operand)

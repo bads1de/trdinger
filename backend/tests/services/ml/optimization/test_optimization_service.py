@@ -165,7 +165,7 @@ class TestPrepareParameterSpace:
         ) as mock_get_space:
             mock_get_space.return_value = {"param1": "value1"}
 
-            result = service._prepare_parameter_space(mock_trainer, settings)
+            service._prepare_parameter_space(mock_trainer, settings)
 
             mock_get_space.assert_called_once()
 
@@ -179,7 +179,7 @@ class TestPrepareParameterSpace:
         with patch(
             "app.services.ml.optimization.optuna_optimizer.build_lightgbm_parameter_space"
         ):
-            result = service._prepare_parameter_space(mock_trainer, settings)
+            service._prepare_parameter_space(mock_trainer, settings)
 
 
 class TestConvertParameterSpaceConfig:

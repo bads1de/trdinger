@@ -30,9 +30,9 @@ class TestParameterConfigPresets:
         )
 
         # presets フィールドが存在することを確認
-        assert hasattr(
-            param, "presets"
-        ), "ParameterConfig に presets フィールドがありません"
+        assert hasattr(param, "presets"), (
+            "ParameterConfig に presets フィールドがありません"
+        )
 
     def test_parameter_config_with_presets(self):
         """presets を指定して ParameterConfig を作成できることをテスト"""
@@ -163,9 +163,9 @@ class TestIndicatorConfigParameterGenerationWithPresets:
         for _ in range(10):
             params = config.generate_random_parameters(preset="long_term")
             assert "length" in params
-            assert (
-                50 <= params["length"] <= 100
-            ), f"長期プリセットで生成された値 {params['length']} が範囲外です"
+            assert 50 <= params["length"] <= 100, (
+                f"長期プリセットで生成された値 {params['length']} が範囲外です"
+            )
 
     def test_generate_parameters_without_preset(self):
         """プリセット未指定の場合はデフォルト範囲を使用"""
@@ -237,9 +237,9 @@ class TestGAConfigPresetSetting:
         config = GAConfig()
 
         # parameter_range_preset フィールドが存在することを確認
-        assert hasattr(
-            config, "parameter_range_preset"
-        ), "GAConfig に parameter_range_preset フィールドがありません"
+        assert hasattr(config, "parameter_range_preset"), (
+            "GAConfig に parameter_range_preset フィールドがありません"
+        )
 
     def test_ga_config_default_preset_is_none(self):
         """デフォルトではプリセットが None（デフォルト範囲を使用）"""

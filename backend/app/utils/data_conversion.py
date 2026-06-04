@@ -7,7 +7,7 @@ pandas標準機能を活用し、冗長なカスタム実装を削除。
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.utils.datetime_utils import parse_timestamp_safe as _parse_timestamp_safe
 
@@ -22,7 +22,7 @@ class DataConversionError(Exception):
     """
 
 
-def parse_timestamp_safe(value: Any) -> Optional[datetime]:
+def parse_timestamp_safe(value: Any) -> datetime | None:
     """
     タイムスタンプを安全にパースする（警告ログ付き）。
 
@@ -51,8 +51,8 @@ class OHLCVDataConverter:
 
     @staticmethod
     def ccxt_to_db_format(
-        ohlcv_data: List[List], symbol: str, timeframe: str
-    ) -> List[Dict[str, Any]]:
+        ohlcv_data: list[list], symbol: str, timeframe: str
+    ) -> list[dict[str, Any]]:
         """
         CCXT形式のOHLCVデータをデータベース形式に変換
 
@@ -110,7 +110,7 @@ class OHLCVDataConverter:
         return db_records
 
     @staticmethod
-    def db_to_api_format(ohlcv_records: List[Any]) -> List[List]:
+    def db_to_api_format(ohlcv_records: list[Any]) -> list[list]:
         """
         データベース形式のOHLCVデータをAPI形式に変換
 
@@ -153,8 +153,8 @@ class FundingRateDataConverter:
 
     @staticmethod
     def ccxt_to_db_format(
-        funding_rate_data: List[Dict[str, Any]], symbol: str
-    ) -> List[Dict[str, Any]]:
+        funding_rate_data: list[dict[str, Any]], symbol: str
+    ) -> list[dict[str, Any]]:
         """
         CCXT形式のファンディングレートデータをデータベース形式に変換
 
@@ -212,8 +212,8 @@ class OpenInterestDataConverter:
 
     @staticmethod
     def ccxt_to_db_format(
-        open_interest_data: List[Dict[str, Any]], symbol: str
-    ) -> List[Dict[str, Any]]:
+        open_interest_data: list[dict[str, Any]], symbol: str
+    ) -> list[dict[str, Any]]:
         """
         CCXT形式のオープンインタレストデータをデータベース形式に変換
 

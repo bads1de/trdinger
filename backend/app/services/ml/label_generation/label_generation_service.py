@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, cast
 
 import pandas as pd
 
@@ -27,12 +27,12 @@ class LabelGenerationService:
         features_df: pd.DataFrame,
         ohlcv_df: pd.DataFrame,
         use_signal_generator: bool = False,
-        signal_config: Optional[Dict[str, Any]] = None,
+        signal_config: dict[str, Any] | None = None,
         use_cusum: bool = False,
-        cusum_threshold: Optional[float] = None,
+        cusum_threshold: float | None = None,
         cusum_vol_multiplier: float = 1.0,
         **training_params,
-    ) -> Tuple[pd.DataFrame, pd.Series]:
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """
         高度な統計手法を用いて、機械学習モデルの学習に最適な「意味のある」正解ラベルを生成します。
 
@@ -83,19 +83,13 @@ class LabelGenerationService:
                 )
 
             # ラベル生成
-            timeframe = training_params.get(
-                "timeframe", label_config.timeframe
-            )
+            timeframe = training_params.get("timeframe", label_config.timeframe)
             labels = label_cache.get_labels(
-                horizon_n=training_params.get(
-                    "horizon_n", label_config.horizon_n
-                ),
+                horizon_n=training_params.get("horizon_n", label_config.horizon_n),
                 threshold_method=training_params.get(
                     "threshold_method", label_config.threshold_method
                 ),
-                threshold=training_params.get(
-                    "threshold", label_config.threshold
-                ),
+                threshold=training_params.get("threshold", label_config.threshold),
                 timeframe=timeframe,
                 price_column=label_config.price_column,
                 pt_factor=training_params.get("pt_factor", 1.0),
@@ -124,11 +118,11 @@ class LabelGenerationService:
         self,
         ohlcv_df: pd.DataFrame,
         use_cusum: bool,
-        cusum_threshold: Optional[float],
+        cusum_threshold: float | None,
         cusum_vol_multiplier: float,
         use_signal_generator: bool,
-        signal_config: Optional[Dict[str, Any]],
-    ) -> Optional[pd.DatetimeIndex]:
+        signal_config: dict[str, Any] | None,
+    ) -> pd.DatetimeIndex | None:
         """
         ラベリングの起点となるイベント時刻（サンプリングポイント）を検出
 

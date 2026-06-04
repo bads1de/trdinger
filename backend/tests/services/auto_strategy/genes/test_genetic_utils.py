@@ -37,7 +37,6 @@ class SampleGene:
 
 
 class TestGeneticUtils:
-
     def test_create_child_metadata(self):
         parent1_meta = {"gen": 1, "score": 10}
         parent2_meta = {"gen": 2, "score": 20}

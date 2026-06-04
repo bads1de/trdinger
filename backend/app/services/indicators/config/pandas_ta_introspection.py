@@ -9,8 +9,9 @@ import inspect
 import logging
 import re
 import warnings
+from collections.abc import Callable
 from functools import lru_cache
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 import pandas_ta_classic as ta
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 # サンプルDataFrameキャッシュ（同じパラメータなら同じDataFrameを再利用）
-_sample_frame_cache: Dict[tuple, pd.DataFrame] = {}
+_sample_frame_cache: dict[tuple, pd.DataFrame] = {}
 
 
 def _build_sample_ohlcv_frame(
@@ -92,8 +93,8 @@ def _build_sample_ohlcv_frame(
 def _build_indicator_call_kwargs(
     func: Any,
     frame: Any,
-    default_params: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    default_params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     検証用の DataFrame から、関数呼び出し用 kwargs を作る
 
@@ -115,7 +116,7 @@ def _build_indicator_call_kwargs(
         - その他 → default_paramsから取得
     """
     sig = inspect.signature(func)
-    kwargs: Dict[str, Any] = {}
+    kwargs: dict[str, Any] = {}
     default_params = default_params or {}
 
     for p_name in sig.parameters:
@@ -141,14 +142,14 @@ def _build_indicator_call_kwargs(
 
 
 # サンプル実行結果キャッシュ（同じ関数/パラメータなら同じ結果を再利用）
-_sample_run_cache: Dict[tuple, Any] = {}
+_sample_run_cache: dict[tuple, Any] = {}
 
 
 def _run_indicator_on_sample_frame(
     func: Callable[..., Any],
     *,
     rows: int,
-    default_params: Optional[Dict[str, Any]] = None,
+    default_params: dict[str, Any] | None = None,
     walk_close: bool = False,
     with_datetime_index: bool = False,
 ) -> Any:
@@ -172,12 +173,8 @@ def _run_indicator_on_sample_frame(
         FutureWarningを抑制して実行します。
     """
     # キャッシュキーを生成（funcはhashableではないので名前ベース）
-    func_id = getattr(func, "__name__", None) or getattr(
-        func, "__qualname__", id(func)
-    )
-    params_key = (
-        tuple(sorted(default_params.items())) if default_params else ()
-    )
+    func_id = getattr(func, "__name__", None) or getattr(func, "__qualname__", id(func))
+    params_key = tuple(sorted(default_params.items())) if default_params else ()
     cache_key = (func_id, rows, params_key, walk_close, with_datetime_index)
 
     if cache_key in _sample_run_cache:
@@ -204,7 +201,7 @@ def _run_indicator_on_sample_frame(
 
 
 @lru_cache(maxsize=256)
-def extract_min_length_expression(indicator_name: str) -> Optional[str]:
+def extract_min_length_expression(indicator_name: str) -> str | None:
     """
     pandas-taのソースコードからmin_length計算式を抽出します
 
@@ -257,7 +254,7 @@ def extract_min_length_expression(indicator_name: str) -> Optional[str]:
         return None
 
 
-def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
+def _get_indicator_defaults(indicator_name: str) -> dict[str, Any]:
     """
     pandas-taの指標からデフォルトパラメータ値を取得します
 
@@ -281,7 +278,7 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
     if func is None:
         return {}
 
-    defaults: Dict[str, Any] = {}
+    defaults: dict[str, Any] = {}
 
     # 1. inspect.signature から数値デフォルト値を取得 (最も信頼性が高い)
     try:
@@ -329,7 +326,7 @@ def _get_indicator_defaults(indicator_name: str) -> Dict[str, Any]:
     return defaults
 
 
-def _evaluate_expression(expr: str, params: Dict[str, Any]) -> Optional[int]:
+def _evaluate_expression(expr: str, params: dict[str, Any]) -> int | None:
     """
     min_length式を評価して数値を返します
 
@@ -362,7 +359,7 @@ def _evaluate_expression(expr: str, params: Dict[str, Any]) -> Optional[int]:
         return None
 
 
-def calculate_min_length(indicator_name: str, params: Dict[str, Any]) -> int:
+def calculate_min_length(indicator_name: str, params: dict[str, Any]) -> int:
     """
     指標の最小必要データ長を計算します
 
@@ -401,9 +398,7 @@ def calculate_min_length(indicator_name: str, params: Dict[str, Any]) -> int:
     # フォールバック2: 全数値パラメータの最大値
     # (例: MACD の {fast: 12, slow: 26, signal: 9} → 26)
     numeric_values = [
-        int(v)
-        for v in merged_params.values()
-        if isinstance(v, (int, float)) and v > 0
+        int(v) for v in merged_params.values() if isinstance(v, (int, float)) and v > 0
     ]
     if numeric_values:
         return max(numeric_values)
@@ -512,7 +507,7 @@ def get_return_column_count(indicator_name: str) -> int:
 
 
 @lru_cache(maxsize=256)
-def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
+def get_return_column_names(indicator_name: str) -> list[str] | None:
     """
     指標が返すカラム名のリストを取得します
 
@@ -559,7 +554,7 @@ def get_return_column_names(indicator_name: str) -> Optional[List[str]]:
 
 
 @lru_cache(maxsize=256)
-def get_indicator_category(indicator_name: str) -> Optional[str]:
+def get_indicator_category(indicator_name: str) -> str | None:
     """
     指標のカテゴリ名 (momentum, trend, volatility, etc.) を取得します
 
@@ -587,7 +582,7 @@ def get_indicator_category(indicator_name: str) -> Optional[str]:
     return None
 
 
-def extract_default_parameters(indicator_name: str) -> Dict[str, Any]:
+def extract_default_parameters(indicator_name: str) -> dict[str, Any]:
     """
     指標のデフォルトパラメータを抽出します
 
@@ -630,7 +625,7 @@ def extract_default_parameters(indicator_name: str) -> Dict[str, Any]:
         return {}
 
 
-def get_all_pandas_ta_indicators() -> List[str]:
+def get_all_pandas_ta_indicators() -> list[str]:
     """
     pandas-taの全指標名を動的に取得します
 
@@ -648,4 +643,4 @@ def get_all_pandas_ta_indicators() -> List[str]:
         indicators.extend(items)
 
     # 重複を除去してソート
-    return sorted(list(set(indicators)))
+    return sorted(set(indicators))

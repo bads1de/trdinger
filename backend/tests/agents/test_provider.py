@@ -1,7 +1,8 @@
 """Tests for LLM Provider."""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, Mock
 
 
 # Mock langchain before importing provider
@@ -35,7 +36,9 @@ class TestLLMProvider:
         with patch.dict("sys.modules", {"langchain_google_genai": MagicMock()}):
             from app.agents.provider import get_llm_provider
 
-            with pytest.raises(ValueError, match="GOOGLE_API_KEY environment variable is not set"):
+            with pytest.raises(
+                ValueError, match="GOOGLE_API_KEY environment variable is not set"
+            ):
                 get_llm_provider()
 
     @patch.dict("os.environ", {"GOOGLE_API_KEY": "test_api_key"})

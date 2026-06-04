@@ -176,7 +176,7 @@ class TestBacktestSystemComprehensive:
             BacktestRunConfig(**sample_config)
             assert True  # 検証成功
         except Exception:
-            assert False  # 検証失敗
+            raise AssertionError()  # 検証失敗
 
     def test_config_validation_invalid_dates(self):
         """無効な日付設定検証のテスト"""
@@ -193,7 +193,7 @@ class TestBacktestSystemComprehensive:
 
         try:
             BacktestRunConfig(**invalid_config)
-            assert False  # 例外が発生すべき
+            raise AssertionError()  # 例外が発生すべき
         except Exception:
             assert True  # 期待通りエラー
 
@@ -206,7 +206,7 @@ class TestBacktestSystemComprehensive:
 
         try:
             BacktestRunConfig(**incomplete_config)
-            assert False  # 例外が発生すべき
+            raise AssertionError()  # 例外が発生すべき
         except Exception:
             assert True  # 期待通りエラー
 
@@ -355,7 +355,7 @@ class TestBacktestSystemComprehensive:
                 pytest.fail("同時実行でエラー")
 
         threads = []
-        for i in range(5):
+        for _i in range(5):
             thread = threading.Thread(target=run_backtest)
             threads.append(thread)
             thread.start()
@@ -423,7 +423,7 @@ class TestBacktestSystemComprehensive:
             BacktestRunConfig(**valid_strategy_config)
             assert True  # 検証成功
         except Exception:
-            assert False  # 検証失敗
+            raise AssertionError()  # 検証失敗
 
     def test_backtest_result_consistency(self):
         """バックテスト結果一貫性のテスト"""
@@ -521,7 +521,7 @@ class TestBacktestSystemComprehensive:
             },
         }
 
-        for template_name, config in templates.items():
+        for _template_name, config in templates.items():
             assert "initial_capital" in config
             assert "commission_rate" in config
 

@@ -7,7 +7,7 @@ backtesting.py の統計結果から取引履歴やエクイティカーブを
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 import pandas as pd
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class TradeHistoryTransformer:
     """取引履歴変換専門クラス"""
 
-    def transform(self, stats: Any) -> List[Dict[str, Any]]:
+    def transform(self, stats: Any) -> list[dict[str, Any]]:
         """
         取引履歴を辞書リストに変換
 
@@ -35,16 +35,14 @@ class TradeHistoryTransformer:
         try:
             trades_df = getattr(stats, "_trades", None)
 
-            if trades_df is None or (
-                hasattr(trades_df, "empty") and trades_df.empty
-            ):
+            if trades_df is None or (hasattr(trades_df, "empty") and trades_df.empty):
                 logger.debug("バックテストで取引が発生しませんでした")
                 return []
 
             df = trades_df.copy()
             pnl_source_col = resolve_trade_pnl_column(df)
 
-            def _convert_timestamps(series: Any) -> list[Optional[datetime]]:
+            def _convert_timestamps(series: Any) -> list[datetime | None]:
                 return [
                     safe_timestamp_conversion(value)
                     for value in pd.to_datetime(series, errors="coerce")
@@ -81,14 +79,11 @@ class TradeHistoryTransformer:
                     "duration",
                     "Duration",
                     lambda s: (
-                        pd.to_timedelta(s)
-                        .dt.total_seconds()
-                        .fillna(0)
-                        .astype(int)
+                        pd.to_timedelta(s).dt.total_seconds().fillna(0).astype(int)
                         if pd.api.types.is_timedelta64_dtype(s)
-                        else cast(
-                            pd.Series, pd.to_numeric(s, errors="coerce")
-                        ).fillna(0)
+                        else cast(pd.Series, pd.to_numeric(s, errors="coerce")).fillna(
+                            0
+                        )
                     ).astype(int),
                 ),
             ]
@@ -104,9 +99,7 @@ class TradeHistoryTransformer:
 
             if pnl_source_col is not None:
                 try:
-                    df["pnl"] = pd.to_numeric(
-                        df[pnl_source_col], errors="coerce"
-                    )
+                    df["pnl"] = pd.to_numeric(df[pnl_source_col], errors="coerce")
                 except Exception:
                     df["pnl"] = 0.0
             else:
@@ -141,9 +134,7 @@ class TradeHistoryTransformer:
 class EquityCurveTransformer:
     """エクイティカーブ変換専門クラス"""
 
-    def transform(
-        self, stats: Any, max_points: int = 1000
-    ) -> List[Dict[str, Any]]:
+    def transform(self, stats: Any, max_points: int = 1000) -> list[dict[str, Any]]:
         """
         エクイティカーブを辞書リストに変換
 
@@ -164,9 +155,7 @@ class EquityCurveTransformer:
                 step = len(df) // max_points
                 df = df.iloc[::step]
 
-            df["timestamp"] = [
-                self._safe_timestamp_conversion(t) for t in df.index
-            ]
+            df["timestamp"] = [self._safe_timestamp_conversion(t) for t in df.index]
             # Equity 列が存在しない場合は最後の数値列をフォールバックとする
             equity_col = (
                 "Equity"
@@ -191,6 +180,6 @@ class EquityCurveTransformer:
             return []
 
     @staticmethod
-    def _safe_timestamp_conversion(value: Any) -> Optional[datetime]:
+    def _safe_timestamp_conversion(value: Any) -> datetime | None:
         """安全なtimestamp変換"""
         return safe_timestamp_conversion(value)

@@ -13,9 +13,9 @@ class TestExcludedFunctionsDynamic:
         from app.services.indicators.config.discovery import DynamicIndicatorDiscovery
 
         # EXCLUDED_FUNCTIONS は動的検出に移行
-        assert not hasattr(
-            DynamicIndicatorDiscovery, "EXCLUDED_FUNCTIONS"
-        ), "EXCLUDED_FUNCTIONS should be removed (use dynamic detection)"
+        assert not hasattr(DynamicIndicatorDiscovery, "EXCLUDED_FUNCTIONS"), (
+            "EXCLUDED_FUNCTIONS should be removed (use dynamic detection)"
+        )
 
     def test_utility_functions_are_excluded(self):
         """ユーティリティ関数が検出から除外されること"""
@@ -55,9 +55,9 @@ class TestDataArgumentsDynamic:
             # 基本5つは動的取得されるべき
             basic = {"open", "high", "low", "close", "volume"}
             overlap = basic & data_args
-            assert (
-                len(overlap) == 0
-            ), f"Basic data args {overlap} should be dynamically detected"
+            assert len(overlap) == 0, (
+                f"Basic data args {overlap} should be dynamically detected"
+            )
 
 
 class TestParameterRulesRemoved:
@@ -68,9 +68,9 @@ class TestParameterRulesRemoved:
         from app.services.indicators.config.discovery import DynamicIndicatorDiscovery
 
         # PARAMETER_RULES は動的計算に移行
-        assert not hasattr(
-            DynamicIndicatorDiscovery, "PARAMETER_RULES"
-        ), "PARAMETER_RULES should be removed (use dynamic calculation)"
+        assert not hasattr(DynamicIndicatorDiscovery, "PARAMETER_RULES"), (
+            "PARAMETER_RULES should be removed (use dynamic calculation)"
+        )
 
     def test_parameters_have_sensible_ranges(self):
         """パラメータが合理的な範囲を持つこと"""

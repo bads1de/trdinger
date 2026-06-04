@@ -90,7 +90,7 @@ class TestAdvancedFeatures:
 
         # ロジックの実装（仮）
         regime = []
-        for i, row in data.iterrows():
+        for _i, row in data.iterrows():
             p_chg = row["close_change"]
             oi_chg = row["oi_change"]
 

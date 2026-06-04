@@ -6,7 +6,7 @@ Windowsのmultiprocessing (spawn) に対応するため、
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 # 遅延インポートなどで循環参照を避ける
 from app.services.auto_strategy.core.fitness.fitness_sharing_vectorizer import (
@@ -20,14 +20,14 @@ from .parallel_evaluator import ParallelEvaluationResult
 logger = logging.getLogger(__name__)
 
 # ワーカープロセスごとのグローバル変数
-_WORKER_EVALUATOR: Optional[IndividualEvaluator] = None
-_WORKER_CONFIG: Optional[Any] = None
+_WORKER_EVALUATOR: IndividualEvaluator | None = None
+_WORKER_CONFIG: Any | None = None
 
 
 def initialize_worker_process(
-    backtest_config: Dict[str, Any],
+    backtest_config: dict[str, Any],
     ga_config: Any,
-    shared_data: Optional[Dict[str, Any]] = None,
+    shared_data: dict[str, Any] | None = None,
 ):
     """
     ワーカープロセスの初期化関数

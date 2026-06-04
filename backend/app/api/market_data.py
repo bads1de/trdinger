@@ -7,7 +7,6 @@
 """
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
@@ -26,9 +25,7 @@ router = APIRouter(prefix="/api/market-data", tags=["market-data"])
 @router.get("/ohlcv")
 @ErrorHandler.api_endpoint("OHLCVデータ取得エラー")
 async def get_ohlcv_data(
-    symbol: str = Query(
-        ..., description="取引ペアシンボル（例: BTC/USDT:USDT）"
-    ),
+    symbol: str = Query(..., description="取引ペアシンボル（例: BTC/USDT:USDT）"),
     timeframe: str = Query(
         unified_config.market.default_timeframe,
         description="時間軸（1m, 5m, 15m, 30m, 1h, 4h, 1d）",
@@ -43,8 +40,8 @@ async def get_ohlcv_data(
             f"-{unified_config.market.max_limit}）"
         ),
     ),
-    start_date: Optional[str] = Query(None, description="開始日時（ISO形式）"),
-    end_date: Optional[str] = Query(None, description="終了日時（ISO形式）"),
+    start_date: str | None = Query(None, description="開始日時（ISO形式）"),
+    end_date: str | None = Query(None, description="終了日時（ISO形式）"),
     service: MarketDataOrchestrationService = Depends(
         get_market_data_orchestration_service
     ),

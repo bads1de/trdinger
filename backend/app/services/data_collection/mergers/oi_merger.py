@@ -6,7 +6,6 @@ Open Interest データのマージロジックを提供します。
 
 import logging
 from datetime import datetime
-from typing import List
 
 import pandas as pd
 
@@ -81,9 +80,7 @@ class OIMerger:
 
         return df
 
-    def _convert_oi_to_dataframe(
-        self, oi_data: List[OpenInterestData]
-    ) -> pd.DataFrame:
+    def _convert_oi_to_dataframe(self, oi_data: list[OpenInterestData]) -> pd.DataFrame:
         """
         OpenInterestDataリストをpandas.DataFrameに変換
 

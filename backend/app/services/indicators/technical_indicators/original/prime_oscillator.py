@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -112,7 +112,7 @@ def _njit_prime_oscillator_loop(
 @handle_pandas_ta_errors
 def prime_oscillator(
     close: pd.Series, length: int = 14, signal_length: int = 3
-) -> Tuple[pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series]:
     """Prime Number Oscillator."""
     if length < 2:
         raise ValueError("length must be >= 2")
@@ -140,17 +140,13 @@ def prime_oscillator(
 
     primes = _get_prime_sequence(length)
     if not primes:
-        return cast(
-            Tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
-        )
+        return cast(tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2))
 
     primes_array = np.array(primes, dtype=np.int64)
     result = _njit_prime_oscillator_loop(prices, primes_array, 200)
 
-    oscillator = pd.Series(
-        result, index=close.index, name=f"PRIME_OSC_{length}"
-    )
+    oscillator = pd.Series(result, index=close.index, name=f"PRIME_OSC_{length}")
     signal = oscillator.rolling(window=signal_length).mean()
     signal.name = f"PRIME_SIGNAL_{length}_{signal_length}"  # type: ignore[reportAttributeAccessIssue]
 
-    return cast(Tuple[pd.Series, pd.Series], (oscillator, signal))
+    return cast(tuple[pd.Series, pd.Series], (oscillator, signal))

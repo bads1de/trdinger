@@ -4,7 +4,6 @@
 
 import logging
 from datetime import datetime, timezone
-from typing import List, Optional
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -22,7 +21,7 @@ class FundingRateRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, FundingRateData)
 
-    def insert_funding_rate_data(self, funding_rate_records: List[dict]) -> int:
+    def insert_funding_rate_data(self, funding_rate_records: list[dict]) -> int:
         if not funding_rate_records:
             logger.warning("挿入するファンディングレートデータがありません")
             return 0
@@ -123,10 +122,10 @@ class FundingRateRepository(BaseRepository):
     def get_funding_rate_data(
         self,
         symbol: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> List[FundingRateData]:
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[FundingRateData]:
         """
         ファンディングレートデータを取得
 
@@ -150,7 +149,7 @@ class FundingRateRepository(BaseRepository):
             limit=limit,
         )
 
-    def get_all_by_symbol(self, symbol: str) -> List[FundingRateData]:
+    def get_all_by_symbol(self, symbol: str) -> list[FundingRateData]:
         """
         指定されたシンボルの全ファンディングレートデータを取得
 
@@ -171,7 +170,7 @@ class FundingRateRepository(BaseRepository):
             limit=None,
         )
 
-    def get_latest_funding_timestamp(self, symbol: str) -> Optional[datetime]:
+    def get_latest_funding_timestamp(self, symbol: str) -> datetime | None:
         """
         指定されたシンボルの最新ファンディングタイムスタンプを取得
 
@@ -183,7 +182,7 @@ class FundingRateRepository(BaseRepository):
         """
         return super().get_latest_timestamp("funding_timestamp", {"symbol": symbol})
 
-    def get_oldest_funding_timestamp(self, symbol: str) -> Optional[datetime]:
+    def get_oldest_funding_timestamp(self, symbol: str) -> datetime | None:
         """
         指定されたシンボルの最古ファンディングタイムスタンプを取得
 
@@ -239,8 +238,8 @@ class FundingRateRepository(BaseRepository):
     def clear_funding_rate_data_by_date_range(
         self,
         symbol: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> int:
         """
         指定された期間のファンディングレートデータを削除
@@ -268,9 +267,9 @@ class FundingRateRepository(BaseRepository):
     def get_funding_rate_dataframe(
         self,
         symbol: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
     ) -> pd.DataFrame:
         """
         ファンディングレートデータをDataFrameとして取得
@@ -298,6 +297,3 @@ class FundingRateRepository(BaseRepository):
             column_mapping=column_mapping,
             index_column="funding_timestamp",
         )
-
-
-

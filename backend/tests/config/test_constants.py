@@ -4,7 +4,6 @@
 app/config/constants.pyの定数定義をテストします。
 """
 
-
 from app.config import constants
 
 

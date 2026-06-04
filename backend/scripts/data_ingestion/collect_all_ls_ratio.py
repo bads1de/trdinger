@@ -13,9 +13,8 @@ Long/Short Ratioの履歴データを取得・保存します。
 
 import asyncio
 import logging
-import sys
 import os
-
+import sys
 
 # プロジェクトルートへのパスを追加してモジュールをインポート可能にする
 sys.path.append(
@@ -25,8 +24,8 @@ sys.path.append(
 from app.services.data_collection.bybit.long_short_ratio_service import (
     BybitLongShortRatioService,
 )
-from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 from database.connection import get_db
+from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 
 # ロガー設定
 logging.basicConfig(
@@ -94,7 +93,7 @@ async def main():
         # 並列実行しすぎるとAPIレート制限にかかるため、逐次または少数の並列で実行
         # ここでは安全のため逐次実行します
         for i, symbol in enumerate(symbols):
-            logger.info(f"--- 処理中 ({i+1}/{len(symbols)}): {symbol} ---")
+            logger.info(f"--- 処理中 ({i + 1}/{len(symbols)}): {symbol} ---")
 
             count = await collect_symbol_data(service, repository, symbol, period)
             total_saved += count

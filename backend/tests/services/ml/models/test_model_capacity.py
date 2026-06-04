@@ -91,12 +91,12 @@ class TestModelCapacity:
 
         # 3. feature2が最も重要であること
         # feature1, feature2, noise の順
-        assert (
-            importances[1] > importances[0]
-        ), "重要な特徴量(feature2)が正しく評価されていません"
-        assert (
-            importances[1] > importances[2]
-        ), "重要な特徴量(feature2)がノイズより低く評価されています"
+        assert importances[1] > importances[0], (
+            "重要な特徴量(feature2)が正しく評価されていません"
+        )
+        assert importances[1] > importances[2], (
+            "重要な特徴量(feature2)がノイズより低く評価されています"
+        )
 
     def test_lightgbm_with_class_weight(self, synthetic_pattern_data):
         """class_weight='balanced' の影響を確認"""
@@ -136,6 +136,6 @@ class TestModelCapacity:
         # Balancedの場合、Recallは高くなるがPrecisionは下がる傾向がある
         # しかし、明確なパターンがあれば両方高くなるはず
         assert rec > 0.9, "Balanced設定でRecallが低すぎます"
-        assert (
-            prec > 0.8
-        ), "Balanced設定でも明確なパターンならPrecisionは維持されるべきです"
+        assert prec > 0.8, (
+            "Balanced設定でも明確なパターンならPrecisionは維持されるべきです"
+        )

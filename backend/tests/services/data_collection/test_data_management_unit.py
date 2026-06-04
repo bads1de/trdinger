@@ -31,7 +31,6 @@ class TestDataManagementOrchestrationUnit:
                 "app.services.data_collection.orchestration.data_management_orchestration_service.OpenInterestRepository"
             ) as mock_oi_cls,
         ):
-
             mock_ohlcv_cls.return_value.clear_all_ohlcv_data.return_value = 100
             mock_fr_cls.return_value.clear_all_funding_rate_data.return_value = 50
             mock_oi_cls.return_value.clear_all_open_interest_data.return_value = 30
@@ -56,7 +55,6 @@ class TestDataManagementOrchestrationUnit:
                 "app.services.data_collection.orchestration.data_management_orchestration_service.OpenInterestRepository"
             ) as mock_oi_cls,
         ):
-
             mock_ohlcv_cls.return_value.clear_ohlcv_data_by_symbol.return_value = 5
             mock_fr_cls.return_value.clear_funding_rate_data_by_symbol.return_value = 5
             mock_oi_cls.return_value.clear_open_interest_data_by_symbol.return_value = 5
@@ -80,7 +78,6 @@ class TestDataManagementOrchestrationUnit:
                 "app.services.data_collection.orchestration.data_management_orchestration_service.OpenInterestRepository"
             ) as mock_oi_cls,
         ):
-
             mock_ohlcv_cls.return_value.clear_ohlcv_data_by_symbol.return_value = 10
             mock_fr_cls.return_value.clear_funding_rate_data_by_symbol.side_effect = (
                 Exception("FR Fail")
@@ -108,7 +105,6 @@ class TestDataManagementOrchestrationUnit:
                 "app.services.data_collection.orchestration.data_management_orchestration_service.OpenInterestRepository"
             ) as mock_oi_cls,
         ):
-
             mock_ohlcv_cls.return_value.get_data_count.return_value = 10
             mock_ohlcv_cls.return_value.get_latest_timestamp.return_value = datetime(
                 2023, 1, 1

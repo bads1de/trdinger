@@ -6,7 +6,8 @@
 """
 
 import logging
-from typing import Any, Callable, List, Mapping, Optional, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any
 
 import numpy as np
 
@@ -23,9 +24,7 @@ from .fitness_sharing_niche import (
 from .fitness_sharing_niche import (
     compute_niche_counts_vectorized as _compute_niche_counts_vectorized,
 )
-from .fitness_sharing_niche import (
-    find_neighbors_kdtree as _find_neighbors_kdtree
-)
+from .fitness_sharing_niche import find_neighbors_kdtree as _find_neighbors_kdtree
 from .fitness_sharing_niche import normalize_vectors as _normalize_vectors
 from .fitness_sharing_silhouette import (
     _collect_gene_vectors,
@@ -59,11 +58,11 @@ class FitnessSharing:
 
     def __init__(
         self,
-        sharing_radius: Optional[float] = None,
-        alpha: Optional[float] = None,
-        sampling_threshold: Optional[int] = None,
-        sampling_ratio: Optional[float] = None,
-        evaluation_report_provider: Optional[Callable[[Any], Any]] = None,
+        sharing_radius: float | None = None,
+        alpha: float | None = None,
+        sampling_threshold: int | None = None,
+        sampling_ratio: float | None = None,
+        evaluation_report_provider: Callable[[Any], Any] | None = None,
     ) -> None:
         """
         初期化
@@ -87,9 +86,7 @@ class FitnessSharing:
             else self.DEFAULT_SAMPLING_THRESHOLD
         )
         self.sampling_ratio = (
-            sampling_ratio
-            if sampling_ratio is not None
-            else self.SAMPLING_RATIO
+            sampling_ratio if sampling_ratio is not None else self.SAMPLING_RATIO
         )
         self._feature_vector_cache: dict[_FrozenKey, np.ndarray] = {}
         self._evaluation_report_provider = evaluation_report_provider
@@ -111,15 +108,13 @@ class FitnessSharing:
             self.operator_types = OPERATORS.copy()
             self.operator_types.extend(["AND", "OR"])
             self.operator_types.sort()
-            self.operator_map = {
-                op: i for i, op in enumerate(self.operator_types)
-            }
+            self.operator_map = {op: i for i, op in enumerate(self.operator_types)}
         except Exception as e:
             logger.warning(f"オペレータタイプ取得失敗: {e}")
             self.operator_types = []
             self.operator_map = {}
 
-    def apply_fitness_sharing(self, population: List[Any]) -> List[Any]:
+    def apply_fitness_sharing(self, population: list[Any]) -> list[Any]:
         """
         個体群にフィットネス共有を適用（最適化版）
 
@@ -148,9 +143,7 @@ class FitnessSharing:
             if len(vectors) < 2:
                 return population
 
-            max_dim = max(
-                v.shape[0] for v in vectors if isinstance(v, np.ndarray)
-            )
+            max_dim = max(v.shape[0] for v in vectors if isinstance(v, np.ndarray))
             vectors_padded: list[np.ndarray] = []
             for v in vectors:
                 if v.shape[0] < max_dim:
@@ -197,13 +190,11 @@ class FitnessSharing:
                 if i in original_fitness and hasattr(individual, "fitness"):
                     silhouette_ratio = (
                         tuple(
-                            float(
-                                np.divide(
-                                    s, o, out=np.zeros_like(s), where=o != 0
-                                )
-                            )
+                            float(np.divide(s, o, out=np.zeros_like(s), where=o != 0))
                             for s, o in zip(
-                                individual.fitness.values, original_fitness[i]
+                                individual.fitness.values,
+                                original_fitness[i],
+                                strict=False,
                             )
                         )
                         if individual.fitness.valid
@@ -211,7 +202,9 @@ class FitnessSharing:
                     )
                     individual.fitness.values = tuple(
                         o * r
-                        for o, r in zip(original_fitness[i], silhouette_ratio)
+                        for o, r in zip(
+                            original_fitness[i], silhouette_ratio, strict=False
+                        )
                     )
 
             return result
@@ -223,7 +216,7 @@ class FitnessSharing:
     def _get_feature_vector_cache_key_with_behavior(
         self,
         gene: StrategyGene,
-        behavior_profile: Optional[Mapping[str, float]] = None,
+        behavior_profile: Mapping[str, float] | None = None,
     ) -> _FrozenKey:
         """behavior profile も含めた特徴ベクトルキャッシュキーを生成する。"""
         try:
@@ -240,15 +233,13 @@ class FitnessSharing:
             )
             return base_key, behavior_signature
         except Exception as e:
-            logger.debug(
-                f"特徴ベクトルキャッシュキーの生成に失敗しました: {e}"
-            )
+            logger.debug(f"特徴ベクトルキャッシュキーの生成に失敗しました: {e}")
             return str(id(gene))
 
     def _get_feature_vector_cache_key(
         self,
         gene: StrategyGene,
-        behavior_profile: Optional[Mapping[str, float]] = None,
+        behavior_profile: Mapping[str, float] | None = None,
     ) -> _FrozenKey:
         """互換性維持のための公開ラッパー。"""
         return self._get_feature_vector_cache_key_with_behavior(
@@ -258,12 +249,12 @@ class FitnessSharing:
 
     def set_evaluation_report_provider(
         self,
-        provider: Optional[Callable[[Any], Any]],
+        provider: Callable[[Any], Any] | None,
     ) -> None:
         """behavior 特徴抽出に使う EvaluationReport 取得関数を設定する。"""
         self._evaluation_report_provider = provider
 
-    def _get_evaluation_report(self, individual: Any) -> Optional[Any]:
+    def _get_evaluation_report(self, individual: Any) -> Any | None:
         """評価レポート取得関数を安全に呼び出す。"""
         if not callable(self._evaluation_report_provider):
             return None
@@ -285,7 +276,7 @@ class FitnessSharing:
 
     def _build_behavior_profile_map(
         self,
-        population: List[Any],
+        population: list[Any],
     ) -> dict[int, dict[str, float]]:
         """個体ごとの behavior profile を事前計算する。"""
         profiles: dict[int, dict[str, float]] = {}
@@ -302,7 +293,7 @@ class FitnessSharing:
     def _resolve_feature_vector(
         self,
         gene: StrategyGene,
-        behavior_profile: Optional[Mapping[str, float]] = None,
+        behavior_profile: Mapping[str, float] | None = None,
     ) -> np.ndarray:
         """gene と behavior profile から特徴ベクトルを取得する。"""
         cache_key = self._get_feature_vector_cache_key(
@@ -364,9 +355,7 @@ class FitnessSharing:
             for index in range(len(vector_keys))
         }
 
-    def compute_niche_counts_vectorized(
-        self, vectors: np.ndarray
-    ) -> np.ndarray:
+    def compute_niche_counts_vectorized(self, vectors: np.ndarray) -> np.ndarray:
         """
         ベクトル化されたニッチカウント計算（O(N log N)）
         """
@@ -403,7 +392,7 @@ class FitnessSharing:
             sampling_ratio=self.sampling_ratio,
         )
 
-    def silhouette_based_sharing(self, population: List[Any]) -> List[Any]:
+    def silhouette_based_sharing(self, population: list[Any]) -> list[Any]:
         """
         シルエットベースの共有
         """
@@ -411,9 +400,7 @@ class FitnessSharing:
 
         def resolve_vector(gene: StrategyGene) -> np.ndarray:
             behavior_profile = behavior_profiles.get(id(gene))
-            return self._vectorize_gene(
-                gene, behavior_profile=behavior_profile
-            )
+            return self._vectorize_gene(gene, behavior_profile=behavior_profile)
 
         return _silhouette_based_sharing(
             population,
@@ -424,7 +411,7 @@ class FitnessSharing:
     def _vectorize_gene(
         self,
         gene: StrategyGene,
-        behavior_profile: Optional[Mapping[str, float]] = None,
+        behavior_profile: Mapping[str, float] | None = None,
     ) -> np.ndarray:
         """
         StrategyGeneを数値的な特徴ベクトルに変換します。
@@ -437,4 +424,3 @@ class FitnessSharing:
             operator_map=self.operator_map,
             behavior_profile=behavior_profile,
         )
-

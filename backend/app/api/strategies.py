@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -42,7 +42,7 @@ class StrategyStatsResponse(BaseModel):
     """戦略統計レスポンス"""
 
     success: bool = True
-    stats: Dict[str, Any] = Field(default_factory=dict)
+    stats: dict[str, Any] = Field(default_factory=dict)
     message: str = "戦略統計が正常に取得されました"
     timestamp: str = Field(default_factory=now_iso)
 
@@ -57,17 +57,11 @@ async def get_strategies(
         description="取得件数制限",
     ),
     offset: int = Query(0, ge=0, description="オフセット"),
-    risk_level: Optional[str] = Query(
-        None, description="リスクレベルフィルター"
-    ),
-    experiment_id: Optional[int] = Query(None, description="実験IDフィルター"),
-    min_fitness: Optional[float] = Query(
-        None, description="最小フィットネススコア"
-    ),
+    risk_level: str | None = Query(None, description="リスクレベルフィルター"),
+    experiment_id: int | None = Query(None, description="実験IDフィルター"),
+    min_fitness: float | None = Query(None, description="最小フィットネススコア"),
     sort_by: str = Query("fitness_score", description="ソート項目"),
-    sort_order: str = Query(
-        "desc", pattern="^(asc|desc)$", description="ソート順序"
-    ),
+    sort_order: str = Query("desc", pattern="^(asc|desc)$", description="ソート順序"),
     strategy_service: GeneratedStrategyService = Depends(
         get_generated_strategy_service_with_db
     ),

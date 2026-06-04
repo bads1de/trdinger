@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, Union, cast
+from typing import Union, cast
 
 import numpy as np
 import pandas as pd
@@ -19,12 +19,12 @@ from app.utils.data_processing.data_processor import _replace_inf_with_nan
 
 logger = logging.getLogger(__name__)
 
-SeriesOrDict = Union[pd.Series, Dict[str, pd.Series]]
+SeriesOrDict = Union[pd.Series, dict[str, pd.Series]]
 
 
 def sanitize_numeric_dataframe(
     df: pd.DataFrame,
-    fill_value: Optional[float] = 0.0,
+    fill_value: float | None = 0.0,
     forward_fill: bool = False,
 ) -> pd.DataFrame:
     """
@@ -44,16 +44,10 @@ def sanitize_numeric_dataframe(
     ]
 
     if not numeric_positions:
-        return (
-            result_df.fillna(fill_value)
-            if fill_value is not None
-            else result_df
-        )
+        return result_df.fillna(fill_value) if fill_value is not None else result_df
 
     for position in numeric_positions:
-        series = _replace_inf_with_nan(
-            cast(pd.Series, result_df.iloc[:, position])
-        )
+        series = _replace_inf_with_nan(cast(pd.Series, result_df.iloc[:, position]))
 
         if forward_fill:
             series = series.ffill()
@@ -84,8 +78,8 @@ class BaseFeatureCalculator(ABC):
 
     def validate_input_data(
         self,
-        df: Optional[pd.DataFrame],
-        required_columns: Optional[list] = None,
+        df: pd.DataFrame | None,
+        required_columns: list | None = None,
     ) -> bool:
         """入力データの妥当性を検証"""
         if df is None or df.empty:
@@ -116,7 +110,7 @@ class BaseFeatureCalculator(ABC):
 
     @abstractmethod
     def calculate_features(
-        self, df: pd.DataFrame, config: Dict[str, SerializableValue]
+        self, df: pd.DataFrame, config: dict[str, SerializableValue]
     ) -> pd.DataFrame:
         """
         特徴量計算の抽象メソッド
@@ -132,7 +126,7 @@ class BaseFeatureCalculator(ABC):
         """
 
     def create_result_dataframe_efficient(
-        self, df: pd.DataFrame, new_features: Dict[str, pd.Series]
+        self, df: pd.DataFrame, new_features: dict[str, pd.Series]
     ) -> pd.DataFrame:
         """
         高速な結果DataFrame作成（DataFrame断片化回避）
@@ -152,9 +146,7 @@ class BaseFeatureCalculator(ABC):
             return df.copy()
 
         # DataFrame断片化を避けるため、辞書で収集 → pd.concat()で一括追加
-        result_df = pd.concat(
-            [df, pd.DataFrame(new_features, index=df.index)], axis=1
-        )
+        result_df = pd.concat([df, pd.DataFrame(new_features, index=df.index)], axis=1)
         return result_df
 
     def handle_calculation_error(
@@ -225,9 +217,7 @@ class BaseFeatureCalculator(ABC):
             return result
 
         # Series型入力の場合
-        if isinstance(numerators, pd.Series) and isinstance(
-            denominators, pd.Series
-        ):
+        if isinstance(numerators, pd.Series) and isinstance(denominators, pd.Series):
             safe_denominators = denominators.replace(0, np.nan)
             result = numerators / safe_denominators
             return result.fillna(fill_value)  # type: ignore[attr-defined,union-attr]

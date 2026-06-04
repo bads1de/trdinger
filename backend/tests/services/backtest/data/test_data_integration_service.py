@@ -53,18 +53,16 @@ class TestDataIntegrationService:
     def test_create_backtest_dataframe_full(self, integration_service, sample_ohlcv_df):
         # Arrange
         integration_service.retrieval_service.get_ohlcv_data.return_value = []
-        integration_service.conversion_service.convert_ohlcv_to_dataframe.return_value = (
-            sample_ohlcv_df
-        )
+        integration_service.conversion_service.convert_ohlcv_to_dataframe.return_value = sample_ohlcv_df
 
         integration_service.oi_merger = MagicMock()
-        integration_service.oi_merger.merge_oi_data.side_effect = (
-            lambda df, *args: df.assign(open_interest=[1000, 1100])
+        integration_service.oi_merger.merge_oi_data.side_effect = lambda df, *args: (
+            df.assign(open_interest=[1000, 1100])
         )
 
         integration_service.fr_merger = MagicMock()
-        integration_service.fr_merger.merge_fr_data.side_effect = (
-            lambda df, *args: df.assign(funding_rate=[0.0001, 0.0002])
+        integration_service.fr_merger.merge_fr_data.side_effect = lambda df, *args: (
+            df.assign(funding_rate=[0.0001, 0.0002])
         )
 
         # Act
@@ -82,9 +80,7 @@ class TestDataIntegrationService:
     def test_create_backtest_dataframe_exclude_optional(
         self, integration_service, sample_ohlcv_df
     ):
-        integration_service.conversion_service.convert_ohlcv_to_dataframe.return_value = (
-            sample_ohlcv_df
-        )
+        integration_service.conversion_service.convert_ohlcv_to_dataframe.return_value = sample_ohlcv_df
 
         df = integration_service.create_backtest_dataframe(
             "BTC/USDT",

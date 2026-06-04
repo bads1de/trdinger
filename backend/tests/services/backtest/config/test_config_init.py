@@ -4,7 +4,6 @@ backtest/configパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-
 import app.services.backtest.config as config_package
 
 

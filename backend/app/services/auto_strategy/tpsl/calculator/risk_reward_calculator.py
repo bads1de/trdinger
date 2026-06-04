@@ -5,7 +5,7 @@ Risk Reward Calculator
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ...genes import TPSLGene
 from .base_calculator import BaseTPSLCalculator
@@ -25,11 +25,11 @@ class RiskRewardCalculator(BaseTPSLCalculator):
     def _do_calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]],
+        tpsl_gene: TPSLGene | None,
+        market_data: dict[str, Any] | None,
         position_direction: float,
         **kwargs,
-    ) -> Tuple[float, float, float, Dict[str, Any]]:
+    ) -> tuple[float, float, float, dict[str, Any]]:
         """
         リスクリワード比方式によるTP/SL計算の実装
 
@@ -48,17 +48,11 @@ class RiskRewardCalculator(BaseTPSLCalculator):
         """
         # 1. パラメータ取得
         if tpsl_gene:
-            sl_pct = (
-                tpsl_gene.base_stop_loss or tpsl_gene.stop_loss_pct or 0.03
-            )
+            sl_pct = tpsl_gene.base_stop_loss or tpsl_gene.stop_loss_pct or 0.03
             rr_ratio = tpsl_gene.risk_reward_ratio or 2.0
         else:
-            sl_pct = kwargs.get(
-                "stop_loss_pct", kwargs.get("base_stop_loss", 0.03)
-            )
-            rr_ratio = kwargs.get(
-                "target_ratio", kwargs.get("risk_reward_ratio", 2.0)
-            )
+            sl_pct = kwargs.get("stop_loss_pct", kwargs.get("base_stop_loss", 0.03))
+            rr_ratio = kwargs.get("target_ratio", kwargs.get("risk_reward_ratio", 2.0))
 
         # 安全策: sl_pctが0またはNoneの場合の強制フォールバック
         if not sl_pct or sl_pct <= 0:

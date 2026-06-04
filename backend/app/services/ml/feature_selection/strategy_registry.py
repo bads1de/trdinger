@@ -7,7 +7,7 @@ FeatureSelector と StagedStrategy はこのレジストリを参照します。
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING
 
 from .config import SelectionMethod
 
@@ -15,14 +15,12 @@ if TYPE_CHECKING:
     from .strategies.base import BaseSelectionStrategy
 
 
-def default_staged_methods() -> List[SelectionMethod]:
+def default_staged_methods() -> list[SelectionMethod]:
     """Staged 選択のデフォルト段階を返す。"""
     return SelectionMethod.default_staged_methods()
 
 
-def build_staged_strategy_map() -> (
-    Dict[SelectionMethod, "BaseSelectionStrategy"]
-):
+def build_staged_strategy_map() -> dict[SelectionMethod, BaseSelectionStrategy]:
     """Staged 選択で使う戦略の対応表を返す。"""
     from .strategies.lasso import LassoStrategy
     from .strategies.permutation import PermutationStrategy
@@ -46,9 +44,7 @@ def build_staged_strategy_map() -> (
     }
 
 
-def build_selection_strategy_map() -> (
-    Dict[SelectionMethod, "BaseSelectionStrategy"]
-):
+def build_selection_strategy_map() -> dict[SelectionMethod, BaseSelectionStrategy]:
     """FeatureSelector 用の戦略対応表を返す。"""
     from .strategies.staged import StagedStrategy
 
@@ -57,7 +53,7 @@ def build_selection_strategy_map() -> (
     return strategy_map
 
 
-def get_selection_strategy(method: SelectionMethod) -> "BaseSelectionStrategy":
+def get_selection_strategy(method: SelectionMethod) -> BaseSelectionStrategy:
     """指定された手法に対応する戦略インスタンスを返す。"""
     strategy_map = build_selection_strategy_map()
     if method not in strategy_map:

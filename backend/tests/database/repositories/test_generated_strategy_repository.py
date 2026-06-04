@@ -6,7 +6,7 @@ GeneratedStrategyRepositoryのテストモジュール
 
 # pyright: reportAttributeAccessIssue=none
 
-from typing import Any, Dict, cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -60,7 +60,7 @@ def sample_strategy_model() -> GeneratedStrategy:
 
 
 @pytest.fixture
-def sample_gene_data() -> Dict[str, Any]:
+def sample_gene_data() -> dict[str, Any]:
     """サンプル遺伝子データ"""
     return {
         "id": "strategy_001",
@@ -88,7 +88,7 @@ class TestSaveStrategy:
     def test_save_strategy_success(
         self,
         repository: GeneratedStrategyRepository,
-        sample_gene_data: Dict[str, Any],
+        sample_gene_data: dict[str, Any],
     ) -> None:
         """戦略が正常に保存される"""
         # save_strategyは@safe_operationデコレータ内で実行され、
@@ -144,7 +144,7 @@ class TestSaveStrategiesBatch:
     def test_save_strategies_batch_success(
         self,
         repository: GeneratedStrategyRepository,
-        sample_gene_data: Dict[str, Any],
+        sample_gene_data: dict[str, Any],
     ) -> None:
         """戦略が一括保存される"""
         strategies_data = [
@@ -352,7 +352,7 @@ class TestValidateGeneData:
     def test_validate_gene_data_preserves_existing_fields(
         self,
         repository: GeneratedStrategyRepository,
-        sample_gene_data: Dict[str, Any],
+        sample_gene_data: dict[str, Any],
     ) -> None:
         """既存フィールドが保持される"""
         validated = repository._validate_gene_data(sample_gene_data)

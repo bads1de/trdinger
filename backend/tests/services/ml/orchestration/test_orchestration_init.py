@@ -18,7 +18,7 @@ class TestMLOrchestrationInitExports:
             BackgroundTaskManager,
         )
 
-        manager = getattr(orchestration_package, "BackgroundTaskManager")
+        manager = orchestration_package.BackgroundTaskManager
 
         assert manager is BackgroundTaskManager
 
@@ -28,7 +28,7 @@ class TestMLOrchestrationInitExports:
             background_task_manager,
         )
 
-        manager = getattr(orchestration_package, "background_task_manager")
+        manager = orchestration_package.background_task_manager
 
         assert manager is background_task_manager
 
@@ -38,7 +38,7 @@ class TestMLOrchestrationInitExports:
             MLManagementOrchestrationService,
         )
 
-        service = getattr(orchestration_package, "MLManagementOrchestrationService")
+        service = orchestration_package.MLManagementOrchestrationService
 
         assert service is MLManagementOrchestrationService
 
@@ -48,7 +48,7 @@ class TestMLOrchestrationInitExports:
             MLTrainingService,
         )
 
-        service = getattr(orchestration_package, "MLTrainingService")
+        service = orchestration_package.MLTrainingService
 
         assert service is MLTrainingService
 
@@ -58,7 +58,7 @@ class TestMLOrchestrationInitExports:
             ml_training_service,
         )
 
-        service = getattr(orchestration_package, "ml_training_service")
+        service = orchestration_package.ml_training_service
 
         assert service is ml_training_service
 

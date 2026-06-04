@@ -4,7 +4,6 @@ technical_indicatorsパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-
 import app.services.indicators.technical_indicators as ti_package
 
 

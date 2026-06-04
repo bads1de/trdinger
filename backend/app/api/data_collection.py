@@ -5,8 +5,6 @@
 責務の分離により、ビジネスロジックはサービス層に委譲されています。
 """
 
-from typing import Dict, Optional
-
 from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
@@ -32,12 +30,12 @@ async def collect_historical_data(
     symbol: str = DEFAULT_MARKET_SYMBOL,
     timeframe: str = "1h",
     force_update: bool = False,
-    start_date: Optional[str] = None,
+    start_date: str | None = None,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
     ),
-) -> Dict:
+) -> dict:
     """
     履歴OHLCVデータを包括的に収集
 
@@ -72,7 +70,7 @@ async def update_bulk_incremental_data(
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
     ),
-) -> Dict:
+) -> dict:
     """
     一括差分データを更新（OHLCV、ファンディングレート、オープンインタレスト）
 
@@ -90,9 +88,7 @@ async def update_bulk_incremental_data(
     Raises:
         HTTPException: データベースエラーが発生した場合
     """
-    return await orchestration_service.execute_bulk_incremental_update(
-        symbol, db
-    )
+    return await orchestration_service.execute_bulk_incremental_update(symbol, db)
 
 
 @router.post("/bulk-historical")
@@ -105,7 +101,7 @@ async def collect_bulk_historical_data(
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
     ),
-) -> Dict:
+) -> dict:
     """
     全ての時間軸でOHLCVデータを一括収集
 
@@ -141,7 +137,7 @@ async def get_collection_status(
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
     ),
-) -> Dict:
+) -> dict:
     """
     指定されたシンボル・時間軸のデータ収集状況を確認
 
@@ -176,12 +172,12 @@ async def get_collection_status(
 async def collect_all_data_bulk(
     background_tasks: BackgroundTasks,
     force_update: bool = False,
-    start_date: Optional[str] = None,
+    start_date: str | None = None,
     db: Session = Depends(get_db),
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
     ),
-) -> Dict:
+) -> dict:
     """
     全データ（OHLCV・ファンディングレート・オープンインタレスト）を一括収集
 
@@ -218,7 +214,7 @@ async def collect_historical_oi_data(
     orchestration_service: DataCollectionOrchestrationService = Depends(
         get_data_collection_orchestration_service
     ),
-) -> Dict:
+) -> dict:
     """
     OI（オープンインタレスト）履歴データを収集
 

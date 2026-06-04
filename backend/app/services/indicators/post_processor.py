@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -25,9 +25,9 @@ class PostProcessor:
     def post_process(
         self,
         result: Any,
-        config: Dict[str, Any],
-        df: Optional[pd.DataFrame] = None,
-    ) -> Union[np.ndarray, tuple]:
+        config: dict[str, Any],
+        df: pd.DataFrame | None = None,
+    ) -> np.ndarray | tuple:
         """
         後処理 - 戻り値の統一
 
@@ -91,7 +91,7 @@ class PostProcessor:
         else:
             return np.asarray(result)
 
-    def _convert_to_multi(self, result: Any, config: Dict[str, Any]) -> tuple:
+    def _convert_to_multi(self, result: Any, config: dict[str, Any]) -> tuple:
         """
         複数値に変換
 
@@ -115,7 +115,7 @@ class PostProcessor:
             return (np.asarray(result),)
 
     def _convert_dataframe_to_multi(
-        self, result: pd.DataFrame, config: Dict[str, Any]
+        self, result: pd.DataFrame, config: dict[str, Any]
     ) -> tuple:
         """
         DataFrameを複数値に変換
@@ -152,13 +152,9 @@ class PostProcessor:
                         if col in c or col.lower() in c.lower()
                     ]
                     if matching_cols:
-                        selected_cols.append(
-                            result[matching_cols[0]].to_numpy()
-                        )
+                        selected_cols.append(result[matching_cols[0]].to_numpy())
                     else:
                         selected_cols.append(np.full(len(result), np.nan))
             return tuple(selected_cols)
         else:
-            return tuple(
-                result.iloc[:, i].to_numpy() for i in range(result.shape[1])
-            )
+            return tuple(result.iloc[:, i].to_numpy() for i in range(result.shape[1]))

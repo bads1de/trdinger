@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Dict, Protocol, Type, cast
+from typing import Protocol, cast
 
 from backtesting import Strategy
 
@@ -46,7 +46,7 @@ class AutoStrategyLoader:
                 f"オートストラテジーモジュールのインポートに失敗しました: {e}"
             )
 
-    def _import_universal_strategy(self) -> Type[Strategy]:
+    def _import_universal_strategy(self) -> type[Strategy]:
         """UniversalStrategy を遅延インポートする"""
         try:
             from app.services.auto_strategy.strategies.universal_strategy import (
@@ -60,7 +60,7 @@ class AutoStrategyLoader:
             )
 
     def load_strategy_gene(
-        self, strategy_config: Dict[str, SerializableValue]
+        self, strategy_config: dict[str, SerializableValue]
     ) -> object:
         """
         戦略設定から戦略遺伝子オブジェクトをロード・復元
@@ -78,9 +78,7 @@ class AutoStrategyLoader:
 
         # 戦略遺伝子データを抽出
         gene_data = self._extract_strategy_gene(strategy_config)
-        if gene_data is None or (
-            isinstance(gene_data, dict) and not gene_data
-        ):
+        if gene_data is None or (isinstance(gene_data, dict) and not gene_data):
             raise AutoStrategyLoaderError(
                 "オートストラテジーの設定に戦略遺伝子 (strategy_gene) が含まれていません。"
             )
@@ -101,13 +99,11 @@ class AutoStrategyLoader:
             gene = serializer.dict_to_strategy_gene(gene_data, StrategyGene)
             return gene
         except Exception as e:
-            raise AutoStrategyLoaderError(
-                f"戦略遺伝子の復元に失敗しました: {e}"
-            )
+            raise AutoStrategyLoaderError(f"戦略遺伝子の復元に失敗しました: {e}")
 
     def create_auto_strategy_class(
-        self, strategy_config: Dict[str, SerializableValue]
-    ) -> Type[Strategy]:
+        self, strategy_config: dict[str, SerializableValue]
+    ) -> type[Strategy]:
         """
         オートストラテジーのクラスを生成
 
@@ -128,16 +124,12 @@ class AutoStrategyLoader:
         # 遺伝子のバリデーション実行
         is_valid, errors = gene.validate()
         if not is_valid:
-            raise AutoStrategyLoaderError(
-                f"無効な戦略遺伝子です: {', '.join(errors)}"
-            )
+            raise AutoStrategyLoaderError(f"無効な戦略遺伝子です: {', '.join(errors)}")
 
         # UniversalStrategyクラスを返す
         return UniversalStrategy
 
-    def _extract_strategy_gene(
-        self, strategy_config: Dict[str, SerializableValue]
-    ):
+    def _extract_strategy_gene(self, strategy_config: dict[str, SerializableValue]):
         """戦略設定から戦略遺伝子を抽出"""
         # 直接strategy_geneがある場合
         gene_data = strategy_config.get("strategy_gene")

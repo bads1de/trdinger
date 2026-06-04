@@ -75,9 +75,7 @@ class MLFilter:
         Returns:
             True: エントリー許可, False: エントリー拒否
         """
-        gate_enabled = bool(
-            getattr(self.strategy, "volatility_gate_enabled", False)
-        )
+        gate_enabled = bool(getattr(self.strategy, "volatility_gate_enabled", False))
         if not gate_enabled:
             return True
 
@@ -120,9 +118,7 @@ class MLFilter:
             # 3. ML予測を実行
             prediction = self.strategy.ml_predictor.predict(features)
             if not isinstance(prediction, dict):
-                logger.warning(
-                    "ML予測結果が辞書形式ではないためフェイルセーフします"
-                )
+                logger.warning("ML予測結果が辞書形式ではないためフェイルセーフします")
                 return True
 
             raw_gate_open = prediction.get("gate_open", True)

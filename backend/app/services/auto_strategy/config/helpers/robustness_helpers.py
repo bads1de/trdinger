@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from app.utils.datetime_utils import (
     normalize_datetimes_for_comparison,
@@ -60,7 +60,7 @@ def _coerce_window_text(window: Mapping[str, Any], key: str) -> str:
 
 def normalize_robustness_regime_window(
     window: Mapping[str, Any],
-) -> Optional[RobustnessRegimeWindow]:
+) -> RobustnessRegimeWindow | None:
     """
     regime window をシナリオ生成向けに正規化する
 
@@ -149,9 +149,7 @@ def validate_robustness_regime_window(window: Mapping[str, Any]) -> list[str]:
     start_date = window.get("start_date")
     end_date = window.get("end_date")
     if not isinstance(start_date, str) or not isinstance(end_date, str):
-        return [
-            "robustness の regime window は start_date/end_date が必要です"
-        ]
+        return ["robustness の regime window は start_date/end_date が必要です"]
 
     normalized = normalize_robustness_regime_window(window)
     if normalized is None:

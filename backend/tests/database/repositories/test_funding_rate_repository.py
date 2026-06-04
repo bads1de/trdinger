@@ -5,7 +5,7 @@ FundingRateRepositoryのテストモジュール
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -78,7 +78,7 @@ def sample_funding_rate_model() -> FundingRateData:
 
 
 @pytest.fixture
-def sample_funding_rate_records() -> List[Dict[str, Any]]:
+def sample_funding_rate_records() -> list[dict[str, Any]]:
     """
     サンプルファンディングレートレコードリスト
 
@@ -126,7 +126,7 @@ class TestInsertFundingRateData:
     def test_insert_funding_rate_data_success(
         self,
         repository: FundingRateRepository,
-        sample_funding_rate_records: List[Dict[str, Any]],
+        sample_funding_rate_records: list[dict[str, Any]],
     ) -> None:
         """ファンディングレートデータが正常に挿入される"""
         mock_result = MagicMock()

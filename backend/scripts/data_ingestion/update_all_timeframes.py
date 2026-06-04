@@ -47,11 +47,11 @@ async def collect_ohlcv_data(symbol: str = "BTC/USDT:USDT") -> dict:
     logger.info(f"=== OHLCV データ収集開始: {symbol} ===")
 
     from app.config.unified_config import unified_config
-    from database.connection import SessionLocal
-    from database.repositories.ohlcv_repository import OHLCVRepository
     from app.services.data_collection.bybit.market_data_service import (
         BybitMarketDataService,
     )
+    from database.connection import SessionLocal
+    from database.repositories.ohlcv_repository import OHLCVRepository
 
     db = SessionLocal()
     total_saved = 0
@@ -123,7 +123,7 @@ async def collect_ohlcv_data(symbol: str = "BTC/USDT:USDT") -> dict:
                     )
 
                     logger.info(
-                        f"  {tf} バッチ {i+1}/{max_pages}: {len(ohlcv_data)}件取得 "
+                        f"  {tf} バッチ {i + 1}/{max_pages}: {len(ohlcv_data)}件取得 "
                         f"({first_dt} ~ {last_dt}) -> {saved}件保存"
                     )
 
@@ -162,12 +162,12 @@ async def collect_funding_rate_data(symbol: str = "BTC/USDT:USDT") -> dict:
     """
     logger.info(f"=== Funding Rate データ収集開始: {symbol} ===")
 
-    from database.connection import SessionLocal
-    from database.repositories.funding_rate_repository import FundingRateRepository
     from app.services.data_collection.bybit.funding_rate_service import (
         BybitFundingRateService,
     )
     from app.utils.data_conversion import FundingRateDataConverter
+    from database.connection import SessionLocal
+    from database.repositories.funding_rate_repository import FundingRateRepository
 
     db = SessionLocal()
     total_saved = 0
@@ -251,7 +251,7 @@ async def collect_funding_rate_data(symbol: str = "BTC/USDT:USDT") -> dict:
                     )
 
                     logger.info(
-                        f"  FR バッチ {i+1}/{max_pages}: {len(fr_data)}件取得 "
+                        f"  FR バッチ {i + 1}/{max_pages}: {len(fr_data)}件取得 "
                         f"({first_dt} ~ {last_dt}) -> {saved}件保存"
                     )
 
@@ -263,7 +263,7 @@ async def collect_funding_rate_data(symbol: str = "BTC/USDT:USDT") -> dict:
                 await asyncio.sleep(0.2)  # レート制限対策
 
             except Exception as e:
-                logger.error(f"  FR バッチ {i+1} でエラー: {e}")
+                logger.error(f"  FR バッチ {i + 1} でエラー: {e}")
                 # 続行を試みる
                 break
 
@@ -294,12 +294,12 @@ async def collect_open_interest_data(
     """
     logger.info(f"=== Open Interest データ収集開始: {symbol} (interval={interval}) ===")
 
-    from database.connection import SessionLocal
-    from database.repositories.open_interest_repository import OpenInterestRepository
     from app.services.data_collection.bybit.open_interest_service import (
         BybitOpenInterestService,
     )
     from app.utils.data_conversion import OpenInterestDataConverter
+    from database.connection import SessionLocal
+    from database.repositories.open_interest_repository import OpenInterestRepository
 
     db = SessionLocal()
     total_saved = 0
@@ -374,7 +374,7 @@ async def collect_open_interest_data(
                     )
 
                     logger.info(
-                        f"  OI バッチ {i+1}/{max_pages}: {len(oi_data)}件取得 "
+                        f"  OI バッチ {i + 1}/{max_pages}: {len(oi_data)}件取得 "
                         f"({first_dt} ~ {last_dt}) -> {saved}件保存"
                     )
 
@@ -386,7 +386,7 @@ async def collect_open_interest_data(
                 await asyncio.sleep(0.2)  # レート制限対策
 
             except Exception as e:
-                logger.error(f"  OI バッチ {i+1} でエラー: {e}")
+                logger.error(f"  OI バッチ {i + 1} でエラー: {e}")
                 break
 
         db.commit()
@@ -531,6 +531,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n処理が中断されました")
         sys.exit(130)
-
-
-

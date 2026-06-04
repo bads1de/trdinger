@@ -7,7 +7,6 @@ import logging
 import warnings
 from copy import deepcopy
 from datetime import datetime
-from typing import Dict, Optional, Type
 
 import numpy as np
 import pandas as pd
@@ -55,8 +54,8 @@ class BacktestExecutor:
 
     def execute_backtest(
         self,
-        strategy_class: Type[Strategy],
-        strategy_parameters: Dict[str, object],
+        strategy_class: type[Strategy],
+        strategy_parameters: dict[str, object],
         symbol: str,
         timeframe: str,
         start_date: datetime,
@@ -65,7 +64,7 @@ class BacktestExecutor:
         commission_rate: float,
         slippage: float = 0.0,
         leverage: float = 1.0,
-        preloaded_data: Optional[pd.DataFrame] = None,
+        preloaded_data: pd.DataFrame | None = None,
     ) -> pd.Series:
         """
         指定された戦略とパラメータでバックテスト・シミュレーションを実行します。
@@ -102,9 +101,7 @@ class BacktestExecutor:
             if preloaded_data is not None:
                 data = preloaded_data
             else:
-                data = self._get_backtest_data(
-                    symbol, timeframe, start_date, end_date
-                )
+                data = self._get_backtest_data(symbol, timeframe, start_date, end_date)
 
             # バックテスト設定
             bt = self._create_backtest_instance(
@@ -125,9 +122,7 @@ class BacktestExecutor:
             raise
         except Exception as e:
             logger.error(f"バックテスト実行エラー: {e}")
-            raise BacktestExecutionError(
-                f"バックテストの実行に失敗しました: {e}"
-            )
+            raise BacktestExecutionError(f"バックテストの実行に失敗しました: {e}")
 
     def _get_backtest_data(
         self,
@@ -175,7 +170,7 @@ class BacktestExecutor:
     def _create_backtest_instance(
         self,
         data: pd.DataFrame,
-        strategy_class: Type[Strategy],
+        strategy_class: type[Strategy],
         initial_capital: float,
         commission_rate: float,
         slippage: float,
@@ -214,7 +209,7 @@ class BacktestExecutor:
             )
 
     def _run_backtest(
-        self, bt: Backtest, strategy_parameters: Dict[str, object]
+        self, bt: Backtest, strategy_parameters: dict[str, object]
     ) -> pd.Series:
         """バックテストを実行"""
         try:
@@ -242,7 +237,7 @@ class BacktestExecutor:
                 f"バックテスト実行中にエラーが発生しました: {e}"
             )
 
-    def get_supported_strategies(self) -> Dict[str, object]:
+    def get_supported_strategies(self) -> dict[str, object]:
         """
         サポートされている戦略一覧を取得
 

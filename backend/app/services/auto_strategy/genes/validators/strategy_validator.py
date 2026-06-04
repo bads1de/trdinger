@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from app.utils.error_handler import safe_operation
 
@@ -26,10 +26,10 @@ class StrategyValidator:
         default_return=(False, ["バリデーションエラー"]),
     )
     def validate_strategy_gene(
-        self, strategy_gene, config: Optional[Any] = None
-    ) -> Tuple[bool, List[str]]:
+        self, strategy_gene, config: Any | None = None
+    ) -> tuple[bool, list[str]]:
         """戦略遺伝子の妥当性を検証"""
-        errors: List[str] = []
+        errors: list[str] = []
 
         # 1. 指標数の制約チェック
         from ...config import GAConfig
@@ -55,8 +55,7 @@ class StrategyValidator:
         )
 
         if not (
-            strategy_gene.long_entry_conditions
-            or strategy_gene.short_entry_conditions
+            strategy_gene.long_entry_conditions or strategy_gene.short_entry_conditions
         ):
             errors.append("エントリー条件が設定されていません")
 
@@ -83,9 +82,7 @@ class StrategyValidator:
 
         return len(errors) == 0, errors
 
-    def _validate_all_conditions(
-        self, cond_list: List, label: str, errors: List[str]
-    ):
+    def _validate_all_conditions(self, cond_list: list, label: str, errors: list[str]):
         """条件リストを再帰的に検証"""
         from ..conditions import ConditionGroup
 
@@ -95,9 +92,7 @@ class StrategyValidator:
                     _recursive(sub, f"{path} -> グループ{j}")
             else:
                 self.condition_validator.clean_condition(cond)
-                valid, detail = self.condition_validator.validate_condition(
-                    cond
-                )
+                valid, detail = self.condition_validator.validate_condition(cond)
                 if not valid:
                     errors.append(f"{path}が無効: {detail}")
 

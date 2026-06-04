@@ -68,9 +68,7 @@ MINIMIZE_OBJECTIVES: Final[frozenset[str]] = frozenset(
 )
 
 DYNAMIC_SCALAR_OBJECTIVES: Final[frozenset[str]] = frozenset(
-    name
-    for name, definition in OBJECTIVE_REGISTRY.items()
-    if definition.dynamic_scalar
+    name for name, definition in OBJECTIVE_REGISTRY.items() if definition.dynamic_scalar
 )
 
 
@@ -153,6 +151,4 @@ def to_selection_space(value: float, objective: str) -> float:
         - 最大化目的関数: value
     """
     numeric_value = float(value)
-    return (
-        -numeric_value if is_minimize_objective(objective) else numeric_value
-    )
+    return -numeric_value if is_minimize_objective(objective) else numeric_value

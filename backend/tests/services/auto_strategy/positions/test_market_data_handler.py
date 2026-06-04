@@ -12,7 +12,6 @@ import pytest
 # unittest.mockは現在未使用だが、将来のテスト拡張用に残す
 
 
-
 class TestMarketDataCache:
     """MarketDataCacheのテスト"""
 

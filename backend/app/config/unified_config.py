@@ -5,7 +5,7 @@
 ドメイン固有の設定は各サービス配下の config パッケージで保持します。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -33,7 +33,7 @@ class AppConfig(BaseSettings):
     debug: bool = Field(default=False, alias="DEBUG")
     host: str = Field(default="127.0.0.1", alias="HOST")
     port: int = Field(default=8000, alias="PORT")
-    cors_origins: List[str] = Field(
+    cors_origins: list[str] = Field(
         default=["http://localhost:3000"], alias="CORS_ORIGINS"
     )
 
@@ -46,7 +46,7 @@ class DatabaseConfig(BaseSettings):
     PostgreSQLデータベース接続の設定を管理します。
     """
 
-    database_url: Optional[str] = Field(default=None, alias="DATABASE_URL")
+    database_url: str | None = Field(default=None, alias="DATABASE_URL")
     host: str = Field(default="localhost", alias="DB_HOST")
     port: int = Field(default=5432, alias="DB_PORT")
     name: str = Field(default="trdinger", alias="DB_NAME")
@@ -102,17 +102,17 @@ class MarketConfig(BaseSettings):
     max_cache_size: int = Field(default=MAX_DATA_LIMIT, alias="MAX_CACHE_SIZE")
 
     # サポートされている取引所
-    supported_exchanges: List[str] = Field(
+    supported_exchanges: list[str] = Field(
         default_factory=lambda: [DEFAULT_MARKET_EXCHANGE]
     )
 
     # サポートされているシンボル（Bybit形式）
-    supported_symbols: List[str] = Field(
+    supported_symbols: list[str] = Field(
         default_factory=lambda: [DEFAULT_MARKET_SYMBOL]
     )
 
     # サポートされている時間軸
-    supported_timeframes: List[str] = Field(
+    supported_timeframes: list[str] = Field(
         default_factory=lambda: list(SUPPORTED_TIMEFRAMES)
     )
 
@@ -127,7 +127,7 @@ class MarketConfig(BaseSettings):
     min_limit: int = Field(default=MIN_DATA_LIMIT, description="最小取得件数")
 
     # Bybit固有の設定
-    bybit_config: Dict[str, Any] = Field(
+    bybit_config: dict[str, Any] = Field(
         default={
             "sandbox": False,
             "enableRateLimit": True,
@@ -136,7 +136,7 @@ class MarketConfig(BaseSettings):
     )
 
     # シンボル正規化マッピング
-    symbol_mapping: Dict[str, str] = Field(
+    symbol_mapping: dict[str, str] = Field(
         default={
             "BTCUSDT": "BTC/USDT:USDT",
             "BTC-USDT": "BTC/USDT:USDT",
@@ -162,25 +162,17 @@ class DataCollectionConfig(BaseSettings):
 
     # Bybit API設定
     bybit_timeout: int = Field(default=30, description="APIタイムアウト（秒）")
-    bybit_page_limit: int = Field(
-        default=200, description="ページング時の制限"
-    )
+    bybit_page_limit: int = Field(default=200, description="ページング時の制限")
     bybit_max_pages: int = Field(
         default=500,
         description="最大ページ数（2020年からのデータを取得可能に拡張）",
     )
 
     # メモリ管理
-    memory_warning_threshold: int = Field(
-        default=8000, description="メモリ警告閾値"
-    )
-    memory_limit_threshold: int = Field(
-        default=10000, description="メモリ制限閾値"
-    )
+    memory_warning_threshold: int = Field(default=8000, description="メモリ警告閾値")
+    memory_limit_threshold: int = Field(default=10000, description="メモリ制限閾値")
 
-    model_config = SettingsConfigDict(
-        env_prefix="DATA_COLLECTION_", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_prefix="DATA_COLLECTION_", extra="ignore")
 
 
 class UnifiedConfig(BaseSettings):
@@ -193,9 +185,7 @@ class UnifiedConfig(BaseSettings):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
     market: MarketConfig = Field(default_factory=MarketConfig)
-    data_collection: DataCollectionConfig = Field(
-        default_factory=DataCollectionConfig
-    )
+    data_collection: DataCollectionConfig = Field(default_factory=DataCollectionConfig)
 
     model_config = SettingsConfigDict(
         env_nested_delimiter="__",

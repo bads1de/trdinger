@@ -53,9 +53,9 @@ class TestGeneValidatorTimeframe:
             indicator = IndicatorGene(
                 type="SMA", parameters={"period": 20}, enabled=True, timeframe=tf
             )
-            assert (
-                validator.validate_indicator_gene(indicator) is True
-            ), f"Timeframe {tf} should be valid"
+            assert validator.validate_indicator_gene(indicator) is True, (
+                f"Timeframe {tf} should be valid"
+            )
 
 
 class TestGeneValidatorTPSLSplit:
@@ -194,7 +194,9 @@ class TestGeneValidatorBasic:
         validator = GeneValidator()
 
         indicator = IndicatorGene(
-            type="SMA", parameters={"period": -5}, enabled=True  # 負の期間
+            type="SMA",
+            parameters={"period": -5},
+            enabled=True,  # 負の期間
         )
 
         assert validator.validate_indicator_gene(indicator) is False

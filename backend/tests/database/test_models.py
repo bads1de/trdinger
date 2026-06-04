@@ -6,7 +6,6 @@ database/models.pyのSQLAlchemyモデルクラスをテストします。
 
 from datetime import datetime
 
-
 from database.models import (
     BacktestResult,
     FundingRateData,

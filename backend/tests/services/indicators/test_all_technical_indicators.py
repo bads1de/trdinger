@@ -19,7 +19,17 @@ from app.services.indicators.config import IndicatorResultType
 class TestAllTechnicalIndicators:
     """全テクニカル指標の網羅的テストクラス"""
 
-    _SPARSE_STANDARD_INDICATORS = {"TD_SEQ", "DECAY", "EBSW", "HA", "HWC", "JMA", "PMAX", "STC", "VIDYA"}
+    _SPARSE_STANDARD_INDICATORS = {
+        "TD_SEQ",
+        "DECAY",
+        "EBSW",
+        "HA",
+        "HWC",
+        "JMA",
+        "PMAX",
+        "STC",
+        "VIDYA",
+    }
 
     # 指標リストを動的に取得
     try:
@@ -43,14 +53,10 @@ class TestAllTechnicalIndicators:
                 for col in array.columns:
                     series = array[col]
                     if pd.api.types.is_numeric_dtype(series):
-                        finite_count += int(
-                            np.isfinite(series.to_numpy()).sum()
-                        )
+                        finite_count += int(np.isfinite(series.to_numpy()).sum())
             elif isinstance(array, pd.Series):
                 if pd.api.types.is_numeric_dtype(array):
-                    finite_count += int(
-                        np.isfinite(array.to_numpy()).sum()
-                    )
+                    finite_count += int(np.isfinite(array.to_numpy()).sum())
             else:
                 try:
                     arr = np.asarray(array)
@@ -79,9 +85,9 @@ class TestAllTechnicalIndicators:
                 resolved_name = indicator_service._resolve_indicator_name(indicator)
                 # 各インジケーターの設定を取得できるか確認
                 config = indicator_service.registry.get_indicator_config(resolved_name)
-                assert (
-                    config is not None
-                ), f"{indicator} ({resolved_name}) の設定が見つかりません"
+                assert config is not None, (
+                    f"{indicator} ({resolved_name}) の設定が見つかりません"
+                )
                 assert (
                     config.adapter_function is not None
                     or config.pandas_function is not None
@@ -184,35 +190,35 @@ class TestAllTechnicalIndicators:
 
             # 結果の形式を検証
             if config.result_type == IndicatorResultType.SINGLE:
-                assert isinstance(
-                    result, np.ndarray
-                ), f"{indicator}の結果がndarrayではありません"
-                assert result.shape[0] == len(
-                    sample_ohlcv
-                ), f"{indicator}の結果の長さが不正"
+                assert isinstance(result, np.ndarray), (
+                    f"{indicator}の結果がndarrayではありません"
+                )
+                assert result.shape[0] == len(sample_ohlcv), (
+                    f"{indicator}の結果の長さが不正"
+                )
                 # NaNを含む場合があるが、最後の数ポイントは有効な場合がある
                 assert result.shape[0] > 0, f"{indicator}の結果が空"
 
             elif config.result_type == IndicatorResultType.COMPLEX:
-                assert isinstance(
-                    result, tuple
-                ), f"{indicator}の結果がtupleではありません"
+                assert isinstance(result, tuple), (
+                    f"{indicator}の結果がtupleではありません"
+                )
                 assert len(result) > 0, f"{indicator}の結果が空のtuple"
                 for i, series in enumerate(result):
-                    assert isinstance(
-                        series, np.ndarray
-                    ), f"{indicator}の結果[{i}]がndarrayではありません"
-                    assert series.shape[0] == len(
-                        sample_ohlcv
-                    ), f"{indicator}の結果[{i}]の長さが不正{indicator}"
+                    assert isinstance(series, np.ndarray), (
+                        f"{indicator}の結果[{i}]がndarrayではありません"
+                    )
+                    assert series.shape[0] == len(sample_ohlcv), (
+                        f"{indicator}の結果[{i}]の長さが不正{indicator}"
+                    )
 
             if (
                 support_info.get("support_tier") == "standard"
                 and indicator not in self._SPARSE_STANDARD_INDICATORS
             ):
-                assert (
-                    self._count_finite_values(result) > 0
-                ), f"{indicator} は標準 OHLCV 指標なのに有限値を返していません"
+                assert self._count_finite_values(result) > 0, (
+                    f"{indicator} は標準 OHLCV 指標なのに有限値を返していません"
+                )
 
         except Exception as e:
             pytest.fail(f"{indicator}のテストでエラー: {e}")
@@ -271,7 +277,9 @@ class TestAllTechnicalIndicators:
             standard_ohlcv = {"close", "high", "low", "open", "volume"}
             required_data_lower = {d.lower() for d in config.required_data}
             if not required_data_lower.issubset(standard_ohlcv):
-                pytest.skip(f"{indicator} は標準OHLCV以外のデータを必要とするためスキップ")
+                pytest.skip(
+                    f"{indicator} は標準OHLCV以外のデータを必要とするためスキップ"
+                )
 
             # 短いデータで計算を試みる
             params = config.default_values or {}
@@ -346,17 +354,17 @@ class TestAllTechnicalIndicators:
                 pytest.skip(f"{indicator}の有効な値がないためスキップ")
 
             if indicator == "RSI":
-                assert all(
-                    0 <= val <= 100 for val in valid_values
-                ), f"{indicator}の値が範囲外"
+                assert all(0 <= val <= 100 for val in valid_values), (
+                    f"{indicator}の値が範囲外"
+                )
             elif indicator == "MFI":
-                assert all(
-                    0 <= val <= 100 for val in valid_values
-                ), f"{indicator}の値が範囲外"
+                assert all(0 <= val <= 100 for val in valid_values), (
+                    f"{indicator}の値が範囲外"
+                )
             elif indicator == "WILLR":
-                assert all(
-                    -100 <= val <= 0 for val in valid_values
-                ), f"{indicator}の値が範囲外"
+                assert all(-100 <= val <= 0 for val in valid_values), (
+                    f"{indicator}の値が範囲外"
+                )
 
         except Exception as e:
             pytest.fail(f"{indicator}の範囲チェックでエラー: {e}")

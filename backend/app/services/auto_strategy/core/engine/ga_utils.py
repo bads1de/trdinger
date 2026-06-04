@@ -7,7 +7,8 @@ GAエンジンで使用される共通のヘルパー関数を提供します。
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def crossover_strategy_genes(
     parent1: StrategyGene, parent2: StrategyGene, config: GAConfig
-) -> Tuple[StrategyGene, StrategyGene]:
+) -> tuple[StrategyGene, StrategyGene]:
     """戦略遺伝子の交叉を実行する。
 
     親個体のクラスメソッド ``crossover`` を呼び出して子個体を生成します。
@@ -74,7 +75,7 @@ def _invalidate_individual_cache(individual: Any) -> None:
 
 
 def _set_fitness_values(
-    individuals: List[Any], fitnesses: List[Tuple[float, ...]]
+    individuals: list[Any], fitnesses: list[tuple[float, ...]]
 ) -> None:
     """個体群にフィットネス値をまとめて設定する。
 
@@ -89,15 +90,15 @@ def _set_fitness_values(
         raise ValueError(
             f"個体数({len(individuals)})とフィットネス数({len(fitnesses)})が一致しません"
         )
-    for ind, fit in zip(individuals, fitnesses):
+    for ind, fit in zip(individuals, fitnesses, strict=False):
         ind.fitness.values = fit
 
 
 def create_deap_mutate_wrapper(
     individual_class: type,
-    population: Optional[List[StrategyGene]],
+    population: list[StrategyGene] | None,
     config: GAConfig,
-) -> Callable[[StrategyGene], Tuple[StrategyGene]]:
+) -> Callable[[StrategyGene], tuple[StrategyGene]]:
     """DEAP用の突然変異ラッパー関数を作成する。
 
     適応的突然変異（Adaptive Mutation）をサポートするクロージャを返します。
@@ -113,7 +114,7 @@ def create_deap_mutate_wrapper(
         シグネチャ: ``(individual) -> tuple[StrategyGene]``
     """
 
-    def mutate_wrapper(individual: StrategyGene) -> Tuple[StrategyGene]:
+    def mutate_wrapper(individual: StrategyGene) -> tuple[StrategyGene]:
         if population is not None:
             mutated_strategy = individual.adaptive_mutate(
                 population, config, base_mutation_rate=config.mutation_rate
@@ -123,10 +124,6 @@ def create_deap_mutate_wrapper(
                 config, mutation_rate=config.mutation_rate
             )
 
-        return (
-            individual_class(
-                **GeneticUtils.extract_gene_params(mutated_strategy)
-            ),
-        )
+        return (individual_class(**GeneticUtils.extract_gene_params(mutated_strategy)),)
 
     return mutate_wrapper

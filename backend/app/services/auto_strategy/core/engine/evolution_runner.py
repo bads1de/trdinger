@@ -9,7 +9,8 @@ import gc
 import heapq
 import logging
 import random
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 if TYPE_CHECKING:
     from ...config.ga.ga_config import GAConfig
@@ -62,10 +63,10 @@ def _invalidate_individual_cache(individual: Any) -> None:
 
 
 def _set_fitness_values(
-    population: List[Any], fitnesses: List[tuple[float, ...]]
+    population: list[Any], fitnesses: list[tuple[float, ...]]
 ) -> None:
     """個体群にフィットネス値を設定する。"""
-    for ind, fit in zip(population, fitnesses):
+    for ind, fit in zip(population, fitnesses, strict=False):
         ind.fitness.values = fit
 
 
@@ -86,10 +87,10 @@ class EvolutionRunner:
         self,
         toolbox: Any,
         stats: Any,
-        fitness_sharing: Optional[FitnessSharing] = None,
-        population: Optional[List[Any]] = None,
-        parallel_evaluator: Optional[ParallelEvaluator] = None,
-        individual_evaluator: Optional[Any] = None,
+        fitness_sharing: FitnessSharing | None = None,
+        population: list[Any] | None = None,
+        parallel_evaluator: ParallelEvaluator | None = None,
+        individual_evaluator: Any | None = None,
     ):
         """
         初期化
@@ -134,9 +135,9 @@ class EvolutionRunner:
         )
 
         def resolve_behavior_or_report(individual: Any) -> Any:
-            if getattr(
-                individual, "_evaluation_fidelity", None
-            ) == "full" and callable(get_cached_report):
+            if getattr(individual, "_evaluation_fidelity", None) == "full" and callable(
+                get_cached_report
+            ):
                 report = get_cached_report(individual)
                 if report is not None:
                     return report
@@ -152,14 +153,12 @@ class EvolutionRunner:
 
     def run_evolution(
         self,
-        population: List[Any],
+        population: list[Any],
         config: "GAConfig",
-        halloffame: Optional[Any] = None,
-        should_stop: Optional[Callable[[], bool]] = None,
-        progress_callback: Optional[
-            Callable[[int, int, Optional[float]], None]
-        ] = None,
-    ) -> tuple[List[Any], object]:
+        halloffame: Any | None = None,
+        should_stop: Callable[[], bool] | None = None,
+        progress_callback: Callable[[int, int, float | None], None] | None = None,
+    ) -> tuple[list[Any], object]:
         """
         設定された世代数分、進化計算アルゴリズムを実行します。
 
@@ -241,23 +240,17 @@ class EvolutionRunner:
                     config.fitness_sharing.get("enable_fitness_sharing", False)
                     and self.fitness_sharing
                 ):
-                    population = self.fitness_sharing.apply_fitness_sharing(
-                        population
-                    )
+                    population = self.fitness_sharing.apply_fitness_sharing(population)
 
                 # 選択（親個体の選択）
                 # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
-                offspring = list(
-                    self.toolbox.map(self.toolbox.clone, population)
-                )
+                offspring = list(self.toolbox.map(self.toolbox.clone, population))
 
                 offspring = self._apply_crossover_batch(offspring, config)
                 offspring = self._apply_mutation_batch(offspring, config)
 
                 # 未評価個体の評価（並列評価対応）
-                invalid_ind = [
-                    ind for ind in offspring if not ind.fitness.valid
-                ]
+                invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
                 self._evaluate_invalid_individuals(invalid_ind, config)
 
                 if should_stop and should_stop():
@@ -300,9 +293,7 @@ class EvolutionRunner:
                         best_fitness = float(best_fitness[0])
                     else:
                         best_fitness = (
-                            float(best_fitness)
-                            if best_fitness is not None
-                            else None
+                            float(best_fitness) if best_fitness is not None else None
                         )
                     progress_callback(gen, config.generations, best_fitness)
             finally:
@@ -313,8 +304,8 @@ class EvolutionRunner:
         return population, logbook
 
     def _apply_crossover_batch(
-        self, offspring: List[Any], config: "GAConfig"
-    ) -> List[Any]:
+        self, offspring: list[Any], config: "GAConfig"
+    ) -> list[Any]:
         """
         交叉のバッチ処理
 
@@ -343,8 +334,8 @@ class EvolutionRunner:
         return offspring
 
     def _apply_mutation_batch(
-        self, offspring: List[Any], config: "GAConfig"
-    ) -> List[Any]:
+        self, offspring: list[Any], config: "GAConfig"
+    ) -> list[Any]:
         """
         突然変異のバッチ処理
 
@@ -421,9 +412,9 @@ class EvolutionRunner:
 
     def _evaluate_population(
         self,
-        population: List[Any],
+        population: list[Any],
         config: Optional["GAConfig"] = None,
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         個体群の適応度評価（並列評価対応）
 
@@ -461,7 +452,7 @@ class EvolutionRunner:
 
     def _evaluate_invalid_individuals(
         self,
-        invalid_ind: List[Any],
+        invalid_ind: list[Any],
         config: Optional["GAConfig"] = None,
     ) -> None:
         """
@@ -494,9 +485,9 @@ class EvolutionRunner:
 
     def _evaluate_individuals_with_config(
         self,
-        individuals: List[Any],
+        individuals: list[Any],
         config: Optional["GAConfig"],
-    ) -> List[tuple[float, ...]]:
+    ) -> list[tuple[float, ...]]:
         """
         設定に応じて個体列を評価する
 
@@ -519,9 +510,7 @@ class EvolutionRunner:
             return []
 
         if self.parallel_evaluator:
-            return list(
-                self.parallel_evaluator.evaluate_population(individuals)
-            )
+            return list(self.parallel_evaluator.evaluate_population(individuals))
 
         if self.individual_evaluator is not None and config is not None:
             fitness_values = [
@@ -534,7 +523,7 @@ class EvolutionRunner:
 
     def _promote_top_candidates_with_full_fidelity(
         self,
-        candidate_population: List[Any],
+        candidate_population: list[Any],
         config: Optional["GAConfig"],
     ) -> None:
         """
@@ -557,15 +546,11 @@ class EvolutionRunner:
         ):
             return
 
-        limit = get_multi_fidelity_candidate_limit(
-            len(candidate_population), config
-        )
+        limit = get_multi_fidelity_candidate_limit(len(candidate_population), config)
         if limit <= 0:
             return
 
-        for candidate in self._select_top_candidates(
-            candidate_population, limit
-        ):
+        for candidate in self._select_top_candidates(candidate_population, limit):
             if getattr(candidate, "_evaluation_fidelity", None) == "full":
                 continue
             fitness = self.individual_evaluator.evaluate(
@@ -574,11 +559,11 @@ class EvolutionRunner:
                 force_refresh=True,
             )
             candidate.fitness.values = fitness
-            setattr(candidate, "_evaluation_fidelity", "full")
+            candidate._evaluation_fidelity = "full"
 
     def _mark_evaluation_fidelity(
         self,
-        individuals: List[Any],
+        individuals: list[Any],
         fidelity: str,
     ) -> None:
         """
@@ -595,14 +580,12 @@ class EvolutionRunner:
         """
         for individual in individuals:
             try:
-                setattr(individual, "_evaluation_fidelity", fidelity)
+                individual._evaluation_fidelity = fidelity
             except Exception as e:
-                logger.debug(
-                    "評価粒度メタデータの設定をスキップしました: %s", e
-                )
+                logger.debug("評価粒度メタデータの設定をスキップしました: %s", e)
 
     def _update_dynamic_objective_scalars(
-        self, population: List[Any], config: "GAConfig"
+        self, population: list[Any], config: "GAConfig"
     ) -> None:
         """
         リスク回避型の重み付けのために、動的な目的正規化係数を更新します。
@@ -625,7 +608,7 @@ class EvolutionRunner:
 
         scalars: dict[str, float] = {}
         for index, objective in enumerate(getattr(config, "objectives", [])):
-            values: List[float] = []
+            values: list[float] = []
             for individual in population:
                 fitness = getattr(individual, "fitness", None)
                 if not fitness or not getattr(fitness, "valid", False):
@@ -645,8 +628,7 @@ class EvolutionRunner:
             if objective_registry.is_dynamic_scalar_objective(objective):
                 scalars[objective] = min(
                     DYNAMIC_SCALAR_MAX,
-                    DEFAULT_SCALAR_VALUE
-                    + max(average_value, DEFAULT_MIN_PASS_RATE),
+                    DEFAULT_SCALAR_VALUE + max(average_value, DEFAULT_MIN_PASS_RATE),
                 )
             else:
                 scalars[objective] = DEFAULT_SCALAR_VALUE
@@ -655,10 +637,10 @@ class EvolutionRunner:
 
     def _apply_two_stage_selection(
         self,
-        candidate_population: List[Any],
+        candidate_population: list[Any],
         population_size: int,
         config: "GAConfig",
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         粗選抜後に report ベースでエリートを差し替える
 
@@ -676,9 +658,7 @@ class EvolutionRunner:
         Note:
             個別評価器がない場合は通常の選択のみ行います。
         """
-        selected = list(
-            self.toolbox.select(candidate_population, population_size)
-        )
+        selected = list(self.toolbox.select(candidate_population, population_size))
         self._clear_two_stage_metadata(selected)
 
         elite_count = get_two_stage_elite_count(config, population_size)
@@ -702,15 +682,13 @@ class EvolutionRunner:
 
         self._mark_two_stage_elites(reranked_elites)
 
-        return merge_reranked_elites(
-            selected, reranked_elites, population_size
-        )
+        return merge_reranked_elites(selected, reranked_elites, population_size)
 
     def _select_top_candidates(
         self,
-        candidate_population: List[Any],
+        candidate_population: list[Any],
         limit: int,
-    ) -> List[Any]:
+    ) -> list[Any]:
         """
         主 fitness の上位候補を返す
 
@@ -745,10 +723,10 @@ class EvolutionRunner:
 
     def _select_report_ranked_elites(
         self,
-        candidates: List[Any],
+        candidates: list[Any],
         elite_count: int,
         config: "GAConfig",
-    ) -> List[tuple[Any, tuple[float, ...]]]:
+    ) -> list[tuple[Any, tuple[float, ...]]]:
         """
         候補を report ベースで再ランクしてエリートを返す
 
@@ -775,15 +753,11 @@ class EvolutionRunner:
             seen_keys.add(candidate_key)
 
             report = self._resolve_evaluation_report(candidate, config)
-            two_stage_config = getattr(
-                config, "two_stage_selection_config", None
-            )
+            two_stage_config = getattr(config, "two_stage_selection_config", None)
             rank_key = build_report_rank_key(
                 candidate,
                 cast(Optional["EvaluationReport"], report),
-                getattr(
-                    two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE
-                ),
+                getattr(two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE),
             )
             ranked_candidates.append((rank_key, candidate))
 
@@ -799,15 +773,11 @@ class EvolutionRunner:
 
     def _diversify_reranked_elites(
         self,
-        ranked_candidates: List[tuple[tuple[float, ...], Any]],
+        ranked_candidates: list[tuple[tuple[float, ...], Any]],
         elite_count: int,
-    ) -> List[tuple[tuple[float, ...], Any]]:
+    ) -> list[tuple[tuple[float, ...], Any]]:
         """behavior ベースでエリート候補を greedy に散らす。"""
-        if (
-            elite_count <= 1
-            or not ranked_candidates
-            or self.fitness_sharing is None
-        ):
+        if elite_count <= 1 or not ranked_candidates or self.fitness_sharing is None:
             return ranked_candidates
 
         build_vectors = getattr(
@@ -821,26 +791,20 @@ class EvolutionRunner:
         try:
             candidate_vectors = cast(
                 dict[int, np.ndarray],
-                build_vectors(
-                    [candidate for _, candidate in ranked_candidates]
-                ),
+                build_vectors([candidate for _, candidate in ranked_candidates]),
             )
         except Exception as exc:
-            logger.debug(
-                "behavior diversity 用ベクトル取得に失敗しました: %s", exc
-            )
+            logger.debug("behavior diversity 用ベクトル取得に失敗しました: %s", exc)
             return ranked_candidates
 
         if len(candidate_vectors) < 2:
             return ranked_candidates
 
-        distance_threshold = self._get_behavior_distance_threshold(
-            candidate_vectors
-        )
+        distance_threshold = self._get_behavior_distance_threshold(candidate_vectors)
         if distance_threshold <= 0.0:
             return ranked_candidates
 
-        diversified: List[tuple[tuple[float, ...], Any]] = []
+        diversified: list[tuple[tuple[float, ...], Any]] = []
         remaining = list(ranked_candidates)
 
         while remaining and len(diversified) < elite_count:
@@ -869,9 +833,7 @@ class EvolutionRunner:
             return 0.0
 
         try:
-            sharing_radius = float(
-                getattr(self.fitness_sharing, "sharing_radius", 0.0)
-            )
+            sharing_radius = float(getattr(self.fitness_sharing, "sharing_radius", 0.0))
         except (TypeError, ValueError):
             return 0.0
 
@@ -886,7 +848,7 @@ class EvolutionRunner:
     @staticmethod
     def _is_behaviorally_distinct(
         candidate: Any,
-        selected: List[tuple[tuple[float, ...], Any]],
+        selected: list[tuple[tuple[float, ...], Any]],
         candidate_vectors: dict[int, np.ndarray],
         distance_threshold: float,
     ) -> bool:
@@ -895,7 +857,7 @@ class EvolutionRunner:
         if candidate_vector is None:
             return True
 
-        min_distance: Optional[float] = None
+        min_distance: float | None = None
         candidate_vector_array = np.asarray(candidate_vector, dtype=float)
         for _, selected_candidate in selected:
             selected_vector = candidate_vectors.get(id(selected_candidate))
@@ -903,8 +865,7 @@ class EvolutionRunner:
                 continue
             distance = float(
                 np.linalg.norm(
-                    candidate_vector_array
-                    - np.asarray(selected_vector, dtype=float)
+                    candidate_vector_array - np.asarray(selected_vector, dtype=float)
                 )
             )
             min_distance = (
@@ -924,7 +885,7 @@ class EvolutionRunner:
         self,
         candidate: object,
         config: "GAConfig",
-    ) -> Optional[object]:
+    ) -> object | None:
         """
         候補の report を取得し、必要なら主プロセスで再評価する
 
@@ -944,7 +905,7 @@ class EvolutionRunner:
         if self.individual_evaluator is None:
             return None
 
-        report: Optional[object] = None
+        report: object | None = None
         get_cached_robustness_report = getattr(
             self.individual_evaluator,
             "get_cached_robustness_report",
@@ -966,9 +927,7 @@ class EvolutionRunner:
                 if not is_evaluation_report(report):
                     report = None
             except Exception as exc:
-                logger.debug(
-                    "二段階選抜用の robustness 評価に失敗しました: %s", exc
-                )
+                logger.debug("二段階選抜用の robustness 評価に失敗しました: %s", exc)
 
         get_cached_report = getattr(
             self.individual_evaluator,
@@ -999,7 +958,7 @@ class EvolutionRunner:
 
         return report
 
-    def _clear_two_stage_metadata(self, individuals: List[Any]) -> None:
+    def _clear_two_stage_metadata(self, individuals: list[Any]) -> None:
         """
         前世代の二段階選抜メタデータをクリアする
 
@@ -1021,7 +980,7 @@ class EvolutionRunner:
 
     def _mark_two_stage_elites(
         self,
-        reranked_elites: List[tuple[Any, tuple[float, ...]]],
+        reranked_elites: list[tuple[Any, tuple[float, ...]]],
     ) -> None:
         """
         二段階選抜で確定したエリートへ順位を付与する
@@ -1037,8 +996,8 @@ class EvolutionRunner:
     def _set_two_stage_metadata(
         self,
         individual: Any,
-        rank: Optional[int],
-        score: Optional[Any],
+        rank: int | None,
+        score: Any | None,
     ) -> None:
         """
         個体へ二段階選抜のメタデータを付与する

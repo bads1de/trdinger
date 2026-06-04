@@ -11,8 +11,9 @@
 """
 
 import logging
+from collections.abc import Callable, Mapping
 from functools import wraps
-from typing import Any, Callable, Dict, Mapping, Optional, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -45,7 +46,7 @@ def _get_indicator_config(indicator_type: str):
     return indicator_registry.get_indicator_config(indicator_type.upper())
 
 
-def _validate_positive_length(length: Optional[int]) -> None:
+def _validate_positive_length(length: int | None) -> None:
     """
     length 引数の正当性を共通チェックする。
 
@@ -64,7 +65,7 @@ def _validate_positive_length(length: Optional[int]) -> None:
 def _return_nan_series_if_needed(
     series: pd.Series,
     min_data_length: int,
-) -> Optional[pd.Series]:
+) -> pd.Series | None:
     """
     空系列または最小長不足の場合に NaN Series を返す。
 
@@ -90,9 +91,9 @@ def _return_nan_series_if_needed(
 def _validate_series_collection(
     series_items: Mapping[str, pd.Series],
     *,
-    length: Optional[int] = None,
+    length: int | None = None,
     min_data_length: int = 0,
-) -> Optional[pd.Series]:
+) -> pd.Series | None:
     """
     単一/複数 Series の共通検証を行う。
 
@@ -113,8 +114,8 @@ def _validate_series_collection(
     if not series_items:
         raise ValueError("series_dict cannot be empty")
 
-    reference_series: Optional[pd.Series] = None
-    reference_name: Optional[str] = None
+    reference_series: pd.Series | None = None
+    reference_name: str | None = None
 
     for name, series in series_items.items():
         if not isinstance(series, pd.Series):
@@ -198,11 +199,11 @@ def _is_missing_indicator_result(result: Any) -> bool:
 
 
 def _run_indicator_with_validation(
-    validation: Optional[pd.Series],
+    validation: pd.Series | None,
     result_factory: Callable[[], object],
     *,
-    fallback_factory: Optional[Callable[[], object]] = None,
-    reference_series: Optional[pd.Series] = None,
+    fallback_factory: Callable[[], object] | None = None,
+    reference_series: pd.Series | None = None,
 ) -> object:
     """
     検証と NaN フォールバックをまとめて扱う。
@@ -220,9 +221,7 @@ def _run_indicator_with_validation(
         Any: 計算結果またはフォールバック結果
     """
     if validation is not None:
-        return (
-            fallback_factory() if fallback_factory is not None else validation
-        )
+        return fallback_factory() if fallback_factory is not None else validation
 
     result = result_factory()
     if _is_missing_indicator_result(result):
@@ -235,11 +234,11 @@ def _run_indicator_with_validation(
 
 def run_series_indicator(
     data: pd.Series,
-    length: Optional[int],
+    length: int | None,
     result_factory: Callable[[], object],
     *,
     min_data_length: int = 0,
-    fallback_factory: Optional[Callable[[], object]] = None,
+    fallback_factory: Callable[[], object] | None = None,
 ) -> object:
     """
     単一 Series 入力の指標計算を検証付きで実行する。
@@ -257,9 +256,7 @@ def run_series_indicator(
     Returns:
         Any: 計算結果またはフォールバック結果
     """
-    validation = validate_series_params(
-        data, length, min_data_length=min_data_length
-    )
+    validation = validate_series_params(data, length, min_data_length=min_data_length)
     return _run_indicator_with_validation(
         validation,
         result_factory,
@@ -270,11 +267,11 @@ def run_series_indicator(
 
 def run_multi_series_indicator(
     series_dict: Mapping[str, pd.Series],
-    length: Optional[int],
+    length: int | None,
     result_factory: Callable[[], object],
     *,
     min_data_length: int = 0,
-    fallback_factory: Optional[Callable[[], object]] = None,
+    fallback_factory: Callable[[], object] | None = None,
 ) -> object:
     """
     複数 Series 入力の指標計算を検証付きで実行する。
@@ -304,9 +301,7 @@ def run_multi_series_indicator(
     )
 
 
-def normalize_non_finite(
-    series: pd.Series, fill_value: Any = np.nan
-) -> pd.Series:
+def normalize_non_finite(series: pd.Series, fill_value: Any = np.nan) -> pd.Series:
     """
     inf/-inf を NaN 経由で指定値に揃える。
 
@@ -325,7 +320,7 @@ def normalize_non_finite(
 def create_nan_series_like(
     reference: pd.Series,
     fill_value: Any = np.nan,
-    name: Optional[str] = None,
+    name: str | None = None,
 ) -> pd.Series:
     """
     参照 Series と同じ index を持つ定数 Series を作る。
@@ -373,7 +368,7 @@ def create_nan_series_map(
     reference: pd.Series,
     keys: list[str],
     fill_value: Any = np.nan,
-) -> Dict[str, pd.Series]:
+) -> dict[str, pd.Series]:
     """
     指定キーに対応する NaN Series の辞書を作る。
 
@@ -398,7 +393,7 @@ def nan_result_for(
     count: int,
     *,
     to_numpy: bool = False,
-    fallback_factory: Optional[Callable[[], Any]] = None,
+    fallback_factory: Callable[[], Any] | None = None,
 ) -> tuple[Any, ...]:
     """
     入力に応じて NaN の tuple 結果を生成する。
@@ -450,9 +445,9 @@ def extract_tuple_result(
     count: int,
     *,
     by_index: bool = False,
-    column_names: Optional[list[str]] = None,
+    column_names: list[str] | None = None,
     to_numpy: bool = False,
-    fallback_factory: Optional[Callable[[], Any]] = None,
+    fallback_factory: Callable[[], Any] | None = None,
 ) -> tuple[Any, ...]:
     """
     DataFrame や tuple の結果を tuple に正規化する。
@@ -483,9 +478,7 @@ def extract_tuple_result(
 
         if isinstance(result, pd.DataFrame):
             if column_names is not None:
-                missing = [
-                    name for name in column_names if name not in result.columns
-                ]
+                missing = [name for name in column_names if name not in result.columns]
                 if missing:
                     raise KeyError(f"Missing columns: {missing}")
                 selected_columns = list(column_names)
@@ -526,9 +519,7 @@ def extract_tuple_result(
         raise
 
 
-def get_param_value(
-    params: Dict[str, Any], keys: list[str], default: int = 1
-) -> int:
+def get_param_value(params: dict[str, Any], keys: list[str], default: int = 1) -> int:
     """
     パラメータ名がlengthまたはwindowの場合の値取得をサポート
 
@@ -551,9 +542,7 @@ def get_param_value(
     return default
 
 
-def get_minimum_data_length(
-    indicator_type: str, params: Dict[str, Any]
-) -> int:
+def get_minimum_data_length(indicator_type: str, params: dict[str, Any]) -> int:
     """
     指標の種類とパラメータから最小必要データ長を取得
 
@@ -577,9 +566,7 @@ def get_minimum_data_length(
 
     # フォールバック：デフォルト値 - lengthまたはwindowパラメータをサポート
     if config and config.default_values:
-        length_value = get_param_value(
-            config.default_values, ["length", "window"], 14
-        )
+        length_value = get_param_value(config.default_values, ["length", "window"], 14)
         return length_value
 
     return 1  # 最低1つのデータ点
@@ -613,8 +600,8 @@ def get_absolute_minimum_length(indicator_type: str) -> int:
 
 
 def validate_data_length_with_fallback(
-    df: pd.DataFrame, indicator_type: str, params: Dict[str, Any]
-) -> Tuple[bool, int]:
+    df: pd.DataFrame, indicator_type: str, params: dict[str, Any]
+) -> tuple[bool, int]:
     """
     データ長検証を強化し、フォールバック可能な最小データ長を返す
 
@@ -730,9 +717,7 @@ def validate_input(data: object, period: int) -> None:
         raise PandasTAError(f"期間は正の整数である必要があります: {period}")
 
     if len(series) < period:
-        raise PandasTAError(
-            f"データ長({len(series)})が期間({period})より短いです"
-        )
+        raise PandasTAError(f"データ長({len(series)})が期間({period})より短いです")
 
     # NaNや無限大の値をチェック (pandas.Series専用)
     if bool(series.isna().any()):
@@ -742,8 +727,8 @@ def validate_input(data: object, period: int) -> None:
 
 
 def validate_series_params(
-    data: pd.Series, length: Optional[int] = None, min_data_length: int = 0
-) -> Optional[pd.Series]:
+    data: pd.Series, length: int | None = None, min_data_length: int = 0
+) -> pd.Series | None:
     """
     指標計算用のパラメータ検証（共通化用）
 
@@ -769,9 +754,9 @@ def validate_series_params(
 
 def validate_multi_series_params(
     series_dict: dict,
-    length: Optional[int] = None,
+    length: int | None = None,
     min_data_length: int = 0,
-) -> Optional[pd.Series]:
+) -> pd.Series | None:
     """
     複数のSeriesパラメータを検証（共通化用）
 
@@ -832,9 +817,7 @@ def handle_pandas_ta_errors(func):
                     raise PandasTAError(f"{func.__name__}: 計算結果が空です")
                 # 全NaNチェック（重要）
                 if len(result) > 0 and np.all(np.isnan(result)):
-                    raise PandasTAError(
-                        f"{func.__name__}: 計算結果が全てNaNです"
-                    )
+                    raise PandasTAError(f"{func.__name__}: 計算結果が全てNaNです")
 
             # tupleの場合（MACD等）
             elif isinstance(result, tuple):
@@ -844,12 +827,8 @@ def handle_pandas_ta_errors(func):
                     return result
 
                 for i, arr in enumerate(result):
-                    if arr is None or (
-                        hasattr(arr, "__len__") and len(arr) == 0
-                    ):
-                        raise PandasTAError(
-                            f"{func.__name__}: 結果[{i}]が無効です"
-                        )
+                    if arr is None or (hasattr(arr, "__len__") and len(arr) == 0):
+                        raise PandasTAError(f"{func.__name__}: 結果[{i}]が無効です")
 
             return result
 

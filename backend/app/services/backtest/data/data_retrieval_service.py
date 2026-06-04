@@ -4,8 +4,9 @@
 """
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, List, Optional, cast
+from typing import Any, cast
 
 from database.models import FundingRateData, OHLCVData, OpenInterestData
 from database.repositories.funding_rate_repository import FundingRateRepository
@@ -30,9 +31,9 @@ class DataRetrievalService:
 
     def __init__(
         self,
-        ohlcv_repo: Optional[OHLCVRepository] = None,
-        oi_repo: Optional[OpenInterestRepository] = None,
-        fr_repo: Optional[FundingRateRepository] = None,
+        ohlcv_repo: OHLCVRepository | None = None,
+        oi_repo: OpenInterestRepository | None = None,
+        fr_repo: FundingRateRepository | None = None,
     ):
         """
         初期化
@@ -53,7 +54,7 @@ class DataRetrievalService:
         default_return: list[Any],
         query: Callable[[], Any],
         raise_on_empty: bool = False,
-        empty_error_message: Optional[str] = None,
+        empty_error_message: str | None = None,
     ) -> list[Any]:
         """repository 呼び出しを安全に実行する共通ラッパー。"""
         # raise_on_empty=True の場合は safe_operation デコレータを使わず
@@ -73,8 +74,7 @@ class DataRetrievalService:
                 raise
             except Exception as e:
                 error_msg = (
-                    empty_error_message
-                    or f"{context}でエラーが発生しました: {e}"
+                    empty_error_message or f"{context}でエラーが発生しました: {e}"
                 )
                 logger.error(error_msg)
                 raise DataRetrievalError(error_msg) from e
@@ -101,7 +101,7 @@ class DataRetrievalService:
         timeframe: str,
         start_date: datetime,
         end_date: datetime,
-    ) -> List[OHLCVData]:
+    ) -> list[OHLCVData]:
         """
         OHLCVデータを取得
 
@@ -118,7 +118,7 @@ class DataRetrievalService:
             logger.warning("OHLCVRepositoryが初期化されていません")
             return []
 
-        def query() -> List[OHLCVData]:
+        def query() -> list[OHLCVData]:
             ohlcv_repo = cast(OHLCVRepository, self.ohlcv_repo)
             result = ohlcv_repo.get_ohlcv_data(
                 symbol=symbol,
@@ -138,7 +138,7 @@ class DataRetrievalService:
 
     def get_open_interest_data(
         self, symbol: str, start_date: datetime, end_date: datetime
-    ) -> List[OpenInterestData]:
+    ) -> list[OpenInterestData]:
         """
         Open Interestデータを取得
 
@@ -154,7 +154,7 @@ class DataRetrievalService:
             logger.warning("Open InterestRepositoryが初期化されていません")
             return []
 
-        def query() -> List[OpenInterestData]:
+        def query() -> list[OpenInterestData]:
             oi_repo = cast(OpenInterestRepository, self.oi_repo)
             return oi_repo.get_open_interest_data(
                 symbol=symbol,
@@ -172,7 +172,7 @@ class DataRetrievalService:
 
     def get_funding_rate_data(
         self, symbol: str, start_date: datetime, end_date: datetime
-    ) -> List[FundingRateData]:
+    ) -> list[FundingRateData]:
         """
         Funding Rateデータを取得
 
@@ -188,7 +188,7 @@ class DataRetrievalService:
             logger.warning("Funding RateRepositoryが初期化されていません")
             return []
 
-        def query() -> List[FundingRateData]:
+        def query() -> list[FundingRateData]:
             fr_repo = cast(FundingRateRepository, self.fr_repo)
             return fr_repo.get_funding_rate_data(
                 symbol=symbol,

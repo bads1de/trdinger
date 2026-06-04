@@ -12,9 +12,6 @@ import logging
 import threading
 from typing import (
     Any,
-    Dict,
-    Optional,
-    Tuple,
 )
 
 import pandas as pd
@@ -76,7 +73,7 @@ class IndividualEvaluator(EvaluationWindowService):
     def __init__(
         self,
         backtest_service: BacktestService,
-        max_cache_size: Optional[int] = None,
+        max_cache_size: int | None = None,
     ):
         """初期化
 
@@ -85,7 +82,7 @@ class IndividualEvaluator(EvaluationWindowService):
             max_cache_size: データキャッシュの最大サイズ（LRU方式で古いエントリを削除）
         """
         self.backtest_service = backtest_service
-        self._fixed_backtest_config: Optional[Dict[str, Any]] = None
+        self._fixed_backtest_config: dict[str, Any] | None = None
         self._max_cache_size = max_cache_size or self.DEFAULT_MAX_CACHE_SIZE
         # データキャッシュ（重いデータ用）
         self._data_cache: LRUCache = LRUCache(maxsize=self._max_cache_size)
@@ -98,11 +95,10 @@ class IndividualEvaluator(EvaluationWindowService):
             maxsize=self._max_cache_size * self.REPORT_CACHE_MULTIPLIER
         )
         self._robustness_report_cache: LRUCache = LRUCache(
-            maxsize=self._max_cache_size
-            * self.ROBUSTNESS_REPORT_CACHE_MULTIPLIER
+            maxsize=self._max_cache_size * self.ROBUSTNESS_REPORT_CACHE_MULTIPLIER
         )
         self._lock = threading.Lock()
-        self._last_evaluation_report: Optional[EvaluationReport] = None
+        self._last_evaluation_report: EvaluationReport | None = None
 
         # 統計情報
         self._cache_hits = 0
@@ -142,7 +138,7 @@ class IndividualEvaluator(EvaluationWindowService):
             logger.debug("キャッシュキー生成に失敗しました: %s", e)
             return str(gene)
 
-    def set_backtest_config(self, backtest_config: Dict[str, Any]):
+    def set_backtest_config(self, backtest_config: dict[str, Any]):
         """バックテスト設定を設定"""
         # バリデーションのためPydanticモデルを通す
         # strategy_configは個体ごとに生成されるため、ここではダミーを入れておく
@@ -184,7 +180,7 @@ class IndividualEvaluator(EvaluationWindowService):
             self._cache_misses = 0
             logger.info("データキャッシュと評価結果キャッシュをクリアしました")
 
-    def get_cache_info(self) -> Dict[str, Any]:
+    def get_cache_info(self) -> dict[str, Any]:
         """キャッシュの状態情報を取得"""
         with self._lock:
             return {
@@ -194,21 +190,17 @@ class IndividualEvaluator(EvaluationWindowService):
                 "result_cache_max": self._result_cache.maxsize,
                 "report_cache_size": len(self._report_cache),
                 "report_cache_max": self._report_cache.maxsize,
-                "robustness_report_cache_size": len(
-                    self._robustness_report_cache
-                ),
+                "robustness_report_cache_size": len(self._robustness_report_cache),
                 "robustness_report_cache_max": self._robustness_report_cache.maxsize,
                 "cache_hits": self._cache_hits,
                 "cache_misses": self._cache_misses,
             }
 
-    def get_last_evaluation_report(self) -> Optional[EvaluationReport]:
+    def get_last_evaluation_report(self) -> EvaluationReport | None:
         """直近の評価レポートを取得する。"""
         return self._last_evaluation_report
 
-    def get_cached_evaluation_report(
-        self, individual: Any
-    ) -> Optional[EvaluationReport]:
+    def get_cached_evaluation_report(self, individual: Any) -> EvaluationReport | None:
         """キャッシュ済みの評価レポートを取得する。"""
         try:
             gene = self._resolve_gene(individual)
@@ -221,28 +213,26 @@ class IndividualEvaluator(EvaluationWindowService):
 
     def get_cached_robustness_report(
         self, individual: Any, config: GAConfig
-    ) -> Optional[EvaluationReport]:
+    ) -> EvaluationReport | None:
         """キャッシュ済みの robustness 評価レポートを取得する。"""
         try:
             gene = self._resolve_gene(individual)
             cache_key = self._build_robustness_cache_key(gene, config)
         except Exception as e:
-            logger.debug(
-                "robustness レポートキャッシュキー生成に失敗しました: %s", e
-            )
+            logger.debug("robustness レポートキャッシュキー生成に失敗しました: %s", e)
             return None
 
         return self._robustness_report_cache.get(cache_key)
 
     def build_parallel_worker_initargs(
         self, config: GAConfig
-    ) -> Optional[Tuple[Dict[str, Any], GAConfig, Dict[str, Any]]]:
+    ) -> tuple[dict[str, Any], GAConfig, dict[str, Any]] | None:
         """並列ワーカー初期化に必要な引数を構築する。"""
         if not self._fixed_backtest_config:
             return None
 
         backtest_config = self._fixed_backtest_config.copy()
-        shared_data: Dict[str, Any] = {}
+        shared_data: dict[str, Any] = {}
         main_key, minute_key = self._build_backtest_cache_keys(backtest_config)
 
         main_data = self._get_cached_data(backtest_config)
@@ -260,8 +250,8 @@ class IndividualEvaluator(EvaluationWindowService):
 
     @staticmethod
     def _build_backtest_cache_keys(
-        backtest_config: Dict[str, Any],
-    ) -> Tuple[Tuple[Any, ...], Tuple[Any, ...]]:
+        backtest_config: dict[str, Any],
+    ) -> tuple[tuple[Any, ...], tuple[Any, ...]]:
         """メイン足・1分足キャッシュキーを構築する。"""
         symbol = backtest_config.get("symbol")
         timeframe = backtest_config.get("timeframe")
@@ -321,8 +311,7 @@ class IndividualEvaluator(EvaluationWindowService):
             )
         if not hasattr(self, "_robustness_report_cache"):
             self._robustness_report_cache = LRUCache(
-                maxsize=self._max_cache_size
-                * self.ROBUSTNESS_REPORT_CACHE_MULTIPLIER
+                maxsize=self._max_cache_size * self.ROBUSTNESS_REPORT_CACHE_MULTIPLIER
             )
         if not hasattr(self, "_last_evaluation_report"):
             self._last_evaluation_report = None
@@ -334,7 +323,7 @@ class IndividualEvaluator(EvaluationWindowService):
         individual: Any,
         config: GAConfig,
         force_refresh: bool = False,
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         個体を評価し、適応度（Fitness）のタプルを返す
 
@@ -360,7 +349,7 @@ class IndividualEvaluator(EvaluationWindowService):
         individual: Any,
         config: GAConfig,
         force_refresh: bool = False,
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         個体を評価し、適応度（Fitness）のタプルを返します（評価ロジックの実体）。
 
@@ -391,21 +380,15 @@ class IndividualEvaluator(EvaluationWindowService):
             cache_key = self._build_cache_key(gene)
 
             with self._lock:
-                cached = (
-                    None
-                    if force_refresh
-                    else self._result_cache.get(cache_key)
-                )
+                cached = None if force_refresh else self._result_cache.get(cache_key)
                 if cached is not None:
                     self._cache_hits += 1
-                    self._last_evaluation_report = self._report_cache.get(
-                        cache_key
-                    )
+                    self._last_evaluation_report = self._report_cache.get(cache_key)
                     return cached
                 self._cache_misses += 1
 
             # バックテスト設定のベースを取得
-            base_backtest_config: Dict[str, Any] = (
+            base_backtest_config: dict[str, Any] = (
                 self._fixed_backtest_config.copy()
                 if self._fixed_backtest_config
                 else {}
@@ -436,7 +419,7 @@ class IndividualEvaluator(EvaluationWindowService):
 
     def evaluate_robustness_report(
         self, individual: Any, config: GAConfig
-    ) -> Optional[EvaluationReport]:
+    ) -> EvaluationReport | None:
         """二段階選抜用の robustness 評価レポートを返す。"""
         try:
             gene = self._resolve_gene(individual)
@@ -446,7 +429,7 @@ class IndividualEvaluator(EvaluationWindowService):
                 self._last_evaluation_report = cached
                 return cached
 
-            base_backtest_config: Dict[str, Any] = (
+            base_backtest_config: dict[str, Any] = (
                 self._fixed_backtest_config.copy()
                 if self._fixed_backtest_config
                 else {}
@@ -469,9 +452,7 @@ class IndividualEvaluator(EvaluationWindowService):
         if isinstance(individual, StrategyGene):
             return individual
         if isinstance(individual, dict):
-            return self._gene_serializer.dict_to_strategy_gene(
-                individual, StrategyGene
-            )
+            return self._gene_serializer.dict_to_strategy_gene(individual, StrategyGene)
         if isinstance(individual, list):
             if len(individual) > 0 and isinstance(individual[0], StrategyGene):
                 return individual[0]
@@ -490,49 +471,36 @@ class IndividualEvaluator(EvaluationWindowService):
         )
         signature_payload = {
             "base_key": base_key,
-            "two_stage_enabled": bool(
-                getattr(two_stage_config, "enabled", True)
-            ),
+            "two_stage_enabled": bool(getattr(two_stage_config, "enabled", True)),
             "min_pass_rate": float(
                 getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0
             ),
             "validation_symbols": list(
                 getattr(robustness_config, "validation_symbols", None) or ()
             ),
-            "regime_windows": [
-                list(window.signature) for window in normalized_windows
-            ],
+            "regime_windows": [list(window.signature) for window in normalized_windows],
             "stress_slippage": list(
                 getattr(robustness_config, "stress_slippage", ()) or ()
             ),
             "stress_commission_multipliers": list(
-                getattr(robustness_config, "stress_commission_multipliers", ())
-                or ()
+                getattr(robustness_config, "stress_commission_multipliers", ()) or ()
             ),
             "aggregate_method": str(
                 getattr(robustness_config, "aggregate_method", "robust")
             ),
-            "enable_purged_kfold": bool(
-                getattr(config, "enable_purged_kfold", False)
-            ),
-            "purged_kfold_splits": int(
-                getattr(config, "purged_kfold_splits", 0) or 0
-            ),
+            "enable_purged_kfold": bool(getattr(config, "enable_purged_kfold", False)),
+            "purged_kfold_splits": int(getattr(config, "purged_kfold_splits", 0) or 0),
             "purged_kfold_embargo": float(
                 getattr(config, "purged_kfold_embargo", 0.0) or 0.0
             ),
             "enable_walk_forward": bool(
                 getattr(evaluation_config, "enable_walk_forward", False)
             ),
-            "wfa_n_folds": int(
-                getattr(evaluation_config, "wfa_n_folds", 0) or 0
-            ),
+            "wfa_n_folds": int(getattr(evaluation_config, "wfa_n_folds", 0) or 0),
             "wfa_train_ratio": float(
                 getattr(evaluation_config, "wfa_train_ratio", 0.0) or 0.0
             ),
-            "wfa_anchored": bool(
-                getattr(evaluation_config, "wfa_anchored", False)
-            ),
+            "wfa_anchored": bool(getattr(evaluation_config, "wfa_anchored", False)),
             "oos_split_ratio": float(
                 getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0
             ),
@@ -550,13 +518,13 @@ class IndividualEvaluator(EvaluationWindowService):
         return hashlib.sha256(signature_json.encode("utf-8")).hexdigest()
 
     def _get_cached_data(
-        self, backtest_config: Dict[str, SerializableValue]
+        self, backtest_config: dict[str, SerializableValue]
     ) -> pd.DataFrame | None:
         """キャッシュされたバックテストデータを取得"""
         return self._data_provider.get_cached_backtest_data(backtest_config)
 
     def _get_cached_minute_data(
-        self, backtest_config: Dict[str, SerializableValue]
+        self, backtest_config: dict[str, SerializableValue]
     ) -> pd.DataFrame | None:
         """
         1分足データをキャッシュから取得
@@ -604,8 +572,8 @@ class IndividualEvaluator(EvaluationWindowService):
         )
 
     def _perform_single_evaluation(
-        self, gene, backtest_config: Dict[str, Any], config: GAConfig
-    ) -> Tuple[float, ...]:
+        self, gene, backtest_config: dict[str, Any], config: GAConfig
+    ) -> tuple[float, ...]:
         """単一期間評価を実行し、適応度タプルのみ返す。"""
         return self._perform_single_evaluation_report(
             gene,
@@ -616,11 +584,11 @@ class IndividualEvaluator(EvaluationWindowService):
     def _perform_single_evaluation_report(
         self,
         gene,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
         config: GAConfig,
         *,
         scenario_name: str = "single",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> ScenarioEvaluation:
         """
         単一期間でのバックテストとフィットネス評価を実行し、評価レポートを返す。
@@ -638,10 +606,8 @@ class IndividualEvaluator(EvaluationWindowService):
                 backtest_config,
                 config,
             )
-            prepared_backtest_config = (
-                self._prepare_backtest_config_for_evaluation(
-                    gene, fidelity_backtest_config
-                )
+            prepared_backtest_config = self._prepare_backtest_config_for_evaluation(
+                gene, fidelity_backtest_config
             )
 
             # 1. 実行用設定の構築
@@ -659,9 +625,7 @@ class IndividualEvaluator(EvaluationWindowService):
             # 2. データの準備
             data = self._get_cached_data(prepared_backtest_config)
 
-            evaluation_start = prepared_backtest_config.get(
-                "_evaluation_start"
-            )
+            evaluation_start = prepared_backtest_config.get("_evaluation_start")
             if evaluation_start is not None:
                 run_config["_include_raw_stats"] = True
 
@@ -708,9 +672,7 @@ class IndividualEvaluator(EvaluationWindowService):
             scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata.update(
                 {
-                    "start_date": str(
-                        fidelity_backtest_config.get("start_date")
-                    ),
+                    "start_date": str(fidelity_backtest_config.get("start_date")),
                     "end_date": str(fidelity_backtest_config.get("end_date")),
                 }
             )
@@ -731,9 +693,7 @@ class IndividualEvaluator(EvaluationWindowService):
             logger.info("単一評価を早期終了しました: %s", e)
             scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata["early_terminated"] = True
-            scenario_metadata["termination_reason"] = getattr(
-                e, "reason", str(e)
-            )
+            scenario_metadata["termination_reason"] = getattr(e, "reason", str(e))
             return ScenarioEvaluation(  # type: ignore[call-arg]
                 name=scenario_name,
                 fitness=self._fitness_calculator.get_penalty_values(config),
@@ -753,7 +713,7 @@ class IndividualEvaluator(EvaluationWindowService):
             )
 
     def _is_backtest_result_passing(
-        self, backtest_result: Dict[str, Any], config: GAConfig
+        self, backtest_result: dict[str, Any], config: GAConfig
     ) -> bool:
         """バックテスト結果が基本制約を満たすか判定する。"""
         try:
@@ -764,8 +724,8 @@ class IndividualEvaluator(EvaluationWindowService):
             return False
 
     def _prepare_run_config(
-        self, gene, backtest_config: Dict[str, Any], config: GAConfig
-    ) -> Optional[Dict[str, Any]]:
+        self, gene, backtest_config: dict[str, Any], config: GAConfig
+    ) -> dict[str, Any] | None:
         """バックテスト実行用設定の構築（高速化版）"""
         run_config = self._run_config_builder.build_run_config(
             gene, backtest_config, config
@@ -774,8 +734,8 @@ class IndividualEvaluator(EvaluationWindowService):
 
     def _inject_external_objects(
         self,
-        run_config: Dict[str, Any],
-        backtest_config: Dict[str, Any],
+        run_config: dict[str, Any],
+        backtest_config: dict[str, Any],
         config: GAConfig,
     ) -> None:
         """実行設定への外部オブジェクト注入（1分足データ）"""
@@ -786,29 +746,27 @@ class IndividualEvaluator(EvaluationWindowService):
         )
 
     def _get_evaluation_context(
-        self, gene, backtest_config: Dict[str, Any], config: GAConfig
-    ) -> Dict[str, Any]:
+        self, gene, backtest_config: dict[str, Any], config: GAConfig
+    ) -> dict[str, Any]:
         """評価計算に必要な追加コンテキストを取得（サブクラスでオーバーライド）"""
         return {}
 
     # --- EvaluationStrategy への委譲メソッド（バックワード互換性・テスト用） ---
 
     def _execute_evaluation_logic(
-        self, gene: Any, base_backtest_config: Dict[str, Any], config: GAConfig
-    ) -> Tuple[float, ...]:
+        self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
+    ) -> tuple[float, ...]:
         """具体的な評価プロセスを振り分け（EvaluationStrategyに委譲）"""
-        return self._evaluation_strategy.execute(
-            gene, base_backtest_config, config
-        )
+        return self._evaluation_strategy.execute(gene, base_backtest_config, config)
 
     def _evaluate_with_oos(
         self,
         gene,
-        base_backtest_config: Dict[str, Any],
+        base_backtest_config: dict[str, Any],
         config: GAConfig,
         oos_ratio: float,
         oos_weight: float,
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """OOS検証を含む評価（EvaluationStrategyに委譲）"""
         return self._evaluation_strategy._evaluate_with_oos_report(
             gene, base_backtest_config, config, oos_ratio, oos_weight
@@ -817,9 +775,9 @@ class IndividualEvaluator(EvaluationWindowService):
     def _evaluate_with_walk_forward(
         self,
         gene,
-        base_backtest_config: Dict[str, Any],
+        base_backtest_config: dict[str, Any],
         config: GAConfig,
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """Walk-Forward Analysis による評価（EvaluationStrategyに委譲）"""
         return self._evaluation_strategy._evaluate_with_walk_forward_report(
             gene, base_backtest_config, config
@@ -828,32 +786,26 @@ class IndividualEvaluator(EvaluationWindowService):
     # --- FitnessCalculator への委譲メソッド（バックワード互換性・サブクラス用） ---
 
     def _extract_performance_metrics(
-        self, backtest_result: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, backtest_result: dict[str, Any]
+    ) -> dict[str, Any]:
         """バックテスト結果からパフォーマンスメトリクスを抽出（FitnessCalculatorに委譲）"""
-        return self._fitness_calculator.extract_performance_metrics(
-            backtest_result
-        )
+        return self._fitness_calculator.extract_performance_metrics(backtest_result)
 
     def _calculate_fitness(
-        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
+        self, backtest_result: dict[str, Any], config: GAConfig, **kwargs
     ) -> float:
         """フィットネス計算（FitnessCalculatorに委譲）"""
         return self._fitness_calculator.calculate_fitness(
             backtest_result, config, **kwargs
         )
 
-    def _calculate_long_short_balance(
-        self, backtest_result: Dict[str, Any]
-    ) -> float:
+    def _calculate_long_short_balance(self, backtest_result: dict[str, Any]) -> float:
         """ロング・ショートバランススコア計算（FitnessCalculatorに委譲）"""
-        return self._fitness_calculator.calculate_long_short_balance(
-            backtest_result
-        )
+        return self._fitness_calculator.calculate_long_short_balance(backtest_result)
 
     def _calculate_multi_objective_fitness(
-        self, backtest_result: Dict[str, Any], config: GAConfig, **kwargs
-    ) -> Tuple[float, ...]:
+        self, backtest_result: dict[str, Any], config: GAConfig, **kwargs
+    ) -> tuple[float, ...]:
         """多目的適応度計算（FitnessCalculatorに委譲）"""
         return self._fitness_calculator.calculate_multi_objective_fitness(
             backtest_result, config, **kwargs

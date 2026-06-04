@@ -9,15 +9,11 @@ from __future__ import annotations
 
 import logging
 import random
+from collections.abc import Callable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
     Protocol,
-    Sequence,
     TypeVar,
 )
 
@@ -83,7 +79,7 @@ class RandomGeneGenerator:
 
     def __init__(
         self,
-        config: "GAConfig",
+        config: GAConfig,
         smart_context: dict | None = None,
     ):
         """
@@ -119,11 +115,11 @@ class RandomGeneGenerator:
         self.threshold_ranges = config.threshold_ranges
 
         # 最適化: キャッシュ
-        self._indicator_cache: List[IndicatorGene] = []
-        self._tpsl_cache: List[TPSLGene] = []
-        self._exit_gene_cache: List[ExitGene] = []
-        self._position_sizing_cache: List[PositionSizingGene] = []
-        self._tool_genes_template: Optional[List[ToolGene]] = None
+        self._indicator_cache: list[IndicatorGene] = []
+        self._tpsl_cache: list[TPSLGene] = []
+        self._exit_gene_cache: list[ExitGene] = []
+        self._position_sizing_cache: list[PositionSizingGene] = []
+        self._tool_genes_template: list[ToolGene] | None = None
 
     @staticmethod
     def _create_enabled_tpsl_gene() -> TPSLGene:
@@ -161,9 +157,7 @@ class RandomGeneGenerator:
             self._exit_gene_cache.append(create_random_exit_gene(self.config))
 
         for _ in range(self.CACHE_SIZE):
-            self._position_sizing_cache.append(
-                create_random_position_sizing_gene()
-            )
+            self._position_sizing_cache.append(create_random_position_sizing_gene())
 
         self._tool_genes_template = self._generate_tool_genes_template()
 
@@ -172,7 +166,7 @@ class RandomGeneGenerator:
         cache: Sequence[T],
         creator: Callable[[], T],
         *,
-        postprocess: Optional[Callable[[T], None]] = None,
+        postprocess: Callable[[T], None] | None = None,
     ) -> T:
         """
         キャッシュから clone し、無ければ creator で生成する
@@ -193,7 +187,7 @@ class RandomGeneGenerator:
             postprocess(gene)
         return gene
 
-    def _generate_tool_genes_template(self) -> List[ToolGene]:
+    def _generate_tool_genes_template(self) -> list[ToolGene]:
         """
         ツール遺伝子テンプレートを生成する
 
@@ -203,7 +197,7 @@ class RandomGeneGenerator:
         Returns:
             List[ToolGene]: ツール遺伝子テンプレートリスト
         """
-        tool_genes: List[ToolGene] = []
+        tool_genes: list[ToolGene] = []
         for tool in tool_registry.get_all():
             # 優先度に応じた確率を取得
             priority = tool.definition.priority
@@ -220,7 +214,7 @@ class RandomGeneGenerator:
         # フィルター数制限を強制
         return self._enforce_filter_limit(tool_genes)
 
-    def _enforce_filter_limit(self, tool_genes: List[Any]) -> List[Any]:
+    def _enforce_filter_limit(self, tool_genes: list[Any]) -> list[Any]:
         """
         フィルター数制限を強制する
 
@@ -235,9 +229,7 @@ class RandomGeneGenerator:
         max_filters = getattr(self.config, "max_enabled_filters", 3)
 
         # 有効なフィルターをコスト順にソート（コストが高い＝優先度低い）
-        enabled_filters = [
-            t for t in tool_genes if hasattr(t, "enabled") and t.enabled
-        ]
+        enabled_filters = [t for t in tool_genes if hasattr(t, "enabled") and t.enabled]
         disabled_filters = [
             t for t in tool_genes if hasattr(t, "enabled") and not t.enabled
         ]
@@ -262,7 +254,7 @@ class RandomGeneGenerator:
 
         return tool_genes
 
-    def _get_cached_indicators(self) -> List[IndicatorGene]:
+    def _get_cached_indicators(self) -> list[IndicatorGene]:
         """
         キャッシュからインジケーターを取得する
 
@@ -339,7 +331,7 @@ class RandomGeneGenerator:
             lambda: create_random_exit_gene(self.config),
         )
 
-    def _get_cached_tool_genes(self) -> List[ToolGene]:
+    def _get_cached_tool_genes(self) -> list[ToolGene]:
         """
         キャッシュからツール遺伝子を取得する
 
@@ -380,9 +372,7 @@ class RandomGeneGenerator:
         is_api_call=False,
         default_return=StrategyGene(
             indicators=[
-                IndicatorGene(
-                    type="SMA", parameters={"period": 20}, enabled=True
-                )
+                IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],
             long_entry_conditions=[],
             short_entry_conditions=[],
@@ -391,9 +381,7 @@ class RandomGeneGenerator:
             risk_management={},
             tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
             long_tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
-            short_tpsl_gene=TPSLGene(
-                take_profit_pct=0.01, stop_loss_pct=0.005
-            ),
+            short_tpsl_gene=TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005),
             exit_gene=ExitGene(),
             position_sizing_gene=PositionSizingGene(
                 method=PositionSizingMethod.FIXED_QUANTITY, fixed_quantity=1000
@@ -427,26 +415,20 @@ class RandomGeneGenerator:
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
         try:
-            setattr(self.smart_condition_generator, "indicators", indicators)
+            self.smart_condition_generator.indicators = indicators
         except Exception as e:
             logger.debug("指標キャッシュの設定に失敗しました: %s", e)
             pass
         long_entry_conditions, short_entry_conditions, _ = (
-            self.smart_condition_generator.generate_balanced_conditions(
-                indicators
-            )
+            self.smart_condition_generator.generate_balanced_conditions(indicators)
         )
 
         # 条件の成立性を底上げ：OR 正規化と価格vsトレンド(or open)フォールバックをコアに委譲
-        long_entry_conditions = (
-            self.smart_condition_generator.normalize_conditions(
-                long_entry_conditions, "long", indicators
-            )
+        long_entry_conditions = self.smart_condition_generator.normalize_conditions(
+            long_entry_conditions, "long", indicators
         )
-        short_entry_conditions = (
-            self.smart_condition_generator.normalize_conditions(
-                short_entry_conditions, "short", indicators
-            )
+        short_entry_conditions = self.smart_condition_generator.normalize_conditions(
+            short_entry_conditions, "short", indicators
         )
         long_exit_conditions, short_exit_conditions, _ = (
             self.smart_condition_generator.generate_exit_conditions(indicators)
@@ -500,7 +482,7 @@ class RandomGeneGenerator:
         self._position_sizing_cache.clear()
         self._tool_genes_template = None
 
-    def get_cache_statistics(self) -> Dict[str, Any]:
+    def get_cache_statistics(self) -> dict[str, Any]:
         """
         キャッシュ統計を返す
 

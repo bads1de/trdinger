@@ -201,7 +201,6 @@ class TestBacktestExecutor:
                 executor, "_run_backtest", return_value=mock_stats
             ) as mock_run,
         ):
-
             result = executor.execute_backtest(
                 mock_strategy,
                 {"p1": 1},
@@ -226,7 +225,6 @@ class TestBacktestExecutor:
             patch.object(executor, "_create_backtest_instance") as mock_create,
             patch.object(executor, "_run_backtest") as mock_run,
         ):
-
             executor.execute_backtest(
                 mock_strategy,
                 {},

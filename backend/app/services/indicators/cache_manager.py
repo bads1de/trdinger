@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pandas as pd
 from cachetools import LRUCache
@@ -46,8 +46,8 @@ class IndicatorCacheManager:
         logger.info("Indicator calculation cache cleared.")
 
     def make_cache_key(
-        self, indicator_type: str, params: Dict[str, Any], df: pd.DataFrame
-    ) -> Optional[tuple]:
+        self, indicator_type: str, params: dict[str, Any], df: pd.DataFrame
+    ) -> tuple | None:
         """キャッシュキーを生成（データの内容に基づいた一意なキー）
 
         DataFrame はミュータブルなので、属性にハッシュを保持しません。
@@ -71,9 +71,7 @@ class IndicatorCacheManager:
         """
         try:
             # パラメータをソートされた不変セットに変換
-            cache_params = frozenset(
-                sorted([(k, str(v)) for k, v in params.items()])
-            )
+            cache_params = frozenset(sorted([(k, str(v)) for k, v in params.items()]))
 
             # データのメタデータを抽出
             data_meta: tuple
@@ -94,7 +92,7 @@ class IndicatorCacheManager:
         except Exception:
             return None
 
-    def get_cached_result(self, cache_key: Optional[tuple]) -> Optional[Any]:
+    def get_cached_result(self, cache_key: tuple | None) -> Any | None:
         """
         キャッシュから結果を取得
 
@@ -115,7 +113,7 @@ class IndicatorCacheManager:
             self._cache_misses += 1
         return result
 
-    def cache_result(self, cache_key: Optional[tuple], result: Any) -> None:
+    def cache_result(self, cache_key: tuple | None, result: Any) -> None:
         """
         結果をキャッシュに保存
 
@@ -128,12 +126,10 @@ class IndicatorCacheManager:
         if cache_key is not None and result is not None:
             self._calculation_cache[cache_key] = result
 
-    def get_cache_statistics(self) -> Dict[str, Any]:
+    def get_cache_statistics(self) -> dict[str, Any]:
         """キャッシュ統計を取得"""
         total_requests = self._cache_hits + self._cache_misses
-        hit_rate = (
-            self._cache_hits / total_requests if total_requests > 0 else 0.0
-        )
+        hit_rate = self._cache_hits / total_requests if total_requests > 0 else 0.0
         return {
             "cache_size": len(self._calculation_cache),
             "cache_hits": self._cache_hits,

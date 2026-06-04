@@ -10,7 +10,7 @@ OHLCVデータ、ファンディングレートデータなどの市場データ
 - 時系列データの順序チェック
 """
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import pandas as pd
 

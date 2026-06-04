@@ -5,7 +5,7 @@ MLトレーニングAPI
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
@@ -31,14 +31,10 @@ router = APIRouter(prefix="/api/ml-training", tags=["ML Training"])
 class ParameterSpaceConfig(BaseModel):
     """パラメータ空間設定"""
 
-    type: str = Field(
-        ..., description="パラメータ型 (real, integer, categorical)"
-    )
-    low: Optional[float] = Field(None, description="最小値 (real, integer)")
-    high: Optional[float] = Field(None, description="最大値 (real, integer)")
-    categories: Optional[list] = Field(
-        None, description="カテゴリ一覧 (categorical)"
-    )
+    type: str = Field(..., description="パラメータ型 (real, integer, categorical)")
+    low: float | None = Field(None, description="最小値 (real, integer)")
+    high: float | None = Field(None, description="最大値 (real, integer)")
+    categories: list | None = Field(None, description="カテゴリ一覧 (categorical)")
 
 
 class OptimizationSettingsConfig(BaseModel):
@@ -47,7 +43,7 @@ class OptimizationSettingsConfig(BaseModel):
     enabled: bool = Field(default=False, description="最適化を有効にするか")
     method: str = Field(default="optuna", description="最適化手法 (optuna)")
     n_calls: int = Field(default=50, description="最適化試行回数")
-    parameter_space: Dict[str, ParameterSpaceConfig] = Field(
+    parameter_space: dict[str, ParameterSpaceConfig] = Field(
         default_factory=dict, description="パラメータ空間設定"
     )
 
@@ -55,7 +51,7 @@ class OptimizationSettingsConfig(BaseModel):
 class StackingParamsConfig(BaseModel):
     """スタッキングパラメータ設定（scikit-learn StackingClassifier対応）"""
 
-    base_models: List[str] = Field(
+    base_models: list[str] = Field(
         default=["lightgbm", "xgboost"],
         description="ベースモデルのリスト（Essential 2 Modelsのみ）",
     )
@@ -68,9 +64,7 @@ class StackingParamsConfig(BaseModel):
         default="predict_proba",
         description="スタック方法（predict_proba, predict）",
     )
-    random_state: Optional[int] = Field(
-        default=42, description="ランダムシード"
-    )
+    random_state: int | None = Field(default=42, description="ランダムシード")
     n_jobs: int = Field(default=-1, description="並列処理数（-1で全CPU使用）")
     passthrough: bool = Field(
         default=False, description="元の特徴量をメタモデルに渡すか"
@@ -85,12 +79,8 @@ class EnsembleRequest(BaseModel):
         とは異なり、APIリクエストボディのスキーマを定義します。
     """
 
-    enabled: bool = Field(
-        default=True, description="アンサンブル学習を有効にするか"
-    )
-    method: str = Field(
-        default="stacking", description="アンサンブル手法 (stacking)"
-    )
+    enabled: bool = Field(default=True, description="アンサンブル学習を有効にするか")
+    method: str = Field(default="stacking", description="アンサンブル手法 (stacking)")
     stacking_params: StackingParamsConfig = Field(
         default_factory=StackingParamsConfig,
         description="スタッキングパラメータ",
@@ -125,9 +115,7 @@ class MLTrainingRequest(BaseModel):
     timeframe: str = Field(default="1h", description="時間軸")
     start_date: str = Field(..., description="開始日（YYYY-MM-DD）")
     end_date: str = Field(..., description="終了日（YYYY-MM-DD）")
-    validation_split: float = Field(
-        default=0.2, description="検証データ分割比率"
-    )
+    validation_split: float = Field(default=0.2, description="検証データ分割比率")
     prediction_horizon: int = Field(default=24, description="予測期間（時間）")
     task_type: str = Field(
         default="volatility_regression",
@@ -150,15 +138,13 @@ class MLTrainingRequest(BaseModel):
         default=5, description="クロスバリデーション分割数"
     )
     random_state: int = Field(default=42, description="ランダムシード")
-    early_stopping_rounds: int = Field(
-        default=100, description="早期停止ラウンド数"
-    )
+    early_stopping_rounds: int = Field(default=100, description="早期停止ラウンド数")
     max_depth: int = Field(default=10, description="最大深度")
     n_estimators: int = Field(default=100, description="推定器数")
     learning_rate: float = Field(default=0.1, description="学習率")
 
     # 最適化設定
-    optimization_settings: Optional[OptimizationSettingsConfig] = Field(
+    optimization_settings: OptimizationSettingsConfig | None = Field(
         None, description="ハイパーパラメータ最適化設定"
     )
 
@@ -166,13 +152,13 @@ class MLTrainingRequest(BaseModel):
     # 特徴量プロファイル設定も削除されました（研究目的専用のためシンプル化）
 
     # アンサンブル学習設定
-    ensemble_config: Optional[EnsembleRequest] = Field(
+    ensemble_config: EnsembleRequest | None = Field(
         default=None,  # デフォルトをNoneに変更してフロントエンドからの設定を優先
         description="アンサンブル学習設定（フロントエンドから明示的に設定）",
     )
 
     # 単一モデル学習設定
-    single_model_config: Optional[SingleModelConfig] = Field(
+    single_model_config: SingleModelConfig | None = Field(
         default=None,  # デフォルトをNoneに変更してフロントエンドからの設定を優先
         description="単一モデル学習設定（アンサンブル無効時に使用）",
     )
@@ -183,8 +169,8 @@ class MLTrainingResponse(BaseModel):
 
     success: bool
     message: str
-    training_id: Optional[str] = None
-    timestamp: Optional[str] = None
+    training_id: str | None = None
+    timestamp: str | None = None
 
 
 class MLStatusResponse(BaseModel):
@@ -194,10 +180,10 @@ class MLStatusResponse(BaseModel):
     progress: int
     status: str
     message: str
-    start_time: Optional[str] = None
-    end_time: Optional[str] = None
-    model_info: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
+    start_time: str | None = None
+    end_time: str | None = None
+    model_info: dict[str, Any] | None = None
+    error: str | None = None
 
 
 @router.post("/train", response_model=MLTrainingResponse)
@@ -234,8 +220,7 @@ async def start_ml_training(
     return MLTrainingResponse(
         success=result.get("success", False),
         message=result.get("message", ""),
-        training_id=result.get("training_id")
-        or payload.get("training_id"),
+        training_id=result.get("training_id") or payload.get("training_id"),
         timestamp=result.get("timestamp", now_iso()),
     )
 

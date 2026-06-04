@@ -63,7 +63,6 @@ class TestEndOfMonthFilter:
             patch("random.random", side_effect=[0.5, 0.1, 0.5, 0.1]),
             patch("random.randint", return_value=1),
         ):
-
             # 1回目: enabled変化なし, days変化あり
             params = {"enabled": True, "days_before_end": 0}
             new_params = filter_tool.mutate_params(params)

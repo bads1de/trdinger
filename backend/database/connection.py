@@ -8,7 +8,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import NullPool, QueuePool
 
 logger = logging.getLogger(__name__)
@@ -171,6 +171,3 @@ def check_db_initialized():
     except Exception as e:
         logger.error(f"データベース初期化チェックエラー: {e}")
         return False
-
-
-

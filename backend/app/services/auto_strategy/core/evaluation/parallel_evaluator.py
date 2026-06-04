@@ -9,17 +9,16 @@ CPU バウンドな計算を効率化します。
 import logging
 import os
 import time
+from collections.abc import Callable
 from concurrent.futures import (
     FIRST_COMPLETED,
     ProcessPoolExecutor,
     ThreadPoolExecutor,
-)
-from concurrent.futures import TimeoutError as FuturesTimeoutError
-from concurrent.futures import (
     wait,
 )
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +27,8 @@ logger = logging.getLogger(__name__)
 class ParallelEvaluationResult:
     """ワーカーから返す拡張評価結果。"""
 
-    fitness: Tuple[float, ...]
-    behavior_summary: Optional[Dict[str, float]] = None
+    fitness: tuple[float, ...]
+    behavior_summary: dict[str, float] | None = None
 
 
 def _combined_initializer(init_func, init_args):
@@ -51,12 +50,12 @@ class ParallelEvaluator:
 
     def __init__(
         self,
-        evaluate_func: Callable[[Any], Tuple[float, ...]],
-        max_workers: Optional[int] = None,
+        evaluate_func: Callable[[Any], tuple[float, ...]],
+        max_workers: int | None = None,
         timeout_per_individual: float = 300.0,
         use_process_pool: bool = True,
-        worker_initializer: Optional[Callable] = None,
-        worker_initargs: Tuple = (),
+        worker_initializer: Callable | None = None,
+        worker_initargs: tuple = (),
     ):
         """
         初期化
@@ -105,10 +104,10 @@ class ParallelEvaluator:
 
         # 最適化: バッチ処理とキャッシュ
         self._batch_size = 10
-        self._evaluation_cache: Dict[str, Tuple[float, ...]] = {}
+        self._evaluation_cache: dict[str, tuple[float, ...]] = {}
         self._cache_hits = 0
         self._cache_misses = 0
-        self._behavior_summary_cache: Dict[object, Dict[str, float]] = {}
+        self._behavior_summary_cache: dict[object, dict[str, float]] = {}
 
     def start(self):
         """
@@ -117,9 +116,7 @@ class ParallelEvaluator:
         if self._executor is not None:
             return
 
-        logger.info(
-            f"並列評価Executorを起動します (max_workers={self.max_workers})"
-        )
+        logger.info(f"並列評価Executorを起動します (max_workers={self.max_workers})")
 
         if self.use_process_pool:
             self._executor = ProcessPoolExecutor(
@@ -148,9 +145,9 @@ class ParallelEvaluator:
 
     def evaluate_population(
         self,
-        population: List[Any],
-        default_fitness: Optional[Tuple[float, ...]] = None,
-    ) -> List[Tuple[float, ...]]:
+        population: list[Any],
+        default_fitness: tuple[float, ...] | None = None,
+    ) -> list[tuple[float, ...]]:
         """
         個体群を並列評価
 
@@ -169,7 +166,7 @@ class ParallelEvaluator:
             default_fitness = (0.0,)
 
         population_size = len(population)
-        results: List[Optional[Tuple[float, ...]]] = [None] * population_size
+        results: list[tuple[float, ...] | None] = [None] * population_size
 
         executor_type = "Process" if self.use_process_pool else "Thread"
         # Executorが起動していない場合は一時的に起動するか、都度作成モードで動作させる
@@ -201,9 +198,7 @@ class ParallelEvaluator:
             )
 
         # Noneが残っている場合はデフォルト値で埋める
-        final_results = [
-            r if r is not None else default_fitness for r in results
-        ]
+        final_results = [r if r is not None else default_fitness for r in results]
 
         logger.info(
             f"並列評価完了: 成功={self._successful_evaluations}, "
@@ -215,10 +210,10 @@ class ParallelEvaluator:
     def _evaluate_on_executor(
         self,
         executor,
-        population: List[Any],
-        results: List[Optional[Tuple[float, ...]]],
-        default_fitness: Tuple[float, ...],
-    ) -> List[Optional[Tuple[float, ...]]]:
+        population: list[Any],
+        results: list[tuple[float, ...] | None],
+        default_fitness: tuple[float, ...],
+    ) -> list[tuple[float, ...] | None]:
         """
         指定されたExecutor上で評価を実行します。
 
@@ -232,7 +227,7 @@ class ParallelEvaluator:
             評価結果リスト
         """
         future_to_index = {}
-        future_started_at: Dict[Any, float] = {}
+        future_started_at: dict[Any, float] = {}
 
         for i, ind in enumerate(population):
             future = executor.submit(self.evaluate_func, ind)
@@ -272,8 +267,7 @@ class ParallelEvaluator:
                 except Exception as e:
                     category = self._categorize_error(e, index)
                     logger.warning(
-                        f"個体評価エラー: index={index}, "
-                        f"category={category}, error={e}"
+                        f"個体評価エラー: index={index}, category={category}, error={e}"
                     )
                     results[index] = default_fitness
                     self._clear_behavior_summary(population[index])
@@ -294,9 +288,7 @@ class ParallelEvaluator:
                 future.cancel()
 
         if timed_out_futures:
-            logger.warning(
-                "個体評価タイムアウトを検知したため、Executorを再生成します"
-            )
+            logger.warning("個体評価タイムアウトを検知したため、Executorを再生成します")
             executor.shutdown(wait=False)
             if self._executor == executor:
                 self._executor = None
@@ -306,7 +298,7 @@ class ParallelEvaluator:
     @staticmethod
     def _extract_fitness_result(
         evaluation_result: Any,
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """返り値から fitness タプルを取り出す。"""
         if isinstance(evaluation_result, ParallelEvaluationResult):
             return tuple(evaluation_result.fitness)
@@ -351,9 +343,7 @@ class ParallelEvaluator:
 
         return id(individual)
 
-    def get_cached_behavior_profile(
-        self, individual: Any
-    ) -> Optional[Dict[str, float]]:
+    def get_cached_behavior_profile(self, individual: Any) -> dict[str, float] | None:
         """個体に対応する behavior summary を返す。"""
         cache_key = self._get_individual_identity(individual)
         behavior_summary = self._behavior_summary_cache.get(cache_key)
@@ -369,8 +359,8 @@ class ParallelEvaluator:
     def _collect_expired_futures(
         self,
         futures,
-        future_started_at: Dict[Any, float],
-    ) -> List[Any]:
+        future_started_at: dict[Any, float],
+    ) -> list[Any]:
         """個体ごとの timeout を超過した Future を抽出する。"""
         now = time.monotonic()
         expired_futures = []
@@ -451,9 +441,9 @@ class ParallelEvaluator:
 
     def evaluate_invalid_individuals(
         self,
-        population: List[Any],
-        default_fitness: Optional[Tuple[float, ...]] = None,
-    ) -> List[Tuple[Tuple[float, ...], Any]]:
+        population: list[Any],
+        default_fitness: tuple[float, ...] | None = None,
+    ) -> list[tuple[tuple[float, ...], Any]]:
         """
         適応度が無効な個体のみを並列評価
 
@@ -465,23 +455,17 @@ class ParallelEvaluator:
             (フィットネス値, 個体) のタプルリスト
         """
         # 無効な個体を抽出
-        invalid_individuals = [
-            ind for ind in population if not ind.fitness.valid
-        ]
+        invalid_individuals = [ind for ind in population if not ind.fitness.valid]
 
         if not invalid_individuals:
             return []
 
-        logger.debug(
-            f"無効な個体数: {len(invalid_individuals)}/{len(population)}"
-        )
+        logger.debug(f"無効な個体数: {len(invalid_individuals)}/{len(population)}")
 
         # 並列評価
-        fitnesses = self.evaluate_population(
-            invalid_individuals, default_fitness
-        )
+        fitnesses = self.evaluate_population(invalid_individuals, default_fitness)
 
-        return list(zip(fitnesses, invalid_individuals))
+        return list(zip(fitnesses, invalid_individuals, strict=False))
 
     def get_statistics(self) -> dict:
         """
@@ -534,10 +518,10 @@ class ParallelEvaluator:
 # =============================================================================
 
 # ワーカープロセス内で共有されるデータコンテキスト
-_WORKER_DATA_CONTEXT: Dict[str, Any] = {}
+_WORKER_DATA_CONTEXT: dict[str, Any] = {}
 
 
-def initialize_worker(data_context: Dict[str, Any]):
+def initialize_worker(data_context: dict[str, Any]):
     """
     ワーカープロセスの初期化
 
@@ -550,7 +534,7 @@ def initialize_worker(data_context: Dict[str, Any]):
         logger.error(f"Worker initialization failed: {e}")
 
 
-def get_worker_data(key: str) -> Optional[Any]:
+def get_worker_data(key: str) -> Any | None:
     """
     共有データの取得
 

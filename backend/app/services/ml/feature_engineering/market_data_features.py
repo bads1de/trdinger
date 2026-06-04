@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         super().__init__()
 
     def calculate_features(
-        self, df: pd.DataFrame, config: Dict[str, Any]
+        self, df: pd.DataFrame, config: dict[str, Any]
     ) -> pd.DataFrame:
         funding_rate_data = config.get("funding_rate_data")
         open_interest_data = config.get("open_interest_data")
@@ -59,9 +59,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
     ) -> tuple[pd.DataFrame, str | None]:
         if data is None or data.empty:
             return df, None
-        target_col = next(
-            (c for c in column_candidates if c in data.columns), None
-        )
+        target_col = next((c for c in column_candidates if c in data.columns), None)
         if target_col is None:
             return df, None
 
@@ -107,7 +105,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         self,
         df: pd.DataFrame,
         funding_rate_data: pd.DataFrame,
-        lookback_periods: Dict[str, int],
+        lookback_periods: dict[str, int],
     ) -> pd.DataFrame:
         try:
             res, fr_col = self._process_market_data(
@@ -139,9 +137,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
 
             # 結果構築
             res["FR_Extremity_Zscore"] = zscores
-            res["FR_MA_24"] = fr_series.rolling(
-                window=24, min_periods=1
-            ).mean()
+            res["FR_MA_24"] = fr_series.rolling(window=24, min_periods=1).mean()
             res["FR_MACD"] = macd
             res["FR_Momentum"] = fr_series.diff().fillna(0.0)
 
@@ -158,7 +154,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         self,
         df: pd.DataFrame,
         open_interest_data: pd.DataFrame,
-        lookback_periods: Dict[str, int],
+        lookback_periods: dict[str, int],
     ) -> pd.DataFrame:
         try:
             res, oi_col = self._process_market_data(
@@ -174,7 +170,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             return df
 
     def calculate_pseudo_open_interest_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: dict[str, int]
     ) -> pd.DataFrame:
         if "volume" not in df.columns or df.empty:
             return df
@@ -191,19 +187,9 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             return df
 
         # RSI (ベクトル化)
-        delta = cast(
-            pd.Series, pd.to_numeric(oi_s.diff(), errors="coerce")
-        ).fillna(0.0)
-        gain = (
-            (delta.where(delta > 0, 0.0))
-            .rolling(window=14, min_periods=1)
-            .mean()
-        )
-        loss = (
-            (-delta.where(delta < 0, 0.0))
-            .rolling(window=14, min_periods=1)
-            .mean()
-        )
+        delta = cast(pd.Series, pd.to_numeric(oi_s.diff(), errors="coerce")).fillna(0.0)
+        gain = (delta.where(delta > 0, 0.0)).rolling(window=14, min_periods=1).mean()
+        loss = (-delta.where(delta < 0, 0.0)).rolling(window=14, min_periods=1).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs))
         rsi = pd.Series(np.nan_to_num(rsi, nan=50.0), index=oi_s.index)
@@ -240,12 +226,10 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         df: pd.DataFrame,
         f_data: pd.DataFrame,
         o_data: pd.DataFrame,
-        lookback: Dict[str, int],
+        lookback: dict[str, int],
     ) -> pd.DataFrame:
         try:
-            res, fr_col = self._process_market_data(
-                df, f_data, ["funding_rate"], "_fr"
-            )
+            res, fr_col = self._process_market_data(df, f_data, ["funding_rate"], "_fr")
             res, oi_col = self._process_market_data(
                 res, o_data, ["open_interest"], "_oi"
             )
@@ -259,8 +243,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             # OIの移動平均を計算
             oi_mean = oi_vals.expanding(min_periods=1).mean()
             stress = np.sqrt(
-                (fr_vals * 1000) ** 2
-                + (oi_vals / oi_mean.replace(0, 1) - 1) ** 2
+                (fr_vals * 1000) ** 2 + (oi_vals / oi_mean.replace(0, 1) - 1) ** 2
             )
 
             res["Market_Stress"] = stress

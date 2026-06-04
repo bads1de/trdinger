@@ -5,7 +5,7 @@ OHLCV、ファンディングレート、オープンインタレストデータ
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -29,7 +29,7 @@ async def reset_all_data(
     orchestration_service: DataManagementOrchestrationService = Depends(
         get_data_management_orchestration_service
     ),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """全ての市場データ（OHLCV、FR、OI）をリセットする。
 
     データベースから全てのOHLCVデータ、ファンディングレート、
@@ -52,7 +52,7 @@ async def reset_ohlcv_data(
     orchestration_service: DataManagementOrchestrationService = Depends(
         get_data_management_orchestration_service
     ),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     OHLCVデータのみをリセット
 
@@ -71,7 +71,7 @@ async def reset_funding_rate_data(
     orchestration_service: DataManagementOrchestrationService = Depends(
         get_data_management_orchestration_service
     ),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     ファンディングレートデータのみをリセット
 
@@ -90,7 +90,7 @@ async def reset_open_interest_data(
     orchestration_service: DataManagementOrchestrationService = Depends(
         get_data_management_orchestration_service
     ),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     オープンインタレストデータのみをリセット
 
@@ -101,16 +101,14 @@ async def reset_open_interest_data(
 
 
 @router.delete("/symbol/{symbol:path}")
-@ErrorHandler.api_endpoint(
-    "シンボル別データのリセット中にエラーが発生しました"
-)
+@ErrorHandler.api_endpoint("シンボル別データのリセット中にエラーが発生しました")
 async def reset_data_by_symbol(
     symbol: str,
     db: Session = Depends(get_db),
     orchestration_service: DataManagementOrchestrationService = Depends(
         get_data_management_orchestration_service
     ),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     特定シンボルの全データ（OHLCV、ファンディングレート、オープンインタレスト）をリセット
 
@@ -132,7 +130,7 @@ async def get_data_status(
     orchestration_service: DataManagementOrchestrationService = Depends(
         get_data_management_orchestration_service
     ),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     現在のデータ状況を取得（詳細版）
 

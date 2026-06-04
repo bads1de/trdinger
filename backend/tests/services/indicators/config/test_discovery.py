@@ -225,14 +225,18 @@ class TestDiscoverAll:
         configs = DynamicIndicatorDiscovery.discover_all()
         # 除外されていないcustom trendインジケーターを確認
         custom_indicators = [c for c in configs if c.category == "custom"]
-        assert len(custom_indicators) > 0, "custom trendパッケージから検出されたインジケーターがありません"
+        assert len(custom_indicators) > 0, (
+            "custom trendパッケージから検出されたインジケーターがありません"
+        )
 
         # 少なくとも1つのcustomインジケーターがadapter_functionまたはpandas_functionを持つ
         has_adapter_or_pandas = any(
             c.adapter_function is not None or c.pandas_function is not None
             for c in custom_indicators
         )
-        assert has_adapter_or_pandas, "adapter_functionまたはpandas_functionを持つcustomインジケーターがありません"
+        assert has_adapter_or_pandas, (
+            "adapter_functionまたはpandas_functionを持つcustomインジケーターがありません"
+        )
 
     @pytest.mark.parametrize(
         ("indicator_name", "expected_default"),

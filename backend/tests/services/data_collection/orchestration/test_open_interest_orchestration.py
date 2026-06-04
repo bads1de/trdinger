@@ -5,7 +5,7 @@ OpenInterestOrchestrationServiceの正常系、異常系、エッジケースを
 """
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -54,7 +54,7 @@ def orchestration_service(
 
 
 @pytest.fixture
-def sample_open_interest_data() -> List[Dict[str, Any]]:
+def sample_open_interest_data() -> list[dict[str, Any]]:
     """
     サンプルオープンインタレストデータ
 
@@ -205,7 +205,7 @@ class TestGetOpenInterestData:
         self,
         orchestration_service: OpenInterestOrchestrationService,
         mock_db_session: MagicMock,
-        sample_open_interest_data: List[Dict[str, Any]],
+        sample_open_interest_data: list[dict[str, Any]],
     ):
         """
         正常系: オープンインタレストデータが正常に取得できる

@@ -11,7 +11,8 @@ ML モデル最適化サービスモジュール
 """
 
 import logging
-from typing import Any, Callable, Dict, Optional, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 import pandas as pd
 
@@ -30,7 +31,7 @@ class OptimizationSettings:
         self,
         enabled: bool = False,
         n_calls: int = 50,
-        parameter_space: Optional[Dict[str, Dict[str, Any]]] = None,
+        parameter_space: dict[str, dict[str, Any]] | None = None,
     ):
         self.enabled = enabled
         self.n_calls = n_calls
@@ -57,11 +58,11 @@ class OptimizationService:
         trainer: Any,
         training_data: pd.DataFrame,
         optimization_settings: OptimizationSettings,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
-        model_name: Optional[str] = None,
+        funding_rate_data: pd.DataFrame | None = None,
+        open_interest_data: pd.DataFrame | None = None,
+        model_name: str | None = None,
         **training_params,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         MLモデル（単一またはアンサンブル）のハイパーパラメータ最適化を実行します。
 
@@ -134,9 +135,9 @@ class OptimizationService:
         ohlcv_data: pd.DataFrame,
         n_trials: int = 50,
         test_ratio: float = 0.2,
-        frac_diff_d_values: Optional[list] = None,
-        fixed_label_params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        frac_diff_d_values: list | None = None,
+        fixed_label_params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         特徴量エンジニアリング、特徴量選択、およびモデル学習を同時に最適化（CASH）します。
 
@@ -184,7 +185,7 @@ class OptimizationService:
         )
 
         # 目的関数を作成
-        def objective_function(params: Dict[str, Any]) -> float:
+        def objective_function(params: dict[str, Any]) -> float:
             try:
                 # 0. ラベルの動的生成 (Triple Barrier Method)
                 # 固定パラメータがある場合はそれを優先し、なければOptunaの提案値(params)を使用
@@ -268,13 +269,9 @@ class OptimizationService:
         if fixed_label_params:
             final_params.update(fixed_label_params)
 
-        df_for_label = (
-            ohlcv_data if ohlcv_data is not None else feature_superset
-        )
+        df_for_label = ohlcv_data if ohlcv_data is not None else feature_superset
 
-        labels_best = self._generate_pipeline_labels(
-            df_for_label, final_params
-        )
+        labels_best = self._generate_pipeline_labels(df_for_label, final_params)
 
         # アラインメント
         X_aligned, y_aligned = self._align_feature_superset_and_labels(
@@ -287,22 +284,20 @@ class OptimizationService:
         )
 
         # ベストパラメータでフルTrainValデータで再学習
-        test_score, n_selected_features = (
-            self._evaluate_selected_model_pipeline(
-                X_train=X_trainval,
-                y_train=y_trainval,
-                X_eval=X_test,
-                y_eval=y_test,
-                d_value=best_params["frac_diff_d"],
-                selection_method=best_params["selection_method"],
-                correlation_threshold=best_params["correlation_threshold"],
-                min_features=best_params["min_features"],
-                learning_rate=best_params["learning_rate"],
-                num_leaves=best_params["num_leaves"],
-                cv_folds=3,
-                cv_strategy="timeseries",
-                n_jobs=-1,
-            )
+        test_score, n_selected_features = self._evaluate_selected_model_pipeline(
+            X_train=X_trainval,
+            y_train=y_trainval,
+            X_eval=X_test,
+            y_eval=y_test,
+            d_value=best_params["frac_diff_d"],
+            selection_method=best_params["selection_method"],
+            correlation_threshold=best_params["correlation_threshold"],
+            min_features=best_params["min_features"],
+            learning_rate=best_params["learning_rate"],
+            num_leaves=best_params["num_leaves"],
+            cv_folds=3,
+            cv_strategy="timeseries",
+            n_jobs=-1,
         )
 
         baseline_score = 0.0
@@ -325,7 +320,7 @@ class OptimizationService:
         }
 
     def _generate_pipeline_labels(
-        self, df_for_label: pd.DataFrame, label_params: Dict[str, Any]
+        self, df_for_label: pd.DataFrame, label_params: dict[str, Any]
     ) -> pd.Series:
         """パイプライン最適化向けに triple barrier ラベルを一元生成する"""
         from app.services.ml.label_generation.presets import (
@@ -405,9 +400,7 @@ class OptimizationService:
         )
 
         exclude_cols = ["open", "high", "low", "close", "volume"]
-        feature_cols = [
-            c for c in X_train_filtered.columns if c not in exclude_cols
-        ]
+        feature_cols = [c for c in X_train_filtered.columns if c not in exclude_cols]
         X_train_features: pd.DataFrame = cast(
             pd.DataFrame, X_train_filtered[feature_cols]
         )
@@ -448,7 +441,7 @@ class OptimizationService:
         y_true: pd.Series,
         n_trials: int = 30,
         cv_splits: int = 5,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         OOF予測を用いたメタモデルの最適化
         ...
@@ -481,9 +474,7 @@ class OptimizationService:
             y_train = y_true.iloc[train_idx]
 
             primary_pipeline.fit(X_train, y_train)
-            oof_probs.iloc[val_idx] = primary_pipeline.predict_proba(X_val)[
-                :, 1
-            ]
+            oof_probs.iloc[val_idx] = primary_pipeline.predict_proba(X_val)[:, 1]
 
         # 予測が生成されたサンプルのみを対象にする (最初のFoldはnanになる)
         valid_mask = oof_probs.notna()
@@ -522,7 +513,9 @@ class OptimizationService:
             "Volume_CV",
         ]
         meta_feature_cols = [
-            c for c in X_meta.columns if any(k in c for k in micro_keywords)  # type: ignore[reportAttributeAccessIssue]
+            c
+            for c in X_meta.columns
+            if any(k in c for k in micro_keywords)  # type: ignore[reportAttributeAccessIssue]
         ]
 
         X_meta_specialized: pd.DataFrame = cast(
@@ -535,11 +528,9 @@ class OptimizationService:
         )
 
         frac_diff_d_values = [0.3, 0.4, 0.5]
-        parameter_space = self._get_pipeline_parameter_space(
-            frac_diff_d_values
-        )
+        parameter_space = self._get_pipeline_parameter_space(frac_diff_d_values)
 
-        def objective_function(params: Dict[str, Any]) -> float:
+        def objective_function(params: dict[str, Any]) -> float:
             try:
                 # 特徴量フィルタリング (FracDiff適用済みのカラムから選択)
                 d_value = params["frac_diff_d"]
@@ -592,8 +583,8 @@ class OptimizationService:
     def _get_pipeline_parameter_space(
         self,
         frac_diff_d_values: list,
-        fixed_label_params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, ParameterSpace]:
+        fixed_label_params: dict[str, Any] | None = None,
+    ) -> dict[str, ParameterSpace]:
         """パイプライン同時最適化用のパラメータ空間を定義"""
 
         space = {
@@ -606,9 +597,7 @@ class OptimizationService:
                 type="categorical",
                 categories=["staged", "rfecv", "mutual_info"],
             ),
-            "correlation_threshold": ParameterSpace(
-                type="real", low=0.85, high=0.99
-            ),
+            "correlation_threshold": ParameterSpace(type="real", low=0.85, high=0.99),
             "min_features": ParameterSpace(type="integer", low=5, high=30),
             # Model (LightGBM)
             "learning_rate": ParameterSpace(type="real", low=0.005, high=0.1),
@@ -623,9 +612,7 @@ class OptimizationService:
         if "tbm_sl" not in fixed_keys:
             space["tbm_sl"] = ParameterSpace(type="real", low=0.5, high=3.0)
         if "tbm_horizon" not in fixed_keys:
-            space["tbm_horizon"] = ParameterSpace(
-                type="integer", low=4, high=48
-            )
+            space["tbm_horizon"] = ParameterSpace(type="integer", low=4, high=48)
 
         return space
 
@@ -661,7 +648,7 @@ class OptimizationService:
 
     def _prepare_parameter_space(
         self, trainer: Any, optimization_settings: OptimizationSettings
-    ) -> Dict[str, ParameterSpace]:
+    ) -> dict[str, ParameterSpace]:
         """
         探索対象となるパラメータ空間を定義
 
@@ -695,21 +682,15 @@ class OptimizationService:
         return build_lightgbm_parameter_space()
 
     def _convert_parameter_space_config(
-        self, parameter_space_config: Dict[str, Dict[str, Any]]
-    ) -> Dict[str, ParameterSpace]:
+        self, parameter_space_config: dict[str, dict[str, Any]]
+    ) -> dict[str, ParameterSpace]:
         """設定辞書をParameterSpaceオブジェクトに変換"""
         return {
             name: ParameterSpace(
                 type=cfg["type"],
-                low=(
-                    int(cfg["low"])
-                    if cfg["type"] == "integer"
-                    else cfg.get("low")
-                ),
+                low=(int(cfg["low"]) if cfg["type"] == "integer" else cfg.get("low")),
                 high=(
-                    int(cfg["high"])
-                    if cfg["type"] == "integer"
-                    else cfg.get("high")
+                    int(cfg["high"]) if cfg["type"] == "integer" else cfg.get("high")
                 ),
                 categories=cfg.get("categories"),
             )
@@ -721,10 +702,10 @@ class OptimizationService:
         trainer: Any,
         training_data: pd.DataFrame,
         optimization_settings: OptimizationSettings,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
+        funding_rate_data: pd.DataFrame | None = None,
+        open_interest_data: pd.DataFrame | None = None,
         **base_training_params,
-    ) -> Callable[[Dict[str, Any]], float]:
+    ) -> Callable[[dict[str, Any]], float]:
         """
         Optuna に渡す目的関数（Objective Function）を作成
 
@@ -742,7 +723,7 @@ class OptimizationService:
         """
         evaluation_count = 0
 
-        def objective_function(params: Dict[str, Any]) -> float:
+        def objective_function(params: dict[str, Any]) -> float:
             nonlocal evaluation_count
             evaluation_count += 1
 
@@ -755,12 +736,12 @@ class OptimizationService:
                 training_params = {**base_training_params, **params}
 
                 # 一時的なトレーナーを作成
-                temp_trainer: "EnsembleTrainer" = self._create_temp_trainer(
+                temp_trainer: EnsembleTrainer = self._create_temp_trainer(
                     trainer, params
                 )
 
                 # 学習実行（保存なし）
-                result: Dict[str, Any] = temp_trainer.train_model(
+                result: dict[str, Any] = temp_trainer.train_model(
                     training_data=training_data,
                     funding_rate_data=funding_rate_data,
                     open_interest_data=open_interest_data,
@@ -787,7 +768,7 @@ class OptimizationService:
         return objective_function
 
     def _create_temp_trainer(
-        self, original_trainer: Any, params: Dict[str, object]
+        self, original_trainer: Any, params: dict[str, object]
     ) -> EnsembleTrainer:
         """一時的なトレーナーを作成（全てEnsembleTrainerで統一）"""
         # オリジナルのトレーナーがEnsembleTrainerであることを前提

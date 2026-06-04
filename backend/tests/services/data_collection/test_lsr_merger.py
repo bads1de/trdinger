@@ -62,7 +62,7 @@ def sample_lsr_data():
     buy_ratios = [0.6, 0.55, 0.5]
     sell_ratios = [0.4, 0.45, 0.5]
 
-    for ts, b_rate, s_rate in zip(timestamps, buy_ratios, sell_ratios):
+    for ts, b_rate, s_rate in zip(timestamps, buy_ratios, sell_ratios, strict=False):
         lsr = MagicMock(spec=LongShortRatioData)
         lsr.timestamp = ts
         lsr.buy_ratio = b_rate

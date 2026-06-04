@@ -4,7 +4,7 @@ AutoStrategy APIのテストモジュール
 AutoStrategy APIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -61,15 +61,15 @@ def override_dependencies(mock_db_session, mock_auto_strategy_service):
         mock_auto_strategy_service: モックAutoStrategyサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_auto_strategy_service] = (
-        lambda: mock_auto_strategy_service
+    app.dependency_overrides[get_auto_strategy_service] = lambda: (
+        mock_auto_strategy_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_ga_generation_request() -> Dict[str, Any]:
+def sample_ga_generation_request() -> dict[str, Any]:
     """
     サンプルGA戦略生成リクエスト
 
@@ -101,7 +101,7 @@ def sample_ga_generation_request() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_experiment() -> Dict[str, Any]:
+def sample_experiment() -> dict[str, Any]:
     """
     サンプル実験データ
 
@@ -122,7 +122,7 @@ def sample_experiment() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_experiments_list(sample_experiment: Dict[str, Any]) -> List[Dict[str, Any]]:
+def sample_experiments_list(sample_experiment: dict[str, Any]) -> list[dict[str, Any]]:
     """
     サンプル実験リスト
 
@@ -156,7 +156,7 @@ class TestGenerateStrategy:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_ga_generation_request: Dict[str, Any],
+        sample_ga_generation_request: dict[str, Any],
     ) -> None:
         """
         正常系: GA戦略生成が正常に開始される
@@ -188,7 +188,7 @@ class TestGenerateStrategy:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_ga_generation_request: Dict[str, Any],
+        sample_ga_generation_request: dict[str, Any],
     ) -> None:
         """
         正常系: 多目的最適化でのGA戦略生成
@@ -274,7 +274,7 @@ class TestGenerateStrategy:
     def test_generate_strategy_missing_fields(
         self,
         test_client: TestClient,
-        sample_ga_generation_request: Dict[str, Any],
+        sample_ga_generation_request: dict[str, Any],
         missing_field: str,
         expected_status: int,
     ) -> None:
@@ -301,7 +301,7 @@ class TestGenerateStrategy:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_ga_generation_request: Dict[str, Any],
+        sample_ga_generation_request: dict[str, Any],
     ) -> None:
         """
         異常系: サービス層でエラーが発生した場合
@@ -335,7 +335,7 @@ class TestListExperiments:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_experiments_list: List[Dict[str, Any]],
+        sample_experiments_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: 実験一覧が正常に取得できる
@@ -388,7 +388,7 @@ class TestListExperiments:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_experiments_list: List[Dict[str, Any]],
+        sample_experiments_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: 様々なステータスの実験が取得できる
@@ -586,7 +586,7 @@ class TestErrorHandling:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_ga_generation_request: Dict[str, Any],
+        sample_ga_generation_request: dict[str, Any],
     ) -> None:
         """
         異常系: 予期しない例外が発生した場合
@@ -620,7 +620,7 @@ class TestBackgroundTaskExecution:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_ga_generation_request: Dict[str, Any],
+        sample_ga_generation_request: dict[str, Any],
     ) -> None:
         """
         正常系: GA戦略生成が即座にレスポンスを返す
@@ -651,7 +651,7 @@ class TestBackgroundTaskExecution:
         self,
         test_client: TestClient,
         mock_auto_strategy_service: AsyncMock,
-        sample_ga_generation_request: Dict[str, Any],
+        sample_ga_generation_request: dict[str, Any],
     ) -> None:
         """
         正常系: 複数の並行リクエストが処理される

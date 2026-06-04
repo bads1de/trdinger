@@ -9,14 +9,14 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from .ml_config import MLConfig
 
 logger = logging.getLogger(__name__)
 
 
-def get_default_ensemble_config() -> Dict[str, Any]:
+def get_default_ensemble_config() -> dict[str, Any]:
     """デフォルトのアンサンブル設定を取得"""
     return {
         "enabled": True,
@@ -31,7 +31,7 @@ def get_default_ensemble_config() -> Dict[str, Any]:
     }
 
 
-def get_default_single_model_config() -> Dict[str, Any]:
+def get_default_single_model_config() -> dict[str, Any]:
     """デフォルトの単一モデル設定を取得"""
     return {"model_type": "lightgbm"}
 
@@ -69,7 +69,7 @@ class MLConfigManager:
         """現在の ML 設定を差し替えます。"""
         self._config = value
 
-    def get_config_dict(self) -> Dict[str, Any]:
+    def get_config_dict(self) -> dict[str, Any]:
         """設定を辞書形式で取得（エイリアス対応）"""
         return self.config.model_dump(by_alias=True)
 
@@ -93,13 +93,9 @@ class MLConfigManager:
 
             if not self.config_file_path.parent.exists():
                 try:
-                    self.config_file_path.parent.mkdir(
-                        parents=True, exist_ok=True
-                    )
+                    self.config_file_path.parent.mkdir(parents=True, exist_ok=True)
                 except Exception as e:
-                    logger.warning(
-                        f"設定ディレクトリの作成に失敗しました: {e}"
-                    )
+                    logger.warning(f"設定ディレクトリの作成に失敗しました: {e}")
 
             with open(self.config_file_path, "w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
@@ -114,25 +110,21 @@ class MLConfigManager:
         """ファイルから設定を読み込み、現在の設定に適用"""
         try:
             if not self.config_file_path.exists():
-                logger.warning(
-                    f"設定ファイルが存在しません: {self.config_file_path}"
-                )
+                logger.warning(f"設定ファイルが存在しません: {self.config_file_path}")
                 return False
 
-            with open(self.config_file_path, "r", encoding="utf-8") as f:
+            with open(self.config_file_path, encoding="utf-8") as f:
                 config_dict = json.load(f)
 
             config_dict.pop("_metadata", None)
             self._apply_config_dict(config_dict)
-            logger.info(
-                f"ML設定を読み込み適用しました: {self.config_file_path}"
-            )
+            logger.info(f"ML設定を読み込み適用しました: {self.config_file_path}")
             return True
         except Exception as e:
             logger.error(f"ML設定の読み込みに失敗しました: {e}")
             return False
 
-    def update_config(self, config_updates: Dict[str, Any]) -> bool:
+    def update_config(self, config_updates: dict[str, Any]) -> bool:
         """
         既存の設定を指定された更新内容で上書きし、ファイルに保存します。
 
@@ -146,15 +138,11 @@ class MLConfigManager:
         """
         try:
             current_config = self.get_config_dict()
-            updated_config = self._merge_config_updates(
-                current_config, config_updates
-            )
+            updated_config = self._merge_config_updates(current_config, config_updates)
             self._apply_config_dict(updated_config)
 
             if self.save_config():
-                logger.info(
-                    f"ML設定を更新しました: {list(config_updates.keys())}"
-                )
+                logger.info(f"ML設定を更新しました: {list(config_updates.keys())}")
                 return True
             else:
                 logger.error("ML設定の保存に失敗しました")
@@ -178,8 +166,8 @@ class MLConfigManager:
             return False
 
     def _merge_config_updates(
-        self, current: Dict[str, Any], updates: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, current: dict[str, Any], updates: dict[str, Any]
+    ) -> dict[str, Any]:
         """設定更新をマージ"""
         res = current.copy()
 
@@ -190,7 +178,7 @@ class MLConfigManager:
                 res[k] = v
         return res
 
-    def _apply_config_dict(self, config_dict: Dict[str, Any]) -> None:
+    def _apply_config_dict(self, config_dict: dict[str, Any]) -> None:
         """辞書から設定を現在の設定に適用"""
         self.config = MLConfig(**config_dict)
 

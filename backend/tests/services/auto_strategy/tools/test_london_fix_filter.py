@@ -83,7 +83,6 @@ class TestLondonFixFilter:
             patch("random.random", side_effect=[0.5, 0.1, 0.5, 0.1]),
             patch("random.randint", return_value=5),
         ):
-
             # 1回目: enabled変化なし, window変化あり
             params = {"enabled": True, "window_minutes": 15}
             new_params = filter_tool.mutate_params(params)

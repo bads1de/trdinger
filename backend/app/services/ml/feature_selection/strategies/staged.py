@@ -6,7 +6,7 @@ Filter -> Wrapper -> Embedded の順序が推奨。
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -27,24 +27,22 @@ class StagedStrategy(BaseSelectionStrategy):
 
     def __init__(
         self,
-        strategies: Optional[
-            Dict[SelectionMethod, BaseSelectionStrategy]
-        ] = None,
+        strategies: dict[SelectionMethod, BaseSelectionStrategy] | None = None,
     ):
         self.strategy_map = strategies or self._default_strategies()
 
     def _default_strategies(
         self,
-    ) -> Dict[SelectionMethod, BaseSelectionStrategy]:
+    ) -> dict[SelectionMethod, BaseSelectionStrategy]:
         return build_staged_strategy_map()
 
     def select(
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: List[str],
+        feature_names: list[str],
         config: FeatureSelectionConfig,
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         current_mask = np.ones(X.shape[1], dtype=bool)
         current_X = X
         current_names = feature_names.copy()

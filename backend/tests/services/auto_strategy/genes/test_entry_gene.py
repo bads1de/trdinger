@@ -7,7 +7,6 @@ from app.services.auto_strategy.genes.entry import EntryGene, create_random_entr
 
 
 class TestEntryGene:
-
     def test_init_default(self):
         gene = EntryGene()
         assert gene.entry_type == EntryType.MARKET

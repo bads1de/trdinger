@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, cast
 
 import lightgbm as lgb
 import numpy as np
@@ -20,10 +20,10 @@ class MetaLabelingService:
     def __init__(
         self,
         model_type: str = "lightgbm",
-        base_model_names: Optional[List[str]] = None,
-        model_params: Optional[Dict[str, Any]] = None,
+        base_model_names: list[str] | None = None,
+        model_params: dict[str, Any] | None = None,
         use_feature_selection: bool = True,
-        feature_selection_params: Optional[Dict[str, Any]] = None,
+        feature_selection_params: dict[str, Any] | None = None,
     ):
         """メタラベリングサービスを初期化する。
 
@@ -50,7 +50,7 @@ class MetaLabelingService:
             "random_state": 42,
         }
         self.selector: Any = None
-        self.selected_features: Optional[List[str]] = None
+        self.selected_features: list[str] | None = None
 
     def _add_base_model_statistics(
         self, X_meta: pd.DataFrame, base_probs_filtered: pd.DataFrame
@@ -87,7 +87,7 @@ class MetaLabelingService:
         primary_preds_proba: pd.Series,
         y_true: pd.Series,
         threshold: float = 0.5,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """
         メタラベルとフィルタリング用のマスクを作成します。
 
@@ -107,9 +107,7 @@ class MetaLabelingService:
         indices: pd.Index = pd.Index(primary_preds_proba.index[trend_mask])
 
         if len(indices) == 0:
-            logger.warning(
-                "一次モデルがトレンドと予測したサンプルがありません。"
-            )
+            logger.warning("一次モデルがトレンドと予測したサンプルがありません。")
             return pd.Series(dtype=bool), pd.Series()
 
         # メタラベルの生成
@@ -152,7 +150,7 @@ class MetaLabelingService:
         primary_proba: pd.Series,
         base_probs: pd.DataFrame,
         mask: pd.Series,
-        X_meta_specific: Optional[pd.DataFrame] = None,
+        X_meta_specific: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
         """メタ特徴量を準備"""
         X_meta = X.loc[mask].copy()
@@ -169,8 +167,8 @@ class MetaLabelingService:
         primary_proba_train: pd.Series,
         base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
-        X_meta_specific: Optional[pd.DataFrame] = None,
-    ) -> Dict[str, Any]:
+        X_meta_specific: pd.DataFrame | None = None,
+    ) -> dict[str, Any]:
         """メタモデルを学習"""
         self.base_model_names = base_model_probs_df.columns.tolist()
 
@@ -195,9 +193,7 @@ class MetaLabelingService:
             )
 
             # メタラベル専用の自律型動的セレクターを使用
-            self.selector = DynamicMetaSelector(
-                **(self.feature_selection_params or {})
-            )
+            self.selector = DynamicMetaSelector(**(self.feature_selection_params or {}))
             X_meta = self.selector.fit_transform(X_meta, y_meta)
             self.selected_features = X_meta.columns.tolist()
             logger.info(
@@ -219,7 +215,7 @@ class MetaLabelingService:
         primary_proba: pd.Series,
         base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
-        X_meta_specific: Optional[pd.DataFrame] = None,
+        X_meta_specific: pd.DataFrame | None = None,
     ) -> pd.Series:
         """予測を実行"""
         if not self.is_trained:
@@ -253,9 +249,9 @@ class MetaLabelingService:
         base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
         n_splits: int = 5,
-        t1: Optional[pd.Series] = None,
+        t1: pd.Series | None = None,
         pct_embargo: float = 0.01,
-        X_meta_specific: Optional[pd.DataFrame] = None,
+        X_meta_specific: pd.DataFrame | None = None,
     ) -> pd.Series:
         """Cross-Validationを実行"""
         from ..cross_validation import create_temporal_cv_splitter
@@ -300,9 +296,7 @@ class MetaLabelingService:
                     DynamicMetaSelector,
                 )
 
-                fold_selector = DynamicMetaSelector(
-                    **self.feature_selection_params
-                )
+                fold_selector = DynamicMetaSelector(**self.feature_selection_params)
                 X_tr = fold_selector.fit_transform(X_tr, y_tr)
                 X_val = fold_selector.transform(X_val)
 
@@ -319,7 +313,7 @@ class MetaLabelingService:
         primary_proba_test: pd.Series,
         base_model_probs_df: pd.DataFrame,
         threshold: float = 0.5,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """メタラベリング適用後のパフォーマンスを評価"""
         from ..evaluation.metrics import metrics_collector
 
@@ -349,12 +343,8 @@ class MetaLabelingService:
             "improvement_precision": m_met["precision"] - p_met["precision"],
             "improvement_recall": m_met["recall"] - p_met["recall"],
             "improvement_f1": m_met["f1_score"] - p_met["f1_score"],
-            "meta_classification_report": m_met.get(
-                "classification_report", {}
-            ),
-            "primary_classification_report": p_met.get(
-                "classification_report", {}
-            ),
+            "meta_classification_report": m_met.get("classification_report", {}),
+            "primary_classification_report": p_met.get("classification_report", {}),
             "meta_balanced_accuracy": m_met.get("balanced_accuracy", 0.0),
             "primary_balanced_accuracy": p_met.get("balanced_accuracy", 0.0),
         }

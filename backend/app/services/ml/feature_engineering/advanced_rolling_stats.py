@@ -5,7 +5,7 @@ Advanced Rolling Statistics Features
 Kaggle上位入賞で頻繁に使用される手法。
 """
 
-from typing import List, Optional, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -27,7 +27,7 @@ class AdvancedRollingStatsCalculator:
     正規分布からの逸脱（歪度・尖度）やテールリスクを捉えます。
     """
 
-    def __init__(self, windows: Optional[List[int]] = None):
+    def __init__(self, windows: list[int] | None = None):
         """
         Args:
             windows: 統計計算に使用するウィンドウサイズのリスト
@@ -38,9 +38,7 @@ class AdvancedRollingStatsCalculator:
         """Advanced Rolling Statistics特徴量を計算"""
         res = pd.DataFrame(index=df.index)
         rets = cast(pd.Series, df["close"]).pct_change()
-        log_rets = pd.Series(
-            np.log(df["close"] / df["close"].shift(1)), index=df.index
-        )
+        log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
         vol = cast(pd.Series, df["volume"])
 
         for w in self.windows:
@@ -80,9 +78,7 @@ class AdvancedRollingStatsCalculator:
             )
 
             # 価格位置 & テールリスク
-            c_pos = (
-                cast(pd.Series, df["close"]) - cast(pd.Series, df["low"])
-            ) / (
+            c_pos = (cast(pd.Series, df["close"]) - cast(pd.Series, df["low"])) / (
                 cast(pd.Series, df["high"]) - cast(pd.Series, df["low"]) + 1e-9
             )
             res[f"Close_Position_Mean_{w}"], res[f"Close_Position_Std_{w}"] = (
@@ -101,13 +97,9 @@ class AdvancedRollingStatsCalculator:
             )
 
         for w in [10, 20]:
-            res[f"Price_Volume_Corr_{w}"] = rets.rolling(w).corr(
-                vol.pct_change()
-            )
-            res[f"Volume_Weighted_Returns_Skew_{w}"] = (
-                self._volume_weighted_skew(
-                    cast(pd.Series, rets), cast(pd.Series, vol), w
-                )
+            res[f"Price_Volume_Corr_{w}"] = rets.rolling(w).corr(vol.pct_change())
+            res[f"Volume_Weighted_Returns_Skew_{w}"] = self._volume_weighted_skew(
+                cast(pd.Series, rets), cast(pd.Series, vol), w
             )
 
         # ハースト指数 (長期記憶性) - 計算コストが高いため期間固定

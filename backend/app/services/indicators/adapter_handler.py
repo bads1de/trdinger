@@ -9,7 +9,7 @@ from __future__ import annotations
 import inspect
 import logging
 from collections.abc import Callable
-from typing import Any, Dict, Optional, Tuple, Union, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class AdapterHandler:
         self,
         df: pd.DataFrame,
         indicator_type: str,
-        params: Dict[str, object],
+        params: dict[str, object],
         config: IndicatorConfig,
     ) -> np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None:
         """
@@ -78,11 +78,7 @@ class AdapterHandler:
         all_args = {**required_data, **converted_params}
 
         return cast(
-            np.ndarray
-            | tuple[np.ndarray, ...]
-            | pd.DataFrame
-            | pd.Series
-            | None,
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
             self._call_adapter_function(
                 adapter_function, all_args, indicator_type, config
             ),
@@ -90,7 +86,7 @@ class AdapterHandler:
 
     def _prepare_adapter_data(
         self, df: pd.DataFrame, config: IndicatorConfig
-    ) -> Dict[str, Union[pd.Series, pd.DataFrame]]:
+    ) -> dict[str, pd.Series | pd.DataFrame]:
         """
         アダプター関数に渡すデータを準備
 
@@ -106,15 +102,13 @@ class AdapterHandler:
                                                         キーは列名、値はSeriesまたはDataFrame
         """
         standard_keys = ["open", "high", "low", "close", "volume"]
-        required_data: Dict[str, Union[pd.Series, pd.DataFrame]] = {}
+        required_data: dict[str, pd.Series | pd.DataFrame] = {}
 
         if config.required_data:
             for key in config.required_data:
                 key_lower = key.lower()
                 if key_lower in standard_keys:
-                    col_name = self.validator.resolve_column_name(
-                        df, key_lower
-                    )
+                    col_name = self.validator.resolve_column_name(df, key_lower)
                     if col_name:
                         required_data[key_lower] = df[col_name]
                 elif key_lower in ["data", "df", "ohlcv"]:
@@ -134,10 +128,10 @@ class AdapterHandler:
 
     def _map_adapter_params(
         self,
-        params: Dict[str, object],
+        params: dict[str, object],
         config: IndicatorConfig,
-        required_data: Dict[str, Union[pd.Series, pd.DataFrame]],
-    ) -> Tuple[Dict[str, object], Dict[str, Union[pd.Series, pd.DataFrame]]]:
+        required_data: dict[str, pd.Series | pd.DataFrame],
+    ) -> tuple[dict[str, object], dict[str, pd.Series | pd.DataFrame]]:
         """
         アダプター関数のパラメータをマッピング
 
@@ -165,7 +159,7 @@ class AdapterHandler:
     def _call_adapter_function(
         self,
         adapter_function: Callable[..., Any],
-        all_args: Dict[str, Any],
+        all_args: dict[str, Any],
         indicator_type: str,
         config: IndicatorConfig,
     ) -> np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None:
@@ -205,16 +199,12 @@ class AdapterHandler:
             None,
         )
 
-        assigned_params: Dict[str, Any] = self._assign_parameters(
+        assigned_params: dict[str, Any] = self._assign_parameters(
             sig, all_args, series_data, scalar_params
         )
 
         result = cast(
-            np.ndarray
-            | tuple[np.ndarray, ...]
-            | pd.DataFrame
-            | pd.Series
-            | None,
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
             self._execute_adapter_function(
                 adapter_function, assigned_params, indicator_type, all_args
             ),
@@ -222,38 +212,28 @@ class AdapterHandler:
 
         if result is None:
             input_ref = all_args.get("data", all_args.get("close"))
-            fallback_input = (
-                input_ref if input_ref is not None else pd.DataFrame()
-            )
+            fallback_input = input_ref if input_ref is not None else pd.DataFrame()
             return self.validator.create_nan_result(
                 fallback_input, {"function": indicator_type}
             )
 
         result = cast(
-            np.ndarray
-            | tuple[np.ndarray, ...]
-            | pd.DataFrame
-            | pd.Series
-            | None,
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
             self._align_adapter_result(result, reference_index),
         )
 
         return cast(
-            np.ndarray
-            | tuple[np.ndarray, ...]
-            | pd.DataFrame
-            | pd.Series
-            | None,
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
             self._convert_adapter_result(result, config),
         )
 
     def _assign_parameters(
         self,
         sig: inspect.Signature,
-        all_args: Dict[str, object],
-        series_data: Dict[str, pd.Series | pd.DataFrame],
-        scalar_params: Dict[str, object],
-    ) -> Dict[str, object]:
+        all_args: dict[str, object],
+        series_data: dict[str, pd.Series | pd.DataFrame],
+        scalar_params: dict[str, object],
+    ) -> dict[str, object]:
         """
         パラメータを割り当て
 
@@ -276,7 +256,7 @@ class AdapterHandler:
             Dict[str, Any]: 関数に渡す割り当てられたパラメータ。
                 マッピングできなかったパラメータは含まれません。
         """
-        assigned_params: Dict[str, Any] = {}
+        assigned_params: dict[str, Any] = {}
 
         for param_name, _param in sig.parameters.items():
             param_lower = param_name.lower()
@@ -324,9 +304,9 @@ class AdapterHandler:
     def _execute_adapter_function(
         self,
         adapter_function: Callable[..., Any],
-        assigned_params: Dict[str, object],
+        assigned_params: dict[str, object],
         indicator_type: str,
-        all_args: Dict[str, object],
+        all_args: dict[str, object],
     ) -> object:
         """
         アダプター関数を実行
@@ -407,11 +387,7 @@ class AdapterHandler:
         """
         if reference_index is None:
             return cast(
-                np.ndarray
-                | tuple[np.ndarray, ...]
-                | pd.DataFrame
-                | pd.Series
-                | None,
+                np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
                 result,
             )
 
@@ -434,19 +410,15 @@ class AdapterHandler:
             )
 
         return cast(
-            np.ndarray
-            | tuple[np.ndarray, ...]
-            | pd.DataFrame
-            | pd.Series
-            | None,
+            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
             result,
         )
 
     def _align_series_like_result(
         self,
-        result: Union[pd.Series, pd.DataFrame],
+        result: pd.Series | pd.DataFrame,
         reference_index: pd.Index,
-    ) -> Union[pd.Series, pd.DataFrame]:
+    ) -> pd.Series | pd.DataFrame:
         """
         Series/DataFrame を入力 index に位置またはラベルで整列する
 
@@ -489,7 +461,7 @@ class AdapterHandler:
         self,
         result_index: pd.Index,
         reference_index: pd.Index,
-    ) -> Optional[pd.Index]:
+    ) -> pd.Index | None:
         """
         RangeIndex などの位置 index を参照 index のラベルへ写像する
 

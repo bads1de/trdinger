@@ -1,10 +1,9 @@
 import argparse
+import json
 import logging
 import sys
-import json
 from datetime import datetime
 from pathlib import Path
-
 
 import numpy as np
 import pandas as pd
@@ -17,17 +16,7 @@ backend_path = str(Path(__file__).resolve().parent.parent)
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
-from database.connection import SessionLocal  # noqa: E402
-from database.repositories.funding_rate_repository import (  # noqa: E402
-    FundingRateRepository,
-)
-from database.repositories.ohlcv_repository import OHLCVRepository  # noqa: E402
-from database.repositories.open_interest_repository import (  # noqa: E402
-    OpenInterestRepository,
-)
-from database.repositories.long_short_ratio_repository import (  # noqa: E402
-    LongShortRatioRepository,
-)
+from app.services.ml.ensemble.meta_labeling import MetaLabelingService  # noqa: E402
 from app.services.ml.feature_engineering.feature_engineering_service import (  # noqa: E402
     FeatureEngineeringService,
 )
@@ -37,8 +26,18 @@ from app.services.ml.feature_selection.feature_selector import (  # noqa: E402
 from app.services.ml.label_generation.presets import (  # noqa: E402
     triple_barrier_method_preset,
 )
-from app.services.ml.ensemble.meta_labeling import MetaLabelingService  # noqa: E402
 from app.services.ml.models.model_manager import model_manager  # noqa: E402
+from database.connection import SessionLocal  # noqa: E402
+from database.repositories.funding_rate_repository import (  # noqa: E402
+    FundingRateRepository,
+)
+from database.repositories.long_short_ratio_repository import (  # noqa: E402
+    LongShortRatioRepository,
+)
+from database.repositories.ohlcv_repository import OHLCVRepository  # noqa: E402
+from database.repositories.open_interest_repository import (  # noqa: E402
+    OpenInterestRepository,
+)
 
 # ロガー設定
 logging.basicConfig(
@@ -199,8 +198,10 @@ def prepare_model_data(symbol, timeframe, limit, labeling_method):
     X_elite = selector.fit_transform(X_model_all, y_model_all)
     if not isinstance(X_elite, pd.DataFrame):
         # ndarrayが返された場合はDataFrameに変換して型を安定させる
-        X_elite = pd.DataFrame(X_elite, columns=selector.get_feature_names_out(), index=X_model_all.index)
-    
+        X_elite = pd.DataFrame(
+            X_elite, columns=selector.get_feature_names_out(), index=X_model_all.index
+        )
+
     elite_cols = X_elite.columns.tolist()
 
     print(f"[*] Total valid signals: {len(X_model_all)}")
@@ -222,7 +223,7 @@ def prepare_model_data(symbol, timeframe, limit, labeling_method):
 def run_analysis_pipeline(
     symbol, timeframe, limit, labeling_method="trend_scanning", save_json=True
 ):
-    print(f"\n{'='*60}\n VERIFY MODE: Full Microstructure Power\n{'='*60}")
+    print(f"\n{'=' * 60}\n VERIFY MODE: Full Microstructure Power\n{'=' * 60}")
 
     data = prepare_model_data(symbol, timeframe, limit, labeling_method)
     if data is None:
@@ -261,7 +262,7 @@ def run_analysis_pipeline(
     primary_scores = []
     meta_scores = []
 
-    print(f"\n{'='*20} Cross Validation Results {'='*20}")
+    print(f"\n{'=' * 20} Cross Validation Results {'=' * 20}")
 
     for fold, (train_idx, test_idx) in enumerate(tscv.split(X_elite)):
         # --- Training Data ---
@@ -313,7 +314,7 @@ def run_analysis_pipeline(
 
         if meta_res["status"] == "skipped":
             print(
-                f"Fold {fold+1}: Primary Acc={p_acc:.4f} | Meta SKIPPED ({meta_res['reason']})"
+                f"Fold {fold + 1}: Primary Acc={p_acc:.4f} | Meta SKIPPED ({meta_res['reason']})"
             )
             meta_scores.append(
                 {
@@ -349,7 +350,7 @@ def run_analysis_pipeline(
             )
 
             print(
-                f"Fold {fold+1}: Primary Trades={n_primary_trades:<4} ({n_primary_hits:<4} hits) -> "
+                f"Fold {fold + 1}: Primary Trades={n_primary_trades:<4} ({n_primary_hits:<4} hits) -> "
                 f"Meta Trades={n_meta_trades:<4} ({n_meta_hits:<4} hits) | Meta Prec={m_prec:.4f}"
             )
 
@@ -361,7 +362,7 @@ def run_analysis_pipeline(
     total_p_trades = sum([s["trades"] for s in primary_scores])
     total_m_trades = sum([s["trades"] for s in meta_scores])
 
-    print(f"\n{'='*20} Final Comparison {'='*20}")
+    print(f"\n{'=' * 20} Final Comparison {'=' * 20}")
     print(
         f"Primary Model: Balanced Acc = {avg_p_acc:.4f} | Precision = {avg_p_prec:.4f} | Total Trades = {total_p_trades}"
     )
@@ -402,7 +403,7 @@ def run_analysis_pipeline(
 
 
 def run_training_mode(symbol, timeframe, limit, labeling_method):
-    print(f"\n{'='*60}\n TRAINING MODE: Train & Save Model\n{'='*60}")
+    print(f"\n{'=' * 60}\n TRAINING MODE: Train & Save Model\n{'=' * 60}")
 
     # 1. データ準備
     data = prepare_model_data(symbol, timeframe, limit, labeling_method)
@@ -470,7 +471,9 @@ def run_verify_mode(symbol, timeframe, limit, labeling_method):
 
 
 def run_compare_mode(symbol, timeframe, limit):
-    print(f"\n{'#'*80}\n COMPARISON MODE: Trend Scanning vs Triple Barrier\n{'#'*80}")
+    print(
+        f"\n{'#' * 80}\n COMPARISON MODE: Trend Scanning vs Triple Barrier\n{'#' * 80}"
+    )
 
     # 1. Trend Scanning
     print("\n>>> [1/2] Running Trend Scanning Pipeline...")
@@ -489,9 +492,9 @@ def run_compare_mode(symbol, timeframe, limit):
         print("Error: Comparison failed due to missing data in one or both pipelines.")
         return
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" FINAL COMPARISON: {symbol} ({timeframe})")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # ヘッダー
     print(

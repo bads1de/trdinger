@@ -88,6 +88,6 @@ class TestTripleBarrierATRPreset:
         # ラベルに両方の値（0と1）が含まれていることを確認
         # （データの性質上、両方のクラスが存在するはず）
         non_nan_labels = labels.dropna()
-        assert (
-            0 in non_nan_labels.values or 1 in non_nan_labels.values
-        ), "ラベルに0か1が含まれていること"
+        assert 0 in non_nan_labels.values or 1 in non_nan_labels.values, (
+            "ラベルに0か1が含まれていること"
+        )

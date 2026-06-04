@@ -507,8 +507,8 @@ class TestEvolutionRunnerAdvanced:
 
         mock_toolbox.select.return_value = [leader_a, leader_b]
         mock_evaluator = MagicMock()
-        mock_evaluator.get_cached_evaluation_report.side_effect = (
-            lambda individual: EvaluationReport.single(
+        mock_evaluator.get_cached_evaluation_report.side_effect = lambda individual: (
+            EvaluationReport.single(
                 mode="single",
                 objectives=["weighted_score"],
                 scenario=ScenarioEvaluation(

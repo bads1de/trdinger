@@ -5,7 +5,7 @@ GA結果処理モジュール
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from deap import tools
 
@@ -33,10 +33,10 @@ class ResultProcessor:
 
     def extract_best_individuals(
         self,
-        population: List[object],
+        population: list[object],
         config: object,
-        halloffame: Optional[object] = None,
-    ) -> Tuple[Any, Optional[StrategyGene], Optional[List[Dict[str, Any]]]]:
+        halloffame: object | None = None,
+    ) -> tuple[Any, StrategyGene | None, list[dict[str, Any]] | None]:
         """
         GAの実行結果（最終集団および殿堂入りリスト）から、最も優れた個体を選択し、利用可能な形式に整形します。
 
@@ -77,9 +77,7 @@ class ResultProcessor:
             if isinstance(ind, StrategyGene):
                 gene = ind
             else:
-                logger.error(
-                    f"個体がStrategyGene型ではありません: {type(ind)}"
-                )
+                logger.error(f"個体がStrategyGene型ではありません: {type(ind)}")
                 continue
 
             best_strategies.append(
@@ -99,7 +97,7 @@ class ResultProcessor:
 
         return best_individual, best_gene, best_strategies
 
-    def sort_population(self, population: List[object]) -> List[object]:
+    def sort_population(self, population: list[object]) -> list[object]:
         """
         集団をランク付けしてソートする。表示のために、個体群を優先順位に従って並び替えます。
 
@@ -115,7 +113,7 @@ class ResultProcessor:
             List[Any]: ソート済みの個体リスト。
         """
 
-        def sort_key(individual: object) -> Tuple[int, int, float]:
+        def sort_key(individual: object) -> tuple[int, int, float]:
             """
             ソート用のキーを生成する。
 

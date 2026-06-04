@@ -13,8 +13,9 @@ import math
 import platform
 import signal
 import time
+from collections.abc import Awaitable, Callable
 from contextlib import contextmanager
-from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar
+from typing import Any, TypeVar
 
 from fastapi import HTTPException, status
 
@@ -73,10 +74,10 @@ class ErrorHandler:
     @staticmethod
     def create_error_response(
         message: str,
-        error_code: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None,
-        context: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        error_code: str | None = None,
+        details: dict[str, Any] | None = None,
+        context: str | None = None,
+    ) -> dict[str, Any]:
         """
         統一エラーレスポンスを生成（response.make_error_responseへ委譲）
 
@@ -134,7 +135,7 @@ class ErrorHandler:
     @staticmethod
     def handle_model_error(
         error: Exception, context: str, operation: str = "unknown"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """モデルエラーの統一処理"""
         logger.error(f"モデルエラー in {context} during {operation}: {error}")
         return ErrorHandler.create_error_response(
@@ -152,7 +153,7 @@ class ErrorHandler:
     @staticmethod
     def safe_execute(
         func: Callable[..., T],
-        default_return: Optional[T] = None,
+        default_return: T | None = None,
         error_message: str = "処理中にエラーが発生しました",
         log_level: str = "error",
         is_api_call: bool = False,
@@ -392,7 +393,7 @@ class ErrorHandler:
     @staticmethod
     def validate_dataframe(
         df: Any,
-        required_columns: Optional[list] = None,
+        required_columns: list | None = None,
         min_rows: int = 0,
     ) -> bool:
         """

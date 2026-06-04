@@ -110,9 +110,9 @@ class IndicatorTestHelper:
     def assert_series_result(result, expected_length: int, allow_all_nan: bool = False):
         """シリーズ結果の基本検証"""
         assert isinstance(result, pd.Series), "結果がpd.Seriesではありません"
-        assert (
-            len(result) == expected_length
-        ), f"結果の長さが不正: {len(result)} != {expected_length}"
+        assert len(result) == expected_length, (
+            f"結果の長さが不正: {len(result)} != {expected_length}"
+        )
         if not allow_all_nan:
             assert not result.isna().all(), "結果がすべてNaNです"
 
@@ -120,9 +120,9 @@ class IndicatorTestHelper:
     def assert_tuple_result(result, expected_length: int, expected_count: int):
         """タプル結果の基本検証"""
         assert isinstance(result, tuple), "結果がtupleではありません"
-        assert (
-            len(result) == expected_count
-        ), f"結果の要素数が不正: {len(result)} != {expected_count}"
+        assert len(result) == expected_count, (
+            f"結果の要素数が不正: {len(result)} != {expected_count}"
+        )
         for i, series in enumerate(result):
             assert isinstance(series, pd.Series), f"結果[{i}]がpd.Seriesではありません"
             assert len(series) == expected_length, f"結果[{i}]の長さが不正"
@@ -133,9 +133,9 @@ class IndicatorTestHelper:
     ):
         """データフレーム結果の基本検証"""
         assert isinstance(result, pd.DataFrame), "結果がpd.DataFrameではありません"
-        assert (
-            len(result) == expected_length
-        ), f"結果の長さが不正: {len(result)} != {expected_length}"
+        assert len(result) == expected_length, (
+            f"結果の長さが不正: {len(result)} != {expected_length}"
+        )
         if expected_columns:
             for col in expected_columns:
                 assert col in result.columns, f"列 '{col}' が結果に含まれていません"
@@ -147,13 +147,13 @@ class IndicatorTestHelper:
         if len(valid_values) == 0:
             return
         if min_val is not None:
-            assert (
-                valid_values.min() >= min_val
-            ), f"最小値が範囲外: {valid_values.min()} < {min_val}"
+            assert valid_values.min() >= min_val, (
+                f"最小値が範囲外: {valid_values.min()} < {min_val}"
+            )
         if max_val is not None:
-            assert (
-                valid_values.max() <= max_val
-            ), f"最大値が範囲外: {valid_values.max()} > {max_val}"
+            assert valid_values.max() <= max_val, (
+                f"最大値が範囲外: {valid_values.max()} > {max_val}"
+            )
 
 
 @pytest.fixture

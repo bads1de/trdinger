@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -37,22 +37,22 @@ class BacktestService:
     3. 結果のデータベースへの保存
     """
 
-    def __init__(self, data_service: Optional[BacktestDataService] = None):
+    def __init__(self, data_service: BacktestDataService | None = None):
         """
         初期化
 
         Args:
             data_service: データ変換サービス（テスト時にモックを注入可能）
         """
-        self.data_service: Optional[BacktestDataService] = data_service
-        self._db_session: Optional[Session] = None  # DBセッション保持用
-        self._orchestrator: Optional[BacktestOrchestrator] = None  # 遅延初期化
+        self.data_service: BacktestDataService | None = data_service
+        self._db_session: Session | None = None  # DBセッション保持用
+        self._orchestrator: BacktestOrchestrator | None = None  # 遅延初期化
 
     def run_backtest(
         self,
-        config: Dict[str, Any],
-        preloaded_data: Optional[pd.DataFrame] = None,
-    ) -> Dict[str, Any]:
+        config: dict[str, Any],
+        preloaded_data: pd.DataFrame | None = None,
+    ) -> dict[str, Any]:
         """
         指定された設定と市場データでバックテスト・シミュレーションを実行します。
 
@@ -92,9 +92,7 @@ class BacktestService:
 
             # 3. オーケストレーターに委譲
             if self._orchestrator is None:
-                raise BacktestExecutionError(
-                    "オーケストレーターが初期化されていません"
-                )
+                raise BacktestExecutionError("オーケストレーターが初期化されていません")
 
             return self._orchestrator.run(config, preloaded_data)
 
@@ -118,9 +116,7 @@ class BacktestService:
                 )
                 logger.debug("バックテストデータサービスを初期化しました")
             except Exception as e:
-                logger.error(
-                    f"バックテストデータサービスの初期化に失敗しました: {e}"
-                )
+                logger.error(f"バックテストデータサービスの初期化に失敗しました: {e}")
                 raise BacktestExecutionError(
                     f"データサービスの初期化に失敗しました: {e}"
                 )
@@ -144,7 +140,7 @@ class BacktestService:
                     f"オーケストレーターの初期化に失敗しました: {e}"
                 )
 
-    def get_supported_strategies(self) -> Dict[str, Any]:
+    def get_supported_strategies(self) -> dict[str, Any]:
         """
         サポートされている戦略一覧を取得
 
@@ -154,9 +150,7 @@ class BacktestService:
         self.ensure_data_service_initialized()
         self._ensure_orchestrator_initialized()
         if self._orchestrator is None:
-            raise BacktestExecutionError(
-                "オーケストレーターが初期化されていません"
-            )
+            raise BacktestExecutionError("オーケストレーターが初期化されていません")
         return self._orchestrator.get_supported_strategies()
 
     def cleanup(self) -> None:
@@ -173,13 +167,11 @@ class BacktestService:
         self.data_service = None
         self._orchestrator = None
 
-    def _build_execution_config(self, request: Any) -> Dict[str, Any]:
+    def _build_execution_config(self, request: Any) -> dict[str, Any]:
         """dict / Pydantic モデルどちらからでもバックテスト設定を組み立てる。"""
         return build_execution_config(request)
 
-    def execute_and_save_backtest(
-        self, request, db_session: Session
-    ) -> Dict[str, Any]:
+    def execute_and_save_backtest(self, request, db_session: Session) -> dict[str, Any]:
         """
         バックテストを実行し、その結果をデータベースに永続化します（Web API向け）。
 

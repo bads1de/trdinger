@@ -319,9 +319,7 @@ class TestRunMultiSeriesIndicator:
             called = True
             return sample_series
 
-        result = run_multi_series_indicator(
-            {"a": sample_series, "b": sample_series}, 3, factory
-        )
+        run_multi_series_indicator({"a": sample_series, "b": sample_series}, 3, factory)
         assert called is True
 
     def test_returns_nan_when_data_too_short(self, sample_series):

@@ -52,7 +52,7 @@ pandas-ta の momentum カテゴリに対応。
 - TD Sequential
 """
 
-from typing import Any, Optional, Tuple, Union, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -68,9 +68,7 @@ from ...data_validation import (
 )
 
 
-def _create_nan_array_bundle(
-    length: int, count: int
-) -> tuple[np.ndarray, ...]:
+def _create_nan_array_bundle(length: int, count: int) -> tuple[np.ndarray, ...]:
     """同じ長さの NaN 配列を複数作る。"""
     base = np.full(length, np.nan)
     return tuple(base.copy() for _ in range(count))
@@ -117,7 +115,7 @@ class MomentumIndicators:
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """MACD (Moving Average Convergence Divergence)
 
         MACDライン = EMA(fast) - EMA(slow)
@@ -130,7 +128,7 @@ class MomentumIndicators:
         """
         min_length = slow + signal  # 十分なウォームアップ期間
 
-        def compute_macd() -> Tuple[pd.Series, pd.Series, pd.Series]:
+        def compute_macd() -> tuple[pd.Series, pd.Series, pd.Series]:
             from .overlap import OverlapIndicators
 
             ema_fast = OverlapIndicators.ema(data, length=fast)
@@ -181,7 +179,7 @@ class MomentumIndicators:
         fast: int = 12,
         slow: int = 26,
         signal: int = 9,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Price Oscillator"""
         result: Any = run_series_indicator(
             data,
@@ -208,10 +206,10 @@ class MomentumIndicators:
         data: pd.Series,
         length: int = 15,
         signal: int = 9,
-        scalar: Optional[float] = None,
+        scalar: float | None = None,
         drift: int = 1,
         offset: int = 0,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """TRIX (Triple Exponential Average)"""
         result: Any = run_series_indicator(
             data,
@@ -245,7 +243,7 @@ class MomentumIndicators:
         talib: bool | None = None,
         drift: int = 1,
         offset: int = 0,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """Directional Movement"""
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low},
@@ -271,9 +269,7 @@ class MomentumIndicators:
         if result is None or (
             hasattr(result, "empty") and getattr(result, "empty", False)
         ):
-            return cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
-            )
+            return cast(tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2))
 
         return result.iloc[:, 0], result.iloc[:, 1]
 
@@ -291,9 +287,7 @@ class MomentumIndicators:
             run_series_indicator(
                 close,
                 length,
-                lambda: ta.er(
-                    close=close, length=length, drift=drift, offset=offset
-                ),
+                lambda: ta.er(close=close, length=length, drift=drift, offset=offset),
             ),
         )
 
@@ -311,9 +305,7 @@ class MomentumIndicators:
             run_series_indicator(
                 close,
                 length,
-                lambda: ta.lrsi(
-                    close=close, length=length, gamma=gamma, offset=offset
-                ),
+                lambda: ta.lrsi(close=close, length=length, gamma=gamma, offset=offset),
             ),
         )
 
@@ -343,7 +335,7 @@ class MomentumIndicators:
         scalar: float = 100.0,
         drift: int = 1,
         offset: int = 0,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """TRIX Histogram"""
         result: Any = run_series_indicator(
             close,
@@ -376,7 +368,7 @@ class MomentumIndicators:
         slow: int = 26,
         signal: int = 9,
         offset: int = 0,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Volume Weighted MACD"""
         result: Any = run_multi_series_indicator(
             {"close": close, "volume": volume},
@@ -409,7 +401,7 @@ class MomentumIndicators:
         k: int = 14,
         d: int = 3,
         smooth_k: int = 3,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """
         ストキャスティクス（Stochastic Oscillator）
 
@@ -453,7 +445,7 @@ class MomentumIndicators:
         stoch_length: int = 14,
         k: int = 3,
         d: int = 3,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """
         Stochastic RSI
 
@@ -613,7 +605,7 @@ class MomentumIndicators:
         low: pd.Series,
         length: int = 9,
         signal: int = 1,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """フィッシャー変換"""
         if signal <= 0:
             raise ValueError(f"signal must be positive: {signal}")
@@ -621,9 +613,7 @@ class MomentumIndicators:
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low},
             length,
-            lambda: ta.fisher(
-                high=high, low=low, length=length, signal=signal
-            ),
+            lambda: ta.fisher(high=high, low=low, length=length, signal=signal),
             fallback_factory=lambda: cast(
                 tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
             ),
@@ -647,11 +637,9 @@ class MomentumIndicators:
         sma3: int = 10,
         sma4: int = 15,
         signal: int = 9,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """Know Sure Thing"""
-        max_period = max(
-            roc1, roc2, roc3, roc4, sma1, sma2, sma3, sma4, signal
-        )
+        max_period = max(roc1, roc2, roc3, roc4, sma1, sma2, sma3, sma4, signal)
         result: Any = run_series_indicator(
             data,
             max_period,
@@ -694,9 +682,7 @@ class MomentumIndicators:
 
         return cast(
             pd.Series,
-            run_series_indicator(
-                data, length, lambda: ta.roc(data, window=length)
-            ),
+            run_series_indicator(data, length, lambda: ta.roc(data, window=length)),
         )
 
     @staticmethod
@@ -705,9 +691,7 @@ class MomentumIndicators:
         """モメンタム"""
         return cast(
             pd.Series,
-            run_series_indicator(
-                data, length, lambda: ta.mom(data, length=length)
-            ),
+            run_series_indicator(data, length, lambda: ta.mom(data, length=length)),
         )
 
     @staticmethod
@@ -723,11 +707,7 @@ class MomentumIndicators:
 
             if isinstance(result, pd.DataFrame):
                 # QQEの主要な列を返す（通常はRSIMA列）
-                return (
-                    result.iloc[:, 1]
-                    if result.shape[1] > 1
-                    else result.iloc[:, 0]
-                )
+                return result.iloc[:, 1] if result.shape[1] > 1 else result.iloc[:, 0]
 
             if result is not None:
                 return result
@@ -737,9 +717,7 @@ class MomentumIndicators:
             if isinstance(rsi_result, pd.DataFrame):
                 return rsi_result.iloc[:, 0]
             return (
-                rsi_result
-                if rsi_result is not None
-                else create_nan_series_like(data)
+                rsi_result if rsi_result is not None else create_nan_series_like(data)
             )
 
         return cast(pd.Series, run_series_indicator(data, length, compute))
@@ -831,9 +809,9 @@ class MomentumIndicators:
         slow: int = 25,
         signal: int = 13,
         scalar: float = 100.0,
-        mamode: Optional[str] = "ema",
+        mamode: str | None = "ema",
         drift: int = 1,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """True Strength Index"""
         max_period = max(fast, slow, signal)
         if drift <= 0:
@@ -886,7 +864,7 @@ class MomentumIndicators:
         length: int = 12,
         scalar: float = 100.0,
         drift: int = 1,
-        open_: Optional[pd.Series] = None,
+        open_: pd.Series | None = None,
     ) -> pd.Series:
         """
         Psychological Line（心理線）
@@ -980,9 +958,7 @@ class MomentumIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def ao(
-        high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34
-    ) -> pd.Series:
+    def ao(high: pd.Series, low: pd.Series, fast: int = 5, slow: int = 34) -> pd.Series:
         """Awesome Oscillator"""
         return cast(
             pd.Series,
@@ -1034,9 +1010,7 @@ class MomentumIndicators:
             run_series_indicator(
                 close,
                 length,
-                lambda: ta.coppock(
-                    close=close, length=length, fast=fast, slow=slow
-                ),
+                lambda: ta.coppock(close=close, length=length, fast=fast, slow=slow),
                 min_data_length=min_length,
             ),
         )
@@ -1077,13 +1051,9 @@ class MomentumIndicators:
                 if ma_result is None or ma_result.isna().all():
                     return create_nan_series_like(data)
 
-                result = (
-                    (data - ma_result) / ma_result.replace(0, np.nan)
-                ) * 100
+                result = ((data - ma_result) / ma_result.replace(0, np.nan)) * 100
 
-            return (
-                result if result is not None else create_nan_series_like(data)
-            )
+            return result if result is not None else create_nan_series_like(data)
 
         return cast(
             pd.Series,
@@ -1123,7 +1093,7 @@ class MomentumIndicators:
         low: pd.Series,
         close: pd.Series,
         length: int = 26,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """BRAR (Brayer)"""
         result: Any = run_multi_series_indicator(
             {"open_": open_, "high": high, "low": low, "close": close},
@@ -1159,7 +1129,7 @@ class MomentumIndicators:
         low: pd.Series,
         close: pd.Series,
         length: int = 13,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """Elder Ray Index"""
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
@@ -1217,7 +1187,7 @@ class MomentumIndicators:
         close: pd.Series,
         length: int = 9,
         signal: int = 3,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """KDJ"""
         result: Any = run_multi_series_indicator(
             {"high": high, "low": low, "close": close},
@@ -1258,7 +1228,7 @@ class MomentumIndicators:
         close: pd.Series,
         length: int = 14,
         swma_length: int = 4,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series]:
         """Relative Vigor Index"""
         result: Any = run_multi_series_indicator(
             {"open_": open_, "high": high, "low": low, "close": close},
@@ -1300,7 +1270,7 @@ class MomentumIndicators:
         slow: int = 20,
         signal: int = 5,
         scalar: float = 1.0,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """SMI Ergodic"""
         result: Any = run_series_indicator(
             close,
@@ -1323,15 +1293,13 @@ class MomentumIndicators:
     @handle_pandas_ta_errors
     def td_seq(
         close: pd.Series, as_bool: bool = False, show_all: bool = False
-    ) -> Union[pd.Series, pd.DataFrame]:
+    ) -> pd.Series | pd.DataFrame:
         """TD Sequential"""
         return cast(
             pd.Series,
             run_series_indicator(
                 close,
                 13,
-                lambda: ta.td_seq(
-                    close=close, asbool=as_bool, show_all=show_all
-                ),
+                lambda: ta.td_seq(close=close, asbool=as_bool, show_all=show_all),
             ),
         )

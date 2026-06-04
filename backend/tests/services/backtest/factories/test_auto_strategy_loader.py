@@ -42,7 +42,6 @@ class TestAutoStrategyLoader:
                 "app.services.auto_strategy.serializers.serialization.GeneSerializer"
             ) as MockSerializerClass,
         ):
-
             MockSerializerClass.return_value.dict_to_strategy_gene.return_value = (
                 mock_gene
             )
@@ -69,8 +68,7 @@ class TestAutoStrategyLoader:
                 "app.services.auto_strategy.serializers.serialization.GeneSerializer"
             ) as MockSerializerClass,
         ):
-
-            result = loader.load_strategy_gene(config)
+            loader.load_strategy_gene(config)
 
             # to_dict() を持つ場合、serializer が呼ばれる
             MockSerializerClass.return_value.dict_to_strategy_gene.assert_called_once()
@@ -137,7 +135,6 @@ class TestAutoStrategyLoader:
                 UniversalStrategy,
             ),
         ):
-
             result = loader.create_auto_strategy_class(config)
 
             assert result == UniversalStrategy

@@ -4,7 +4,7 @@
 戦略APIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -59,15 +59,15 @@ def override_dependencies(mock_db_session, mock_strategy_integration_service):
         mock_strategy_integration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_generated_strategy_service_with_db] = (
-        lambda: mock_strategy_integration_service
+    app.dependency_overrides[get_generated_strategy_service_with_db] = lambda: (
+        mock_strategy_integration_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_strategy() -> Dict[str, Any]:
+def sample_strategy() -> dict[str, Any]:
     """
     サンプル戦略データ
 
@@ -92,7 +92,7 @@ def sample_strategy() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_strategies_list(sample_strategy: Dict[str, Any]) -> List[Dict[str, Any]]:
+def sample_strategies_list(sample_strategy: dict[str, Any]) -> list[dict[str, Any]]:
     """
     サンプル戦略リスト
 
@@ -126,7 +126,7 @@ class TestGetStrategies:
         self,
         test_client: TestClient,
         mock_strategy_integration_service: Mock,
-        sample_strategies_list: List[Dict[str, Any]],
+        sample_strategies_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: 戦略一覧が正常に取得できる
@@ -160,7 +160,7 @@ class TestGetStrategies:
         self,
         test_client: TestClient,
         mock_strategy_integration_service: Mock,
-        sample_strategy: Dict[str, Any],
+        sample_strategy: dict[str, Any],
     ) -> None:
         """
         正常系: フィルター付きで戦略が取得できる
@@ -202,7 +202,7 @@ class TestGetStrategies:
         self,
         test_client: TestClient,
         mock_strategy_integration_service: Mock,
-        sample_strategies_list: List[Dict[str, Any]],
+        sample_strategies_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: ソート付きで戦略が取得できる
@@ -245,7 +245,7 @@ class TestGetStrategies:
         self,
         test_client: TestClient,
         mock_strategy_integration_service: Mock,
-        sample_strategies_list: List[Dict[str, Any]],
+        sample_strategies_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: ページネーション付きで戦略が取得できる
@@ -400,7 +400,7 @@ class TestGetStrategies:
         self,
         test_client: TestClient,
         mock_strategy_integration_service: Mock,
-        sample_strategy: Dict[str, Any],
+        sample_strategy: dict[str, Any],
         risk_level: str,
     ) -> None:
         """
@@ -440,7 +440,7 @@ class TestGetStrategies:
         self,
         test_client: TestClient,
         mock_strategy_integration_service: Mock,
-        sample_strategy: Dict[str, Any],
+        sample_strategy: dict[str, Any],
     ) -> None:
         """
         正常系: 実験IDフィルターが機能する
@@ -476,7 +476,7 @@ class TestGetStrategies:
         self,
         test_client: TestClient,
         mock_strategy_integration_service: Mock,
-        sample_strategies_list: List[Dict[str, Any]],
+        sample_strategies_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: 最小フィットネスフィルターが機能する

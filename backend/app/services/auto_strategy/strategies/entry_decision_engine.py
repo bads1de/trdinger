@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import List, Optional, Tuple, Union, cast
+from typing import cast
 
 from ..config.constants import EntryType
 from ..genes import Condition, ConditionGroup, TPSLGene, TPSLMethod
@@ -110,12 +110,10 @@ class EntryDecisionEngine:
             return bool(cached_signal)
 
         field_name = (
-            "long_entry_conditions"
-            if direction > 0
-            else "short_entry_conditions"
+            "long_entry_conditions" if direction > 0 else "short_entry_conditions"
         )
         conditions = cast(
-            List[Union[Condition, ConditionGroup]],
+            list[Condition | ConditionGroup],
             getattr(self.strategy.gene, field_name, []),
         )
         if not conditions:
@@ -155,9 +153,7 @@ class EntryDecisionEngine:
                 return signals.iloc[idx]
             return signals[idx]
         except Exception as e:
-            logger.debug(
-                "キャッシュ済みエントリーシグナルの取得に失敗しました: %s", e
-            )
+            logger.debug("キャッシュ済みエントリーシグナルの取得に失敗しました: %s", e)
             return None
 
     def calculate_position_size(self) -> float:
@@ -203,9 +199,7 @@ class EntryDecisionEngine:
                         if data_length > lookback + 1:
                             import numpy as np
 
-                            high = np.array(
-                                self.strategy.data.High[-lookback:]
-                            )
+                            high = np.array(self.strategy.data.High[-lookback:])
                             low = np.array(self.strategy.data.Low[-lookback:])
                             prev_close = np.array(
                                 self.strategy.data.Close[-lookback - 1 : -1]
@@ -221,11 +215,13 @@ class EntryDecisionEngine:
                 except Exception as e:
                     logger.debug("ATR market data calculation error: %s", e)
 
-                position_size = self.strategy.position_sizing_service.calculate_position_size_fast(
-                    gene=self.strategy.gene.position_sizing_gene,
-                    account_balance=account_balance,
-                    current_price=current_price,
-                    market_data=market_data,
+                position_size = (
+                    self.strategy.position_sizing_service.calculate_position_size_fast(
+                        gene=self.strategy.gene.position_sizing_gene,
+                        account_balance=account_balance,
+                        current_price=current_price,
+                        market_data=market_data,
+                    )
                 )
                 position_size = float(position_size)
                 if not math.isfinite(position_size) or position_size <= 0:
@@ -238,16 +234,11 @@ class EntryDecisionEngine:
                 max_size_limit = float(
                     getattr(gene, "max_position_size", position_size)
                 )
-                if (
-                    not math.isfinite(max_size_limit)
-                    or max_size_limit < min_size_limit
-                ):
+                if not math.isfinite(max_size_limit) or max_size_limit < min_size_limit:
                     max_size_limit = min_size_limit
 
                 # 最終的なユニット数（この時点ではまだ小数である可能性がある）
-                final_units = max(
-                    min_size_limit, min(max_size_limit, position_size)
-                )
+                final_units = max(min_size_limit, min(max_size_limit, position_size))
 
                 # backtesting.py の仕様に合わせて変換
                 # 0 < size < 1: 証拠金比率
@@ -272,19 +263,17 @@ class EntryDecisionEngine:
                 return 0.001
             return 0.01
         except Exception as e:
-            logger.warning(
-                "ポジションサイズ計算エラー、フォールバック使用: %s", e
-            )
+            logger.warning("ポジションサイズ計算エラー、フォールバック使用: %s", e)
             return 0.01
 
     def calculate_effective_tpsl_prices(
         self,
         direction: float,
         current_price: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """有効なTP/SL価格を計算する。"""
         active_tpsl_gene = cast(
-            Optional[TPSLGene],
+            TPSLGene | None,
             self.strategy._get_effective_tpsl_gene(direction),
         )
         if not active_tpsl_gene:
@@ -321,7 +310,7 @@ class EntryDecisionEngine:
                     closes = self.strategy.data.Close[-required_slice_size:]
                     market_data["ohlc_data"] = [
                         {"high": h, "low": low_val, "close": c}
-                        for h, low_val, c in zip(highs, lows, closes)
+                        for h, low_val, c in zip(highs, lows, closes, strict=False)
                     ]
 
         return self.strategy.tpsl_service.calculate_tpsl_prices(
@@ -374,7 +363,5 @@ class EntryDecisionEngine:
 
             return False
         except Exception as e:
-            logger.warning(
-                "ツールフィルターエラー（フェイルセーフ適用）: %s", e
-            )
+            logger.warning("ツールフィルターエラー（フェイルセーフ適用）: %s", e)
             return False

@@ -198,7 +198,9 @@ class TestBacktestStatisticsCalculator:
         assert result["total_trades"] == 50
 
     def test_callable_stats(self, calculator):
-        stats = lambda: pd.Series({"Return [%]": 20.0, "# Trades": 30})
+        def stats():
+            return pd.Series({"Return [%]": 20.0, "# Trades": 30})
+
         result = calculator.calculate_statistics(stats)
         assert result["total_return"] == 20.0
 

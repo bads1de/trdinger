@@ -30,12 +30,12 @@ class TestStackingLeak:
         cv = ensemble._create_cv_splitter(X)
 
         # PurgedKFoldであることを検証
-        assert isinstance(
-            cv, PurgedKFold
-        ), f"PurgedKFold must be used for time series data. Got: {type(cv)}"
-        assert not isinstance(
-            cv, StratifiedKFold
-        ), "StratifiedKFold causes data leakage in time series!"
+        assert isinstance(cv, PurgedKFold), (
+            f"PurgedKFold must be used for time series data. Got: {type(cv)}"
+        )
+        assert not isinstance(cv, StratifiedKFold), (
+            "StratifiedKFold causes data leakage in time series!"
+        )
 
     def test_stacking_uses_kfold_when_specified(self):
         """cv_strategy='kfold'の場合、KFoldが使用されることを検証"""
@@ -58,9 +58,9 @@ class TestStackingLeak:
         ensemble = StackingEnsemble(config)
         cv = ensemble._create_cv_splitter(X)
 
-        assert isinstance(
-            cv, KFold
-        ), f"KFold must be used when specified. Got: {type(cv)}"
+        assert isinstance(cv, KFold), (
+            f"KFold must be used when specified. Got: {type(cv)}"
+        )
 
     def test_stacking_uses_stratified_kfold_when_specified(self):
         """cv_strategy='stratified_kfold'の場合、StratifiedKFoldが使用されることを検証"""
@@ -83,6 +83,6 @@ class TestStackingLeak:
         ensemble = StackingEnsemble(config)
         cv = ensemble._create_cv_splitter(X)
 
-        assert isinstance(
-            cv, StratifiedKFold
-        ), f"StratifiedKFold must be used when specified. Got: {type(cv)}"
+        assert isinstance(cv, StratifiedKFold), (
+            f"StratifiedKFold must be used when specified. Got: {type(cv)}"
+        )

@@ -2,7 +2,7 @@
 再帰的特徴量削減（クロスバリデーション付き）戦略
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -17,16 +17,16 @@ from .base import BaseSelectionStrategy
 class RFECVStrategy(BaseSelectionStrategy):
     """再帰的特徴量削減（クロスバリデーション付き）"""
 
-    def __init__(self, estimator: Optional[BaseEstimator] = None):
+    def __init__(self, estimator: BaseEstimator | None = None):
         self.estimator = estimator
 
     def select(
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: List[str],
+        feature_names: list[str],
         config: FeatureSelectionConfig,
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         estimator = self.estimator or get_default_estimator(
             n_estimators=50,
             random_state=config.random_state,

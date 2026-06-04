@@ -1,6 +1,5 @@
 import math
 from datetime import datetime
-from typing import Dict
 
 import pytest
 
@@ -66,7 +65,7 @@ def test_fixed_ratio_respects_risk_percentage_and_balance(
     )
     calculator = FixedRatioCalculator()
 
-    result: Dict[str, float] = calculator.calculate(gene, balance, price)
+    result: dict[str, float] = calculator.calculate(gene, balance, price)
 
     assert math.isclose(result["position_size"], expected, rel_tol=1e-9)
     assert result["details"]["fixed_ratio"] == fixed_ratio
@@ -112,9 +111,9 @@ def test_fixed_quantity_returns_constant_size_for_any_input(
 
     for balance, price in [(1000.0, 10.0), (5000.0, 250.0), (100000.0, 50000.0)]:
         result = calculator.calculate(gene, balance, price)
-        assert result["position_size"] == pytest.approx(
-            fixed_qty
-        ), "固定枚数方式は口座残高や価格に依存せず一定サイズを返すべき"
+        assert result["position_size"] == pytest.approx(fixed_qty), (
+            "固定枚数方式は口座残高や価格に依存せず一定サイズを返すべき"
+        )
 
 
 def test_volatility_based_size_decreases_when_volatility_increases(

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -32,11 +32,11 @@ class BaseGradientBoostingModel(ABC):
     def __init__(self, random_state: int = 42, **kwargs):
         self.model: Any = None
         self.is_trained = False
-        self.feature_columns: Optional[List[str]] = None
+        self.feature_columns: list[str] | None = None
         self.classes_ = None  # sklearn互換性のため
         self.random_state = random_state
         self.task_type = kwargs.pop("task_type", "regression")
-        self.last_training_result: Dict[str, Any] = {}
+        self.last_training_result: dict[str, Any] = {}
 
         # その他のパラメータを設定
         for key, value in kwargs.items():
@@ -44,8 +44,8 @@ class BaseGradientBoostingModel(ABC):
 
     @staticmethod
     def _coerce_feature_frame(
-        X: Union[pd.DataFrame, np.ndarray],
-        feature_columns: Optional[List[str]] = None,
+        X: pd.DataFrame | np.ndarray,
+        feature_columns: list[str] | None = None,
     ) -> pd.DataFrame:
         """特徴量入力をDataFrameに正規化する。"""
         if isinstance(X, pd.DataFrame):
@@ -54,7 +54,7 @@ class BaseGradientBoostingModel(ABC):
         return pd.DataFrame(X, columns=cast(Any, cols))
 
     @staticmethod
-    def _coerce_target_series(y: Union[pd.Series, np.ndarray]) -> pd.Series:
+    def _coerce_target_series(y: pd.Series | np.ndarray) -> pd.Series:
         """ターゲット入力をSeriesに正規化する。"""
         if isinstance(y, pd.Series):
             return y
@@ -62,10 +62,10 @@ class BaseGradientBoostingModel(ABC):
 
     def fit(
         self,
-        X: Union[pd.DataFrame, np.ndarray],
-        y: Union[pd.Series, np.ndarray],
+        X: pd.DataFrame | np.ndarray,
+        y: pd.Series | np.ndarray,
         **kwargs,
-    ) -> "BaseGradientBoostingModel":
+    ) -> BaseGradientBoostingModel:
         """
         sklearn互換のfitメソッド
         """
@@ -126,15 +126,13 @@ class BaseGradientBoostingModel(ABC):
 
             self._train_model_impl(
                 cast(pd.DataFrame, X_train),
-                cast(Optional[pd.DataFrame], X_val),
+                cast(pd.DataFrame | None, X_val),
                 cast(pd.Series, y_train),
-                cast(Optional[pd.Series], y_val),
+                cast(pd.Series | None, y_val),
                 **kwargs,
             )
 
-            self.classes_ = (
-                None if self._is_regression_task() else np.unique(y)
-            )
+            self.classes_ = None if self._is_regression_task() else np.unique(y)
             return self
 
         except Exception as e:
@@ -144,11 +142,11 @@ class BaseGradientBoostingModel(ABC):
     def _train_model_impl(
         self,
         X_train: pd.DataFrame,
-        X_test: Optional[pd.DataFrame],
+        X_test: pd.DataFrame | None,
         y_train: pd.Series,
-        y_test: Optional[pd.Series],
+        y_test: pd.Series | None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         モデル学習の共通実装（テンプレートメソッド）
         """
@@ -177,9 +175,7 @@ class BaseGradientBoostingModel(ABC):
                             f"class_weight={class_weight} を適用してsample_weightを計算しました"
                         )
                     except Exception as e:
-                        logger.warning(
-                            f"sample_weightの計算に失敗しました: {e}"
-                        )
+                        logger.warning(f"sample_weightの計算に失敗しました: {e}")
 
             # モデル固有のデータセット作成
             train_data = self._create_dataset(X_train, y_train, sample_weight)
@@ -207,18 +203,14 @@ class BaseGradientBoostingModel(ABC):
 
             # 予測と評価 (検証データがある場合のみ)
             detailed_metrics = {}
-            if (
-                valid_data is not None
-                and y_test is not None
-                and X_test is not None
-            ):
+            if valid_data is not None and y_test is not None and X_test is not None:
                 if is_regression:
-                    y_pred = np.asarray(
-                        self.predict(cast(pd.DataFrame, X_test))
-                    )
-                    detailed_metrics = metrics_collector.calculate_volatility_regression_metrics(
-                        np.asarray(y_test),
-                        y_pred,
+                    y_pred = np.asarray(self.predict(cast(pd.DataFrame, X_test)))
+                    detailed_metrics = (
+                        metrics_collector.calculate_volatility_regression_metrics(
+                            np.asarray(y_test),
+                            y_pred,
+                        )
                     )
                     logger.info(
                         f"{self.ALGORITHM_NAME}回帰モデル学習完了: "
@@ -242,9 +234,7 @@ class BaseGradientBoostingModel(ABC):
                         f"{self.ALGORITHM_NAME}モデル学習完了: 精度={detailed_metrics.get('accuracy', 0.0):.4f}"
                     )
             else:
-                logger.info(
-                    f"{self.ALGORITHM_NAME}モデル学習完了 (検証データなし)"
-                )
+                logger.info(f"{self.ALGORITHM_NAME}モデル学習完了 (検証データなし)")
 
             # 特徴量重要度
             feature_importance = self.get_feature_importance()
@@ -264,9 +254,7 @@ class BaseGradientBoostingModel(ABC):
             }
 
             # best_iterationなど、モデル固有の属性を結果に追加
-            if self.model is not None and hasattr(
-                self.model, "best_iteration"
-            ):
+            if self.model is not None and hasattr(self.model, "best_iteration"):
                 result["best_iteration"] = self.model.best_iteration
 
             self.last_training_result = result
@@ -274,13 +262,11 @@ class BaseGradientBoostingModel(ABC):
 
         except Exception as e:
             logger.error(f"{self.ALGORITHM_NAME}モデル学習エラー: {e}")
-            raise ModelError(
-                f"{self.ALGORITHM_NAME}モデル学習に失敗しました: {e}"
-            )
+            raise ModelError(f"{self.ALGORITHM_NAME}モデル学習に失敗しました: {e}")
 
     def _handle_class_weight_for_catboost(
-        self, class_weight: Any, kwargs: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+        self, class_weight: Any, kwargs: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         CatBoost用のclass_weight処理（サブクラスでオーバーライド可能）
 
@@ -297,9 +283,9 @@ class BaseGradientBoostingModel(ABC):
     @abstractmethod
     def _create_dataset(
         self,
-        X: Union[pd.DataFrame, np.ndarray],
-        y: Optional[Union[pd.Series, np.ndarray]] = None,
-        sample_weight: Optional[np.ndarray] = None,
+        X: pd.DataFrame | np.ndarray,
+        y: pd.Series | np.ndarray | None = None,
+        sample_weight: np.ndarray | None = None,
     ) -> Any:
         """
         モデル固有のデータセットオブジェクトを作成します。
@@ -307,9 +293,7 @@ class BaseGradientBoostingModel(ABC):
         """
 
     @abstractmethod
-    def _get_model_params(
-        self, num_classes: int, **kwargs
-    ) -> Dict[str, object]:
+    def _get_model_params(self, num_classes: int, **kwargs) -> dict[str, object]:
         """
         モデル固有のパラメータディクショナリを生成します。
         """
@@ -318,9 +302,9 @@ class BaseGradientBoostingModel(ABC):
     def _train_internal(
         self,
         train_data: Any,
-        valid_data: Optional[Any],
-        params: Dict[str, Any],
-        early_stopping_rounds: Optional[int] = None,
+        valid_data: Any | None,
+        params: dict[str, Any],
+        early_stopping_rounds: int | None = None,
         **kwargs: Any,
     ) -> Any:
         """
@@ -334,7 +318,7 @@ class BaseGradientBoostingModel(ABC):
         学習時の検証用に使用されます。
         """
 
-    def predict(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         """
         sklearn互換の予測メソッド（クラス予測）
         """
@@ -349,7 +333,7 @@ class BaseGradientBoostingModel(ABC):
             return self._predict_raw(data)
         return predict_class_from_proba(self.predict_proba(X))
 
-    def predict_proba(self, X: Union[pd.DataFrame, np.ndarray]) -> np.ndarray:
+    def predict_proba(self, X: pd.DataFrame | np.ndarray) -> np.ndarray:
         """
         予測確率を取得。
         回帰タスクの場合は予測値を (n_samples, 1) の形状で返します。
@@ -388,7 +372,7 @@ class BaseGradientBoostingModel(ABC):
         モデルから生の予測値（確率）を取得します。
         """
 
-    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
+    def get_feature_importance(self, top_n: int = 10) -> dict[str, float]:
         """
         特徴量重要度を取得（共通ユーティリティを使用）
         """

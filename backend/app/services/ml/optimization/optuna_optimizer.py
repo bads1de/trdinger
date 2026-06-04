@@ -5,9 +5,10 @@ Optunaベースの最適化エンジン
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 import optuna
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 class OptimizationResult:
     """最適化結果"""
 
-    best_params: Dict[str, Any]
+    best_params: dict[str, Any]
     best_score: float
     total_evaluations: int
     optimization_time: float
@@ -32,32 +33,22 @@ class ParameterSpace:
     """パラメータ空間の定義"""
 
     type: str  # "real", "integer", "categorical"
-    low: Optional[float] = None
-    high: Optional[float] = None
-    step: Optional[float] = None
-    categories: Optional[list] = None
+    low: float | None = None
+    high: float | None = None
+    step: float | None = None
+    categories: list | None = None
 
 
 def build_lightgbm_parameter_space(
     prefix: str = "",
-) -> Dict[str, ParameterSpace]:
+) -> dict[str, ParameterSpace]:
     """LightGBM のパラメータ空間を構築する。"""
     return {
-        f"{prefix}num_leaves": ParameterSpace(
-            type="integer", low=10, high=100
-        ),
-        f"{prefix}learning_rate": ParameterSpace(
-            type="real", low=0.01, high=0.3
-        ),
-        f"{prefix}feature_fraction": ParameterSpace(
-            type="real", low=0.5, high=1.0
-        ),
-        f"{prefix}bagging_fraction": ParameterSpace(
-            type="real", low=0.5, high=1.0
-        ),
-        f"{prefix}min_data_in_leaf": ParameterSpace(
-            type="integer", low=5, high=50
-        ),
+        f"{prefix}num_leaves": ParameterSpace(type="integer", low=10, high=100),
+        f"{prefix}learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
+        f"{prefix}feature_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
+        f"{prefix}bagging_fraction": ParameterSpace(type="real", low=0.5, high=1.0),
+        f"{prefix}min_data_in_leaf": ParameterSpace(type="integer", low=5, high=50),
         f"{prefix}max_depth": ParameterSpace(type="integer", low=3, high=15),
     }
 
@@ -75,13 +66,13 @@ class OptunaOptimizer:
 
     def __init__(self):
         """初期化"""
-        self.study: Optional[optuna.Study] = None
+        self.study: optuna.Study | None = None
 
     @safe_operation(context="Optuna最適化", is_api_call=False)
     def optimize(
         self,
-        objective_function: Callable[[Dict[str, Any]], float],
-        parameter_space: Dict[str, ParameterSpace],
+        objective_function: Callable[[dict[str, Any]], float],
+        parameter_space: dict[str, ParameterSpace],
         n_calls: int = 50,
     ) -> OptimizationResult:
         """
@@ -140,9 +131,7 @@ class OptunaOptimizer:
 
         best_score = best_trial.value if best_trial.value is not None else 0.0
         if best_trial.value is None:
-            logger.warning(
-                "ベスト試行の値がNoneです。デフォルト値0.0を使用します"
-            )
+            logger.warning("ベスト試行の値がNoneです。デフォルト値0.0を使用します")
 
         result = OptimizationResult(
             best_params=best_trial.params,
@@ -187,8 +176,8 @@ class OptunaOptimizer:
             pass  # デストラクタでは例外を発生させない
 
     def _suggest_parameters(
-        self, trial: optuna.Trial, parameter_space: Dict[str, ParameterSpace]
-    ) -> Dict[str, Any]:
+        self, trial: optuna.Trial, parameter_space: dict[str, ParameterSpace]
+    ) -> dict[str, Any]:
         """
         ParameterSpace の定義に基づき、現在の試行に使用するパラメータを提案
 
@@ -229,12 +218,10 @@ class OptunaOptimizer:
         return params
 
     @staticmethod
-    @safe_operation(
-        context="アンサンブルパラメータ空間取得", is_api_call=False
-    )
+    @safe_operation(context="アンサンブルパラメータ空間取得", is_api_call=False)
     def get_ensemble_parameter_space(
         ensemble_method: str, enabled_models: list
-    ) -> Dict[str, ParameterSpace]:
+    ) -> dict[str, ParameterSpace]:
         """
         アンサンブル学習用のパラメータ空間を取得
 

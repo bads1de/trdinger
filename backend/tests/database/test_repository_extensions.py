@@ -5,7 +5,6 @@ OHLCVRepositoryとFundingRateRepositoryの拡張メソッド（get_all_by_symbol
 """
 
 from datetime import datetime, timezone
-from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -34,7 +33,7 @@ def funding_rate_repository(mock_db_session):
 
 
 @pytest.fixture
-def sample_ohlcv_data() -> List[OHLCVData]:
+def sample_ohlcv_data() -> list[OHLCVData]:
     """サンプルOHLCVデータ"""
     data = []
     for i in range(5):
@@ -54,7 +53,7 @@ def sample_ohlcv_data() -> List[OHLCVData]:
 
 
 @pytest.fixture
-def sample_funding_rate_data() -> List[FundingRateData]:
+def sample_funding_rate_data() -> list[FundingRateData]:
     """サンプルファンディングレートデータ"""
     data = []
     base_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)

@@ -6,7 +6,7 @@
 """
 
 import random
-from typing import Any, Dict
+from typing import Any
 
 from .base import BaseTool, ToolContext, ToolDefinition
 from .registry import register_tool
@@ -27,9 +27,7 @@ class MondayReversalFilter(BaseTool):
         priority="disabled",
     )
 
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """
         月曜日の指定時間帯かどうかを判定
 
@@ -57,7 +55,7 @@ class MondayReversalFilter(BaseTool):
         # 指定時間未満ならスキップ (例: skip_hours=12なら 00:00〜11:59 までスキップ)
         return hour < skip_hours
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         パラメータを突然変異
 

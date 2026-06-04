@@ -4,7 +4,6 @@ genesパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-
 import app.services.auto_strategy.genes as genes_package
 
 

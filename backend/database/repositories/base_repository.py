@@ -3,8 +3,9 @@
 """
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 import pandas as pd
 from sqlalchemy import asc, delete, desc, func, select
@@ -26,7 +27,7 @@ class BaseRepository(Generic[T]):
     将来的なライブラリのアップデートにも対応可能な設計となっています。
     """
 
-    def __init__(self, db: Session, model_class: Type[T]):
+    def __init__(self, db: Session, model_class: type[T]):
         """
         リポジトリを初期化します。
 
@@ -59,7 +60,7 @@ class BaseRepository(Generic[T]):
                 result[column.name] = val
         return result
 
-    def to_pydantic_model(self, model_instance: T, pydantic_model_class: Type[T]) -> T:
+    def to_pydantic_model(self, model_instance: T, pydantic_model_class: type[T]) -> T:
         """モデルインスタンスをPydanticモデルに変換
 
         Args:
@@ -74,7 +75,7 @@ class BaseRepository(Generic[T]):
         return pydantic_model_class(**data_dict)
 
     def bulk_insert_with_conflict_handling(
-        self, records: List[Dict[str, Any]], conflict_columns: List[str]
+        self, records: list[dict[str, Any]], conflict_columns: list[str]
     ) -> int:
         """
         重複処理付き一括挿入（SQLAlchemy 2.0 標準API使用）
@@ -121,7 +122,7 @@ class BaseRepository(Generic[T]):
             logger.error(f"一括挿入エラー ({self.model_class.__name__}): {e}")
             raise
 
-    def _bulk_insert_sqlite_ignore(self, records: List[Dict[str, Any]]) -> int:
+    def _bulk_insert_sqlite_ignore(self, records: list[dict[str, Any]]) -> int:
         """
         SQLite用のINSERT OR IGNORE一括挿入
 
@@ -165,7 +166,7 @@ class BaseRepository(Generic[T]):
             return self._bulk_insert_individual(records)
 
     def _bulk_insert_postgresql_ignore(
-        self, records: List[Dict[str, Any]], conflict_columns: List[str]
+        self, records: list[dict[str, Any]], conflict_columns: list[str]
     ) -> int:
         """
         PostgreSQL用のon_conflict_do_nothing一括挿入
@@ -199,7 +200,7 @@ class BaseRepository(Generic[T]):
             )
             return self._bulk_insert_individual(records)
 
-    def _bulk_insert_individual(self, records: List[Dict[str, Any]]) -> int:
+    def _bulk_insert_individual(self, records: list[dict[str, Any]]) -> int:
         """
         個別挿入処理（重複エラーを無視）
 
@@ -242,8 +243,8 @@ class BaseRepository(Generic[T]):
         return inserted_count
 
     def get_latest_timestamp(
-        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
-    ) -> Optional[datetime]:
+        self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
+    ) -> datetime | None:
         """
         最新タイムスタンプを取得（SQLAlchemy 2.0 標準API使用）
 
@@ -278,8 +279,8 @@ class BaseRepository(Generic[T]):
             return None  # 型チェッカー用のフォールバック
 
     def get_oldest_timestamp(
-        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
-    ) -> Optional[datetime]:
+        self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
+    ) -> datetime | None:
         """
         最古タイムスタンプを取得（SQLAlchemy 2.0 標準API使用）
 
@@ -306,9 +307,7 @@ class BaseRepository(Generic[T]):
             logger.error(f"最古タイムスタンプの取得中にエラーが発生しました: {e}")
             raise
 
-    def get_record_count(
-        self, filter_conditions: Optional[Dict[str, Any]] = None
-    ) -> int:
+    def get_record_count(self, filter_conditions: dict[str, Any] | None = None) -> int:
         """
         レコード数を取得（SQLAlchemy 2.0 標準API使用）
 
@@ -333,7 +332,7 @@ class BaseRepository(Generic[T]):
             raise
 
     def get_date_range(
-        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
+        self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
     ):
         """
         データ期間を取得（SQLAlchemy 2.0 標準API使用）
@@ -354,7 +353,7 @@ class BaseRepository(Generic[T]):
             logger.error(f"データ期間の取得中にエラーが発生しました: {e}")
             raise
 
-    def get_available_symbols(self, symbol_column: str = "symbol") -> List[str]:
+    def get_available_symbols(self, symbol_column: str = "symbol") -> list[str]:
         """
         利用可能なシンボルのリストを取得
 
@@ -438,15 +437,15 @@ class BaseRepository(Generic[T]):
     # 汎用データ取得メソッド
     def get_filtered_data(
         self,
-        filters: Optional[Dict[str, Any]] = None,
-        time_range_column: Optional[str] = None,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        order_by_column: Optional[str] = None,
+        filters: dict[str, Any] | None = None,
+        time_range_column: str | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        order_by_column: str | None = None,
         order_asc: bool = True,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
-    ) -> List[T]:
+        limit: int | None = None,
+        offset: int | None = None,
+    ) -> list[T]:
         """
         汎用的なフィルタリングデータ取得メソッド
 
@@ -510,10 +509,10 @@ class BaseRepository(Generic[T]):
 
     def get_latest_records(
         self,
-        filters: Optional[Dict[str, Any]] = None,
+        filters: dict[str, Any] | None = None,
         timestamp_column: str = "timestamp",
         limit: int = 100,
-    ) -> List[T]:
+    ) -> list[T]:
         """
         最新レコードを取得する汎用メソッド
 
@@ -538,9 +537,9 @@ class BaseRepository(Generic[T]):
         timestamp_column: str,
         start_time: datetime,
         end_time: datetime,
-        filters: Optional[Dict[str, Any]] = None,
-        limit: Optional[int] = None,
-    ) -> List[T]:
+        filters: dict[str, Any] | None = None,
+        limit: int | None = None,
+    ) -> list[T]:
         """
         期間指定でデータを取得する汎用メソッド
 
@@ -566,9 +565,9 @@ class BaseRepository(Generic[T]):
 
     def to_dataframe(
         self,
-        records: List[T],
-        column_mapping: Optional[Dict[str, str]] = None,
-        index_column: Optional[str] = None,
+        records: list[T],
+        column_mapping: dict[str, str] | None = None,
+        index_column: str | None = None,
     ) -> pd.DataFrame:
         """
         レコードをDataFrameに変換する汎用メソッド
@@ -618,9 +617,9 @@ class BaseRepository(Generic[T]):
     def delete_by_date_range(
         self,
         timestamp_column: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        additional_filters: Optional[Dict[str, Any]] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        additional_filters: dict[str, Any] | None = None,
     ) -> int:
         """
         期間指定でレコードを削除する汎用メソッド
@@ -668,7 +667,7 @@ class BaseRepository(Generic[T]):
         self,
         timestamp_column: str,
         before_date: datetime,
-        additional_filters: Optional[Dict[str, Any]] = None,
+        additional_filters: dict[str, Any] | None = None,
     ) -> int:
         """
         指定日時より古いデータを削除する汎用メソッド
@@ -690,8 +689,8 @@ class BaseRepository(Generic[T]):
     def get_data_statistics(
         self,
         timestamp_column: str,
-        filters: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        filters: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         データの統計情報を取得する汎用メソッド
 
@@ -743,9 +742,9 @@ class BaseRepository(Generic[T]):
 
     def validate_records(
         self,
-        records: List[Dict[str, Any]],
-        required_fields: List[str],
-        validation_func: Optional[Callable[[List[Dict[str, Any]]], bool]] = None,
+        records: list[dict[str, Any]],
+        required_fields: list[str],
+        validation_func: Callable[[list[dict[str, Any]]], bool] | None = None,
     ) -> bool:
         """
         レコードの妥当性を検証する汎用メソッド

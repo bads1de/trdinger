@@ -5,10 +5,10 @@ GAによって生成された戦略の永続化処理を管理します。
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, cast as t_cast
+from typing import Any
 
 from sqlalchemy import Float, cast, desc
-from sqlalchemy.orm import Session, selectinload, defer
+from sqlalchemy.orm import Session, selectinload
 
 from database.models import GeneratedStrategy
 
@@ -43,20 +43,18 @@ class GeneratedStrategyRepository(BaseRepository):
         return (
             self.db.query(GeneratedStrategy)
             .outerjoin(GeneratedStrategy.backtest_result)
-            .options(
-                selectinload(GeneratedStrategy.backtest_result)
-            )
+            .options(selectinload(GeneratedStrategy.backtest_result))
         )
 
     def save_strategy(
         self,
         experiment_id: int,
-        gene_data: Dict[str, Any],
+        gene_data: dict[str, Any],
         generation: int,
-        fitness_score: Optional[float] = None,
-        fitness_values: Optional[List[float]] = None,
-        parent_ids: Optional[List[int]] = None,
-        backtest_result_id: Optional[int] = None,
+        fitness_score: float | None = None,
+        fitness_values: list[float] | None = None,
+        parent_ids: list[int] | None = None,
+        backtest_result_id: int | None = None,
     ) -> GeneratedStrategy:
         """
         戦略を保存
@@ -99,8 +97,8 @@ class GeneratedStrategyRepository(BaseRepository):
         return _save_strategy()
 
     def save_strategies_batch(
-        self, strategies_data: List[Dict[str, Any]]
-    ) -> List[GeneratedStrategy]:
+        self, strategies_data: list[dict[str, Any]]
+    ) -> list[GeneratedStrategy]:
         """
         戦略を一括保存
 
@@ -145,10 +143,10 @@ class GeneratedStrategyRepository(BaseRepository):
     def get_strategies_by_experiment(
         self,
         experiment_id: int,
-        generation: Optional[int] = None,
-        limit: Optional[int] = None,
+        generation: int | None = None,
+        limit: int | None = None,
         eager_load_backtest: bool = True,
-    ) -> List[GeneratedStrategy]:
+    ) -> list[GeneratedStrategy]:
         """
         実験別で戦略を取得
 
@@ -168,17 +166,15 @@ class GeneratedStrategyRepository(BaseRepository):
             query = self.db.query(GeneratedStrategy).filter(
                 GeneratedStrategy.experiment_id == experiment_id
             )
-            
+
             if generation is not None:
                 query = query.filter(GeneratedStrategy.generation == generation)
 
             if eager_load_backtest:
-                query = query.options(
-                    selectinload(GeneratedStrategy.backtest_result)
-                )
+                query = query.options(selectinload(GeneratedStrategy.backtest_result))
 
             query = query.order_by(desc(GeneratedStrategy.fitness_score))
-            
+
             if limit is not None:
                 query = query.limit(limit)
 
@@ -188,7 +184,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
     def get_strategies_by_generation(
         self, experiment_id: int, generation: int, eager_load_backtest: bool = True
-    ) -> List[GeneratedStrategy]:
+    ) -> list[GeneratedStrategy]:
         """
         世代別で戦略を取得
 
@@ -208,12 +204,10 @@ class GeneratedStrategyRepository(BaseRepository):
                 GeneratedStrategy.experiment_id == experiment_id,
                 GeneratedStrategy.generation == generation,
             )
-            
+
             if eager_load_backtest:
-                query = query.options(
-                    selectinload(GeneratedStrategy.backtest_result)
-                )
-            
+                query = query.options(selectinload(GeneratedStrategy.backtest_result))
+
             query = query.order_by(desc(GeneratedStrategy.fitness_score))
 
             return query.all()
@@ -221,8 +215,8 @@ class GeneratedStrategyRepository(BaseRepository):
         return _get_strategies_by_generation()
 
     def get_strategies_with_backtest_results(
-        self, limit: int = 50, offset: int = 0, experiment_id: Optional[int] = None
-    ) -> List[GeneratedStrategy]:
+        self, limit: int = 50, offset: int = 0, experiment_id: int | None = None
+    ) -> list[GeneratedStrategy]:
         """
         バックテスト結果を持つ戦略を取得
 
@@ -257,12 +251,12 @@ class GeneratedStrategyRepository(BaseRepository):
         self,
         limit: int = 50,
         offset: int = 0,
-        risk_level: Optional[str] = None,
-        experiment_id: Optional[int] = None,
-        min_fitness: Optional[float] = None,
+        risk_level: str | None = None,
+        experiment_id: int | None = None,
+        min_fitness: float | None = None,
         sort_by: str = "fitness_score",
         sort_order: str = "desc",
-    ) -> Tuple[int, List[GeneratedStrategy]]:
+    ) -> tuple[int, list[GeneratedStrategy]]:
         """
         フィルタリングとソートを適用して戦略を取得
 
@@ -294,18 +288,21 @@ class GeneratedStrategyRepository(BaseRepository):
         )
         def _get_filtered_and_sorted_strategies():
             from sqlalchemy import func
-            
+
             # カウント用の軽量クエリ（eager loadingなし）
-            count_query = (
-                self.db.query(func.count(GeneratedStrategy.id))
-                .outerjoin(GeneratedStrategy.backtest_result)
+            count_query = self.db.query(func.count(GeneratedStrategy.id)).outerjoin(
+                GeneratedStrategy.backtest_result
             )
-            
+
             # フィルタリング（カウントクエリ）
             if experiment_id is not None:
-                count_query = count_query.filter(GeneratedStrategy.experiment_id == experiment_id)
+                count_query = count_query.filter(
+                    GeneratedStrategy.experiment_id == experiment_id
+                )
             if min_fitness is not None:
-                count_query = count_query.filter(GeneratedStrategy.fitness_score >= min_fitness)
+                count_query = count_query.filter(
+                    GeneratedStrategy.fitness_score >= min_fitness
+                )
             if risk_level:
                 if risk_level == "low":
                     count_query = count_query.filter(
@@ -324,7 +321,7 @@ class GeneratedStrategyRepository(BaseRepository):
                         cast(BacktestResult.performance_metrics["max_drawdown"], Float)
                         > 0.15
                     )
-            
+
             total_count = count_query.scalar()
 
             # データ取得用のクエリ（eager loadingあり）
@@ -388,7 +385,7 @@ class GeneratedStrategyRepository(BaseRepository):
 
         return _delete_all_strategies()
 
-    def _validate_gene_data(self, gene_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_gene_data(self, gene_data: dict[str, Any]) -> dict[str, Any]:
         """
         遺伝子データの整合性を確保
 
@@ -458,5 +455,3 @@ class GeneratedStrategyRepository(BaseRepository):
             return count
 
         return _unlink_backtest_result()
-
-

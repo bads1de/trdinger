@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -24,7 +24,7 @@ class MLGateSettings:
     """
 
     enabled: bool
-    model_path: Optional[str]
+    model_path: str | None
 
 
 def _read_value(source: object, key: str) -> object:
@@ -46,7 +46,7 @@ def _read_value(source: object, key: str) -> object:
     return getattr(source, key, None)
 
 
-def _resolve_model_path(*candidates: Any) -> Optional[str]:
+def _resolve_model_path(*candidates: Any) -> str | None:
     """
     最初に見つかった有効なモデルパスを返す
 
@@ -103,7 +103,7 @@ def resolve_ml_gate_settings(source: Mapping[str, Any]) -> MLGateSettings:
 
 def normalize_ml_gate_fields(
     source: Mapping[str, Any],
-) -> dict[str, Optional[str] | bool]:
+) -> dict[str, str | None | bool]:
     """
     volatility gate 設定を正規化する
 

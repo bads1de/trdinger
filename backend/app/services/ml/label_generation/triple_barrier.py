@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Optional, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -133,11 +133,11 @@ class TripleBarrier:
         self,
         close: pd.Series,
         t_events: pd.DatetimeIndex,
-        pt_sl: List[float],
+        pt_sl: list[float],
         target: pd.Series,
         min_ret: float,
-        vertical_barrier_times: Optional[pd.Series] = None,
-        side: Optional[pd.Series] = None,
+        vertical_barrier_times: pd.Series | None = None,
+        side: pd.Series | None = None,
     ) -> pd.DataFrame:
         """
         指定されたイベント（エントリー候補点）に対して、各バリアの接触時刻とリターンを特定します。
@@ -185,9 +185,7 @@ class TripleBarrier:
         # 1. 価格データと時刻
         close_vals = close.to_numpy(dtype=np.float64)
         # 時刻はint64(ns)として扱う (明示的にns解像度に変換)
-        close_times = (
-            close.index.astype("datetime64[ns]").astype(np.int64).to_numpy()
-        )
+        close_times = close.index.astype("datetime64[ns]").astype(np.int64).to_numpy()
 
         # 2. イベント開始位置のインデックス
         # get_indexer は見つからない場合 -1 を返す
@@ -215,9 +213,7 @@ class TripleBarrier:
             v_bar_idxs[valid_v_mask] = found_idxs
 
         # 4. 垂直バリアの時刻 (int64)
-        v_bar_times_int = (
-            v_bar.astype("datetime64[ns]").astype(np.int64).to_numpy()
-        )
+        v_bar_times_int = v_bar.astype("datetime64[ns]").astype(np.int64).to_numpy()
 
         # 5. その他パラメータ配列
         target_vals = target.to_numpy(dtype=np.float64)
@@ -337,12 +333,8 @@ class TripleBarrier:
         else:
             # フォールバック (リターンベース)
             if self.pt > 0:
-                out.loc[out["ret"] > out["trgt"] * self.pt * 0.999, "bin"] = (
-                    1.0
-                )
+                out.loc[out["ret"] > out["trgt"] * self.pt * 0.999, "bin"] = 1.0
             if not binary_label and self.sl > 0:
-                out.loc[out["ret"] < -out["trgt"] * self.sl * 0.999, "bin"] = (
-                    -1.0
-                )
+                out.loc[out["ret"] < -out["trgt"] * self.sl * 0.999, "bin"] = -1.0
 
         return out

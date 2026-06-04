@@ -80,7 +80,6 @@ class TestBacktestOrchestrationService:
                 "app.services.backtest.orchestration.backtest_orchestration_service.GeneratedStrategyRepository"
             ) as MockStrategyRepo,
         ):
-
             mock_backtest_repo = MockBacktestRepo.return_value
             mock_strategy_repo = MockStrategyRepo.return_value
 
@@ -109,7 +108,6 @@ class TestBacktestOrchestrationService:
                 "app.services.backtest.orchestration.backtest_orchestration_service.GeneratedStrategyRepository"
             ) as MockStrategyRepo,
         ):
-
             MockBacktestRepo.return_value.delete_all_backtest_results.return_value = 10
             MockGARepo.return_value.delete_all_experiments.return_value = 5
             MockStrategyRepo.return_value.delete_all_strategies.return_value = 20

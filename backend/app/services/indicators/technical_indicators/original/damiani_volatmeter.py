@@ -14,9 +14,7 @@ from ._window_helpers import _window_mean, _window_mean_and_std
 
 
 @njit(cache=True)
-def _njit_damiani_volatmeter_loop(
-    high, low, close, vis_atr, vis_std, sed_atr, sed_std
-):
+def _njit_damiani_volatmeter_loop(high, low, close, vis_atr, vis_std, sed_atr, sed_std):
     n = len(close)
     result = np.full(n, np.nan, dtype=np.float64)
     min_len = max(sed_atr, sed_std)
@@ -94,9 +92,7 @@ def damiani_volatmeter(
         sed_atr,
         sed_std,
     )
-    osc = pd.Series(
-        result, index=close.index, name=f"DAMIANI_{vis_atr}_{sed_atr}"
-    )
+    osc = pd.Series(result, index=close.index, name=f"DAMIANI_{vis_atr}_{sed_atr}")
     thr = pd.Series(
         np.full(len(close), threshold),
         index=close.index,

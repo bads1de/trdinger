@@ -4,10 +4,11 @@ multi-fidelity 評価の補助ユーティリティ。
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from copy import deepcopy
 from datetime import timedelta
 from math import ceil
-from typing import Any, Dict, Mapping, Optional, cast
+from typing import Any, cast
 
 import pandas as pd
 
@@ -85,14 +86,14 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
             getattr(coarse.evaluation_config, "multi_fidelity_oos_ratio", 0.2),
             0.2,
         )
-    setattr(coarse, "_evaluation_fidelity", "coarse")
+    coarse._evaluation_fidelity = "coarse"
     return coarse
 
 
 def adjust_backtest_config_for_fidelity(
-    backtest_config: Dict[str, Any],
+    backtest_config: dict[str, Any],
     config: object,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     評価精度設定に基づいて、バックテストの実行範囲（期間）を調整します。
 
@@ -139,17 +140,15 @@ def adjust_backtest_config_for_fidelity(
 
     coarse_start = end_ts - coarse_duration
     adjusted["start_date"] = _format_timestamp_like_input(
-        cast(Optional[pd.Timestamp], coarse_start), start_date
+        cast(pd.Timestamp | None, coarse_start), start_date
     )
     adjusted["end_date"] = _format_timestamp_like_input(
-        cast(Optional[pd.Timestamp], end_ts), end_date
+        cast(pd.Timestamp | None, end_ts), end_date
     )
     return adjusted
 
 
-def get_multi_fidelity_candidate_limit(
-    population_size: int, config: object
-) -> int:
+def get_multi_fidelity_candidate_limit(population_size: int, config: object) -> int:
     """フル評価へ昇格する候補数を返す。"""
     if population_size <= 0:
         return 0
@@ -174,9 +173,7 @@ def get_multi_fidelity_candidate_limit(
     )
 
 
-def _format_timestamp_like_input(
-    value: Optional[pd.Timestamp], source: object
-) -> str:
+def _format_timestamp_like_input(value: pd.Timestamp | None, source: object) -> str:
     """入力形式に寄せて日時を書き戻す。"""
     if value is None:
         return ""

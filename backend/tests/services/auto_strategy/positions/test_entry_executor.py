@@ -2,7 +2,6 @@
 EntryExecutorのユニットテスト
 """
 
-
 import pytest
 
 from app.services.auto_strategy.config.constants import EntryType

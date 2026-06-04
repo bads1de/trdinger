@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional, Protocol, Tuple, TypeVar
+from typing import Protocol, TypeVar
 
 from app.types import SerializableValue
 
@@ -17,7 +17,7 @@ T = TypeVar("T")
 class Cloneable(Protocol):
     """Protocol for objects that can be cloned."""
 
-    def clone(self) -> "Cloneable":
+    def clone(self) -> Cloneable:
         """Return a copy of this object."""
         ...
 
@@ -27,11 +27,11 @@ class GeneticUtils:
 
     @staticmethod
     def create_child_metadata(
-        parent1_metadata: Dict[str, SerializableValue],
-        parent2_metadata: Dict[str, SerializableValue],
+        parent1_metadata: dict[str, SerializableValue],
+        parent2_metadata: dict[str, SerializableValue],
         parent1_id: str,
         parent2_id: str,
-    ) -> Tuple[Dict[str, SerializableValue], Dict[str, SerializableValue]]:
+    ) -> tuple[dict[str, SerializableValue], dict[str, SerializableValue]]:
         """
         交叉子のメタデータを生成
 
@@ -76,7 +76,7 @@ class GeneticUtils:
         )
 
     @staticmethod
-    def _extract_gene_params(gene) -> Dict[str, object]:
+    def _extract_gene_params(gene) -> dict[str, object]:
         """
         遺伝子オブジェクトからパラメータを抽出（slots/dict両対応）
 
@@ -111,7 +111,7 @@ class GeneticUtils:
         return params
 
     @staticmethod
-    def extract_gene_params(gene) -> Dict[str, object]:
+    def extract_gene_params(gene) -> dict[str, object]:
         """遺伝子オブジェクトから公開フィールドを抽出"""
         return GeneticUtils._extract_gene_params(gene)
 
@@ -142,10 +142,10 @@ class GeneticUtils:
 
     @staticmethod
     def crossover_optional_gene(
-        parent1_gene: Optional[T],
-        parent2_gene: Optional[T],
+        parent1_gene: T | None,
+        parent2_gene: T | None,
         gene_class: type,
-    ) -> Tuple[Optional[T], Optional[T]]:
+    ) -> tuple[T | None, T | None]:
         """
         オプショナルな遺伝子の交叉を実行する汎用ヘルパー。
 
@@ -171,8 +171,8 @@ class GeneticUtils:
 
     @staticmethod
     def copy_conditions(
-        conditions: List[SerializableValue | object],
-    ) -> List[SerializableValue | object]:
+        conditions: list[SerializableValue | object],
+    ) -> list[SerializableValue | object]:
         """
         条件リストをスマートコピーする。
 
@@ -186,8 +186,8 @@ class GeneticUtils:
 
     @staticmethod
     def copy_stateful_conditions(
-        conditions: List[Cloneable],
-    ) -> List[Cloneable]:
+        conditions: list[Cloneable],
+    ) -> list[Cloneable]:
         """
         ステートフル条件をクローンする。
 
@@ -200,7 +200,7 @@ class GeneticUtils:
         return [c.clone() for c in conditions]
 
     @staticmethod
-    def copy_tool_genes(tools: List[Cloneable]) -> List[Cloneable]:
+    def copy_tool_genes(tools: list[Cloneable]) -> list[Cloneable]:
         """
         ツール遺伝子リストをクローンする。
 
@@ -217,9 +217,9 @@ class GeneticUtils:
         parent1_gene,
         parent2_gene,
         gene_class,
-        numeric_fields: Optional[List[str]] = None,
-        enum_fields: Optional[List[str]] = None,
-        choice_fields: Optional[List[str]] = None,
+        numeric_fields: list[str] | None = None,
+        enum_fields: list[str] | None = None,
+        choice_fields: list[str] | None = None,
     ):
         """
         複数種類のフィールドを持つ汎用遺伝子の交叉を実行
@@ -270,9 +270,7 @@ class GeneticUtils:
                 # 数値フィールドは平均化
                 val1 = parent1_dict[field]
                 val2 = parent2_dict[field]
-                if isinstance(val1, (int, float)) and isinstance(
-                    val2, (int, float)
-                ):
+                if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
                     child1_params[field] = (val1 + val2) / 2
                     child2_params[field] = (val1 + val2) / 2
                 else:
@@ -298,9 +296,9 @@ class GeneticUtils:
         gene,
         gene_class,
         mutation_rate: float = 0.1,
-        numeric_fields: Optional[List[str]] = None,
-        enum_fields: Optional[List[str]] = None,
-        numeric_ranges: Optional[Dict[str, Tuple[float, float]]] = None,
+        numeric_fields: list[str] | None = None,
+        enum_fields: list[str] | None = None,
+        numeric_ranges: dict[str, tuple[float, float]] | None = None,
     ):
         """
         汎用遺伝子の突然変異を実行

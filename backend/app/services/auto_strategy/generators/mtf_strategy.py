@@ -8,7 +8,7 @@
 import copy
 import logging
 import random
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
@@ -37,10 +37,12 @@ class MTFStrategy:
     def __init__(self, condition_generator: Any) -> None:
         self.gen = condition_generator
 
-    def generate_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
+    def generate_conditions(
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+        list[Condition],
     ]:
         """
         上位足のトレンドと下位足のトリガーを組み合わせたMTF条件を生成
@@ -75,9 +77,7 @@ class MTFStrategy:
         for trend_ind in mtf_trends:
             t_name = self.gen._get_indicator_name(trend_ind)
             t_long = self.gen._create_side_condition(trend_ind, "long", t_name)
-            t_short = self.gen._create_side_condition(
-                trend_ind, "short", t_name
-            )
+            t_short = self.gen._create_side_condition(trend_ind, "short", t_name)
 
             for trig_ind in targets:
                 if (
@@ -87,16 +87,10 @@ class MTFStrategy:
                     continue
 
                 m_name = self.gen._get_indicator_name(trig_ind)
-                m_long = self.gen._create_side_condition(
-                    trig_ind, "long", m_name
-                )
-                m_short = self.gen._create_side_condition(
-                    trig_ind, "short", m_name
-                )
+                m_long = self.gen._create_side_condition(trig_ind, "long", m_name)
+                m_short = self.gen._create_side_condition(trig_ind, "short", m_name)
 
-                build_and_groups = getattr(
-                    type(self.gen), "_build_and_groups", None
-                )
+                build_and_groups = getattr(type(self.gen), "_build_and_groups", None)
                 if build_and_groups is None:
                     long_group = ConditionGroup(
                         operator="AND",
@@ -131,8 +125,8 @@ class MTFStrategy:
         return random.choice(res) if isinstance(res, list) else res
 
     def _create_mtf_indicators(
-        self, indicators: List[IndicatorGene], timeframe: str
-    ) -> List[IndicatorGene]:
+        self, indicators: list[IndicatorGene], timeframe: str
+    ) -> list[IndicatorGene]:
         """指標のディープコピーを作成し、timeframeを設定"""
         res = []
         for ind in indicators:

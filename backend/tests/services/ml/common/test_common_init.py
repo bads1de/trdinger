@@ -108,7 +108,7 @@ class TestMLCommonInitExports:
         """MLConfigManagerが遅延ロードされる"""
         from app.services.ml.common.config import MLConfigManager
 
-        manager = getattr(common_package, "MLConfigManager")
+        manager = common_package.MLConfigManager
 
         assert manager is MLConfigManager
 
@@ -116,7 +116,7 @@ class TestMLCommonInitExports:
         """ml_config_managerインスタンスが遅延ロードされる"""
         from app.services.ml.common.config import ml_config_manager
 
-        manager = getattr(common_package, "ml_config_manager")
+        manager = common_package.ml_config_manager
 
         assert manager is ml_config_manager
 
@@ -124,7 +124,7 @@ class TestMLCommonInitExports:
         """get_default_ensemble_configが遅延ロードされる"""
         from app.services.ml.common.config import get_default_ensemble_config
 
-        func = getattr(common_package, "get_default_ensemble_config")
+        func = common_package.get_default_ensemble_config
 
         assert func is get_default_ensemble_config
 
@@ -132,7 +132,7 @@ class TestMLCommonInitExports:
         """get_default_single_model_configが遅延ロードされる"""
         from app.services.ml.common.config import get_default_single_model_config
 
-        func = getattr(common_package, "get_default_single_model_config")
+        func = common_package.get_default_single_model_config
 
         assert func is get_default_single_model_config
 

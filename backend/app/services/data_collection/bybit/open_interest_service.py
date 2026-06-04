@@ -6,7 +6,7 @@ Bybitオープンインタレストサービス
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import (
@@ -41,9 +41,9 @@ class BybitOpenInterestService(BybitService):
         self,
         symbol: str,
         limit: int = 100,
-        since: Optional[int] = None,
+        since: int | None = None,
         interval: str = "1h",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         オープンインタレスト履歴を取得
 
@@ -76,7 +76,7 @@ class BybitOpenInterestService(BybitService):
     async def fetch_incremental_open_interest_data(
         self,
         symbol: str,
-        repository: Optional[OpenInterestRepository] = None,
+        repository: OpenInterestRepository | None = None,
         interval: str = "1h",
     ) -> dict:
         """
@@ -102,8 +102,8 @@ class BybitOpenInterestService(BybitService):
     async def fetch_and_save_open_interest_data(
         self,
         symbol: str,
-        limit: Optional[int] = None,
-        repository: Optional[OpenInterestRepository] = None,
+        limit: int | None = None,
+        repository: OpenInterestRepository | None = None,
         fetch_all: bool = False,
         interval: str = "1h",
     ) -> dict:

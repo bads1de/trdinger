@@ -110,39 +110,54 @@ test = [
     "pyright",
 ]
 dev = [
-    "black",
-    "isort",
-    "flake8",
     "mypy",
     "pyright",
     "ruff",
-    "Flake8-pyproject",
 ]
 
 
-[tool.black]
+[tool.ruff]
+target-version = "py310"
 line-length = 88
-target-version = ['py310']
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "build",
+    "dist",
+    ".eggs",
+    "*.egg-info",
+    ".mypy_cache",
+    ".tox",
+]
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-known_first_party = ["app", "database", "backtest", "scripts"]
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501", # line-length is handled by ruff format
+    "B904", # Within an except clause, raise exceptions with raise ... from err
+    "B017", # Do not assert blind exception: Exception
+    "B905", # zip() without an explicit strict= parameter
+    "B008", # Do not perform function call Depends in argument defaults (FastAPI)
+    "B024", # Abstract base class without abstract methods
+    "B027", # Abstract base class empty method has no abstract decorator
+    "UP007", # Use X | Y for type annotations
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "database", "backtest", "scripts"]
 
 [tool.setuptools]
 packages = ["app"]
@@ -179,22 +194,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
 
-[tool.flake8]
-max-line-length = 100
-extend-ignore = ["E203", "W503", "E402", "E501"]
-exclude = [
-    ".git",
-    "__pycache__",
-    ".venv",
-    "venv",
-    "build",
-    "dist",
-    ".eggs",
-    "*.egg-info",
-    ".mypy_cache",
-    ".tox",
-]
-per-file-ignores = "scripts/*:E402"
+
 
 [tool.pyright]
 pythonVersion = "3.10"

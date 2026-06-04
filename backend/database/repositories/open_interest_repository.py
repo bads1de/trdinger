@@ -4,7 +4,6 @@
 
 import logging
 from datetime import datetime
-from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -21,7 +20,7 @@ class OpenInterestRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, OpenInterestData)
 
-    def insert_open_interest_data(self, open_interest_records: List[dict]) -> int:
+    def insert_open_interest_data(self, open_interest_records: list[dict]) -> int:
         """
         オープンインタレストデータを一括挿入
 
@@ -52,10 +51,10 @@ class OpenInterestRepository(BaseRepository):
     def get_open_interest_data(
         self,
         symbol: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> List[OpenInterestData]:
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[OpenInterestData]:
         """
         オープンインタレストデータを取得
 
@@ -79,7 +78,7 @@ class OpenInterestRepository(BaseRepository):
             limit=limit,
         )
 
-    def get_latest_open_interest_timestamp(self, symbol: str) -> Optional[datetime]:
+    def get_latest_open_interest_timestamp(self, symbol: str) -> datetime | None:
         """
         指定されたシンボルの最新オープンインタレストタイムスタンプを取得
 
@@ -91,7 +90,7 @@ class OpenInterestRepository(BaseRepository):
         """
         return super().get_latest_timestamp("data_timestamp", {"symbol": symbol})
 
-    def get_oldest_open_interest_timestamp(self, symbol: str) -> Optional[datetime]:
+    def get_oldest_open_interest_timestamp(self, symbol: str) -> datetime | None:
         """
         指定されたシンボルの最古オープンインタレストタイムスタンプを取得
 
@@ -131,6 +130,3 @@ class OpenInterestRepository(BaseRepository):
             f"シンボル '{symbol}' のオープンインタレストデータを削除しました: {deleted_count}件"
         )
         return deleted_count
-
-
-

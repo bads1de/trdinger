@@ -39,7 +39,7 @@ pandas-ta の overlap カテゴリに対応。
 - SWMA (Symmetric Weighted Moving Average)
 """
 
-from typing import Any, Dict, Tuple, cast
+from typing import Any, cast
 
 import pandas as pd
 import pandas_ta_classic as ta
@@ -72,9 +72,7 @@ class OverlapIndicators:
 
         return cast(
             pd.Series,
-            run_series_indicator(
-                data, length, lambda: ta.sma(data, length=length)
-            ),
+            run_series_indicator(data, length, lambda: ta.sma(data, length=length)),
         )
 
     @staticmethod
@@ -109,9 +107,7 @@ class OverlapIndicators:
 
         return cast(
             pd.Series,
-            run_series_indicator(
-                data, length, lambda: ta.wma(data, length=length)
-            ),
+            run_series_indicator(data, length, lambda: ta.wma(data, length=length)),
         )
 
     @staticmethod
@@ -143,9 +139,7 @@ class OverlapIndicators:
             run_series_indicator(
                 data,
                 length,
-                lambda: ta.zlma(
-                    data, length=length, mamode=mamode, offset=offset
-                ),
+                lambda: ta.zlma(data, length=length, mamode=mamode, offset=offset),
             ),
         )
 
@@ -229,9 +223,7 @@ class OverlapIndicators:
         """カウフマン適応移動平均"""
         return cast(
             pd.Series,
-            run_series_indicator(
-                data, length, lambda: ta.kama(data, length=length)
-            ),
+            run_series_indicator(data, length, lambda: ta.kama(data, length=length)),
         )
 
     @staticmethod
@@ -240,9 +232,7 @@ class OverlapIndicators:
         """Hull移動平均"""
         return cast(
             pd.Series,
-            run_series_indicator(
-                data, length, lambda: ta.hma(data, length=length)
-            ),
+            run_series_indicator(data, length, lambda: ta.hma(data, length=length)),
         )
 
     @staticmethod
@@ -325,9 +315,7 @@ class OverlapIndicators:
         """Wilde's Moving Average"""
         return cast(
             pd.Series,
-            run_series_indicator(
-                data, length, lambda: ta.rma(data, length=length)
-            ),
+            run_series_indicator(data, length, lambda: ta.rma(data, length=length)),
         )
 
     @staticmethod
@@ -339,7 +327,7 @@ class OverlapIndicators:
         period: int = 7,
         multiplier: float = 3.0,
         **kwargs,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """
         Supertrend インジケーター
 
@@ -408,7 +396,7 @@ class OverlapIndicators:
         tenkan_period: int = 9,
         kijun_period: int = 26,
         senkou_span_b_period: int = 52,
-    ) -> Dict[str, pd.Series]:
+    ) -> dict[str, pd.Series]:
         """Ichimoku Cloud (一目均衡表)
 
         Args:
@@ -430,7 +418,7 @@ class OverlapIndicators:
             max_period,
         )
 
-        def nan_result() -> Dict[str, pd.Series]:
+        def nan_result() -> dict[str, pd.Series]:
             """
             一目均衡表の計算に失敗した場合、またはデータ不足の場合に NaN の結果を返します。
             """
@@ -491,7 +479,7 @@ class OverlapIndicators:
         low_length: int = 13,
         mamode: str = "sma",
         offset: int = 0,
-    ) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Gann HiLo"""
         result = cast(
             tuple[pd.Series, pd.Series, pd.Series],
@@ -571,9 +559,7 @@ class OverlapIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def midprice(
-        high: pd.Series, low: pd.Series, length: int = 2
-    ) -> pd.Series:
+    def midprice(high: pd.Series, low: pd.Series, length: int = 2) -> pd.Series:
         """Midprice"""
         return cast(
             pd.Series,
@@ -638,17 +624,13 @@ class OverlapIndicators:
             run_series_indicator(
                 close,
                 length,
-                lambda: ta.jma(
-                    close=close, length=length, phase=phase, offset=offset
-                ),
+                lambda: ta.jma(close=close, length=length, phase=phase, offset=offset),
             ),
         )
 
     @staticmethod
     @handle_pandas_ta_errors
-    def fwma(
-        close: pd.Series, length: int = 10, asc: bool = True
-    ) -> pd.Series:
+    def fwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
         """Fibonacci Weighted Moving Average"""
         return cast(
             pd.Series,
@@ -661,9 +643,7 @@ class OverlapIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def pwma(
-        close: pd.Series, length: int = 10, asc: bool = True
-    ) -> pd.Series:
+    def pwma(close: pd.Series, length: int = 10, asc: bool = True) -> pd.Series:
         """Pascal Weighted Moving Average"""
         return cast(
             pd.Series,

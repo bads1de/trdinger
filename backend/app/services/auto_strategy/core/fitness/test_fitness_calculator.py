@@ -2,7 +2,6 @@
 フィットネス計算器のテスト
 """
 
-
 import pytest
 
 from app.services.auto_strategy.config.ga.ga_config import GAConfig
@@ -72,9 +71,7 @@ def test_calculate_fitness_zero_trades(fitness_calculator, sample_config):
         "trade_history": [],
     }
 
-    fitness = fitness_calculator.calculate_fitness(
-        backtest_result, sample_config
-    )
+    fitness = fitness_calculator.calculate_fitness(backtest_result, sample_config)
 
     # 取引回数が0の場合はペナルティ値を返す
     assert fitness == sample_config.zero_trades_penalty
@@ -125,13 +122,9 @@ def test_calculate_fitness_with_trade_penalty(
     assert fitness >= 0.0
 
 
-def test_extract_performance_metrics(
-    fitness_calculator, sample_backtest_result
-):
+def test_extract_performance_metrics(fitness_calculator, sample_backtest_result):
     """パフォーマンス指標の抽出をテスト"""
-    metrics = fitness_calculator.extract_performance_metrics(
-        sample_backtest_result
-    )
+    metrics = fitness_calculator.extract_performance_metrics(sample_backtest_result)
 
     # 必要な指標が含まれていることを確認
     assert "total_return" in metrics
@@ -141,31 +134,19 @@ def test_extract_performance_metrics(
     assert "total_trades" in metrics
 
 
-def test_meets_constraints(
-    fitness_calculator, sample_backtest_result, sample_config
-):
+def test_meets_constraints(fitness_calculator, sample_backtest_result, sample_config):
     """制約チェックをテスト"""
     # 正常なケース
-    assert (
-        fitness_calculator.meets_constraints(
-            sample_backtest_result, sample_config
-        )
-        == True
-    )
+    assert fitness_calculator.meets_constraints(sample_backtest_result, sample_config)
 
     # 取引回数が0の場合
     sample_backtest_result["total_trades"] = 0
-    assert (
-        fitness_calculator.meets_constraints(
-            sample_backtest_result, sample_config
-        )
-        == False
+    assert not fitness_calculator.meets_constraints(
+        sample_backtest_result, sample_config
     )
 
 
-def test_calculate_long_short_balance(
-    fitness_calculator, sample_backtest_result
-):
+def test_calculate_long_short_balance(fitness_calculator, sample_backtest_result):
     """ロング・ショートバランス計算をテスト"""
     balance_score = fitness_calculator.calculate_long_short_balance(
         sample_backtest_result

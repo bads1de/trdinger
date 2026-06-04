@@ -5,7 +5,7 @@ Open Interest履歴データの収集を担当します。
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
@@ -35,7 +35,7 @@ class OICollectionOrchestrator:
         background_tasks: BackgroundTasks,
         db: Session,
         data_validator: Any = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         OI履歴データ収集を開始（既存データを削除して全期間再取得）
 
@@ -58,13 +58,8 @@ class OICollectionOrchestrator:
             # デフォルトのバリデーション（テスト用）
             from app.config.unified_config import unified_config
 
-            normalized_symbol = unified_config.market.symbol_mapping.get(
-                symbol, symbol
-            )
-            if (
-                normalized_symbol
-                not in unified_config.market.supported_symbols
-            ):
+            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+            if normalized_symbol not in unified_config.market.supported_symbols:
                 raise ValueError(f"サポートされていないシンボル: {symbol}")
             if interval not in unified_config.market.supported_timeframes:
                 raise ValueError(f"無効な時間軸: {interval}")

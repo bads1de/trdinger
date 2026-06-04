@@ -7,7 +7,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from sklearn.metrics import (
@@ -69,10 +69,10 @@ class MetricsCalculator:
         self,
         y_true: np.ndarray,
         y_pred: np.ndarray,
-        y_proba: Optional[np.ndarray] = None,
-        class_names: Optional[List[str]] = None,
+        y_proba: np.ndarray | None = None,
+        class_names: list[str] | None = None,
         level: str = "full",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         包括的な評価指標を計算
 
@@ -104,9 +104,7 @@ class MetricsCalculator:
         if level == "basic":
             # バランス精度は重要かつ軽量なので計算
             if self.config.include_balanced_accuracy:
-                metrics.update(
-                    self._calculate_balanced_metrics(y_true, y_pred)
-                )
+                metrics.update(self._calculate_balanced_metrics(y_true, y_pred))
             return metrics
 
         # 以下はFullモードのみ実行
@@ -117,30 +115,22 @@ class MetricsCalculator:
 
         # 確率ベース指標
         if y_proba is not None:
-            metrics.update(
-                self._calculate_probability_metrics(y_true, y_proba)
-            )
+            metrics.update(self._calculate_probability_metrics(y_true, y_proba))
 
         # 混同行列
         if self.config.include_confusion_matrix:
             metrics.update(
-                self._calculate_confusion_matrix_metrics(
-                    y_true, y_pred, class_names
-                )
+                self._calculate_confusion_matrix_metrics(y_true, y_pred, class_names)
             )
 
         # 分類レポート
         if self.config.include_classification_report:
             metrics.update(
-                self._calculate_classification_report(
-                    y_true, y_pred, class_names
-                )
+                self._calculate_classification_report(y_true, y_pred, class_names)
             )
 
         # クラス別詳細指標
-        metrics.update(
-            self._calculate_per_class_metrics(y_true, y_pred, class_names)
-        )
+        metrics.update(self._calculate_per_class_metrics(y_true, y_pred, class_names))
 
         # データ分布情報
         metrics.update(self._calculate_distribution_metrics(y_true, y_pred))
@@ -152,7 +142,7 @@ class MetricsCalculator:
 
     def _calculate_basic_metrics(
         self, y_true: np.ndarray, y_pred: np.ndarray
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """基本的な精度指標を計算"""
         try:
             # 標準メトリクス
@@ -186,15 +176,13 @@ class MetricsCalculator:
 
     def _calculate_balanced_metrics(
         self, y_true: np.ndarray, y_pred: np.ndarray
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """不均衡データ対応指標を計算"""
         metrics = {}
 
         try:
             # バランス精度（分析報告書で推奨）
-            metrics["balanced_accuracy"] = balanced_accuracy_score(
-                y_true, y_pred
-            )
+            metrics["balanced_accuracy"] = balanced_accuracy_score(y_true, y_pred)
 
             # クラス重み付き精度
             sample_weight = self._calculate_class_weights(y_true)
@@ -209,7 +197,7 @@ class MetricsCalculator:
 
     def _calculate_probability_metrics(
         self, y_true: np.ndarray, y_proba: np.ndarray
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """確率ベース指標を計算"""
         metrics = {}
         try:
@@ -239,9 +227,7 @@ class MetricsCalculator:
                         for i in range(n_classes)
                         if np.sum(y_true == i) > 0
                     ]
-                    metrics["pr_auc"] = (
-                        np.mean(np.asarray(pr_aucs)) if pr_aucs else 0.0
-                    )
+                    metrics["pr_auc"] = np.mean(np.asarray(pr_aucs)) if pr_aucs else 0.0
 
             metrics["log_loss"] = log_loss(y_true, y_proba)
             if n_classes == 2:
@@ -250,9 +236,7 @@ class MetricsCalculator:
                 metrics["brier_score"] = np.mean(
                     np.asarray(
                         [
-                            brier_score_loss(
-                                (y_true == i).astype(int), y_proba[:, i]
-                            )
+                            brier_score_loss((y_true == i).astype(int), y_proba[:, i])
                             for i in range(n_classes)
                         ]
                     )
@@ -266,8 +250,8 @@ class MetricsCalculator:
         self,
         y_true: np.ndarray,
         y_pred: np.ndarray,
-        class_names: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        class_names: list[str] | None = None,
+    ) -> dict[str, Any]:
         """混同行列関連指標を計算"""
         metrics = {}
         try:
@@ -314,12 +298,8 @@ class MetricsCalculator:
                 weights = counts / (counts.sum() + eps)
                 metrics.update(
                     {
-                        "specificity": float(
-                            np.average(spec, weights=weights)
-                        ),
-                        "sensitivity": float(
-                            np.average(sens, weights=weights)
-                        ),
+                        "specificity": float(np.average(spec, weights=weights)),
+                        "sensitivity": float(np.average(sens, weights=weights)),
                         "npv": float(np.average(npv, weights=weights)),
                         "ppv": float(np.average(ppv, weights=weights)),
                     }
@@ -332,8 +312,8 @@ class MetricsCalculator:
         self,
         y_true: np.ndarray,
         y_pred: np.ndarray,
-        class_names: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        class_names: list[str] | None = None,
+    ) -> dict[str, Any]:
         """分類レポートを計算"""
         metrics = {}
 
@@ -357,8 +337,8 @@ class MetricsCalculator:
         self,
         y_true: np.ndarray,
         y_pred: np.ndarray,
-        class_names: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        class_names: list[str] | None = None,
+    ) -> dict[str, Any]:
         """クラス別詳細指標を計算"""
         try:
             # average=None の場合、各指標はクラスごとの配列として返される
@@ -392,7 +372,7 @@ class MetricsCalculator:
 
     def _calculate_distribution_metrics(
         self, y_true: np.ndarray, y_pred: np.ndarray
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """データ分布関連指標を計算"""
         metrics = {}
 
@@ -405,9 +385,7 @@ class MetricsCalculator:
             # 予測ラベル分布
             pred_counts = np.bincount(y_pred, minlength=len(true_counts))
             pred_distribution = pred_counts / len(y_pred)
-            metrics["predicted_label_distribution"] = (
-                pred_distribution.tolist()
-            )
+            metrics["predicted_label_distribution"] = pred_distribution.tolist()
 
             # 不均衡比率
             max_class_ratio = np.max(true_distribution) / np.min(
@@ -445,7 +423,7 @@ class MetricsCalculator:
         self,
         y_true: np.ndarray,
         y_pred: np.ndarray,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """future_log_realized_vol 回帰用の評価指標を計算。"""
         y_true = np.asarray(y_true, dtype=float)
         y_pred = np.asarray(y_pred, dtype=float)
@@ -469,7 +447,7 @@ class MetricsCalculator:
         }
 
 
-def get_default_metrics() -> Dict[str, float]:
+def get_default_metrics() -> dict[str, float]:
     """デフォルトの評価メトリクス辞書を返す（全て0.0初期化）"""
     keys = [
         "accuracy",
@@ -496,7 +474,7 @@ def get_default_metrics() -> Dict[str, float]:
         "val_loss",
         "training_time",
     ]
-    return {k: 0.0 for k in keys}
+    return dict.fromkeys(keys, 0.0)
 
 
 # グローバルインスタンス

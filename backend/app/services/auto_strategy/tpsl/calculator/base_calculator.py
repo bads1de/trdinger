@@ -6,7 +6,7 @@ TP/SL計算器の基底クラスを定義します。
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ...genes import TPSLGene
 from ...genes.tpsl import TPSLResult
@@ -29,8 +29,8 @@ class BaseTPSLCalculator(ABC):
     def calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene] = None,
-        market_data: Optional[Dict[str, Any]] = None,
+        tpsl_gene: TPSLGene | None = None,
+        market_data: dict[str, Any] | None = None,
         position_direction: float = 1.0,
         **kwargs,
     ) -> TPSLResult:
@@ -62,11 +62,11 @@ class BaseTPSLCalculator(ABC):
     def _do_calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]],
+        tpsl_gene: TPSLGene | None,
+        market_data: dict[str, Any] | None,
         position_direction: float,
         **kwargs,
-    ) -> Tuple[float, float, float, Dict[str, Any]]:
+    ) -> tuple[float, float, float, dict[str, Any]]:
         """固有の計算ロジック（(sl_pct, tp_pct, confidence, metrics) を返す）"""
 
     def _create_fallback_result(self) -> TPSLResult:
@@ -81,13 +81,13 @@ class BaseTPSLCalculator(ABC):
     def _make_prices(
         self,
         current_price: float,
-        stop_loss_pct: Optional[float],
-        take_profit_pct: Optional[float],
+        stop_loss_pct: float | None,
+        take_profit_pct: float | None,
         position_direction: float,
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """割合からSL/TP価格を生成（共通ユーティリティ）"""
-        sl_price: Optional[float] = None
-        tp_price: Optional[float] = None
+        sl_price: float | None = None
+        tp_price: float | None = None
 
         if stop_loss_pct is not None:
             if stop_loss_pct == 0:
@@ -101,9 +101,7 @@ class BaseTPSLCalculator(ABC):
             if take_profit_pct == 0:
                 tp_price = current_price
             else:
-                tp_price = current_price * (
-                    1 + (position_direction * take_profit_pct)
-                )
+                tp_price = current_price * (1 + (position_direction * take_profit_pct))
 
         return sl_price, tp_price
 
@@ -112,8 +110,8 @@ class BaseTPSLCalculator(ABC):
         stop_loss_pct: float,
         take_profit_pct: float,
         confidence_score: float = 0.0,
-        expected_performance: Optional[Dict[str, Any]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        expected_performance: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> TPSLResult:
         """TPSLResultオブジェクトを作成"""
         return TPSLResult(

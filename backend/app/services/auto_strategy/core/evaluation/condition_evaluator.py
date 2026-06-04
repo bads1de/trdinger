@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, List, Union, cast
+from collections.abc import Callable
+from typing import Any, Union, cast
 
 import numpy as np
 import pandas as pd
@@ -40,20 +41,18 @@ class ConditionEvaluator:
         import operator as op_module
 
         # 演算子関数のキャッシュ
-        self._ops: Dict[str, Callable[[Any, Any], Any]] = {
+        self._ops: dict[str, Callable[[Any, Any], Any]] = {
             ">": op_module.gt,
             "<": op_module.lt,
             ">=": op_module.ge,
             "<=": op_module.le,
             "==": lambda x, y: np.isclose(x, y, atol=FLOAT_TOLERANCE),
-            "!=": lambda x, y: np.logical_not(
-                np.isclose(x, y, atol=FLOAT_TOLERANCE)
-            ),
+            "!=": lambda x, y: np.logical_not(np.isclose(x, y, atol=FLOAT_TOLERANCE)),
             # CROSS_UP/DOWN は特別扱い
         }
 
         # 属性アクセサのキャッシュ: "sma_20" -> operator.attrgetter("sma_20")
-        self._accessor_cache: Dict[str, Callable[[Any], Any]] = {}
+        self._accessor_cache: dict[str, Callable[[Any], Any]] = {}
 
         # OHLCV名のマッピング
         self._ohlcv_map = {
@@ -91,12 +90,10 @@ class ConditionEvaluator:
             return str(val) if val is not None else ""
         return str(operand)
 
-    @safe_operation(
-        context="条件評価（AND）", is_api_call=False, default_return=False
-    )
+    @safe_operation(context="条件評価（AND）", is_api_call=False, default_return=False)
     def evaluate_conditions(
         self,
-        conditions: List[Union[Condition, ConditionGroup]],
+        conditions: list[Condition | ConditionGroup],
         strategy_instance,
     ) -> bool:
         """
@@ -114,9 +111,9 @@ class ConditionEvaluator:
 
     def calculate_conditions_vectorized(
         self,
-        conditions: List[Union[Condition, ConditionGroup]],
+        conditions: list[Condition | ConditionGroup],
         strategy_instance,
-    ) -> Union[pd.Series, np.ndarray, None]:
+    ) -> pd.Series | np.ndarray | None:
         """
         条件リストの全体評価をベクトル化して実行（論理積：AND）
         """
@@ -132,9 +129,7 @@ class ConditionEvaluator:
         final_mask = None
 
         for cond in conditions:
-            result = self._evaluate_recursive_item_vectorized(
-                cond, strategy_instance
-            )
+            result = self._evaluate_recursive_item_vectorized(cond, strategy_instance)
             if result is None:
                 return None  # ベクトル化不可能
             if not self._is_vectorized_result(result):
@@ -151,32 +146,26 @@ class ConditionEvaluator:
         return final_mask
 
     def _evaluate_recursive_item_vectorized(
-        self, item: Union[Condition, ConditionGroup], strategy_instance
-    ) -> Union[pd.Series, np.ndarray, None]:
+        self, item: Condition | ConditionGroup, strategy_instance
+    ) -> pd.Series | np.ndarray | None:
         """再帰的なベクトル化評価"""
         # 型チェックの順序を頻度順に最適化（Conditionの方が多いと仮定）
         if isinstance(item, Condition):
-            return self.evaluate_single_condition_vectorized(
-                item, strategy_instance
-            )
+            return self.evaluate_single_condition_vectorized(item, strategy_instance)
         elif isinstance(item, ConditionGroup):
-            return self._evaluate_condition_group_vectorized(
-                item, strategy_instance
-            )
+            return self._evaluate_condition_group_vectorized(item, strategy_instance)
         return None
 
     def _evaluate_condition_group_vectorized(
         self, group: ConditionGroup, strategy_instance
-    ) -> Union[pd.Series, np.ndarray, None]:
+    ) -> pd.Series | np.ndarray | None:
         """条件グループのベクトル化評価"""
         if not group or group.is_empty():
             return None
 
         results = []
         for c in group.conditions:
-            res = self._evaluate_recursive_item_vectorized(
-                c, strategy_instance
-            )
+            res = self._evaluate_recursive_item_vectorized(c, strategy_instance)
             if res is None:
                 return None
             results.append(res)
@@ -200,7 +189,7 @@ class ConditionEvaluator:
 
     def evaluate_single_condition_vectorized(
         self, condition: Condition, strategy_instance
-    ) -> Union[pd.Series, np.ndarray, None]:
+    ) -> pd.Series | np.ndarray | None:
         """単一条件のベクトル化評価"""
         try:
             left_val = self.get_condition_vector(
@@ -256,9 +245,9 @@ class ConditionEvaluator:
 
     def get_condition_vector(
         self,
-        operand: Union[Dict[str, Any], str, int, float],
+        operand: dict[str, Any] | str | int | float,
         strategy_instance,
-    ) -> Union[pd.Series, np.ndarray, float, None]:
+    ) -> pd.Series | np.ndarray | float | None:
         """オペランドからベクトル（またはスカラー）を取得"""
         # 1. スカラー (頻出パス)
         if isinstance(operand, (int, float, np.number)):
@@ -293,7 +282,7 @@ class ConditionEvaluator:
 
     def _get_ohlcv_vector(
         self, operand: str, strategy_instance
-    ) -> Union[pd.Series, np.ndarray, None]:
+    ) -> pd.Series | np.ndarray | None:
         """OHLCVの全データを取得"""
         # 小文字変換のコスト削減のため、operandが既に小文字であることを期待したいが
         # 安全のため小文字化。ただし頻出する "close" 等はチェック
@@ -322,7 +311,7 @@ class ConditionEvaluator:
         return None
 
     def _evaluate_recursive_item(
-        self, item: Union[Condition, ConditionGroup], strategy_instance
+        self, item: Condition | ConditionGroup, strategy_instance
     ) -> bool:
         """再帰的に評価"""
         # 型チェックの順序最適化
@@ -364,12 +353,8 @@ class ConditionEvaluator:
         最末端の単一条件を評価（最適化版）
         """
         # 値の取得
-        left_val = self.get_condition_value(
-            condition.left_operand, strategy_instance
-        )
-        right_val = self.get_condition_value(
-            condition.right_operand, strategy_instance
-        )
+        left_val = self.get_condition_value(condition.left_operand, strategy_instance)
+        right_val = self.get_condition_value(condition.right_operand, strategy_instance)
 
         # NaNチェック (インライン化)
         # np.isnanはオーバーヘッドがあるため、まずは単純な数値比較でフィルタ
@@ -384,9 +369,7 @@ class ConditionEvaluator:
             try:
                 return bool(func(left_val, right_val))
             except Exception as e:
-                logger.debug(
-                    "条件評価に失敗しました (operator: %s): %s", op, e
-                )
+                logger.debug("条件評価に失敗しました (operator: %s): %s", op, e)
                 # 比較不能な場合（NaNなど）
                 return False
 
@@ -442,9 +425,7 @@ class ConditionEvaluator:
                 # pandas Series / DataFrame
                 if hasattr(val, "iloc"):
                     if len(val) >= PREVIOUS_VALUE_INDEX:
-                        return float(
-                        val.iloc[PREVIOUS_VALUE_ILOC_INDEX]
-                    )  # type: ignore[reportAttributeAccessIssue]
+                        return float(val.iloc[PREVIOUS_VALUE_ILOC_INDEX])  # type: ignore[reportAttributeAccessIssue]
                 # numpy array / list
                 elif hasattr(val, "__getitem__"):
                     # 0次元配列（スカラー）の場合は len() がエラーになるためチェック
@@ -490,7 +471,7 @@ class ConditionEvaluator:
 
     def get_condition_value(
         self,
-        operand: Union[Dict[str, Any], str, int, float],
+        operand: dict[str, Any] | str | int | float,
         strategy_instance,
     ) -> float:
         """
@@ -520,9 +501,7 @@ class ConditionEvaluator:
                 except (TypeError, KeyError, IndexError):
                     # PandasのRangeIndexなどで[-1]がキーエラーになる場合のフォールバック
                     if hasattr(obj, "iloc"):
-                        return float(
-                        obj.iloc[LAST_VALUE_INDEX]
-                    )  # type: ignore[reportAttributeAccessIssue]
+                        return float(obj.iloc[LAST_VALUE_INDEX])  # type: ignore[reportAttributeAccessIssue]
                     raise
 
             try:
@@ -568,9 +547,7 @@ class ConditionEvaluator:
             # 成功したらアクセサをキャッシュ
             import operator
 
-            self._accessor_cache[operand_str] = operator.attrgetter(
-                operand_str
-            )
+            self._accessor_cache[operand_str] = operator.attrgetter(operand_str)
             return self._get_final_value(val)
         except AttributeError:
             pass

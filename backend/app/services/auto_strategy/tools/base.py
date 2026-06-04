@@ -8,7 +8,7 @@ import random
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass, field
-from typing import Any, ClassVar, Dict, Optional
+from typing import Any, ClassVar
 
 import pandas as pd
 
@@ -23,7 +23,7 @@ class ToolDefinition:
 
     name: str
     description: str = ""
-    default_params: Dict[str, Any] = field(default_factory=dict)
+    default_params: dict[str, Any] = field(default_factory=dict)
     priority: str = "optional"  # essential, optional, disabled
 
 
@@ -36,7 +36,7 @@ class ToolContext:
     """
 
     # 現在のバーのタイムスタンプ
-    timestamp: Optional[pd.Timestamp] = None
+    timestamp: pd.Timestamp | None = None
 
     # 現在の価格データ
     current_price: float = 0.0
@@ -45,7 +45,7 @@ class ToolContext:
     current_volume: float = 0.0
 
     # 追加の市場データ（OI, FR など）
-    extra_data: Dict[str, Any] = field(default_factory=dict)
+    extra_data: dict[str, Any] = field(default_factory=dict)
 
 
 class BaseTool(ABC):
@@ -55,15 +55,13 @@ class BaseTool(ABC):
     すべてのツールはこのクラスを継承し、共通インターフェースを実装します。
     """
 
-    tool_definition: ClassVar[Optional[ToolDefinition]] = None
+    tool_definition: ClassVar[ToolDefinition | None] = None
 
     @classmethod
     def _get_tool_definition(cls) -> ToolDefinition:
         definition = cls.tool_definition
         if definition is None:
-            raise NotImplementedError(
-                f"{cls.__name__} must define tool_definition"
-            )
+            raise NotImplementedError(f"{cls.__name__} must define tool_definition")
         return definition
 
     @property
@@ -92,9 +90,7 @@ class BaseTool(ABC):
         return self.definition.description
 
     @abstractmethod
-    def should_skip_entry(
-        self, context: ToolContext, params: Dict[str, Any]
-    ) -> bool:
+    def should_skip_entry(self, context: ToolContext, params: dict[str, Any]) -> bool:
         """
         エントリーをスキップすべきか判定
 
@@ -108,7 +104,7 @@ class BaseTool(ABC):
         """
         pass
 
-    def get_default_params(self) -> Dict[str, Any]:
+    def get_default_params(self) -> dict[str, Any]:
         """
         デフォルトパラメータを取得
 
@@ -117,7 +113,7 @@ class BaseTool(ABC):
         """
         return deepcopy(self.definition.default_params)
 
-    def validate_params(self, params: Dict[str, Any]) -> bool:
+    def validate_params(self, params: dict[str, Any]) -> bool:
         """
         パラメータの妥当性を検証
 
@@ -129,7 +125,7 @@ class BaseTool(ABC):
         """
         return True
 
-    def mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         パラメータを突然変異させる（GAで使用）
 

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Mapping, cast
+from collections.abc import Mapping
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -57,12 +58,8 @@ def _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length):
             log_oc[i] = np.log(open_arr[i] / close_arr[i - 1])
             log_co[i] = np.log(close_arr[i] / open_arr[i])
             rs_term[i] = (
-                np.log(high_arr[i] / close_arr[i])
-                * np.log(high_arr[i] / open_arr[i])
-            ) + (
-                np.log(low_arr[i] / close_arr[i])
-                * np.log(low_arr[i] / open_arr[i])
-            )
+                np.log(high_arr[i] / close_arr[i]) * np.log(high_arr[i] / open_arr[i])
+            ) + (np.log(low_arr[i] / close_arr[i]) * np.log(low_arr[i] / open_arr[i]))
 
     k = 0.34 / (1.34 + (length + 1) / (length - 1))
 
@@ -128,12 +125,7 @@ def _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length):
     const = 2.0 * np.log(2.0) - 1.0
     inst_var = np.zeros(n)
     for i in prange(n):
-        if (
-            open_arr[i] > 0
-            and high_arr[i] > 0
-            and low_arr[i] > 0
-            and close_arr[i] > 0
-        ):
+        if open_arr[i] > 0 and high_arr[i] > 0 and low_arr[i] > 0 and close_arr[i] > 0:
             v1 = 0.5 * (np.log(high_arr[i] / low_arr[i]) ** 2)
             v2 = const * (np.log(close_arr[i] / open_arr[i]) ** 2)
             val = v1 - v2

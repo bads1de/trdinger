@@ -4,12 +4,12 @@
 簡易的なGAを実行し、シード戦略の効果を検証します。
 """
 
-import time
 import logging
-from typing import Dict, Any
+import time
 
 # 警告を抑制
 import warnings
+from typing import Any
 
 # ログ設定（INFOのみ表示）
 logging.basicConfig(
@@ -17,7 +17,9 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 # GAエンジンのログだけINFOで出力
-logging.getLogger("app.services.auto_strategy.core.engine.ga_engine").setLevel(logging.INFO)
+logging.getLogger("app.services.auto_strategy.core.engine.ga_engine").setLevel(
+    logging.INFO
+)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -25,7 +27,7 @@ logger.setLevel(logging.INFO)
 warnings.filterwarnings("ignore")
 
 
-def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> Dict[str, Any]:
+def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> dict[str, Any]:
     """単一のGA実行"""
     from app.services.auto_strategy.config.ga import GAConfig
     from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -22,7 +22,7 @@ def build_tool(name: str) -> BaseTool:
         def should_skip_entry(
             self,
             context: ToolContext,
-            params: Dict[str, Any],
+            params: dict[str, Any],
         ) -> bool:
             return False
 

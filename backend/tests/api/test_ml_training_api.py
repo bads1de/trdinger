@@ -4,7 +4,7 @@ MLトレーニングAPIのテストモジュール
 MLトレーニングAPIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -68,7 +68,7 @@ def mock_ml_training_service() -> Mock:
 
 
 @pytest.fixture
-def sample_training_config() -> Dict[str, Any]:
+def sample_training_config() -> dict[str, Any]:
     """
     サンプルトレーニング設定
 
@@ -103,7 +103,7 @@ class TestStartTraining:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_ml_training_service: AsyncMock,
-        sample_training_config: Dict[str, Any],
+        sample_training_config: dict[str, Any],
     ) -> None:
         """
         正常系: MLトレーニングが正常に開始される
@@ -132,7 +132,7 @@ class TestStartTraining:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_ml_training_service: AsyncMock,
-        sample_training_config: Dict[str, Any],
+        sample_training_config: dict[str, Any],
     ) -> None:
         """
         正常系: アンサンブル学習でトレーニングが開始される
@@ -174,7 +174,7 @@ class TestStartTraining:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_ml_training_service: AsyncMock,
-        sample_training_config: Dict[str, Any],
+        sample_training_config: dict[str, Any],
     ) -> None:
         """
         正常系: 単一モデルでトレーニングが開始される
@@ -426,7 +426,7 @@ class TestErrorHandling:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_ml_training_service: AsyncMock,
-        sample_training_config: Dict[str, Any],
+        sample_training_config: dict[str, Any],
     ) -> None:
         """
         異常系: サービス層でエラーが発生した場合

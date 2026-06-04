@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from math import ceil
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -26,8 +26,8 @@ class EvaluationWindowService:
     """評価窓の前処理と統計再計算を提供する。"""
 
     def prepare_backtest_config_for_evaluation(
-        self, gene: object, backtest_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, gene: object, backtest_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """指標 warmup 用に評価開始前の履歴を含む実行設定へ変換する。"""
         prepared_config = backtest_config.copy()
         start_date = backtest_config.get("start_date")
@@ -52,13 +52,9 @@ class EvaluationWindowService:
         )
         return prepared_config
 
-    _prepare_backtest_config_for_evaluation = (
-        prepare_backtest_config_for_evaluation
-    )
+    _prepare_backtest_config_for_evaluation = prepare_backtest_config_for_evaluation
 
-    def estimate_required_warmup_bars(
-        self, gene: object, base_timeframe: str
-    ) -> int:
+    def estimate_required_warmup_bars(self, gene: object, base_timeframe: str) -> int:
         """戦略実行前に必要な warmup バー数を推定する。"""
         base_minutes = self.timeframe_to_minutes(base_timeframe)
         max_bars = 0
@@ -76,17 +72,12 @@ class EvaluationWindowService:
             )
             timeframe_scale = max(
                 1,
-                ceil(
-                    self.timeframe_to_minutes(indicator_timeframe)
-                    / base_minutes
-                ),
+                ceil(self.timeframe_to_minutes(indicator_timeframe) / base_minutes),
             )
             max_bars = max(max_bars, (lookback + 1) * timeframe_scale)
 
         position_sizing_gene = getattr(gene, "position_sizing_gene", None)
-        if position_sizing_gene and getattr(
-            position_sizing_gene, "enabled", True
-        ):
+        if position_sizing_gene and getattr(position_sizing_gene, "enabled", True):
             max_bars = max(
                 max_bars,
                 int(
@@ -117,7 +108,7 @@ class EvaluationWindowService:
     _estimate_required_warmup_bars = estimate_required_warmup_bars
 
     @staticmethod
-    def extract_lookback_from_parameters(parameters: Dict[str, Any]) -> int:
+    def extract_lookback_from_parameters(parameters: dict[str, Any]) -> int:
         """インディケーターパラメータから lookback 長を推定する。"""
         if not isinstance(parameters, dict):
             return 0
@@ -156,9 +147,7 @@ class EvaluationWindowService:
     _timeframe_to_minutes = timeframe_to_minutes
 
     @staticmethod
-    def format_datetime_like(
-        original_value: object, timestamp: pd.Timestamp
-    ) -> object:
+    def format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
         """元の入力型に合わせて Timestamp を整形する。"""
         if isinstance(original_value, pd.Timestamp):
             return timestamp
@@ -172,31 +161,25 @@ class EvaluationWindowService:
 
     def apply_evaluation_window_to_result(
         self,
-        backtest_result: Dict[str, Any],
+        backtest_result: dict[str, Any],
         raw_stats: object,
         market_data: pd.DataFrame,
         evaluation_start: object,
         evaluation_end: object,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """warmup を除外した評価窓だけでバックテスト結果を再計算する。"""
         if raw_stats is None or market_data is None or market_data.empty:
             return backtest_result
 
         raw_equity_curve = getattr(raw_stats, "_equity_curve", None)
-        if raw_equity_curve is None or getattr(
-            raw_equity_curve, "empty", True
-        ):
+        if raw_equity_curve is None or getattr(raw_equity_curve, "empty", True):
             return backtest_result
 
         market_df = market_data.copy()
         market_df = market_df.sort_index()
 
-        start_ts = self.normalize_timestamp_to_index(
-            evaluation_start, market_df.index
-        )
-        end_ts = self.normalize_timestamp_to_index(
-            evaluation_end, market_df.index
-        )
+        start_ts = self.normalize_timestamp_to_index(evaluation_start, market_df.index)
+        end_ts = self.normalize_timestamp_to_index(evaluation_end, market_df.index)
 
         start_pos = int(
             cast(pd.Index, market_df.index).searchsorted(
@@ -221,14 +204,12 @@ class EvaluationWindowService:
         if trimmed_market_data.empty:
             return backtest_result
 
-        trimmed_equity_curve: pd.DataFrame = (
-            self.slice_equity_curve_for_window(
-                raw_equity_curve,
-                trimmed_market_data.index,
-                start_pos,
-                end_pos,
-                backtest_result.get("initial_capital", 0.0),
-            )
+        trimmed_equity_curve: pd.DataFrame = self.slice_equity_curve_for_window(
+            raw_equity_curve,
+            trimmed_market_data.index,
+            start_pos,
+            end_pos,
+            backtest_result.get("initial_capital", 0.0),
         )
         equity_values = (
             cast(
@@ -245,9 +226,7 @@ class EvaluationWindowService:
             end_pos,
         )
 
-        normalized_market_data = self.normalize_ohlc_data_for_stats(
-            trimmed_market_data
-        )
+        normalized_market_data = self.normalize_ohlc_data_for_stats(trimmed_market_data)
         window_stats = self._compute_window_stats(
             trimmed_trades,
             equity_values,
@@ -271,9 +250,7 @@ class EvaluationWindowService:
     _apply_evaluation_window_to_result = apply_evaluation_window_to_result
 
     @staticmethod
-    def normalize_timestamp_to_index(
-        value: object, index: pd.Index
-    ) -> pd.Timestamp:
+    def normalize_timestamp_to_index(value: object, index: pd.Index) -> pd.Timestamp:
         """インデックスのタイムゾーンに合わせて Timestamp を正規化する。"""
         return align_timestamp_to_index(value, index)
 
@@ -297,10 +274,7 @@ class EvaluationWindowService:
         initial_capital: float,
     ) -> pd.DataFrame:
         """評価窓に対応するエクイティカーブを切り出す。"""
-        if (
-            not isinstance(raw_equity_curve, pd.DataFrame)
-            or raw_equity_curve.empty
-        ):
+        if not isinstance(raw_equity_curve, pd.DataFrame) or raw_equity_curve.empty:
             return pd.DataFrame(
                 {"Equity": [initial_capital] * len(target_index)},
                 index=target_index,

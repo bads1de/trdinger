@@ -32,9 +32,7 @@ def setup_logging():
     """
     # ルートロガーを取得
     root_logger = logging.getLogger()
-    root_logger.setLevel(
-        getattr(logging, unified_config.logging.level.upper())
-    )
+    root_logger.setLevel(getattr(logging, unified_config.logging.level.upper()))
 
     # 既存のハンドラーをクリア
     for handler in root_logger.handlers[:]:
@@ -42,9 +40,7 @@ def setup_logging():
 
     # コンソールハンドラーを作成
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(
-        getattr(logging, unified_config.logging.level.upper())
-    )
+    console_handler.setLevel(getattr(logging, unified_config.logging.level.upper()))
 
     # フォーマッターを設定
     formatter = logging.Formatter(unified_config.logging.format)

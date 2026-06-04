@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.types import StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
@@ -63,7 +63,7 @@ class TPSLGene(BaseGene):
     atr_period: int = 14
     lookback_period: int = 100
     confidence_threshold: float = 0.7
-    method_weights: Dict[str, float] = field(
+    method_weights: dict[str, float] = field(
         default_factory=lambda: {
             "fixed": 0.25,
             "risk_reward": 0.35,
@@ -77,11 +77,9 @@ class TPSLGene(BaseGene):
     # トレーリングストップ関連パラメータ
     trailing_stop: bool = False  # トレーリングストップ有効化フラグ
     trailing_step_pct: float = 0.01  # トレーリング更新幅（1% = 0.01）
-    trailing_take_profit: bool = (
-        False  # トレーリングTP有効化（TP到達後も利益を伸ばす）
-    )
+    trailing_take_profit: bool = False  # トレーリングTP有効化（TP到達後も利益を伸ばす）
 
-    def _validate_parameters(self, errors: List[str]) -> None:
+    def _validate_parameters(self, errors: list[str]) -> None:
         """パラメータ固有の検証を実装"""
         if not isinstance(self.method, TPSLMethod):
             errors.append("methodは有効なTPSLMethodである必要があります")
@@ -90,16 +88,12 @@ class TPSLGene(BaseGene):
         for field_name, (min_val, max_val) in self.NUMERIC_RANGES.items():
             value = getattr(self, field_name, None)
             if value is not None:
-                self._validate_range(
-                    value, min_val, max_val, field_name, errors
-                )
+                self._validate_range(value, min_val, max_val, field_name, errors)
 
         # method_weightsの検証
         for key, value in self.method_weights.items():
             if value < 0:
-                errors.append(
-                    f"method_weights[{key}]は0以上である必要があります"
-                )
+                errors.append(f"method_weights[{key}]は0以上である必要があります")
 
         required_keys = {"fixed", "risk_reward", "volatility", "statistical"}
         missing_keys = required_keys - set(self.method_weights.keys())
@@ -110,7 +104,7 @@ class TPSLGene(BaseGene):
         if not (0.99 <= total_weight <= 1.01):  # 浮動小数点誤差考慮
             errors.append("method_weightsの合計は1.0である必要があります")
 
-    def mutate(self, mutation_rate: float = 0.1) -> "TPSLGene":
+    def mutate(self, mutation_rate: float = 0.1) -> TPSLGene:
         """TP/SL遺伝子の突然変異"""
         import random
 
@@ -132,8 +126,8 @@ class TPSLGene(BaseGene):
             for key in mutated_gene.method_weights:
                 current_weight = mutated_gene.method_weights[key]
                 # 現在の値を中心とした範囲で変動
-                mutated_gene.method_weights[key] = (
-                    current_weight * random.uniform(0.8, 1.2)
+                mutated_gene.method_weights[key] = current_weight * random.uniform(
+                    0.8, 1.2
                 )
 
             # 合計が1.0になるよう正規化
@@ -147,7 +141,7 @@ class TPSLGene(BaseGene):
     @classmethod
     def crossover(
         cls, parent1: BaseGene, parent2: BaseGene
-    ) -> tuple["TPSLGene", "TPSLGene"]:
+    ) -> tuple[TPSLGene, TPSLGene]:
         """TP/SL遺伝子の交叉"""
         import random
 
@@ -173,11 +167,9 @@ class TPSLGene(BaseGene):
 
         # method_weightsの特殊処理
         # BLX-α交叉: 親の値の範囲内でランダムに重みを生成
-        p1: "TPSLGene" = parent1  # type: ignore[assignment]
-        p2: "TPSLGene" = parent2  # type: ignore[assignment]
-        all_keys = set(p1.method_weights.keys()) | set(
-            p2.method_weights.keys()
-        )
+        p1: TPSLGene = parent1  # type: ignore[assignment]
+        p2: TPSLGene = parent2  # type: ignore[assignment]
+        all_keys = set(p1.method_weights.keys()) | set(p2.method_weights.keys())
 
         for key in all_keys:
             if key in p1.method_weights and key in p2.method_weights:
@@ -188,15 +180,11 @@ class TPSLGene(BaseGene):
                 # 親の範囲内（または少し外側）でランダムに選択
                 child1.method_weights[key] = max(
                     0.0,
-                    min_v
-                    - 0.1 * range_v
-                    + random.random() * (range_v + 0.2 * range_v),
+                    min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v),
                 )
                 child2.method_weights[key] = max(
                     0.0,
-                    min_v
-                    - 0.1 * range_v
-                    + random.random() * (range_v + 0.2 * range_v),
+                    min_v - 0.1 * range_v + random.random() * (range_v + 0.2 * range_v),
                 )
             else:
                 # 片方しかない場合、そのまま継承
@@ -252,8 +240,8 @@ class TPSLResult:
     take_profit_pct: float
     method_used: str
     confidence_score: float = 0.0
-    expected_performance: Optional[Dict[str, Any]] = None
-    metadata: Optional[Dict[str, Any]] = None
+    expected_performance: dict[str, Any] | None = None
+    metadata: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         """後処理"""
@@ -262,7 +250,7 @@ class TPSLResult:
         if self.metadata is None:
             self.metadata = {}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """辞書形式に変換"""
         return dataclass_to_dict(self)
 

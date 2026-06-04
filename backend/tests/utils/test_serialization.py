@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -55,7 +55,7 @@ class DefaultDataclass:
 class NestedDataclass:
     id: int
     inner: SimpleDataclass
-    tags: List[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -63,7 +63,7 @@ class ComplexDataclass:
     color: Color
     status: Status
     created_at: datetime
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -72,7 +72,7 @@ class DataclassWithFromDict:
     value: int
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DataclassWithFromDict":
+    def from_dict(cls, data: dict[str, Any]) -> "DataclassWithFromDict":
         return cls(name=data["name"], value=data["value"] * 2)
 
 

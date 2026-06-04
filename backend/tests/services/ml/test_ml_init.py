@@ -18,7 +18,7 @@ class TestMLInitExports:
             MLTrainingService,
         )
 
-        service = getattr(ml_package, "MLTrainingService")
+        service = ml_package.MLTrainingService
 
         assert service is MLTrainingService
 

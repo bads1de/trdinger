@@ -4,7 +4,7 @@ OHLCV データのリポジトリクラス
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -25,7 +25,7 @@ class OHLCVRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, OHLCVData)
 
-    def insert_ohlcv_data(self, ohlcv_records: List[dict]) -> int:
+    def insert_ohlcv_data(self, ohlcv_records: list[dict]) -> int:
         """
         大量のOHLCVレコードを一括挿入します。
 
@@ -72,10 +72,10 @@ class OHLCVRepository(BaseRepository):
         self,
         symbol: str,
         timeframe: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
-    ) -> List[OHLCVData]:
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
+    ) -> list[OHLCVData]:
         """
         指定された条件に基づいてOHLCVデータを取得します。
 
@@ -104,7 +104,7 @@ class OHLCVRepository(BaseRepository):
         )
         return data
 
-    def get_all_by_symbol(self, symbol: str, timeframe: str) -> List[OHLCVData]:
+    def get_all_by_symbol(self, symbol: str, timeframe: str) -> list[OHLCVData]:
         """
         指定されたシンボルと時間軸の全OHLCVデータを取得
 
@@ -131,7 +131,7 @@ class OHLCVRepository(BaseRepository):
         symbol: str,
         timeframe: str,
         limit: int = 100,
-    ) -> List[OHLCVData]:
+    ) -> list[OHLCVData]:
         """
         最新のOHLCV データを取得（降順）
 
@@ -151,8 +151,8 @@ class OHLCVRepository(BaseRepository):
         )
 
     def get_latest_timestamp(
-        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
-    ) -> Optional[datetime]:
+        self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
+    ) -> datetime | None:
         """
         最新タイムスタンプを取得（BaseRepositoryのメソッドをオーバーライド）
 
@@ -172,8 +172,8 @@ class OHLCVRepository(BaseRepository):
         return super().get_latest_timestamp(timestamp_column, filter_conditions)
 
     def get_oldest_timestamp(
-        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
-    ) -> Optional[datetime]:
+        self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
+    ) -> datetime | None:
         """
         最古タイムスタンプを取得（BaseRepositoryのメソッドをオーバーライド）
 
@@ -206,7 +206,7 @@ class OHLCVRepository(BaseRepository):
         return super().get_record_count({"symbol": symbol, "timeframe": timeframe})
 
     def get_date_range(
-        self, timestamp_column: str, filter_conditions: Optional[Dict[str, Any]] = None
+        self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
     ):
         """
         データ期間を取得（BaseRepositoryのメソッドをオーバーライド）
@@ -230,9 +230,9 @@ class OHLCVRepository(BaseRepository):
         self,
         symbol: str,
         timeframe: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
-        limit: Optional[int] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        limit: int | None = None,
     ) -> pd.DataFrame:
         """
         OHLCV データをDataFrameとして取得
@@ -264,7 +264,7 @@ class OHLCVRepository(BaseRepository):
             index_column="timestamp",
         )
 
-    def sanitize_ohlcv_data(self, ohlcv_data: List[dict]) -> List[dict]:
+    def sanitize_ohlcv_data(self, ohlcv_data: list[dict]) -> list[dict]:
         """
         OHLCV データをサニタイズ
 
@@ -339,6 +339,3 @@ class OHLCVRepository(BaseRepository):
                 f"シンボル '{symbol}' 時間軸 '{timeframe}' のOHLCVデータ削除エラー: {e}"
             )
             raise
-
-
-

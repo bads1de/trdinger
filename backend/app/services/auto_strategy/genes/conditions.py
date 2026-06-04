@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +32,10 @@ class Condition:
                    進化アルゴリズムのコンテキストで使用されます。
     """
 
-    left_operand: Union[Dict[str, Any], str, float]
+    left_operand: dict[str, Any] | str | float
     operator: str
-    right_operand: Union[Dict[str, Any], str, float]
-    direction: Optional[EntryDirection] = None
+    right_operand: dict[str, Any] | str | float
+    direction: EntryDirection | None = None
 
     def __post_init__(self) -> None:
         """型の正規化: 数値はfloatへ（テストの型要件に合わせる）"""
@@ -86,9 +86,7 @@ class ConditionGroup:
     """
 
     operator: str = "OR"
-    conditions: List[Union[Condition, "ConditionGroup"]] = field(
-        default_factory=list
-    )
+    conditions: list[Condition | ConditionGroup] = field(default_factory=list)
 
     def is_empty(self) -> bool:
         """グループ内に条件が含まれているかを確認"""
@@ -139,9 +137,7 @@ class StateTracker:
 
     def __init__(self):
         """初期化"""
-        self._events: Dict[str, int] = (
-            {}
-        )  # event_name -> last_triggered_bar_index
+        self._events: dict[str, int] = {}  # event_name -> last_triggered_bar_index
 
     def record_event(self, event_name: str, bar_index: int) -> None:
         """
@@ -175,9 +171,7 @@ class StateTracker:
 
         return 0 <= bars_since_trigger <= lookback_bars
 
-    def get_bars_since_event(
-        self, event_name: str, current_bar: int
-    ) -> Optional[int]:
+    def get_bars_since_event(self, event_name: str, current_bar: int) -> int | None:
         """
         イベント発生からの経過バー数を取得
 
@@ -196,7 +190,7 @@ class StateTracker:
         """全イベントをクリア（新しいバックテストの開始時などに使用）"""
         self._events.clear()
 
-    def get_all_events(self) -> Dict[str, int]:
+    def get_all_events(self) -> dict[str, int]:
         """全イベントのコピーを取得（デバッグや可視化用）"""
         return self._events.copy()
 
@@ -226,7 +220,7 @@ class StatefulCondition:
     direction: EntryDirection = "long"  # デフォルトはロング
     enabled: bool = True
 
-    def validate(self) -> Tuple[bool, List[str]]:
+    def validate(self) -> tuple[bool, list[str]]:
         """
         ステートフル条件のパラメータ妥当性を検証
 
@@ -236,7 +230,7 @@ class StatefulCondition:
         Returns:
             (妥当かどうか, エラーメッセージのリスト) のタプル
         """
-        errors: List[str] = []
+        errors: list[str] = []
 
         # lookback_bars のチェック
         if self.lookback_bars <= 0:

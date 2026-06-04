@@ -2,7 +2,7 @@
 単変量統計テストによる特徴量選択戦略
 """
 
-from typing import Any, Dict, List, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 from sklearn.feature_selection import (
@@ -31,9 +31,9 @@ class UnivariateStrategy(BaseSelectionStrategy):
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: List[str],
+        feature_names: list[str],
         config: FeatureSelectionConfig,
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         k = (
             config.target_k
             or config.max_features

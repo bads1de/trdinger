@@ -5,7 +5,7 @@ Fixed Percentage Calculator
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ...genes import TPSLGene
 from .base_calculator import BaseTPSLCalculator
@@ -25,11 +25,11 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
     def _do_calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]],
+        tpsl_gene: TPSLGene | None,
+        market_data: dict[str, Any] | None,
         position_direction: float,
         **kwargs,
-    ) -> Tuple[float, float, float, Dict[str, Any]]:
+    ) -> tuple[float, float, float, dict[str, Any]]:
         """
         固定パーセンテージ方式によるTP/SL計算の実装
 

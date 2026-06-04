@@ -5,8 +5,9 @@ GAConfig にぶら下がる設定 dataclass 群を定義する。
 
 import copy
 import logging
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, fields
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Optional, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from ..constants import GA_DEFAULT_CONFIG, GA_MUTATION_SETTINGS, OPERATORS
 
@@ -76,25 +77,23 @@ class EarlyTerminationSettings(NestedConfigMixin):
     """早期終了の正規化済み設定。"""
 
     enabled: bool = True
-    max_drawdown: Optional[float] = 0.15
-    min_trades: Optional[int] = 30
+    max_drawdown: float | None = 0.15
+    min_trades: int | None = 30
     min_trade_check_progress: float = 0.33
     trade_pace_tolerance: float = 0.5
-    min_expectancy: Optional[float] = -0.05
+    min_expectancy: float | None = -0.05
     expectancy_min_trades: int = 10
     expectancy_progress: float = 0.1
 
     @classmethod
-    def from_source(
-        cls, source: Mapping[str, Any]
-    ) -> "EarlyTerminationSettings":
+    def from_source(cls, source: Mapping[str, Any]) -> "EarlyTerminationSettings":
         """dict / オブジェクトのどちらからでも設定を生成する。"""
         if isinstance(source, cls):
             return source
         if isinstance(source, Mapping):
             return cls.from_dict(source)
 
-        filtered: Dict[str, Any] = {
+        filtered: dict[str, Any] = {
             field_name: _read_value(source, field_name, default)
             for field_name, default in DEFAULT_EARLY_TERMINATION_VALUES.items()
         }
@@ -109,12 +108,14 @@ class MutationConfig(NestedConfigMixin):
     crossover_field_selection_probability: float = float(
         cast(float, GA_MUTATION_SETTINGS["crossover_field_selection_probability"])
     )
-    indicator_param_range: List[float] = field(
+    indicator_param_range: list[float] = field(
         default_factory=lambda: list(
-            cast(Iterable[float], GA_MUTATION_SETTINGS["indicator_param_mutation_range"])
+            cast(
+                Iterable[float], GA_MUTATION_SETTINGS["indicator_param_mutation_range"]
+            )
         )
     )
-    risk_param_range: List[float] = field(
+    risk_param_range: list[float] = field(
         default_factory=lambda: list(
             cast(Iterable[float], GA_MUTATION_SETTINGS["risk_param_mutation_range"])
         )
@@ -160,7 +161,7 @@ class MutationConfig(NestedConfigMixin):
     adaptive_increase_multiplier: float = float(
         cast(float, GA_MUTATION_SETTINGS["adaptive_mutation_rate_increase_multiplier"])
     )
-    valid_condition_operators: List[str] = field(
+    valid_condition_operators: list[str] = field(
         default_factory=lambda: OPERATORS.copy()
     )
 
@@ -177,9 +178,7 @@ class MutationConfig(NestedConfigMixin):
         """親参照を持ち込まずに deepcopy する。"""
         copied = type(self)(
             **{
-                field_info.name: copy.deepcopy(
-                    getattr(self, field_info.name), memo
-                )
+                field_info.name: copy.deepcopy(getattr(self, field_info.name), memo)
                 for field_info in fields(type(self))
             }
         )
@@ -203,9 +202,7 @@ class EvaluationConfig(NestedConfigMixin):
     """評価・検証関連設定。"""
 
     enable_parallel: bool = True
-    max_workers: Optional[int] = (
-        None  # Noneの場合は自動で物理コア-2, 最大8に制限
-    )
+    max_workers: int | None = None  # Noneの場合は自動で物理コア-2, 最大8に制限
     timeout: float = 300.0
     enable_multi_fidelity_evaluation: bool = False
     multi_fidelity_window_ratio: float = 0.3
@@ -250,11 +247,11 @@ class HybridConfig(NestedConfigMixin):
 
     mode: bool = False
     model_type: str = "lightgbm"
-    model_types: Optional[List[str]] = None
+    model_types: list[str] | None = None
     volatility_gate_enabled: bool = False
-    volatility_model_path: Optional[str] = None
+    volatility_model_path: str | None = None
     ml_filter_enabled: bool = False
-    ml_model_path: Optional[str] = None
+    ml_model_path: str | None = None
     preprocess_features: bool = True
 
 
@@ -287,10 +284,10 @@ class TwoStageSelectionConfig(NestedConfigMixin):
 class RobustnessConfig(NestedConfigMixin):
     """robustness 評価関連設定。"""
 
-    validation_symbols: Optional[List[str]] = None
-    regime_windows: List[dict] = field(default_factory=list)
-    stress_slippage: List[float] = field(default_factory=list)
-    stress_commission_multipliers: List[float] = field(default_factory=list)
+    validation_symbols: list[str] | None = None
+    regime_windows: list[dict] = field(default_factory=list)
+    stress_slippage: list[float] = field(default_factory=list)
+    stress_commission_multipliers: list[float] = field(default_factory=list)
     aggregate_method: str = "robust"
 
 

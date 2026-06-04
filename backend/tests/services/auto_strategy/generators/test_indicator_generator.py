@@ -6,8 +6,6 @@ including multi-timeframe (MTF) functionality.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional
-
 
 from app.services.auto_strategy.genes import (
     IndicatorGene,
@@ -23,9 +21,9 @@ class MockGAConfig:
     min_indicators: int = 2
     max_indicators: int = 5
     enable_multi_timeframe: bool = False
-    available_timeframes: Optional[List[str]] = None
+    available_timeframes: list[str] | None = None
     mtf_indicator_probability: float = 0.3
-    parameter_range_preset: Optional[str] = None
+    parameter_range_preset: str | None = None
 
 
 class TestIndicatorGenerationMTF:

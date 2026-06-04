@@ -25,9 +25,9 @@ class TestParameterConstraints:
         )
 
         # parameter_constraints フィールドが存在することを確認
-        assert hasattr(
-            config, "parameter_constraints"
-        ), "IndicatorConfig に parameter_constraints フィールドがありません"
+        assert hasattr(config, "parameter_constraints"), (
+            "IndicatorConfig に parameter_constraints フィールドがありません"
+        )
 
     def test_indicator_config_with_less_than_constraint(self):
         """< 制約（fast < slow）を定義できることをテスト"""

@@ -211,7 +211,7 @@ class TestDynamicPositionSizing:
 
         details = result["details"]
         es_ratio = details.get("es_ratio")
-        var_ratio = details.get("var_ratio")
+        details.get("var_ratio")
         es_cap = (10000.0 * gene.max_expected_shortfall_ratio) / (
             max(es_ratio, 1e-12) * 200.0
         )
@@ -348,6 +348,6 @@ class TestDynamicPositionSizing:
 
         # 高速版がフル版より速いか同等であること
         # （少なくとも大幅に遅くないこと）
-        assert (
-            time_fast <= time_full * 1.5
-        ), f"高速版 ({time_fast:.4f}s) がフル版 ({time_full:.4f}s) より顕著に遅い"
+        assert time_fast <= time_full * 1.5, (
+            f"高速版 ({time_fast:.4f}s) がフル版 ({time_full:.4f}s) より顕著に遅い"
+        )

@@ -16,7 +16,7 @@ class TestAutoStrategyCoreInitExports:
         """DEAPSetupが遅延ロードされる"""
         from app.services.auto_strategy.core.engine.deap_setup import DEAPSetup
 
-        setup = getattr(core_package, "DEAPSetup")
+        setup = core_package.DEAPSetup
 
         assert setup is DEAPSetup
 
@@ -26,7 +26,7 @@ class TestAutoStrategyCoreInitExports:
             EvolutionRunner,
         )
 
-        runner = getattr(core_package, "EvolutionRunner")
+        runner = core_package.EvolutionRunner
 
         assert runner is EvolutionRunner
 
@@ -36,7 +36,7 @@ class TestAutoStrategyCoreInitExports:
             GeneticAlgorithmEngine,
         )
 
-        engine = getattr(core_package, "GeneticAlgorithmEngine")
+        engine = core_package.GeneticAlgorithmEngine
 
         assert engine is GeneticAlgorithmEngine
 
@@ -46,7 +46,7 @@ class TestAutoStrategyCoreInitExports:
             GeneticAlgorithmEngineFactory,
         )
 
-        factory = getattr(core_package, "GeneticAlgorithmEngineFactory")
+        factory = core_package.GeneticAlgorithmEngineFactory
 
         assert factory is GeneticAlgorithmEngineFactory
 
@@ -56,7 +56,7 @@ class TestAutoStrategyCoreInitExports:
             crossover_strategy_genes,
         )
 
-        func = getattr(core_package, "crossover_strategy_genes")
+        func = core_package.crossover_strategy_genes
 
         assert func is crossover_strategy_genes
 
@@ -64,7 +64,7 @@ class TestAutoStrategyCoreInitExports:
         """mutate_strategy_geneが遅延ロードされる"""
         from app.services.auto_strategy.core.engine.ga_utils import mutate_strategy_gene
 
-        func = getattr(core_package, "mutate_strategy_gene")
+        func = core_package.mutate_strategy_gene
 
         assert func is mutate_strategy_gene
 
@@ -74,7 +74,7 @@ class TestAutoStrategyCoreInitExports:
             ConditionEvaluator,
         )
 
-        evaluator = getattr(core_package, "ConditionEvaluator")
+        evaluator = core_package.ConditionEvaluator
 
         assert evaluator is ConditionEvaluator
 
@@ -84,7 +84,7 @@ class TestAutoStrategyCoreInitExports:
             EvaluationStrategy,
         )
 
-        strategy = getattr(core_package, "EvaluationStrategy")
+        strategy = core_package.EvaluationStrategy
 
         assert strategy is EvaluationStrategy
 
@@ -94,7 +94,7 @@ class TestAutoStrategyCoreInitExports:
             EvaluatorWrapper,
         )
 
-        wrapper = getattr(core_package, "EvaluatorWrapper")
+        wrapper = core_package.EvaluatorWrapper
 
         assert wrapper is EvaluatorWrapper
 
@@ -104,7 +104,7 @@ class TestAutoStrategyCoreInitExports:
             IndividualEvaluator,
         )
 
-        evaluator = getattr(core_package, "IndividualEvaluator")
+        evaluator = core_package.IndividualEvaluator
 
         assert evaluator is IndividualEvaluator
 
@@ -114,7 +114,7 @@ class TestAutoStrategyCoreInitExports:
             ParallelEvaluator,
         )
 
-        evaluator = getattr(core_package, "ParallelEvaluator")
+        evaluator = core_package.ParallelEvaluator
 
         assert evaluator is ParallelEvaluator
 
@@ -124,7 +124,7 @@ class TestAutoStrategyCoreInitExports:
             FitnessCalculator,
         )
 
-        calculator = getattr(core_package, "FitnessCalculator")
+        calculator = core_package.FitnessCalculator
 
         assert calculator is FitnessCalculator
 
@@ -134,7 +134,7 @@ class TestAutoStrategyCoreInitExports:
             FitnessSharing,
         )
 
-        sharing = getattr(core_package, "FitnessSharing")
+        sharing = core_package.FitnessSharing
 
         assert sharing is FitnessSharing
 
@@ -144,7 +144,7 @@ class TestAutoStrategyCoreInitExports:
             HybridFeatureAdapter,
         )
 
-        adapter = getattr(core_package, "HybridFeatureAdapter")
+        adapter = core_package.HybridFeatureAdapter
 
         assert adapter is HybridFeatureAdapter
 
@@ -154,7 +154,7 @@ class TestAutoStrategyCoreInitExports:
             WaveletFeatureTransformer,
         )
 
-        transformer = getattr(core_package, "WaveletFeatureTransformer")
+        transformer = core_package.WaveletFeatureTransformer
 
         assert transformer is WaveletFeatureTransformer
 
@@ -164,7 +164,7 @@ class TestAutoStrategyCoreInitExports:
             HybridIndividualEvaluator,
         )
 
-        evaluator = getattr(core_package, "HybridIndividualEvaluator")
+        evaluator = core_package.HybridIndividualEvaluator
 
         assert evaluator is HybridIndividualEvaluator
 
@@ -174,7 +174,7 @@ class TestAutoStrategyCoreInitExports:
             HybridPredictor,
         )
 
-        predictor = getattr(core_package, "HybridPredictor")
+        predictor = core_package.HybridPredictor
 
         assert predictor is HybridPredictor
 
@@ -184,7 +184,7 @@ class TestAutoStrategyCoreInitExports:
             OperandGroup,
         )
 
-        group = getattr(core_package, "OperandGroup")
+        group = core_package.OperandGroup
 
         assert group is OperandGroup
 
@@ -194,7 +194,7 @@ class TestAutoStrategyCoreInitExports:
             OperandGroupingSystem,
         )
 
-        system = getattr(core_package, "OperandGroupingSystem")
+        system = core_package.OperandGroupingSystem
 
         assert system is OperandGroupingSystem
 
@@ -204,7 +204,7 @@ class TestAutoStrategyCoreInitExports:
             operand_grouping_system,
         )
 
-        system = getattr(core_package, "operand_grouping_system")
+        system = core_package.operand_grouping_system
 
         assert system is operand_grouping_system
 

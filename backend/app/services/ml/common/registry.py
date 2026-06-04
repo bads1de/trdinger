@@ -7,7 +7,7 @@ MLモデルレジストリ・メタデータ
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.utils.serialization import dataclass_to_dict
 
@@ -177,13 +177,13 @@ class ModelMetadata:
     gate_quantile: float = 0.67
     gate_cutoff_log_rv: float = 0.0
     gate_cutoff_vol: float = 1.0
-    created_at: Optional[str] = None
+    created_at: str | None = None
 
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now().isoformat()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         メタデータを辞書形式に変換
 
@@ -197,8 +197,8 @@ class ModelMetadata:
     @classmethod
     def from_training_result(
         cls,
-        training_result: Dict[str, Any],
-        training_params: Dict[str, Any],
+        training_result: dict[str, Any],
+        training_params: dict[str, Any],
         model_type: str = "",
         feature_count: int = 0,
     ) -> "ModelMetadata":
@@ -240,9 +240,7 @@ class ModelMetadata:
             rmse_log_rv=r.get("rmse_log_rv", 0.0),
             mae_log_rv=r.get("mae_log_rv", 0.0),
             feature_count=feature_count,
-            training_samples=r.get(
-                "training_samples", r.get("train_samples", 0)
-            ),
+            training_samples=r.get("training_samples", r.get("train_samples", 0)),
             test_samples=r.get("test_samples", 0),
             best_iteration=r.get("best_iteration", 0),
             num_classes=r.get("num_classes", 1),
@@ -251,9 +249,7 @@ class ModelMetadata:
             model_type=model_type,
             symbol=p.get("symbol", ""),
             timeframe=p.get("timeframe", ""),
-            prediction_horizon=int(
-                p.get("prediction_horizon", p.get("horizon_n", 1))
-            ),
+            prediction_horizon=int(p.get("prediction_horizon", p.get("horizon_n", 1))),
             gate_quantile=float(p.get("gate_quantile", 0.67)),
             gate_cutoff_log_rv=float(r.get("gate_cutoff_log_rv", 0.0)),
             gate_cutoff_vol=float(r.get("gate_cutoff_vol", 1.0)),
@@ -272,7 +268,7 @@ class ModelMetadata:
             f"学習サンプル数={self.training_samples}"
         )
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         """メタデータの妥当性を検証
 
         メタデータの値が合理的な範囲内にあるかを検証します。
@@ -308,9 +304,7 @@ class ModelMetadata:
         if self.feature_count <= 0:
             warnings.append(f"特徴量数が0以下です: {self.feature_count}")
         if self.training_samples <= 0:
-            warnings.append(
-                f"学習サンプル数が0以下です: {self.training_samples}"
-            )
+            warnings.append(f"学習サンプル数が0以下です: {self.training_samples}")
         return {
             "is_valid": len(errors) == 0,
             "errors": errors,

@@ -24,13 +24,13 @@
     python -m scripts.run_auto_strategy --no-save
 """
 
-import sys
-from pathlib import Path
 import argparse
 import json
 import logging
+import sys
 from datetime import datetime
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any
 
 # プロジェクトルートをパスに追加
 project_root = Path(__file__).parent.parent
@@ -45,8 +45,12 @@ from app.services.auto_strategy.generators.random_gene_generator import (  # noq
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.genes.strategy import StrategyGene  # noqa: E402
-from app.services.auto_strategy.serializers.serialization import GeneSerializer  # noqa: E402
-from app.services.backtest.services.backtest_service import BacktestService  # noqa: E402
+from app.services.auto_strategy.serializers.serialization import (
+    GeneSerializer,  # noqa: E402
+)
+from app.services.backtest.services.backtest_service import (
+    BacktestService,  # noqa: E402
+)
 
 # ロギング設定
 log_file = project_root / "logs" / "ga_run.log"
@@ -57,7 +61,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(log_file, encoding="utf-8")
+        logging.FileHandler(log_file, encoding="utf-8"),
     ],
 )
 logger = logging.getLogger(__name__)
@@ -254,26 +258,26 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
     fitness_constraints = None
     min_trades = getattr(args, "min_trades", None)
     if min_trades is not None or smoke_mode:
-        from app.services.auto_strategy.config.constants import DEFAULT_FITNESS_CONSTRAINTS
-
-        fitness_constraints = DEFAULT_FITNESS_CONSTRAINTS.copy()
-        fitness_constraints["min_trades"] = (
-            min_trades if min_trades is not None else 0
+        from app.services.auto_strategy.config.constants import (
+            DEFAULT_FITNESS_CONSTRAINTS,
         )
 
-    config_kwargs = dict(
-        population_size=population,
-        generations=generations,
-        crossover_rate=args.crossover_rate,
-        mutation_rate=args.mutation_rate,
-        elite_size=elite_size,
-        evaluation_config=EvaluationConfig(
+        fitness_constraints = DEFAULT_FITNESS_CONSTRAINTS.copy()
+        fitness_constraints["min_trades"] = min_trades if min_trades is not None else 0
+
+    config_kwargs = {
+        "population_size": population,
+        "generations": generations,
+        "crossover_rate": args.crossover_rate,
+        "mutation_rate": args.mutation_rate,
+        "elite_size": elite_size,
+        "evaluation_config": EvaluationConfig(
             enable_parallel=not args.no_parallel and not smoke_mode
         ),
-        log_level="DEBUG" if args.verbose else "INFO",
-        fallback_start_date=args.start_date,
-        fallback_end_date=args.end_date,
-    )
+        "log_level": "DEBUG" if args.verbose else "INFO",
+        "fallback_start_date": args.start_date,
+        "fallback_end_date": args.end_date,
+    }
     if smoke_mode:
         config_kwargs["max_indicators"] = 3
         config_kwargs["max_conditions"] = 2
@@ -295,7 +299,7 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
     return GAConfig(**config_kwargs)
 
 
-def create_backtest_config(args: argparse.Namespace) -> Dict[str, Any]:
+def create_backtest_config(args: argparse.Namespace) -> dict[str, Any]:
     """引数からバックテスト設定を作成します。
 
     Args:
@@ -324,7 +328,7 @@ def create_backtest_config(args: argparse.Namespace) -> Dict[str, Any]:
 
 def strategy_gene_to_readable_dict(
     gene: StrategyGene, serializer: GeneSerializer
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """StrategyGeneを可読性の高い辞書に変換します。"""
     # シリアライザを使って基本辞書を取得
     base_dict = serializer.strategy_gene_to_dict(gene)
@@ -415,7 +419,7 @@ def _format_conditions(conditions: Any) -> list:
     return formatted
 
 
-def _format_single_condition(cond: Any) -> Dict[str, Any]:
+def _format_single_condition(cond: Any) -> dict[str, Any]:
     """単一条件を可読形式に整形します。"""
     if not isinstance(cond, dict):
         return {"raw": str(cond)}
@@ -439,7 +443,7 @@ def _format_single_condition(cond: Any) -> Dict[str, Any]:
     }
 
 
-def _create_condition_description(cond: Dict[str, Any]) -> str:
+def _create_condition_description(cond: dict[str, Any]) -> str:
     """条件の説明文を生成します。"""
     left = cond.get("left_operand", "?")
     op = cond.get("operator", "?")
@@ -454,7 +458,7 @@ def _create_condition_description(cond: Dict[str, Any]) -> str:
     return f"{operand_to_str(left)} {op} {operand_to_str(right)}"
 
 
-def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
+def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
     """オートストラテジーを実行します。"""
     args = apply_smoke_mode(args)
 
@@ -539,25 +543,27 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
                         "initial_capital": backtest_config["initial_capital"],
                         "strategy_config": {
                             "strategy_type": "GENERATED_GA",
-                            "parameters": {"strategy_gene": gene_dict}
+                            "parameters": {"strategy_gene": gene_dict},
                         },
                         "commission_rate": 0.0004,
-                        "slippage": 0.0001
+                        "slippage": 0.0001,
                     }
                     full_result = backtest_service.run_backtest(full_bt_config)
-                    
+
                     # 保存ディレクトリの準備
                     bt_results_dir = project_root / "results" / "backtest"
                     bt_results_dir.mkdir(parents=True, exist_ok=True)
-                    
+
                     # ファイル名の生成（戦略IDやタイムスタンプを含む）
                     bt_filename = f"backtest_result_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.json"
                     bt_path = bt_results_dir / bt_filename
-                    
+
                     with open(bt_path, "w", encoding="utf-8") as f:
                         # datetimeなどを文字列化するために default=str を指定
-                        json.dump(full_result, f, indent=2, ensure_ascii=False, default=str)
-                    
+                        json.dump(
+                            full_result, f, indent=2, ensure_ascii=False, default=str
+                        )
+
                     logger.info(f"詳細バックテスト結果を保存しました: {bt_path}")
                     saved_backtest_path = str(bt_path)
                 except Exception as bt_err:
@@ -586,7 +592,7 @@ def run_auto_strategy(args: argparse.Namespace) -> Dict[str, Any]:
             "backtest_config": backtest_config,
             "best_strategy": strategy_dict,
         }
-        
+
         if saved_backtest_path:
             output["backtest_result_file"] = saved_backtest_path
 
@@ -688,7 +694,6 @@ def main():
         print("\n" + "-" * 60)
         print(f"保存先: {output_path}")
         print("-" * 60)
-
 
     return 0 if result.get("success") else 1
 

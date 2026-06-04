@@ -5,7 +5,7 @@ BaseRepositoryのテストモジュール
 """
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -83,7 +83,7 @@ def sample_ohlcv_model() -> OHLCVData:
 
 
 @pytest.fixture
-def sample_records() -> List[Dict[str, Any]]:
+def sample_records() -> list[dict[str, Any]]:
     """
     サンプルレコードリスト
 
@@ -164,7 +164,7 @@ class TestBulkInsertMethods:
     """一括挿入メソッドのテスト"""
 
     def test_bulk_insert_sqlite_success(
-        self, repository: BaseRepository, sample_records: List[Dict[str, Any]]
+        self, repository: BaseRepository, sample_records: list[dict[str, Any]]
     ) -> None:
         """SQLite用の一括挿入が成功する"""
         mock_result = MagicMock()
@@ -185,7 +185,7 @@ class TestBulkInsertMethods:
         repository.db.execute.assert_not_called()
 
     def test_bulk_insert_with_conflict_handling_sqlite(
-        self, repository: BaseRepository, sample_records: List[Dict[str, Any]]
+        self, repository: BaseRepository, sample_records: list[dict[str, Any]]
     ) -> None:
         """重複処理付き一括挿入がSQLiteで動作する"""
         mock_result = MagicMock()
@@ -478,7 +478,7 @@ class TestValidationMethods:
     """検証メソッドのテスト"""
 
     def test_validate_records_success(
-        self, repository: BaseRepository, sample_records: List[Dict[str, Any]]
+        self, repository: BaseRepository, sample_records: list[dict[str, Any]]
     ) -> None:
         """レコード検証が成功する"""
         required_fields = ["symbol", "timestamp", "open"]
@@ -507,7 +507,7 @@ class TestErrorHandling:
     """エラーハンドリングのテスト"""
 
     def test_bulk_insert_rollback_on_error(
-        self, repository: BaseRepository, sample_records: List[Dict[str, Any]]
+        self, repository: BaseRepository, sample_records: list[dict[str, Any]]
     ) -> None:
         """エラー時の処理（safe_operationが例外をキャッチ）"""
         repository.db.execute.side_effect = Exception("DB Error")

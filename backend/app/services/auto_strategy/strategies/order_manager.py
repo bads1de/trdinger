@@ -7,7 +7,7 @@ UniversalStrategyから注文管理の責務を分離するためのクラスで
 
 import logging
 import weakref
-from typing import List, Optional, cast
+from typing import cast
 
 import pandas as pd
 
@@ -36,7 +36,7 @@ class OrderManager:
         # 循環参照を防ぐため弱参照を使用
         self._strategy_ref = weakref.ref(strategy)
         self.lower_tf_simulator = lower_tf_simulator
-        self.pending_orders: List[PendingOrder] = []
+        self.pending_orders: list[PendingOrder] = []
 
     @property
     def strategy(self):
@@ -122,8 +122,8 @@ class OrderManager:
         direction: float,
         size: float,
         entry_params: dict,
-        sl_price: Optional[float],
-        tp_price: Optional[float],
+        sl_price: float | None,
+        tp_price: float | None,
         entry_gene: EntryGene,
         current_bar_index: int,
     ) -> None:
@@ -152,17 +152,13 @@ class OrderManager:
         )
         self.pending_orders.append(order)
 
-    def _execute_filled_order(
-        self, order: PendingOrder, fill_price: float
-    ) -> None:
+    def _execute_filled_order(self, order: PendingOrder, fill_price: float) -> None:
         """
         約定した注文を実行（Strategyに委譲）
         """
         strategy = self.strategy
         if strategy is None:
-            logger.error(
-                "Execute filled order failed: strategy instance is None"
-            )
+            logger.error("Execute filled order failed: strategy instance is None")
             return
 
         # ポジションサイズの検証
@@ -200,8 +196,8 @@ class OrderManager:
         self,
         *,
         entry_price: float,
-        sl_price: Optional[float],
-        tp_price: Optional[float],
+        sl_price: float | None,
+        tp_price: float | None,
         direction: float,
     ) -> None:
         """新旧の戦略状態表現を同時に更新する。"""
@@ -210,9 +206,7 @@ class OrderManager:
             return
 
         runtime_state = getattr(strategy, "runtime_state", None)
-        if runtime_state is not None and hasattr(
-            runtime_state, "set_open_position"
-        ):
+        if runtime_state is not None and hasattr(runtime_state, "set_open_position"):
             try:
                 runtime_state.set_open_position(
                     entry_price=entry_price,
@@ -234,11 +228,9 @@ class OrderManager:
             try:
                 setattr(strategy, attr_name, value)
             except Exception as exc:
-                logger.debug(
-                    "legacy 属性 %s の更新に失敗しました: %s", attr_name, exc
-                )
+                logger.debug("legacy 属性 %s の更新に失敗しました: %s", attr_name, exc)
 
-    def _get_bar_duration(self) -> Optional[pd.Timedelta]:
+    def _get_bar_duration(self) -> pd.Timedelta | None:
         """現在のタイムフレームのバー期間を取得"""
         # UniversalStrategyからbase_timeframeを取得
         timeframe = getattr(self.strategy, "base_timeframe", "1h")
@@ -252,4 +244,4 @@ class OrderManager:
             "4h": pd.Timedelta(hours=4),
             "1d": pd.Timedelta(days=1),
         }
-        return cast(Optional[pd.Timedelta], timeframe_map.get(timeframe, None))
+        return cast(pd.Timedelta | None, timeframe_map.get(timeframe, None))

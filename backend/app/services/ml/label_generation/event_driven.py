@@ -4,8 +4,9 @@
 """
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Sequence, Tuple, Union, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -32,14 +33,14 @@ class EventDrivenLabelGenerator:
     といった戦略的ラベルを生成し、学習効率の高いデータセットを作成します。
     """
 
-    REGIME_FACTORS: Dict[Union[int, str], dict] = {
+    REGIME_FACTORS: dict[int | str, dict] = {
         0: {"tp": 1.15, "sl": 1.0, "holding": 1.1},
         1: {"tp": 0.85, "sl": 0.9, "holding": 0.8},
         2: {"tp": 1.4, "sl": 1.25, "holding": 0.7},
         "default": {"tp": 1.0, "sl": 1.0, "holding": 1.0},
     }
 
-    DEFAULT_PROFILES: Dict[str, BarrierProfile] = {
+    DEFAULT_PROFILES: dict[str, BarrierProfile] = {
         "hrhp": BarrierProfile(base_tp=0.035, base_sl=0.02, holding_period=24),
         "lrlp": BarrierProfile(base_tp=0.015, base_sl=0.01, holding_period=12),
     }
@@ -47,9 +48,9 @@ class EventDrivenLabelGenerator:
     def generate_hrhp_lrlp_labels(
         self,
         market_data: pd.DataFrame,
-        regime_labels: Optional[Sequence[int]] = None,
-        profile_overrides: Optional[Dict[str, dict]] = None,
-    ) -> Tuple[pd.DataFrame, dict]:
+        regime_labels: Sequence[int] | None = None,
+        profile_overrides: dict[str, dict] | None = None,
+    ) -> tuple[pd.DataFrame, dict]:
         """
         市場レジームに適応したトリプルバリアラベルを生成
 
@@ -69,7 +70,7 @@ class EventDrivenLabelGenerator:
         self._ensure_required_columns(market_data)
         profiles = self._resolve_profiles(profile_overrides)
 
-        regime_array: Optional[np.ndarray] = None
+        regime_array: np.ndarray | None = None
         if regime_labels is not None:
             regime_array = np.asarray(regime_labels, dtype=int)
             if regime_array.size < len(market_data):
@@ -79,12 +80,8 @@ class EventDrivenLabelGenerator:
                     [regime_array, np.full(pad_count, pad_value, dtype=int)]
                 )
 
-        hrhp_labels = self._apply_profile(
-            market_data, profiles["hrhp"], regime_array
-        )
-        lrlp_labels = self._apply_profile(
-            market_data, profiles["lrlp"], regime_array
-        )
+        hrhp_labels = self._apply_profile(market_data, profiles["hrhp"], regime_array)
+        lrlp_labels = self._apply_profile(market_data, profiles["lrlp"], regime_array)
 
         index = market_data.index[: len(hrhp_labels)]
         labels_df = pd.DataFrame(
@@ -95,9 +92,7 @@ class EventDrivenLabelGenerator:
             labels_df["market_regime"] = 0
             active_regime = 0
         else:
-            regime_series = pd.Series(
-                regime_array[: len(hrhp_labels)], index=index
-            )
+            regime_series = pd.Series(regime_array[: len(hrhp_labels)], index=index)
             labels_df["market_regime"] = regime_series
             active_regime = int(regime_series.iloc[-1])
 
@@ -132,10 +127,10 @@ class EventDrivenLabelGenerator:
                 market_data[lower_name] = market_data[original]
 
     def _resolve_profiles(
-        self, overrides: Optional[Dict[str, dict]]
-    ) -> Dict[str, BarrierProfile]:
+        self, overrides: dict[str, dict] | None
+    ) -> dict[str, BarrierProfile]:
         overrides = overrides or {}
-        resolved: Dict[str, BarrierProfile] = {}
+        resolved: dict[str, BarrierProfile] = {}
         for name, base_profile in self.DEFAULT_PROFILES.items():
             override = overrides.get(name, {})
             resolved[name] = BarrierProfile(
@@ -151,7 +146,7 @@ class EventDrivenLabelGenerator:
         self,
         market_data: pd.DataFrame,
         profile: BarrierProfile,
-        regime_array: Optional[np.ndarray],
+        regime_array: np.ndarray | None,
     ) -> np.ndarray:
         n = len(market_data) - 1
         if n <= 0:
@@ -175,20 +170,16 @@ class EventDrivenLabelGenerator:
             sl = profile.base_sl * f["sl"]
             hld = max(1, int(round(profile.holding_period * f["holding"])))
 
-            labels[idx] = self._first_touch_label(
-                close, high, low, idx, tp, sl, hld
-            )
+            labels[idx] = self._first_touch_label(close, high, low, idx, tp, sl, hld)
 
         return labels
 
     def _resolve_regime_factors(
-        self, regime_value: Union[int, str, None]
-    ) -> Dict[str, float]:
+        self, regime_value: int | str | None
+    ) -> dict[str, float]:
         if regime_value is None:
             return self.REGIME_FACTORS["default"]
-        return self.REGIME_FACTORS.get(
-            regime_value, self.REGIME_FACTORS["default"]
-        )
+        return self.REGIME_FACTORS.get(regime_value, self.REGIME_FACTORS["default"])
 
     def _first_touch_label(
         self,
@@ -222,9 +213,7 @@ class EventDrivenLabelGenerator:
         if entry_price <= 0:
             return 0
 
-        up_bar, dn_bar = entry_price * (1 + tp_mult), entry_price * (
-            1 - sl_mult
-        )
+        up_bar, dn_bar = entry_price * (1 + tp_mult), entry_price * (1 - sl_mult)
         end_idx = min(len(close) - 1, start_idx + holding)
 
         for i in range(start_idx + 1, end_idx + 1):
@@ -238,9 +227,9 @@ class EventDrivenLabelGenerator:
         return 0
 
     def _summarize_regime_profiles(
-        self, profiles: Dict[str, BarrierProfile]
-    ) -> Dict[Any, dict]:
-        summary: Dict[Any, dict] = {}
+        self, profiles: dict[str, BarrierProfile]
+    ) -> dict[Any, dict]:
+        summary: dict[Any, dict] = {}
         for regime_key in [0, 1, 2, "default"]:
             factors = self._resolve_regime_factors(
                 regime_key if isinstance(regime_key, int) else None
@@ -252,7 +241,7 @@ class EventDrivenLabelGenerator:
         return summary
 
     def _profile_stats(
-        self, profile: BarrierProfile, factors: Dict[str, float]
+        self, profile: BarrierProfile, factors: dict[str, float]
     ) -> dict:
         return {
             "take_profit": round(profile.base_tp * factors["tp"], 6),

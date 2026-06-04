@@ -7,7 +7,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import pandas as pd
 
@@ -18,9 +18,9 @@ from ..config.constants import AUTO_STRATEGY_DEFAULTS
 class MarketDataCache:
     """市場データキャッシュ"""
 
-    atr_values: Dict[str, float]
-    volatility_metrics: Dict[str, float]
-    price_data: Optional[pd.DataFrame]
+    atr_values: dict[str, float]
+    volatility_metrics: dict[str, float]
+    price_data: pd.DataFrame | None
     last_updated: datetime
 
     def is_expired(self, max_age_minutes: int = 5) -> bool:
@@ -37,15 +37,15 @@ class MarketDataHandler:
     """市場データ処理ハンドラ"""
 
     def __init__(self):
-        self._cache: Optional[MarketDataCache] = None
+        self._cache: MarketDataCache | None = None
 
     def prepare_market_data(
         self,
         symbol: str,
         current_price: float,
-        market_data: Optional[Dict[str, Any]],
+        market_data: dict[str, Any] | None,
         use_cache: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         市場データを準備し、デフォルト値やキャッシュで情報を拡張します。
 
@@ -87,9 +87,9 @@ class MarketDataHandler:
 
     def update_cache(
         self,
-        atr_values: Dict[str, float],
-        volatility_metrics: Dict[str, float],
-        price_data: Optional[pd.DataFrame] = None,
+        atr_values: dict[str, float],
+        volatility_metrics: dict[str, float],
+        price_data: pd.DataFrame | None = None,
     ):
         """キャッシュの更新"""
         self._cache = MarketDataCache(
@@ -99,7 +99,7 @@ class MarketDataHandler:
             last_updated=datetime.now(),
         )
 
-    def get_cache(self) -> Optional[MarketDataCache]:
+    def get_cache(self) -> MarketDataCache | None:
         """キャッシュの取得"""
         return self._cache
 

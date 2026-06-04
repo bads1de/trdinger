@@ -7,8 +7,9 @@
 import functools
 import logging
 import math
+from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime
-from typing import Any, Iterable, Mapping, Optional, Sequence
+from typing import Any
 
 import numpy as np
 from numba import njit
@@ -27,7 +28,7 @@ MINIMUM_DURATION_HOURS = 1.0 / 24.0
 
 
 @functools.lru_cache(maxsize=DATETIME_CACHE_SIZE)
-def _ensure_datetime(value: Optional[object]) -> Optional[datetime]:
+def _ensure_datetime(value: object | None) -> datetime | None:
     """値をdatetimeオブジェクトに変換します（キャッシュ付き）。"""
     return parse_datetime_optional(value)
 
@@ -106,9 +107,9 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
 def calculate_trade_frequency_penalty(
     *,
     total_trades: int,
-    start_date: Optional[object],
-    end_date: Optional[object],
-    trade_history: Optional[Iterable[Mapping[str, Any]]] = None,
+    start_date: object | None,
+    end_date: object | None,
+    trade_history: Iterable[Mapping[str, Any]] | None = None,
 ) -> float:
     """
     過剰な取引（オーバートレーディング）を抑制するための、正規化されたペナルティ値を算出します。
@@ -142,11 +143,7 @@ def calculate_trade_frequency_penalty(
     parsed_start = _ensure_datetime(start_date)
     parsed_end = _ensure_datetime(end_date)
 
-    if (
-        parsed_start is None
-        or parsed_end is None
-        or parsed_end <= parsed_start
-    ):
+    if parsed_start is None or parsed_end is None or parsed_end <= parsed_start:
         duration_days = NORMALIZATION_THRESHOLD
     else:
         duration_days = max(

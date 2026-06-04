@@ -4,11 +4,10 @@
 GA生成時の探索範囲（GENERATION）と検証用の許容範囲（VALIDATION）を定義します。
 """
 
-from typing import Dict, Tuple
 
 # ==================== PositionSizingGene ====================
 
-POSITION_SIZING_GENERATION_RANGES: Dict[str, Tuple[float, float]] = {
+POSITION_SIZING_GENERATION_RANGES: dict[str, tuple[float, float]] = {
     "lookback_period": (50, 200),
     "optimal_f_multiplier": (0.25, 0.75),
     "atr_period": (10, 30),
@@ -25,7 +24,7 @@ POSITION_SIZING_GENERATION_RANGES: Dict[str, Tuple[float, float]] = {
     "priority": (0.5, 1.5),
 }
 
-POSITION_SIZING_VALIDATION_RANGES: Dict[str, Tuple[float, float]] = {
+POSITION_SIZING_VALIDATION_RANGES: dict[str, tuple[float, float]] = {
     "lookback_period": (10, 500),
     "optimal_f_multiplier": (0.1, 1.0),
     "atr_period": (5, 50),
@@ -44,7 +43,7 @@ POSITION_SIZING_VALIDATION_RANGES: Dict[str, Tuple[float, float]] = {
 
 # ==================== TPSLGene ====================
 
-TPSL_GENERATION_RANGES: Dict[str, Tuple[float, float]] = {
+TPSL_GENERATION_RANGES: dict[str, tuple[float, float]] = {
     "stop_loss_pct": (0.01, 0.08),
     "take_profit_pct": (0.02, 0.15),
     "risk_reward_ratio": (1.2, 4.0),
@@ -58,7 +57,7 @@ TPSL_GENERATION_RANGES: Dict[str, Tuple[float, float]] = {
     "trailing_step_pct": (0.005, 0.05),
 }
 
-TPSL_VALIDATION_RANGES: Dict[str, Tuple[float, float]] = {
+TPSL_VALIDATION_RANGES: dict[str, tuple[float, float]] = {
     "stop_loss_pct": (0.005, 0.15),  # 0.5%-15%
     "take_profit_pct": (0.01, 0.3),  # 1%-30%
     "risk_reward_ratio": (1.0, 10.0),  # 1:10まで
@@ -74,14 +73,14 @@ TPSL_VALIDATION_RANGES: Dict[str, Tuple[float, float]] = {
 
 # ==================== EntryGene ====================
 
-ENTRY_GENERATION_RANGES: Dict[str, Tuple[float, float]] = {
+ENTRY_GENERATION_RANGES: dict[str, tuple[float, float]] = {
     "limit_offset_pct": (0.005, 0.02),
     "stop_offset_pct": (0.005, 0.02),
     "order_validity_bars": (5, 20),
     "priority": (0.5, 1.5),
 }
 
-ENTRY_VALIDATION_RANGES: Dict[str, Tuple[float, float]] = {
+ENTRY_VALIDATION_RANGES: dict[str, tuple[float, float]] = {
     "limit_offset_pct": (0.0, 0.1),
     "stop_offset_pct": (0.0, 0.1),
     "order_validity_bars": (0, 100),
@@ -90,12 +89,12 @@ ENTRY_VALIDATION_RANGES: Dict[str, Tuple[float, float]] = {
 
 # ==================== ExitGene ====================
 
-EXIT_GENERATION_RANGES: Dict[str, Tuple[float, float]] = {
+EXIT_GENERATION_RANGES: dict[str, tuple[float, float]] = {
     "partial_exit_pct": (0.5, 0.8),
     "priority": (0.5, 1.5),
 }
 
-EXIT_VALIDATION_RANGES: Dict[str, Tuple[float, float]] = {
+EXIT_VALIDATION_RANGES: dict[str, tuple[float, float]] = {
     "partial_exit_pct": (0.1, 0.9),
     "priority": (0.5, 1.5),
 }

@@ -9,7 +9,6 @@
 import logging
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy.orm import Session
 
@@ -28,7 +27,7 @@ class BaseDataCollectionOrchestrationService:
     シンボル正規化などの機能を含みます。
     """
 
-    def _parse_datetime(self, date_str: Optional[str]) -> Optional[datetime]:
+    def _parse_datetime(self, date_str: str | None) -> datetime | None:
         """
         文字列の日付をdatetimeオブジェクトに変換する。
 
@@ -55,7 +54,7 @@ class BaseDataCollectionOrchestrationService:
             return None
 
     @contextmanager
-    def _get_db_session(self, db_session: Optional[Session] = None):
+    def _get_db_session(self, db_session: Session | None = None):
         """
         データベースセッションを取得するコンテキストマネージャ
 
@@ -79,9 +78,7 @@ class BaseDataCollectionOrchestrationService:
             finally:
                 session.close()
 
-    def _create_success_response(
-        self, message: str, data: Optional[dict] = None
-    ) -> dict:
+    def _create_success_response(self, message: str, data: dict | None = None) -> dict:
         """
         成功レスポンスを作成する
 
@@ -98,10 +95,10 @@ class BaseDataCollectionOrchestrationService:
         self,
         message: str,
         *,
-        details: Optional[dict] = None,
-        error_code: Optional[str] = None,
-        context: Optional[str] = None,
-        data: Optional[dict] = None,
+        details: dict | None = None,
+        error_code: str | None = None,
+        context: str | None = None,
+        data: dict | None = None,
     ) -> dict:
         """
         標準化されたエラーレスポンスを作成する。

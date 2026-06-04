@@ -61,7 +61,7 @@ def sample_oi_data():
     ]
     values = [100000.0, 105000.0, 110000.0]
 
-    for ts, val in zip(timestamps, values):
+    for ts, val in zip(timestamps, values, strict=False):
         oi = MagicMock(spec=OpenInterestData)
         oi.data_timestamp = ts
         oi.open_interest_value = val

@@ -6,7 +6,7 @@
 
 import logging
 from copy import deepcopy
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .base import BaseTool, ToolDefinition
 
@@ -21,7 +21,7 @@ class ToolRegistry:
     """
 
     _instance: Optional["ToolRegistry"] = None
-    _tools: Dict[str, BaseTool] = {}
+    _tools: dict[str, BaseTool] = {}
 
     def __new__(cls) -> "ToolRegistry":
         """シングルトンパターン"""
@@ -43,7 +43,7 @@ class ToolRegistry:
             )
         self._tools[tool.name] = tool
 
-    def get(self, name: str) -> Optional[BaseTool]:
+    def get(self, name: str) -> BaseTool | None:
         """
         名前でツールを取得
 
@@ -55,7 +55,7 @@ class ToolRegistry:
         """
         return self._tools.get(name)
 
-    def get_all(self) -> List[BaseTool]:
+    def get_all(self) -> list[BaseTool]:
         """
         すべての登録済みツールを取得
 
@@ -64,7 +64,7 @@ class ToolRegistry:
         """
         return list(self._tools.values())
 
-    def get_definitions(self) -> List[ToolDefinition]:
+    def get_definitions(self) -> list[ToolDefinition]:
         """
         すべての登録済みツール定義を取得
 
@@ -73,7 +73,7 @@ class ToolRegistry:
         """
         return [deepcopy(tool.definition) for tool in self._tools.values()]
 
-    def get_names(self) -> List[str]:
+    def get_names(self) -> list[str]:
         """
         すべての登録済みツール名を取得
 

@@ -5,7 +5,7 @@ Bybit ロング/ショート比率データ収集サービス
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import ccxt.async_support as ccxt
 
@@ -23,7 +23,7 @@ class BybitLongShortRatioService(BybitService):
     Bybitからロング/ショート比率データを収集するサービスクラス
     """
 
-    def __init__(self, exchange: Optional[ccxt.Exchange] = None):
+    def __init__(self, exchange: ccxt.Exchange | None = None):
         super().__init__(exchange)
 
     async def fetch_long_short_ratio_data(
@@ -31,9 +31,9 @@ class BybitLongShortRatioService(BybitService):
         symbol: str,
         period: str,
         limit: int = 50,
-        start_time: Optional[int] = None,
-        end_time: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
+        start_time: int | None = None,
+        end_time: int | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Bybitからロング/ショート比率データを取得
 
@@ -75,11 +75,7 @@ class BybitLongShortRatioService(BybitService):
             )
             return []
 
-        if (
-            not response
-            or "result" not in response
-            or "list" not in response["result"]
-        ):
+        if not response or "result" not in response or "list" not in response["result"]:
             logger.warning(
                 f"ロング/ショート比率データの取得に失敗またはデータなし: {symbol}"
             )
@@ -101,7 +97,7 @@ class BybitLongShortRatioService(BybitService):
         symbol: str,
         period: str,
         repository: LongShortRatioRepository,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         ロング/ショート比率データの差分更新（最新データの取得）
 
@@ -142,9 +138,7 @@ class BybitLongShortRatioService(BybitService):
                     "saved_count": 0,
                     "success": True,
                     "latest_timestamp": (
-                        latest_db_record.timestamp
-                        if latest_db_record
-                        else None
+                        latest_db_record.timestamp if latest_db_record else None
                     ),
                 }
 
@@ -179,7 +173,7 @@ class BybitLongShortRatioService(BybitService):
         symbol: str,
         period: str,
         repository: LongShortRatioRepository,
-        start_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
     ) -> int:
         """
         過去のロング/ショート比率データを収集（ページネーション）
@@ -242,9 +236,7 @@ class BybitLongShortRatioService(BybitService):
                     )
 
                     if data_list:
-                        saved = repository.insert_long_short_ratio_data(
-                            data_list
-                        )
+                        saved = repository.insert_long_short_ratio_data(data_list)
                         total_saved += saved
                         logger.info(
                             f"Chunk {current_cursor} - {next_cursor}: {len(data_list)} fetched, {saved} saved."

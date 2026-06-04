@@ -7,14 +7,12 @@ ML 学習用ユーティリティ
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 def resolve_holdout_test_size(
     *,
-    test_size: Optional[float] = None,
-    train_test_split: Optional[float] = None,
-    validation_split: Optional[float] = None,
+    test_size: float | None = None,
+    train_test_split: float | None = None,
+    validation_split: float | None = None,
     default_train_split: float = 0.8,
     default_validation_split: float = 0.2,
 ) -> float:
@@ -46,9 +44,7 @@ def resolve_holdout_test_size(
         return float(test_size)
 
     effective_train_split = (
-        default_train_split
-        if train_test_split is None
-        else float(train_test_split)
+        default_train_split if train_test_split is None else float(train_test_split)
     )
     effective_validation_split = (
         default_validation_split

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, Dict, Optional
+from typing import Any
 
 _MISSING = object()
 
@@ -13,7 +13,7 @@ def _is_scalar_config_value(value: object) -> bool:
     return isinstance(value, (int, float, str))
 
 
-def _copy_config_source(source: Any) -> Dict[str, Any]:
+def _copy_config_source(source: Any) -> dict[str, Any]:
     """
     設定ソースを辞書にコピーする
 
@@ -77,7 +77,7 @@ def _get_optional_value(source: object, key: str) -> object:
         return _MISSING
 
 
-def _normalize_strategy_config(strategy_config: Any) -> Dict[str, Any]:
+def _normalize_strategy_config(strategy_config: Any) -> dict[str, Any]:
     """
     strategy_configを辞書形式に正規化する
 
@@ -101,7 +101,7 @@ def _normalize_strategy_config(strategy_config: Any) -> Dict[str, Any]:
 
 def ensure_backtest_defaults(
     backtest_config: Mapping[str, Any], defaults: Mapping[str, Any]
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     不足しているバックテスト設定をデフォルト値で補完する
 
@@ -128,12 +128,12 @@ def ensure_backtest_defaults(
 def build_execution_config(
     source: Any,
     *,
-    strategy_name: Optional[str] = None,
+    strategy_name: str | None = None,
     strategy_config: Any = None,
-    defaults: Optional[Mapping[str, Any]] = None,
+    defaults: Mapping[str, Any] | None = None,
     default_slippage: float = 0.0,
     default_leverage: float = 1.0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     dict / Pydantic モデルからバックテスト実行設定を組み立てる
 
@@ -209,9 +209,7 @@ def build_execution_config(
         else default_slippage
     )
     leverage_default = (
-        defaults.get("leverage", default_leverage)
-        if defaults
-        else default_leverage
+        defaults.get("leverage", default_leverage) if defaults else default_leverage
     )
 
     spread_value = working.get("spread", _MISSING)
@@ -230,13 +228,9 @@ def build_execution_config(
     ):
         slippage_value = _get_optional_value(source, "slippage")
 
-    if spread_value is not _MISSING and not _is_scalar_config_value(
-        spread_value
-    ):
+    if spread_value is not _MISSING and not _is_scalar_config_value(spread_value):
         spread_value = _MISSING
-    if slippage_value is not _MISSING and not _is_scalar_config_value(
-        slippage_value
-    ):
+    if slippage_value is not _MISSING and not _is_scalar_config_value(slippage_value):
         slippage_value = _MISSING
 
     if spread_value is _MISSING or spread_value is None:

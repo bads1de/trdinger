@@ -10,7 +10,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 
-
 class TestMainModuleImports:
     """main.pyのインポートに関するテスト"""
 
@@ -44,8 +43,8 @@ class TestMainModuleImports:
                 # BACKEND_DIRがsys.pathに含まれているか確認
                 backend_dir = str(Path(__file__).parent.parent / "backend")
                 # 絶対パスで比較
-                path_entries = [str(Path(p).resolve()) for p in sys.path]
-                backend_resolved = str(Path(backend_dir).resolve())
+                [str(Path(p).resolve()) for p in sys.path]
+                str(Path(backend_dir).resolve())
 
                 # インポート処理で追加されるはず
                 # 注: 既に存在する場合もあるため、インポート後の確認は難しい
@@ -115,7 +114,7 @@ class TestUvicornConfiguration:
         main_module.__name__ = "__main__"
 
         with patch.dict(sys.modules, {"uvicorn": MagicMock()}):
-            with patch("uvicorn.run") as mock_run:
+            with patch("uvicorn.run"):
                 try:
                     spec.loader.exec_module(main_module)
                 except Exception:

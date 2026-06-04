@@ -5,7 +5,7 @@ GA実験の実行と管理を担当します。
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
 
@@ -32,14 +32,12 @@ class ExperimentManager:
         self,
         backtest_service: BacktestService,
         persistence_service: ExperimentPersistenceService,
-        engine_registry: Optional[ExperimentEngineRegistry] = None,
+        engine_registry: ExperimentEngineRegistry | None = None,
     ):
         """初期化"""
         self.backtest_service = backtest_service
         self.persistence_service = persistence_service
-        self.experiment_backtest_service = ExperimentBacktestService(
-            backtest_service
-        )
+        self.experiment_backtest_service = ExperimentBacktestService(backtest_service)
         self._engine_registry = engine_registry or _DEFAULT_ENGINE_REGISTRY
         self._active_engines = self._engine_registry.active_engines
         self._registry_lock = self._engine_registry.lock
@@ -48,7 +46,7 @@ class ExperimentManager:
         self,
         experiment_id: str,
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
     ):
         """
         GA実験を非同期（バックグラウンド）実行の文脈で処理
@@ -67,7 +65,7 @@ class ExperimentManager:
         def progress_callback(
             current_generation: int,
             total_generations: int,
-            best_fitness: Optional[float],
+            best_fitness: float | None,
         ):
             """各世代終了時に進捗をDBに更新する。"""
             try:
@@ -82,15 +80,11 @@ class ExperimentManager:
                     f"進捗更新に失敗しました（世代 {current_generation}）: {e}"
                 )
 
-        @safe_operation(
-            context=f"GA実験実行 ({experiment_id})", is_api_call=False
-        )
+        @safe_operation(context=f"GA実験実行 ({experiment_id})", is_api_call=False)
         def _execute():
             engine = self._get_active_engine(experiment_id)
             if not engine:
-                raise RuntimeError(
-                    f"GAエンジンが初期化されていません: {experiment_id}"
-                )
+                raise RuntimeError(f"GAエンジンが初期化されていません: {experiment_id}")
 
             run_backtest_config = backtest_config.copy()
             run_backtest_config["experiment_id"] = experiment_id
@@ -162,7 +156,7 @@ class ExperimentManager:
             self.release_experiment(experiment_id)
 
     def initialize_ga_engine(
-        self, ga_config: GAConfig, experiment_id: Optional[str] = None
+        self, ga_config: GAConfig, experiment_id: str | None = None
     ) -> "GeneticAlgorithmEngine":
         """GAエンジンを初期化（Factoryを使用）"""
         from ..core.engine.ga_engine_factory import (
@@ -195,9 +189,7 @@ class ExperimentManager:
             logger.info(f"実験停止シグナル送信: {experiment_id}")
             return True
 
-        experiment_info = self.persistence_service.get_experiment_info(
-            experiment_id
-        )
+        experiment_info = self.persistence_service.get_experiment_info(experiment_id)
         if experiment_info and experiment_info.get("status") == "running":
             self.persistence_service.stop_experiment(experiment_id)
             logger.info(
@@ -205,9 +197,7 @@ class ExperimentManager:
             )
             return True
 
-        logger.warning(
-            f"停止対象の実行中実験が見つかりません: {experiment_id}"
-        )
+        logger.warning(f"停止対象の実行中実験が見つかりません: {experiment_id}")
         return False
 
     def release_experiment(

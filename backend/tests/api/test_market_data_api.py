@@ -4,7 +4,7 @@
 市場データAPIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -59,15 +59,15 @@ def override_dependencies(mock_db_session, mock_market_data_orchestration_servic
         mock_market_data_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_market_data_orchestration_service] = (
-        lambda: mock_market_data_orchestration_service
+    app.dependency_overrides[get_market_data_orchestration_service] = lambda: (
+        mock_market_data_orchestration_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_ohlcv_data() -> Dict[str, Any]:
+def sample_ohlcv_data() -> dict[str, Any]:
     """
     サンプルOHLCVデータ
 
@@ -85,7 +85,7 @@ def sample_ohlcv_data() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_ohlcv_list(sample_ohlcv_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+def sample_ohlcv_list(sample_ohlcv_data: dict[str, Any]) -> list[dict[str, Any]]:
     """
     サンプルOHLCVリスト
 
@@ -109,7 +109,7 @@ class TestGetOHLCVData:
         self,
         test_client: TestClient,
         mock_market_data_orchestration_service: AsyncMock,
-        sample_ohlcv_list: List[Dict[str, Any]],
+        sample_ohlcv_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: OHLCVデータが正常に取得できる
@@ -151,7 +151,7 @@ class TestGetOHLCVData:
         self,
         test_client: TestClient,
         mock_market_data_orchestration_service: AsyncMock,
-        sample_ohlcv_data: Dict[str, Any],
+        sample_ohlcv_data: dict[str, Any],
     ) -> None:
         """
         正常系: 日付範囲指定でOHLCVデータが取得できる
@@ -197,7 +197,7 @@ class TestGetOHLCVData:
         self,
         test_client: TestClient,
         mock_market_data_orchestration_service: AsyncMock,
-        sample_ohlcv_list: List[Dict[str, Any]],
+        sample_ohlcv_list: list[dict[str, Any]],
         timeframe: str,
     ) -> None:
         """
@@ -349,7 +349,7 @@ class TestGetOHLCVData:
         self,
         test_client: TestClient,
         mock_market_data_orchestration_service: AsyncMock,
-        sample_ohlcv_list: List[Dict[str, Any]],
+        sample_ohlcv_list: list[dict[str, Any]],
         symbol: str,
     ) -> None:
         """
@@ -390,7 +390,7 @@ class TestGetOHLCVData:
         self,
         test_client: TestClient,
         mock_market_data_orchestration_service: AsyncMock,
-        sample_ohlcv_list: List[Dict[str, Any]],
+        sample_ohlcv_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: デフォルトパラメータで取得できる

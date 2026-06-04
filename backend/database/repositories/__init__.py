@@ -35,6 +35,3 @@ __all__ = [
     "GeneratedStrategyRepository",
     "LongShortRatioRepository",
 ]
-
-
-

@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 
 def build_indicator_reference_name(
     indicator: object,
-    output_index: Optional[int] = None,
+    output_index: int | None = None,
 ) -> str:
     """
     実行時に使う一意なインジケーター参照名を生成する。

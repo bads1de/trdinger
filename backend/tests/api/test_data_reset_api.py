@@ -4,7 +4,7 @@
 データリセットAPIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -57,15 +57,15 @@ def override_dependencies(mock_db_session, mock_data_management_orchestration_se
         mock_data_management_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_data_management_orchestration_service] = (
-        lambda: mock_data_management_orchestration_service
+    app.dependency_overrides[get_data_management_orchestration_service] = lambda: (
+        mock_data_management_orchestration_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_reset_result() -> Dict[str, Any]:
+def sample_reset_result() -> dict[str, Any]:
     """
     サンプルリセット結果
 
@@ -91,7 +91,7 @@ class TestResetAllData:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_data_management_orchestration_service: AsyncMock,
-        sample_reset_result: Dict[str, Any],
+        sample_reset_result: dict[str, Any],
     ) -> None:
         """
         正常系: 全データが正常にリセットされる

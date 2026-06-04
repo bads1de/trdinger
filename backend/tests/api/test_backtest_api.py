@@ -4,7 +4,7 @@
 バックテストAPIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -63,15 +63,15 @@ def override_dependencies(mock_db_session, mock_backtest_orchestration_service):
         mock_backtest_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_backtest_orchestration_service] = (
-        lambda: mock_backtest_orchestration_service
+    app.dependency_overrides[get_backtest_orchestration_service] = lambda: (
+        mock_backtest_orchestration_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_backtest_result() -> Dict[str, Any]:
+def sample_backtest_result() -> dict[str, Any]:
     """
     サンプルバックテスト結果
 
@@ -97,7 +97,7 @@ def sample_backtest_result() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_backtest_results_list(sample_backtest_result: Dict[str, Any]) -> list:
+def sample_backtest_results_list(sample_backtest_result: dict[str, Any]) -> list:
     """
     サンプルバックテスト結果リスト
 
@@ -156,7 +156,7 @@ class TestBacktestResultsRetrieval:
         self,
         test_client: TestClient,
         mock_backtest_orchestration_service: AsyncMock,
-        sample_backtest_result: Dict[str, Any],
+        sample_backtest_result: dict[str, Any],
     ) -> None:
         """
         正常系: フィルター付きでバックテスト結果が取得できる
@@ -280,7 +280,7 @@ class TestBacktestResultById:
         self,
         test_client: TestClient,
         mock_backtest_orchestration_service: AsyncMock,
-        sample_backtest_result: Dict[str, Any],
+        sample_backtest_result: dict[str, Any],
     ) -> None:
         """
         正常系: ID指定でバックテスト結果が取得できる

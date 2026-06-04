@@ -6,7 +6,6 @@ Funding Rate データのマージロジックを提供します。
 
 import logging
 from datetime import datetime
-from typing import List
 
 import pandas as pd
 
@@ -79,9 +78,7 @@ class FRMerger:
 
         return df
 
-    def _convert_fr_to_dataframe(
-        self, fr_data: List[FundingRateData]
-    ) -> pd.DataFrame:
+    def _convert_fr_to_dataframe(self, fr_data: list[FundingRateData]) -> pd.DataFrame:
         """
         FundingRateDataリストをpandas.DataFrameに変換
 

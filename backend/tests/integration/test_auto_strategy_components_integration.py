@@ -174,7 +174,7 @@ class TestAutoStrategyComponentsIntegration:
     ):
         """ConditionEvaluator と FitnessCalculator の結合テスト"""
         condition_evaluator = ConditionEvaluator()
-        fitness_calculator = FitnessCalculator()
+        FitnessCalculator()
 
         # 条件評価
         condition = Condition(

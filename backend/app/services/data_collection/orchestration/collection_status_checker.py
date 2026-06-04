@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
@@ -34,7 +34,7 @@ class CollectionStatusChecker:
         db: Session,
         data_validator: Any = None,
         historical_orchestrator: Any = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         データ収集状況を確認
 
@@ -58,13 +58,8 @@ class CollectionStatusChecker:
             # デフォルトのバリデーション（テスト用）
             from app.config.unified_config import unified_config
 
-            normalized_symbol = unified_config.market.symbol_mapping.get(
-                symbol, symbol
-            )
-            if (
-                normalized_symbol
-                not in unified_config.market.supported_symbols
-            ):
+            normalized_symbol = unified_config.market.symbol_mapping.get(symbol, symbol)
+            if normalized_symbol not in unified_config.market.supported_symbols:
                 raise ValueError(f"サポートされていないシンボル: {symbol}")
             if timeframe not in unified_config.market.supported_timeframes:
                 raise ValueError(f"無効な時間軸: {timeframe}")
@@ -85,9 +80,7 @@ class CollectionStatusChecker:
                     db,
                     data_validator=data_validator,
                 )
-                logger.info(
-                    f"自動フェッチを開始: {normalized_symbol} {timeframe}"
-                )
+                logger.info(f"自動フェッチを開始: {normalized_symbol} {timeframe}")
 
                 return api_response(
                     success=True,

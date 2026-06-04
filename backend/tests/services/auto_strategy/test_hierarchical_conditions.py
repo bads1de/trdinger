@@ -73,10 +73,12 @@ def test_hierarchical_condition_evaluation_complex_false():
 def test_hierarchical_validation():
     """ネストされたConditionGroupのバリデーションテスト"""
     from app.services.auto_strategy.genes import TPSLGene
-    from app.services.auto_strategy.genes.validators.indicator_validator import IndicatorValidator
+    from app.services.auto_strategy.genes.validators.indicator_validator import (
+        IndicatorValidator,
+    )
 
     # Mock IndicatorValidator to accept our test indicators "A", "B", "C"
-    with patch.object(IndicatorValidator, '__init__', lambda self: None):
+    with patch.object(IndicatorValidator, "__init__", lambda self: None):
         validator = GeneValidator()
         # Manually set valid_indicator_types
         validator._indicator_validator.valid_indicator_types = ["A", "B", "C"]

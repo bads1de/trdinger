@@ -9,7 +9,7 @@
 
 import logging
 import random
-from typing import Any, List, Tuple, Union
+from typing import Any
 
 from app.services.indicators.config import (
     IndicatorScaleType,
@@ -36,10 +36,12 @@ class ComplexConditionsStrategy:
     def __init__(self, condition_generator: Any) -> None:
         self.gen = condition_generator
 
-    def generate_conditions(self, indicators: List[IndicatorGene]) -> Tuple[
-        List[Union[Condition, ConditionGroup]],
-        List[Union[Condition, ConditionGroup]],
-        List[Condition],
+    def generate_conditions(
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+        list[Condition],
     ]:
         """
         複数の指標を組み合わせて王道パターンに基づいた条件を生成
@@ -92,9 +94,10 @@ class ComplexConditionsStrategy:
             return longs, shorts
 
         trend, momentum = random.choice(trends), random.choice(momentums)
-        t_name, m_name = self.gen._get_indicator_name(
-            trend
-        ), self.gen._get_indicator_name(momentum)
+        t_name, m_name = (
+            self.gen._get_indicator_name(trend),
+            self.gen._get_indicator_name(momentum),
+        )
 
         # 順張り特化: Close > Trend AND Momentum > Bullish
         cfg = indicator_registry.get_indicator_config(momentum.type)
@@ -127,10 +130,8 @@ class ComplexConditionsStrategy:
                 th_short = 0
 
         # ロング: Close > Trend AND Momentum > High
-        long_conds: List[Union[Condition, ConditionGroup]] = [
-            Condition(
-                left_operand="Close", operator=">", right_operand=t_name
-            ),
+        long_conds: list[Condition | ConditionGroup] = [
+            Condition(left_operand="Close", operator=">", right_operand=t_name),
         ]
         # Momentumの比較対象が "close" の場合は、Momentum > Close (または < Close) になる
         # もしMomentumがRSI(0-100)なら、RSI > 60 となる
@@ -142,29 +143,21 @@ class ComplexConditionsStrategy:
         op_long = ">"
         op_short = "<"
         long_conds.append(
-            Condition(
-                left_operand=m_name, operator=op_long, right_operand=th_long
-            )
+            Condition(left_operand=m_name, operator=op_long, right_operand=th_long)
         )
 
         # ショート: Close < Trend AND Momentum < Low
-        short_conds: List[Union[Condition, ConditionGroup]] = [
-            Condition(
-                left_operand="Close", operator="<", right_operand=t_name
-            ),
+        short_conds: list[Condition | ConditionGroup] = [
+            Condition(left_operand="Close", operator="<", right_operand=t_name),
         ]
         short_conds.append(
-            Condition(
-                left_operand=m_name, operator=op_short, right_operand=th_short
-            )
+            Condition(left_operand=m_name, operator=op_short, right_operand=th_short)
         )
 
         build_and_groups = getattr(type(self.gen), "_build_and_groups", None)
         if build_and_groups is None:
             long_group = ConditionGroup(operator="AND", conditions=long_conds)
-            short_group = ConditionGroup(
-                operator="AND", conditions=short_conds
-            )
+            short_group = ConditionGroup(operator="AND", conditions=short_conds)
         else:
             long_group, short_group = build_and_groups(
                 self.gen,
@@ -190,13 +183,12 @@ class ComplexConditionsStrategy:
             return longs, shorts
 
         short_ma, long_ma = (i1, i2) if p1 < p2 else (i2, i1)
-        s_name, l_name = self.gen._get_indicator_name(
-            short_ma
-        ), self.gen._get_indicator_name(long_ma)
-
-        longs.append(
-            Condition(left_operand=s_name, operator=">", right_operand=l_name)
+        s_name, l_name = (
+            self.gen._get_indicator_name(short_ma),
+            self.gen._get_indicator_name(long_ma),
         )
+
+        longs.append(Condition(left_operand=s_name, operator=">", right_operand=l_name))
         shorts.append(
             Condition(left_operand=s_name, operator="<", right_operand=l_name)
         )
@@ -206,9 +198,7 @@ class ComplexConditionsStrategy:
         """ボラティリティブレイクアウト条件を生成"""
         longs, shorts = [], []
         candidates = [
-            i
-            for i in indicators
-            if i.enabled and self.gen._is_band_indicator(i)
+            i for i in indicators if i.enabled and self.gen._is_band_indicator(i)
         ]
         if not candidates:
             return longs, shorts
@@ -217,14 +207,10 @@ class ComplexConditionsStrategy:
         up_name, low_name = self.gen._get_band_names(target)
 
         longs.append(
-            Condition(
-                left_operand="Close", operator=">", right_operand=up_name
-            )
+            Condition(left_operand="Close", operator=">", right_operand=up_name)
         )
         shorts.append(
-            Condition(
-                left_operand="Close", operator="<", right_operand=low_name
-            )
+            Condition(left_operand="Close", operator="<", right_operand=low_name)
         )
         return longs, shorts
 

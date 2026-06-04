@@ -18,7 +18,7 @@ class TestAutoStrategyInitExports:
             AutoStrategyService,
         )
 
-        service = getattr(auto_strategy_package, "AutoStrategyService")
+        service = auto_strategy_package.AutoStrategyService
 
         assert service is AutoStrategyService
 
@@ -26,7 +26,7 @@ class TestAutoStrategyInitExports:
         """StrategyGeneが遅延ロードされる"""
         from app.services.auto_strategy.genes import StrategyGene
 
-        gene = getattr(auto_strategy_package, "StrategyGene")
+        gene = auto_strategy_package.StrategyGene
 
         assert gene is StrategyGene
 
@@ -34,7 +34,7 @@ class TestAutoStrategyInitExports:
         """GAConfigが遅延ロードされる"""
         from app.services.auto_strategy.config import GAConfig
 
-        config = getattr(auto_strategy_package, "GAConfig")
+        config = auto_strategy_package.GAConfig
 
         assert config is GAConfig
 
@@ -42,7 +42,7 @@ class TestAutoStrategyInitExports:
         """TPSLServiceが遅延ロードされる"""
         from app.services.auto_strategy.tpsl import TPSLService
 
-        service = getattr(auto_strategy_package, "TPSLService")
+        service = auto_strategy_package.TPSLService
 
         assert service is TPSLService
 
@@ -52,7 +52,7 @@ class TestAutoStrategyInitExports:
             PositionSizingService,
         )
 
-        service = getattr(auto_strategy_package, "PositionSizingService")
+        service = auto_strategy_package.PositionSizingService
 
         assert service is PositionSizingService
 

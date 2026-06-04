@@ -5,7 +5,7 @@ GA実行後のエリート個体のパラメータチューニングと最終選
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from ...config.ga.ga_config import GAConfig
@@ -81,11 +81,11 @@ class ParameterTuningManager:
 
     def select_tuning_candidates(
         self,
-        population: List[object],
+        population: list[object],
         config: "GAConfig",
         *,
-        fallback_gene: Optional[StrategyGene] = None,
-    ) -> List[StrategyGene]:
+        fallback_gene: StrategyGene | None = None,
+    ) -> list[StrategyGene]:
         """
         チューニング対象の上位候補を抽出する。
         """
@@ -102,7 +102,7 @@ class ParameterTuningManager:
         processor = ResultProcessor()
         ordered_population = processor.sort_population(population)
 
-        candidates: List[StrategyGene] = []
+        candidates: list[StrategyGene] = []
         seen_keys = set()
 
         for individual in ordered_population:
@@ -122,8 +122,8 @@ class ParameterTuningManager:
         return candidates
 
     def tune_candidate_genes(
-        self, candidates: List[StrategyGene], config: "GAConfig"
-    ) -> List[StrategyGene]:
+        self, candidates: list[StrategyGene], config: "GAConfig"
+    ) -> list[StrategyGene]:
         """
         候補遺伝子群を順次チューニングする。
         """
@@ -136,7 +136,7 @@ class ParameterTuningManager:
             config,
         )
 
-        tuned_candidates: List[StrategyGene] = []
+        tuned_candidates: list[StrategyGene] = []
         for candidate_rank, candidate in enumerate(candidates):
             try:
                 tuned_candidate = tuner.tune(candidate)
@@ -147,25 +147,21 @@ class ParameterTuningManager:
                     exc,
                 )
                 tuned_candidate = candidate
-            tuned_candidate.metadata.setdefault(
-                "tuning_candidate_rank", candidate_rank
-            )
+            tuned_candidate.metadata.setdefault("tuning_candidate_rank", candidate_rank)
             tuned_candidates.append(tuned_candidate)
 
         return tuned_candidates
 
     def select_best_tuned_candidate(
-        self, tuned_candidates: List[StrategyGene], config: "GAConfig"
-    ) -> Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]]:
+        self, tuned_candidates: list[StrategyGene], config: "GAConfig"
+    ) -> tuple[StrategyGene, float, dict[str, Any] | None] | None:
         """
         チューニング後候補を robustness で再評価し最終勝者を返す。
         """
         if not tuned_candidates:
             return None
 
-        best_tuple: Optional[
-            Tuple[StrategyGene, float, Optional[Dict[str, Any]]]
-        ] = None
+        best_tuple: tuple[StrategyGene, float, dict[str, Any] | None] | None = None
         best_key = None
 
         for candidate_rank, candidate in enumerate(tuned_candidates):
@@ -181,9 +177,7 @@ class ParameterTuningManager:
                 )
                 continue
 
-            primary_fitness = self.extract_primary_fitness_from_result(
-                fitness_result
-            )
+            primary_fitness = self.extract_primary_fitness_from_result(fitness_result)
             report = None
             evaluate_robustness_report = getattr(
                 self.individual_evaluator,
@@ -212,7 +206,7 @@ class ParameterTuningManager:
             rank_key = build_report_rank_key_from_primary_fitness(
                 primary_fitness,
                 cast(
-                    Optional[EvaluationReport],
+                    EvaluationReport | None,
                     report if is_evaluation_report(report) else None,
                 ),
                 min_pass_rate=float(
@@ -244,18 +238,16 @@ class ParameterTuningManager:
         return best_tuple
 
     def select_best_tuned_candidate_by_fitness(
-        self, tuned_candidates: List[StrategyGene], config: "GAConfig"
-    ) -> Optional[Tuple[StrategyGene, float, Optional[Dict[str, Any]]]]:
+        self, tuned_candidates: list[StrategyGene], config: "GAConfig"
+    ) -> tuple[StrategyGene, float, dict[str, Any] | None] | None:
         """
         チューニング後候補を主 fitness だけで再選抜する。
         """
         if not tuned_candidates:
             return None
 
-        best_tuple: Optional[
-            Tuple[StrategyGene, float, Optional[Dict[str, Any]]]
-        ] = None
-        best_fitness: Optional[float] = None
+        best_tuple: tuple[StrategyGene, float, dict[str, Any] | None] | None = None
+        best_fitness: float | None = None
 
         for candidate in tuned_candidates:
             try:
@@ -266,9 +258,7 @@ class ParameterTuningManager:
                 logger.warning("[Tuning] 候補の再評価に失敗: %s", exc)
                 continue
 
-            primary_fitness = self.extract_primary_fitness_from_result(
-                fitness_result
-            )
+            primary_fitness = self.extract_primary_fitness_from_result(fitness_result)
             summary = self.build_individual_evaluation_summary(
                 candidate,
                 config,
@@ -288,7 +278,7 @@ class ParameterTuningManager:
 
     def evaluate_individual_with_full_fidelity(
         self, individual: object, config: "GAConfig"
-    ) -> Tuple[float, ...]:
+    ) -> tuple[float, ...]:
         """
         必要に応じて full fidelity で個体を再評価する。
         """
@@ -312,12 +302,12 @@ class ParameterTuningManager:
     def tune_and_select_best_gene(
         self,
         *,
-        population: List[object],
-        current_best_gene: Optional[StrategyGene],
+        population: list[object],
+        current_best_gene: StrategyGene | None,
         config: "GAConfig",
         fallback_fitness: object,
-        fallback_summary: Optional[Dict[str, Any]],
-    ) -> Tuple[Optional[StrategyGene], object, Optional[Dict[str, Any]]]:
+        fallback_summary: dict[str, Any] | None,
+    ) -> tuple[StrategyGene | None, object, dict[str, Any] | None]:
         """
         上位候補をチューニングし、設定に応じた基準で最終勝者を選び直す。
         """
@@ -327,13 +317,11 @@ class ParameterTuningManager:
         objectives = getattr(config, "objectives", ())
         if isinstance(objectives, (list, tuple)) and len(objectives) > 1:
             tuned_gene = self.tune_elite_parameters(current_best_gene, config)
-            refreshed_fitness, refreshed_summary = (
-                self.refresh_best_gene_reporting(
-                    best_gene=tuned_gene,
-                    config=config,
-                    fallback_fitness=fallback_fitness,
-                    fallback_summary=fallback_summary,
-                )
+            refreshed_fitness, refreshed_summary = self.refresh_best_gene_reporting(
+                best_gene=tuned_gene,
+                config=config,
+                fallback_fitness=fallback_fitness,
+                fallback_summary=fallback_summary,
             )
             logger.info(
                 "[Tuning] 多目的設定のため、最良個体のみをチューニングして再評価しました"
@@ -346,13 +334,11 @@ class ParameterTuningManager:
             fallback_gene=current_best_gene,
         )
         if not tuning_candidates:
-            refreshed_fitness, refreshed_summary = (
-                self.refresh_best_gene_reporting(
-                    best_gene=current_best_gene,
-                    config=config,
-                    fallback_fitness=fallback_fitness,
-                    fallback_summary=fallback_summary,
-                )
+            refreshed_fitness, refreshed_summary = self.refresh_best_gene_reporting(
+                best_gene=current_best_gene,
+                config=config,
+                fallback_fitness=fallback_fitness,
+                fallback_summary=fallback_summary,
             )
             return current_best_gene, refreshed_fitness, refreshed_summary
 
@@ -368,13 +354,11 @@ class ParameterTuningManager:
                 config,
             )
         if tuned_winner is None:
-            refreshed_fitness, refreshed_summary = (
-                self.refresh_best_gene_reporting(
-                    best_gene=current_best_gene,
-                    config=config,
-                    fallback_fitness=fallback_fitness,
-                    fallback_summary=fallback_summary,
-                )
+            refreshed_fitness, refreshed_summary = self.refresh_best_gene_reporting(
+                best_gene=current_best_gene,
+                config=config,
+                fallback_fitness=fallback_fitness,
+                fallback_summary=fallback_summary,
             )
             return current_best_gene, refreshed_fitness, refreshed_summary
 
@@ -393,11 +377,11 @@ class ParameterTuningManager:
     def refresh_best_gene_reporting(
         self,
         *,
-        best_gene: Optional[StrategyGene],
+        best_gene: StrategyGene | None,
         config: "GAConfig",
         fallback_fitness: object,
-        fallback_summary: Optional[Dict[str, Any]],
-    ) -> Tuple[object, Optional[Dict[str, Any]]]:
+        fallback_summary: dict[str, Any] | None,
+    ) -> tuple[object, dict[str, Any] | None]:
         """
         チューニング後の最良遺伝子を再評価し、summary を最新化する。
         """
@@ -406,9 +390,7 @@ class ParameterTuningManager:
 
         refreshed_fitness = fallback_fitness
         try:
-            evaluated = self.evaluate_individual_with_full_fidelity(
-                best_gene, config
-            )
+            evaluated = self.evaluate_individual_with_full_fidelity(best_gene, config)
             refreshed_fitness = normalize_fitness_values(evaluated)
         except Exception as exc:
             logger.warning("最良遺伝子の再評価に失敗しました: %s", exc)
@@ -417,9 +399,7 @@ class ParameterTuningManager:
             best_gene,
             config,
             force_robustness=bool(config.two_stage_selection_config.enabled),
-            primary_fitness=self.extract_primary_fitness_from_result(
-                refreshed_fitness
-            ),
+            primary_fitness=self.extract_primary_fitness_from_result(refreshed_fitness),
         )
         return refreshed_fitness, refreshed_summary or fallback_summary
 
@@ -429,10 +409,10 @@ class ParameterTuningManager:
         config: "GAConfig",
         *,
         force_robustness: bool = False,
-        primary_fitness: Optional[float] = None,
-        selection_rank_override: Optional[int] = None,
-        selection_score_override: Optional[Tuple[float, ...]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        primary_fitness: float | None = None,
+        selection_rank_override: int | None = None,
+        selection_score_override: tuple[float, ...] | None = None,
+    ) -> dict[str, Any] | None:
         """
         個体の評価 report から保存向け summary を構築する。
         """
@@ -455,21 +435,15 @@ class ParameterTuningManager:
             None,
         )
 
-        report: Optional[object] = None
+        report: object | None = None
         if callable(get_cached_robustness_report):
             report = get_cached_robustness_report(individual, config)
 
-        if (
-            report is None
-            and force_robustness
-            and callable(evaluate_robustness_report)
-        ):
+        if report is None and force_robustness and callable(evaluate_robustness_report):
             try:
                 report = evaluate_robustness_report(individual, config)
             except Exception as exc:
-                logger.debug(
-                    "summary 用 robustness 評価に失敗しました: %s", exc
-                )
+                logger.debug("summary 用 robustness 評価に失敗しました: %s", exc)
 
         if report is None and callable(get_cached_evaluation_report):
             report = get_cached_evaluation_report(individual)
@@ -500,14 +474,10 @@ class ParameterTuningManager:
 
         if primary_fitness is None:
             fitness_score = extract_primary_fitness(individual)
-            numeric_fitness = (
-                fitness_score if isfinite(fitness_score) else None
-            )
+            numeric_fitness = fitness_score if isfinite(fitness_score) else None
         else:
             numeric_fitness = (
-                float(primary_fitness)
-                if isfinite(float(primary_fitness))
-                else None
+                float(primary_fitness) if isfinite(float(primary_fitness)) else None
             )
 
         selection_rank = selection_rank_override

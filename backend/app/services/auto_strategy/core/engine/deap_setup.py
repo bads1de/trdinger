@@ -6,7 +6,7 @@ DEAPライブラリの設定とツールボックスの初期化を担当するD
 
 import logging
 import uuid
-from typing import Callable, Optional, Tuple
+from collections.abc import Callable
 
 from deap import base, creator, tools
 
@@ -31,17 +31,17 @@ class DEAPSetup:
         DEAP設定クラスを初期化します。
         ツールボックスとクラス名はsetup_deapで設定されます。
         """
-        self.toolbox: Optional[base.Toolbox] = None
+        self.toolbox: base.Toolbox | None = None
         self.Individual = None
-        self.fitness_class_name: Optional[str] = None
-        self.individual_class_name: Optional[str] = None
+        self.fitness_class_name: str | None = None
+        self.individual_class_name: str | None = None
 
     def setup_deap(
         self,
         config: GAConfig,
         create_individual_func: Callable[[], StrategyGene],
-        evaluate_func: Callable[[StrategyGene], Tuple[float, ...]],
-        crossover_func: Callable[..., Tuple[StrategyGene, StrategyGene]],
+        evaluate_func: Callable[[StrategyGene], tuple[float, ...]],
+        crossover_func: Callable[..., tuple[StrategyGene, StrategyGene]],
         mutate_func: Callable[..., StrategyGene],
     ) -> None:
         """DEAP環境のセットアップ。
@@ -89,7 +89,7 @@ class DEAPSetup:
 
         normalized_weights = []
         try:
-            for objective, weight in zip(objectives, objective_weights):
+            for objective, weight in zip(objectives, objective_weights, strict=False):
                 numeric_weight = float(weight)
                 normalized_weight = (
                     -abs(numeric_weight)
@@ -98,27 +98,19 @@ class DEAPSetup:
                 )
                 normalized_weights.append(normalized_weight)
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "objective_weights は数値である必要があります"
-            ) from exc
+            raise ValueError("objective_weights は数値である必要があります") from exc
 
         weights = tuple(normalized_weights)
 
-        logger.info(
-            f"多目的最適化モード: 目的={config.objectives}, 重み={weights}"
-        )
+        logger.info(f"多目的最適化モード: 目的={config.objectives}, 重み={weights}")
 
         # フィットネスクラスを作成
         creator.create(fitness_class_name, base.Fitness, weights=weights)
         fitness_class = getattr(creator, fitness_class_name)
 
         # StrategyGeneを継承し、fitness属性を持つクラスを作成
-        creator.create(
-            individual_class_name, StrategyGene, fitness=fitness_class
-        )  # type: ignore
-        self.Individual = getattr(
-            creator, individual_class_name
-        )  # type: ignore
+        creator.create(individual_class_name, StrategyGene, fitness=fitness_class)  # type: ignore
+        self.Individual = getattr(creator, individual_class_name)  # type: ignore
 
         # ツールボックスの初期化
         self.toolbox = base.Toolbox()
@@ -158,7 +150,7 @@ class DEAPSetup:
 
         logger.info("DEAP環境のセットアップ完了")
 
-    def get_toolbox(self) -> Optional[base.Toolbox]:
+    def get_toolbox(self) -> base.Toolbox | None:
         """
         DEAPツールボックスを取得
 
@@ -169,7 +161,7 @@ class DEAPSetup:
         """
         return self.toolbox
 
-    def get_individual_class(self) -> Optional[type]:
+    def get_individual_class(self) -> type | None:
         """生成された個体クラスを取得
 
         DEAPのcreator.createによって生成された個体クラスを返します。

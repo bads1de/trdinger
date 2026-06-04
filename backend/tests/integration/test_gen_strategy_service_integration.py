@@ -5,7 +5,7 @@ GeneratedStrategyService統合テスト
 """
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -48,7 +48,7 @@ class TestGeneratedStrategyService:
         return GeneratedStrategyService(db=mock_db_session)
 
     @pytest.fixture
-    def sample_gene_data(self) -> Dict[str, Any]:
+    def sample_gene_data(self) -> dict[str, Any]:
         """サンプル遺伝子データ
 
         Returns:
@@ -83,7 +83,7 @@ class TestGeneratedStrategyService:
         }
 
     @pytest.fixture
-    def sample_backtest_result(self) -> Dict[str, Any]:
+    def sample_backtest_result(self) -> dict[str, Any]:
         """サンプルバックテスト結果
 
         Returns:
@@ -100,7 +100,7 @@ class TestGeneratedStrategyService:
 
     @pytest.fixture
     def sample_generated_strategy(
-        self, sample_gene_data: Dict[str, Any], sample_backtest_result: Dict[str, Any]
+        self, sample_gene_data: dict[str, Any], sample_backtest_result: dict[str, Any]
     ) -> GeneratedStrategy:
         """サンプル生成戦略
 
@@ -156,7 +156,7 @@ class TestGeneratedStrategyService:
     def test_extract_strategy_name(
         self,
         integration_service: GeneratedStrategyService,
-        sample_gene_data: Dict[str, Any],
+        sample_gene_data: dict[str, Any],
     ) -> None:
         """戦略名の抽出
 
@@ -186,7 +186,7 @@ class TestGeneratedStrategyService:
     def test_generate_strategy_description(
         self,
         integration_service: GeneratedStrategyService,
-        sample_gene_data: Dict[str, Any],
+        sample_gene_data: dict[str, Any],
     ) -> None:
         """戦略説明の生成
 
@@ -205,7 +205,7 @@ class TestGeneratedStrategyService:
     def test_extract_indicators(
         self,
         integration_service: GeneratedStrategyService,
-        sample_gene_data: Dict[str, Any],
+        sample_gene_data: dict[str, Any],
     ) -> None:
         """インジケーターの抽出
 
@@ -222,7 +222,7 @@ class TestGeneratedStrategyService:
     def test_extract_parameters(
         self,
         integration_service: GeneratedStrategyService,
-        sample_gene_data: Dict[str, Any],
+        sample_gene_data: dict[str, Any],
     ) -> None:
         """パラメータの抽出
 

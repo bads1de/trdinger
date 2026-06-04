@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any, Dict, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ class IndicatorValidator:
     """
 
     def basic_validation(
-        self, df: pd.DataFrame, config: Dict[str, Any], params: Dict[str, Any]
+        self, df: pd.DataFrame, config: dict[str, Any], params: dict[str, Any]
     ) -> bool:
         """
         基本検証 - データ長と必須カラムのチェック
@@ -44,9 +44,7 @@ class IndicatorValidator:
         Returns:
             bool: 検証に合格した場合はTrue、不合格の場合はFalse
         """
-        is_valid, _ = validate_data_length_with_fallback(
-            df, config["function"], params
-        )
+        is_valid, _ = validate_data_length_with_fallback(df, config["function"], params)
         if not is_valid:
             return False
 
@@ -65,8 +63,8 @@ class IndicatorValidator:
         return True
 
     def create_nan_result(
-        self, df: pd.DataFrame, config: Dict[str, Any]
-    ) -> Union[np.ndarray, tuple]:
+        self, df: pd.DataFrame, config: dict[str, Any]
+    ) -> np.ndarray | tuple:
         """
         NaN結果を作成
 
@@ -86,9 +84,7 @@ class IndicatorValidator:
             return tuple(nan_result[:, i] for i in range(nan_result.shape[1]))
         return nan_result
 
-    def resolve_column_name(
-        self, df: pd.DataFrame, data_key: str
-    ) -> str | None:
+    def resolve_column_name(self, df: pd.DataFrame, data_key: str) -> str | None:
         """
         データフレームから適切なカラム名を解決
 

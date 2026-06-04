@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -72,7 +72,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def __init__(
         self,
-        trainer_config: Optional[Dict[str, SerializableValue]] = None,
+        trainer_config: dict[str, SerializableValue] | None = None,
     ):
         """
         トレーナーを初期化し、共通サービス（特徴量計算、ラベル生成等）を準備します。
@@ -97,15 +97,13 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         self.trainer_config = trainer_config or {}
 
-        self.scaler: Optional[StandardScaler] = StandardScaler()
-        self.feature_columns: Optional[List[str]] = None
+        self.scaler: StandardScaler | None = StandardScaler()
+        self.feature_columns: list[str] | None = None
         self.is_trained: bool = False
         self._model: TrainedModel | None = None
-        self.current_model_path: Optional[str] = None
-        self.current_model_metadata: Optional[Dict[str, SerializableValue]] = (
-            None
-        )
-        self.metadata: Optional[Dict[str, SerializableValue]] = None
+        self.current_model_path: str | None = None
+        self.current_model_metadata: dict[str, SerializableValue] | None = None
+        self.metadata: dict[str, SerializableValue] | None = None
 
     @property
     def config(self):
@@ -137,12 +135,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def train_model(
         self,
         training_data: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
+        funding_rate_data: pd.DataFrame | None = None,
+        open_interest_data: pd.DataFrame | None = None,
         save_model: bool = True,
-        model_name: Optional[str] = None,
+        model_name: str | None = None,
         **training_params,
-    ) -> Dict[str, SerializableValue]:
+    ) -> dict[str, SerializableValue]:
         """
         MLモデルを学習（テンプレートメソッド）
 
@@ -165,9 +163,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 raise DataError("学習データが空です")
 
             # 2. データ分割（時系列ホールドアウト）
-            X_tr, X_te, y_tr, y_te = self._split_data(
-                X_all, y, **training_params
-            )
+            X_tr, X_te, y_tr, y_te = self._split_data(X_all, y, **training_params)
 
             gate_quantile = self._coerce_float_param(
                 training_params.get(
@@ -198,18 +194,14 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # 3. クロスバリデーション（特徴量選択の前に実行してリークを防ぐ）
             cv_res = None
             if training_params.get("use_cross_validation", False):
-                cv_res = self._time_series_cross_validate(
-                    X_tr, y_tr, **training_params
-                )
+                cv_res = self._time_series_cross_validate(X_tr, y_tr, **training_params)
 
             # 4. 動的な特徴量選択（学習データのみを使用）
             X_tr, X_te = self._apply_feature_selection(X_tr, X_te, y_tr)
 
             # 5. 学習実行
             X_tr_s, X_te_s = self._preprocess_data(X_tr, X_te)
-            res = self._train_model_impl(
-                X_tr_s, X_te_s, y_tr, y_te, **training_params
-            )
+            res = self._train_model_impl(X_tr_s, X_te_s, y_tr, y_te, **training_params)
             if cv_res is not None:
                 res.update(cv_res)
 
@@ -224,9 +216,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                     len(self.feature_columns or []),
                 )
                 if not meta.validate()["is_valid"]:
-                    logger.warning(
-                        f"メタデータ警告: {meta.validate()['warnings']}"
-                    )
+                    logger.warning(f"メタデータ警告: {meta.validate()['warnings']}")
 
                 path = self.save_model(
                     model_name or self.config.model.auto_strategy_model_name,
@@ -238,9 +228,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
             # 元のX, yを返す必要がある場合は、選択後の特徴量を持つ全データを再構築
             # （レポート出力用など）
-            X_final, y_final = self._recombine_split_data(
-                X_tr, X_te, y_tr, y_te
-            )
+            X_final, y_final = self._recombine_split_data(X_tr, X_te, y_tr, y_te)
 
             return self._format_training_result(res, X_final, y_final)
 
@@ -256,9 +244,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             予測結果
         """
 
-    def predict_volatility(
-        self, features_df: pd.DataFrame
-    ) -> Dict[str, float]:
+    def predict_volatility(self, features_df: pd.DataFrame) -> dict[str, float]:
         """
         最新の特徴量データから将来ボラティリティを予測
 
@@ -329,7 +315,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         y_train: pd.Series,
         y_test: pd.Series,
         **training_params,
-    ) -> Dict[str, SerializableValue]:
+    ) -> dict[str, SerializableValue]:
         """
         モデル学習の実装（抽象メソッド）
         """
@@ -337,8 +323,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     def _calculate_features(
         self,
         ohlcv_data: pd.DataFrame,
-        funding_rate_data: Optional[pd.DataFrame] = None,
-        open_interest_data: Optional[pd.DataFrame] = None,
+        funding_rate_data: pd.DataFrame | None = None,
+        open_interest_data: pd.DataFrame | None = None,
     ) -> pd.DataFrame:
         """入力データから特徴量集合を計算"""
         try:
@@ -352,9 +338,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 open_interest_data=open_interest_data,
             )
 
-            logger.info(
-                f"✅ 特徴量生成完了: {len(basic_features.columns)}個の特徴量"
-            )
+            logger.info(f"✅ 特徴量生成完了: {len(basic_features.columns)}個の特徴量")
             return basic_features
 
         except Exception as e:
@@ -366,7 +350,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         features_df: pd.DataFrame,
         ohlcv_df: pd.DataFrame,
         **training_params,
-    ) -> Tuple[pd.DataFrame, pd.Series]:
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """学習用データを準備"""
         try:
             task_type = training_params.get(
@@ -374,16 +358,12 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 self.config.training.task_type,
             )
             if task_type == "volatility_regression":
-                features_clean, labels_numeric = (
-                    self.target_service.prepare_targets(
-                        features_df, ohlcv_df, **training_params
-                    )
+                features_clean, labels_numeric = self.target_service.prepare_targets(
+                    features_df, ohlcv_df, **training_params
                 )
             else:
-                features_clean, labels_numeric = (
-                    self.label_service.prepare_labels(
-                        features_df, ohlcv_df, **training_params
-                    )
+                features_clean, labels_numeric = self.label_service.prepare_labels(
+                    features_df, ohlcv_df, **training_params
                 )
 
             self.feature_columns = features_clean.columns.tolist()
@@ -395,7 +375,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def _apply_feature_selection(
         self, X_tr: pd.DataFrame, X_te: pd.DataFrame, y_tr: pd.Series
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """学習用データのみに対して特徴量選択を適用する"""
         logger.info(
             f"🎯 動的な特徴量選択を実行中... (学習データ: {len(X_tr)}サンプル, 候補数: {len(X_tr.columns)})"
@@ -404,9 +384,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             # fitは学習データのみで行う（これが重要）
             self.feature_selector.fit(X_tr, y_tr)
 
-            selected_columns = list(
-                self.feature_selector.get_feature_names_out()
-            )
+            selected_columns = list(self.feature_selector.get_feature_names_out())
 
             # transformは学習・テスト両方に適用
             X_tr_selected = pd.DataFrame(
@@ -421,9 +399,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             )
 
             self.feature_columns = selected_columns
-            logger.info(
-                f"✅ 特徴量選択完了: {len(self.feature_columns)}個を採用"
-            )
+            logger.info(f"✅ 特徴量選択完了: {len(self.feature_columns)}個を採用")
             return X_tr_selected, X_te_selected
         except Exception as e:
             logger.warning(
@@ -434,7 +410,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def _split_data(
         self, X: pd.DataFrame, y: pd.Series, **training_params
-    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """データを分割（常に時系列分割）"""
         test_size = resolve_holdout_test_size(
             test_size=training_params.get("test_size"),
@@ -459,7 +435,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         X_test: pd.DataFrame,
         y_train: pd.Series,
         y_test: pd.Series,
-    ) -> Tuple[pd.DataFrame, pd.Series]:
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """学習・テスト分割後のデータをレポート用に再結合する。"""
         try:
             X_final = pd.concat([X_train, X_test]).sort_index()
@@ -475,15 +451,13 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def _time_series_cross_validate(
         self, X: pd.DataFrame, y: pd.Series, **training_params
-    ) -> Dict[str, SerializableValue]:
+    ) -> dict[str, SerializableValue]:
         """時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行
 
         各fold内で特徴量選択とスケーリングを実行することで、
         データリークを防ぎます。
         """
-        n_splits = training_params.get(
-            "cv_splits", self.config.training.cv_folds
-        )
+        n_splits = training_params.get("cv_splits", self.config.training.cv_folds)
         logger.info(f"🔄 時系列クロスバリデーション開始（{n_splits}分割）")
 
         t1_horizon_n = training_params.get(
@@ -500,25 +474,19 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         )
 
         pct_embargo = getattr(self.config.training, "pct_embargo", 0.01)
-        splitter = PurgedKFold(
-            n_splits=n_splits, t1=t1, pct_embargo=pct_embargo
-        )
+        splitter = PurgedKFold(n_splits=n_splits, t1=t1, pct_embargo=pct_embargo)
 
-        cv_scores: List[float] = []
-        fold_results: List[Dict[str, SerializableValue]] = []
-        task_type = training_params.get(
-            "task_type", self.config.training.task_type
-        )
+        cv_scores: list[float] = []
+        fold_results: list[dict[str, SerializableValue]] = []
+        task_type = training_params.get("task_type", self.config.training.task_type)
 
         for fold, (train_idx, test_idx) in enumerate(splitter.split(X, y)):
             X_train_cv, X_test_cv = X.iloc[train_idx], X.iloc[test_idx]
             y_train_cv, y_test_cv = y.iloc[train_idx], y.iloc[test_idx]
 
             # 各fold内で特徴量選択を実行（データリーク防止）
-            X_train_selected, X_test_selected = (
-                self._apply_feature_selection_for_fold(
-                    X_train_cv, X_test_cv, y_train_cv
-                )
+            X_train_selected, X_test_selected = self._apply_feature_selection_for_fold(
+                X_train_cv, X_test_cv, y_train_cv
             )
 
             # スケーリング（各fold内で実行）
@@ -527,7 +495,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
                 X_train_selected, X_test_selected, scaler
             )
 
-            fold_result: Dict[str, SerializableValue] = (
+            fold_result: dict[str, SerializableValue] = (
                 self._train_fold_with_error_handling(
                     fold + 1,
                     X_train_scaled,
@@ -569,12 +537,11 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         # `SerializableValue` は `list[float]` をそのまま受け取れないため、
         # 戻り値直前で明示的にシリアライズ可能な要素型へ揃える。
-        cv_scores_serializable: List[SerializableValue] = [
+        cv_scores_serializable: list[SerializableValue] = [
             cast(SerializableValue, score) for score in cv_scores
         ]
-        fold_results_serializable: List[SerializableValue] = [
-            cast(SerializableValue, fold_result)
-            for fold_result in fold_results
+        fold_results_serializable: list[SerializableValue] = [
+            cast(SerializableValue, fold_result) for fold_result in fold_results
         ]
 
         return {
@@ -589,7 +556,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         X_train_cv: pd.DataFrame,
         X_test_cv: pd.DataFrame,
         y_train_cv: pd.Series,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """CVの各fold内で特徴量選択を適用する（データリーク防止）"""
         try:
             # foldごとに新しい特徴量選択器を作成
@@ -621,7 +588,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         X_train: pd.DataFrame,
         X_test: pd.DataFrame,
         scaler: StandardScaler,
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """データをスケーリングし、DataFrame形式で返す。"""
         X_train_scaled = pd.DataFrame(
             np.asarray(scaler.fit_transform(X_train)),
@@ -637,7 +604,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def _preprocess_data(
         self, X_train: pd.DataFrame, X_test: pd.DataFrame
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """データを前処理（スケーリング）"""
         if self.scaler is None:
             self.scaler = StandardScaler()
@@ -650,24 +617,22 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def _get_model_specific_metadata(
         self, model_name: str
-    ) -> Dict[str, SerializableValue]:
+    ) -> dict[str, SerializableValue]:
         """モデル固有のメタデータを取得"""
         return {}
 
     def save_model(
         self,
         model_name: str,
-        metadata: Optional[Dict[str, SerializableValue]] = None,
-    ) -> Optional[str]:
+        metadata: dict[str, SerializableValue] | None = None,
+    ) -> str | None:
         """学習済みモデルを永続化"""
         if not self.is_trained:
             raise MLModelError("学習済みモデルがありません")
 
         final_metadata = {
             "model_type": self.__class__.__name__,
-            "feature_count": (
-                len(self.feature_columns) if self.feature_columns else 0
-            ),
+            "feature_count": (len(self.feature_columns) if self.feature_columns else 0),
             "is_trained": self.is_trained,
         }
         if metadata:
@@ -684,9 +649,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         model_to_save = self._get_model_to_save()
         if model_to_save is None:
-            logger.warning(
-                "保存対象モデルがNoneです。トレーナー自体を保存します。"
-            )
+            logger.warning("保存対象モデルがNoneです。トレーナー自体を保存します。")
             model_to_save = self
 
         model_path: str = model_manager.save_model(
@@ -702,22 +665,20 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
     def _format_training_result(
         self,
-        training_result: Dict[str, SerializableValue],
+        training_result: dict[str, SerializableValue],
         X: pd.DataFrame,
         y: pd.Series,
-    ) -> Dict[str, SerializableValue]:
+    ) -> dict[str, SerializableValue]:
         """学習結果を整形"""
         result = {
             "success": True,
-            "feature_count": (
-                len(self.feature_columns) if self.feature_columns else 0
-            ),
+            "feature_count": (len(self.feature_columns) if self.feature_columns else 0),
             "total_samples": len(X),
             **training_result,
         }
         return result
 
-    def get_feature_importance(self, top_n: int = 10) -> Dict[str, float]:
+    def get_feature_importance(self, top_n: int = 10) -> dict[str, float]:
         """特徴量重要度を取得"""
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
@@ -735,9 +696,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
     )
     def load_model(self, model_path: str) -> bool:
         """モデルを読み込み"""
-        model_data: Optional[Dict[str, Any]] = model_manager.load_model(
-            model_path
-        )
+        model_data: dict[str, Any] | None = model_manager.load_model(model_path)
 
         if model_data is None:
             return False
@@ -819,8 +778,8 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         y_test_cv: pd.Series,
         X_train_cv: pd.DataFrame,
         X_test_cv: pd.DataFrame,
-        training_params: Dict[str, SerializableValue],
-    ) -> Dict[str, SerializableValue]:
+        training_params: dict[str, SerializableValue],
+    ) -> dict[str, SerializableValue]:
         """エラーハンドリング付きフォールド学習"""
         fold_result = self._train_model_impl(
             X_train_scaled,

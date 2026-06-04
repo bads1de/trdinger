@@ -5,8 +5,6 @@
 パラメータ空間を定義します。Optunaの高度な最適化機能を活用。
 """
 
-from typing import Dict
-
 from .optuna_optimizer import ParameterSpace, build_lightgbm_parameter_space
 
 
@@ -19,7 +17,7 @@ class EnsembleParameterSpace:
     """
 
     @staticmethod
-    def get_lightgbm_parameter_space() -> Dict[str, ParameterSpace]:
+    def get_lightgbm_parameter_space() -> dict[str, ParameterSpace]:
         """LightGBM用のハイパーパラメータ探索空間を返す。
 
         Returns:
@@ -29,18 +27,14 @@ class EnsembleParameterSpace:
         params = build_lightgbm_parameter_space(prefix="lgb_")
         params.update(
             {
-                "lgb_reg_alpha": ParameterSpace(
-                    type="real", low=0.0, high=1.0
-                ),
-                "lgb_reg_lambda": ParameterSpace(
-                    type="real", low=0.0, high=1.0
-                ),
+                "lgb_reg_alpha": ParameterSpace(type="real", low=0.0, high=1.0),
+                "lgb_reg_lambda": ParameterSpace(type="real", low=0.0, high=1.0),
             }
         )
         return params
 
     @staticmethod
-    def get_xgboost_parameter_space() -> Dict[str, ParameterSpace]:
+    def get_xgboost_parameter_space() -> dict[str, ParameterSpace]:
         """XGBoost用のハイパーパラメータ探索空間を返す。
 
         Returns:
@@ -49,23 +43,17 @@ class EnsembleParameterSpace:
         """
         return {
             "xgb_max_depth": ParameterSpace(type="integer", low=3, high=15),
-            "xgb_learning_rate": ParameterSpace(
-                type="real", low=0.01, high=0.3
-            ),
+            "xgb_learning_rate": ParameterSpace(type="real", low=0.01, high=0.3),
             "xgb_subsample": ParameterSpace(type="real", low=0.5, high=1.0),
-            "xgb_colsample_bytree": ParameterSpace(
-                type="real", low=0.5, high=1.0
-            ),
-            "xgb_min_child_weight": ParameterSpace(
-                type="integer", low=1, high=10
-            ),
+            "xgb_colsample_bytree": ParameterSpace(type="real", low=0.5, high=1.0),
+            "xgb_min_child_weight": ParameterSpace(type="integer", low=1, high=10),
             "xgb_reg_alpha": ParameterSpace(type="real", low=0.0, high=1.0),
             "xgb_reg_lambda": ParameterSpace(type="real", low=0.0, high=1.0),
             "xgb_gamma": ParameterSpace(type="real", low=0.0, high=0.5),
         }
 
     @staticmethod
-    def get_stacking_parameter_space() -> Dict[str, ParameterSpace]:
+    def get_stacking_parameter_space() -> dict[str, ParameterSpace]:
         """スタッキングアンサンブル固有のハイパーパラメータ探索空間を返す。
 
         メタモデル（LogisticRegression）の正則化パラメータ、
@@ -76,9 +64,7 @@ class EnsembleParameterSpace:
         """
         return {
             # メタモデル（LogisticRegression）のパラメータ
-            "stacking_meta_C": ParameterSpace(
-                type="real", low=0.01, high=10.0
-            ),
+            "stacking_meta_C": ParameterSpace(type="real", low=0.01, high=10.0),
             "stacking_meta_penalty": ParameterSpace(
                 type="categorical", categories=["l1", "l2", "elasticnet"]
             ),
@@ -86,15 +72,13 @@ class EnsembleParameterSpace:
                 type="categorical", categories=["liblinear", "saga"]
             ),
             # CV分割数
-            "stacking_cv_folds": ParameterSpace(
-                type="integer", low=3, high=10
-            ),
+            "stacking_cv_folds": ParameterSpace(type="integer", low=3, high=10),
         }
 
     @classmethod
     def get_ensemble_parameter_space(
         cls, ensemble_method: str, enabled_models: list
-    ) -> Dict[str, ParameterSpace]:
+    ) -> dict[str, ParameterSpace]:
         """統合されたハイパーパラメータ探索空間を構築する。
 
         指定されたアンサンブル手法と有効なベースモデルに応じて、

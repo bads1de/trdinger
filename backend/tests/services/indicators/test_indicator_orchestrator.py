@@ -111,7 +111,9 @@ class TestTechnicalIndicatorService:
                 indicator_service, "_get_indicator_config", return_value=None
             ):
                 # デフォルトのNaN結果が返されることを確認
-                result = indicator_service.calculate_indicator(sample_df, "UNSUPPORTED", {})
+                result = indicator_service.calculate_indicator(
+                    sample_df, "UNSUPPORTED", {}
+                )
                 assert isinstance(result, np.ndarray)
                 assert len(result) == len(sample_df)
                 assert np.all(np.isnan(result))
@@ -347,7 +349,9 @@ class TestTechnicalIndicatorService:
     def test_calculate_unknown_indicator(self, indicator_service, sample_df):
         """未登録の指標に対するテスト"""
         # NaN結果が返されることを確認
-        result = indicator_service.calculate_indicator(sample_df, "UNKNOWN_INDICATOR", {})
+        result = indicator_service.calculate_indicator(
+            sample_df, "UNKNOWN_INDICATOR", {}
+        )
         assert isinstance(result, np.ndarray)
         assert len(result) == len(sample_df)
         assert np.all(np.isnan(result))
@@ -365,7 +369,9 @@ class TestTechnicalIndicatorService:
                 indicator_service, "_get_indicator_config", return_value=None
             ):
                 # 例外がキャッチされてNaN結果が返されることを確認
-                result = indicator_service.calculate_indicator(unique_df, "SMA", {"length": 10})
+                result = indicator_service.calculate_indicator(
+                    unique_df, "SMA", {"length": 10}
+                )
                 assert isinstance(result, np.ndarray)
                 assert len(result) == len(unique_df)
                 assert np.all(np.isnan(result))

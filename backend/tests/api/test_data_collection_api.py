@@ -4,7 +4,7 @@
 データ収集APIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -57,8 +57,8 @@ def override_dependencies(mock_db_session, mock_data_collection_orchestration_se
         mock_data_collection_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_data_collection_orchestration_service] = (
-        lambda: mock_data_collection_orchestration_service
+    app.dependency_overrides[get_data_collection_orchestration_service] = lambda: (
+        mock_data_collection_orchestration_service
     )
     yield
     app.dependency_overrides.clear()
@@ -76,7 +76,7 @@ def mock_background_tasks() -> Mock:
 
 
 @pytest.fixture
-def sample_collection_response() -> Dict[str, Any]:
+def sample_collection_response() -> dict[str, Any]:
     """
     サンプルデータ収集レスポンス
 
@@ -96,7 +96,7 @@ def sample_collection_response() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_collection_status() -> Dict[str, Any]:
+def sample_collection_status() -> dict[str, Any]:
     """
     サンプルデータ収集状態
 
@@ -123,7 +123,7 @@ class TestHistoricalDataCollection:
         self,
         test_client: TestClient,
         mock_data_collection_orchestration_service: AsyncMock,
-        sample_collection_response: Dict[str, Any],
+        sample_collection_response: dict[str, Any],
     ) -> None:
         """
         正常系: 履歴データ収集が正常に開始される
@@ -136,9 +136,7 @@ class TestHistoricalDataCollection:
             sample_collection_response: サンプルレスポンス
         """
         # モックの設定
-        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = (
-            sample_collection_response
-        )
+        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = sample_collection_response
 
         # APIリクエスト
         response = test_client.post(
@@ -162,7 +160,7 @@ class TestHistoricalDataCollection:
         self,
         test_client: TestClient,
         mock_data_collection_orchestration_service: AsyncMock,
-        sample_collection_response: Dict[str, Any],
+        sample_collection_response: dict[str, Any],
     ) -> None:
         """
         正常系: カスタム開始日付で履歴データ収集が開始される
@@ -175,9 +173,7 @@ class TestHistoricalDataCollection:
             sample_collection_response: サンプルレスポンス
         """
         # モックの設定
-        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = (
-            sample_collection_response
-        )
+        mock_data_collection_orchestration_service.start_historical_data_collection.return_value = sample_collection_response
 
         # APIリクエスト
         response = test_client.post(
@@ -378,7 +374,7 @@ class TestCollectionStatus:
         self,
         test_client: TestClient,
         mock_data_collection_orchestration_service: AsyncMock,
-        sample_collection_status: Dict[str, Any],
+        sample_collection_status: dict[str, Any],
     ) -> None:
         """
         正常系: データ収集状態が正常に取得できる
@@ -391,9 +387,7 @@ class TestCollectionStatus:
             sample_collection_status: サンプル状態
         """
         # モックの設定
-        mock_data_collection_orchestration_service.get_collection_status.return_value = (
-            sample_collection_status
-        )
+        mock_data_collection_orchestration_service.get_collection_status.return_value = sample_collection_status
 
         # APIリクエスト
         response = test_client.get(
@@ -413,7 +407,7 @@ class TestCollectionStatus:
         self,
         test_client: TestClient,
         mock_data_collection_orchestration_service: AsyncMock,
-        sample_collection_status: Dict[str, Any],
+        sample_collection_status: dict[str, Any],
     ) -> None:
         """
         正常系: 自動フェッチ有効で状態が取得できる
@@ -426,9 +420,7 @@ class TestCollectionStatus:
             sample_collection_status: サンプル状態
         """
         # モックの設定
-        mock_data_collection_orchestration_service.get_collection_status.return_value = (
-            sample_collection_status
-        )
+        mock_data_collection_orchestration_service.get_collection_status.return_value = sample_collection_status
 
         # APIリクエスト
         response = test_client.get(

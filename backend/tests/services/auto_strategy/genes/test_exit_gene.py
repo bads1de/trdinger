@@ -11,7 +11,6 @@ from app.services.auto_strategy.genes.exit import ExitGene, create_random_exit_g
 
 
 class TestExitGene:
-
     def test_init_default(self):
         gene = ExitGene()
         assert gene.exit_type == ExitType.FULL

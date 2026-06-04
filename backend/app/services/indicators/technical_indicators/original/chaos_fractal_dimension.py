@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple, cast
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -135,9 +135,7 @@ def _njit_ctfd_raw_pass(
             p_chg[j] = p_win[j] - p_win[j - 1]
             v_chg[j] = v_win[j] - v_win[j - 1]
 
-        corr_dim = _calculate_correlation_dimension_impl(
-            p_win, embedding_dim, 1
-        )
+        corr_dim = _calculate_correlation_dimension_impl(p_win, embedding_dim, 1)
         chaos_score = corr_dim
 
         if p_len > 5:
@@ -156,9 +154,7 @@ def _njit_ctfd_raw_pass(
                 sxy += px * vx
                 sx2y += px2 * vx
 
-            A = np.array(
-                [[sx4, sx3, sx2], [sx3, sx2, sx], [sx2, sx, float(p_len)]]
-            )
+            A = np.array([[sx4, sx3, sx2], [sx3, sx2, sx], [sx2, sx, float(p_len)]])
             b = np.array([sx2y, sxy, sy])
 
             coeffs = _njit_solve_3x3(A, b)
@@ -214,9 +210,7 @@ def _njit_ctfd_raw_pass(
 
 
 @njit(cache=True)
-def _njit_ctfd_normalize(
-    raw_scores: np.ndarray, min_period: int
-) -> np.ndarray:
+def _njit_ctfd_normalize(raw_scores: np.ndarray, min_period: int) -> np.ndarray:
     n = len(raw_scores)
     result = np.full(n, np.nan)
 
@@ -252,9 +246,7 @@ def _chaos_fractal_dimension_loop(
     prices: np.ndarray, volumes: np.ndarray, length: int, embedding_dim: int
 ) -> np.ndarray:
     min_period = max(length, 30)
-    raw_scores = _njit_ctfd_raw_pass(
-        prices, volumes, length, embedding_dim, min_period
-    )
+    raw_scores = _njit_ctfd_raw_pass(prices, volumes, length, embedding_dim, min_period)
     return _njit_ctfd_normalize(raw_scores, min_period)
 
 
@@ -267,7 +259,7 @@ def chaos_fractal_dimension(
     length: int = 25,
     embedding_dim: int = 3,
     signal_length: int = 4,
-) -> Tuple[pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series]:
     """Chaos Theory Fractal Dimension (CTFD)."""
     if length < 15:
         raise ValueError("length must be >= 15")
@@ -295,12 +287,10 @@ def chaos_fractal_dimension(
     prices = close.astype(float).to_numpy()
     volumes = volume.astype(float).to_numpy()
 
-    result = _chaos_fractal_dimension_loop(
-        prices, volumes, length, embedding_dim
-    )
+    result = _chaos_fractal_dimension_loop(prices, volumes, length, embedding_dim)
 
     ctf_series = pd.Series(result, index=close.index, name="CHAOS_FRACTAL_DIM")
     signal = ctf_series.rolling(window=signal_length, min_periods=1).mean()
     signal.name = "CTFD_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
 
-    return cast(Tuple[pd.Series, pd.Series], (ctf_series, signal))
+    return cast(tuple[pd.Series, pd.Series], (ctf_series, signal))

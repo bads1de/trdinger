@@ -51,7 +51,6 @@ class TestE2EFlow:
                 "app.services.auto_strategy.services.auto_strategy_service.ExperimentManager"
             ) as MockManager,
         ):
-
             mock_persistence = MockPersistence.return_value
             mock_manager = MockManager.return_value
 
@@ -78,7 +77,7 @@ class TestE2EFlow:
 
             # バックグラウンドタスクが追加されたか
             assert len(background_tasks.tasks) == 1
-            task = background_tasks.tasks[0]
+            background_tasks.tasks[0]
             # task.func は experiment_manager.run_experiment であるべき
             # 注意: インスタンスメソッドの比較は難しい場合があるが、mock_manager.run_experiment と一致するはず
             # FastAPIのBackgroundTasksの実装詳細に依存しすぎないよう、ここでは「タスクが1つある」ことと

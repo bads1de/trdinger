@@ -5,7 +5,7 @@ GA実行、進捗管理、結果保存、戦略テストを統合的に管理し
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from app.services.backtest.services.backtest_service import BacktestService
 from app.utils.error_handler import ErrorHandler
@@ -32,12 +32,10 @@ class AutoStrategyService:
 
     def __init__(
         self,
-        backtest_service: Optional[BacktestService] = None,
-        persistence_service: Optional[ExperimentPersistenceService] = None,
-        experiment_manager: Optional[ExperimentManager] = None,
-        experiment_application_service: Optional[
-            ExperimentApplicationService
-        ] = None,
+        backtest_service: BacktestService | None = None,
+        persistence_service: ExperimentPersistenceService | None = None,
+        experiment_manager: ExperimentManager | None = None,
+        experiment_application_service: ExperimentApplicationService | None = None,
     ):
         """
         初期化
@@ -61,9 +59,7 @@ class AutoStrategyService:
             self.backtest_service = backtest_service
             self.persistence_service = persistence_service
             self.experiment_manager = experiment_manager
-            self.experiment_application_service = (
-                experiment_application_service
-            )
+            self.experiment_application_service = experiment_application_service
         else:
             # 従来モード: 内部初期化
             self._init_services()
@@ -93,8 +89,8 @@ class AutoStrategyService:
         self,
         experiment_id: str,
         experiment_name: str,
-        ga_config_dict: Dict[str, Any],
-        backtest_config_dict: Dict[str, Any],
+        ga_config_dict: dict[str, Any],
+        backtest_config_dict: dict[str, Any],
         task_scheduler: TaskScheduler,
     ) -> str:
         """
@@ -120,9 +116,7 @@ class AutoStrategyService:
 
         # 3. 実験の作成
         if not self.experiment_application_service:
-            raise RuntimeError(
-                "実験 application service が初期化されていません。"
-            )
+            raise RuntimeError("実験 application service が初期化されていません。")
 
         self.experiment_application_service.start_experiment(
             experiment_id=experiment_id,
@@ -138,7 +132,7 @@ class AutoStrategyService:
 
         return experiment_id
 
-    def _prepare_ga_config(self, settings: Dict[str, Any]) -> GAConfig:
+    def _prepare_ga_config(self, settings: dict[str, Any]) -> GAConfig:
         """
         GAの設定オブジェクトを準備します。
 
@@ -163,8 +157,8 @@ class AutoStrategyService:
             raise ErrorHandler.handle_api_error(e, context="GA設定構築と検証")
 
     def _prepare_backtest_config(
-        self, backtest_config_dict: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, backtest_config_dict: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         バックテスト設定の最終調整
 
@@ -175,9 +169,7 @@ class AutoStrategyService:
             シンボル等のデフォルト値が補完された設定辞書
         """
         backtest_config = backtest_config_dict.copy()
-        backtest_config["symbol"] = backtest_config.get(
-            "symbol", DEFAULT_SYMBOL
-        )
+        backtest_config["symbol"] = backtest_config.get("symbol", DEFAULT_SYMBOL)
         return backtest_config
 
     def _create_experiment(
@@ -185,7 +177,7 @@ class AutoStrategyService:
         experiment_id: str,
         experiment_name: str,
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
     ):
         """
         データベースに実験レコードを作成
@@ -217,7 +209,7 @@ class AutoStrategyService:
         self,
         experiment_id: str,
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
         task_scheduler: TaskScheduler,
     ):
         """実験をバックグラウンドタスクで開始する"""
@@ -233,12 +225,10 @@ class AutoStrategyService:
     ) -> ExperimentApplicationService:
         """初期化済みの ExperimentApplicationService を返す。"""
         if not self.experiment_application_service:
-            raise RuntimeError(
-                "実験 application service が初期化されていません。"
-            )
+            raise RuntimeError("実験 application service が初期化されていません。")
         return self.experiment_application_service
 
-    def list_experiments(self) -> List[Dict[str, Any]]:
+    def list_experiments(self) -> list[dict[str, Any]]:
         """
         実験一覧を取得
 
@@ -253,9 +243,7 @@ class AutoStrategyService:
             logger.error("エラー in 実験一覧取得: %s", e)
             return []
 
-    def get_experiment_detail(
-        self, experiment_id: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_experiment_detail(self, experiment_id: str) -> dict[str, Any] | None:
         """
         実験詳細を取得（進捗情報を含む）
 
@@ -275,7 +263,7 @@ class AutoStrategyService:
             logger.error("エラー in 実験詳細取得: %s", e)
             return None
 
-    def stop_experiment(self, experiment_id: str) -> Dict[str, Any]:
+    def stop_experiment(self, experiment_id: str) -> dict[str, Any]:
         """
         実験を停止
 
@@ -291,9 +279,7 @@ class AutoStrategyService:
                     "success": False,
                     "message": "実験 application service が初期化されていません",
                 }
-            return self.experiment_application_service.stop_experiment(
-                experiment_id
-            )
+            return self.experiment_application_service.stop_experiment(experiment_id)
         except Exception as e:
             logger.error("エラー in 実験停止: %s", e)
             return {

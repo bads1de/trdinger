@@ -5,7 +5,6 @@
 """
 
 from datetime import datetime, timezone
-from typing import List
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
@@ -113,7 +112,7 @@ def sample_ls_ratio_record() -> LongShortRatioData:
 
 
 @pytest.fixture
-def sample_ls_ratio_list(sample_ls_ratio_record) -> List[LongShortRatioData]:
+def sample_ls_ratio_list(sample_ls_ratio_record) -> list[LongShortRatioData]:
     """
     サンプルロング/ショート比率リスト
 
@@ -141,7 +140,7 @@ class TestGetLongShortRatioData:
         self,
         test_client: TestClient,
         mock_repository: Mock,
-        sample_ls_ratio_list: List[LongShortRatioData],
+        sample_ls_ratio_list: list[LongShortRatioData],
     ) -> None:
         """
         正常系: ロング/ショート比率が正常に取得できる

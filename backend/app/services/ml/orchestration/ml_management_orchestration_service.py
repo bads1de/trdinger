@@ -5,7 +5,7 @@ ML管理 オーケストレーションサービス
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 from urllib.parse import unquote
 
 from fastapi import HTTPException
@@ -35,7 +35,7 @@ class MLManagementOrchestrationService:
     def __init__(self):
         pass
 
-    async def get_formatted_models(self) -> Dict[str, List[Dict[str, Any]]]:
+    async def get_formatted_models(self) -> dict[str, list[dict[str, Any]]]:
         """
         ファイルシステム上の全学習済みモデルをスキャンし、詳細な統計情報を含むリストを返します。
 
@@ -64,9 +64,7 @@ class MLManagementOrchestrationService:
                 "is_active": self._is_active_model(m),
             }
             try:
-                data = await run_in_threadpool(
-                    load_model_metadata_safely, m["path"]
-                )
+                data = await run_in_threadpool(load_model_metadata_safely, m["path"])
                 meta = data["metadata"] if data else {}
                 metrics = await run_in_threadpool(
                     model_manager.extract_model_performance_metrics,
@@ -87,7 +85,7 @@ class MLManagementOrchestrationService:
             formatted.append(info)
         return {"models": formatted}
 
-    def _apply_default_model_metrics(self, model_info: Dict[str, Any]) -> None:
+    def _apply_default_model_metrics(self, model_info: dict[str, Any]) -> None:
         """モデル情報にデフォルトメトリクスを適用"""
         d = get_default_metrics()
         model_info.update(
@@ -102,14 +100,12 @@ class MLManagementOrchestrationService:
             }
         )
 
-    async def delete_model(self, model_id: str) -> Dict[str, str]:
+    async def delete_model(self, model_id: str) -> dict[str, str]:
         """指定されたモデルを削除"""
         logger.info(f"モデル削除要求: {model_id}")
         dec_id = unquote(model_id)
         models = await run_in_threadpool(model_manager.list_models, "*")
-        target = next(
-            (m for m in models if m["name"] in [dec_id, model_id]), None
-        )
+        target = next((m for m in models if m["name"] in [dec_id, model_id]), None)
 
         if not target:
             raise HTTPException(
@@ -120,14 +116,12 @@ class MLManagementOrchestrationService:
             await run_in_threadpool(os.remove, target["path"])
             return api_response(success=True, message="モデルが削除されました")
         except FileNotFoundError:
-            raise HTTPException(
-                status_code=404, detail="モデルファイルが存在しません"
-            )
+            raise HTTPException(status_code=404, detail="モデルファイルが存在しません")
         except Exception as e:
             logger.error(f"削除エラー: {e}")
             raise HTTPException(status_code=500, detail="削除失敗")
 
-    async def delete_all_models(self) -> Dict[str, Any]:
+    async def delete_all_models(self) -> dict[str, Any]:
         """
         すべてのモデルを削除
         """
@@ -153,9 +147,7 @@ class MLManagementOrchestrationService:
                 logger.info(f"モデル削除成功: {model['name']}")
                 deleted_count += 1
             except FileNotFoundError:
-                logger.warning(
-                    f"モデルファイルが存在しません: {model['path']}"
-                )
+                logger.warning(f"モデルファイルが存在しません: {model['path']}")
                 failed_models.append(model["name"])
             except Exception as e:
                 logger.error(f"モデル削除エラー: {model['name']} -> {e}")
@@ -174,12 +166,12 @@ class MLManagementOrchestrationService:
             "failed_models": failed_models,
         }
 
-    async def get_ml_status(self) -> Dict[str, Any]:
+    async def get_ml_status(self) -> dict[str, Any]:
         """
         MLモデルの現在の状態を取得
         """
         # デフォルトステータスの初期化
-        status: Dict[str, Any] = {
+        status: dict[str, Any] = {
             "is_model_loaded": False,
             "is_trained": False,
             "model_path": None,
@@ -213,9 +205,7 @@ class MLManagementOrchestrationService:
                         "model_path": model_info_data["path"],
                         "model_type": model_info.get("model_type"),
                         "feature_count": model_info.get("feature_count", 0),
-                        "training_samples": model_info.get(
-                            "training_samples", 0
-                        ),
+                        "training_samples": model_info.get("training_samples", 0),
                     }
                 )
                 status["model_info"] = model_info
@@ -245,7 +235,7 @@ class MLManagementOrchestrationService:
 
         return status
 
-    async def get_feature_importance(self, top_n: int = 10) -> Dict[str, Any]:
+    async def get_feature_importance(self, top_n: int = 10) -> dict[str, Any]:
         """
         特徴量重要度を取得
         """
@@ -277,14 +267,14 @@ class MLManagementOrchestrationService:
             # Bug #2修正: 空リストではなく空辞書を返す
             return {"feature_importance": {}}
 
-    async def cleanup_old_models(self) -> Dict[str, str]:
+    async def cleanup_old_models(self) -> dict[str, str]:
         """
         古いモデルファイルをクリーンアップ
         """
         await run_in_threadpool(model_manager.cleanup_expired_models)
         return {"message": "古いモデルファイルが削除されました"}
 
-    async def load_model(self, model_name: str) -> Dict[str, Any]:
+    async def load_model(self, model_name: str) -> dict[str, Any]:
         """
         指定されたモデルを読み込み
         """
@@ -330,7 +320,7 @@ class MLManagementOrchestrationService:
             ErrorHandler.handle_model_error(e, context="load_model")
             return {"success": False, "error": str(e)}
 
-    async def get_current_model_info(self) -> Dict[str, Any]:
+    async def get_current_model_info(self) -> dict[str, Any]:
         """
         現在読み込まれているモデル情報を取得
         """
@@ -365,20 +355,14 @@ class MLManagementOrchestrationService:
                 # ブロッキングI/Oをスレッドプールで実行
                 if await run_in_threadpool(os.path.exists, current_model_path):
                     stat = await run_in_threadpool(os.stat, current_model_path)
-                    last_updated = datetime.fromtimestamp(
-                        stat.st_mtime
-                    ).isoformat()
+                    last_updated = datetime.fromtimestamp(stat.st_mtime).isoformat()
 
                 return {
                     "loaded": True,
-                    "model_type": current_metadata.get(
-                        "model_type", "Unknown"
-                    ),
+                    "model_type": current_metadata.get("model_type", "Unknown"),
                     "is_trained": True,
                     "feature_count": current_metadata.get("feature_count", 0),
-                    "training_samples": current_metadata.get(
-                        "training_samples", 0
-                    ),
+                    "training_samples": current_metadata.get("training_samples", 0),
                     "accuracy": metrics.get("accuracy", 0.0),
                     "precision": metrics.get("precision", 0.0),
                     "recall": metrics.get("recall", 0.0),
@@ -396,7 +380,7 @@ class MLManagementOrchestrationService:
             logger.warning(f"現在のモデル情報取得エラー: {e}")
             return {"loaded": False, "error": str(e)}
 
-    def get_ml_config_dict(self) -> Dict[str, Any]:
+    def get_ml_config_dict(self) -> dict[str, Any]:
         """
         ML設定を辞書形式で取得
 
@@ -405,9 +389,7 @@ class MLManagementOrchestrationService:
         """
         return ml_config_manager.get_config_dict()
 
-    async def update_ml_config(
-        self, config_updates: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def update_ml_config(self, config_updates: dict[str, Any]) -> dict[str, Any]:
         """
         ML設定を更新
 
@@ -439,7 +421,7 @@ class MLManagementOrchestrationService:
                 "message": f"ML設定の更新中にエラーが発生しました: {e}",
             }
 
-    async def reset_ml_config(self) -> Dict[str, Any]:
+    async def reset_ml_config(self) -> dict[str, Any]:
         """
         ML設定をデフォルト値にリセット
 
@@ -468,7 +450,7 @@ class MLManagementOrchestrationService:
                 "message": f"ML設定のリセット中にエラーが発生しました: {e}",
             }
 
-    def _is_active_model(self, model: Dict[str, Any]) -> bool:
+    def _is_active_model(self, model: dict[str, Any]) -> bool:
         """
         モデルがアクティブかどうかを判定
 
@@ -492,7 +474,5 @@ class MLManagementOrchestrationService:
             return False
         except Exception as e:
             # 予期しない例外はログに記録して再スロー
-            logger.error(
-                f"予期しないアクティブモデル判定エラー: {e}", exc_info=True
-            )
+            logger.error(f"予期しないアクティブモデル判定エラー: {e}", exc_info=True)
             return False

@@ -7,7 +7,7 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import Optional, Tuple, Union, cast
+from typing import cast
 
 import pandas as pd
 from backtesting import Strategy
@@ -137,9 +137,7 @@ class UniversalStrategy(Strategy):
         self.tpsl_service = TPSLService()
         self.position_sizing_service = PositionSizingService()
         self.entry_executor = EntryExecutor()  # エントリー注文実行サービス
-        self.lower_tf_simulator = (
-            LowerTimeframeSimulator()
-        )  # 1分足シミュレーター
+        self.lower_tf_simulator = LowerTimeframeSimulator()  # 1分足シミュレーター
         self.state_tracker = StateTracker()  # ステートフル条件用
         self.runtime_state = StrategyRuntimeState()
         self._current_bar_index = 0  # バーインデックストラッカー
@@ -150,9 +148,7 @@ class UniversalStrategy(Strategy):
         # ヘルパークラスの初期化
         self.position_manager = PositionManager(self)
         self.stateful_conditions_evaluator = StatefulConditionsEvaluator(self)
-        self.early_termination_controller = StrategyEarlyTerminationController(
-            self
-        )
+        self.early_termination_controller = StrategyEarlyTerminationController(self)
         self.ml_filter = MLFilter(self)
         self.entry_decision_engine = EntryDecisionEngine(self)
         self.exit_decision_engine = ExitDecisionEngine(self)
@@ -176,26 +172,20 @@ class UniversalStrategy(Strategy):
             self.gene = self.strategy_gene
         else:
             # 安全のためデフォルトの空遺伝子またはエラー
-            raise ValueError(
-                "UniversalStrategy requires 'strategy_gene' in params"
-            )
+            raise ValueError("UniversalStrategy requires 'strategy_gene' in params")
 
         # ベースタイムフレーム（パラメータから取得、デフォルトは1h）
         self.base_timeframe = params.get("timeframe", "1h")
         self.evaluation_start = params.get("evaluation_start")
-        self._evaluation_start = self._normalize_evaluation_start(
-            self.evaluation_start
-        )
+        self._evaluation_start = self._normalize_evaluation_start(self.evaluation_start)
         early_termination_settings = params.get("early_termination_settings")
         if early_termination_settings is None:
             self.early_termination_settings = EarlyTerminationSettings()
         elif isinstance(early_termination_settings, EarlyTerminationSettings):
             self.early_termination_settings = early_termination_settings
         else:
-            self.early_termination_settings = (
-                EarlyTerminationSettings.from_source(
-                    early_termination_settings
-                )
+            self.early_termination_settings = EarlyTerminationSettings.from_source(
+                early_termination_settings
             )
 
         # 1分足データの取得（1分足シミュレーション用）
@@ -233,9 +223,7 @@ class UniversalStrategy(Strategy):
         # HybridPredictor インスタンス（オプション）
         self.ml_predictor = params.get("ml_predictor")
         ml_gate_fields = normalize_ml_gate_fields(params)
-        self.volatility_gate_enabled = bool(
-            ml_gate_fields["volatility_gate_enabled"]
-        )
+        self.volatility_gate_enabled = bool(ml_gate_fields["volatility_gate_enabled"])
         self.volatility_model_path = ml_gate_fields["volatility_model_path"]
 
         # ベクトル化評価結果のキャッシュ
@@ -252,9 +240,7 @@ class UniversalStrategy(Strategy):
             if ind.enabled
         )
 
-    def _get_effective_sub_gene(
-        self, direction: float, gene_type: str
-    ) -> object:
+    def _get_effective_sub_gene(self, direction: float, gene_type: str) -> object:
         """
         方向とタイプに応じた有効なサブ遺伝子を取得（統合版）
 
@@ -285,32 +271,28 @@ class UniversalStrategy(Strategy):
 
         return None
 
-    def _get_effective_tpsl_gene(self, direction: float) -> Optional[TPSLGene]:
+    def _get_effective_tpsl_gene(self, direction: float) -> TPSLGene | None:
         """有効なTPSL遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         target = self._get_effective_sub_gene(direction, "tpsl")
-        return cast(Optional[TPSLGene], target)
+        return cast(TPSLGene | None, target)
 
-    def _get_effective_entry_gene(
-        self, direction: float
-    ) -> Optional[EntryGene]:
+    def _get_effective_entry_gene(self, direction: float) -> EntryGene | None:
         """有効なエントリー遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         target = self._get_effective_sub_gene(direction, "entry")
-        return cast(Optional[EntryGene], target)
+        return cast(EntryGene | None, target)
 
     def _get_effective_exit_gene(self, direction: float):
         """有効なイグジット遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
         from ..genes import ExitGene
 
         target = self._get_effective_sub_gene(direction, "exit")
-        return cast(Optional[ExitGene], target)
+        return cast(ExitGene | None, target)
 
     def _normalize_evaluation_start(
-        self, value: Union[str, pd.Timestamp, None]
-    ) -> Optional[pd.Timestamp]:
+        self, value: str | pd.Timestamp | None
+    ) -> pd.Timestamp | None:
         """評価開始時刻を pandas.Timestamp に正規化する。"""
-        return self.early_termination_controller.normalize_evaluation_start(
-            value
-        )
+        return self.early_termination_controller.normalize_evaluation_start(value)
 
     def _is_evaluation_bar(self) -> bool:
         """現在バーが評価開始時刻以降かを返す。"""
@@ -319,7 +301,7 @@ class UniversalStrategy(Strategy):
     def _initialize_evaluation_progress_bounds(
         self,
         data: object,
-    ) -> tuple[Optional[pd.DatetimeIndex], int, int]:
+    ) -> tuple[pd.DatetimeIndex | None, int, int]:
         """評価進捗計算に使う評価窓の境界を初期化する。"""
         return self.early_termination_controller.initialize_evaluation_progress_bounds(
             data
@@ -344,13 +326,11 @@ class UniversalStrategy(Strategy):
         """現在までの評価進捗を返す。"""
         return self.early_termination_controller.get_progress_ratio()
 
-    def _calculate_closed_trade_expectancy(self) -> Optional[float]:
+    def _calculate_closed_trade_expectancy(self) -> float | None:
         """クローズ済みトレードの平均期待値を返す。"""
-        return (
-            self.early_termination_controller.calculate_closed_trade_expectancy()
-        )
+        return self.early_termination_controller.calculate_closed_trade_expectancy()
 
-    def _should_terminate_early(self) -> Optional[str]:
+    def _should_terminate_early(self) -> str | None:
         """早期打ち切りすべき理由を返す。"""
         return self.early_termination_controller.should_terminate_early()
 
@@ -396,7 +376,7 @@ class UniversalStrategy(Strategy):
 
     def _calculate_effective_tpsl_prices(
         self, direction: float, current_price: float
-    ) -> Tuple[Optional[float], Optional[float]]:
+    ) -> tuple[float | None, float | None]:
         """
         現在の価格と方向に基づいて、実効的な利確（TP）および損切り（SL）価格を計算します。
 
@@ -459,7 +439,7 @@ class UniversalStrategy(Strategy):
         """
         return self.ml_filter.ml_allows_entry(direction)
 
-    def _prepare_current_features(self) -> Optional[pd.DataFrame]:
+    def _prepare_current_features(self) -> pd.DataFrame | None:
         """
         MLフィルター用の現在の特徴量を準備
 
@@ -472,16 +452,14 @@ class UniversalStrategy(Strategy):
         """ステートフルトリガーを処理"""
         self.stateful_conditions_evaluator.process_stateful_triggers()
 
-    def _get_stateful_entry_direction(self) -> Optional[float]:
+    def _get_stateful_entry_direction(self) -> float | None:
         """
         ステートフルエントリーの方向を取得
 
         Returns:
             1.0 (Long), -1.0 (Short), または None
         """
-        return (
-            self.stateful_conditions_evaluator.get_stateful_entry_direction()
-        )
+        return self.stateful_conditions_evaluator.get_stateful_entry_direction()
 
     # ===== ツールフィルターメソッド =====
 

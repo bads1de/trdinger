@@ -118,9 +118,9 @@ class TestOOFDataLeakValidation:
 
         # 各ベースモデルのOOF予測を取得
         oof_base_predictions = stacking.get_oof_base_model_predictions()
-        assert (
-            oof_base_predictions is not None
-        ), "ベースモデルのOOF予測が生成されていません"
+        assert oof_base_predictions is not None, (
+            "ベースモデルのOOF予測が生成されていません"
+        )
         assert len(oof_base_predictions.columns) > 0, "ベースモデルのOOF予測が空です"
 
         print(f"\nベースモデル数: {len(oof_base_predictions.columns)}")
@@ -210,7 +210,7 @@ class TestOOFDataLeakValidation:
         if all(v == int(v) for v in unique_values):
             # クラスラベルとして検証
             n_classes = len(unique_values)
-            assert n_classes >= 2, f"クラス数が{ n_classes}で少なすぎます"
+            assert n_classes >= 2, f"クラス数が{n_classes}で少なすぎます"
             print(f"✅ OOF予測がクラスラベルとして有効です（{n_classes}クラス）")
         else:
             # 確率として検証

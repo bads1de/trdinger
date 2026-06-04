@@ -61,10 +61,7 @@ class StrategyInitializer:
             self.init_indicator(indicator_gene)
 
     def _precompute_ml_features(self) -> None:
-        if (
-            self.strategy.volatility_gate_enabled
-            and self.strategy.ml_predictor
-        ):
+        if self.strategy.volatility_gate_enabled and self.strategy.ml_predictor:
             self.strategy.ml_filter.precompute_ml_features()
 
     def _precompute_condition_signals(self) -> None:
@@ -81,9 +78,7 @@ class StrategyInitializer:
             precomputed_exit_signals.clear()
 
             # Entry条件
-            long_conds = getattr(
-                self.strategy.gene, "long_entry_conditions", []
-            )
+            long_conds = getattr(self.strategy.gene, "long_entry_conditions", [])
             if long_conds:
                 self._cache_vectorized_signal(
                     precomputed_signals,
@@ -94,9 +89,7 @@ class StrategyInitializer:
                     ),
                 )
 
-            short_conds = getattr(
-                self.strategy.gene, "short_entry_conditions", []
-            )
+            short_conds = getattr(self.strategy.gene, "short_entry_conditions", [])
             if short_conds:
                 self._cache_vectorized_signal(
                     precomputed_signals,
@@ -108,9 +101,7 @@ class StrategyInitializer:
                 )
 
             # Exit条件
-            long_exit_conds = getattr(
-                self.strategy.gene, "long_exit_conditions", []
-            )
+            long_exit_conds = getattr(self.strategy.gene, "long_exit_conditions", [])
             if long_exit_conds:
                 self._cache_vectorized_signal(
                     precomputed_exit_signals,
@@ -121,9 +112,7 @@ class StrategyInitializer:
                     ),
                 )
 
-            short_exit_conds = getattr(
-                self.strategy.gene, "short_exit_conditions", []
-            )
+            short_exit_conds = getattr(self.strategy.gene, "short_exit_conditions", [])
             if short_exit_conds:
                 self._cache_vectorized_signal(
                     precomputed_exit_signals,
@@ -205,17 +194,11 @@ class StrategyInitializer:
                     ).values
                     logger.debug("ATR事前計算完了")
                 else:
-                    logger.warning(
-                        "ATR事前計算失敗: ta.atr が None を返しました"
-                    )
+                    logger.warning("ATR事前計算失敗: ta.atr が None を返しました")
             except ImportError:
-                logger.warning(
-                    "pandas-taが見つからないためATR事前計算をスキップ"
-                )
+                logger.warning("pandas-taが見つからないためATR事前計算をスキップ")
             except Exception as e:
-                logger.debug(
-                    "ATR事前計算中のエラー（フォールバック使用）: %s", e
-                )
+                logger.debug("ATR事前計算中のエラー（フォールバック使用）: %s", e)
         except Exception as e:
             logger.debug("ATR事前計算失敗: %s", e)
 
@@ -237,13 +220,9 @@ class StrategyInitializer:
                             high = self.strategy.data.df["High"]
                             low = self.strategy.data.df["Low"]
                             close = self.strategy.data.df["Close"]
-                            atr_result = ta.atr(
-                                high, low, close, length=atr_period
-                            )
+                            atr_result = ta.atr(high, low, close, length=atr_period)
                             if atr_result is not None:
-                                self.strategy._precomputed_tpsl_atr[
-                                    atr_period
-                                ] = cast(
+                                self.strategy._precomputed_tpsl_atr[atr_period] = cast(
                                     pd.Series,
                                     atr_result,
                                 ).values

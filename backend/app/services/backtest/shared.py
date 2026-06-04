@@ -7,8 +7,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from datetime import datetime, timedelta
-from typing import Any, Optional, Sequence, Tuple
+from typing import Any
 
 import pandas as pd
 
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_stats_object(
-    stats: object, warning_logger: Optional[logging.Logger] = None
+    stats: object, warning_logger: logging.Logger | None = None
 ) -> object:
     """
     statsオブジェクトの実体を取得する。callableなら呼び出す。
@@ -162,7 +163,7 @@ def parse_datetime_value(value: Any) -> datetime:
     return _parse_datetime_value(value)
 
 
-def safe_timestamp_conversion(value: Any) -> Optional[datetime]:
+def safe_timestamp_conversion(value: Any) -> datetime | None:
     """
     timestamp値を安全にdatetimeへ変換する。
 
@@ -180,7 +181,7 @@ def safe_timestamp_conversion(value: Any) -> Optional[datetime]:
 def resolve_trade_pnl_column(
     trades_df: Any,
     preferred_columns: Sequence[str] = TRADE_PNL_COLUMNS,
-) -> Optional[str]:
+) -> str | None:
     """
     取引データから損益列名を解決する。
 
@@ -236,15 +237,11 @@ def normalize_ohlcv_columns(
         normalized_name = column.lower()
         if normalized_name not in OHLCV_COLUMNS:
             continue
-        target_name = (
-            normalized_name if lowercase else normalized_name.capitalize()
-        )
+        target_name = normalized_name if lowercase else normalized_name.capitalize()
         if column != target_name:
             rename_map[column] = target_name
 
-    normalized = (
-        data_frame.rename(columns=rename_map) if rename_map else data_frame
-    )
+    normalized = data_frame.rename(columns=rename_map) if rename_map else data_frame
     volume_column = "volume" if lowercase else "Volume"
     if ensure_volume and volume_column not in normalized.columns:
         normalized = normalized.copy()
@@ -254,7 +251,7 @@ def normalize_ohlcv_columns(
 
 def normalize_datetimes_for_comparison(
     start_date: datetime, end_date: datetime
-) -> Tuple[datetime, datetime]:
+) -> tuple[datetime, datetime]:
     """
     datetime値を比較用に正規化する。
 

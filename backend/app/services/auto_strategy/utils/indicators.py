@@ -5,7 +5,6 @@
 """
 
 import logging
-from typing import Dict, List
 
 from app.services.indicators import TechnicalIndicatorService
 from app.services.indicators.config.indicator_config import (
@@ -20,11 +19,11 @@ from ..config.constants import COMPOSITE_INDICATORS
 # =============================================================================
 
 
-def indicators_by_category(category: str) -> List[str]:
+def indicators_by_category(category: str) -> list[str]:
     """レジストリに登録済みのインジケーターからカテゴリ別に主名称とエイリアスを抽出"""
     indicator_registry.ensure_initialized()
     seen = set()
-    results: List[str] = []
+    results: list[str] = []
 
     for _name, cfg in indicator_registry.get_all_indicators().items():
         try:
@@ -48,7 +47,7 @@ def indicators_by_category(category: str) -> List[str]:
     return results
 
 
-def get_all_indicators(include_composite: bool = True) -> List[str]:
+def get_all_indicators(include_composite: bool = True) -> list[str]:
     """
     全指標タイプを取得
 
@@ -65,28 +64,28 @@ def get_all_indicators(include_composite: bool = True) -> List[str]:
         return [t for t in all_types if t not in COMPOSITE_INDICATORS]
 
 
-def get_volume_indicators() -> List[str]:
+def get_volume_indicators() -> list[str]:
     return indicators_by_category("volume")
 
 
-def get_momentum_indicators() -> List[str]:
+def get_momentum_indicators() -> list[str]:
     return indicators_by_category("momentum")
 
 
-def get_trend_indicators() -> List[str]:
+def get_trend_indicators() -> list[str]:
     return indicators_by_category("trend")
 
 
-def get_volatility_indicators() -> List[str]:
+def get_volatility_indicators() -> list[str]:
     return indicators_by_category("volatility")
 
 
-def get_valid_indicator_types() -> List[str]:
+def get_valid_indicator_types() -> list[str]:
     """有効な指標タイプを取得"""
     return get_all_indicators(include_composite=True)
 
 
-def get_all_indicator_ids() -> Dict[str, int]:
+def get_all_indicator_ids() -> dict[str, int]:
     """
     全指標のIDマッピングを取得
 
@@ -94,9 +93,7 @@ def get_all_indicator_ids() -> Dict[str, int]:
     """
     try:
         indicator_service = TechnicalIndicatorService()
-        technical_indicators = list(
-            indicator_service.get_supported_indicators().keys()
-        )
+        technical_indicators = list(indicator_service.get_supported_indicators().keys())
 
         # IDマッピングを作成（空文字列は0、その他は1から開始）
         return {

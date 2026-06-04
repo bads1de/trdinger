@@ -4,7 +4,6 @@ positionsパッケージの__init__.pyのテスト
 エクスポート定義を確認します。
 """
 
-
 import app.services.auto_strategy.positions as positions_package
 
 

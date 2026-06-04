@@ -129,9 +129,7 @@ def connors_rsi(
         raise ValueError("rank_periods must be >= 2")
 
     max_period = max(rsi_periods, streak_periods, rank_periods)
-    validation = validate_series_params(
-        close, max_period, min_data_length=max_period
-    )
+    validation = validate_series_params(close, max_period, min_data_length=max_period)
     if validation is not None:
         return pd.Series(
             np.full(len(close), np.nan),
@@ -140,9 +138,7 @@ def connors_rsi(
         )
 
     prices = close.astype(float).to_numpy()
-    result = _njit_connors_rsi_loop(
-        prices, rsi_periods, streak_periods, rank_periods
-    )
+    result = _njit_connors_rsi_loop(prices, rsi_periods, streak_periods, rank_periods)
 
     return pd.Series(
         result,

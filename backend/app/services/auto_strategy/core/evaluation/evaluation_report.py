@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from statistics import median
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any
 
 from app.services.auto_strategy.config import objective_registry
 
@@ -16,7 +17,7 @@ _ROBUST_WORST_CASE_WEIGHT = 0.3
 _DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-def _safe_copy_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def _safe_copy_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     """メタデータのコピーを安全に作成する。"""
     return metadata.copy() if metadata else {}
 
@@ -26,10 +27,10 @@ class ScenarioEvaluation:
     """単一シナリオの評価結果。"""
 
     name: str
-    fitness: Tuple[float, ...]
+    fitness: tuple[float, ...]
     passed: bool = True
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    performance_metrics: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    performance_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -37,11 +38,11 @@ class EvaluationReport:
     """複数シナリオの評価を束ねたレポート。"""
 
     mode: str
-    objectives: Tuple[str, ...]
-    aggregated_fitness: Tuple[float, ...]
-    scenarios: List[ScenarioEvaluation] = field(default_factory=list)
+    objectives: tuple[str, ...]
+    aggregated_fitness: tuple[float, ...]
+    scenarios: list[ScenarioEvaluation] = field(default_factory=list)
     aggregate_method: str = "single"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def pass_rate(self) -> float:
@@ -52,21 +53,21 @@ class EvaluationReport:
         return passed_count / len(self.scenarios)
 
     @property
-    def primary_objective(self) -> Optional[str]:
+    def primary_objective(self) -> str | None:
         """主要目的関数名。"""
         if not self.objectives:
             return None
         return self.objectives[0]
 
     @property
-    def primary_aggregated_fitness(self) -> Optional[float]:
+    def primary_aggregated_fitness(self) -> float | None:
         """主要目的の集約 fitness。"""
         if not self.aggregated_fitness:
             return None
         return float(self.aggregated_fitness[0])
 
     @property
-    def primary_worst_case_fitness(self) -> Optional[float]:
+    def primary_worst_case_fitness(self) -> float | None:
         """主要目的における最悪シナリオ値。"""
         if not self.scenarios or not self.objectives:
             return None
@@ -90,15 +91,13 @@ class EvaluationReport:
         mode: str,
         objectives: Sequence[str],
         scenario: ScenarioEvaluation,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> "EvaluationReport":
+        metadata: dict[str, Any] | None = None,
+    ) -> EvaluationReport:
         """単一シナリオのレポートを構築する。"""
         report = cls(
             mode=mode,
             objectives=tuple(objectives),
-            aggregated_fitness=tuple(
-                float(value) for value in scenario.fitness
-            ),
+            aggregated_fitness=tuple(float(value) for value in scenario.fitness),
             scenarios=[scenario],
             aggregate_method="single",
             metadata=_safe_copy_metadata(metadata),
@@ -115,9 +114,9 @@ class EvaluationReport:
         objectives: Sequence[str],
         scenarios: Iterable[ScenarioEvaluation],
         aggregate_method: str = "robust",
-        weights: Optional[Sequence[float]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> "EvaluationReport":
+        weights: Sequence[float] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> EvaluationReport:
         """
         複数の評価シナリオ（OOS、WFA、交差検証の各フォールド等）の結果を、単一の適応度セットに集約します。
 
@@ -145,7 +144,7 @@ class EvaluationReport:
             return cls(
                 mode=mode,
                 objectives=objective_names,
-                aggregated_fitness=tuple(),
+                aggregated_fitness=(),
                 scenarios=[],
                 aggregate_method=aggregate_method,
                 metadata=_safe_copy_metadata(metadata),
@@ -191,7 +190,7 @@ class EvaluationReport:
         values: Sequence[float],
         objective: str,
         aggregate_method: str,
-        weights: Optional[Sequence[float]],
+        weights: Sequence[float] | None,
     ) -> float:
         """
         単一の目的関数（指標）に対して、複数のシナリオから得られた値を一つにまとめます。
@@ -224,7 +223,7 @@ class EvaluationReport:
             return float(
                 sum(
                     value * weight
-                    for value, weight in zip(values, normalized_weights)
+                    for value, weight in zip(values, normalized_weights, strict=False)
                 )
             )
 
@@ -247,9 +246,9 @@ class EvaluationReport:
 
     @staticmethod
     def _normalize_weights(
-        weights: Optional[Sequence[float]],
+        weights: Sequence[float] | None,
         expected_count: int,
-    ) -> List[float]:
+    ) -> list[float]:
         """重み列を正規化する。"""
         if not weights or len(weights) != expected_count:
             return [1.0 / expected_count] * expected_count
@@ -260,7 +259,7 @@ class EvaluationReport:
 
         return [float(weight) / total for weight in weights]
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """保存・ログ出力向けに辞書へ変換する。"""
         return {
             "mode": self.mode,
@@ -281,9 +280,7 @@ class EvaluationReport:
             ],
         }
 
-    def to_summary_dict(
-        self, max_scenarios: Optional[int] = None
-    ) -> Dict[str, Any]:
+    def to_summary_dict(self, max_scenarios: int | None = None) -> dict[str, Any]:
         """保存向けの軽量 summary を返す。"""
         if max_scenarios is None or max_scenarios < 0:
             scenario_slice = self.scenarios

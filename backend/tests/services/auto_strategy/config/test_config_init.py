@@ -58,7 +58,7 @@ class TestAutoStrategyConfigInitExports:
         """GAConfigが遅延ロードされる"""
         from app.services.auto_strategy.config.ga import GAConfig
 
-        config = getattr(config_package, "GAConfig")
+        config = config_package.GAConfig
 
         assert config is GAConfig
 

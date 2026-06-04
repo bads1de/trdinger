@@ -6,7 +6,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 def evaluate_model_predictions(
     y_true: pd.Series,
     y_pred: np.ndarray,
-    y_pred_proba: Optional[np.ndarray] = None,
-) -> Dict[str, Any]:
+    y_pred_proba: np.ndarray | None = None,
+) -> dict[str, Any]:
     """モデル予測の評価メトリクスを計算する共通ラッパー。
 
     真のラベルと予測値から、包括的な評価メトリクス（精度、QLike、
@@ -49,7 +49,7 @@ class BaseEnsemble(ABC):
     スタッキングアンサンブル手法の共通インターフェースを定義します。
     """
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         """
         初期化
 
@@ -58,21 +58,21 @@ class BaseEnsemble(ABC):
         """
         self.config = config
         # 実体モデルも保持できるよう型を緩和
-        self._base_models_list: List[Any] = []
-        self._meta_model_ref: Optional[Any] = None
+        self._base_models_list: list[Any] = []
+        self._meta_model_ref: Any | None = None
         self.is_fitted = False
-        self.feature_columns: Optional[List[str]] = None
-        self.scaler: Optional[Any] = None
-        self._fitted_base_models: Dict[str, Any] = {}
+        self.feature_columns: list[str] | None = None
+        self.scaler: Any | None = None
+        self._fitted_base_models: dict[str, Any] = {}
 
     @abstractmethod
     def fit(
         self,
         X_train: pd.DataFrame,
         y_train: pd.Series,
-        X_test: Optional[pd.DataFrame] = None,
-        y_test: Optional[pd.Series] = None,
-    ) -> Dict[str, Any]:
+        X_test: pd.DataFrame | None = None,
+        y_test: pd.Series | None = None,
+    ) -> dict[str, Any]:
         """
         アンサンブルモデルを学習
 
@@ -113,7 +113,7 @@ class BaseEnsemble(ABC):
     def _create_base_model(
         self,
         model_type: str,
-        model_params: Optional[Dict[str, Any]] = None,
+        model_params: dict[str, Any] | None = None,
     ) -> Any:
         """ベースモデルを作成する。
 
@@ -128,9 +128,7 @@ class BaseEnsemble(ABC):
             Any: 作成されたモデルインスタンス。
         """
         mt = model_type.lower()
-        params = {
-            k: v for k, v in (model_params or {}).items() if v is not None
-        }
+        params = {k: v for k, v in (model_params or {}).items() if v is not None}
         ml_training = ml_config_manager.config.training
         seed = params.pop(
             "random_state",
@@ -205,9 +203,7 @@ class BaseEnsemble(ABC):
             import catboost as cb
 
             return cb.CatBoostClassifier(
-                iterations=params.pop(
-                    "iterations", params.pop("n_estimators", 100)
-                ),
+                iterations=params.pop("iterations", params.pop("n_estimators", 100)),
                 learning_rate=params.pop("learning_rate", 0.1),
                 depth=params.pop("depth", params.pop("max_depth", 6)),
                 random_seed=seed,
@@ -239,8 +235,8 @@ class BaseEnsemble(ABC):
         self,
         y_true: pd.Series,
         y_pred: np.ndarray,
-        y_pred_proba: Optional[np.ndarray] = None,
-    ) -> Dict[str, Any]:
+        y_pred_proba: np.ndarray | None = None,
+    ) -> dict[str, Any]:
         """
         予測結果を評価
 
@@ -258,7 +254,7 @@ class BaseEnsemble(ABC):
 
         return result
 
-    def get_feature_importance(self) -> Optional[Dict[str, float]]:
+    def get_feature_importance(self) -> dict[str, float] | None:
         """
         特徴量重要度を取得（ベースモデルから集約）
 
@@ -272,7 +268,7 @@ class BaseEnsemble(ABC):
             return {}
 
         # ベースモデルから特徴量重要度を集約
-        all_importances: Dict[str, List[float]] = {}
+        all_importances: dict[str, list[float]] = {}
 
         if self._fitted_base_models:
             candidate_models = list(self._fitted_base_models.values())
@@ -300,9 +296,7 @@ class BaseEnsemble(ABC):
                             all_importances[feature] = []
                         all_importances[feature].append(importance)
                 else:
-                    logger.warning(
-                        f"モデル{i}: 特徴量重要度が取得できませんでした"
-                    )
+                    logger.warning(f"モデル{i}: 特徴量重要度が取得できませんでした")
 
             except Exception as e:
                 logger.error(f"モデル{i}の特徴量重要度取得エラー: {e}")
@@ -313,15 +307,13 @@ class BaseEnsemble(ABC):
                 feature: float(np.mean(values))
                 for feature, values in all_importances.items()
             }
-            logger.info(
-                f"アンサンブル特徴量重要度を計算: {len(avg_importance)}個"
-            )
+            logger.info(f"アンサンブル特徴量重要度を計算: {len(avg_importance)}個")
             return avg_importance
 
         logger.warning("特徴量重要度データが見つかりませんでした")
         return {}
 
-    def save_models(self, base_path: str) -> List[str]:
+    def save_models(self, base_path: str) -> list[str]:
         """アンサンブルモデルをファイルに保存する。
 
         学習済みのアンサンブルモデル（ベースモデル、メタモデル、設定など）を
@@ -407,9 +399,7 @@ class BaseEnsemble(ABC):
 
         try:
             # 1. StackingClassifier ファイル検索
-            f_list = collect_unique_files(
-                [f"{base_path}_stacking_classifier_*.pkl"]
-            )
+            f_list = collect_unique_files([f"{base_path}_stacking_classifier_*.pkl"])
             f_list.sort()
             if f_list:
                 with warnings.catch_warnings():
@@ -427,9 +417,7 @@ class BaseEnsemble(ABC):
             # 2. 統合モデルファイル検索
             f_list = collect_unique_files([f"{base_path}_*_*.pkl"])
             f_list = [
-                f
-                for f in f_list
-                if not f.endswith(("_config.pkl", "_meta_model.pkl"))
+                f for f in f_list if not f.endswith(("_config.pkl", "_meta_model.pkl"))
             ]
             f_list.sort()
             if f_list:

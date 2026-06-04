@@ -67,7 +67,6 @@ class TestMondayReversalFilter:
             patch("random.random", side_effect=[0.5, 0.1, 0.5, 0.1]),
             patch("random.randint", return_value=4),
         ):
-
             # 1回目: enabled変化なし, skip_hours変化あり
             params = {"enabled": True, "skip_hours": 12}
             new_params = filter_tool.mutate_params(params)

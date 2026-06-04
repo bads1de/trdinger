@@ -7,7 +7,7 @@ OHLCV価格データから基本的な価格関連特徴量を計算します。
 """
 
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -35,7 +35,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         super().__init__()
 
     def calculate_features(
-        self, df: pd.DataFrame, config: Dict[str, Any]
+        self, df: pd.DataFrame, config: dict[str, Any]
     ) -> pd.DataFrame:
         """価格特徴量を計算"""
         res = self.create_result_dataframe(df)
@@ -51,7 +51,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
     @safe_ml_operation(default_return=None, context="統計的特徴量計算エラー")
     def calculate_statistical_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: dict[str, int]
     ) -> pd.DataFrame:
         """統計的特徴量を計算"""
         w = 20
@@ -59,9 +59,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         df[f"Close_range_{w}"] = (
             df["high"].rolling(w).max() - df["low"].rolling(w).min()
         ).fillna(0.0)
-        log_rets = pd.Series(
-            np.log(df["close"] / df["close"].shift(1)), index=df.index
-        )
+        log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
         df[f"Historical_Volatility_{w}"] = (
             log_rets.rolling(w).std() * np.sqrt(252)
         ).fillna(0.0)
@@ -70,7 +68,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
     @safe_ml_operation(default_return=None, context="時系列特徴量計算エラー")
     def calculate_time_series_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: dict[str, int]
     ) -> pd.DataFrame:
         """時系列特徴量を計算"""
         df["Trend_strength_20"] = TrendIndicators.linregslope(
@@ -78,11 +76,9 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         ).fillna(0.0)
         return df
 
-    @safe_ml_operation(
-        default_return=None, context="ボラティリティ特徴量計算エラー"
-    )
+    @safe_ml_operation(default_return=None, context="ボラティリティ特徴量計算エラー")
     def calculate_volatility_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: dict[str, int]
     ) -> pd.DataFrame:
         """ボラティリティ特徴量を計算"""
         df["Parkinson_Vol_20"] = parkinson_volatility(
@@ -92,20 +88,18 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
 
     @safe_ml_operation(default_return=None, context="基本価格特徴量計算エラー")
     def calculate_price_features(
-        self, df: pd.DataFrame, lookback_periods: Dict[str, int]
+        self, df: pd.DataFrame, lookback_periods: dict[str, int]
     ) -> pd.DataFrame:
         """基本価格特徴量を計算"""
-        if not self.validate_input_data(
-            df, ["open", "high", "low", "close", "volume"]
-        ):
+        if not self.validate_input_data(df, ["open", "high", "low", "close", "volume"]):
             return df
 
-        p_chg = MomentumIndicators.roc(
-            cast(pd.Series, df["close"]), period=1
-        ).fillna(0.0)
-        v_chg = MomentumIndicators.roc(
-            cast(pd.Series, df["volume"]), period=1
-        ).fillna(0.0)
+        p_chg = MomentumIndicators.roc(cast(pd.Series, df["close"]), period=1).fillna(
+            0.0
+        )
+        v_chg = MomentumIndicators.roc(cast(pd.Series, df["volume"]), period=1).fillna(
+            0.0
+        )
         df["Price_Volume_Trend"] = p_chg * v_chg
         return df
 

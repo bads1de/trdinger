@@ -5,7 +5,7 @@ Pydanticモデルによるバリデーションとシリアライズを検証し
 """
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -19,7 +19,7 @@ from app.services.backtest.config.backtest_config import (
 
 
 @pytest.fixture
-def valid_strategy_gene_dict() -> Dict[str, Any]:
+def valid_strategy_gene_dict() -> dict[str, Any]:
     """有効な戦略遺伝子の辞書（簡略版）"""
     return {
         "indicators": [],
@@ -30,7 +30,7 @@ def valid_strategy_gene_dict() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def valid_strategy_config_dict(valid_strategy_gene_dict) -> Dict[str, Any]:
+def valid_strategy_config_dict(valid_strategy_gene_dict) -> dict[str, Any]:
     """有効な戦略設定の辞書"""
     return {
         "strategy_type": "GENERATED_GA",
@@ -42,7 +42,7 @@ def valid_strategy_config_dict(valid_strategy_gene_dict) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def valid_backtest_config_dict(valid_strategy_config_dict) -> Dict[str, Any]:
+def valid_backtest_config_dict(valid_strategy_config_dict) -> dict[str, Any]:
     """有効なバックテスト設定の辞書"""
     return {
         "strategy_name": "Test Strategy",

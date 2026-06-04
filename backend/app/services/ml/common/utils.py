@@ -9,7 +9,7 @@ import glob
 import hashlib
 import logging
 import os
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -59,10 +59,10 @@ def optimize_dtypes(df: pd.DataFrame) -> pd.DataFrame:
 
 def generate_cache_key(
     ohlcv_data: pd.DataFrame,
-    funding_rate_data: Optional[pd.DataFrame] = None,
-    open_interest_data: Optional[pd.DataFrame] = None,
-    long_short_ratio_data: Optional[pd.DataFrame] = None,
-    extra_params: Optional[dict] = None,
+    funding_rate_data: pd.DataFrame | None = None,
+    open_interest_data: pd.DataFrame | None = None,
+    long_short_ratio_data: pd.DataFrame | None = None,
+    extra_params: dict | None = None,
 ) -> str:
     """
     データの内容とパラメータセットから一意なキャッシュキーを生成
@@ -107,7 +107,7 @@ def generate_cache_key(
     return f"features_{h1}_{h2}_{h3}_{h4}_{h5}"
 
 
-def collect_unique_files(patterns: List[str]) -> List[str]:
+def collect_unique_files(patterns: list[str]) -> list[str]:
     """
     複数パターンに一致するファイルを重複なく収集する。
 
@@ -123,7 +123,7 @@ def collect_unique_files(patterns: List[str]) -> List[str]:
     Note:
         パスは絶対パスに正規化されて重複チェックされます。
     """
-    files: List[str] = []
+    files: list[str] = []
     seen_files = set()
 
     for pattern in patterns:
@@ -172,7 +172,7 @@ def validate_training_inputs(
 
 def prepare_data_for_prediction(
     features_df: pd.DataFrame,
-    expected_columns: List[str],
+    expected_columns: list[str],
     scaler=None,
 ) -> pd.DataFrame:
     """
@@ -255,9 +255,9 @@ def predict_class_from_proba(
 
 def get_feature_importance_unified(
     model,
-    feature_columns: List[str],
+    feature_columns: list[str],
     top_n: int = 10,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """
     異なる機械学習ライブラリ（LightGBM, XGBoost, Scikit-learn等）の間で異なる特徴量重要度の定義を、
     統一されたフォーマットに変換して取得します。
@@ -286,9 +286,7 @@ def get_feature_importance_unified(
             model.feature_importance
         ):
             try:
-                importance_scores = model.feature_importance(
-                    importance_type="gain"
-                )
+                importance_scores = model.feature_importance(importance_type="gain")
             except Exception:
                 try:
                     importance_scores = model.feature_importance()
@@ -329,18 +327,16 @@ def get_feature_importance_unified(
                 res = model.get_feature_importance(top_n=top_n)
                 if isinstance(res, dict):
                     return dict(
-                        sorted(res.items(), key=lambda x: x[1], reverse=True)[
-                            :top_n
-                        ]
+                        sorted(res.items(), key=lambda x: x[1], reverse=True)[:top_n]
                     )
                 return {}
             except TypeError:
                 all_imp = model.get_feature_importance()
                 if isinstance(all_imp, dict):
                     return dict(
-                        sorted(
-                            all_imp.items(), key=lambda x: x[1], reverse=True
-                        )[:top_n]
+                        sorted(all_imp.items(), key=lambda x: x[1], reverse=True)[
+                            :top_n
+                        ]
                     )
                 return {}
         return {}
@@ -392,7 +388,7 @@ def calculate_price_change(
 def calculate_volatility_std(
     returns: pd.Series,
     window: int = 24,
-    min_periods: Optional[int] = None,
+    min_periods: int | None = None,
 ) -> pd.Series:
     """
     標準偏差ベースのボラティリティ計算
@@ -452,9 +448,9 @@ def calculate_volatility_atr(
     if len(high) == 0:
         return pd.Series([], dtype=float)
     pc = close.shift(1)
-    tr = pd.concat(
-        [high - low, (high - pc).abs(), (low - pc).abs()], axis=1
-    ).max(axis=1)
+    tr = pd.concat([high - low, (high - pc).abs(), (low - pc).abs()], axis=1).max(
+        axis=1
+    )
     atr = tr.rolling(window=window).mean()
     return atr / close if as_percentage else atr
 

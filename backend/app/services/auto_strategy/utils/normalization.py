@@ -5,7 +5,7 @@ auto_strategy全体で使用されるパラメータ正規化・Enum正規化の
 """
 
 import logging
-from typing import Any, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class NormalizationUtils:
 
     @staticmethod
     def normalize_parameter(
-        value: Union[int, float], min_val: int = 1, max_val: int = 200
+        value: int | float, min_val: int = 1, max_val: int = 200
     ) -> float:
         """パラメータ値を正規化（0-1の範囲に変換）
 

@@ -5,16 +5,16 @@
 from __future__ import annotations
 
 import random
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 import pandas as pd
 
 
 def normalize_timestamp(
-    timestamp: Optional[pd.Timestamp],
+    timestamp: pd.Timestamp | None,
     *,
     assume_timezone: str = "UTC",
-) -> Optional[pd.Timestamp]:
+) -> pd.Timestamp | None:
     """naive timestamp を指定タイムゾーンとして正規化する。"""
     if timestamp is None:
         return None
@@ -26,15 +26,13 @@ def normalize_timestamp(
 
 
 def to_timezone_minutes(
-    timestamp: Optional[pd.Timestamp],
+    timestamp: pd.Timestamp | None,
     timezone_name: str,
     *,
     assume_timezone: str = "UTC",
-) -> Optional[int]:
+) -> int | None:
     """指定タイムゾーンでの分単位時刻を返す。"""
-    normalized = normalize_timestamp(
-        timestamp, assume_timezone=assume_timezone
-    )
+    normalized = normalize_timestamp(timestamp, assume_timezone=assume_timezone)
     if normalized is None:
         return None
     localized = normalized.tz_convert(timezone_name)
@@ -42,18 +40,16 @@ def to_timezone_minutes(
 
 
 def to_utc_minutes(
-    timestamp: Optional[pd.Timestamp],
+    timestamp: pd.Timestamp | None,
     *,
     assume_timezone: str = "UTC",
-) -> Optional[int]:
+) -> int | None:
     """UTC での分単位時刻を返す。"""
-    return to_timezone_minutes(
-        timestamp, "UTC", assume_timezone=assume_timezone
-    )
+    return to_timezone_minutes(timestamp, "UTC", assume_timezone=assume_timezone)
 
 
 def is_within_window(
-    current_minutes: Optional[int],
+    current_minutes: int | None,
     target_minutes: int,
     window_minutes: int,
 ) -> bool:
@@ -64,7 +60,7 @@ def is_within_window(
 
 
 def is_within_any_window(
-    current_minutes: Optional[int],
+    current_minutes: int | None,
     targets: Iterable[int],
     window_minutes: int,
 ) -> bool:

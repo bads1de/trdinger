@@ -2,7 +2,8 @@
 フィットネス共有のニッチ計算ユーティリティ
 """
 
-from typing import Sequence, cast
+from collections.abc import Sequence
+from typing import cast
 
 import numpy as np
 from scipy.spatial import cKDTree  # type: ignore[reportAttributeAccessIssue]

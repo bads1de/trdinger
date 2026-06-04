@@ -2,7 +2,7 @@
 ツリーベースモデルの特徴量重要度による選択戦略
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -21,16 +21,16 @@ class TreeBasedStrategy(BaseSelectionStrategy):
     ターゲットが回帰か分類かを自動判定して適切なestimatorを選択する。
     """
 
-    def __init__(self, estimator: Optional[BaseEstimator] = None):
+    def __init__(self, estimator: BaseEstimator | None = None):
         self.estimator = estimator
 
     def select(
         self,
         X: np.ndarray,
         y: np.ndarray,
-        feature_names: List[str],
+        feature_names: list[str],
         config: FeatureSelectionConfig,
-    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         from typing import cast
 
         model = cast(
@@ -51,14 +51,10 @@ class TreeBasedStrategy(BaseSelectionStrategy):
         mask = cast(np.ndarray, selector.get_support())
 
         if config.max_features and mask.sum() > config.max_features:
-            mask = self._limit_features(
-                mask, model.feature_importances_, config
-            )
+            mask = self._limit_features(mask, model.feature_importances_, config)
 
         if config.min_features and mask.sum() < config.min_features:
-            top_k = np.argsort(model.feature_importances_)[
-                -config.min_features :
-            ]
+            top_k = np.argsort(model.feature_importances_)[-config.min_features :]
             mask = np.zeros(len(feature_names), dtype=bool)
             mask[top_k] = True
 

@@ -5,7 +5,7 @@ Statistical Calculator
 """
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from ...genes import TPSLGene
 from .base_calculator import BaseTPSLCalculator
@@ -25,11 +25,11 @@ class StatisticalCalculator(BaseTPSLCalculator):
     def _do_calculate(
         self,
         current_price: float,
-        tpsl_gene: Optional[TPSLGene],
-        market_data: Optional[Dict[str, Any]],
+        tpsl_gene: TPSLGene | None,
+        market_data: dict[str, Any] | None,
         position_direction: float,
         **kwargs,
-    ) -> Tuple[float, float, float, Dict[str, Any]]:
+    ) -> tuple[float, float, float, dict[str, Any]]:
         """
         統計的分析方式によるTP/SL計算の実装
 
@@ -73,11 +73,11 @@ class StatisticalCalculator(BaseTPSLCalculator):
 
     def _calculate_statistical_levels(
         self,
-        market_data: Optional[Dict[str, Any]],
+        market_data: dict[str, Any] | None,
         lookback_period: int,
         confidence_threshold: float,
         current_price: float,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """統計的な最適レベルを計算"""
         try:
             if not market_data or "historical_prices" not in market_data:
@@ -94,9 +94,9 @@ class StatisticalCalculator(BaseTPSLCalculator):
             # 価格変化の分布を計算
             price_changes = []
             for i in range(1, len(recent_prices)):
-                change_pct = (
-                    recent_prices[i] - recent_prices[i - 1]
-                ) / recent_prices[i - 1]
+                change_pct = (recent_prices[i] - recent_prices[i - 1]) / recent_prices[
+                    i - 1
+                ]
                 price_changes.append(change_pct)
 
             if not price_changes:
@@ -104,9 +104,9 @@ class StatisticalCalculator(BaseTPSLCalculator):
 
             # 標準偏差を計算
             mean_change = sum(price_changes) / len(price_changes)
-            variance = sum(
-                (x - mean_change) ** 2 for x in price_changes
-            ) / len(price_changes)
+            variance = sum((x - mean_change) ** 2 for x in price_changes) / len(
+                price_changes
+            )
             std_dev = variance**0.5
 
             # 信頼区間に基づいてSL/TPを設定

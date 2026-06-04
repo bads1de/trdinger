@@ -11,7 +11,7 @@ import sys
 from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
 from datetime import datetime
-from typing import Dict, List, Tuple, Union, get_type_hints
+from typing import get_type_hints
 
 from typing_extensions import Self
 
@@ -33,10 +33,10 @@ class BaseGene(ABC):
     __slots__ = ()
 
     # 遺伝的操作のための設定（サブクラスでオーバーライド）
-    NUMERIC_FIELDS: List[str] = []
-    ENUM_FIELDS: List[str] = []
-    CHOICE_FIELDS: List[str] = []
-    NUMERIC_RANGES: Dict[str, Tuple[float, float]] = {}
+    NUMERIC_FIELDS: list[str] = []
+    ENUM_FIELDS: list[str] = []
+    CHOICE_FIELDS: list[str] = []
+    NUMERIC_RANGES: dict[str, tuple[float, float]] = {}
     _SKIP_FIELD_CONVERSION = object()
 
     def to_dict(self) -> StrategyGeneDict:
@@ -48,7 +48,7 @@ class BaseGene(ABC):
         # 非 dataclass サブクラス向けフォールバック
         result = {}
 
-        keys: List[str] = []
+        keys: list[str] = []
         try:
             keys = list(self.__slots__)
         except AttributeError:
@@ -108,9 +108,7 @@ class BaseGene(ABC):
             try:
                 return param_type(value)
             except ValueError:
-                logger.warning(
-                    f"無効なEnum値 {value} を無視、既定値へフォールバック"
-                )
+                logger.warning(f"無効なEnum値 {value} を無視、既定値へフォールバック")
                 return BaseGene._SKIP_FIELD_CONVERSION
         return value
 
@@ -132,16 +130,12 @@ class BaseGene(ABC):
             try:
                 return datetime.fromisoformat(value)
             except ValueError:
-                logger.warning(
-                    f"無効なdatetime値 {value} を無視、デフォルト値を設定"
-                )
+                logger.warning(f"無効なdatetime値 {value} を無視、デフォルト値を設定")
                 return datetime.now()  # デフォルトとして現在時刻
         return value
 
     @staticmethod
-    def _convert_value(
-        value: object, param_type: type
-    ) -> SerializableValue | object:
+    def _convert_value(value: object, param_type: type) -> SerializableValue | object:
         """一般的な値変換"""
         if BaseGene._is_enum_type(param_type):
             return BaseGene._convert_enum_value(value, param_type)
@@ -185,15 +179,11 @@ class BaseGene(ABC):
 
             try:
                 annotations.update(
-                    get_type_hints(
-                        base, globalns=combined_globalns, localns=localns
-                    )
+                    get_type_hints(base, globalns=combined_globalns, localns=localns)
                 )
             except Exception as e:
                 # Try per-annotation to salvage what we can
-                logger.debug(
-                    "型ヒントの取得に失敗しました (%s): %s", base.__name__, e
-                )
+                logger.debug("型ヒントの取得に失敗しました (%s): %s", base.__name__, e)
                 for name, raw in raw_annotations.items():
                     if name in annotations:
                         continue
@@ -242,7 +232,7 @@ class BaseGene(ABC):
         # クラスが受け取れない引数が含まれている場合のガード（任意だが、通常は**init_paramsで十分）
         return cls(**init_params)
 
-    def validate(self) -> Tuple[bool, List[str]]:
+    def validate(self) -> tuple[bool, list[str]]:
         """遺伝子の妥当性を検証"""
         errors = []
 
@@ -264,16 +254,16 @@ class BaseGene(ABC):
         return len(errors) == 0, errors
 
     @abstractmethod
-    def _validate_parameters(self, errors: List[str]) -> None:
+    def _validate_parameters(self, errors: list[str]) -> None:
         """サブクラスで固有のパラメータ検証を実装"""
 
     def _validate_range(
         self,
-        value: Union[int, float],
-        min_val: Union[int, float],
-        max_val: Union[int, float],
+        value: int | float,
+        min_val: int | float,
+        max_val: int | float,
         param_name: str,
-        errors: List[str],
+        errors: list[str],
     ) -> bool:
         """
         数値パラメータの範囲検証
@@ -295,7 +285,7 @@ class BaseGene(ABC):
             return False
         return True
 
-    def mutate(self, mutation_rate: float = 0.1) -> "BaseGene":
+    def mutate(self, mutation_rate: float = 0.1) -> BaseGene:
         """
         遺伝子の突然変異（デフォルト実装）
         GeneticUtils.mutate_generic_geneを使用します。
@@ -314,8 +304,8 @@ class BaseGene(ABC):
 
     @classmethod
     def crossover(
-        cls, parent1: "BaseGene", parent2: "BaseGene"
-    ) -> Tuple["BaseGene", "BaseGene"]:
+        cls, parent1: BaseGene, parent2: BaseGene
+    ) -> tuple[BaseGene, BaseGene]:
         """
         遺伝子の交叉（デフォルト実装）
         GeneticUtils.crossover_generic_genesを使用します。

@@ -5,7 +5,8 @@ IndividualEvaluator 用のバックテスト実行設定ビルダー。
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any
 
 from app.services.auto_strategy.config.ga.nested_configs import (
     EarlyTerminationSettings,
@@ -25,10 +26,10 @@ class RunConfigBuilder:
     def build_run_config(
         self,
         gene: Any,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
         config: Any,
-        defaults: Optional[Mapping[str, Any]] = None,
-    ) -> Optional[Dict[str, Any]]:
+        defaults: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
         """バックテスト実行用の設定辞書を構築する。"""
         try:
             early_termination_settings = (
@@ -38,16 +39,12 @@ class RunConfigBuilder:
                 "strategy_gene": gene,
             }
             strategy_parameters.update(normalize_ml_gate_fields(config))
-            if not isinstance(
-                early_termination_settings, EarlyTerminationSettings
-            ):
-                early_termination_settings = (
-                    EarlyTerminationSettings.from_source(
-                        early_termination_settings
-                    )
+            if not isinstance(early_termination_settings, EarlyTerminationSettings):
+                early_termination_settings = EarlyTerminationSettings.from_source(
+                    early_termination_settings
                 )
-            strategy_parameters["early_termination_settings"] = (
-                dataclass_to_dict(early_termination_settings)
+            strategy_parameters["early_termination_settings"] = dataclass_to_dict(
+                early_termination_settings
             )
             evaluation_start = backtest_config.get("_evaluation_start")
             if evaluation_start is not None:
@@ -76,12 +73,10 @@ class RunConfigBuilder:
 
     @staticmethod
     def inject_external_objects(
-        run_config: Dict[str, Any],
+        run_config: dict[str, Any],
         *,
         minute_data: Any = None,
     ) -> None:
         """実行設定へ外部オブジェクトを注入する。"""
         if minute_data is not None:
-            run_config["strategy_config"]["parameters"][
-                "minute_data"
-            ] = minute_data
+            run_config["strategy_config"]["parameters"]["minute_data"] = minute_data

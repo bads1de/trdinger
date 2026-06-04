@@ -4,7 +4,7 @@
 ファンディングレートAPIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -57,15 +57,15 @@ def override_dependencies(mock_db_session, mock_funding_rate_orchestration_servi
         mock_funding_rate_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_funding_rate_orchestration_service] = (
-        lambda: mock_funding_rate_orchestration_service
+    app.dependency_overrides[get_funding_rate_orchestration_service] = lambda: (
+        mock_funding_rate_orchestration_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_funding_rate() -> Dict[str, Any]:
+def sample_funding_rate() -> dict[str, Any]:
     """
     サンプルファンディングレートデータ
 
@@ -83,8 +83,8 @@ def sample_funding_rate() -> Dict[str, Any]:
 
 @pytest.fixture
 def sample_funding_rates_list(
-    sample_funding_rate: Dict[str, Any],
-) -> List[Dict[str, Any]]:
+    sample_funding_rate: dict[str, Any],
+) -> list[dict[str, Any]]:
     """
     サンプルファンディングレートリスト
 
@@ -109,7 +109,7 @@ class TestGetFundingRates:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_funding_rate_orchestration_service: AsyncMock,
-        sample_funding_rates_list: List[Dict[str, Any]],
+        sample_funding_rates_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: ファンディングレートが正常に取得できる
@@ -146,7 +146,7 @@ class TestGetFundingRates:
         test_client: TestClient,
         mock_db_session: Mock,
         mock_funding_rate_orchestration_service: AsyncMock,
-        sample_funding_rate: Dict[str, Any],
+        sample_funding_rate: dict[str, Any],
     ) -> None:
         """
         正常系: 日付範囲指定でファンディングレートが取得できる

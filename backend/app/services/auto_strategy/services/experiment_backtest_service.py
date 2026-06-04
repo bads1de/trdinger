@@ -8,7 +8,7 @@ GA実験で最良個体に対する詳細バックテストの構築と実行を
 import logging
 import re
 from copy import deepcopy
-from typing import Any, Dict, Optional
+from typing import Any
 
 from app.services.auto_strategy.core.evaluation.report_persistence import (
     attach_backtest_evaluation_summary,
@@ -33,7 +33,7 @@ class ExperimentBacktestService:
     def __init__(
         self,
         backtest_service: BacktestService,
-        serializer: Optional[GeneSerializer] = None,
+        serializer: GeneSerializer | None = None,
     ):
         """初期化"""
         self.backtest_service = backtest_service
@@ -41,12 +41,12 @@ class ExperimentBacktestService:
 
     def create_detailed_backtest_result_data(
         self,
-        result: Dict[str, Any],
+        result: dict[str, Any],
         ga_config: GAConfig,
-        backtest_config: Dict[str, Any],
+        backtest_config: dict[str, Any],
         experiment_id: str,
-        experiment_info: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        experiment_info: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         最良個体に対する詳細バックテストを実行し、保存用レコードを作成する
 
@@ -65,9 +65,7 @@ class ExperimentBacktestService:
 
         best_strategy = result["best_strategy"]
         best_fitness = result["best_fitness"]
-        experiment_data = (
-            experiment_info if isinstance(experiment_info, dict) else {}
-        )
+        experiment_data = experiment_info if isinstance(experiment_info, dict) else {}
 
         experiment_name = str(experiment_data.get("name", experiment_id))
         db_experiment_id = int(experiment_data.get("db_id", 0) or 0)
@@ -108,8 +106,8 @@ class ExperimentBacktestService:
         self,
         best_strategy: StrategyGene,
         experiment_name: str,
-        backtest_config: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        backtest_config: dict[str, Any],
+    ) -> dict[str, Any]:
         """
         詳細バックテスト用の最終的な設定を構築
 
@@ -143,13 +141,13 @@ class ExperimentBacktestService:
 
     def _prepare_backtest_result_data(
         self,
-        detailed_result: Dict[str, Any],
-        config: Dict[str, Any],
+        detailed_result: dict[str, Any],
+        config: dict[str, Any],
         experiment_id: str,
         db_experiment_id: int,
         best_fitness: float,
-        evaluation_summary: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        evaluation_summary: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         backtest_results テーブルへ保存するためのレコードデータを構築
         """
@@ -172,9 +170,7 @@ class ExperimentBacktestService:
             "initial_capital": config["initial_capital"],
             "commission_rate": config.get("commission_rate", 0.001),
             "config_json": config_json,
-            "performance_metrics": detailed_result.get(
-                "performance_metrics", {}
-            ),
+            "performance_metrics": detailed_result.get("performance_metrics", {}),
             "equity_curve": detailed_result.get("equity_curve", []),
             "trade_history": detailed_result.get("trade_history", []),
             "execution_time": detailed_result.get("execution_time"),

@@ -307,10 +307,12 @@ class TestUniversalStrategyAll:
             enabled=True, method=TPSLMethod.VOLATILITY_BASED, atr_period=50
         )
         strategy = UniversalStrategy(
-            mock_broker, mock_data_large, {
+            mock_broker,
+            mock_data_large,
+            {
                 "strategy_gene": valid_gene,
                 "early_termination_settings": EarlyTerminationSettings(enabled=False),
-            }
+            },
         )
 
         with patch.object(
@@ -342,23 +344,26 @@ class TestUniversalStrategyAll:
         )
         # equityをモックする
         with patch.object(
-            UniversalStrategy, "equity", new_callable=PropertyMock, return_value=100000.0
+            UniversalStrategy,
+            "equity",
+            new_callable=PropertyMock,
+            return_value=100000.0,
         ):
             strategy = UniversalStrategy(
                 mock_broker, mock_data, {"strategy_gene": valid_gene}
             )
-            
+
             # 既存のインスタンスのメソッドを直接パッチする
             # calculate_position_size_fastはユニット数を返すので、(0.05 * 100000)/102 で逆算する
             target_fraction1 = 0.05
             target_unit1 = (target_fraction1 * 100000.0) / 102.0
             target_fraction2 = 0.08
             target_unit2 = (target_fraction2 * 100000.0) / 102.0
-            
+
             with patch.object(
                 strategy.position_sizing_service,
                 "calculate_position_size_fast",
-                side_effect=[target_unit1, target_unit2]
+                side_effect=[target_unit1, target_unit2],
             ):
                 assert abs(strategy._calculate_position_size() - 0.05) < 1e-9
                 assert abs(strategy._calculate_position_size() - 0.08) < 1e-9

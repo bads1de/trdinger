@@ -4,14 +4,12 @@
 create_random_* 関数で使用する確率、重み、デフォルト値などの定数を定義します。
 """
 
-from typing import Dict
-
 from ..config.constants import EntryType, ExitType
 
 # ==================== EntryGene ====================
 
 # エントリータイプの出現確率（初期段階では成行注文を多めに設定）
-ENTRY_TYPE_WEIGHTS: Dict[EntryType, float] = {
+ENTRY_TYPE_WEIGHTS: dict[EntryType, float] = {
     EntryType.MARKET: 0.6,
     EntryType.LIMIT: 0.2,
     EntryType.STOP: 0.15,
@@ -21,7 +19,7 @@ ENTRY_TYPE_WEIGHTS: Dict[EntryType, float] = {
 # ==================== ExitGene ====================
 
 # イグジットタイプの出現確率（全決済を多めに設定）
-EXIT_TYPE_WEIGHTS: Dict[ExitType, float] = {
+EXIT_TYPE_WEIGHTS: dict[ExitType, float] = {
     ExitType.FULL: 0.5,
     ExitType.PARTIAL: 0.3,
     ExitType.TRAILING: 0.2,

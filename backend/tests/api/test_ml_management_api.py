@@ -4,7 +4,7 @@ ML管理APIのテストモジュール
 ML管理APIエンドポイントの正常系、異常系、エッジケースをテストします。
 """
 
-from typing import Any, Dict, List
+from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -69,15 +69,15 @@ def override_dependencies(mock_db_session, mock_ml_management_orchestration_serv
         mock_ml_management_orchestration_service: モックサービス
     """
     app.dependency_overrides[get_db] = lambda: mock_db_session
-    app.dependency_overrides[get_ml_management_orchestration_service] = (
-        lambda: mock_ml_management_orchestration_service
+    app.dependency_overrides[get_ml_management_orchestration_service] = lambda: (
+        mock_ml_management_orchestration_service
     )
     yield
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
-def sample_model_info() -> Dict[str, Any]:
+def sample_model_info() -> dict[str, Any]:
     """
     サンプルモデル情報
 
@@ -99,7 +99,7 @@ def sample_model_info() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_models_list(sample_model_info: Dict[str, Any]) -> List[Dict[str, Any]]:
+def sample_models_list(sample_model_info: dict[str, Any]) -> list[dict[str, Any]]:
     """
     サンプルモデルリスト
 
@@ -123,7 +123,7 @@ class TestGetModels:
         self,
         test_client: TestClient,
         mock_ml_management_orchestration_service: AsyncMock,
-        sample_models_list: List[Dict[str, Any]],
+        sample_models_list: list[dict[str, Any]],
     ) -> None:
         """
         正常系: モデル一覧が正常に取得できる
@@ -399,7 +399,7 @@ class TestLoadModel:
         self,
         test_client: TestClient,
         mock_ml_management_orchestration_service: AsyncMock,
-        sample_model_info: Dict[str, Any],
+        sample_model_info: dict[str, Any],
     ) -> None:
         """
         正常系: 現在のモデル情報が取得できる

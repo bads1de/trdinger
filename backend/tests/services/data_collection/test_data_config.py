@@ -7,7 +7,6 @@ DataServiceConfigデータクラスとファクトリ関数をテストします
 - get_open_interest_config
 """
 
-
 from app.services.data_collection.bybit.data_config import (
     DataServiceConfig,
     get_funding_rate_config,

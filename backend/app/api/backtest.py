@@ -5,7 +5,7 @@ backtesting.pyライブラリを使用したバックテスト機能のAPIを提
 責務の分離により、ビジネスロジックはOrchestrationServiceに委譲されています。
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -32,18 +32,18 @@ class BacktestResponse(BaseModel):
     """バックテストレスポンス"""
 
     success: bool
-    result: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    timestamp: Optional[str] = None
+    result: dict[str, Any] | None = None
+    error: str | None = None
+    timestamp: str | None = None
 
 
 class BacktestResultsResponse(BaseModel):
     """バックテスト結果一覧レスポンス"""
 
     success: bool
-    results: Optional[list] = None
-    total: Optional[int] = None
-    error: Optional[str] = None
+    results: list | None = None
+    total: int | None = None
+    error: str | None = None
 
 
 @router.get("/results", response_model=BacktestResultsResponse)
@@ -56,8 +56,8 @@ async def get_backtest_results(
         description="取得件数",
     ),
     offset: int = Query(0, ge=0, description="オフセット"),
-    symbol: Optional[str] = Query(None, description="取引ペアフィルター"),
-    strategy_name: Optional[str] = Query(None, description="戦略名フィルター"),
+    symbol: str | None = Query(None, description="取引ペアフィルター"),
+    strategy_name: str | None = Query(None, description="戦略名フィルター"),
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
         get_backtest_orchestration_service

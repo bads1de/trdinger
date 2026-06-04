@@ -4,9 +4,9 @@
 バックテスト関連の静的データを定義します。
 """
 
-from typing import Any, Dict
+from typing import Any
 
-SUPPORTED_STRATEGIES: Dict[str, Any] = {
+SUPPORTED_STRATEGIES: dict[str, Any] = {
     "auto_strategy": {
         "name": "オートストラテジー",
         "description": "遺伝的アルゴリズムで生成された戦略",

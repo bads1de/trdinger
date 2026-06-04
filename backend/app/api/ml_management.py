@@ -5,7 +5,7 @@ ML管理API
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from fastapi import APIRouter, Depends
 
@@ -201,7 +201,7 @@ async def get_ml_config(
 @router.put("/config")
 @ErrorHandler.api_endpoint("ML設定の更新中にエラーが発生しました")
 async def update_ml_config(
-    config_data: Dict[str, Any],
+    config_data: dict[str, Any],
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
@@ -261,9 +261,7 @@ async def reset_ml_config(
 
 
 @router.post("/models/cleanup")
-@ErrorHandler.api_endpoint(
-    "古いモデルのクリーンアップ中にエラーが発生しました"
-)
+@ErrorHandler.api_endpoint("古いモデルのクリーンアップ中にエラーが発生しました")
 async def cleanup_old_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service

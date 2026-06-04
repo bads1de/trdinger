@@ -102,7 +102,6 @@ class TestBacktestServiceEnhancement:
                 "app.services.backtest.services.backtest_service.BacktestResultRepository"
             ) as MockRepo,
         ):
-
             MockRepo.return_value.save_backtest_result.return_value = {
                 "id": 1,
                 "saved": True,
