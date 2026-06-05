@@ -1,13 +1,11 @@
 # Trdinger: Advanced Algo-Trading & Research Platform
 
-<!-- TODO: Update these badges with your actual repository URL -->
-<!-- [![Backend CI](https://github.com/username/trading/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/username/trading/actions/workflows/backend-ci.yml) -->
-<!-- [![Frontend CI](https://github.com/username/trading/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/username/trading/actions/workflows/frontend-ci.yml) -->
-
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0%2B-blue)](https://www.typescriptlang.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109%2B-009688)](https://fastapi.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.121%2B-009688)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![uv](https://img.shields.io/badge/uv-package%20manager-blueviolet)](https://docs.astral.sh/uv/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Trdingerは、仮想通貨市場における取引戦略の**科学的な研究、バックテスト、そして自動生成**を行うためのプラットフォームです。
 単なる自動売買ボットではなく、遺伝的アルゴリズムによる戦略探索や、高度な機械学習モデルを用いた市場予測を統合した**「戦略の研究開発ラボ」**として設計されています。
@@ -136,19 +134,63 @@ npm run dev
 
 ## 🧪 Testing & Quality Checks
 
-品質担保のため、以下のコマンドでテストと静的解析を実行できます。
+CI で走る内容と同一のチェックをローカルでも実行できます。
+
+### Backend (`/backend`)
 
 ```bash
-# Backend Testing & Linting
-pytest backend/tests
-mypy backend/app
-flake8 backend/app
+cd backend
 
-# Frontend Testing
-npm test
-npm run lint
+# 依存解決（lockfile で完全固定）
+uv sync --all-extras
+
+# テスト（カバレッジ付き）
+uv run pytest --cov=app --cov-report=term-missing
+
+# Lint / Format
+uv run ruff format --check app tests
+uv run ruff check app tests
+
+# 静的型チェック
+uv run mypy app
 ```
+
+### Frontend (`/frontend`)
+
+```bash
+cd frontend
+
+# 依存解決（package-lock.json 固定）
+npm ci
+
+# テスト
+npm test -- --ci
+
+# Lint
+npm run lint
+
+# 型チェック
+npx tsc --noEmit
+
+# 本番ビルド
+npm run build
+```
+
+## 📐 Architecture Notes
+
+設計上の主要な判断は [`AGENTS.md`](./AGENTS.md) に集約しています。
+
+- **レイヤードアーキテクチャ + DI**: `app/api` → `app/services` → `database/repositories` の3層で責務を分離
+- **Repository Pattern**: データアクセスを抽象化し、テストでは FastAPI の `dependency_overrides` でモックに差し替え
+- **Domain-Driven パッケージ分割**: 機能軸（`auto_strategy` / `backtest` / `ml` / `data_collection` / `indicators` / `optimization`）で分割し、機能追加時の影響範囲を局所化
+
+## 🛣️ Roadmap
+
+- [ ] WebSocket ベースのライブ実行インターフェース
+- [ ] マルチユーザー対応（認証・認可レイヤー）
+- [ ] 追加取引所サポート（Hyperliquid, dYdX 等）
+- [ ] ポジションサイジングの追加戦略（Kelly, Risk Parity）
 
 ---
 
-_Created for portfolio demonstration purposes._
+_Created for portfolio demonstration purposes. Feedback and questions welcome via Issues._

@@ -1,20 +1,20 @@
-# Dependencies
+# Node.js / Frontend
 node_modules/
-backend/__pycache__/
-backend/src/**/__pycache__/
-backend/tests/__pycache__/
-
-
-
-
-# Next.js
 .next/
 out/
-
-# Production
 build/
 dist/
-
+coverage/
+*.lcov
+.coverage
+.npm
+.eslintcache
+*.tgz
+.yarn-integrity
+.cache
+.parcel-cache/
+public/
+.tmp/
 
 # Environment variables
 .env
@@ -24,104 +24,41 @@ dist/
 .env.production.local
 
 # Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-*.log
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.dmypy.json
+dmypy.json
 
-# Coverage directory used by tools like istanbul
-coverage/
-*.lcov
-.coverage
+# TypeScript / Frontend build artifacts
+.turbo
+.swc/
 
-
-# nyc test coverage
-.nyc_output
-
-# Dependency directories
-jspm_packages/
-
-# Optional npm cache directory
-.npm
-
-# Optional eslint cache
-.eslintcache
-
-# Microbundle cache
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-
-# Optional REPL history
-.node_repl_history
-
-# Output of 'npm pack'
-*.tgz
-
-# Yarn Integrity file
-.yarn-integrity
-
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
-
-# Next.js build output
-.next
-
-# Nuxt.js build / generate output
-.nuxt
-dist
-
-# Gatsby files
-.cache/
-public
-
-# Storybook build outputs
-.out
-.storybook-out
-
-# Temporary folders
-tmp/
-temp/
-
-# Editor directories and files
+# Editor / OS
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS generated files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
-
-# Python
-*.pyc
-*.pyo
-*.pyd
-__pycache__/
-*.so
-.Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-.pytest_cache/
-.venv/
-*.egg-info/
 
 # Database
 *.db
@@ -131,35 +68,16 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints
 
-# uv
-# .python-version は uv で使用するため track する
-# uv.lock も track する (再現性の肝)
-
-# pytest
-.pytest_cache/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# ruff
-.ruff_cache/
-
-# ruff
-.ruff_cache/
-
-
-# Ignore ML models
+# ML artifacts (large / non-portable)
 backend/models/ml_indicators/*.joblib
 backend/models/*.pkl
 
-# Feature evaluation analysis results
+# Project-internal analysis outputs
 backend/data/feature_evaluation/*.json
 backend/data/feature_evaluation/plots/
+backend/results/
 .claude/
 
-# Analysis results and outputs
-backend/results/
+# Note: .python-version and uv.lock are intentionally tracked for reproducibility
 
 
