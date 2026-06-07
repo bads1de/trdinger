@@ -152,8 +152,7 @@ class HistoricalDataOrchestrator:
             else:
                 logger.error(f"履歴データ収集失敗: {symbol} {timeframe}")
 
-        except Exception as e:
-            logger.error(
-                f"履歴データ収集中にエラーが発生しました: {symbol} {timeframe}",
-                e,
+        except Exception:
+            logger.exception(
+                "履歴データ収集中にエラーが発生しました: %s %s", symbol, timeframe
             )
