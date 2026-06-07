@@ -116,10 +116,7 @@ class BulkDataOrchestrator:
             )
 
         except Exception as e:
-            logger.error(
-                "ビットコイン全データ収集開始エラー",
-                e,
-            )
+            logger.exception("ビットコイン全データ収集開始エラー: %s", e)
             raise
 
     async def start_bulk_historical_data_collection(
@@ -345,10 +342,9 @@ class BulkDataOrchestrator:
 
             logger.info(f"全データ収集完了: {symbol} {timeframe}")
 
-        except Exception as e:
-            logger.error(
-                f"全データ収集中にエラーが発生しました: {symbol} {timeframe}",
-                e,
+        except Exception:
+            logger.exception(
+                "全データ収集中にエラーが発生しました: %s %s", symbol, timeframe
             )
         finally:
             # データベースセッションのクリーンアップ

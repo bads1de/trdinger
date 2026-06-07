@@ -122,10 +122,9 @@ class OICollectionOrchestrator:
                     f"OI収集失敗: {symbol} {interval} - {result.get('message')}"
                 )
 
-        except Exception as e:
-            logger.error(
+        except Exception:
+            logger.exception(
                 f"OI履歴データ収集中にエラーが発生しました: {symbol} {interval}",
-                e,
             )
         finally:
             if hasattr(db, "close"):
