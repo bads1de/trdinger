@@ -138,7 +138,7 @@ const EquityCurveChart: React.FC<EquityCurveChartProps> = ({
     }
 
     return sampledData;
-  }, [data, maxDataPoints, showBuyHold, buyHoldReturn]);
+  }, [data, maxDataPoints, showBuyHold, buyHoldReturn, initialCapital]);
 
   // Y軸のドメインを計算
   const yAxisDomain = useMemo(() => {
@@ -168,7 +168,7 @@ const EquityCurveChart: React.FC<EquityCurveChartProps> = ({
     // 例: if (yMax - yMin < initialCapital * 0.1) { ... }
 
     return [yMin, yMax];
-  }, [processedData, showBuyHold, buyHoldReturn, initialCapital]);
+  }, [processedData, showBuyHold, buyHoldReturn]);
 
   return (
     <ChartContainer

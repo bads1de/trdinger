@@ -74,6 +74,7 @@ describe("useDataReset", () => {
         success: true,
         message: "リセット完了",
         total_deleted: 1000,
+        timestamp: new Date().toISOString(),
       });
     });
 
@@ -88,6 +89,7 @@ describe("useDataReset", () => {
       result.current.handleResetComplete({
         success: false,
         message: "リセット失敗",
+        timestamp: new Date().toISOString(),
       });
     });
 
@@ -111,6 +113,7 @@ describe("useDataReset", () => {
       result.current.handleResetComplete({
         success: true,
         message: "完了",
+        timestamp: new Date().toISOString(),
       });
     });
 
