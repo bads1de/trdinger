@@ -2,7 +2,6 @@
 exceptions モジュールのユニットテスト
 """
 
-import pytest
 
 from app.services.ml.common.exceptions import (
     MLBaseError,

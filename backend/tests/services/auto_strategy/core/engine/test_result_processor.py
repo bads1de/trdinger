@@ -6,7 +6,7 @@ ResultProcessorのユニットテスト
 """
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock
 
 from deap import tools
 

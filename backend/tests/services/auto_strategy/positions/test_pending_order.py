@@ -2,7 +2,6 @@
 pending_order モジュールのユニットテスト
 """
 
-import pytest
 
 from app.services.auto_strategy.config.constants import EntryType
 from app.services.auto_strategy.positions.pending_order import PendingOrder

@@ -10,8 +10,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
-
 from app.services.auto_strategy.config.ga.ga_config import GAConfig
 from app.services.auto_strategy.core.engine.parameter_tuning_manager import (
     ParameterTuningManager,

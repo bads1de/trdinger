@@ -2,7 +2,7 @@
 data_collection/orchestration/collection_status_checker モジュールのユニットテスト
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

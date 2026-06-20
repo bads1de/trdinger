@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from app.services.ml.label_generation.trend_scanning import (
     TrendScanning,

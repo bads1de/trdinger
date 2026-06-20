@@ -9,12 +9,11 @@ improve line/branch coverage of the original/ indicator package.
 from __future__ import annotations
 
 import importlib
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helpers

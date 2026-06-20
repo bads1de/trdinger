@@ -11,8 +11,6 @@ from __future__ import annotations
 import logging
 from unittest.mock import Mock, patch
 
-import pytest
-
 from app.services.auto_strategy.config.ga.ga_config import GAConfig, HybridConfig
 from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.core.engine.ga_engine_factory import (
@@ -29,20 +27,23 @@ class TestFactoryLogLevel:
         target_logger = logging.getLogger("app.services.auto_strategy")
         original_level = target_logger.level
 
-        with patch(
-            "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
-        ):
-            mock_backtest_service = Mock(spec=BacktestService)
-            ga_config = Mock(spec=GAConfig)
-            ga_config.log_level = log_level_str
-            ga_config.hybrid_config = Mock()
-            ga_config.hybrid_config.mode = False
-            ga_config.population_size = 5
+        try:
+            with patch(
+                "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
+            ):
+                mock_backtest_service = Mock(spec=BacktestService)
+                ga_config = Mock(spec=GAConfig)
+                ga_config.log_level = log_level_str
+                ga_config.hybrid_config = Mock()
+                ga_config.hybrid_config.mode = False
+                ga_config.population_size = 5
 
-            GeneticAlgorithmEngineFactory.create_engine(
-                backtest_service=mock_backtest_service, ga_config=ga_config
-            )
-            return target_logger.level
+                GeneticAlgorithmEngineFactory.create_engine(
+                    backtest_service=mock_backtest_service, ga_config=ga_config
+                )
+                return target_logger.level
+        finally:
+            target_logger.setLevel(original_level)
 
     def test_log_level_debug(self) -> None:
         level = self._capture_log_level("DEBUG")

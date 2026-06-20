@@ -19,7 +19,6 @@ from app.services.ml.feature_engineering.volatility_estimators import (
     yang_zhang_volatility,
 )
 
-
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
