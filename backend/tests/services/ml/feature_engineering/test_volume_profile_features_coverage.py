@@ -197,3 +197,116 @@ class TestVolumeProfileCalculatorExtended:
         # Should not raise
         result = calc.calculate_features(df, lookback_periods=[20])
         assert isinstance(result, pd.DataFrame)
+
+
+class TestNumbaRollingVolumeProfileExpansion:
+    """Test the VAH/VAL expansion loop branches."""
+
+    def test_volume_distribution_reaches_target(self) -> None:
+        """VAH/VAL 拡張ループで target_v に到達するケース"""
+        n = 100
+        rng = np.random.default_rng(42)
+        high = np.linspace(100, 110, n) + rng.normal(0, 0.2, n)
+        low = np.linspace(90, 100, n) + rng.normal(0, 0.2, n)
+        close = (high + low) / 2.0
+        vol = rng.uniform(100, 1000, n)
+
+        poc, vah, val = vpf._numba_rolling_volume_profile(high, low, close, vol, 20, 10)
+        assert poc.shape == (n,)
+        assert vah.shape == (n,)
+        assert val.shape == (n,)
+        # At least some finite values after window
+        assert np.isfinite(poc[20:]).any()
+
+    def test_volume_concentrated_in_one_bin(self) -> None:
+        """出来高が1ビンに集中している場合の拡張ループ break"""
+        n = 50
+        # Price range creates multiple bins
+        high = np.linspace(101, 110, n)
+        low = np.linspace(90, 99, n)
+        close = (high + low) / 2.0
+        # Volume concentrated in middle of window
+        vol = np.zeros(n)
+        vol[5:15] = 1000.0  # One region of high volume
+
+        poc, vah, val = vpf._numba_rolling_volume_profile(high, low, close, vol, 15, 5)
+        assert poc.shape == (n,)
+        assert not np.all(np.isnan(poc[15:]))
+
+    def test_sparse_volume_distribution(self) -> None:
+        """出来高がまばらな場合でも v_up/dn == 0 break に到達すること"""
+        n = 60
+        high = np.linspace(100, 110, n)
+        low = np.linspace(90, 100, n)
+        close = (high + low) / 2.0
+        # Only a few non-zero volume points
+        vol = np.zeros(n)
+        vol[10] = 500.0
+        vol[30] = 500.0
+
+        poc, vah, val = vpf._numba_rolling_volume_profile(high, low, close, vol, 20, 10)
+        # Should not crash, some values might be NaN or 0
+        assert poc.shape == (n,)
+
+
+class TestNumbaDetectVolumeNodesExtendedBranches:
+    """Test HVN/LVN detection with asymmetric volume distributions."""
+
+    def test_hvn_found_closer_than_lvn(self) -> None:
+        """HVN が LVN より現在価格に近いケース"""
+        n = 60
+        rng = np.random.default_rng(42)
+        high = np.linspace(100, 110, n) + rng.normal(0, 0.3, n)
+        low = np.linspace(90, 100, n) + rng.normal(0, 0.3, n)
+        close = (high + low) / 2.0
+        vol = rng.uniform(10, 1000, n)
+
+        hvn, lvn = vpf._numba_detect_volume_nodes_signed(high, low, close, vol, 20, 10)
+        assert hvn.shape == (n,)
+        assert lvn.shape == (n,)
+        # After window, at least some should be non-zero
+        assert (hvn[20:] != 0.0).any() or (lvn[20:] != 0.0).any()
+
+    def test_current_price_at_extreme(self) -> None:
+        """現在価格が価格範囲の端にあるケース"""
+        n = 60
+        rng = np.random.default_rng(7)
+        high = np.linspace(101, 110, n) + rng.normal(0, 0.2, n)
+        low = np.linspace(90, 100, n) + rng.normal(0, 0.2, n)
+        # close near the high extreme
+        close = high - rng.normal(0, 0.1, n)
+        vol = rng.uniform(100, 1000, n)
+
+        hvn, lvn = vpf._numba_detect_volume_nodes_signed(high, low, close, vol, 20, 10)
+        assert hvn.shape == (n,)
+        assert lvn.shape == (n,)
+
+
+class TestNumbaVPSkewnessKurtosisBranches:
+    """Test weighted skewness/kurtosis with varying volume profiles."""
+
+    def test_asymmetric_volume_weighted(self) -> None:
+        """非対称な出来高分布での加重歪度・尖度"""
+        n = 60
+        rng = np.random.default_rng(42)
+        close = np.linspace(100, 110, n) + rng.normal(0, 0.5, n)
+        # Volume weighted toward one end
+        vol = np.linspace(10, 1000, n)  # Increasing volume
+
+        skew, kurt = vpf._numba_vp_skewness_kurtosis(close, vol, 15)
+        assert skew.shape == (n,)
+        assert kurt.shape == (n,)
+        # After warm-up, should have non-zero values
+        assert (skew[15:] != 0.0).any()
+
+    def test_decreasing_volume_profile(self) -> None:
+        """減少する出来高分布での加重統計"""
+        n = 60
+        rng = np.random.default_rng(99)
+        close = np.linspace(100, 108, n) + rng.normal(0, 0.3, n)
+        # Decreasing volume
+        vol = np.linspace(1000, 10, n)
+
+        skew, kurt = vpf._numba_vp_skewness_kurtosis(close, vol, 15)
+        assert skew.shape == (n,)
+        assert kurt.shape == (n,)
