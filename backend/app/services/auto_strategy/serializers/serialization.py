@@ -15,7 +15,7 @@ from dataclasses import fields, is_dataclass
 from enum import Enum
 from typing import Any, cast
 
-from app.types import SerializableValue
+from app.types import SerializablePrimitive, SerializableValue
 
 from ..genes import (
     Condition,
@@ -29,7 +29,7 @@ from ..genes import (
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
 # キャッシュキー用にハッシュ可能な構造
-_FrozenKey = tuple | str | int | float | bool | None | bytes
+_FrozenKey = tuple | bytes | SerializablePrimitive
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +48,11 @@ class DictConverter:
         self._strategy_gene_codec = StrategyGeneDictCodec(self)
         self._cache_size = cache_size
         self._serialize_cache: dict[
-            int | str | tuple | bytes | float | bool | None,
+            tuple | bytes | SerializablePrimitive,
             dict[str, SerializableValue],
         ] = {}
         self._deserialize_cache: dict[
-            int | str | tuple | bytes | float | bool | None, object
+            tuple | bytes | SerializablePrimitive, object
         ] = {}
 
     def _freeze_for_cache_key(self, value: object) -> _FrozenKey:

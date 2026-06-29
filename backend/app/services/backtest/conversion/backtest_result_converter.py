@@ -13,6 +13,7 @@ from app.services.backtest.shared import (
     parse_datetime_value,
     resolve_stats_object,
 )
+from app.types import DatetimeLike
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,8 @@ class BacktestResultConverter:
         symbol: str,
         timeframe: str,
         initial_capital: float,
-        start_date: Any,
-        end_date: Any,
+        start_date: DatetimeLike,
+        end_date: DatetimeLike,
         config_json: dict[str, Any],
     ) -> dict[str, Any]:
         """

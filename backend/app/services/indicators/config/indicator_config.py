@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from app.types import SerializablePrimitive
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,7 +46,7 @@ class ParameterConfig:
     """
 
     name: str  # パラメータ名（例：period, fast_period）
-    default_value: int | float | str | bool  # デフォルト値
+    default_value: SerializablePrimitive  # デフォルト値
     min_value: int | float | None = None  # 最小値
     max_value: int | float | None = None  # 最大値
     description: str | None = None  # パラメータの説明

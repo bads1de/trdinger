@@ -6,7 +6,7 @@
 
 from datetime import datetime
 from math import isclose
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -16,6 +16,7 @@ from app.services.backtest.shared import (
     normalize_datetimes_for_comparison,
     parse_datetime_value,
 )
+from app.types import DatetimeLike, MLModelProtocol
 
 VALID_TIMEFRAMES = SUPPORTED_TIMEFRAMES
 
@@ -34,7 +35,7 @@ class GeneratedGAParameters(BaseModel):
     strategy_gene: dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
     volatility_gate_enabled: bool = False
     volatility_model_path: str | None = None
-    ml_predictor: Any | None = None  # MLモデルインスタンス
+    ml_predictor: MLModelProtocol | None = None  # MLモデルインスタンス
     evaluation_start: Any | None = None
     minute_data: Any | None = None  # DataFrameなどはPydanticで検証しにくいためAny
     enable_early_termination: bool = False
@@ -74,8 +75,8 @@ class BacktestRunConfig(BaseModel):
     strategy_name: str = Field(..., min_length=1)
     symbol: str
     timeframe: str
-    start_date: datetime
-    end_date: datetime
+    start_date: DatetimeLike
+    end_date: DatetimeLike
     initial_capital: float = Field(..., gt=0)
     commission_rate: float = Field(default=0.001, ge=0, le=1)
     spread: float = Field(0.0, ge=0)
@@ -134,8 +135,11 @@ class BacktestRunConfig(BaseModel):
         """日付の整合性を検証"""
         errors: list[str] = []
 
+        start_date = cast(datetime, self.start_date)
+        end_date = cast(datetime, self.end_date)
+
         start_date, end_date = normalize_datetimes_for_comparison(
-            self.start_date, self.end_date
+            start_date, end_date
         )
 
         if start_date >= end_date:

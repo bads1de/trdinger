@@ -17,6 +17,7 @@ from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.auto_strategy.utils.indicators import (
     get_valid_indicator_types,
 )
+from app.types import SerializablePrimitive
 
 from .fitness_sharing_niche import (
     compute_niche_counts_sampling as _compute_niche_counts_sampling,
@@ -36,7 +37,7 @@ from .fitness_sharing_vectorizer import build_behavior_profile
 from .fitness_sharing_vectorizer import vectorize_gene as _vectorize_gene
 from .fitness_utils import has_valid_fitness
 
-_FrozenKey = tuple | str | int | float | bool | None | bytes
+_FrozenKey = tuple | bytes | SerializablePrimitive
 
 logger = logging.getLogger(__name__)
 

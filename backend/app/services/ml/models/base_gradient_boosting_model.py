@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from sklearn.utils.class_weight import compute_sample_weight
 
+from app.types import MLModelProtocol
 from app.utils.error_handler import ModelError
 
 from ..common.utils import (
@@ -19,7 +20,7 @@ from ..evaluation.metrics import metrics_collector
 logger = logging.getLogger(__name__)
 
 
-class BaseGradientBoostingModel(ABC):
+class BaseGradientBoostingModel(ABC, MLModelProtocol):
     """
     勾配ブースティングモデルの抽象基底クラス
 
