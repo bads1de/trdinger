@@ -97,20 +97,50 @@ class TestComputeWindowTValue:
 
 class TestLabelFromTValue:
     def test_return_t_value_mode(self) -> None:
-        assert _label_from_t_value(5.0, min_t_value=2.0, return_t_value_as_label=True) == 5.0
-        assert _label_from_t_value(-3.0, min_t_value=2.0, return_t_value_as_label=True) == -3.0
-        assert _label_from_t_value(0.0, min_t_value=2.0, return_t_value_as_label=True) == 0.0
+        assert (
+            _label_from_t_value(5.0, min_t_value=2.0, return_t_value_as_label=True)
+            == 5.0
+        )
+        assert (
+            _label_from_t_value(-3.0, min_t_value=2.0, return_t_value_as_label=True)
+            == -3.0
+        )
+        assert (
+            _label_from_t_value(0.0, min_t_value=2.0, return_t_value_as_label=True)
+            == 0.0
+        )
 
     def test_discrete_labels(self) -> None:
-        assert _label_from_t_value(5.0, min_t_value=2.0, return_t_value_as_label=False) == 1.0
-        assert _label_from_t_value(-5.0, min_t_value=2.0, return_t_value_as_label=False) == -1.0
-        assert _label_from_t_value(0.0, min_t_value=2.0, return_t_value_as_label=False) == 0.0
+        assert (
+            _label_from_t_value(5.0, min_t_value=2.0, return_t_value_as_label=False)
+            == 1.0
+        )
+        assert (
+            _label_from_t_value(-5.0, min_t_value=2.0, return_t_value_as_label=False)
+            == -1.0
+        )
+        assert (
+            _label_from_t_value(0.0, min_t_value=2.0, return_t_value_as_label=False)
+            == 0.0
+        )
         # Strict boundary (t_val == min_t_value stays at 0)
-        assert _label_from_t_value(2.0, min_t_value=2.0, return_t_value_as_label=False) == 0.0
-        assert _label_from_t_value(-2.0, min_t_value=2.0, return_t_value_as_label=False) == 0.0
+        assert (
+            _label_from_t_value(2.0, min_t_value=2.0, return_t_value_as_label=False)
+            == 0.0
+        )
+        assert (
+            _label_from_t_value(-2.0, min_t_value=2.0, return_t_value_as_label=False)
+            == 0.0
+        )
         # Just above / below the boundary
-        assert _label_from_t_value(2.001, min_t_value=2.0, return_t_value_as_label=False) == 1.0
-        assert _label_from_t_value(-2.001, min_t_value=2.0, return_t_value_as_label=False) == -1.0
+        assert (
+            _label_from_t_value(2.001, min_t_value=2.0, return_t_value_as_label=False)
+            == 1.0
+        )
+        assert (
+            _label_from_t_value(-2.001, min_t_value=2.0, return_t_value_as_label=False)
+            == -1.0
+        )
 
 
 class TestTrendScanningLinearMode:

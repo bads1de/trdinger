@@ -138,9 +138,7 @@ class BacktestRunConfig(BaseModel):
         start_date = cast(datetime, self.start_date)
         end_date = cast(datetime, self.end_date)
 
-        start_date, end_date = normalize_datetimes_for_comparison(
-            start_date, end_date
-        )
+        start_date, end_date = normalize_datetimes_for_comparison(start_date, end_date)
 
         if start_date >= end_date:
             errors.append("start_dateはend_dateより前である必要があります")

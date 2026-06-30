@@ -50,7 +50,9 @@ class TestCrossoverStrategyGenes:
         parent2 = _CrossableGene()
         config = SimpleNamespace()
 
-        with patch.object(_CrossableGene, "crossover", return_value=(parent1, parent2)) as mock_co:
+        with patch.object(
+            _CrossableGene, "crossover", return_value=(parent1, parent2)
+        ) as mock_co:
             result = crossover_strategy_genes(parent1, parent2, config)
 
         assert result == (parent1, parent2)
@@ -61,7 +63,9 @@ class TestCrossoverStrategyGenes:
         parent2 = _CrossableGene()
         config = SimpleNamespace(mutation_rate=0.05)
 
-        with patch.object(_CrossableGene, "crossover", return_value=(parent1, parent2)) as mock_co:
+        with patch.object(
+            _CrossableGene, "crossover", return_value=(parent1, parent2)
+        ) as mock_co:
             crossover_strategy_genes(parent1, parent2, config)
             args, _ = mock_co.call_args
             assert args[2] is config
@@ -72,7 +76,9 @@ class TestCrossoverStrategyGenes:
         parent2 = _CrossableGene()
         config = SimpleNamespace()
 
-        with patch.object(_CrossableGene, "crossover", return_value=(parent1, parent2)) as mock_co:
+        with patch.object(
+            _CrossableGene, "crossover", return_value=(parent1, parent2)
+        ) as mock_co:
             crossover_strategy_genes(parent1, parent2, config)
             # クラスメソッドとして呼ばれている
             assert mock_co.called

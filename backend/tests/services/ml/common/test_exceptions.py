@@ -2,7 +2,6 @@
 exceptions モジュールのユニットテスト
 """
 
-
 from app.services.ml.common.exceptions import (
     MLBaseError,
     MLDataError,

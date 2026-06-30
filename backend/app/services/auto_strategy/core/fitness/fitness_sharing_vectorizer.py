@@ -147,16 +147,23 @@ def vectorize_gene(
     # リスク管理パラメータ
     if gene.risk_management:
         features.append(
-            float(gene.risk_management.get("position_size", DEFAULT_POSITION_SIZE))
+            _safe_float(
+                gene.risk_management.get("position_size"),
+                fallback=DEFAULT_POSITION_SIZE,
+            )
         )
     else:
         features.append(DEFAULT_POSITION_SIZE)
 
     # TP/SLパラメータ
     if gene.tpsl_gene:
-        features.append(float(gene.tpsl_gene.stop_loss_pct or DEFAULT_STOP_LOSS_PCT))
         features.append(
-            float(gene.tpsl_gene.take_profit_pct or DEFAULT_TAKE_PROFIT_PCT)
+            _safe_float(gene.tpsl_gene.stop_loss_pct, fallback=DEFAULT_STOP_LOSS_PCT)
+        )
+        features.append(
+            _safe_float(
+                gene.tpsl_gene.take_profit_pct, fallback=DEFAULT_TAKE_PROFIT_PCT
+            )
         )
     else:
         features.append(DEFAULT_STOP_LOSS_PCT)
@@ -167,7 +174,10 @@ def vectorize_gene(
         gene.position_sizing_gene, "risk_per_trade"
     ):
         features.append(
-            float(gene.position_sizing_gene.risk_per_trade or DEFAULT_RISK_PER_TRADE)
+            _safe_float(
+                gene.position_sizing_gene.risk_per_trade,
+                fallback=DEFAULT_RISK_PER_TRADE,
+            )
         )
     else:
         features.append(DEFAULT_RISK_PER_TRADE)

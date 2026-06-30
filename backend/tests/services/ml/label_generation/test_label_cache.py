@@ -70,8 +70,12 @@ class TestLabelCache:
 
     def test_different_params_different_cache(self, sample_ohlcv):
         cache = LabelCache(sample_ohlcv)
-        cache.get_labels(horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002)
-        cache.get_labels(horizon_n=8, threshold_method="TREND_SCANNING", threshold=0.002)
+        cache.get_labels(
+            horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002
+        )
+        cache.get_labels(
+            horizon_n=8, threshold_method="TREND_SCANNING", threshold=0.002
+        )
         assert cache.miss_count == 2
         assert cache.hit_count == 0
 
@@ -100,13 +104,19 @@ class TestLabelCache:
         cache = LabelCache(sample_ohlcv)
         assert cache.get_hit_rate() == 0.0
 
-        cache.get_labels(horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002)
-        cache.get_labels(horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002)
+        cache.get_labels(
+            horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002
+        )
+        cache.get_labels(
+            horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002
+        )
         assert cache.get_hit_rate() == 50.0
 
     def test_clear(self, sample_ohlcv):
         cache = LabelCache(sample_ohlcv)
-        cache.get_labels(horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002)
+        cache.get_labels(
+            horizon_n=4, threshold_method="TREND_SCANNING", threshold=0.002
+        )
         cache.clear()
         assert cache.cache == {}
         assert cache.hit_count == 0

@@ -56,7 +56,11 @@ class TestIndicatorValidator:
         assert np.isnan(result).all()
 
     def test_create_nan_result_multiple(self, validator, sample_df):
-        config = {"function": "MACD", "returns": "multiple", "return_cols": ["macd", "signal", "hist"]}
+        config = {
+            "function": "MACD",
+            "returns": "multiple",
+            "return_cols": ["macd", "signal", "hist"],
+        }
         result = validator.create_nan_result(sample_df, config)
         assert isinstance(result, tuple)
         assert len(result) == 3
@@ -75,7 +79,15 @@ class TestIndicatorValidator:
 
     def test_basic_validation_short_data(self, validator):
         index = pd.date_range("2024-01-01", periods=3, freq="h")
-        short_df = pd.DataFrame({"Close": [1, 2, 3], "Open": [1, 2, 3], "High": [1, 2, 3], "Low": [1, 2, 3]}, index=index)
+        short_df = pd.DataFrame(
+            {
+                "Close": [1, 2, 3],
+                "Open": [1, 2, 3],
+                "High": [1, 2, 3],
+                "Low": [1, 2, 3],
+            },
+            index=index,
+        )
         config = {
             "function": "RSI",
             "data_column": "close",

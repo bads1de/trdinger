@@ -2,7 +2,6 @@
 pending_order モジュールのユニットテスト
 """
 
-
 from app.services.auto_strategy.config.constants import EntryType
 from app.services.auto_strategy.positions.pending_order import PendingOrder
 
@@ -17,20 +16,37 @@ class TestPendingOrder:
         assert order.stop_triggered is False
 
     def test_is_expired_false(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=1.0, created_bar_index=0, validity_bars=5)
+        order = PendingOrder(
+            order_type=EntryType.MARKET,
+            direction=1.0,
+            created_bar_index=0,
+            validity_bars=5,
+        )
         assert order.is_expired(3) is False
 
     def test_is_expired_true(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=1.0, created_bar_index=0, validity_bars=5)
+        order = PendingOrder(
+            order_type=EntryType.MARKET,
+            direction=1.0,
+            created_bar_index=0,
+            validity_bars=5,
+        )
         assert order.is_expired(5) is True
         assert order.is_expired(10) is True
 
     def test_is_expired_zero_validity_never_expires(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=1.0, validity_bars=0)
+        order = PendingOrder(
+            order_type=EntryType.MARKET, direction=1.0, validity_bars=0
+        )
         assert order.is_expired(100) is False
 
     def test_is_expired_with_created_bar_index(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=1.0, created_bar_index=5, validity_bars=3)
+        order = PendingOrder(
+            order_type=EntryType.MARKET,
+            direction=1.0,
+            created_bar_index=5,
+            validity_bars=3,
+        )
         assert order.is_expired(7) is False
         assert order.is_expired(8) is True
 

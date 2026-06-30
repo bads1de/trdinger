@@ -74,7 +74,9 @@ class TestMicrostructureFeatureCalculator:
         assert "LS_Acceleration" in result.columns
         assert "LS_Price_Incongruence" in result.columns
 
-    def test_calculate_features_with_fr_and_ls(self, sample_ohlcv, sample_fr, sample_ls):
+    def test_calculate_features_with_fr_and_ls(
+        self, sample_ohlcv, sample_fr, sample_ls
+    ):
         calc = MicrostructureFeatureCalculator()
         result = calc.calculate_features(sample_ohlcv, fr_df=sample_fr, ls_df=sample_ls)
 

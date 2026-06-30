@@ -127,8 +127,7 @@ class TestConnorsRSIDeepCoverage:
     def test_inner_loop_directly(self) -> None:
         m = _import_original_module("connors_rsi")
         prices = np.array(
-            [100, 101, 102, 103, 104, 103, 102, 101, 100, 99, 100, 101]
-            * 20,
+            [100, 101, 102, 103, 104, 103, 102, 101, 100, 99, 100, 101] * 20,
             dtype=float,
         )
         result = m._njit_connors_rsi_loop(prices, 3, 2, 100)
@@ -831,17 +830,13 @@ class TestDamianiVolatmeterDeepCoverage:
         high = np.cumsum(rng.normal(0, 1, n)) + 102
         low = np.cumsum(rng.normal(0, 1, n)) + 98
         close = (high + low) / 2.0
-        result = m._njit_damiani_volatmeter_loop(
-            high, low, close, 13, 20, 40, 100
-        )
+        result = m._njit_damiani_volatmeter_loop(high, low, close, 13, 20, 40, 100)
         assert result.shape == (n,)
 
     def test_outer_function_insufficient_data(self) -> None:
         m = _import_original_module("damiani_volatmeter")
         df = _make_ohlcv(10)
-        osc, thr = m.damiani_volatmeter(
-            df["high"], df["low"], df["close"]
-        )
+        osc, thr = m.damiani_volatmeter(df["high"], df["low"], df["close"])
         assert isinstance(osc, pd.Series)
         assert isinstance(thr, pd.Series)
         assert osc.isna().all()
@@ -851,9 +846,7 @@ class TestDamianiVolatmeterDeepCoverage:
     def test_outer_function_returns_named(self) -> None:
         m = _import_original_module("damiani_volatmeter")
         df = _make_ohlcv(150)
-        osc, thr = m.damiani_volatmeter(
-            df["high"], df["low"], df["close"]
-        )
+        osc, thr = m.damiani_volatmeter(df["high"], df["low"], df["close"])
         assert osc.name.startswith("DAMIANI_")
         assert thr.name.startswith("DAMIANI_THR_")
 
@@ -882,9 +875,7 @@ class TestAdaptiveEntropyDeepCoverage:
         with pytest.raises(ValueError, match="signal_length must be >= 2"):
             m.adaptive_entropy(close, short_length=14, long_length=28, signal_length=1)
         with pytest.raises(ValueError, match="short_length must be < long_length"):
-            m.adaptive_entropy(
-                close, short_length=30, long_length=28, signal_length=3
-            )
+            m.adaptive_entropy(close, short_length=30, long_length=28, signal_length=3)
 
     def test_outer_function_insufficient_data(self) -> None:
         m = _import_original_module("adaptive_entropy")
@@ -1015,9 +1006,7 @@ class TestQuantumFlowDeepCoverage:
     def test_outer_function_insufficient_data(self) -> None:
         m = _import_original_module("quantum_flow")
         df = _make_ohlcv(3)
-        flow, sig = m.quantum_flow(
-            df["close"], df["high"], df["low"], df["volume"]
-        )
+        flow, sig = m.quantum_flow(df["close"], df["high"], df["low"], df["volume"])
         assert isinstance(flow, pd.Series)
         assert isinstance(sig, pd.Series)
         assert flow.isna().all()
@@ -1026,9 +1015,7 @@ class TestQuantumFlowDeepCoverage:
     def test_outer_function_returns_named(self) -> None:
         m = _import_original_module("quantum_flow")
         df = _make_ohlcv(100)
-        flow, sig = m.quantum_flow(
-            df["close"], df["high"], df["low"], df["volume"]
-        )
+        flow, sig = m.quantum_flow(df["close"], df["high"], df["low"], df["volume"])
         assert flow.name == "QUANTUM_FLOW"
         assert sig.name == "QUANTUM_FLOW_SIGNAL"
 

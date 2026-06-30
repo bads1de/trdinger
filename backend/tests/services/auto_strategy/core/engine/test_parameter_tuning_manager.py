@@ -17,7 +17,9 @@ from app.services.auto_strategy.core.engine.parameter_tuning_manager import (
 from app.services.auto_strategy.genes import StrategyGene
 
 
-def _make_strategy_individual(fitness_values: tuple[float, ...], gene_id: str = "x") -> Mock:
+def _make_strategy_individual(
+    fitness_values: tuple[float, ...], gene_id: str = "x"
+) -> Mock:
     """StrategyGene として振る舞う Mock 個体"""
     ind = Mock()
     ind.__class__ = StrategyGene
@@ -59,12 +61,9 @@ class TestSelectTuningCandidates:
         config = GAConfig()
         # Default tuning_config.elite_count = 3
         individuals = [
-            _make_strategy_individual((float(i),), gene_id=f"g{i}")
-            for i in range(10)
+            _make_strategy_individual((float(i),), gene_id=f"g{i}") for i in range(10)
         ]
-        result = manager.select_tuning_candidates(
-            population=individuals, config=config
-        )
+        result = manager.select_tuning_candidates(population=individuals, config=config)
         # Should return at most elite_count (3)
         assert len(result) <= 3
 
@@ -74,12 +73,9 @@ class TestSelectTuningCandidates:
         # Override the tuning_config
         config.tuning_config.elite_count = 5
         individuals = [
-            _make_strategy_individual((float(i),), gene_id=f"g{i}")
-            for i in range(20)
+            _make_strategy_individual((float(i),), gene_id=f"g{i}") for i in range(20)
         ]
-        result = manager.select_tuning_candidates(
-            population=individuals, config=config
-        )
+        result = manager.select_tuning_candidates(population=individuals, config=config)
         assert len(result) == 5
 
     def test_clamps_budget_to_minimum_one(self) -> None:
@@ -90,9 +86,7 @@ class TestSelectTuningCandidates:
             _make_strategy_individual((0.1,), gene_id="a"),
             _make_strategy_individual((0.5,), gene_id="b"),
         ]
-        result = manager.select_tuning_candidates(
-            population=individuals, config=config
-        )
+        result = manager.select_tuning_candidates(population=individuals, config=config)
         # Budget clamped to max(1, 0) = 1
         assert len(result) == 1
 
@@ -105,9 +99,7 @@ class TestSelectTuningCandidates:
             _make_strategy_individual((0.1,), gene_id="a"),
             _make_strategy_individual((0.5,), gene_id="b"),
         ]
-        result = manager.select_tuning_candidates(
-            population=individuals, config=config
-        )
+        result = manager.select_tuning_candidates(population=individuals, config=config)
         # budget falls back to 1
         assert len(result) == 1
 
@@ -119,9 +111,7 @@ class TestSelectTuningCandidates:
         good = _make_strategy_individual((0.5,), gene_id="g1")
         bad = MagicMock()  # not StrategyGene
 
-        result = manager.select_tuning_candidates(
-            population=[good, bad], config=config
-        )
+        result = manager.select_tuning_candidates(population=[good, bad], config=config)
         # Only the StrategyGene individual should be included
         assert len(result) == 1
         assert result[0] is good
@@ -269,7 +259,9 @@ class TestSelectBestTunedCandidateByFitness:
         candidates = [c1, c2]
 
         with patch.object(
-            manager, "build_individual_evaluation_summary", return_value={"mode": "single"}
+            manager,
+            "build_individual_evaluation_summary",
+            return_value={"mode": "single"},
         ):
             result = manager.select_best_tuned_candidate_by_fitness(
                 tuned_candidates=candidates, config=GAConfig()
@@ -298,7 +290,9 @@ class TestSelectBestTunedCandidateByFitness:
         c2 = _make_gene("c2")
 
         with patch.object(
-            manager, "build_individual_evaluation_summary", return_value={"mode": "single"}
+            manager,
+            "build_individual_evaluation_summary",
+            return_value={"mode": "single"},
         ):
             result = manager.select_best_tuned_candidate_by_fitness(
                 tuned_candidates=[c1, c2], config=GAConfig()

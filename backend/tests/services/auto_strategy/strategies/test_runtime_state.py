@@ -2,7 +2,6 @@
 runtime_state モジュールのユニットテスト
 """
 
-
 from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
 
 

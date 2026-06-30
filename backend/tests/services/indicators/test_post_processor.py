@@ -62,13 +62,20 @@ class TestPostProcessor:
         assert isinstance(result, np.ndarray)
 
     def test_post_process_reindex(self, processor, sample_df):
-        short_series = pd.Series(range(30), index=pd.date_range("2024-01-01", periods=30, freq="h"))
+        short_series = pd.Series(
+            range(30), index=pd.date_range("2024-01-01", periods=30, freq="h")
+        )
         config = {"returns": "single"}
         result = processor.post_process(short_series, config, sample_df)
         assert isinstance(result, np.ndarray)
 
-    def test_post_process_dataframe_return_cols_partial_match(self, processor, sample_df):
-        df = pd.DataFrame({"MACD_12_26_9": range(50), "MACDs_12_26_9": range(50)}, index=sample_df.index)
+    def test_post_process_dataframe_return_cols_partial_match(
+        self, processor, sample_df
+    ):
+        df = pd.DataFrame(
+            {"MACD_12_26_9": range(50), "MACDs_12_26_9": range(50)},
+            index=sample_df.index,
+        )
         config = {"returns": "multiple", "return_cols": ["MACD"]}
         result = processor.post_process(df, config, sample_df)
         assert isinstance(result, tuple)

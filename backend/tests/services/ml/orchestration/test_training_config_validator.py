@@ -19,7 +19,6 @@ from app.services.ml.orchestration.training_config_validator import (
     validate_training_config,
 )
 
-
 # ======================================================================
 # Fixtures
 # ======================================================================
@@ -74,12 +73,16 @@ class TestValidateDateRange:
 
     def test_start_date_after_end_date(self):
         """開始日が終了日より後の場合はValueError"""
-        with pytest.raises(ValueError, match="開始日は終了日より前である必要があります"):
+        with pytest.raises(
+            ValueError, match="開始日は終了日より前である必要があります"
+        ):
             validate_date_range("2024-02-01", "2024-01-01")
 
     def test_start_date_equals_end_date(self):
         """開始日と終了日が同じ日付の場合はエラー"""
-        with pytest.raises(ValueError, match="開始日は終了日より前である必要があります"):
+        with pytest.raises(
+            ValueError, match="開始日は終了日より前である必要があります"
+        ):
             validate_date_range("2024-01-01", "2024-01-01")
 
     def test_less_than_7_days(self):
@@ -97,7 +100,9 @@ class TestValidateDateRange:
 
     def test_invalid_date_format(self):
         """不正な日付形式の場合はValueError"""
-        with pytest.raises(ValueError, match="開始日は終了日より前である必要があります"):
+        with pytest.raises(
+            ValueError, match="開始日は終了日より前である必要があります"
+        ):
             validate_date_range("invalid-date", "2024-01-10")
 
     def test_none_date(self):
@@ -108,9 +113,7 @@ class TestValidateDateRange:
     def test_timezone_aware_dates(self):
         """タイムゾーン付き日付も正しく処理されること"""
         validate_date_range("2024-01-01T00:00:00Z", "2024-01-10T00:00:00Z")
-        validate_date_range(
-            "2024-01-01T00:00:00+09:00", "2024-01-10T00:00:00+09:00"
-        )
+        validate_date_range("2024-01-01T00:00:00+09:00", "2024-01-10T00:00:00+09:00")
 
 
 # ======================================================================
@@ -338,7 +341,9 @@ class TestValidateEnsembleConfig:
 
     def test_ensemble_config_without_enabled_attribute(self):
         """enabled属性を持たないオブジェクトはエラーにならないこと"""
-        validate_ensemble_config("volatility_regression", object())  # enabled=Falseとみなされる
+        validate_ensemble_config(
+            "volatility_regression", object()
+        )  # enabled=Falseとみなされる
 
 
 # ======================================================================

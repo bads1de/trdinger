@@ -97,7 +97,9 @@ class TestFactoryHybridMode:
 
             assert engine.hybrid_mode is False
             # Standard mode uses IndividualEvaluator (not HybridIndividualEvaluator)
-            assert engine.individual_evaluator.__class__.__name__ == "IndividualEvaluator"
+            assert (
+                engine.individual_evaluator.__class__.__name__ == "IndividualEvaluator"
+            )
 
     @patch(
         "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
@@ -136,7 +138,10 @@ class TestFactoryHybridMode:
         )
         assert engine.hybrid_mode is True
         # The engine uses HybridIndividualEvaluator
-        assert engine.individual_evaluator.__class__.__name__ == "HybridIndividualEvaluator"
+        assert (
+            engine.individual_evaluator.__class__.__name__
+            == "HybridIndividualEvaluator"
+        )
 
     @patch(
         "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
@@ -244,7 +249,10 @@ class TestFactoryHybridMode:
 
         # Engine is still created with hybrid mode
         assert engine.hybrid_mode is True
-        assert engine.individual_evaluator.__class__.__name__ == "HybridIndividualEvaluator"
+        assert (
+            engine.individual_evaluator.__class__.__name__
+            == "HybridIndividualEvaluator"
+        )
 
     @patch(
         "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
@@ -324,13 +332,17 @@ class TestFactoryWithHybridConfig:
     """HybridConfig インスタンスを使った統合テスト"""
 
     def test_real_hybrid_config_single_model(self) -> None:
-        with patch(
-            "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
-        ), patch(
-            "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
-        ) as mock_adapter, patch(
-            "app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor"
-        ) as mock_predictor_cls:
+        with (
+            patch(
+                "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
+            ),
+            patch(
+                "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
+            ) as mock_adapter,
+            patch(
+                "app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor"
+            ) as mock_predictor_cls,
+        ):
             predictor = Mock()
             predictor.load_latest_models.return_value = True
             mock_predictor_cls.return_value = predictor
@@ -351,19 +363,26 @@ class TestFactoryWithHybridConfig:
             )
 
             assert engine.hybrid_mode is True
-            assert engine.individual_evaluator.__class__.__name__ == "HybridIndividualEvaluator"
+            assert (
+                engine.individual_evaluator.__class__.__name__
+                == "HybridIndividualEvaluator"
+            )
             mock_predictor_cls.assert_called_once_with(
                 trainer_type="single", model_type="lightgbm"
             )
 
     def test_real_hybrid_config_ensemble(self) -> None:
-        with patch(
-            "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
-        ), patch(
-            "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
-        ), patch(
-            "app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor"
-        ) as mock_predictor_cls:
+        with (
+            patch(
+                "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
+            ),
+            patch(
+                "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
+            ),
+            patch(
+                "app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor"
+            ) as mock_predictor_cls,
+        ):
             predictor = Mock()
             predictor.load_latest_models.return_value = False
             mock_predictor_cls.return_value = predictor
@@ -405,4 +424,6 @@ class TestFactoryWithHybridConfig:
             )
 
             assert engine.hybrid_mode is False
-            assert engine.individual_evaluator.__class__.__name__ == "IndividualEvaluator"
+            assert (
+                engine.individual_evaluator.__class__.__name__ == "IndividualEvaluator"
+            )
