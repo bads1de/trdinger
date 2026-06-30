@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Protocol, Union
+from typing import TYPE_CHECKING, Any, Protocol, Union
 
 import numpy as np
 import pandas as pd
@@ -40,6 +40,14 @@ class MLModelProtocol(Protocol):
     def predict(self, X: pd.DataFrame) -> np.ndarray: ...
 
     def predict_proba(self, X: pd.DataFrame) -> np.ndarray: ...
+
+    @classmethod
+    def __get_pydantic_core_schema__(cls, source: Any, handler: Any) -> Any:
+        from pydantic_core import core_schema
+
+        return core_schema.no_info_plain_validator_function(
+            lambda v: v,
+        )
 
 
 # 学習済みモデル（具体的な型）

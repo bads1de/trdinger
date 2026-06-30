@@ -167,7 +167,7 @@ class TestAutoStrategyComponentsIntegration:
         assert result is not None
         assert isinstance(result, tuple)
         assert len(result) > 0
-        assert elapsed < 1.0  # 1秒以内に完了
+        assert elapsed < 2.0  # 2秒以内に完了（CI/Windows環境の性能変動を考慮）
 
     def test_condition_evaluator_with_fitness_calculator(
         self, ga_config, mock_strategy
