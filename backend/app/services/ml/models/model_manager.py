@@ -13,6 +13,8 @@ from typing import Any
 
 import joblib
 
+from app.utils.response import now_iso
+
 from ....utils.error_handler import safe_ml_operation
 from ..common.config import ml_config_manager
 from ..common.exceptions import MLModelError
@@ -229,7 +231,7 @@ class ModelManager:
             # メタデータにシステム情報を追加
             model_data["metadata"].update(
                 {
-                    "created_at": datetime.now().isoformat(),
+                    "created_at": now_iso(),
                     "python_version": f"{__import__('sys').version_info.major}.{__import__('sys').version_info.minor}",
                     "model_type": type(model).__name__,
                 }

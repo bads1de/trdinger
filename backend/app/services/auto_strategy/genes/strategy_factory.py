@@ -5,9 +5,9 @@ StrategyGene 構築用のファクトリ関数。
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
 
 from app.types import SerializableValue
+from app.utils.response import now_iso
 
 from .conditions import Condition, ConditionGroup
 from .entry import EntryGene
@@ -63,7 +63,7 @@ def assemble_strategy_gene(
 ):
     """部品から StrategyGene を構築する。"""
     final_metadata = dict(metadata or {})
-    final_metadata.setdefault("assembled_at", datetime.now().isoformat())
+    final_metadata.setdefault("assembled_at", now_iso())
 
     return strategy_gene_class(
         id=str(uuid.uuid4()),

@@ -6,9 +6,9 @@ MLモデルレジストリ・メタデータ
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any
 
+from app.utils.response import now_iso
 from app.utils.serialization import dataclass_to_dict
 
 logger = logging.getLogger(__name__)
@@ -181,7 +181,7 @@ class ModelMetadata:
 
     def __post_init__(self):
         if self.created_at is None:
-            self.created_at = datetime.now().isoformat()
+            self.created_at = now_iso()
 
     def to_dict(self) -> dict[str, Any]:
         """

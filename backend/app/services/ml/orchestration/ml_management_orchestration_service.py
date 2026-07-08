@@ -14,7 +14,7 @@ from starlette.concurrency import run_in_threadpool
 from app.services.ml.common.config import ml_config_manager
 from app.services.ml.models.model_manager import model_manager
 from app.utils.error_handler import ErrorHandler
-from app.utils.response import api_response
+from app.utils.response import api_response, now_iso
 
 from ..evaluation.metrics import get_default_metrics
 from .ml_training_orchestration_service import (
@@ -350,7 +350,7 @@ class MLManagementOrchestrationService:
                     # どちらもない場合はデフォルト値を使用(既に初期化済み)
 
                 # ファイル情報の取得（ファイルが存在する場合）
-                last_updated = datetime.now().isoformat()
+                last_updated = now_iso()
 
                 # ブロッキングI/Oをスレッドプールで実行
                 if await run_in_threadpool(os.path.exists, current_model_path):

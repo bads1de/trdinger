@@ -30,7 +30,7 @@ from app.services.ml.orchestration.training_config_validator import (
 from app.types import SerializableValue
 from app.utils.datetime_utils import parse_datetime_range_optional
 from app.utils.error_handler import safe_ml_operation
-from app.utils.response import api_response, ensure_response_dict
+from app.utils.response import api_response, ensure_response_dict, now_iso
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
@@ -299,7 +299,7 @@ class MLTrainingService(BaseResourceManager):
                         "progress": 0,
                         "status": "starting",
                         "message": "トレーニングを開始しています...",
-                        "start_time": datetime.now().isoformat(),
+                        "start_time": now_iso(),
                         "end_time": None,
                         "error": None,
                         "training_id": training_id,
@@ -446,7 +446,7 @@ class MLTrainingService(BaseResourceManager):
                     "is_training": False,
                     "status": "stopped",
                     "message": "トレーニングが停止されました",
-                    "end_time": datetime.now().isoformat(),
+                    "end_time": now_iso(),
                     "training_id": None,
                     "task_id": None,
                 }
@@ -576,7 +576,7 @@ class MLTrainingService(BaseResourceManager):
                                 "is_training": False,
                                 "status": "error",
                                 "message": f"エラー: {e}",
-                                "end_time": datetime.now().isoformat(),
+                                "end_time": now_iso(),
                                 "error": str(e),
                                 "training_id": training_id,
                             }
@@ -722,7 +722,7 @@ class MLTrainingService(BaseResourceManager):
                         "progress": 100,
                         "status": "error",
                         "message": error_message,
-                        "end_time": datetime.now().isoformat(),
+                        "end_time": now_iso(),
                         "error": error_message,
                         "model_info": result,
                     }
@@ -746,7 +746,7 @@ class MLTrainingService(BaseResourceManager):
                     "progress": 100,
                     "status": "completed",
                     "message": "トレーニングが完了しました",
-                    "end_time": datetime.now().isoformat(),
+                    "end_time": now_iso(),
                     "model_info": result,
                 }
             )

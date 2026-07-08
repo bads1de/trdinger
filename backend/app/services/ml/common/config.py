@@ -7,9 +7,10 @@ ML関連のデフォルト設定定数、および設定の永続化、更新、
 
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from app.utils.response import now_iso
 
 from .ml_config import MLConfig
 
@@ -86,7 +87,7 @@ class MLConfigManager:
         try:
             config_dict = self.get_config_dict()
             config_dict["_metadata"] = {
-                "saved_at": datetime.now().isoformat(),
+                "saved_at": now_iso(),
                 "version": "1.0.0",
                 "description": "ML設定ファイル",
             }
