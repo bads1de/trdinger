@@ -126,18 +126,20 @@ def _load_cache() -> list[IndicatorConfig] | None:
                                     ):
                                         # IndicatorsクラスとAdvancedFeaturesクラスをスキャン
                                         if (
-                                            name.endswith("Indicators")
-                                            and name != "Indicators"
-                                        ) or name == "AdvancedFeatures":
-                                            if hasattr(
+                                            (
+                                                name.endswith("Indicators")
+                                                and name != "Indicators"
+                                            )
+                                            or name == "AdvancedFeatures"
+                                        ) and hasattr(
+                                            obj,
+                                            config.indicator_name.lower(),
+                                        ):
+                                            config.adapter_function = getattr(
                                                 obj,
                                                 config.indicator_name.lower(),
-                                            ):
-                                                config.adapter_function = getattr(
-                                                    obj,
-                                                    config.indicator_name.lower(),
-                                                )
-                                                break
+                                            )
+                                            break
                                     if config.adapter_function is not None:
                                         break
                                 except Exception:
@@ -519,14 +521,11 @@ class DynamicIndicatorDiscovery:
 
         # 3. 名前による判定
         param_lower = param.name.lower()
-        if (
+        return bool(
             param_lower in cls._STANDARD_DATA_ARGS
             or param_lower in cls._PROJECT_DATA_COLUMNS
             or param_lower in ["data", "series"]
-        ):
-            return True
-
-        return False
+        )
 
     # pandas-ta カテゴリ -> システムカテゴリのマッピング
     # overlap は移動平均系などを含むため、独自カテゴリとして維持

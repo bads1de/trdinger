@@ -245,16 +245,18 @@ class TestFetchAllFundingRateHistory:
         mock_data = [{"timestamp": 1609459300000, "fundingRate": 0.0002}]
         latest_timestamp = 1609459200000
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=latest_timestamp
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                service, "_get_latest_timestamp_from_db", return_value=latest_timestamp
+            ),
+            patch.object(
                 service, "_fetch_paginated_data", return_value=mock_data
-            ) as mock_fetch:
-                result = await service.fetch_all_funding_rate_history("BTC/USDT:USDT")
+            ) as mock_fetch,
+        ):
+            result = await service.fetch_all_funding_rate_history("BTC/USDT:USDT")
 
-                assert result == mock_data
-                mock_fetch.assert_called_once()
+            assert result == mock_data
+            mock_fetch.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -310,33 +312,35 @@ class TestFetchIncrementalData:
             return_value=[{"id": 1}]
         )
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=latest_timestamp
+        with (
+            patch.object(
+                service, "_get_latest_timestamp_from_db", return_value=latest_timestamp
+            ),
+            patch("asyncio.get_event_loop") as mock_loop,
         ):
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_executor = AsyncMock(return_value=mock_data)
-                mock_loop.return_value.run_in_executor = mock_executor
+            mock_executor = AsyncMock(return_value=mock_data)
+            mock_loop.return_value.run_in_executor = mock_executor
 
-                with patch(
-                    "app.services.data_collection.bybit.bybit_service.get_db"
-                ) as mock_get_db:
-                    mock_db = MagicMock()
-                    mock_get_db.return_value = iter([mock_db])
-                    mock_repository_instance = MagicMock()
-                    mock_repository_instance.insert_funding_rate_data = MagicMock(
-                        return_value=1
-                    )
-                    mock_config.repository_class.return_value = mock_repository_instance
+            with patch(
+                "app.services.data_collection.bybit.bybit_service.get_db"
+            ) as mock_get_db:
+                mock_db = MagicMock()
+                mock_get_db.return_value = iter([mock_db])
+                mock_repository_instance = MagicMock()
+                mock_repository_instance.insert_funding_rate_data = MagicMock(
+                    return_value=1
+                )
+                mock_config.repository_class.return_value = mock_repository_instance
 
-                    service.exchange.fetch_funding_rate_history.return_value = mock_data
+                service.exchange.fetch_funding_rate_history.return_value = mock_data
 
-                    result = await service.fetch_incremental_funding_rate_data(
-                        "BTC/USDT:USDT"
-                    )
+                result = await service.fetch_incremental_funding_rate_data(
+                    "BTC/USDT:USDT"
+                )
 
-                    assert result["success"] is True
-                    assert result["saved_count"] == 1
-                    assert result["latest_timestamp"] == latest_timestamp
+                assert result["success"] is True
+                assert result["saved_count"] == 1
+                assert result["latest_timestamp"] == latest_timestamp
 
     async def test_fetch_incremental_with_custom_repository(
         self, service, mock_repository, mock_config

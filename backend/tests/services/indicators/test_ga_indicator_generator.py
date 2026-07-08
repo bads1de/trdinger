@@ -66,7 +66,7 @@ class TestIndicatorGenerator:
         has_json_config = any(
             hasattr(ind, "json_config") and ind.json_config for ind in indicators
         )
-        assert has_json_config or True
+        assert has_json_config
 
     def test_error_handling(self, mock_config):
         """エラーハンドリングテスト"""

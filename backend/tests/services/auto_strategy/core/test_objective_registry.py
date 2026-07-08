@@ -2,11 +2,13 @@ from app.services.auto_strategy.config import objective_registry
 
 
 def test_minimize_objectives_are_centralized():
-    assert objective_registry.MINIMIZE_OBJECTIVES == frozenset(
-        {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
+    assert (
+        frozenset({"max_drawdown", "ulcer_index", "trade_frequency_penalty"})
+        == objective_registry.MINIMIZE_OBJECTIVES
     )
-    assert objective_registry.DYNAMIC_SCALAR_OBJECTIVES == frozenset(
-        {"max_drawdown", "ulcer_index", "trade_frequency_penalty"}
+    assert (
+        frozenset({"max_drawdown", "ulcer_index", "trade_frequency_penalty"})
+        == objective_registry.DYNAMIC_SCALAR_OBJECTIVES
     )
 
 

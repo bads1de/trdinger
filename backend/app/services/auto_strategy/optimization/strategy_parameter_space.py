@@ -210,24 +210,23 @@ class StrategyParameterSpace:
 
         if config and config.parameters:
             for param_name, param_config in config.parameters.items():
-                if hasattr(param_config, "min_value") and hasattr(
-                    param_config, "max_value"
-                ):
-                    if (
+                if (
+                    hasattr(param_config, "min_value")
+                    and hasattr(param_config, "max_value")
+                    and (
                         param_config.min_value is not None
                         and param_config.max_value is not None
-                    ):
-                        # 整数か浮動小数点かを判定
-                        default_val = getattr(param_config, "default_value", 14)
-                        param_type = (
-                            "integer" if isinstance(default_val, int) else "real"
-                        )
+                    )
+                ):
+                    # 整数か浮動小数点かを判定
+                    default_val = getattr(param_config, "default_value", 14)
+                    param_type = "integer" if isinstance(default_val, int) else "real"
 
-                        ranges[param_name] = {
-                            "low": param_config.min_value,
-                            "high": param_config.max_value,
-                            "type": param_type,
-                        }
+                    ranges[param_name] = {
+                        "low": param_config.min_value,
+                        "high": param_config.max_value,
+                        "type": param_type,
+                    }
 
         return ranges
 
@@ -368,7 +367,7 @@ class StrategyParameterSpace:
         self, tpsl_gene: TPSLGene, params: dict[str, Any], prefix: str
     ) -> None:
         """TPSLパラメータを適用"""
-        for param_name in self.TPSL_RANGES.keys():
+        for param_name in self.TPSL_RANGES:
             param_key = f"{prefix}_{param_name}"
             if param_key in params:
                 setattr(tpsl_gene, param_name, params[param_key])

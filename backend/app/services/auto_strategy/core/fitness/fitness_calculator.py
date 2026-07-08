@@ -361,10 +361,7 @@ class FitnessCalculator:
 
             sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
             min_sharpe_ratio = float(constraints.get("min_sharpe_ratio", 0.0) or 0.0)
-            if sharpe_ratio < min_sharpe_ratio:
-                return False
-
-            return True
+            return not sharpe_ratio < min_sharpe_ratio
         except (KeyError, TypeError, ValueError):
             return False
 

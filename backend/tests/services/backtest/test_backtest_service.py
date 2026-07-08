@@ -221,30 +221,32 @@ def test_execute_and_save_backtest_success(
     """execute_and_save_backtestの正常系テスト"""
     # モックの設定
     mock_db_session = MagicMock()
-    with patch.object(
-        backtest_service, "run_backtest", return_value=sample_converted_result
-    ):
-        with patch(
+    with (
+        patch.object(
+            backtest_service, "run_backtest", return_value=sample_converted_result
+        ),
+        patch(
             "app.services.backtest.services.backtest_service.BacktestResultRepository",
             return_value=mock_backtest_repo,
-        ):
-            mock_backtest_repo.save_backtest_result.return_value = {
-                "id": 1,
-                **sample_converted_result,
-            }
+        ),
+    ):
+        mock_backtest_repo.save_backtest_result.return_value = {
+            "id": 1,
+            **sample_converted_result,
+        }
 
-            # 実行
-            result = backtest_service.execute_and_save_backtest(
-                sample_config, mock_db_session
-            )
+        # 実行
+        result = backtest_service.execute_and_save_backtest(
+            sample_config, mock_db_session
+        )
 
-            # アサーション
-            backtest_service.run_backtest.assert_called_once_with(sample_config)
-            mock_backtest_repo.save_backtest_result.assert_called_once_with(
-                sample_converted_result
-            )
-            assert result["success"] is True
-            assert result["result"]["id"] == 1
+        # アサーション
+        backtest_service.run_backtest.assert_called_once_with(sample_config)
+        mock_backtest_repo.save_backtest_result.assert_called_once_with(
+            sample_converted_result
+        )
+        assert result["success"] is True
+        assert result["result"]["id"] == 1
 
 
 def test_execute_and_save_backtest_run_error(
@@ -277,23 +279,23 @@ def test_execute_and_save_backtest_save_error(
     """execute_and_save_backtestで保存が失敗するテスト"""
     # モックの設定
     mock_db_session = MagicMock()
-    with patch.object(
-        backtest_service, "run_backtest", return_value=sample_converted_result
-    ):
-        with patch(
+    with (
+        patch.object(
+            backtest_service, "run_backtest", return_value=sample_converted_result
+        ),
+        patch(
             "app.services.backtest.services.backtest_service.BacktestResultRepository",
             return_value=mock_backtest_repo,
-        ):
-            mock_backtest_repo.save_backtest_result.side_effect = Exception(
-                "Save failed"
-            )
+        ),
+    ):
+        mock_backtest_repo.save_backtest_result.side_effect = Exception("Save failed")
 
-            # 実行
-            result = backtest_service.execute_and_save_backtest(
-                sample_config, mock_db_session
-            )
+        # 実行
+        result = backtest_service.execute_and_save_backtest(
+            sample_config, mock_db_session
+        )
 
-            # アサーション
-            assert result["success"] is False
-            assert "Save failed" in result["error"]
-            assert result["status_code"] == 500
+        # アサーション
+        assert result["success"] is False
+        assert "Save failed" in result["error"]
+        assert result["status_code"] == 500

@@ -119,10 +119,7 @@ def main():
         no_seed = results["no_seed"]["best_fitness"]
         with_seed = results["with_seed"]["best_fitness"]
 
-        if no_seed != 0:
-            improvement = (with_seed - no_seed) / abs(no_seed) * 100
-        else:
-            improvement = 0
+        improvement = (with_seed - no_seed) / abs(no_seed) * 100 if no_seed != 0 else 0
 
         print(f"\n{'項目':<25} {'シードなし':>12} {'シードあり':>12}")
         print("-" * 55)

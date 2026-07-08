@@ -91,7 +91,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
             data_temp[[target_col, on_col] if on_col else [target_col]],
             left_index=True,
             right_on=on_col if on_col else None,
-            right_index=True if on_col is None else False,
+            right_index=on_col is None,
             direction="backward",
         )
 

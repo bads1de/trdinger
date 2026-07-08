@@ -41,14 +41,16 @@ class TestMLManagementOrchestrationService:
     async def test_delete_model_success(self, service):
         """モデル個別削除成功"""
         mock_models = [{"name": "m1", "path": "p1"}]
-        with patch(
-            "app.services.ml.models.model_manager.model_manager.list_models",
-            return_value=mock_models,
+        with (
+            patch(
+                "app.services.ml.models.model_manager.model_manager.list_models",
+                return_value=mock_models,
+            ),
+            patch("os.remove") as mock_remove,
         ):
-            with patch("os.remove") as mock_remove:
-                res = await service.delete_model("m1")
-                assert res["success"] is True
-                mock_remove.assert_called_once_with("p1")
+            res = await service.delete_model("m1")
+            assert res["success"] is True
+            mock_remove.assert_called_once_with("p1")
 
     @pytest.mark.asyncio
     async def test_delete_model_not_found(self, service):
@@ -65,28 +67,32 @@ class TestMLManagementOrchestrationService:
     async def test_delete_all_models(self, service):
         """全モデル削除"""
         mock_models = [{"name": "m1", "path": "p1"}, {"name": "m2", "path": "p2"}]
-        with patch(
-            "app.services.ml.models.model_manager.model_manager.list_models",
-            return_value=mock_models,
+        with (
+            patch(
+                "app.services.ml.models.model_manager.model_manager.list_models",
+                return_value=mock_models,
+            ),
+            patch("os.remove") as mock_remove,
         ):
-            with patch("os.remove") as mock_remove:
-                res = await service.delete_all_models()
-                assert res["deleted_count"] == 2
-                assert mock_remove.call_count == 2
+            res = await service.delete_all_models()
+            assert res["deleted_count"] == 2
+            assert mock_remove.call_count == 2
 
     @pytest.mark.asyncio
     async def test_delete_all_models_partial_fail(self, service):
         """一部のモデル削除に失敗した場合"""
         mock_models = [{"name": "m1", "path": "p1"}, {"name": "m2", "path": "p2"}]
-        with patch(
-            "app.services.ml.models.model_manager.model_manager.list_models",
-            return_value=mock_models,
+        with (
+            patch(
+                "app.services.ml.models.model_manager.model_manager.list_models",
+                return_value=mock_models,
+            ),
+            patch("os.remove", side_effect=[None, PermissionError("Denied")]),
         ):
-            with patch("os.remove", side_effect=[None, PermissionError("Denied")]):
-                res = await service.delete_all_models()
-                assert res["deleted_count"] == 1
-                assert res["failed_count"] == 1
-                assert "m2" in res["failed_models"]
+            res = await service.delete_all_models()
+            assert res["deleted_count"] == 1
+            assert res["failed_count"] == 1
+            assert "m2" in res["failed_models"]
 
     @pytest.mark.asyncio
     async def test_get_ml_status_no_model(self, service):

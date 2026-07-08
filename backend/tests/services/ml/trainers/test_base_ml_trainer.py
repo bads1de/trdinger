@@ -63,58 +63,62 @@ class TestBaseMLTrainer:
 
     def test_train_model_success(self, trainer, sample_data):
         """正常な学習フローのテスト"""
-        with patch.object(
-            trainer.feature_service,
-            "calculate_advanced_features",
-            return_value=pd.DataFrame(
-                np.random.randn(150, 10), index=sample_data.index
+        with (
+            patch.object(
+                trainer.feature_service,
+                "calculate_advanced_features",
+                return_value=pd.DataFrame(
+                    np.random.randn(150, 10), index=sample_data.index
+                ),
             ),
-        ):
-            with patch.object(
+            patch.object(
                 trainer.target_service,
                 "prepare_targets",
                 return_value=(
                     pd.DataFrame(np.random.randn(140, 10)),
                     pd.Series(np.random.randn(140)),
                 ),
-            ):
-                with patch(
-                    "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
-                    return_value="/path/to/model",
-                ):
-                    result = trainer.train_model(sample_data, save_model=True)
+            ),
+            patch(
+                "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
+                return_value="/path/to/model",
+            ),
+        ):
+            result = trainer.train_model(sample_data, save_model=True)
 
-                    assert result["success"] is True
-                    assert trainer.is_trained is True
-                    assert "qlike" in result
-                    assert result["model_path"] == "/path/to/model"
+            assert result["success"] is True
+            assert trainer.is_trained is True
+            assert "qlike" in result
+            assert result["model_path"] == "/path/to/model"
 
     def test_train_model_coerces_invalid_gate_quantile(self, trainer, sample_data):
         """gate_quantile が壊れていても既定値へフォールバックする"""
-        with patch.object(
-            trainer.feature_service,
-            "calculate_advanced_features",
-            return_value=pd.DataFrame(
-                np.random.randn(150, 10), index=sample_data.index
+        with (
+            patch.object(
+                trainer.feature_service,
+                "calculate_advanced_features",
+                return_value=pd.DataFrame(
+                    np.random.randn(150, 10), index=sample_data.index
+                ),
             ),
-        ):
-            with patch.object(
+            patch.object(
                 trainer.target_service,
                 "prepare_targets",
                 return_value=(
                     pd.DataFrame(np.random.randn(140, 10)),
                     pd.Series(np.random.randn(140)),
                 ),
-            ):
-                with patch(
-                    "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
-                    return_value="/path/to/model",
-                ):
-                    result = trainer.train_model(
-                        sample_data,
-                        save_model=True,
-                        gate_quantile={"invalid": True},
-                    )
+            ),
+            patch(
+                "app.services.ml.trainers.base_ml_trainer.model_manager.save_model",
+                return_value="/path/to/model",
+            ),
+        ):
+            result = trainer.train_model(
+                sample_data,
+                save_model=True,
+                gate_quantile={"invalid": True},
+            )
 
         assert result["success"] is True
         assert trainer.current_model_metadata is not None
@@ -614,13 +618,15 @@ class TestBaseMLTrainer:
         """ターゲット生成エラー時は DataError"""
         from app.utils.error_handler import DataError
 
-        with patch.object(
-            trainer.target_service,
-            "prepare_targets",
-            side_effect=Exception("target error"),
+        with (
+            patch.object(
+                trainer.target_service,
+                "prepare_targets",
+                side_effect=Exception("target error"),
+            ),
+            pytest.raises(DataError, match="準備に失敗"),
         ):
-            with pytest.raises(DataError, match="準備に失敗"):
-                trainer._prepare_training_data(sample_data, sample_data)
+            trainer._prepare_training_data(sample_data, sample_data)
 
     # ------------------------------------------------------------------
     # _cleanup_models

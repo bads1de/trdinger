@@ -184,20 +184,20 @@ class TestDataRetrieval:
 
     def test_get_data_for_backtest_integration_error(self, backtest_data_service):
         """データ統合エラー時の処理"""
-        with patch.object(
-            backtest_data_service._integration_service,
-            "create_backtest_dataframe",
-            side_effect=DataIntegrationError("統合エラー"),
+        with (
+            patch.object(
+                backtest_data_service._integration_service,
+                "create_backtest_dataframe",
+                side_effect=DataIntegrationError("統合エラー"),
+            ),
+            pytest.raises(ValueError, match="バックテスト用データの作成に失敗しました"),
         ):
-            with pytest.raises(
-                ValueError, match="バックテスト用データの作成に失敗しました"
-            ):
-                backtest_data_service.get_data_for_backtest(
-                    symbol="BTC/USDT:USDT",
-                    timeframe="1h",
-                    start_date=datetime(2024, 1, 1),
-                    end_date=datetime(2024, 1, 5),
-                )
+            backtest_data_service.get_data_for_backtest(
+                symbol="BTC/USDT:USDT",
+                timeframe="1h",
+                start_date=datetime(2024, 1, 1),
+                end_date=datetime(2024, 1, 5),
+            )
 
 
 class TestOHLCVDataRetrieval:
@@ -331,20 +331,22 @@ class TestMLTrainingData:
 
     def test_get_ml_training_data_integration_error(self, backtest_data_service):
         """MLトレーニングデータ統合エラー時の処理"""
-        with patch.object(
-            backtest_data_service._integration_service,
-            "create_ml_training_dataframe",
-            side_effect=DataIntegrationError("統合エラー"),
-        ):
-            with pytest.raises(
+        with (
+            patch.object(
+                backtest_data_service._integration_service,
+                "create_ml_training_dataframe",
+                side_effect=DataIntegrationError("統合エラー"),
+            ),
+            pytest.raises(
                 ValueError, match="MLトレーニング用データの作成に失敗しました"
-            ):
-                backtest_data_service.get_ml_training_data(
-                    symbol="BTC/USDT:USDT",
-                    timeframe="1h",
-                    start_date=datetime(2024, 1, 1),
-                    end_date=datetime(2024, 1, 5),
-                )
+            ),
+        ):
+            backtest_data_service.get_ml_training_data(
+                symbol="BTC/USDT:USDT",
+                timeframe="1h",
+                start_date=datetime(2024, 1, 1),
+                end_date=datetime(2024, 1, 5),
+            )
 
 
 class TestEventLabeledData:
@@ -514,32 +516,34 @@ class TestErrorHandling:
 
     def test_handle_data_retrieval_error(self, backtest_data_service):
         """データ取得エラーを適切に処理すること"""
-        with patch.object(
-            backtest_data_service._retrieval_service,
-            "get_ohlcv_data",
-            side_effect=Exception("データベースエラー"),
+        with (
+            patch.object(
+                backtest_data_service._retrieval_service,
+                "get_ohlcv_data",
+                side_effect=Exception("データベースエラー"),
+            ),
+            pytest.raises(Exception),
         ):
-            with pytest.raises(Exception):
-                backtest_data_service.get_ohlcv_data(
-                    symbol="BTC/USDT:USDT",
-                    timeframe="1h",
-                    start_date=datetime(2024, 1, 1),
-                    end_date=datetime(2024, 1, 5),
-                )
+            backtest_data_service.get_ohlcv_data(
+                symbol="BTC/USDT:USDT",
+                timeframe="1h",
+                start_date=datetime(2024, 1, 1),
+                end_date=datetime(2024, 1, 5),
+            )
 
     def test_handle_date_range_error(self, backtest_data_service):
         """不正な日付範囲を処理すること"""
-        with patch.object(
-            backtest_data_service._integration_service,
-            "create_backtest_dataframe",
-            side_effect=DataIntegrationError("開始日が終了日より後です"),
+        with (
+            patch.object(
+                backtest_data_service._integration_service,
+                "create_backtest_dataframe",
+                side_effect=DataIntegrationError("開始日が終了日より後です"),
+            ),
+            pytest.raises(ValueError, match="バックテスト用データの作成に失敗しました"),
         ):
-            with pytest.raises(
-                ValueError, match="バックテスト用データの作成に失敗しました"
-            ):
-                backtest_data_service.get_data_for_backtest(
-                    symbol="BTC/USDT:USDT",
-                    timeframe="1h",
-                    start_date=datetime(2024, 1, 5),
-                    end_date=datetime(2024, 1, 1),
-                )
+            backtest_data_service.get_data_for_backtest(
+                symbol="BTC/USDT:USDT",
+                timeframe="1h",
+                start_date=datetime(2024, 1, 5),
+                end_date=datetime(2024, 1, 1),
+            )

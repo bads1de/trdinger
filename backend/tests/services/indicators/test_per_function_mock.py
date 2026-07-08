@@ -1,5 +1,7 @@
 """Fallback coverage for indicator wrappers when pandas-ta returns None."""
 
+import contextlib
+
 import pandas_ta_classic as ta
 import pytest
 
@@ -108,10 +110,8 @@ class TestPerFunctionMock:
 
         # Some wrappers return fallback arrays, some raise after the helper swallows the error.
         monkeypatch.setattr(ta, patch_target, lambda *args, **kwargs: None)
-        try:
+        with contextlib.suppress(Exception):
             method(*resolved_args)
-        except Exception:
-            pass
 
     @pytest.mark.parametrize("patch_target,method,args", VOLUME_CASES)
     def test_volume_all_none_returns(

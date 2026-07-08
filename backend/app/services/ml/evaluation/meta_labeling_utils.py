@@ -129,10 +129,7 @@ def find_optimal_threshold(
     """最適な確率閾値を見つける"""
     y_true_array = y_true.values if hasattr(y_true, "values") else y_true
 
-    if len(y_pred_proba.shape) > 1:
-        proba_positive = y_pred_proba[:, 1]
-    else:
-        proba_positive = y_pred_proba
+    proba_positive = y_pred_proba[:, 1] if len(y_pred_proba.shape) > 1 else y_pred_proba
 
     precisions, recalls, thresholds = precision_recall_curve(
         y_true_array, proba_positive

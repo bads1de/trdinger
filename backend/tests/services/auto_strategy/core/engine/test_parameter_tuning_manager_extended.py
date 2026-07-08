@@ -238,21 +238,23 @@ class TestTuneAndSelectBestGene:
         config = GAConfig()
         config.objectives = (Mock(), Mock())  # 2 要素
 
-        with patch.object(
-            manager, "tune_elite_parameters", return_value=tuned
-        ) as mock_tune:
-            with patch.object(
+        with (
+            patch.object(
+                manager, "tune_elite_parameters", return_value=tuned
+            ) as mock_tune,
+            patch.object(
                 manager,
                 "refresh_best_gene_reporting",
                 return_value=(0.5, {"s": "x"}),
-            ):
-                result = manager.tune_and_select_best_gene(
-                    population=[],
-                    current_best_gene=best,
-                    config=config,
-                    fallback_fitness=0.0,
-                    fallback_summary=None,
-                )
+            ),
+        ):
+            result = manager.tune_and_select_best_gene(
+                population=[],
+                current_best_gene=best,
+                config=config,
+                fallback_fitness=0.0,
+                fallback_summary=None,
+            )
 
         assert result[0] is tuned
         mock_tune.assert_called_once_with(best, config)
@@ -379,22 +381,24 @@ class TestRefreshBestGeneReporting:
     def test_returns_normalized_fitness_on_success(self) -> None:
         manager = ParameterTuningManager(individual_evaluator=Mock())
         best = _make_gene("best")
-        with patch.object(
-            manager,
-            "evaluate_individual_with_full_fidelity",
-            return_value=(0.6, 0.4),
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                manager,
+                "evaluate_individual_with_full_fidelity",
+                return_value=(0.6, 0.4),
+            ),
+            patch.object(
                 manager,
                 "build_individual_evaluation_summary",
                 return_value={"new": True},
-            ) as mock_summary:
-                fitness, summary = manager.refresh_best_gene_reporting(
-                    best_gene=best,
-                    config=GAConfig(),
-                    fallback_fitness=0.0,
-                    fallback_summary=None,
-                )
+            ) as mock_summary,
+        ):
+            fitness, summary = manager.refresh_best_gene_reporting(
+                best_gene=best,
+                config=GAConfig(),
+                fallback_fitness=0.0,
+                fallback_summary=None,
+            )
 
         # tuple は normalized される
         assert fitness == (0.6, 0.4)
@@ -405,22 +409,24 @@ class TestRefreshBestGeneReporting:
     def test_returns_fallback_fitness_on_exception(self) -> None:
         manager = ParameterTuningManager(individual_evaluator=Mock())
         best = _make_gene("best")
-        with patch.object(
-            manager,
-            "evaluate_individual_with_full_fidelity",
-            side_effect=RuntimeError("eval fail"),
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                manager,
+                "evaluate_individual_with_full_fidelity",
+                side_effect=RuntimeError("eval fail"),
+            ),
+            patch.object(
                 manager,
                 "build_individual_evaluation_summary",
                 return_value={"x": "y"},
-            ):
-                fitness, summary = manager.refresh_best_gene_reporting(
-                    best_gene=best,
-                    config=GAConfig(),
-                    fallback_fitness=(0.1, 0.2),
-                    fallback_summary=None,
-                )
+            ),
+        ):
+            fitness, summary = manager.refresh_best_gene_reporting(
+                best_gene=best,
+                config=GAConfig(),
+                fallback_fitness=(0.1, 0.2),
+                fallback_summary=None,
+            )
 
         # 例外時は fallback_fitness がそのまま返る
         assert fitness == (0.1, 0.2)
@@ -429,22 +435,24 @@ class TestRefreshBestGeneReporting:
     def test_falls_back_to_fallback_summary_when_summary_none(self) -> None:
         manager = ParameterTuningManager(individual_evaluator=Mock())
         best = _make_gene("best")
-        with patch.object(
-            manager,
-            "evaluate_individual_with_full_fidelity",
-            return_value=(0.5,),
-        ):
-            with patch.object(
+        with (
+            patch.object(
+                manager,
+                "evaluate_individual_with_full_fidelity",
+                return_value=(0.5,),
+            ),
+            patch.object(
                 manager,
                 "build_individual_evaluation_summary",
                 return_value=None,
-            ):
-                fitness, summary = manager.refresh_best_gene_reporting(
-                    best_gene=best,
-                    config=GAConfig(),
-                    fallback_fitness=0.0,
-                    fallback_summary={"legacy": True},
-                )
+            ),
+        ):
+            fitness, summary = manager.refresh_best_gene_reporting(
+                best_gene=best,
+                config=GAConfig(),
+                fallback_fitness=0.0,
+                fallback_summary={"legacy": True},
+            )
 
         assert summary == {"legacy": True}
 

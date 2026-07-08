@@ -69,24 +69,28 @@ class TestMLConfigManager:
     def test_save_config_error_handling(self, manager):
         """保存時の各種エラー（PermissionError等）のハンドリング"""
         # open時にPermissionErrorを発生させる
-        with patch(
-            "app.services.ml.common.config.open",
-            side_effect=PermissionError("Forbidden"),
+        with (
+            patch(
+                "app.services.ml.common.config.open",
+                side_effect=PermissionError("Forbidden"),
+            ),
+            patch("app.services.ml.common.config.Path.exists", return_value=True),
         ):
-            with patch("app.services.ml.common.config.Path.exists", return_value=True):
-                success = manager.save_config()
-                assert success is False
+            success = manager.save_config()
+            assert success is False
 
     def test_mkdir_fail_handling(self, manager):
         """ディレクトリ作成失敗時のハンドリング"""
-        with patch(
-            "app.services.ml.common.config.Path.exists", side_effect=[False, False]
-        ):
-            with patch(
+        with (
+            patch(
+                "app.services.ml.common.config.Path.exists", side_effect=[False, False]
+            ),
+            patch(
                 "app.services.ml.common.config.Path.mkdir",
                 side_effect=OSError("Disk Full"),
-            ):
-                # ディレクトリ作成に失敗しても例外で落ちずに False を返すことを確認
-                # 実際には open で落ちるが save_config 全体で try-except されている
-                success = manager.save_config()
-                assert success is False
+            ),
+        ):
+            # ディレクトリ作成に失敗しても例外で落ちずに False を返すことを確認
+            # 実際には open で落ちるが save_config 全体で try-except されている
+            success = manager.save_config()
+            assert success is False

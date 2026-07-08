@@ -35,24 +35,24 @@ class TestModelManager:
         """モデル保存の正常系テスト"""
         mock_model = {"coef": [1, 2, 3]}
 
-        with patch(
-            "app.services.ml.models.model_manager.ModelManager._extract_algorithm_name",
-            return_value="mock_algo",
+        with (
+            patch(
+                "app.services.ml.models.model_manager.ModelManager._extract_algorithm_name",
+                return_value="mock_algo",
+            ),
+            patch("builtins.open", mock_open()) as mock_file,
         ):
-            with patch("builtins.open", mock_open()) as mock_file:
-                path = manager.save_model(
-                    mock_model, "test_model", metadata={"acc": 0.9}
-                )
+            path = manager.save_model(mock_model, "test_model", metadata={"acc": 0.9})
 
-                assert path is not None
-                assert "mock_algo" in path
-                assert path.endswith(".pkl")
+            assert path is not None
+            assert "mock_algo" in path
+            assert path.endswith(".pkl")
 
-                mock_dump.assert_called_once()
-                mock_cleanup.assert_called_once_with("mock_algo")
-                mock_file.assert_called_once_with(
-                    path.replace(".pkl", ".meta.json"), "w", encoding="utf-8"
-                )
+            mock_dump.assert_called_once()
+            mock_cleanup.assert_called_once_with("mock_algo")
+            mock_file.assert_called_once_with(
+                path.replace(".pkl", ".meta.json"), "w", encoding="utf-8"
+            )
 
     @patch("app.services.ml.models.model_manager.os.path.exists", return_value=True)
     @patch("app.services.ml.models.model_manager.joblib.load")

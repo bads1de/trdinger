@@ -3,12 +3,12 @@ from typing import cast
 
 import numpy as np
 import pandas as pd
-from numba import jit
+from numba import njit
 
 logger = logging.getLogger(__name__)
 
 
-@jit(nopython=True)
+@njit
 def _compute_window_t_value(
     sum_y: float,
     sum_yy: float,
@@ -34,10 +34,7 @@ def _compute_window_t_value(
     ss_x = sum_xx - (sum_x * sum_x) / n_val
     t_val = 0.0
     if abs(slope) < 1e-11 or sum_res_sq < 1e-11:
-        if abs(slope) < 1e-14:
-            t_val = 0.0
-        else:
-            t_val = 100.0 if slope > 0 else -100.0
+        t_val = 0.0 if abs(slope) < 1e-14 else 100.0 if slope > 0 else -100.0
     elif ss_x > 1e-12 and sigma_eps > 1e-12:
         se_slope = sigma_eps / np.sqrt(ss_x)
         t_val = slope / se_slope
@@ -53,7 +50,7 @@ def _compute_window_t_value(
     return t_val
 
 
-@jit(nopython=True)
+@njit
 def _label_from_t_value(
     t_val: float, min_t_value: float, return_t_value_as_label: bool
 ) -> float:
@@ -67,7 +64,7 @@ def _label_from_t_value(
     return 0.0
 
 
-@jit(nopython=True)
+@njit
 def _trend_scanning_loop_numba(
     close_vals: np.ndarray,
     t0_indices: np.ndarray,

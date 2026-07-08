@@ -102,21 +102,19 @@ class TestTechnicalIndicatorService:
 
     def test_calculate_indicator_unsupported(self, indicator_service, sample_df):
         """サポートされていない指標テスト"""
-        with patch.object(
-            indicator_service.pandas_ta_caller,
-            "get_pandas_ta_config",
-            return_value=None,
+        with (
+            patch.object(
+                indicator_service.pandas_ta_caller,
+                "get_pandas_ta_config",
+                return_value=None,
+            ),
+            patch.object(indicator_service, "_get_indicator_config", return_value=None),
         ):
-            with patch.object(
-                indicator_service, "_get_indicator_config", return_value=None
-            ):
-                # デフォルトのNaN結果が返されることを確認
-                result = indicator_service.calculate_indicator(
-                    sample_df, "UNSUPPORTED", {}
-                )
-                assert isinstance(result, np.ndarray)
-                assert len(result) == len(sample_df)
-                assert np.all(np.isnan(result))
+            # デフォルトのNaN結果が返されることを確認
+            result = indicator_service.calculate_indicator(sample_df, "UNSUPPORTED", {})
+            assert isinstance(result, np.ndarray)
+            assert len(result) == len(sample_df)
+            assert np.all(np.isnan(result))
 
     @patch(
         "app.services.indicators.indicator_validator.validate_data_length_with_fallback"

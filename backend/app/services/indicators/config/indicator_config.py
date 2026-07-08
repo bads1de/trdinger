@@ -245,7 +245,7 @@ class IndicatorConfig:
         # param_mapからパラメータ名を取得
         param_names = set()
         if self.param_map:
-            for param_name in self.param_map.keys():
+            for param_name in self.param_map:
                 if (
                     param_name
                     and param_name != "data"
@@ -254,7 +254,7 @@ class IndicatorConfig:
                     param_names.add(param_name)
 
         # default_valuesからもパラメータ名を取得
-        for param_name in self.default_values.keys():
+        for param_name in self.default_values:
             param_names.add(param_name)
 
         # 各パラメータのParameterConfigを作成

@@ -9,12 +9,12 @@ import logging
 
 import numpy as np
 import pandas as pd
-from numba import jit
+from numba import njit
 
 logger = logging.getLogger(__name__)
 
 
-@jit(nopython=True)
+@njit
 def _numba_calc_bins(w_high, w_low, w_vol, price_min, bin_step, num_bins):
     """ビンごとの出来高を計算"""
     bin_volume = np.zeros(num_bins)
@@ -31,7 +31,7 @@ def _numba_calc_bins(w_high, w_low, w_vol, price_min, bin_step, num_bins):
     return bin_volume
 
 
-@jit(nopython=True)
+@njit
 def _numba_rolling_volume_profile(
     high_arr: np.ndarray,
     low_arr: np.ndarray,
@@ -86,7 +86,7 @@ def _numba_rolling_volume_profile(
     return poc_arr, vah_arr, val_arr
 
 
-@jit(nopython=True)
+@njit
 def _numba_detect_volume_nodes_signed(
     high_arr: np.ndarray,
     low_arr: np.ndarray,
@@ -135,7 +135,7 @@ def _numba_detect_volume_nodes_signed(
     return hvn_dist, lvn_dist
 
 
-@jit(nopython=True)
+@njit
 def _numba_vp_skewness_kurtosis(
     close_arr: np.ndarray, volume_arr: np.ndarray, window: int
 ) -> tuple[np.ndarray, np.ndarray]:

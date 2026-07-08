@@ -544,11 +544,12 @@ class ConfigValidator:
             )
 
         # 新規: candidate_pool_sizeがpopulation_sizeを超えないことを検証
-        if isinstance(candidate_pool_size, (int, float)) and isinstance(
-            population_size, (int, float)
+        if (
+            isinstance(candidate_pool_size, (int, float))
+            and isinstance(population_size, (int, float))
+            and int(candidate_pool_size) > int(population_size)
         ):
-            if int(candidate_pool_size) > int(population_size):
-                errors.append("二段階選抜候補数は個体数以下である必要があります")
+            errors.append("二段階選抜候補数は個体数以下である必要があります")
 
         if (
             not isinstance(two_stage_config.min_pass_rate, (int, float))

@@ -159,11 +159,11 @@ def generate_random_indicators(config: Any) -> list[IndicatorGene]:
     for name in available_indicators:
         cfg = indicator_registry.get_indicator_config(name)
         # カテゴリがtrend または 優先リストに含まれる場合
-        if (cfg and getattr(cfg, "category", "") == "trend") or (
-            name in preferred_trend_names
-        ):
-            if name not in trend_indicators:
-                trend_indicators.append(name)
+        if (
+            (cfg and getattr(cfg, "category", "") == "trend")
+            or (name in preferred_trend_names)
+        ) and name not in trend_indicators:
+            trend_indicators.append(name)
 
     # MTF設定の準備
     from app.config.constants import SUPPORTED_TIMEFRAMES

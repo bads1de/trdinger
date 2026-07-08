@@ -189,46 +189,48 @@ class TestMLFilterIntegration:
             strategy._trailing_tp_sl = None
 
             # _ml_allows_entryがFalseを返すようにモック
-            with patch.object(
-                strategy, "_ml_allows_entry", return_value=False
-            ) as mock_ml_check:
-                with patch.object(
+            with (
+                patch.object(
+                    strategy, "_ml_allows_entry", return_value=False
+                ) as mock_ml_check,
+                patch.object(
                     strategy.entry_decision_engine,
                     "check_entry_conditions",
                     side_effect=lambda d: d == 1.0,
-                ):
-                    with patch.object(
-                        strategy.entry_decision_engine,
-                        "tools_block_entry",
-                        return_value=False,
-                    ):
-                        with patch.object(
-                            strategy.order_manager,
-                            "check_pending_order_fills",
-                            return_value=None,
-                        ):
-                            with patch.object(
-                                strategy.order_manager,
-                                "expire_pending_orders",
-                                return_value=None,
-                            ):
-                                with patch.object(
-                                    strategy,
-                                    "_process_stateful_triggers",
-                                    return_value=None,
-                                ):
-                                    with patch.object(
-                                        strategy,
-                                        "_get_stateful_entry_direction",
-                                        return_value=None,
-                                    ):
-                                        with patch.object(
-                                            type(strategy),
-                                            "position",
-                                            new_callable=PropertyMock,
-                                            return_value=None,
-                                        ):
-                                            strategy.next()
+                ),
+                patch.object(
+                    strategy.entry_decision_engine,
+                    "tools_block_entry",
+                    return_value=False,
+                ),
+                patch.object(
+                    strategy.order_manager,
+                    "check_pending_order_fills",
+                    return_value=None,
+                ),
+                patch.object(
+                    strategy.order_manager,
+                    "expire_pending_orders",
+                    return_value=None,
+                ),
+                patch.object(
+                    strategy,
+                    "_process_stateful_triggers",
+                    return_value=None,
+                ),
+                patch.object(
+                    strategy,
+                    "_get_stateful_entry_direction",
+                    return_value=None,
+                ),
+                patch.object(
+                    type(strategy),
+                    "position",
+                    new_callable=PropertyMock,
+                    return_value=None,
+                ),
+            ):
+                strategy.next()
 
             # MLフィルターがチェックされたことを確認
             mock_ml_check.assert_called_once_with(1.0)
@@ -262,61 +264,63 @@ class TestMLFilterIntegration:
             strategy._trailing_tp_sl = None
 
             # _ml_allows_entryがTrueを返すようにモック
-            with patch.object(
-                strategy, "_ml_allows_entry", return_value=True
-            ) as mock_ml_check:
-                with patch.object(
+            with (
+                patch.object(
+                    strategy, "_ml_allows_entry", return_value=True
+                ) as mock_ml_check,
+                patch.object(
                     strategy.entry_decision_engine,
                     "check_entry_conditions",
                     side_effect=lambda d: d == 1.0,
-                ):
-                    with patch.object(
-                        strategy.entry_decision_engine,
-                        "tools_block_entry",
-                        return_value=False,
-                    ):
-                        with patch.object(
-                            strategy.order_manager,
-                            "check_pending_order_fills",
-                            return_value=None,
-                        ):
-                            with patch.object(
-                                strategy.order_manager,
-                                "expire_pending_orders",
-                                return_value=None,
-                            ):
-                                with patch.object(
-                                    strategy,
-                                    "_process_stateful_triggers",
-                                    return_value=None,
-                                ):
-                                    with patch.object(
-                                        strategy,
-                                        "_get_stateful_entry_direction",
-                                        return_value=None,
-                                    ):
-                                        with patch.object(
-                                            strategy.entry_decision_engine,
-                                            "calculate_position_size",
-                                            return_value=0.01,
-                                        ):
-                                            with patch.object(
-                                                strategy.entry_decision_engine,
-                                                "calculate_effective_tpsl_prices",
-                                                return_value=(None, None),
-                                            ):
-                                                with patch.object(
-                                                    strategy,
-                                                    "_get_effective_entry_gene",
-                                                    return_value=None,
-                                                ):
-                                                    with patch.object(
-                                                        type(strategy),
-                                                        "position",
-                                                        new_callable=PropertyMock,
-                                                        return_value=None,
-                                                    ):
-                                                        strategy.next()
+                ),
+                patch.object(
+                    strategy.entry_decision_engine,
+                    "tools_block_entry",
+                    return_value=False,
+                ),
+                patch.object(
+                    strategy.order_manager,
+                    "check_pending_order_fills",
+                    return_value=None,
+                ),
+                patch.object(
+                    strategy.order_manager,
+                    "expire_pending_orders",
+                    return_value=None,
+                ),
+                patch.object(
+                    strategy,
+                    "_process_stateful_triggers",
+                    return_value=None,
+                ),
+                patch.object(
+                    strategy,
+                    "_get_stateful_entry_direction",
+                    return_value=None,
+                ),
+                patch.object(
+                    strategy.entry_decision_engine,
+                    "calculate_position_size",
+                    return_value=0.01,
+                ),
+                patch.object(
+                    strategy.entry_decision_engine,
+                    "calculate_effective_tpsl_prices",
+                    return_value=(None, None),
+                ),
+                patch.object(
+                    strategy,
+                    "_get_effective_entry_gene",
+                    return_value=None,
+                ),
+                patch.object(
+                    type(strategy),
+                    "position",
+                    new_callable=PropertyMock,
+                    return_value=None,
+                ),
+            ):
+                strategy.next()
 
             # MLフィルターがチェックされたことを確認
             mock_ml_check.assert_called_once_with(1.0)

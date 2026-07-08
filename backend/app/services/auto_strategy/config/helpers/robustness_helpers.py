@@ -107,7 +107,7 @@ def normalize_robustness_regime_windows(
         - 文字列、バイト列、辞書の場合は空リストを返します
         - Iterableでない場合は空リストを返します
     """
-    if isinstance(windows, (str, bytes)) or isinstance(windows, Mapping):
+    if isinstance(windows, (str, bytes, Mapping)):
         return []
     if not isinstance(windows, Iterable):
         return []

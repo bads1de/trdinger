@@ -203,9 +203,10 @@ class ConditionValidator:
     @safe_operation(context="辞書オペランド抽出", is_api_call=False, default_return="")
     def _extract_operand_from_dict(self, operand_dict: dict) -> str:
         """辞書形式のオペランドから文字列を抽出"""
-        if operand_dict.get("type") == "indicator":
-            return operand_dict.get("name", "")
-        elif operand_dict.get("type") == "price":
+        if (
+            operand_dict.get("type") == "indicator"
+            or operand_dict.get("type") == "price"
+        ):
             return operand_dict.get("name", "")
         elif operand_dict.get("type") == "value":
             value = operand_dict.get("value")

@@ -4,6 +4,7 @@
 インジケーター計算結果の後処理を担当します。
 """
 
+import contextlib
 import logging
 from typing import Any
 
@@ -60,10 +61,8 @@ class PostProcessor:
         # NaN処理とインデックス再編成
         if isinstance(result, (pd.Series, pd.DataFrame)):
             if df is not None and len(result) != len(df):
-                try:
+                with contextlib.suppress(Exception):
                     result = result.reindex(df.index)
-                except Exception:
-                    pass
 
         # 戻り値変換
         if config["returns"] == "single":

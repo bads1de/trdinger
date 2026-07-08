@@ -106,8 +106,10 @@ class TestBaseGradientBoostingModel:
     def test_fit_error_handling(self, model, sample_data):
         """エラー発生時のModelErrorへのラップ"""
         X, y = sample_data
-        with patch.object(
-            model, "_train_model_impl", side_effect=ValueError("Internal error")
+        with (
+            patch.object(
+                model, "_train_model_impl", side_effect=ValueError("Internal error")
+            ),
+            pytest.raises(ModelError, match="fit失敗"),
         ):
-            with pytest.raises(ModelError, match="fit失敗"):
-                model.fit(X, y)
+            model.fit(X, y)

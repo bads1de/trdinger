@@ -282,26 +282,13 @@ class ErrorHandler:
         """
         APIエンドポイント用の安全な実行デコレータ
 
+        ``api_endpoint`` と同一の実装であるため、そちらへ委譲します。
+
         Args:
             message: エラーメッセージ
             status_code: エラー時のHTTPステータスコード
         """
-
-        def decorator(func: Callable[..., Awaitable[Any]]):
-            @functools.wraps(func)
-            async def wrapper(*args, **kwargs):
-                try:
-                    return await func(*args, **kwargs)
-                except HTTPException as e:
-                    logger.error(f"API例外処理: {message} - {e.detail}", exc_info=True)
-                    raise e
-                except Exception as e:
-                    logger.error(f"API例外処理: {message} - {e}", exc_info=True)
-                    raise HTTPException(status_code=status_code, detail=message)
-
-            return wrapper
-
-        return decorator
+        return ErrorHandler.api_endpoint(message, status_code)
 
     @staticmethod
     def handle_timeout(

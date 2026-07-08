@@ -291,11 +291,13 @@ class TestUniversalStrategyAll:
             },
         )
 
-        with patch.object(
-            strategy, "_should_terminate_early", return_value="max_drawdown"
+        with (
+            patch.object(
+                strategy, "_should_terminate_early", return_value="max_drawdown"
+            ),
+            pytest.raises(StrategyEarlyTermination),
         ):
-            with pytest.raises(StrategyEarlyTermination):
-                strategy._check_early_termination()
+            strategy._check_early_termination()
 
     # ---------------------------------------------------------------------------
     # TPSL & データスライス テスト
@@ -315,23 +317,25 @@ class TestUniversalStrategyAll:
             },
         )
 
-        with patch.object(
-            strategy.tpsl_service, "calculate_tpsl_prices", return_value=(90.0, 110.0)
-        ) as mock_tpsl:
-            with patch.object(
+        with (
+            patch.object(
+                strategy.tpsl_service,
+                "calculate_tpsl_prices",
+                return_value=(90.0, 110.0),
+            ) as mock_tpsl,
+            patch.object(
                 strategy.condition_evaluator, "evaluate_conditions", return_value=True
-            ):
-                with (
-                    patch.object(strategy, "buy"),
-                    patch.object(
-                        UniversalStrategy, "position", new_callable=PropertyMock
-                    ) as mock_pos,
-                ):
-                    mock_pos.return_value = None
-                    strategy.next()
-                    # スライスサイズが atr_period + 1 以上であることを確認
-                    ohlc_data = mock_tpsl.call_args.kwargs["market_data"]["ohlc_data"]
-                    assert len(ohlc_data) >= 51
+            ),
+            patch.object(strategy, "buy"),
+            patch.object(
+                UniversalStrategy, "position", new_callable=PropertyMock
+            ) as mock_pos,
+        ):
+            mock_pos.return_value = None
+            strategy.next()
+            # スライスサイズが atr_period + 1 以上であることを確認
+            ohlc_data = mock_tpsl.call_args.kwargs["market_data"]["ohlc_data"]
+            assert len(ohlc_data) >= 51
 
     # ---------------------------------------------------------------------------
     # ポジションサイジング & キャッシュ無効化 テスト

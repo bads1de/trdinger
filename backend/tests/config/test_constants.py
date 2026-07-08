@@ -48,7 +48,7 @@ class TestDefaultEnsembleAlgorithms:
     def test_contains_expected_algorithms(self):
         """予想されるアルゴリズムが含まれている"""
         expected = ("lightgbm", "xgboost", "catboost")
-        assert constants.DEFAULT_ENSEMBLE_ALGORITHMS == expected
+        assert expected == constants.DEFAULT_ENSEMBLE_ALGORITHMS
 
     def test_all_elements_are_strings(self):
         """すべての要素は文字列"""

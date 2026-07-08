@@ -433,7 +433,7 @@ class TestDefaultParameterSpace:
         result = optimizer.optimize(objective, space, n_calls=10)
 
         # 全てのパラメータが存在
-        assert all(key in result.best_params for key in space.keys())
+        assert all(key in result.best_params for key in space)
 
 
 class TestEnsembleParameterSpace:

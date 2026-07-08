@@ -382,23 +382,25 @@ class TestBacktestInstanceCreation:
         self, backtest_executor, sample_backtest_data, sample_strategy_class
     ):
         """バックテストインスタンス作成エラー時の処理"""
-        with patch(
-            "app.services.backtest.execution.backtest_executor.FractionalBacktest",
-            side_effect=Exception("インスタンス作成失敗"),
-        ):
-            with pytest.raises(
+        with (
+            patch(
+                "app.services.backtest.execution.backtest_executor.FractionalBacktest",
+                side_effect=Exception("インスタンス作成失敗"),
+            ),
+            pytest.raises(
                 BacktestExecutionError,
                 match="バックテストインスタンスの作成に失敗しました",
-            ):
-                backtest_executor._create_backtest_instance(
-                    data=sample_backtest_data,
-                    strategy_class=sample_strategy_class,
-                    initial_capital=10000.0,
-                    commission_rate=0.001,
-                    slippage=0.0,
-                    leverage=1.0,
-                    symbol="BTC/USDT:USDT",
-                )
+            ),
+        ):
+            backtest_executor._create_backtest_instance(
+                data=sample_backtest_data,
+                strategy_class=sample_strategy_class,
+                initial_capital=10000.0,
+                commission_rate=0.001,
+                slippage=0.0,
+                leverage=1.0,
+                symbol="BTC/USDT:USDT",
+            )
 
 
 class TestBacktestRun:

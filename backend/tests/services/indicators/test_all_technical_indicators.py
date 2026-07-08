@@ -353,11 +353,7 @@ class TestAllTechnicalIndicators:
             if len(valid_values) == 0:
                 pytest.skip(f"{indicator}の有効な値がないためスキップ")
 
-            if indicator == "RSI":
-                assert all(0 <= val <= 100 for val in valid_values), (
-                    f"{indicator}の値が範囲外"
-                )
-            elif indicator == "MFI":
+            if indicator == "RSI" or indicator == "MFI":
                 assert all(0 <= val <= 100 for val in valid_values), (
                     f"{indicator}の値が範囲外"
                 )

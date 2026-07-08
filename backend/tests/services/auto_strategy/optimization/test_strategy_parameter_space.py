@@ -127,7 +127,7 @@ class TestStrategyParameterSpace:
         # 空の遺伝子でも辞書が返される
         assert isinstance(result, dict)
         # インジケーターがないのでパラメータはない
-        assert len([k for k in result.keys() if k.startswith("ind_")]) == 0
+        assert len([k for k in result if k.startswith("ind_")]) == 0
 
     def test_apply_params_to_gene_indicators(self, parameter_space, sample_gene):
         """インジケーターパラメータの適用テスト"""
@@ -235,7 +235,7 @@ class TestStrategyParameterSpace:
         # ネストされた条件の閾値も含まれる
         assert isinstance(result, dict)
         # グループ名付きのキーが生成される
-        assert any("grp" in k for k in result.keys())
+        assert any("grp" in k for k in result)
 
     def test_long_short_tpsl_separation(self, parameter_space):
         """ロング・ショート別TPSL のテスト"""

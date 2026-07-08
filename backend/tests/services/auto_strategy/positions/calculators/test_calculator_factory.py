@@ -168,7 +168,7 @@ class TestCalculatorFactoryIntegration:
 
         methods = CalculatorFactory.get_available_methods()
 
-        for method_key in methods.keys():
+        for method_key in methods:
             calculator = CalculatorFactory.create_calculator(method_key)
             # calculateメソッドが存在することを確認（BaseCalculatorの抽象メソッド）
             assert hasattr(calculator, "calculate"), (

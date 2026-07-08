@@ -127,9 +127,7 @@ def _build_indicator_call_kwargs(
             kwargs[p_name] = frame["high"]
         elif p_lower == "low":
             kwargs[p_name] = frame["low"]
-        elif p_lower == "open":
-            kwargs[p_name] = frame["open"]
-        elif p_lower == "open_":
+        elif p_lower == "open" or p_lower == "open_":
             kwargs[p_name] = frame["open"]
         elif p_lower == "volume":
             kwargs[p_name] = frame["volume"]

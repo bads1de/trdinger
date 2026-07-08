@@ -237,7 +237,7 @@ class TestMetricsCalculator:
 
         assert "per_class_metrics" in result
         # クラス名が使用されていることを確認
-        assert any("negative" in str(k) for k in result["per_class_metrics"].keys())
+        assert any("negative" in str(k) for k in result["per_class_metrics"])
 
     def test_calculate_distribution_metrics(self):
         """分布指標の計算"""

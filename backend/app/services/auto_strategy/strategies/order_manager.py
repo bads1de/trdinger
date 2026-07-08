@@ -244,4 +244,4 @@ class OrderManager:
             "4h": pd.Timedelta(hours=4),
             "1d": pd.Timedelta(days=1),
         }
-        return cast(pd.Timedelta | None, timeframe_map.get(timeframe, None))
+        return cast(pd.Timedelta | None, timeframe_map.get(timeframe))

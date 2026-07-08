@@ -26,10 +26,7 @@ class TestTripleBarrierATRPreset:
         base_price = 100.0
 
         for i in range(120):
-            if i < 60:
-                vol = 1.0
-            else:
-                vol = 5.0
+            vol = 1.0 if i < 60 else 5.0
 
             # 緩やかな上昇トレンド
             base_price += 0.1

@@ -4,6 +4,7 @@
 database/connection.pyの各関数をテストします。
 """
 
+import contextlib
 from unittest.mock import MagicMock, patch
 
 from sqlalchemy.exc import OperationalError
@@ -28,10 +29,8 @@ class TestGetDb:
         mock_session.close.assert_not_called()
 
         # ジェネレータを最後まで実行
-        try:
+        with contextlib.suppress(StopIteration):
             next(gen)
-        except StopIteration:
-            pass
 
         mock_session.close.assert_called_once()
 
@@ -45,10 +44,8 @@ class TestGetDb:
         next(gen)  # セッションを取得
 
         # 例外が発生してもcloseが呼ばれる
-        try:
+        with contextlib.suppress(RuntimeError):
             gen.throw(RuntimeError("Test error"))
-        except RuntimeError:
-            pass
 
         mock_session.close.assert_called_once()
 

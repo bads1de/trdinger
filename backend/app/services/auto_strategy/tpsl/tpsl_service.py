@@ -378,9 +378,7 @@ class TPSLService:
             return False
         if not math.isfinite(price):
             return False
-        if price <= 0:
-            return False
-        return True
+        return not price <= 0
 
     def _validate_percentage(self, percentage: float, label: str) -> bool:
         """割合の妥当性を検証"""

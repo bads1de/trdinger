@@ -3,6 +3,7 @@
 Data validation testing script for improved data_validator.py
 """
 
+import contextlib
 import os
 import sys
 from datetime import datetime, timezone
@@ -13,14 +14,12 @@ import pytest
 # Add backend directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
 
-try:
+with contextlib.suppress(ImportError):
     from app.utils.data_processing.data_validator import (
         validate_data_integrity,
         validate_extended_data,
         validate_ohlcv_data,
     )
-except ImportError:
-    pass
 
 
 def test_validate_ohlcv_data():

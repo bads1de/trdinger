@@ -135,10 +135,7 @@ class ConditionEvaluator:
             if not self._is_vectorized_result(result):
                 return None  # スカラー結果はベクトル化キャッシュしない
 
-            if final_mask is None:
-                final_mask = result
-            else:
-                final_mask = final_mask & result
+            final_mask = result if final_mask is None else final_mask & result
 
         if not self._is_vectorized_result(final_mask):
             return None
@@ -180,10 +177,7 @@ class ConditionEvaluator:
         is_and = op == "AND"
 
         for r in results[1:]:
-            if is_and:
-                combined = combined & r
-            else:
-                combined = combined | r
+            combined = combined & r if is_and else combined | r
 
         return combined
 

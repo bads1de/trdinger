@@ -75,7 +75,7 @@ class PandasTaCaller:
                         if alias not in params_mapping[target]:
                             params_mapping[target].append(alias)
             else:
-                for param_name in config.parameters.keys():
+                for param_name in config.parameters:
                     params_mapping[param_name] = [param_name]
 
             return {

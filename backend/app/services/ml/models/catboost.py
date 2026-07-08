@@ -171,10 +171,7 @@ class CatBoostModel(BaseGradientBoostingModel):
             raise ModelError("学習済みモデルがありません")
 
         # タプルの場合はXデータを抽出
-        if isinstance(data, tuple):
-            X_data = data[0]
-        else:
-            X_data = data
+        X_data = data[0] if isinstance(data, tuple) else data
 
         # 回帰タスク: predict() を使用し、形状を (n_samples, 1) に整える
         predictions = self.model.predict(X_data)

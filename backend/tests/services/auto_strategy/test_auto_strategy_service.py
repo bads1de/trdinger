@@ -133,19 +133,21 @@ def test_start_strategy_generation_cleans_up_on_failure(
     backtest_config_dict = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
     background_tasks = BackgroundTasks()
 
-    with patch.object(
-        auto_strategy_service.experiment_application_service,
-        "schedule_experiment",
-        side_effect=RuntimeError("boom"),
+    with (
+        patch.object(
+            auto_strategy_service.experiment_application_service,
+            "schedule_experiment",
+            side_effect=RuntimeError("boom"),
+        ),
+        pytest.raises(RuntimeError),
     ):
-        with pytest.raises(RuntimeError):
-            auto_strategy_service.start_strategy_generation(
-                experiment_id,
-                experiment_name,
-                ga_config_dict,
-                backtest_config_dict,
-                background_tasks,
-            )
+        auto_strategy_service.start_strategy_generation(
+            experiment_id,
+            experiment_name,
+            ga_config_dict,
+            backtest_config_dict,
+            background_tasks,
+        )
 
     mock_experiment_manager.release_experiment.assert_called_once_with(experiment_id)
     mock_persistence_service.fail_experiment.assert_called_once_with(experiment_id)
@@ -154,14 +156,16 @@ def test_start_strategy_generation_cleans_up_on_failure(
 def test_start_strategy_generation_invalid_ga_config(auto_strategy_service):
     """異常系: 無効なGA設定でHTTPExceptionが発生すること"""
     # 準備
-    with patch(
-        "app.services.auto_strategy.config.ConfigValidator.validate",
-        return_value=(False, ["error"]),
+    with (
+        patch(
+            "app.services.auto_strategy.config.ConfigValidator.validate",
+            return_value=(False, ["error"]),
+        ),
+        pytest.raises(HTTPException),
     ):
-        with pytest.raises(HTTPException):
-            auto_strategy_service.start_strategy_generation(
-                "test-id", "test-name", {}, {}, BackgroundTasks()
-            )
+        auto_strategy_service.start_strategy_generation(
+            "test-id", "test-name", {}, {}, BackgroundTasks()
+        )
 
 
 def test_list_experiments(auto_strategy_service, mock_persistence_service):

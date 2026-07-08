@@ -3,12 +3,12 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-from numba import jit
+from numba import njit
 
 logger = logging.getLogger(__name__)
 
 
-@jit(nopython=True)
+@njit
 def _process_events_numba(
     close_vals: np.ndarray,
     close_times: np.ndarray,  # int64 inputs

@@ -6,6 +6,7 @@ GAエンジンで使用される共通のヘルパー関数を提供します。
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -64,14 +65,10 @@ def _invalidate_individual_cache(individual: Any) -> None:
     Args:
         individual: 個体オブジェクト
     """
-    try:
+    with contextlib.suppress(AttributeError):
         del individual.fitness.values
-    except AttributeError:
-        pass
-    try:
+    with contextlib.suppress(AttributeError):
         del individual._feature_vector
-    except AttributeError:
-        pass
 
 
 def _set_fitness_values(

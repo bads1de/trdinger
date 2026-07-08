@@ -5,6 +5,7 @@ StrategyGene の突然変異（mutation）演算ロジック。
 突然変異処理を提供します。
 """
 
+import contextlib
 import inspect
 import logging
 import random
@@ -323,15 +324,11 @@ def mutate_strategy_gene(
     try:
         mutated = gene.clone()
 
-        try:
+        with contextlib.suppress(Exception):
             mutate_indicators(mutated, mutation_rate, config)
-        except Exception:
-            pass
 
-        try:
+        with contextlib.suppress(Exception):
             mutate_conditions(mutated, mutation_rate, config)
-        except Exception:
-            pass
 
         try:
             min_risk_multiplier, max_risk_multiplier = (

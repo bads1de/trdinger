@@ -237,31 +237,33 @@ class TestFetchIncrementalData:
             return_value=[{"id": 1}]
         )
 
-        with patch.object(
-            service, "_get_latest_timestamp_from_db", return_value=latest_timestamp
+        with (
+            patch.object(
+                service, "_get_latest_timestamp_from_db", return_value=latest_timestamp
+            ),
+            patch("asyncio.get_event_loop") as mock_loop,
         ):
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_executor = AsyncMock(return_value=mock_data)
-                mock_loop.return_value.run_in_executor = mock_executor
+            mock_executor = AsyncMock(return_value=mock_data)
+            mock_loop.return_value.run_in_executor = mock_executor
 
-                with patch(
-                    "app.services.data_collection.bybit.bybit_service.get_db"
-                ) as mock_get_db:
-                    mock_db = MagicMock()
-                    mock_get_db.return_value = iter([mock_db])
-                    mock_repository_instance = MagicMock()
-                    mock_repository_instance.insert_open_interest_data = MagicMock(
-                        return_value=1
-                    )
-                    mock_config.repository_class.return_value = mock_repository_instance
+            with patch(
+                "app.services.data_collection.bybit.bybit_service.get_db"
+            ) as mock_get_db:
+                mock_db = MagicMock()
+                mock_get_db.return_value = iter([mock_db])
+                mock_repository_instance = MagicMock()
+                mock_repository_instance.insert_open_interest_data = MagicMock(
+                    return_value=1
+                )
+                mock_config.repository_class.return_value = mock_repository_instance
 
-                    result = await service.fetch_incremental_open_interest_data(
-                        "BTC/USDT:USDT"
-                    )
+                result = await service.fetch_incremental_open_interest_data(
+                    "BTC/USDT:USDT"
+                )
 
-                    assert result["success"] is True
-                    assert result["saved_count"] == 1
-                    assert result["latest_timestamp"] == latest_timestamp
+                assert result["success"] is True
+                assert result["saved_count"] == 1
+                assert result["latest_timestamp"] == latest_timestamp
 
     async def test_fetch_incremental_with_custom_interval(
         self, service, mock_repository, mock_config

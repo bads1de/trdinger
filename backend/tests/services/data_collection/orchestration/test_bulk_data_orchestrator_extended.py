@@ -56,13 +56,15 @@ class TestExecuteBulkIncrementalUpdate:
         orch = BulkDataOrchestrator()
         db = MagicMock()
 
-        with patch.object(
-            orch.historical_service,
-            "collect_bulk_incremental_data",
-            new=AsyncMock(side_effect=RuntimeError("api fail")),
+        with (
+            patch.object(
+                orch.historical_service,
+                "collect_bulk_incremental_data",
+                new=AsyncMock(side_effect=RuntimeError("api fail")),
+            ),
+            pytest.raises(RuntimeError, match="api fail"),
         ):
-            with pytest.raises(RuntimeError, match="api fail"):
-                await orch.execute_bulk_incremental_update("BTC/USDT:USDT", db)
+            await orch.execute_bulk_incremental_update("BTC/USDT:USDT", db)
 
 
 class TestStartBitcoinFullDataCollection:
@@ -104,17 +106,19 @@ class TestStartBitcoinFullDataCollection:
             def __iter__(self):
                 raise RuntimeError("config fail")
 
-        with patch.object(
-            orch_module.unified_config.market,
-            "supported_timeframes",
-            new=FailingList(),
+        with (
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_timeframes",
+                new=FailingList(),
+            ),
+            pytest.raises(RuntimeError, match="config fail"),
         ):
-            with pytest.raises(RuntimeError, match="config fail"):
-                await orch.start_bitcoin_full_data_collection(
-                    background_tasks=background_tasks,
-                    db=db,
-                    historical_orchestrator=historical_orchestrator,
-                )
+            await orch.start_bitcoin_full_data_collection(
+                background_tasks=background_tasks,
+                db=db,
+                historical_orchestrator=historical_orchestrator,
+            )
 
 
 class TestStartBulkHistoricalDataCollection:

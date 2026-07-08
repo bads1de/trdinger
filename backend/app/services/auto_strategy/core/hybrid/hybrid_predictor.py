@@ -415,10 +415,7 @@ class HybridPredictor:
         Returns:
             学習済みフラグ
         """
-        for service in self.services:
-            if not self._service_is_trained(service):
-                return False
-        return True
+        return all(self._service_is_trained(service) for service in self.services)
 
     async def get_model_info(self) -> dict[str, Any]:
         """
@@ -483,10 +480,7 @@ class HybridPredictor:
             return False
 
         model_attr = getattr(trainer, "model", object())
-        if model_attr is None and is_trained_attr is not None:
-            return False
-
-        return True
+        return not (model_attr is None and is_trained_attr is not None)
 
     def _predict_with_service(
         self, service: "MLTrainingService", features_df: pd.DataFrame

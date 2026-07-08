@@ -345,7 +345,7 @@ class TestEdgeCases:
         assert "xgb_max_depth" in space
 
         # パラメータ数は正常（重複カウントされない）
-        lgb_params = [k for k in space.keys() if k.startswith("lgb_")]
+        lgb_params = [k for k in space if k.startswith("lgb_")]
         assert len(lgb_params) == 8  # 重複分は追加されない
 
     def test_case_sensitive_model_names(self):

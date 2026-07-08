@@ -124,9 +124,8 @@ class TestGetDbSession:
         ) as mock_get_db:
             mock_get_db.return_value = iter([mock_session])
 
-            with pytest.raises(RuntimeError):
-                with service._get_db_session(None):
-                    raise RuntimeError("test error")
+            with pytest.raises(RuntimeError), service._get_db_session(None):
+                raise RuntimeError("test error")
 
             mock_session.close.assert_called_once()
 

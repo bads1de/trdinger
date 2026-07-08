@@ -203,9 +203,8 @@ class TestOperationContext:
         """異常系: コンテキスト内で例外発生"""
         caplog.set_level(logging.INFO)
 
-        with pytest.raises(ValueError):
-            with operation_context("Failing operation"):
-                raise ValueError("Test error")
+        with pytest.raises(ValueError), operation_context("Failing operation"):
+            raise ValueError("Test error")
 
         # ログにエラーメッセージが含まれることを確認
         assert "Failing operation" in caplog.text

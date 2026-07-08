@@ -168,10 +168,7 @@ def _njit_harmonic_resonance_loop(
                     ss_xy += x_dev * y_dev
 
                 denom = np.sqrt(ss_xx * ss_yy)
-                if denom > 1e-12:
-                    corr = ss_xy / denom
-                else:
-                    corr = 0.0
+                corr = ss_xy / denom if denom > 1e-12 else 0.0
 
                 std_f = np.sqrt(ss_xx / (length - 1))
                 freq_weight = 1.0 / (1.0 + freq * 10.0)

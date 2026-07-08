@@ -53,7 +53,7 @@ def _filter_known_fields(
 ) -> dict[str, Any]:
     """既知フィールドのみを残し、未知キーは警告する。"""
     known = {field_info.name for field_info in fields(cls)}
-    unknown = sorted(key for key in data.keys() if key not in known)
+    unknown = sorted(key for key in data if key not in known)
     if unknown:
         logger.warning(
             "%s の未対応キーを無視しました: %s",
