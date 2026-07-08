@@ -202,18 +202,6 @@ def _save_cache(configs: list[IndicatorConfig]) -> None:
         logger.warning(f"キャッシュの保存に失敗しました: {e}")
 
 
-def clear_discovery_cache() -> None:
-    """インジケーター検出キャッシュをクリア"""
-    try:
-        if os.path.exists(_CACHE_FILE):
-            os.remove(_CACHE_FILE)
-            logger.info("インジケーター検出キャッシュをクリアしました")
-        if os.path.exists(_VERSION_FILE):
-            os.remove(_VERSION_FILE)
-    except Exception as e:
-        logger.warning(f"キャッシュのクリアに失敗しました: {e}")
-
-
 class DynamicIndicatorDiscovery:
     """インジケーター動的検出クラス"""
 

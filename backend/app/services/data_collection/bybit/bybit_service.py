@@ -9,13 +9,13 @@ import asyncio
 import logging
 from abc import ABC
 from collections.abc import Callable
-from datetime import datetime, timezone
 from typing import Any
 
 import ccxt.async_support as ccxt
 
 from app.config.unified_config import unified_config
 from app.utils.data_conversion import normalize_market_symbol
+from app.utils.datetime_utils import current_millis, to_millis
 from app.utils.error_handler import (
     DataError,
     ErrorHandler,
@@ -226,7 +226,7 @@ class BybitService(ABC):
         all_data: list[dict[str, Any]] = []
         page_count = 0
         # 最新の時刻から開始（Bybit APIは新しいデータから古いデータの順で返す）
-        until_time = int(datetime.now(timezone.utc).timestamp() * 1000)
+        until_time = current_millis()
 
         while page_count < max_pages:
             page_count += 1
@@ -298,7 +298,7 @@ class BybitService(ABC):
         """
         all_data: list[dict[str, Any]] = []
         page_count = 0
-        end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
+        end_time = current_millis()
 
         # 間隔に応じた時間差を計算（ミリ秒）
         interval_ms = self._get_interval_milliseconds(interval)
@@ -516,7 +516,7 @@ class BybitService(ABC):
             get_timestamp_method = getattr(repo, get_timestamp_method_name)
             latest_datetime = get_timestamp_method(symbol, **kwargs)
             if latest_datetime:
-                return int(latest_datetime.timestamp() * 1000)
+                return to_millis(latest_datetime)
             return None
 
         try:

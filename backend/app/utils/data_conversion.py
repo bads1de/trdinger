@@ -9,7 +9,12 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-from app.utils.datetime_utils import parse_timestamp_safe as _parse_timestamp_safe
+from app.utils.datetime_utils import (
+    parse_timestamp_safe as _parse_timestamp_safe,
+)
+from app.utils.datetime_utils import (
+    to_millis,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -129,9 +134,7 @@ class OHLCVDataConverter:
         for record in ohlcv_records:
             api_data.append(
                 [
-                    int(
-                        record.timestamp.timestamp() * 1000
-                    ),  # タイムスタンプ（ミリ秒）
+                    int(to_millis(record.timestamp)),  # タイムスタンプ（ミリ秒）
                     float(record.open),
                     float(record.high),
                     float(record.low),
@@ -285,9 +288,6 @@ def normalize_market_symbol(symbol: Any) -> str:
     市場シンボルを正規化する
 
     様々な形式のシンボル表記をBybitの標準形式（BTC/USDT:USDT）に正規化します。
-    BybitService._normalize_symbol_for_ccxt および
-    BaseDataCollectionOrchestrationService._normalize_derivative_symbol
-    を共通化した関数。
 
     Args:
         symbol: 正規化するシンボル（例: "BTC/USDT", "BTCUSDT", "BTC/USDT:USDT"）

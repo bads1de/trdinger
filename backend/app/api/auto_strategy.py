@@ -69,15 +69,6 @@ class GAGenerationResponse(BaseModel):
     timestamp: str
 
 
-class GAResultResponse(BaseModel):
-    """GA結果レスポンス"""
-
-    success: bool
-    message: str
-    data: dict[str, Any] | None = None
-    timestamp: str
-
-
 class StopExperimentResponse(BaseModel):
     """実験停止レスポンス"""
 

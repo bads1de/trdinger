@@ -11,6 +11,7 @@ from typing import Any
 import ccxt
 
 from app.config.constants import DEFAULT_MARKET_SYMBOL
+from app.utils.datetime_utils import to_millis
 from app.utils.error_handler import ErrorHandler
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -176,7 +177,7 @@ class HistoricalDataService:
             )
             if latest_db_ts:
                 historical_data = [
-                    d for d in historical_data if d[0] < latest_db_ts.timestamp() * 1000
+                    d for d in historical_data if d[0] < to_millis(latest_db_ts)
                 ]
 
             if not historical_data:
@@ -259,11 +260,7 @@ class HistoricalDataService:
                         timestamp_column="timestamp",
                         filter_conditions={"symbol": symbol, "timeframe": tf},
                     )
-                    since_ms = (
-                        int(latest_timestamp.timestamp() * 1000)
-                        if latest_timestamp
-                        else None
-                    )
+                    since_ms = to_millis(latest_timestamp) if latest_timestamp else None
 
                     if since_ms:
                         logger.info(

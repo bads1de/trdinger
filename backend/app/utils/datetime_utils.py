@@ -237,3 +237,31 @@ def ensure_utc_timezone(dt: datetime | None) -> datetime | None:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
+
+
+def to_millis(dt: datetime) -> int:
+    """
+    datetime をミリ秒単位のUNIXタイムスタンプ（int）に変換する。
+
+    ``int(dt.timestamp() * 1000)`` の共通実装。各所で繰り返されていた
+    手書きの変換を集約するために用意しました。
+
+    Args:
+        dt: 変換対象のdatetimeオブジェクト
+
+    Returns:
+        int: ミリ秒単位のUNIXタイムスタンプ
+    """
+    return int(dt.timestamp() * 1000)
+
+
+def current_millis() -> int:
+    """
+    現在時刻のミリ秒単位UNIXタイムスタンプ（UTC）を返す。
+
+    ``int(datetime.now(timezone.utc).timestamp() * 1000)`` の共通実装。
+
+    Returns:
+        int: 現在時刻のミリ秒単位UNIXタイムスタンプ（UTC）
+    """
+    return int(datetime.now(timezone.utc).timestamp() * 1000)

@@ -5,7 +5,6 @@
 """
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -35,15 +34,6 @@ class StrategiesResponse(BaseModel):
     total_count: int = 0
     has_more: bool = False
     message: str = "戦略が正常に取得されました"
-    timestamp: str = Field(default_factory=now_iso)
-
-
-class StrategyStatsResponse(BaseModel):
-    """戦略統計レスポンス"""
-
-    success: bool = True
-    stats: dict[str, Any] = Field(default_factory=dict)
-    message: str = "戦略統計が正常に取得されました"
     timestamp: str = Field(default_factory=now_iso)
 
 

@@ -32,21 +32,6 @@ class EnsembleConfig(TypedDict, total=False):
     meta_labeling_params: dict[str, Any]
 
 
-class BaseModelParams(TypedDict, total=False):
-    """ベースモデルパラメータの型定義"""
-
-    random_state: int
-    n_jobs: int
-    n_estimators: int
-    learning_rate: float
-    max_depth: int
-    early_stopping_rounds: int
-    random_seed: int
-    thread_count: int
-    iterations: int
-    depth: int
-
-
 class EnsembleTrainer(BaseMLTrainer):
     """
     複数の機械学習モデルを組み合わせたアンサンブル学習を統括するトレーナーです。

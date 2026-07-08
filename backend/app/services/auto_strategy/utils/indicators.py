@@ -64,22 +64,6 @@ def get_all_indicators(include_composite: bool = True) -> list[str]:
         return [t for t in all_types if t not in COMPOSITE_INDICATORS]
 
 
-def get_volume_indicators() -> list[str]:
-    return indicators_by_category("volume")
-
-
-def get_momentum_indicators() -> list[str]:
-    return indicators_by_category("momentum")
-
-
-def get_trend_indicators() -> list[str]:
-    return indicators_by_category("trend")
-
-
-def get_volatility_indicators() -> list[str]:
-    return indicators_by_category("volatility")
-
-
 def get_valid_indicator_types() -> list[str]:
     """有効な指標タイプを取得"""
     return get_all_indicators(include_composite=True)

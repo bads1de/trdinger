@@ -4,11 +4,12 @@ Bybit ロング/ショート比率データ収集サービス
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 import ccxt.async_support as ccxt
 
+from app.utils.datetime_utils import current_millis, to_millis
 from database.repositories.long_short_ratio_repository import (
     LongShortRatioRepository,
 )
@@ -119,7 +120,7 @@ class BybitLongShortRatioService(BybitService):
                 # Bybitの仕様上、指定時刻を含むデータを返す可能性があるため、
                 # 重複排除はリポジトリ層（INSERT OR IGNORE）に任せるか、ここでフィルタリングする。
                 # 安全のため、少し前から取得して重複チェックに任せる。
-                start_time = int(latest_db_record.timestamp.timestamp() * 1000)
+                start_time = to_millis(latest_db_record.timestamp)
 
             logger.info(
                 f"LS比率差分データ収集開始: {symbol} ({period}) start_time={start_time}"
@@ -193,9 +194,9 @@ class BybitLongShortRatioService(BybitService):
             if not start_date:
                 start_ts = 1601510400000  # 2020-10-01 UTC
             else:
-                start_ts = int(start_date.timestamp() * 1000)
+                start_ts = to_millis(start_date)
 
-            current_end_ts = int(datetime.now(timezone.utc).timestamp() * 1000)
+            current_end_ts = current_millis()
 
             logger.info(
                 f"LS比率履歴データ収集開始: {symbol} ({period}) from {start_ts} to {current_end_ts}"
