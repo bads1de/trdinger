@@ -2,7 +2,7 @@
 シャドウ特徴量ベースの選択戦略（Boruta風）
 """
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -47,9 +47,10 @@ class ShadowFeatureStrategy(BaseSelectionStrategy):
                 random_state=config.random_state + iteration,
                 n_jobs=config.n_jobs,
             )
-            model.fit(X_extended, y)
+            # (sklearn stubs が BaseEstimator の属性を未定義のため Any 経由で解決)
+            cast(Any, model).fit(X_extended, y)
 
-            importances = model.feature_importances_
+            importances = cast(Any, model).feature_importances_
             real_importances = importances[:n_features]
             shadow_importances = importances[n_features:]
 

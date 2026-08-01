@@ -24,9 +24,9 @@ from .operators import (
     uniform_crossover,
 )
 from .operators.mutation import (  # noqa: F401 (テスト用)
-    _create_sub_gene,
-    _get_creation_probability_multiplier,
-    _iter_mutable_sub_gene_specs,
+    _create_sub_gene,  # pyright: ignore[reportUnusedImport]
+    _get_creation_probability_multiplier,  # pyright: ignore[reportUnusedImport]
+    _iter_mutable_sub_gene_specs,  # pyright: ignore[reportUnusedImport]
 )
 
 __all__ = [

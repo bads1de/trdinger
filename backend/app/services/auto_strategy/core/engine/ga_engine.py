@@ -11,7 +11,7 @@ import random
 import threading
 import time
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from deap import tools
@@ -261,7 +261,7 @@ class GeneticAlgorithmEngine:
             stats = self._create_statistics()
 
             # 初期個体群の生成（評価なし）
-            population = toolbox.population(n=config.population_size)
+            population = cast(Any, toolbox).population(n=config.population_size)
 
             # シード戦略の注入（ハイブリッド初期化）
             if config.use_seed_strategies:

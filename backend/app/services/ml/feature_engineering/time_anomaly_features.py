@@ -58,7 +58,8 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
                 )
                 return df
 
-        index: pd.DatetimeIndex = pd.DatetimeIndex(df.index)
+        # (pandas-stubs が DatetimeIndex の hour/dayofweek/day 等を型として未定義のため Any で解決)
+        index: Any = pd.DatetimeIndex(df.index)
         new_features = {}
 
         # 1. 周期性特徴量 (Cyclical Encoding)

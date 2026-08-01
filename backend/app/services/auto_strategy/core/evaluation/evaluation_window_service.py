@@ -336,11 +336,17 @@ class EvaluationWindowService:
             if trades_df.empty:
                 return trades_df
             trades_df["EntryBar"] = (
-                pd.to_numeric(trades_df["EntryBar"], errors="coerce").astype(int)
+                cast(
+                    pd.Series,
+                    pd.to_numeric(trades_df["EntryBar"], errors="coerce"),
+                ).astype(int)
                 - start_pos
             )
             trades_df["ExitBar"] = (
-                pd.to_numeric(trades_df["ExitBar"], errors="coerce").astype(int)
+                cast(
+                    pd.Series,
+                    pd.to_numeric(trades_df["ExitBar"], errors="coerce"),
+                ).astype(int)
                 - start_pos
             )
         return trades_df

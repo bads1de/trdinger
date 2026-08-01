@@ -146,7 +146,10 @@ def prime_oscillator(
     result = _njit_prime_oscillator_loop(prices, primes_array, 200)
 
     oscillator = pd.Series(result, index=close.index, name=f"PRIME_OSC_{length}")
-    signal = oscillator.rolling(window=signal_length).mean()
+    signal = pd.Series(
+        oscillator.rolling(window=signal_length).mean(),
+        index=oscillator.index,
+    )
     signal.name = f"PRIME_SIGNAL_{length}_{signal_length}"
 
     return (oscillator, signal)

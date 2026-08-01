@@ -92,10 +92,11 @@ def adaptive_entropy(
 
     normalized_osc = (entropy_ratio - 0.5) * 2.0
 
-    signal = (
+    signal = pd.Series(
         pd.Series(normalized_osc, index=close.index)
         .rolling(window=signal_length)
-        .mean()
+        .mean(),
+        index=close.index,
     )
 
     oscillator = pd.Series(

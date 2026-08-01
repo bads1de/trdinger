@@ -324,13 +324,13 @@ class HybridPredictor:
 
         try:
             if hasattr(service, "run_time_series_cv"):
-                service.run_time_series_cv(features_df)
+                cast(Any, service).run_time_series_cv(features_df)
             elif hasattr(service, "time_series_cross_validate"):
-                service.time_series_cross_validate(features_df)
+                cast(Any, service).time_series_cross_validate(features_df)
             elif hasattr(service, "trainer") and hasattr(
                 service.trainer, "time_series_cross_validate"
             ):
-                service.trainer.time_series_cross_validate(features_df)
+                cast(Any, service.trainer).time_series_cross_validate(features_df)
         except Exception as exc:
             logger.warning(f"時系列クロスバリデーション実行エラー: {exc}")
 

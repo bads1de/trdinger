@@ -376,7 +376,7 @@ class EnsembleTrainer(BaseMLTrainer):
 
             # 統一された評価システムを使用
             detailed_metrics = metrics_collector.calculate_comprehensive_metrics(
-                y_true=y_test,
+                y_true=np.asarray(y_test),
                 y_pred=y_pred,
                 y_proba=y_pred_proba,
             )
@@ -410,7 +410,8 @@ class EnsembleTrainer(BaseMLTrainer):
             self.is_trained = True
 
             # BaseMLTrainer用のモデル参照を設定
-            self._model = self.ensemble_model
+            # (StackingEnsemble は TrainedModel 型に含まれないため Any 経由で解決)
+            self._model = cast(Any, self.ensemble_model)
 
             # 精度を取得
             accuracy = detailed_metrics.get("accuracy", 0.0)

@@ -72,7 +72,7 @@ class StrategyEarlyTerminationController:
             return None
 
         try:
-            return pd.Timestamp(value)
+            return cast(pd.Timestamp, pd.Timestamp(value))
         except Exception as e:
             logger.warning(
                 "evaluation_start の解析に失敗しました: %s, エラー: %s",

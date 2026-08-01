@@ -5,7 +5,7 @@ Funding Rate データのマージロジックを提供します。
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -56,7 +56,7 @@ class FRMerger:
                 fr_df = self._convert_fr_to_dataframe(fr_data)
 
                 # toleranceを設定（8時間以内のデータのみ使用）
-                tolerance = pd.Timedelta(hours=8)
+                tolerance = timedelta(hours=8)
                 df = pd.merge_asof(
                     df.sort_index(),
                     fr_df.sort_index(),

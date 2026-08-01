@@ -103,7 +103,7 @@ def create_app() -> FastAPI:
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)
-    async def global_exception_handler(
+    async def global_exception_handler(  # pyright: ignore[reportUnusedFunction] - FastAPI がデコレータ経由で動的登録する
         request: Request, exc: Exception
     ) -> JSONResponse:
         """グローバル例外ハンドラです。
@@ -129,7 +129,7 @@ def create_app() -> FastAPI:
 
     # ヘルスチェックエンドポイント
     @app.get("/health")
-    async def health_check() -> dict[str, Any]:
+    async def health_check() -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction] - FastAPI がデコレータ経由で動的登録する
         """ヘルスチェックエンドポイントです。
 
         アプリケーションの状態を確認するためのエンドポイントです。

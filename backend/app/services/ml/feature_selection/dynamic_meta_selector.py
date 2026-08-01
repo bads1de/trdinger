@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -52,7 +52,7 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         for _i, label in enumerate(cluster_labels):
             if label not in clusters:
                 clusters[label] = []
-            clusters[label].append(X.columns[_i])
+            clusters[label].append(cast(str, X.columns[_i]))
         return clusters
 
     def _shadow_filtering(self, X: pd.DataFrame, y: pd.Series) -> np.ndarray:

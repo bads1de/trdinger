@@ -325,10 +325,10 @@ class MetaLabelingService:
 
         # メトリクス計算
         m_met = metrics_collector.calculate_comprehensive_metrics(
-            y_test, final_pred.values
+            np.asarray(y_test), np.asarray(final_pred.values)
         )
         p_met = metrics_collector.calculate_comprehensive_metrics(
-            y_test, primary_pred.values
+            np.asarray(y_test), np.asarray(primary_pred.values)
         )
 
         return {

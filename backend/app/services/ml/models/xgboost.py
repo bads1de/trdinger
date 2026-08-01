@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -112,10 +112,11 @@ class XGBoostModel(BaseGradientBoostingModel):
         )
 
         # 早期停止の最適イテレーションを保存
+        # (pyright は hasattr ガード内の属性アクセスを絞り込まないため Any 経由で解決)
         if hasattr(model, "best_iteration"):
             self.best_iteration = model.best_iteration
         elif hasattr(model, "best_ntree_limit"):
-            self.best_iteration = model.best_ntree_limit
+            self.best_iteration = cast(Any, model).best_ntree_limit
 
         return model
 

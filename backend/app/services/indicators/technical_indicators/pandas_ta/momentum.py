@@ -56,7 +56,7 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-import pandas_ta_classic as ta
+import pandas_ta_classic as _pandas_ta_classic
 
 from ...data_validation import (
     create_nan_series_bundle,
@@ -66,6 +66,8 @@ from ...data_validation import (
     run_multi_series_indicator,
     run_series_indicator,
 )
+
+ta: Any = _pandas_ta_classic
 
 
 def _create_nan_array_bundle(length: int, count: int) -> tuple[np.ndarray, ...]:
@@ -98,7 +100,8 @@ class MomentumIndicators:
             # pandas_ta_classicはRS=0/0のケースで0を返すことがある
             valid_values = result.dropna()
             if not valid_values.empty and bool(valid_values.eq(0.0).all()):
-                if float(data.std()) == 0.0:
+                std_value = data.std()
+                if isinstance(std_value, float) and std_value == 0.0:
                     return pd.Series(50.0, index=result.index)
 
             return result

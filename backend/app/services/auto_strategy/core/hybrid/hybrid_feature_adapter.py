@@ -8,7 +8,7 @@ GA + ML ハイブリッドアプローチの特徴量エンジニアリング
 import hashlib
 import logging
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -87,7 +87,7 @@ class HybridFeatureAdapter:
         try:
             from pandas.util import hash_pandas_object
 
-            return int(hash_pandas_object(df, index=True).sum())
+            return int(cast(Any, hash_pandas_object)(df, index=True).sum())
         except Exception as e:
             logger.debug(f"DataFrameのハッシュ生成に失敗しました: {e}")
             return None
@@ -207,11 +207,13 @@ class HybridFeatureAdapter:
             # センチメント
             if sentiment_scores is not None and not sentiment_scores.empty:
                 features_df["sentiment_smoothed"] = (
-                    sentiment_scores.reindex(features_df.index)
-                    .ffill()
-                    .rolling(self.SENTIMENT_ROLLING_WINDOW, min_periods=1)
-                    .mean()
-                    .fillna(self.DEFAULT_FILL_VALUE)
+                    cast(
+                        pd.Series,
+                        sentiment_scores.reindex(features_df.index)
+                        .ffill()
+                        .rolling(self.SENTIMENT_ROLLING_WINDOW, min_periods=1)
+                        .mean(),
+                    ).fillna(self.DEFAULT_FILL_VALUE)
                 )
             else:
                 features_df["sentiment_smoothed"] = self.DEFAULT_FILL_VALUE
@@ -231,7 +233,7 @@ class HybridFeatureAdapter:
 
                 # 新しく追加されたカラムのみを抽出
                 new_cols = temp_df.columns.difference(ohlcv_data.columns)
-                derived_features = temp_df[new_cols]
+                derived_features = cast(pd.DataFrame, temp_df[new_cols])
 
                 # キャッシュ保存
                 self._cache_derived_features(ohlcv_data, derived_features)
@@ -450,7 +452,7 @@ class WaveletFeatureTransformer:
             if not pd.api.types.is_numeric_dtype(series.dtype):
                 continue
 
-            numeric_series = series.astype(float)
+            numeric_series = cast(pd.Series, series.astype(float))
             for scale in self.scales:
                 detail = self._haar_detail(numeric_series, scale)
                 new_column = f"wavelet_{column}_scale_{scale}"

@@ -64,8 +64,11 @@ def safe_float_conversion(value: Any) -> float:
     Returns:
         float: 変換されたfloat値（失敗時は0.0）
     """
+    if value is None:
+        return 0.0
+
     try:
-        if value is None or pd.isna(value):
+        if pd.isna(value):
             return 0.0
     except (TypeError, ValueError):
         pass
@@ -84,8 +87,11 @@ def safe_duration_conversion(value: Any) -> float:
     pd.Timedelta / datetime.timedelta / "5 days" のような文字列を
     日数単位のfloatに正規化します。変換できない場合は0.0を返します。
     """
+    if value is None:
+        return 0.0
+
     try:
-        if value is None or pd.isna(value):
+        if pd.isna(value):
             return 0.0
     except (TypeError, ValueError):
         pass
@@ -133,8 +139,11 @@ def safe_int_conversion(value: Any) -> int:
     Returns:
         int: 変換されたint値（失敗時は0）
     """
+    if value is None:
+        return 0
+
     try:
-        if value is None or pd.isna(value):
+        if pd.isna(value):
             return 0
     except (TypeError, ValueError):
         pass

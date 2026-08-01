@@ -5,7 +5,7 @@ Long Short Ratio データのマージロジックを提供します。
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -64,7 +64,7 @@ class LSRMerger:
 
                 # toleranceを設定（デフォルト4時間）
                 # 期間に応じて調整することも検討可能だが、一旦固定値とする
-                tolerance = pd.Timedelta(hours=4)
+                tolerance = timedelta(hours=4)
 
                 df = pd.merge_asof(
                     df.sort_index(),

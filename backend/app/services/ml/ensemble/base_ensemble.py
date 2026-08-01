@@ -38,7 +38,7 @@ def evaluate_model_predictions(
         Dict[str, Any]: 計算された評価メトリクスを含む辞書。
     """
     return metrics_collector.calculate_comprehensive_metrics(
-        y_true, y_pred, y_pred_proba
+        np.asarray(y_true), y_pred, y_pred_proba
     )
 
 
@@ -368,13 +368,13 @@ class BaseEnsemble(ABC):
                 "feature_columns": self.feature_columns,
                 "is_fitted": self.is_fitted,
             }
-            path: str = model_manager.save_model(  # type: ignore[no-redef]
+            legacy_path: str | None = model_manager.save_model(
                 model=data,
                 model_name=m_name,
                 metadata={"ensemble_type": "StackingEnsemble"},
                 feature_columns=self.feature_columns,
             )
-            return [path] if path else []
+            return [legacy_path] if legacy_path else []
 
         raise MLModelError("No valid model data found in ensemble")
 

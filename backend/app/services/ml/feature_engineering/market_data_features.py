@@ -96,7 +96,8 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         )
 
         # 元のインデックスに戻す
-        merged.index = merged["__orig_index__"]
+        # (pandas-stubs が __getitem__ の戻りを Series|Unknown|DataFrame と推論するため cast で解決)
+        merged.index = cast(pd.Series, merged["__orig_index__"])
         res[target_col + suffix] = merged[target_col].fillna(0.0)
 
         return res, target_col + suffix

@@ -7,7 +7,7 @@ DEAPライブラリの設定とツールボックスの初期化を担当するD
 import logging
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from deap import base, creator, tools
 
@@ -122,7 +122,7 @@ class DEAPSetup:
             "population",
             tools.initRepeat,
             list,
-            self.toolbox.individual,
+            cast(Any, self.toolbox).individual,
         )
 
         # 評価関数の登録

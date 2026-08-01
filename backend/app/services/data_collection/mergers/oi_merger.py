@@ -5,7 +5,7 @@ Open Interest データのマージロジックを提供します。
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 
@@ -58,7 +58,7 @@ class OIMerger:
                 oi_df = self._convert_oi_to_dataframe(oi_data)
 
                 # toleranceを設定（1日以内のデータのみ使用）
-                tolerance = pd.Timedelta(days=1)
+                tolerance = timedelta(days=1)
                 df = pd.merge_asof(
                     df.sort_index(),
                     oi_df.sort_index(),

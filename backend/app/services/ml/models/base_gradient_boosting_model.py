@@ -78,10 +78,12 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
             # 検証データ準備
             eval_set = kwargs.get("eval_set")
             early_stop = kwargs.get("early_stopping_rounds")
-            X_train, y_train, X_val, y_val = X, y, None, None
+            X_train, y_train = X, y
+            X_val: pd.DataFrame | None = None
+            y_val: pd.Series | None = None
 
             if eval_set and isinstance(eval_set, list) and len(eval_set) > 0:
-                X_val, y_val = eval_set[0]
+                X_val, y_val = cast(tuple[Any, Any], eval_set[0])
             elif early_stop:
                 logger.info(
                     f"Early Stopping有効(rounds={early_stop}): データを分割します"
@@ -96,13 +98,21 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
                         from sklearn.model_selection import train_test_split
 
                         stratify_param = y if len(np.unique(y)) <= 20 else None
-                        X_train, X_val, y_train, y_val = train_test_split(
-                            X,
-                            y,
-                            test_size=0.2,
-                            random_state=self.random_state,
-                            stratify=stratify_param,
-                            shuffle=stratify_param is not None,
+                        X_train, X_val, y_train, y_val = cast(
+                            tuple[
+                                pd.DataFrame,
+                                pd.DataFrame,
+                                pd.Series,
+                                pd.Series,
+                            ],
+                            train_test_split(
+                                X,
+                                y,
+                                test_size=0.2,
+                                random_state=self.random_state,
+                                stratify=stratify_param,
+                                shuffle=stratify_param is not None,
+                            ),
                         )
                     except Exception as e:
                         logger.warning(
@@ -228,7 +238,7 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
 
                     detailed_metrics = (
                         metrics_collector.calculate_comprehensive_metrics(
-                            y_test, y_pred_class, y_pred_proba
+                            np.asarray(y_test), y_pred_class, y_pred_proba
                         )
                     )
                     logger.info(

@@ -67,7 +67,7 @@ class BybitOpenInterestService(BybitService):
             list[dict[str, Any]],
             await self._handle_ccxt_errors(
                 f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
-                self.exchange.fetch_open_interest_history,
+                cast(Any, self.exchange).fetch_open_interest_history,
                 normalized_symbol,
                 interval,  # timeframeパラメータを追加
                 since,

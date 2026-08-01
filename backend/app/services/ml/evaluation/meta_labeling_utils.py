@@ -23,7 +23,7 @@ def evaluate_meta_labeling(
     y_pred_proba: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """メタラベリング用の評価指標を計算"""
-    y_t = y_true.values if hasattr(y_true, "values") else y_true
+    y_t = np.asarray(y_true)
     res = (
         metrics_collector.calculate_comprehensive_metrics(y_t, y_pred, y_pred_proba)
         or {}

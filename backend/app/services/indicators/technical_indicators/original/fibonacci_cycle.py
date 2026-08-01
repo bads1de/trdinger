@@ -104,7 +104,10 @@ def fibonacci_cycle(
     fibonacci_cycle_result = pd.Series(
         result, index=close.index, name=f"FIBO_CYCLE_{len(cycle_periods)}"
     )
-    signal = fibonacci_cycle_result.rolling(window=3).mean()
+    signal = pd.Series(
+        fibonacci_cycle_result.rolling(window=3).mean(),
+        index=fibonacci_cycle_result.index,
+    )
     signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"
 
     return (fibonacci_cycle_result, signal)

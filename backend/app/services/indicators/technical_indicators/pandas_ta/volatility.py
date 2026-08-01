@@ -26,7 +26,7 @@ import warnings
 from typing import Any, cast
 
 import pandas as pd
-import pandas_ta_classic as ta
+import pandas_ta_classic as _pandas_ta_classic
 
 from ...data_validation import (
     create_nan_series_bundle,
@@ -34,6 +34,8 @@ from ...data_validation import (
     run_multi_series_indicator,
     run_series_indicator,
 )
+
+ta: Any = _pandas_ta_classic
 
 logger = logging.getLogger(__name__)
 

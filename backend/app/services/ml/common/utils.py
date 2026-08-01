@@ -88,7 +88,9 @@ def generate_cache_key(
         try:
             if isinstance(obj, pd.DataFrame):
                 # 1. データ内容とインデックスのハッシュ
-                data_hash = pd.util.hash_pandas_object(obj, index=True).values.tobytes()
+                data_hash = cast(Any, pd).util.hash_pandas_object(
+                    obj, index=True
+                ).values.tobytes()
                 # 2. カラム名のハッシュ（カラム名が変われば結果も変わる可能性があるため）
                 col_hash = str(list(obj.columns)).encode()
 
@@ -279,7 +281,7 @@ def get_feature_importance_unified(
         return {}
 
     try:
-        importance_scores = None
+        importance_scores: Any = None
         if hasattr(model, "feature_importances_"):
             importance_scores = model.feature_importances_
         elif hasattr(model, "feature_importance") and callable(

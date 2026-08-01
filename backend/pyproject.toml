@@ -214,8 +214,10 @@ markers = [
 
 
 [tool.pyright]
-pythonVersion = "3.10"
+pythonVersion = "3.11"
 typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
 include = ["app", "tests"]
 exclude = [
     "**/__pycache__",

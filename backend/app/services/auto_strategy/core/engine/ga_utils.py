@@ -56,11 +56,13 @@ def mutate_strategy_gene(
     return gene.mutate(config, mutation_rate)
 
 
-def _invalidate_individual_cache(individual: Any) -> None:
+def _invalidate_individual_cache(  # pyright: ignore[reportUnusedFunction] - evolution_runner やテストから import して使用
+    individual: Any,
+) -> None:
     """評価済み個体のキャッシュを無効化する。
 
     ``fitness.values`` と ``_feature_vector`` を削除し、次回アクセス時に
-    再評価・再計算を強制します。
+    再評価・再計算を強制します。併せて個体に紐づく ``_cache`` もクリアします。
 
     Args:
         individual: 個体オブジェクト
@@ -69,9 +71,11 @@ def _invalidate_individual_cache(individual: Any) -> None:
         del individual.fitness.values
     with contextlib.suppress(AttributeError):
         del individual._feature_vector
+    with contextlib.suppress(AttributeError):
+        individual._cache = {}
 
 
-def _set_fitness_values(
+def _set_fitness_values(  # pyright: ignore[reportUnusedFunction] - evolution_runner やテストから import して使用
     individuals: list[Any], fitnesses: list[tuple[float, ...]]
 ) -> None:
     """個体群にフィットネス値をまとめて設定する。

@@ -60,7 +60,7 @@ def align_timestamp_to_tz(value: Any, target_tz: Any | None) -> pd.Timestamp:
         target_tz が存在し、value が timezone を持たない場合は local timezone で
         timezone を付与します。
     """
-    timestamp = pd.Timestamp(value)
+    timestamp = cast(pd.Timestamp, pd.Timestamp(value))
 
     # NaT check
     if _is_nat(timestamp):

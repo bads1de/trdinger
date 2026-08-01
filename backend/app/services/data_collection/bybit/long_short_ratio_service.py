@@ -67,7 +67,7 @@ class BybitLongShortRatioService(BybitService):
         try:
             response = await self._handle_ccxt_errors(
                 "Bybit V5 Market Account Ratio",
-                self.exchange.publicGetV5MarketAccountRatio,
+                cast(Any, self.exchange).publicGetV5MarketAccountRatio,
                 params=params,
             )
         except Exception as e:

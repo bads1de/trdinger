@@ -352,7 +352,8 @@ class FeatureEngineeringService:
         up_volume = ohlcv_1m["volume"] * is_up
 
         # 2. 1時間ごとに集計用のラベル
-        hour_labels = pd.DatetimeIndex(ohlcv_1m.index).floor("1h")
+        # (pandas-stubs が DatetimeIndex.floor を型として未定義のため Any 経由で解決)
+        hour_labels = cast(Any, pd.DatetimeIndex(ohlcv_1m.index)).floor("1h")
         resampler = ohlcv_1m.resample("1h")
 
         agg_features = pd.DataFrame(index=resampler.last().index)
@@ -630,3 +631,17 @@ class FeatureEngineeringService:
             "data": data.copy(deep=True),
             "timestamp": datetime.now(),
         }
+
+    def cleanup_resources(self) -> dict[str, Any]:
+        """
+        保持しているリソース（特徴量キャッシュ等）を解放します。
+
+        モデルクリーンアップ時に呼び出され、メモリ上のキャッシュを破棄して
+        後続の学習処理で古いデータが再利用されないようにします。
+
+        Returns:
+            クリーンアップ結果を示す統計情報
+        """
+        self.feature_cache.clear()
+        logger.debug("特徴量計算キャッシュをクリアしました")
+        return {"status": "cleaned", "memory_freed": 0}

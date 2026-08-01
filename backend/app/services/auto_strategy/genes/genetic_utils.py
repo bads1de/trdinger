@@ -361,7 +361,7 @@ class GeneticUtils:
                     enum_class = current_enum.__class__
                     # ランダムに別の値を選択
                     mutated_params[field] = random.choice(
-                        list(enum_class.__members__.values())
+                        list(cast(Any, enum_class).__members__.values())
                     )
 
         return gene_class(**mutated_params)

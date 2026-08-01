@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import cast
 
 import numpy as np
-from scipy.spatial import cKDTree
+from scipy.spatial import KDTree as cKDTree
 
 # 定数
 DEFAULT_NICHE_COUNT = 1.0

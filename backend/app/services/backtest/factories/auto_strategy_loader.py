@@ -150,7 +150,7 @@ class AutoStrategyLoader:
         # StrategyGene オブジェクトが直接渡された場合（to_dictメソッドがある場合）
         if gene_data is not None:
             if hasattr(gene_data, "to_dict"):
-                return gene_data.to_dict()
+                return cast(Any, gene_data).to_dict()
             raise AutoStrategyLoaderError(
                 f"戦略遺伝子の形式が不正です。dict または to_dict() メソッドを持つオブジェクトが必要です: {type(gene_data)}"
             )

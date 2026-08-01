@@ -421,7 +421,7 @@ class ConditionEvaluator:
                 # pandas Series / DataFrame
                 if hasattr(val, "iloc"):
                     if len(val) >= PREVIOUS_VALUE_INDEX:
-                        return float(val.iloc[PREVIOUS_VALUE_ILOC_INDEX])
+                        return float(cast(Any, val).iloc[PREVIOUS_VALUE_ILOC_INDEX])
                 # numpy array / list
                 elif hasattr(val, "__getitem__"):
                     # 0次元配列（スカラー）の場合は len() がエラーになるためチェック
@@ -497,7 +497,7 @@ class ConditionEvaluator:
                 except (TypeError, KeyError, IndexError):
                     # PandasのRangeIndexなどで[-1]がキーエラーになる場合のフォールバック
                     if hasattr(obj, "iloc"):
-                        return float(obj.iloc[LAST_VALUE_INDEX])
+                        return float(cast(Any, obj).iloc[LAST_VALUE_INDEX])
                     raise
 
             try:

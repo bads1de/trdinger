@@ -154,14 +154,14 @@ class BacktestDataProvider:
 
         self.backtest_service.ensure_data_service_initialized()
         start_dt = (
-            pd.to_datetime(start_date).tz_localize("UTC")
-            if pd.to_datetime(start_date).tzinfo is None
-            else pd.to_datetime(start_date)
+            pd.to_datetime(cast(Any, start_date)).tz_localize("UTC")
+            if pd.to_datetime(cast(Any, start_date)).tzinfo is None
+            else pd.to_datetime(cast(Any, start_date))
         )
         end_dt = (
-            pd.to_datetime(end_date).tz_localize("UTC")
-            if pd.to_datetime(end_date).tzinfo is None
-            else pd.to_datetime(end_date)
+            pd.to_datetime(cast(Any, end_date)).tz_localize("UTC")
+            if pd.to_datetime(cast(Any, end_date)).tzinfo is None
+            else pd.to_datetime(cast(Any, end_date))
         )
         data = self.backtest_service.data_service.get_data_for_backtest(
             symbol=symbol,

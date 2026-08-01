@@ -175,7 +175,7 @@ class OptimizationService:
         # データ分割基準日を決定 (feature_supersetのインデックスを使用)
         n_samples = len(feature_superset)
         split_idx = int(n_samples * (1 - test_ratio))
-        split_date = feature_superset.index[split_idx]
+        split_date = cast(pd.Timestamp, feature_superset.index[split_idx])
 
         logger.info(f"データ分割基準日: {split_date}")
 
@@ -491,7 +491,7 @@ class OptimizationService:
                 "reason": "too few entries for meta-learning",
             }
 
-        X_meta = X_meta_full[entry_mask]
+        X_meta: pd.DataFrame = cast(pd.DataFrame, X_meta_full[entry_mask])
         # メタラベル: 1 = 成功(TP), 0 = 失敗(FP/ダマシ)
         y_meta = (y_true_meta[entry_mask] == 1).astype(int)
 

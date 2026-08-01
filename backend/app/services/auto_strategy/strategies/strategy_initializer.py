@@ -181,7 +181,7 @@ class StrategyInitializer:
                         "close": self.strategy.data.Close,
                     }
                 )
-                atr_series = ta.atr(
+                atr_series = cast(Any, ta).atr(
                     cast(pd.Series, temp_df["high"]),
                     cast(pd.Series, temp_df["low"]),
                     cast(pd.Series, temp_df["close"]),
@@ -220,7 +220,7 @@ class StrategyInitializer:
                             high = self.strategy.data.df["High"]
                             low = self.strategy.data.df["Low"]
                             close = self.strategy.data.df["Close"]
-                            atr_result = ta.atr(high, low, close, length=atr_period)
+                            atr_result = cast(Any, ta).atr(high, low, close, length=atr_period)
                             if atr_result is not None:
                                 self.strategy._precomputed_tpsl_atr[atr_period] = cast(
                                     pd.Series,

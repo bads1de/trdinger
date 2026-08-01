@@ -2,7 +2,7 @@
 Permutation Importance による特徴量選択戦略
 """
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -35,16 +35,17 @@ class PermutationStrategy(BaseSelectionStrategy):
             random_state=config.random_state,
             n_jobs=config.n_jobs,
         )
-        model.fit(X, y)
+        # (sklearn stubs が BaseEstimator.fit / Bunch 属性を未定義のため Any 経由で解決)
+        cast(Any, model).fit(X, y)
 
-        result = permutation_importance(
+        result = cast(Any, permutation_importance(
             model,
             X,
             y,
             n_repeats=10,
             random_state=config.random_state,
             n_jobs=config.n_jobs,
-        )
+        ))
 
         importances = result.importances_mean
         mask = importances > config.importance_threshold

@@ -7,7 +7,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 from sklearn.metrics import (
@@ -90,7 +90,7 @@ class MetricsCalculator:
         """
         # pd.Series の場合は numpy 配列に変換
         if hasattr(y_true, "values"):
-            y_true = y_true.values
+            y_true = cast(Any, y_true).values
 
         if level == "full":
             logger.info("📊 包括的な評価指標を計算中(Full)...")

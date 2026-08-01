@@ -29,11 +29,11 @@ pandas-ta の volume カテゴリに対応。
 """
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-import pandas_ta_classic as ta
+import pandas_ta_classic as _pandas_ta_classic
 from numba import njit
 
 from ...data_validation import (
@@ -43,6 +43,8 @@ from ...data_validation import (
     run_multi_series_indicator,
     run_series_indicator,
 )
+
+ta: Any = _pandas_ta_classic
 
 logger = logging.getLogger(__name__)
 
@@ -530,11 +532,11 @@ class VolumeIndicators:
             if isinstance(volume.index, pd.DatetimeIndex):
                 try:
                     # 時間情報を秒単位のインデックスに変換 (0 - 86400)
-                    idx = volume.index
-                    _h = idx.hour
-                    _m = idx.minute
-                    _s = idx.second
-                    time_indices = (_h * 3600 + _m * 60 + _s).values.astype(np.int32)
+                    idx = volume.index.to_series()
+                    _h = idx.dt.hour
+                    _m = idx.dt.minute
+                    _s = idx.dt.second
+                    time_indices = (_h * 3600 + _m * 60 + _s).to_numpy(dtype=np.int32)
                     vol_arr = volume.values.astype(np.float64)
 
                     res_arr = _njit_rvol_loop(vol_arr, time_indices, window)
@@ -734,7 +736,12 @@ class VolumeIndicators:
         """
 
         def _calculate_vp() -> pd.DataFrame | pd.Series | None:
-            result = ta.vp(close=close, volume=volume, bins=bins, width=width)
+            result = ta.vp(
+                close=close,
+                volume=volume,
+                bins=bins,
+                width=cast(int | None, width),
+            )
             if isinstance(result, pd.Series):
                 return result.to_frame()
             if isinstance(result, pd.DataFrame):

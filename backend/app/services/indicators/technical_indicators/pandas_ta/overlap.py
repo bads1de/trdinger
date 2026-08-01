@@ -42,7 +42,7 @@ pandas-ta の overlap カテゴリに対応。
 from typing import Any, cast
 
 import pandas as pd
-import pandas_ta_classic as ta
+import pandas_ta_classic as _pandas_ta_classic
 
 from ...data_validation import (
     create_nan_series_bundle,
@@ -53,6 +53,8 @@ from ...data_validation import (
     run_series_indicator,
     validate_multi_series_params,
 )
+
+ta: Any = _pandas_ta_classic
 
 
 class OverlapIndicators:
@@ -372,20 +374,23 @@ class OverlapIndicators:
         try:
             # 浮動小数点形式 (例: 3.0)
             return (
-                result[f"SUPERTl_{period}_{float(multiplier)}"],
-                result[f"SUPERTs_{period}_{float(multiplier)}"],
-                result[f"SUPERTd_{period}_{float(multiplier)}"],
+                cast(pd.Series, result[f"SUPERTl_{period}_{float(multiplier)}"]),
+                cast(pd.Series, result[f"SUPERTs_{period}_{float(multiplier)}"]),
+                cast(pd.Series, result[f"SUPERTd_{period}_{float(multiplier)}"]),
             )
         except KeyError:
             try:
                 # 整数形式 (例: 3)
                 return (
-                    result[f"SUPERTl_{period}_{int(multiplier)}"],
-                    result[f"SUPERTs_{period}_{int(multiplier)}"],
-                    result[f"SUPERTd_{period}_{int(multiplier)}"],
+                    cast(pd.Series, result[f"SUPERTl_{period}_{int(multiplier)}"]),
+                    cast(pd.Series, result[f"SUPERTs_{period}_{int(multiplier)}"]),
+                    cast(pd.Series, result[f"SUPERTd_{period}_{int(multiplier)}"]),
                 )
             except (KeyError, Exception):
-                return create_nan_series_bundle(high, 3)
+                return cast(
+                    tuple[pd.Series, pd.Series, pd.Series],
+                    create_nan_series_bundle(high, 3),
+                )
 
     @staticmethod
     @handle_pandas_ta_errors

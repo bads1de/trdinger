@@ -5,6 +5,7 @@
 
 import logging
 from datetime import datetime
+from typing import Any, cast
 
 import pandas as pd
 
@@ -255,10 +256,14 @@ class DataIntegrationService:
             return {"error": "データがありません"}
 
         # 安全に日付を取得
-        start_date_val: pd.Timestamp = pd.to_datetime(df.index.min(), errors="coerce")
+        start_date_val: pd.Timestamp = pd.to_datetime(
+            cast(Any, df.index.min()), errors="coerce"
+        )
         start_date = start_date_val.isoformat() if pd.notna(start_date_val) else None
 
-        end_date_val: pd.Timestamp = pd.to_datetime(df.index.max(), errors="coerce")
+        end_date_val: pd.Timestamp = pd.to_datetime(
+            cast(Any, df.index.max()), errors="coerce"
+        )
         end_date = end_date_val.isoformat() if pd.notna(end_date_val) else None
 
         # カラム名を小文字に統一して取得
@@ -273,31 +278,37 @@ class DataIntegrationService:
             "end_date": end_date,
             "columns": list(df.columns),
             "price_range": {
-                "min": float(df[low_col].min()) if not df.empty else None,
-                "max": float(df[high_col].max()) if not df.empty else None,
-                "first_close": (float(df[close_col].iloc[0]) if not df.empty else None),
-                "last_close": (float(df[close_col].iloc[-1]) if not df.empty else None),
+                "min": float(cast(Any, df[low_col].min())) if not df.empty else None,
+                "max": float(cast(Any, df[high_col].max())) if not df.empty else None,
+                "first_close": (
+                    float(cast(Any, df[close_col].iloc[0])) if not df.empty else None
+                ),
+                "last_close": (
+                    float(cast(Any, df[close_col].iloc[-1])) if not df.empty else None
+                ),
             },
             "volume_stats": {
-                "total": float(df[volume_col].sum()) if not df.empty else 0.0,
-                "average": (float(df[volume_col].mean()) if not df.empty else 0.0),
-                "max": float(df[volume_col].max()) if not df.empty else 0.0,
+                "total": float(cast(Any, df[volume_col].sum())) if not df.empty else 0.0,
+                "average": (
+                    float(cast(Any, df[volume_col].mean())) if not df.empty else 0.0
+                ),
+                "max": float(cast(Any, df[volume_col].max())) if not df.empty else 0.0,
             },
         }
 
         # 追加データの統計情報
         if "open_interest" in df.columns:
             summary["open_interest_stats"] = {
-                "average": float(df["open_interest"].mean()),
-                "min": float(df["open_interest"].min()),
-                "max": float(df["open_interest"].max()),
+                "average": float(cast(Any, df["open_interest"].mean())),
+                "min": float(cast(Any, df["open_interest"].min())),
+                "max": float(cast(Any, df["open_interest"].max())),
             }
 
         if "funding_rate" in df.columns:
             summary["funding_rate_stats"] = {
-                "average": float(df["funding_rate"].mean()),
-                "min": float(df["funding_rate"].min()),
-                "max": float(df["funding_rate"].max()),
+                "average": float(cast(Any, df["funding_rate"].mean())),
+                "min": float(cast(Any, df["funding_rate"].min())),
+                "max": float(cast(Any, df["funding_rate"].max())),
             }
 
         return summary

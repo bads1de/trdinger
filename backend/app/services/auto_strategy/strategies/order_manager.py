@@ -7,6 +7,7 @@ UniversalStrategyから注文管理の責務を分離するためのクラスで
 
 import logging
 import weakref
+from datetime import timedelta
 from typing import Any
 
 import pandas as pd
@@ -230,18 +231,18 @@ class OrderManager:
             except Exception as exc:
                 logger.debug("legacy 属性 %s の更新に失敗しました: %s", attr_name, exc)
 
-    def _get_bar_duration(self) -> pd.Timedelta | None:
+    def _get_bar_duration(self) -> timedelta | None:
         """現在のタイムフレームのバー期間を取得"""
         # UniversalStrategyからbase_timeframeを取得
         timeframe = getattr(self.strategy, "base_timeframe", "1h")
 
         timeframe_map = {
-            "1m": pd.Timedelta(minutes=1),
-            "5m": pd.Timedelta(minutes=5),
-            "15m": pd.Timedelta(minutes=15),
-            "30m": pd.Timedelta(minutes=30),
-            "1h": pd.Timedelta(hours=1),
-            "4h": pd.Timedelta(hours=4),
-            "1d": pd.Timedelta(days=1),
+            "1m": timedelta(minutes=1),
+            "5m": timedelta(minutes=5),
+            "15m": timedelta(minutes=15),
+            "30m": timedelta(minutes=30),
+            "1h": timedelta(hours=1),
+            "4h": timedelta(hours=4),
+            "1d": timedelta(days=1),
         }
         return timeframe_map.get(timeframe)

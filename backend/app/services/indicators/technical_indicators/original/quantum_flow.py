@@ -148,8 +148,11 @@ def quantum_flow(
         prices, highs, lows, volumes, length, wavelet_result
     )
 
-    signal = (
-        pd.Series(flow_values, index=close.index).rolling(window=flow_length).mean()
+    signal = pd.Series(
+        pd.Series(flow_values, index=close.index)
+        .rolling(window=flow_length)
+        .mean(),
+        index=close.index,
     )
     signal.name = "QUANTUM_FLOW_SIGNAL"
 

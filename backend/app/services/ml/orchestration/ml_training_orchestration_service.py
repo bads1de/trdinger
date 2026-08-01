@@ -854,7 +854,7 @@ class MLTrainingService(BaseResourceManager):
             if isinstance(training_data, pd.DataFrame)
             else training_data
         )
-        ohlcv = data_dict.get("ohlcv")
+        ohlcv = cast(pd.DataFrame, data_dict.get("ohlcv"))
         fr, oi = data_dict.get("funding_rate"), data_dict.get("open_interest")
 
         best_params, is_optimized, opt_result = {}, False, None

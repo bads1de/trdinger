@@ -28,6 +28,7 @@ from ..evaluation.evaluation_fidelity import (
 )
 from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..fitness.fitness_sharing import FitnessSharing
+from .ga_utils import _invalidate_individual_cache, _set_fitness_values
 from .report_selection import (
     build_report_rank_key,
     extract_primary_fitness,
@@ -47,27 +48,6 @@ GC_THRESHOLD_DIVISIONS = 20
 DYNAMIC_SCALAR_MAX = 2.0
 DEFAULT_SCALAR_VALUE = 1.0
 DEFAULT_MIN_PASS_RATE = 0.0
-
-
-def _invalidate_individual_cache(individual: Any) -> None:
-    """個体のキャッシュを無効化する。
-
-    交叉・突然変異後に呼ばれ、個体に紐づくキャッシュデータをクリアする。
-    """
-    try:
-        individual._cache = {}
-    except AttributeError:
-        pass
-    except Exception as e:
-        logger.debug("個体キャッシュのクリアに失敗しました: %s", e)
-
-
-def _set_fitness_values(
-    population: list[Any], fitnesses: list[tuple[float, ...]]
-) -> None:
-    """個体群にフィットネス値を設定する。"""
-    for ind, fit in zip(population, fitnesses, strict=False):
-        ind.fitness.values = fit
 
 
 class EvolutionStoppedError(RuntimeError):

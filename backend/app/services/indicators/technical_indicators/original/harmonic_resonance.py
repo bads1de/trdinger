@@ -248,7 +248,10 @@ def harmonic_resonance(
     )
 
     hri_series = pd.Series(hri_values, index=close.index, name="HARMONIC_RESONANCE")
-    signal = hri_series.rolling(window=signal_length, min_periods=1).mean()
+    signal = pd.Series(
+        hri_series.rolling(window=signal_length, min_periods=1).mean(),
+        index=hri_series.index,
+    )
     signal.name = "HRI_SIGNAL"
 
     return (hri_series, signal)

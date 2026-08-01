@@ -41,9 +41,10 @@ class CusumSignalGenerator:
 
         # 対数収益率を計算
         # r_t = ln(p_t / p_{t-1})
+        # (pandas-stubs が Series.values を ArrayLike 型にするため np.asarray で ndarray 化)
         shifted = prices.shift(1)
         log_returns: pd.Series = pd.Series(
-            np.log(prices.values / shifted.values),
+            np.log(np.asarray(prices) / np.asarray(shifted)),
             index=prices.index,
         ).fillna(0)  # 最初は0
 
@@ -108,8 +109,9 @@ class CusumSignalGenerator:
             pd.Series: 各時点でのローカルボラティリティ（対数リターンのEWM標準偏差）。
         """
         shifted = close.shift(1)
+        # (pandas-stubs が Series.values を ArrayLike 型にするため np.asarray で ndarray 化)
         log_returns = pd.Series(
-            np.log(close.values / shifted.values),
+            np.log(np.asarray(close) / np.asarray(shifted)),
             index=close.index,
         )
         return log_returns.ewm(span=span).std()

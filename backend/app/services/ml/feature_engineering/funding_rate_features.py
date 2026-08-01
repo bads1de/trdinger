@@ -70,7 +70,8 @@ class FundingRateFeatureCalculator:
             right_on="timestamp",
             direction="backward",
         )
-        merged.index = merged["__orig_index__"]
+        # (pandas-stubs が __getitem__ の戻りを Series|Unknown|DataFrame と推論するため cast で解決)
+        merged.index = cast(pd.Series, merged["__orig_index__"])
         res["funding_rate"] = merged["funding_rate"].fillna(self.baseline_rate)
 
         # 2. 数値加工 (ベクトル化)
@@ -82,7 +83,8 @@ class FundingRateFeatureCalculator:
         res["fr_lag_3p"] = res["fr_bps"].shift(3 * self.settlement_interval)
 
         # 周期
-        h = pd.DatetimeIndex(res.index).hour % self.settlement_interval
+        # (pandas-stubs が DatetimeIndex.hour を型として未定義のため Any 経由で解決)
+        h = cast(Any, pd.DatetimeIndex(res.index)).hour % self.settlement_interval
         res["fr_cycle_sin"] = np.sin(2 * np.pi * h / self.settlement_interval)
         res["fr_cycle_cos"] = np.cos(2 * np.pi * h / self.settlement_interval)
 
