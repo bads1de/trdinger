@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pandas as pd
 from numba import njit, prange
@@ -15,7 +13,7 @@ from ...data_validation import (
 from ._window_helpers import _window_mean_and_std
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _simple_wavelet_transform(data: np.ndarray, scale: int) -> np.ndarray:
     scale = int(scale)
     n = len(data)
@@ -41,7 +39,7 @@ def _simple_wavelet_transform(data: np.ndarray, scale: int) -> np.ndarray:
 
 
 @njit(parallel=True, cache=True)
-def _njit_quantum_flow_loop(
+def _njit_quantum_flow_loop(  # type: ignore[no-untyped-def]
     prices,
     highs,
     lows,
@@ -153,7 +151,7 @@ def quantum_flow(
     signal = (
         pd.Series(flow_values, index=close.index).rolling(window=flow_length).mean()
     )
-    signal.name = "QUANTUM_FLOW_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
+    signal.name = "QUANTUM_FLOW_SIGNAL"
 
     flow_series = pd.Series(flow_values, index=close.index, name="QUANTUM_FLOW")
-    return cast(tuple[pd.Series, pd.Series], (flow_series, signal))
+    return (flow_series, signal)

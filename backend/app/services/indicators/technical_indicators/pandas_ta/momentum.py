@@ -496,7 +496,7 @@ class MomentumIndicators:
         low: pd.Series,
         close: pd.Series,
         length: int = 14,
-        **kwargs,
+        **kwargs: Any,
     ) -> pd.Series:
         """
         ウィリアムズ%R（Williams %R）

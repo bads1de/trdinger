@@ -48,10 +48,7 @@ def _get_default_values_from_fields(cls: type[Any]) -> dict[str, Any]:
             defaults[field_info.name] = field_info.default
         if field_info.default_factory is not MISSING:
             try:
-                if callable(field_info.default_factory):
-                    defaults[field_info.name] = field_info.default_factory()
-                else:
-                    defaults[field_info.name] = field_info.default_factory
+                defaults[field_info.name] = field_info.default_factory()
             except Exception as exc:
                 logger.warning(
                     "デフォルト値生成失敗: %s, %s",
@@ -243,7 +240,8 @@ class GAConfig:
             normalize_indicator_universe_mode(self.indicator_universe_mode),
         )
 
-        if not isinstance(self.fitness_sharing, dict):
+        fitness_sharing: Any = self.fitness_sharing
+        if not isinstance(fitness_sharing, dict):
             object.__setattr__(
                 self,
                 "fitness_sharing",
@@ -251,7 +249,7 @@ class GAConfig:
             )
         else:
             merged_fitness_sharing = copy.deepcopy(GA_DEFAULT_FITNESS_SHARING)
-            merged_fitness_sharing.update(self.fitness_sharing)
+            merged_fitness_sharing.update(fitness_sharing)
             object.__setattr__(self, "fitness_sharing", merged_fitness_sharing)
 
         if isinstance(self.mutation_config, dict):
@@ -321,7 +319,7 @@ class GAConfig:
     @classmethod
     def _from_dict_defaults(cls) -> dict[str, Any]:
         """from_dict 用のデフォルト値を生成する。"""
-        return cast(dict[str, Any], copy.deepcopy(_get_default_values_from_fields(cls)))
+        return copy.deepcopy(_get_default_values_from_fields(cls))
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "GAConfig":

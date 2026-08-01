@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pandas as pd
 from numba import njit, prange
@@ -15,7 +13,7 @@ from ...data_validation import (
 from ._window_helpers import _window_mean
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_dft_magnitude(x: np.ndarray) -> np.ndarray:
     n = len(x)
     m = n // 2
@@ -32,7 +30,7 @@ def _njit_dft_magnitude(x: np.ndarray) -> np.ndarray:
     return mag
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_find_dominant_freqs(prices: np.ndarray) -> np.ndarray:
     n = len(prices)
     if n < 4:
@@ -80,7 +78,7 @@ def _njit_find_dominant_freqs(prices: np.ndarray) -> np.ndarray:
     return res_freqs
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_apply_bandpass_res(x: np.ndarray, freq: float, q: float = 2.0) -> np.ndarray:
     n = len(x)
     y = np.zeros(n, dtype=np.float64)
@@ -120,7 +118,7 @@ def _njit_apply_bandpass_res(x: np.ndarray, freq: float, q: float = 2.0) -> np.n
     return y_out[::-1]
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_harmonic_resonance_loop(
     prices: np.ndarray, length: int, resonance_bands: int, min_period: int
 ) -> np.ndarray:
@@ -251,6 +249,6 @@ def harmonic_resonance(
 
     hri_series = pd.Series(hri_values, index=close.index, name="HARMONIC_RESONANCE")
     signal = hri_series.rolling(window=signal_length, min_periods=1).mean()
-    signal.name = "HRI_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
+    signal.name = "HRI_SIGNAL"
 
-    return cast(tuple[pd.Series, pd.Series], (hri_series, signal))
+    return (hri_series, signal)

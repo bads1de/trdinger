@@ -7,9 +7,11 @@
 汎用的に条件を構築します。
 """
 
+from __future__ import annotations
+
 import logging
 import random
-from typing import Any
+from typing import TYPE_CHECKING
 
 from app.services.indicators.config import (
     IndicatorScaleType,
@@ -18,6 +20,9 @@ from app.services.indicators.config import (
 
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
+
+if TYPE_CHECKING:
+    from .condition_generator import ConditionGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +38,7 @@ class ComplexConditionsStrategy:
     PM100_LONG_THRESHOLDS = [10, 25, 50]
     PM100_SHORT_THRESHOLDS = [-10, -25, -50]
 
-    def __init__(self, condition_generator: Any) -> None:
+    def __init__(self, condition_generator: ConditionGenerator) -> None:
         self.gen = condition_generator
 
     def generate_conditions(
@@ -83,9 +88,15 @@ class ComplexConditionsStrategy:
             [],
         )
 
-    def _create_trend_follow(self, classified):
+    def _create_trend_follow(
+        self, classified: dict[IndicatorType, list[IndicatorGene]]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+    ]:
         """トレンドフォロー条件（順張り特化）を生成"""
-        longs, shorts = [], []
+        longs: list[Condition | ConditionGroup] = []
+        shorts: list[Condition | ConditionGroup] = []
         trends, momentums = (
             classified[IndicatorType.TREND],
             classified[IndicatorType.MOMENTUM],
@@ -103,7 +114,8 @@ class ComplexConditionsStrategy:
         cfg = indicator_registry.get_indicator_config(momentum.type)
         scale_type = cfg.scale_type if cfg else None
 
-        th_long, th_short = 0, 0
+        th_long: int | float | str = 0
+        th_short: int | float | str = 0
         if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
             th_long = random.choice(self.OSCILLATOR_LONG_THRESHOLDS)
             th_short = random.choice(self.OSCILLATOR_SHORT_THRESHOLDS)
@@ -168,9 +180,15 @@ class ComplexConditionsStrategy:
         shorts.append(short_group)
         return longs, shorts
 
-    def _create_cross(self, indicators):
+    def _create_cross(
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+    ]:
         """指標クロス条件を生成"""
-        longs, shorts = [], []
+        longs: list[Condition | ConditionGroup] = []
+        shorts: list[Condition | ConditionGroup] = []
         price_inds = [
             i for i in indicators if i.enabled and self.gen._is_price_scale(i)
         ]
@@ -194,9 +212,15 @@ class ComplexConditionsStrategy:
         )
         return longs, shorts
 
-    def _create_breakout(self, indicators):
+    def _create_breakout(
+        self, indicators: list[IndicatorGene]
+    ) -> tuple[
+        list[Condition | ConditionGroup],
+        list[Condition | ConditionGroup],
+    ]:
         """ボラティリティブレイクアウト条件を生成"""
-        longs, shorts = [], []
+        longs: list[Condition | ConditionGroup] = []
+        shorts: list[Condition | ConditionGroup] = []
         candidates = [
             i for i in indicators if i.enabled and self.gen._is_band_indicator(i)
         ]
@@ -215,11 +239,15 @@ class ComplexConditionsStrategy:
         return longs, shorts
 
     # テスト互換用エイリアス
-    def _get_indicator_name(self, ind):
+    def _get_indicator_name(self, ind: IndicatorGene) -> str:
         return self.gen._get_indicator_name(ind)
 
-    def _classify_indicators(self, inds):
+    def _classify_indicators(
+        self, inds: list[IndicatorGene]
+    ) -> dict[IndicatorType, list[IndicatorGene]]:
         return self.gen._classify_indicators(inds)
 
-    def _structure_conditions(self, conds):
+    def _structure_conditions(
+        self, conds: list[Condition | ConditionGroup]
+    ) -> list[Condition | ConditionGroup]:
         return self.gen._structure_conditions(conds)

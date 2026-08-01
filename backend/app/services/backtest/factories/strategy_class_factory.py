@@ -4,7 +4,7 @@
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from backtesting import Strategy
 
@@ -97,4 +97,6 @@ class StrategyClassFactory:
                 return {}
         else:
             # 通常の戦略の場合、parametersを返す
-            return strategy_config.get("parameters", {})
+            return cast(
+                dict[str, Any], strategy_config.get("parameters", {})
+            )

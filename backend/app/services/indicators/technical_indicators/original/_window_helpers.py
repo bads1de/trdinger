@@ -6,7 +6,7 @@ import numpy as np
 from numba import njit
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _window_sum(values: np.ndarray, start: int, end: int) -> float:
     total = 0.0
     for idx in range(start, end):
@@ -14,15 +14,15 @@ def _window_sum(values: np.ndarray, start: int, end: int) -> float:
     return total
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _window_mean(values: np.ndarray, start: int, end: int) -> float:  # pyright: ignore[reportUnusedFunction]
     length = end - start
     if length <= 0:
         return 0.0
-    return _window_sum(values, start, end) / float(length)
+    return float(_window_sum(values, start, end)) / float(length)
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _window_mean_and_std(  # pyright: ignore[reportUnusedFunction]
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float]:
@@ -44,7 +44,7 @@ def _window_mean_and_std(  # pyright: ignore[reportUnusedFunction]
     return mean, np.sqrt(variance)
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _window_mean_and_std_finite(  # pyright: ignore[reportUnusedFunction]
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float, int]:
@@ -69,7 +69,7 @@ def _window_mean_and_std_finite(  # pyright: ignore[reportUnusedFunction]
     return mean, np.sqrt(variance), count
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _window_min_max(values: np.ndarray, start: int, end: int) -> tuple[float, float]:
     min_val = values[start]
     max_val = values[start]
@@ -82,7 +82,7 @@ def _window_min_max(values: np.ndarray, start: int, end: int) -> tuple[float, fl
     return min_val, max_val
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _window_range(values: np.ndarray, start: int, end: int, scale: float) -> float:  # pyright: ignore[reportUnusedFunction]
     min_val, max_val = _window_min_max(values, start, end)
-    return (max_val - min_val) / scale
+    return float(max_val - min_val) / scale

@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from app.types import StrategyGeneDict
 
@@ -95,9 +95,10 @@ class EntryGene:
             )
 
         # entry_type が有効な値かチェック
-        if not isinstance(self.entry_type, EntryType):
+        raw_entry_type: Any = self.entry_type
+        if not isinstance(raw_entry_type, EntryType):
             try:
-                EntryType(self.entry_type)
+                EntryType(raw_entry_type)
             except ValueError:
                 errors.append(f"無効な entry_type です: {self.entry_type}")
 
@@ -126,18 +127,18 @@ class EntryGene:
         entry_type_value = data.get("entry_type", "market")
         if isinstance(entry_type_value, str):
             entry_type = EntryType(entry_type_value)
-        elif isinstance(entry_type_value, EntryType):
-            entry_type = entry_type_value
         else:
             entry_type = EntryType.MARKET
 
         return cls(
             entry_type=entry_type,
-            limit_offset_pct=data.get("limit_offset_pct", 0.005),
-            stop_offset_pct=data.get("stop_offset_pct", 0.005),
-            order_validity_bars=data.get("order_validity_bars", 5),
-            enabled=data.get("enabled", True),
-            priority=data.get("priority", 1.0),
+            limit_offset_pct=cast(float, data.get("limit_offset_pct", 0.005)),
+            stop_offset_pct=cast(float, data.get("stop_offset_pct", 0.005)),
+            order_validity_bars=cast(
+                int, data.get("order_validity_bars", 5)
+            ),
+            enabled=cast(bool, data.get("enabled", True)),
+            priority=cast(float, data.get("priority", 1.0)),
         )
 
     def clone(self) -> EntryGene:

@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 from typing import Any, cast
 
-from app.types import SerializableValue, StrategyGeneDict
+from app.types import StrategyGeneDict
 
 from ..config.constants import PositionSizingMethod
 from .base_gene import BaseGene
@@ -18,7 +18,7 @@ from .gene_ranges import (
 )
 
 
-def _ensure_position_size_bounds(params: dict[str, SerializableValue]) -> None:
+def _ensure_position_size_bounds(params: dict[str, Any]) -> None:
     """min/max_position_size の論理整合性を補正する。"""
     min_size = params.get("min_position_size")
     max_size = params.get("max_position_size")
@@ -76,26 +76,27 @@ class PositionSizingGene(BaseGene):
     @classmethod
     def from_dict(cls, data: StrategyGeneDict) -> PositionSizingGene:
         """辞書から復元。無効な method はデフォルトにフォールバック。"""
-        from .base_gene import BaseGene
-
         cleaned = dict(data)
         method_raw = cleaned.get("method")
         if method_raw is not None:
-            if isinstance(method_raw, PositionSizingMethod):
-                pass
-            elif isinstance(method_raw, str):
+            if isinstance(method_raw, str):
                 try:
                     cleaned["method"] = PositionSizingMethod(method_raw)
                 except ValueError:
                     cleaned["method"] = PositionSizingMethod.VOLATILITY_BASED
             else:
                 cleaned["method"] = PositionSizingMethod.VOLATILITY_BASED
-        return BaseGene.from_dict.__func__(cls, cleaned)  # type: ignore[attr-defined,return-value]
+        from .base_gene import BaseGene
+
+        base_from_dict = cast(Any, BaseGene.from_dict)
+        return cast(PositionSizingGene, base_from_dict.__func__(cls, cleaned))
 
     def _validate_parameters(self, errors: list[str]) -> None:
         """パラメータ固有の検証を実装"""
         if not isinstance(self.method, PositionSizingMethod):
-            errors.append("methodは有効なPositionSizingMethodである必要があります")
+            errors.append(  # type: ignore[unreachable]
+                "methodは有効なPositionSizingMethodである必要があります"
+            )
 
         # NUMERIC_RANGESを使用して検証（config非依存）
         for field_name, (min_val, max_val) in self.NUMERIC_RANGES.items():

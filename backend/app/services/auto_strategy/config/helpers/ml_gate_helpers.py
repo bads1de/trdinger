@@ -66,7 +66,7 @@ def _resolve_model_path(*candidates: Any) -> str | None:
     return None
 
 
-def resolve_ml_gate_settings(source: Mapping[str, Any]) -> MLGateSettings:
+def resolve_ml_gate_settings(source: object) -> MLGateSettings:
     """
     volatility gate 設定を共通形に解決する
 

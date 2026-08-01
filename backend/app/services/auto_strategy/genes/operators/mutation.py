@@ -11,9 +11,10 @@ import logging
 import random
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 from ...config.ga.ga_config import GAConfig
-from ..conditions import ConditionGroup
+from ..conditions import Condition, ConditionGroup
 from ..entry import EntryGene, create_random_entry_gene
 from ..exit import ExitGene, create_random_exit_gene
 from ..position_sizing import (
@@ -145,7 +146,7 @@ def _iter_mutable_sub_gene_specs(
     return specs
 
 
-def mutate_indicators(mutated, mutation_rate: float, config: GAConfig) -> None:
+def mutate_indicators(mutated: StrategyGene, mutation_rate: float, config: GAConfig) -> None:
     """指標遺伝子の突然変異処理。"""
     min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
@@ -244,10 +245,10 @@ def mutate_indicators(mutated, mutation_rate: float, config: GAConfig) -> None:
             mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
 
-def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
+def mutate_conditions(mutated: StrategyGene, mutation_rate: float, config: GAConfig) -> None:
     """条件の突然変異処理。"""
 
-    def mutate_item(condition):
+    def mutate_item(condition: Condition | ConditionGroup) -> None:
         if isinstance(condition, ConditionGroup):
             if (
                 random.random()
@@ -269,7 +270,7 @@ def mutate_conditions(mutated, mutation_rate: float, config: GAConfig) -> None:
         mutation_rate * config.mutation_config.condition_change_multiplier
     )
 
-    def maybe_mutate_branch(conditions):
+    def maybe_mutate_branch(conditions: list[Condition | ConditionGroup]) -> None:
         if (
             conditions
             and random.random() < config.mutation_config.condition_selection_probability
@@ -420,7 +421,7 @@ def mutate_strategy_gene_batch(
 ) -> list[object]:
     """StrategyGene の突然変異をバッチで実行する。"""
     return [
-        mutate_strategy_gene(  # type: ignore[arg-type]
+        mutate_strategy_gene(
             individual,  # type: ignore[arg-type]
             config,
             mutation_rate=mutation_rate,
@@ -430,11 +431,11 @@ def mutate_strategy_gene_batch(
 
 
 def adaptive_mutate_strategy_gene(
-    gene,
-    population,
+    gene: StrategyGene,
+    population: list[Any],
     config: GAConfig,
     base_mutation_rate: float = 0.1,
-):
+) -> StrategyGene:
     """集団分散に基づく適応的突然変異。"""
     try:
         fitnesses = []

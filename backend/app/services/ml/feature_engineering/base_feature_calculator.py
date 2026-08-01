@@ -71,7 +71,7 @@ class BaseFeatureCalculator(ABC):
     - 共通の計算パターン
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         初期化
         """
@@ -220,7 +220,7 @@ class BaseFeatureCalculator(ABC):
         if isinstance(numerators, pd.Series) and isinstance(denominators, pd.Series):
             safe_denominators = denominators.replace(0, np.nan)
             result = numerators / safe_denominators
-            return result.fillna(fill_value)  # type: ignore[attr-defined,union-attr]
+            return result.fillna(fill_value)
 
         return {} if isinstance(numerators, dict) else pd.Series(dtype=float)
 

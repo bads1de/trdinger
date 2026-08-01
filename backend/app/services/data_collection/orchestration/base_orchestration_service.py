@@ -7,6 +7,7 @@
 """
 
 import logging
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -54,7 +55,9 @@ class BaseDataCollectionOrchestrationService:
             return None
 
     @contextmanager
-    def _get_db_session(self, db_session: Session | None = None):
+    def _get_db_session(
+        self, db_session: Session | None = None
+    ) -> Iterator[Session]:
         """
         データベースセッションを取得するコンテキストマネージャ
 

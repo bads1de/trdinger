@@ -8,7 +8,13 @@ from datetime import datetime
 from math import isclose
 from typing import Any, Literal, cast
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from app.config.constants import SUPPORTED_TIMEFRAMES
 from app.services.backtest.shared import (
@@ -56,7 +62,7 @@ class StrategyConfig(BaseModel):
 
     @field_validator("parameters", mode="before")
     @classmethod
-    def validate_parameters(cls, v, info):
+    def validate_parameters(cls, v: Any, info: ValidationInfo) -> Any:
         """strategy_typeに基づいてパラメータを適切なモデルに変換"""
         strategy_type = info.data.get("strategy_type")
 
@@ -124,7 +130,7 @@ class BacktestRunConfig(BaseModel):
 
     @field_validator("start_date", "end_date", mode="before")
     @classmethod
-    def parse_datetime(cls, v):
+    def parse_datetime(cls, v: Any) -> Any:
         """日付文字列をdatetimeオブジェクトに変換"""
         if isinstance(v, str):
             return parse_datetime_value(v)

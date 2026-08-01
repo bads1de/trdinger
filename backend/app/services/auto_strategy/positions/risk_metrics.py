@@ -7,7 +7,7 @@ from collections.abc import Iterable
 import numpy as np
 
 
-def _prepare_returns(raw_returns: Iterable[float]) -> np.ndarray:
+def _prepare_returns(raw_returns: Iterable[float] | None) -> np.ndarray:
     """計算用にリターン配列を整形"""
 
     if raw_returns is None:
@@ -21,7 +21,7 @@ def _prepare_returns(raw_returns: Iterable[float]) -> np.ndarray:
     if array.size == 0:
         return array
 
-    return array[np.isfinite(array)]
+    return np.asarray(array[np.isfinite(array)])
 
 
 def _clamp_confidence(confidence: float) -> float:

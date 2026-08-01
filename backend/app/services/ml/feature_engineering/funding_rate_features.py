@@ -70,7 +70,7 @@ class FundingRateFeatureCalculator:
             right_on="timestamp",
             direction="backward",
         )
-        merged.index = merged["__orig_index__"]  # type: ignore[reportAttributeAccessIssue]
+        merged.index = merged["__orig_index__"]
         res["funding_rate"] = merged["funding_rate"].fillna(self.baseline_rate)
 
         # 2. 数値加工 (ベクトル化)
@@ -82,7 +82,7 @@ class FundingRateFeatureCalculator:
         res["fr_lag_3p"] = res["fr_bps"].shift(3 * self.settlement_interval)
 
         # 周期
-        h = pd.DatetimeIndex(res.index).hour % self.settlement_interval  # type: ignore[reportAttributeAccessIssue]
+        h = pd.DatetimeIndex(res.index).hour % self.settlement_interval
         res["fr_cycle_sin"] = np.sin(2 * np.pi * h / self.settlement_interval)
         res["fr_cycle_cos"] = np.cos(2 * np.pi * h / self.settlement_interval)
 

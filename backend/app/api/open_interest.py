@@ -5,6 +5,8 @@
 オープンインタレスト（建玉残高）データの取得・収集機能を提供します。
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -34,7 +36,7 @@ async def get_open_interest_data(
         get_open_interest_orchestration_service
     ),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     オープンインタレストデータを取得します
 
@@ -77,7 +79,7 @@ async def collect_open_interest_data(
         get_open_interest_orchestration_service
     ),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     オープンインタレストデータを収集してデータベースに保存します
 
@@ -110,7 +112,7 @@ async def bulk_collect_open_interest(
         get_open_interest_orchestration_service
     ),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     BTCシンボルのオープンインタレストデータを一括収集します
 

@@ -175,7 +175,7 @@ class StrategyGene:
         return tuple(
             field_info.name
             for field_info in fields(cls)
-            if field_info.name != "id"  # type: ignore[arg-type]
+            if field_info.name != "id"
         )
 
     @classmethod

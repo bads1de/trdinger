@@ -90,7 +90,7 @@ class MetricsCalculator:
         """
         # pd.Series の場合は numpy 配列に変換
         if hasattr(y_true, "values"):
-            y_true = y_true.values  # type: ignore[reportAttributeAccessIssue]
+            y_true = y_true.values
 
         if level == "full":
             logger.info("📊 包括的な評価指標を計算中(Full)...")

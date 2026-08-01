@@ -32,11 +32,11 @@ def _validate_series_bundle(series_map: Mapping[str, pd.Series]) -> pd.Index:
 def _to_float_array(series: pd.Series) -> np.ndarray:
     """Coerce a pandas Series to a float64 numpy array."""
     coerced = pd.to_numeric(series, errors="coerce")
-    return cast(pd.Series, coerced).to_numpy(dtype=np.float64, copy=False)
+    return np.asarray(cast(pd.Series, coerced).to_numpy(dtype=np.float64, copy=False))
 
 
 @njit(parallel=True, cache=True)
-def _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length):
+def _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length):  # type: ignore[no-untyped-def]
     """Numba accelerated Yang-Zhang volatility loop."""
     n = len(open_arr)
     result = np.full(n, np.nan, dtype=np.float64)
@@ -91,7 +91,7 @@ def _njit_yang_zhang_loop(open_arr, high_arr, low_arr, close_arr, length):
 
 
 @njit(parallel=True, cache=True)
-def _njit_parkinson_loop(high_arr, low_arr, length):
+def _njit_parkinson_loop(high_arr, low_arr, length):  # type: ignore[no-untyped-def]
     """Numba accelerated Parkinson volatility loop."""
     n = len(high_arr)
     result = np.full(n, np.nan, dtype=np.float64)
@@ -115,7 +115,7 @@ def _njit_parkinson_loop(high_arr, low_arr, length):
 
 
 @njit(parallel=True, cache=True)
-def _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length):
+def _njit_garman_klass_loop(open_arr, high_arr, low_arr, close_arr, length):  # type: ignore[no-untyped-def]
     """Numba accelerated Garman-Klass volatility loop."""
     n = len(open_arr)
     result = np.full(n, np.nan, dtype=np.float64)

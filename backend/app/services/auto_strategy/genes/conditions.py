@@ -112,11 +112,9 @@ class ConditionGroup:
                 ok, _ = validator.validate_condition(c)
                 if not ok:
                     return False
-            elif isinstance(c, ConditionGroup):
+            else:
                 if not c.validate():
                     return False
-            else:
-                return False
         return True
 
     def clone(self) -> ConditionGroup:
@@ -135,7 +133,7 @@ class StateTracker:
     バーインデックスを記録し、過去Nバー以内に発生したかを判定します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         self._events: dict[str, int] = {}  # event_name -> last_triggered_bar_index
 
@@ -239,18 +237,6 @@ class StatefulCondition:
         # cooldown_bars のチェック
         if self.cooldown_bars < 0:
             errors.append("cooldown_bars must be non-negative")
-
-        # trigger_condition のチェック
-        if self.trigger_condition is None:
-            errors.append("trigger_condition is required")
-        elif not isinstance(self.trigger_condition, Condition):
-            errors.append("trigger_condition must be a Condition instance")
-
-        # follow_condition のチェック
-        if self.follow_condition is None:
-            errors.append("follow_condition is required")
-        elif not isinstance(self.follow_condition, Condition):
-            errors.append("follow_condition must be a Condition instance")
 
         return len(errors) == 0, errors
 

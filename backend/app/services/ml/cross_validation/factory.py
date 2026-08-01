@@ -7,7 +7,7 @@ CV スプリッター ファクトリー
 import logging
 
 import pandas as pd
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import BaseCrossValidator, KFold, StratifiedKFold
 
 from .purged_kfold import PurgedKFold
 
@@ -89,7 +89,7 @@ def create_temporal_cv_splitter(
     pct_embargo: float = 0.01,
     horizon_n: int | None = None,
     timeframe: str | None = None,
-):
+) -> BaseCrossValidator:
     """時系列向けのCV splitterを一元生成する。
 
     指定された戦略に応じて、適切なクロスバリデーション分割器を

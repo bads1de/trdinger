@@ -50,7 +50,7 @@ class TechnicalIndicatorService:
         "fundingrate",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         TechnicalIndicatorServiceを初期化
 

@@ -5,6 +5,7 @@ IndicatorCompositionService
 
 import logging
 import random
+from typing import Any
 
 from app.services.indicators import TechnicalIndicatorService
 
@@ -29,7 +30,7 @@ class IndicatorCompositionService:
     MA_PERIOD_CHOICES = [10, 14, 20, 30, 50]
     DEFAULT_MA_PERIOD = 20
 
-    def __init__(self, config):
+    def __init__(self, config: Any) -> None:
         self.config = config
         self.indicator_service = TechnicalIndicatorService()
 
@@ -159,7 +160,7 @@ class IndicatorCompositionService:
             logger.error(f"MA選択エラー: {e}")
             return None
 
-    def _remove_non_ma_indicator(self, indicators: list[IndicatorGene]):
+    def _remove_non_ma_indicator(self, indicators: list[IndicatorGene]) -> None:
         """非MA指標を1つ削除"""
         for i, ind in enumerate(indicators):
             if ind.type not in MOVING_AVERAGE_INDICATORS:

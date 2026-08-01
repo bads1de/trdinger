@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from .orchestration.ml_training_orchestration_service import (
@@ -29,7 +29,7 @@ def __getattr__(name: str) -> type:
     module = import_module(module_path, __name__)
     value = getattr(module, name)
     globals()[name] = value
-    return value
+    return cast(type, value)
 
 
 def __dir__() -> list[str]:

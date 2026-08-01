@@ -20,6 +20,10 @@ from sklearn.preprocessing import LabelEncoder
 
 from .dtype_optimizer import optimize_dataframe_dtypes
 
+# sklearn の Transformer は X/y が任意の型を受け取るため Any で受ける
+_X = Any
+_Y = Any
+
 
 class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
     """
@@ -29,7 +33,12 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
     中央値で置換することで外れ値を除去します。
     """
 
-    def __init__(self, method="isolation_forest", contamination=0.1, **kwargs):
+    def __init__(
+        self,
+        method: str = "isolation_forest",
+        contamination: float = 0.1,
+        **kwargs: Any,
+    ):
         """
         初期化
 
@@ -40,9 +49,9 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
         """
         self.method = method
         self.contamination = contamination
-        self.detector_ = None
+        self.detector_: Any = None
 
-    def fit(self, X, y=None):
+    def fit(self, X: _X, y: _Y = None) -> "OutlierRemovalTransformer":
         """
         外れ値検出器を適合させる
 
@@ -62,7 +71,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
             self.detector_.fit(X)
         return self
 
-    def transform(self, X):
+    def transform(self, X: _X) -> _X:
         """
         外れ値を中央値で置換して変換
 
@@ -103,7 +112,7 @@ class OutlierRemovalTransformer(BaseEstimator, TransformerMixin):
                     X_transformed[outlier_mask, i] = col_median
             return X_transformed
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> Any:
         """
         変換の出力特徴名を取得
 
@@ -123,7 +132,7 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
     カテゴリ変数を数値にエンコードします。
     """
 
-    def __init__(self, encoding_type="label", **kwargs):
+    def __init__(self, encoding_type: str = "label", **kwargs: Any):
         """
         初期化
 
@@ -132,9 +141,9 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
             **kwargs: 互換性維持のために無視される追加パラメータ
         """
         self.encoding_type = encoding_type
-        self.encoders_ = {}
+        self.encoders_: dict[Any, LabelEncoder] = {}
 
-    def fit(self, X, y=None):
+    def fit(self, X: _X, y: _Y = None) -> "CategoricalEncoderTransformer":
         """
         エンコーダーを適合させる
 
@@ -160,7 +169,7 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
                 self.encoders_[col] = encoder
         return self
 
-    def transform(self, X):
+    def transform(self, X: _X) -> _X:
         """
         カテゴリ変数をエンコードして変換
 
@@ -182,7 +191,7 @@ class CategoricalEncoderTransformer(BaseEstimator, TransformerMixin):
             return X_encoded
         return X
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> Any:
         """
         変換の出力特徴名を取得
 
@@ -202,7 +211,7 @@ class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
     DataFrameのdtypeを最適化してメモリ効率を向上させます。
     """
 
-    def fit(self, X, y=None):
+    def fit(self, X: _X, y: _Y = None) -> "DtypeOptimizerTransformer":
         """
         fitは何もしない（dtype最適化はtransformのみ）
 
@@ -215,7 +224,7 @@ class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
         """
         return self
 
-    def transform(self, X):
+    def transform(self, X: _X) -> _X:
         """
         dtypeを最適化して変換
 
@@ -235,7 +244,7 @@ class DtypeOptimizerTransformer(BaseEstimator, TransformerMixin):
             )
         return X
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> Any:
         """
         変換の出力特徴名を取得
 
@@ -260,10 +269,10 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
 
     def __init__(
         self,
-        strategy="most_frequent",
-        fill_value="Unknown",
-        encoding=True,
-        categorical_encoding="label",
+        strategy: str = "most_frequent",
+        fill_value: str = "Unknown",
+        encoding: bool = True,
+        categorical_encoding: str = "label",
     ):
         """
         初期化
@@ -278,10 +287,10 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
         self.fill_value = fill_value
         self.encoding = encoding
         self.categorical_encoding = categorical_encoding
-        self.imputer_ = None
-        self.encoder_ = None
+        self.imputer_: Any = None
+        self.encoder_: Any = None
 
-    def fit(self, X, y=None):
+    def fit(self, X: _X, y: _Y = None) -> "CategoricalPipelineTransformer":
         """
         ImputerとEncoderを適合させる
 
@@ -308,7 +317,7 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, X):
+    def transform(self, X: _X) -> _X:
         """
         欠損値補間とエンコーディングを適用して変換
 
@@ -352,7 +361,7 @@ class CategoricalPipelineTransformer(BaseEstimator, TransformerMixin):
             return result
         return X
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> Any:
         """
         変換の出力特徴名を取得
 
@@ -381,7 +390,7 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
         >>> X_transformed = transformer.fit_transform(X)
     """
 
-    def __init__(self, numeric_pipeline, categorical_pipeline):
+    def __init__(self, numeric_pipeline: Any, categorical_pipeline: Any):
         """混合型トランスフォーマーを初期化する。
 
         Args:
@@ -392,8 +401,10 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
         """
         self.numeric_pipeline = numeric_pipeline
         self.categorical_pipeline = categorical_pipeline
+        self.numeric_columns_: list[str] | None = None
+        self.categorical_columns_: list[str] | None = None
 
-    def fit(self, X, y=None):
+    def fit(self, X: _X, y: _Y = None) -> "MixedTypeTransformer":
         """
         数値・カテゴリパイプラインを適合させる
 
@@ -430,7 +441,7 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
 
         return self
 
-    def transform(self, X):
+    def transform(self, X: _X) -> _X:
         """数値・カテゴリパイプラインを変換する。
 
         入力データを数値カラムとカテゴリカルカラムに分割し、
@@ -526,7 +537,7 @@ class MixedTypeTransformer(BaseEstimator, TransformerMixin):
             # For numpy arrays
             return self.numeric_pipeline.transform(X)
 
-    def get_feature_names_out(self, input_features=None):
+    def get_feature_names_out(self, input_features: Any = None) -> Any:
         """
         変換の出力特徴名を取得
 

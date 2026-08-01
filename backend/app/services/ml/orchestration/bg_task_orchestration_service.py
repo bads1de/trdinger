@@ -8,7 +8,7 @@ import gc
 import logging
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from typing import Any
 from uuid import uuid4
@@ -23,7 +23,7 @@ class BackgroundTaskManager:
     メモリリークを防ぎ、適切なリソース管理を行います。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._active_tasks: dict[str, dict[str, Any]] = {}
         self._task_resources: dict[str, list[Any]] = {}
         self._cleanup_callbacks: dict[str, list[Callable[[], None]]] = {}
@@ -65,7 +65,7 @@ class BackgroundTaskManager:
         logger.info(f"バックグラウンドタスク登録: {task_name} (ID: {task_id})")
         return task_id
 
-    def unregister_task(self, task_id: str, force_cleanup: bool = True):
+    def unregister_task(self, task_id: str, force_cleanup: bool = True) -> None:
         """
         バックグラウンドタスクの登録を解除
 
@@ -99,7 +99,7 @@ class BackgroundTaskManager:
                 f"メモリ変化: {memory_diff:+.2f}MB"
             )
 
-    def _cleanup_task_resources(self, task_id: str):
+    def _cleanup_task_resources(self, task_id: str) -> None:
         """タスクのリソースをクリーンアップ"""
         try:
             # コールバック実行
@@ -128,7 +128,7 @@ class BackgroundTaskManager:
         task_name: str,
         resources: list[Any] | None = None,
         cleanup_callbacks: list[Callable[[], None]] | None = None,
-    ):
+    ) -> Iterator[str]:
         """
         管理されたバックグラウンドタスクのコンテキストマネージャー
 
@@ -148,7 +148,7 @@ class BackgroundTaskManager:
         finally:
             self.unregister_task(task_id, force_cleanup=True)
 
-    def cleanup_all_tasks(self):
+    def cleanup_all_tasks(self) -> None:
         """
         すべてのアクティブなタスクをクリーンアップ
         """

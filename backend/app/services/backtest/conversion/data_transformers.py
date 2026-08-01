@@ -125,7 +125,7 @@ class TradeHistoryTransformer:
                 "return_pct",
                 "duration",
             ]
-            return df[result_cols].to_dict("records")
+            return cast(list[dict[str, Any]], df[result_cols].to_dict("records"))
         except Exception as e:
             logger.warning(f"取引履歴の変換中にエラー: {e}")
             return []
@@ -174,7 +174,7 @@ class EquityCurveTransformer:
             ).fillna(0.0)
 
             result_cols = ["timestamp", "equity", "drawdown"]
-            return df[result_cols].to_dict("records")
+            return cast(list[dict[str, Any]], df[result_cols].to_dict("records"))
         except Exception as e:
             logger.warning(f"エクイティカーブの変換中にエラー: {e}")
             return []

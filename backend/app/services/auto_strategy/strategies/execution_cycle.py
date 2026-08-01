@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 import pandas as pd
 
@@ -12,7 +12,7 @@ import pandas as pd
 class StrategyExecutionCycle:
     """バー単位の前処理、既存ポジション処理、新規エントリー判定をまとめる。"""
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any) -> None:
         self.strategy = strategy
 
     def run_current_bar(self) -> None:

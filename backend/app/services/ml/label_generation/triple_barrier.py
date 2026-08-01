@@ -8,7 +8,7 @@ from numba import njit
 logger = logging.getLogger(__name__)
 
 
-@njit
+@njit  # type: ignore[untyped-decorator]
 def _process_events_numba(
     close_vals: np.ndarray,
     close_times: np.ndarray,  # int64 inputs

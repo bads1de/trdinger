@@ -47,7 +47,7 @@ class ExperimentManager:
         experiment_id: str,
         ga_config: GAConfig,
         backtest_config: dict[str, Any],
-    ):
+    ) -> None:
         """
         GA実験を非同期（バックグラウンド）実行の文脈で処理
 
@@ -66,7 +66,7 @@ class ExperimentManager:
             current_generation: int,
             total_generations: int,
             best_fitness: float | None,
-        ):
+        ) -> None:
             """各世代終了時に進捗をDBに更新する。"""
             try:
                 self.persistence_service.update_experiment_progress(
@@ -81,7 +81,7 @@ class ExperimentManager:
                 )
 
         @safe_operation(context=f"GA実験実行 ({experiment_id})", is_api_call=False)
-        def _execute():
+        def _execute() -> None:
             engine = self._get_active_engine(experiment_id)
             if not engine:
                 raise RuntimeError(f"GAエンジンが初期化されていません: {experiment_id}")

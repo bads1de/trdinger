@@ -9,7 +9,7 @@ from numba import njit, prange
 from ...data_validation import handle_pandas_ta_errors, validate_series_params
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_connors_rsi_loop(
     prices: np.ndarray,
     rsi_periods: int,

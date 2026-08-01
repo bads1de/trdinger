@@ -63,14 +63,14 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
 
         # 1. 周期性特徴量 (Cyclical Encoding)
         # 23時から0時への連続性をモデルに理解させる
-        new_features["time_hour_sin"] = np.sin(2 * np.pi * index.hour / 24)  # type: ignore[reportAttributeAccessIssue]
-        new_features["time_hour_cos"] = np.cos(2 * np.pi * index.hour / 24)  # type: ignore[reportAttributeAccessIssue]
-        new_features["time_day_sin"] = np.sin(2 * np.pi * index.dayofweek / 7)  # type: ignore[reportAttributeAccessIssue]
-        new_features["time_day_cos"] = np.cos(2 * np.pi * index.dayofweek / 7)  # type: ignore[reportAttributeAccessIssue]
+        new_features["time_hour_sin"] = np.sin(2 * np.pi * index.hour / 24)
+        new_features["time_hour_cos"] = np.cos(2 * np.pi * index.hour / 24)
+        new_features["time_day_sin"] = np.sin(2 * np.pi * index.dayofweek / 7)
+        new_features["time_day_cos"] = np.cos(2 * np.pi * index.dayofweek / 7)
 
         # 2. 市場セッション (UTC基準)
         # 仮想通貨は24時間動くが、法定通貨ペアや機関投資家の動きは主要市場に依存する
-        hours = index.hour  # type: ignore[reportAttributeAccessIssue]
+        hours = index.hour
         # アジア (東京/香港): 00:00 - 09:00 UTC
         new_features["time_session_asia"] = ((hours >= 0) & (hours < 9)).astype(int)
         # 欧州 (ロンドン): 08:00 - 16:00 UTC
@@ -84,21 +84,21 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
 
         # 3. カレンダーアノマリー
         # 週末フラグ (土日)
-        new_features["time_is_weekend"] = (index.dayofweek >= 5).astype(int)  # type: ignore[reportAttributeAccessIssue]
+        new_features["time_is_weekend"] = (index.dayofweek >= 5).astype(int)
 
         # 月末フラグ (最後の3日間)
         # カレンダー上の最後の3日間をフラグ化
         new_features["time_is_month_end"] = (
-            index.day >= (index.days_in_month - 2)  # type: ignore[reportAttributeAccessIssue]
+            index.day >= (index.days_in_month - 2)
         ).astype(int)
 
         # 週初め・週末の特定の動き (月曜の窓埋め、金曜の手仕舞い)
-        new_features["time_is_monday"] = (index.dayofweek == 0).astype(int)  # type: ignore[reportAttributeAccessIssue]
-        new_features["time_is_friday"] = (index.dayofweek == 4).astype(int)  # type: ignore[reportAttributeAccessIssue]
+        new_features["time_is_monday"] = (index.dayofweek == 0).astype(int)
+        new_features["time_is_friday"] = (index.dayofweek == 4).astype(int)
 
         # 4. 特定の時間帯のボラティリティ傾向 (ダミーフラグ)
         # 00:00 UTC (日足確定前後)
-        new_features["time_is_daily_close"] = (index.hour == 0).astype(int)  # type: ignore[reportAttributeAccessIssue]
+        new_features["time_is_daily_close"] = (index.hour == 0).astype(int)
 
         # 5. 相互作用特徴量 (Interaction Features)
         # 時間帯ごとの出来高やボラティリティの強さを捉える
@@ -172,7 +172,7 @@ class TimeAnomalyFeatures(BaseFeatureCalculator):
 
         # 8. イベント経過時間 (Time Since Session Start)
         # 開始直後か、終了間際かを連続値で表現
-        hours = index.hour  # type: ignore[reportAttributeAccessIssue]
+        hours = index.hour
         # 東京開始(0)からの経過
         new_features["time_since_tokyo"] = hours % 24
         # ロンドン開始(8)からの経過

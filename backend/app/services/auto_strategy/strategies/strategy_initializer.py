@@ -7,7 +7,7 @@ UniversalStrategy.init() に集約されていた初期化責務を分離する�
 from __future__ import annotations
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class StrategyInitializer:
     """UniversalStrategy の初期化フローを担当するクラス。"""
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any) -> None:
         self.strategy = strategy
 
     def initialize(self) -> None:
@@ -137,7 +137,7 @@ class StrategyInitializer:
         self,
         cache: dict,
         direction: float,
-        signal,
+        signal: Any,
     ) -> None:
         """ベクトル化できたシグナルだけをキャッシュする。"""
         if signal is None:

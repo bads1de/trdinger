@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 from backtesting import Strategy
 
@@ -129,7 +129,9 @@ class AutoStrategyLoader:
         # UniversalStrategyクラスを返す
         return UniversalStrategy
 
-    def _extract_strategy_gene(self, strategy_config: dict[str, SerializableValue]):
+    def _extract_strategy_gene(
+        self, strategy_config: dict[str, SerializableValue]
+    ) -> Any:
         """戦略設定から戦略遺伝子を抽出"""
         # 直接strategy_geneがある場合
         gene_data = strategy_config.get("strategy_gene")
@@ -148,7 +150,7 @@ class AutoStrategyLoader:
         # StrategyGene オブジェクトが直接渡された場合（to_dictメソッドがある場合）
         if gene_data is not None:
             if hasattr(gene_data, "to_dict"):
-                return gene_data.to_dict()  # type: ignore[return-value]
+                return gene_data.to_dict()
             raise AutoStrategyLoaderError(
                 f"戦略遺伝子の形式が不正です。dict または to_dict() メソッドを持つオブジェクトが必要です: {type(gene_data)}"
             )

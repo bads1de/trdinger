@@ -182,9 +182,26 @@ follow_imports = "silent"
 
 [[tool.mypy.overrides]]
 module = [
-    "ccxt.*",
     "pandas.*",
     "numpy.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "backtesting",
+    "backtesting.*",
+    "catboost",
+    "ccxt",
+    "ccxt.*",
+    "deap",
+    "deap.*",
+    "joblib",
+    "numba",
+    "pandas_ta_classic",
+    "psutil",
+    "scipy.*",
+    "sklearn.*",
 ]
 ignore_missing_imports = true
 

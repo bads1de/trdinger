@@ -64,7 +64,7 @@ class OptunaOptimizer:
     Study オブジェクトのライフサイクル管理とメモリクリーンアップ機能を備えています。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         self.study: optuna.Study | None = None
 
@@ -147,7 +147,7 @@ class OptunaOptimizer:
         return result
 
     @safe_operation(context="Optunaリソースクリーンアップ", is_api_call=False)
-    def cleanup(self):
+    def cleanup(self) -> None:
         """
         Optuna インスタンスが保持するリソースをクリーンアップ
 
@@ -168,7 +168,7 @@ class OptunaOptimizer:
 
             gc.collect()
 
-    def __del__(self):
+    def __del__(self) -> None:
         """デストラクタでクリーンアップを確実に実行"""
         try:
             self.cleanup()

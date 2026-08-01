@@ -171,7 +171,9 @@ class BacktestService:
         """dict / Pydantic モデルどちらからでもバックテスト設定を組み立てる。"""
         return build_execution_config(request)
 
-    def execute_and_save_backtest(self, request, db_session: Session) -> dict[str, Any]:
+    def execute_and_save_backtest(
+        self, request: Any, db_session: Session
+    ) -> dict[str, Any]:
         """
         バックテストを実行し、その結果をデータベースに永続化します（Web API向け）。
 

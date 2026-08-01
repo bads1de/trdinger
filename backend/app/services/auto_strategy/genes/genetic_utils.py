@@ -7,19 +7,11 @@
 from __future__ import annotations
 
 import random
-from typing import Protocol, TypeVar
+from typing import Any, TypeVar, cast
 
 from app.types import SerializableValue
 
 T = TypeVar("T")
-
-
-class Cloneable(Protocol):
-    """Protocol for objects that can be cloned."""
-
-    def clone(self) -> Cloneable:
-        """Return a copy of this object."""
-        ...
 
 
 class GeneticUtils:
@@ -57,7 +49,9 @@ class GeneticUtils:
         return child1_metadata, child2_metadata
 
     @staticmethod
-    def prepare_crossover_metadata(strategy_parent1, strategy_parent2):
+    def prepare_crossover_metadata(
+        strategy_parent1: Any, strategy_parent2: Any
+    ) -> tuple[dict[str, SerializableValue], dict[str, SerializableValue]]:
         """
         戦略遺伝子交叉用のメタデータ作成ユーティリティ
 
@@ -76,7 +70,7 @@ class GeneticUtils:
         )
 
     @staticmethod
-    def _extract_gene_params(gene) -> dict[str, object]:
+    def _extract_gene_params(gene: Any) -> dict[str, object]:
         """
         遺伝子オブジェクトからパラメータを抽出（slots/dict両対応）
 
@@ -111,7 +105,7 @@ class GeneticUtils:
         return params
 
     @staticmethod
-    def extract_gene_params(gene) -> dict[str, object]:
+    def extract_gene_params(gene: Any) -> dict[str, object]:
         """遺伝子オブジェクトから公開フィールドを抽出"""
         return GeneticUtils._extract_gene_params(gene)
 
@@ -133,7 +127,7 @@ class GeneticUtils:
         """
         clone_method = getattr(value, "clone", None)
         if callable(clone_method):
-            return clone_method()
+            return cast(SerializableValue | object, clone_method())
         if isinstance(value, list):
             return [GeneticUtils.smart_copy(item) for item in value]
         if isinstance(value, dict):
@@ -144,7 +138,7 @@ class GeneticUtils:
     def crossover_optional_gene(
         parent1_gene: T | None,
         parent2_gene: T | None,
-        gene_class: type,
+        gene_class: Any,
     ) -> tuple[T | None, T | None]:
         """
         オプショナルな遺伝子の交叉を実行する汎用ヘルパー。
@@ -162,17 +156,26 @@ class GeneticUtils:
             (child1_gene, child2_gene) のタプル
         """
         if parent1_gene and parent2_gene:
-            return gene_class.crossover(parent1_gene, parent2_gene)  # type: ignore[attr-defined]
+            return cast(
+                tuple[T | None, T | None],
+                gene_class.crossover(parent1_gene, parent2_gene),
+            )
         if parent1_gene:
-            return parent1_gene.clone(), parent1_gene.clone()  # type: ignore[attr-defined]
+            return cast(
+                tuple[T | None, T | None],
+                (parent1_gene.clone(), parent1_gene.clone()),  # type: ignore[attr-defined]
+            )
         if parent2_gene:
-            return parent2_gene.clone(), parent2_gene.clone()  # type: ignore[attr-defined]
+            return cast(
+                tuple[T | None, T | None],
+                (parent2_gene.clone(), parent2_gene.clone()),  # type: ignore[attr-defined]
+            )
         return None, None
 
     @staticmethod
     def copy_conditions(
-        conditions: list[SerializableValue | object],
-    ) -> list[SerializableValue | object]:
+        conditions: list[Any],
+    ) -> list[Any]:
         """
         条件リストをスマートコピーする。
 
@@ -186,8 +189,8 @@ class GeneticUtils:
 
     @staticmethod
     def copy_stateful_conditions(
-        conditions: list[Cloneable],
-    ) -> list[Cloneable]:
+        conditions: list[Any],
+    ) -> list[Any]:
         """
         ステートフル条件をクローンする。
 
@@ -200,7 +203,7 @@ class GeneticUtils:
         return [c.clone() for c in conditions]
 
     @staticmethod
-    def copy_tool_genes(tools: list[Cloneable]) -> list[Cloneable]:
+    def copy_tool_genes(tools: list[Any]) -> list[Any]:
         """
         ツール遺伝子リストをクローンする。
 
@@ -214,13 +217,13 @@ class GeneticUtils:
 
     @staticmethod
     def crossover_generic_genes(
-        parent1_gene,
-        parent2_gene,
-        gene_class,
+        parent1_gene: Any,
+        parent2_gene: Any,
+        gene_class: Any,
         numeric_fields: list[str] | None = None,
         enum_fields: list[str] | None = None,
         choice_fields: list[str] | None = None,
-    ):
+    ) -> tuple[Any, Any]:
         """
         複数種類のフィールドを持つ汎用遺伝子の交叉を実行
 
@@ -293,13 +296,13 @@ class GeneticUtils:
 
     @staticmethod
     def mutate_generic_gene(
-        gene,
-        gene_class,
+        gene: Any,
+        gene_class: Any,
         mutation_rate: float = 0.1,
         numeric_fields: list[str] | None = None,
         enum_fields: list[str] | None = None,
         numeric_ranges: dict[str, tuple[float, float]] | None = None,
-    ):
+    ) -> Any:
         """
         汎用遺伝子の突然変異を実行
 
@@ -358,7 +361,7 @@ class GeneticUtils:
                     enum_class = current_enum.__class__
                     # ランダムに別の値を選択
                     mutated_params[field] = random.choice(
-                        list(enum_class.__members__.values())  # type: ignore[attr-defined]
+                        list(enum_class.__members__.values())
                     )
 
         return gene_class(**mutated_params)

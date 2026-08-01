@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import cast
+from typing import Any, cast
 
 from ..config.constants import EntryType
 from ..genes import Condition, ConditionGroup, TPSLGene, TPSLMethod
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class EntryDecisionEngine:
     """エントリー方向の決定と注文実行を担当するクラス。"""
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any):
         self.strategy = strategy
 
     def determine_entry_direction(self) -> float:
@@ -119,12 +119,15 @@ class EntryDecisionEngine:
         if not conditions:
             return False
 
-        return self.strategy.condition_evaluator.evaluate_conditions(
-            conditions,
-            self.strategy,
+        return cast(
+            bool,
+            self.strategy.condition_evaluator.evaluate_conditions(
+                conditions,
+                self.strategy,
+            ),
         )
 
-    def _get_cached_entry_signal(self, direction: float):
+    def _get_cached_entry_signal(self, direction: float) -> Any:
         """キャッシュされたエントリーシグナルを安全に取得する。"""
         cached = getattr(self.strategy, "_precomputed_signals", None)
         if not isinstance(cached, dict):
@@ -280,7 +283,7 @@ class EntryDecisionEngine:
             return None, None
 
         market_data = {}
-        tpsl_method = active_tpsl_gene.method  # type: ignore[attr-defined]
+        tpsl_method = active_tpsl_gene.method
         if tpsl_method in (
             TPSLMethod.VOLATILITY_BASED,
             TPSLMethod.ADAPTIVE,
@@ -313,11 +316,14 @@ class EntryDecisionEngine:
                         for h, low_val, c in zip(highs, lows, closes, strict=False)
                     ]
 
-        return self.strategy.tpsl_service.calculate_tpsl_prices(
-            current_price=current_price,
-            tpsl_gene=active_tpsl_gene,
-            position_direction=direction,
-            market_data=market_data,
+        return cast(
+            tuple[float | None, float | None],
+            self.strategy.tpsl_service.calculate_tpsl_prices(
+                current_price=current_price,
+                tpsl_gene=active_tpsl_gene,
+                position_direction=direction,
+                market_data=market_data,
+            ),
         )
 
     def tools_block_entry(self) -> bool:

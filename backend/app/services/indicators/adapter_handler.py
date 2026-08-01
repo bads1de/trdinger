@@ -69,7 +69,7 @@ class AdapterHandler:
                 f"Adapter function is not available for indicator {indicator_type}"
             )
 
-        adapter_function = cast(Callable[..., Any], config.adapter_function)
+        adapter_function = config.adapter_function
 
         required_data = self._prepare_adapter_data(df, config)
         converted_params, required_data = self._map_adapter_params(
@@ -77,11 +77,8 @@ class AdapterHandler:
         )
         all_args = {**required_data, **converted_params}
 
-        return cast(
-            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
-            self._call_adapter_function(
-                adapter_function, all_args, indicator_type, config
-            ),
+        return self._call_adapter_function(
+            adapter_function, all_args, indicator_type, config
         )
 
     def _prepare_adapter_data(
@@ -178,7 +175,7 @@ class AdapterHandler:
         Returns:
             Any: 整列・変換された計算結果
         """
-        sig = inspect.signature(cast(Callable[..., Any], adapter_function))
+        sig = inspect.signature(adapter_function)
 
         series_data = {
             k: v
@@ -217,10 +214,7 @@ class AdapterHandler:
                 fallback_input, {"function": indicator_type}
             )
 
-        result = cast(
-            np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
-            self._align_adapter_result(result, reference_index),
-        )
+        result = self._align_adapter_result(result, reference_index)
 
         return cast(
             np.ndarray | tuple[np.ndarray, ...] | pd.DataFrame | pd.Series | None,
@@ -322,7 +316,7 @@ class AdapterHandler:
         Returns:
             Any: 実行結果（失敗時はNone）
         """
-        sig = inspect.signature(cast(Callable[..., Any], adapter_function))
+        sig = inspect.signature(adapter_function)
 
         # 期間パラメータのバリデーション
         period_params = ["length", "period", "window", "n"]
@@ -507,10 +501,10 @@ class AdapterHandler:
             np.ndarray | tuple[np.ndarray, ...] | object: 変換された結果（numpy配列、タプル等）
         """
         if isinstance(result, pd.Series):
-            return result.to_numpy()
+            return np.asarray(result.to_numpy())
         elif isinstance(result, pd.DataFrame):
             if config.result_type == IndicatorResultType.SINGLE:
-                return result.iloc[:, 0].to_numpy()
+                return np.asarray(result.iloc[:, 0].to_numpy())
             else:
                 return tuple(result[col].to_numpy() for col in result.columns)
         elif isinstance(result, tuple):

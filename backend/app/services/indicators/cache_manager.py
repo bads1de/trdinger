@@ -77,7 +77,7 @@ class IndicatorCacheManager:
             data_meta: tuple
             if not df.empty:
                 # 全列のハッシュの合計を使うことで、どの列が変わっても検知できるようにする
-                data_hash = pd.util.hash_pandas_object(df, index=True).sum()  # type: ignore[reportAttributeAccessIssue]
+                data_hash = pd.util.hash_pandas_object(df, index=True).sum()
 
                 data_meta = (
                     df.index[0],  # 開始日

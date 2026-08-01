@@ -14,7 +14,9 @@ from ._window_helpers import _window_mean, _window_mean_and_std
 
 
 @njit(cache=True)
-def _njit_damiani_volatmeter_loop(high, low, close, vis_atr, vis_std, sed_atr, sed_std):
+def _njit_damiani_volatmeter_loop(  # type: ignore[no-untyped-def]
+    high, low, close, vis_atr, vis_std, sed_atr, sed_std
+):
     n = len(close)
     result = np.full(n, np.nan, dtype=np.float64)
     min_len = max(sed_atr, sed_std)
@@ -43,15 +45,15 @@ def _njit_damiani_volatmeter_loop(high, low, close, vis_atr, vis_std, sed_atr, s
 
 @handle_pandas_ta_errors
 def damiani_volatmeter(
-    high,
-    low,
-    close,
-    vis_atr=13,
-    vis_std=20,
-    sed_atr=40,
-    sed_std=100,
-    threshold=1.4,
-):
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    vis_atr: int = 13,
+    vis_std: int = 20,
+    sed_atr: int = 40,
+    sed_std: int = 100,
+    threshold: float = 1.4,
+) -> tuple[pd.Series, pd.Series]:
     """Damiani Volatmeter.
 
     Compares short-term to long-term volatility to filter market conditions.

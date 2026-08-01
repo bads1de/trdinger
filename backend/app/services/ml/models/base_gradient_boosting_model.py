@@ -30,11 +30,11 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
 
     ALGORITHM_NAME: str = "base_gradient_boosting"
 
-    def __init__(self, random_state: int = 42, **kwargs):
+    def __init__(self, random_state: int = 42, **kwargs: Any):
         self.model: Any = None
         self.is_trained = False
         self.feature_columns: list[str] | None = None
-        self.classes_ = None  # sklearn互換性のため
+        self.classes_: np.ndarray | None = None  # sklearn互換性のため
         self.random_state = random_state
         self.task_type = kwargs.pop("task_type", "regression")
         self.last_training_result: dict[str, Any] = {}
@@ -65,7 +65,7 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
         self,
         X: pd.DataFrame | np.ndarray,
         y: pd.Series | np.ndarray,
-        **kwargs,
+        **kwargs: Any,
     ) -> BaseGradientBoostingModel:
         """
         sklearn互換のfitメソッド
@@ -127,9 +127,9 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
 
             self._train_model_impl(
                 cast(pd.DataFrame, X_train),
-                cast(pd.DataFrame | None, X_val),
+                X_val,
                 cast(pd.Series, y_train),
-                cast(pd.Series | None, y_val),
+                y_val,
                 **kwargs,
             )
 
@@ -146,7 +146,7 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
         X_test: pd.DataFrame | None,
         y_train: pd.Series,
         y_test: pd.Series | None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         モデル学習の共通実装（テンプレートメソッド）
@@ -294,7 +294,7 @@ class BaseGradientBoostingModel(ABC, MLModelProtocol):
         """
 
     @abstractmethod
-    def _get_model_params(self, num_classes: int, **kwargs) -> dict[str, object]:
+    def _get_model_params(self, num_classes: int, **kwargs: Any) -> dict[str, object]:
         """
         モデル固有のパラメータディクショナリを生成します。
         """

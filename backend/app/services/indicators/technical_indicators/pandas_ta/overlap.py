@@ -326,7 +326,7 @@ class OverlapIndicators:
         close: pd.Series,
         period: int = 7,
         multiplier: float = 3.0,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """
         Supertrend インジケーター
@@ -350,7 +350,7 @@ class OverlapIndicators:
             multiplier = kwargs["factor"]
 
         result = cast(
-            tuple[pd.Series, pd.Series, pd.Series],
+            pd.DataFrame | tuple[pd.Series, pd.Series, pd.Series],
             run_multi_series_indicator(
                 {"high": high, "low": low, "close": close},
                 period,
@@ -385,7 +385,7 @@ class OverlapIndicators:
                     result[f"SUPERTd_{period}_{int(multiplier)}"],
                 )
             except (KeyError, Exception):
-                return create_nan_series_bundle(high, 3)  # type: ignore[return-value]
+                return create_nan_series_bundle(high, 3)
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -482,7 +482,7 @@ class OverlapIndicators:
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Gann HiLo"""
         result = cast(
-            tuple[pd.Series, pd.Series, pd.Series],
+            pd.DataFrame | tuple[pd.Series, pd.Series, pd.Series],
             run_multi_series_indicator(
                 {"high": high, "low": low, "close": close},
                 max(high_length, low_length),

@@ -61,7 +61,7 @@ class TrendFilter(BaseTool):
         # extra_data にADX値が渡されているかチェック
         adx_value = context.extra_data.get("adx")
         if adx_value is not None:
-            return adx_value < min_adx
+            return bool(adx_value < min_adx)
 
         # データがない場合はスキップしない
         return False

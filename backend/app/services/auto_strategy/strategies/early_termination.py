@@ -44,7 +44,7 @@ class StrategyEarlyTerminationController:
     - 取引統計の収集
     """
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any) -> None:
         """早期終了コントローラを初期化する。
 
         Args:
@@ -72,7 +72,7 @@ class StrategyEarlyTerminationController:
             return None
 
         try:
-            return pd.Timestamp(value)  # type: ignore[return-value]
+            return pd.Timestamp(value)
         except Exception as e:
             logger.warning(
                 "evaluation_start の解析に失敗しました: %s, エラー: %s",
@@ -108,7 +108,7 @@ class StrategyEarlyTerminationController:
             current_time,
         )
 
-        return current_time >= evaluation_start  # type: ignore[operator]
+        return bool(current_time >= evaluation_start)
 
     def initialize_evaluation_progress_bounds(
         self,

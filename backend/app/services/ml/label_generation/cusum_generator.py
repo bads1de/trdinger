@@ -44,7 +44,7 @@ class CusumSignalGenerator:
         shifted = prices.shift(1)
         log_returns: pd.Series = pd.Series(
             np.log(prices.values / shifted.values),
-            index=prices.index,  # type: ignore[arg-type]
+            index=prices.index,
         ).fillna(0)  # 最初は0
 
         # 閾値の準備
@@ -109,7 +109,7 @@ class CusumSignalGenerator:
         """
         shifted = close.shift(1)
         log_returns = pd.Series(
-            np.log(close.values / shifted.values),  # type: ignore[arg-type]
+            np.log(close.values / shifted.values),
             index=close.index,
         )
         return log_returns.ewm(span=span).std()

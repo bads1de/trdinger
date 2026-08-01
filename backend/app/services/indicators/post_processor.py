@@ -84,9 +84,9 @@ class PostProcessor:
             np.ndarray: 単一のnumpy配列
         """
         if isinstance(result, pd.Series):
-            return result.to_numpy()
+            return np.asarray(result.to_numpy())
         elif isinstance(result, pd.DataFrame):
-            return result.iloc[:, 0].to_numpy()
+            return np.asarray(result.iloc[:, 0].to_numpy())
         else:
             return np.asarray(result)
 

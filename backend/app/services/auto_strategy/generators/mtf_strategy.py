@@ -8,7 +8,7 @@
 import copy
 import logging
 import random
-from typing import Any
+from typing import Any, cast
 
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
@@ -110,7 +110,7 @@ class MTFStrategy:
                 short_conds.append(short_group)
 
         # 多すぎる場合は間引く
-        def _sample(lst):
+        def _sample(lst: list[Any]) -> list[Any]:
             return (
                 random.sample(lst, self.MAX_CONDITIONS_SAMPLE)
                 if len(lst) > self.MAX_CONDITIONS_SAMPLE
@@ -122,7 +122,7 @@ class MTFStrategy:
     def _determine_higher_tf(self, current_tf: str) -> str:
         """実行足に基づいて適切な上位足を決定"""
         res = self.TIMEFRAME_MAPPING.get(current_tf, self.DEFAULT_HIGHER_TF)
-        return random.choice(res) if isinstance(res, list) else res
+        return cast(str, random.choice(res) if isinstance(res, list) else res)
 
     def _create_mtf_indicators(
         self, indicators: list[IndicatorGene], timeframe: str
@@ -136,5 +136,5 @@ class MTFStrategy:
         return res
 
     # テスト互換用エイリアス
-    def _determine_higher_timeframe(self, tf):
+    def _determine_higher_timeframe(self, tf: str) -> str:
         return self._determine_higher_tf(tf)

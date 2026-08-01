@@ -67,12 +67,12 @@ class VolumeFilter(BaseTool):
 
         if current_volume is not None and avg_volume is not None and avg_volume > 0:
             volume_ratio = current_volume / avg_volume
-            return volume_ratio < min_volume_ratio
+            return bool(volume_ratio < min_volume_ratio)
 
         # current_volumeがcontextから取れる場合（extra_dataがない場合）
         if context.current_volume > 0 and avg_volume is not None and avg_volume > 0:
             volume_ratio = context.current_volume / avg_volume
-            return volume_ratio < min_volume_ratio
+            return bool(volume_ratio < min_volume_ratio)
 
         # データがない場合はスキップしない
         return False

@@ -252,8 +252,6 @@ def _sanitize_numeric_sequence(values: Sequence[float] | None) -> list[float]:
         return []
     sanitized: list[float] = []
     for value in values:
-        if not isinstance(value, (int, float)):
-            continue
         value_float = float(value)
         if np.isfinite(value_float):
             sanitized.append(value_float)

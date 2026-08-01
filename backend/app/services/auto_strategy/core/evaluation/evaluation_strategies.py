@@ -419,15 +419,12 @@ class EvaluationStrategy:
         )
         if callable(report_attr):
             report_method = self._evaluator._perform_single_evaluation_report
-            return cast(
-                ScenarioEvaluation,
-                report_method(
-                    gene,
-                    backtest_config,
-                    config,
-                    scenario_name=scenario_name,
-                    metadata=metadata,
-                ),
+            return report_method(
+                gene,
+                backtest_config,
+                config,
+                scenario_name=scenario_name,
+                metadata=metadata,
             )
 
         legacy_attr = inspect.getattr_static(
@@ -823,6 +820,6 @@ class EvaluationStrategy:
 
         return fold_configs
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """キャッシュをクリアする。"""
         self._date_cache.clear()

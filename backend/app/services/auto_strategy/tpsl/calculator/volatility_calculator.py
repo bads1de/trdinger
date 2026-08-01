@@ -5,7 +5,7 @@ Volatility Calculator
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from ...genes import TPSLGene
 from .base_calculator import BaseTPSLCalculator
@@ -18,7 +18,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
     ボラティリティベースのTP/SL計算器
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         super().__init__("volatility_based")
 
@@ -28,7 +28,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
         tpsl_gene: TPSLGene | None,
         market_data: dict[str, Any] | None,
         position_direction: float,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[float, float, float, dict[str, Any]]:
         """
         ボラティリティ方式（ATR）によるTP/SL計算の実装
@@ -89,7 +89,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
         # 直接ATR値が提供されている場合
         if "atr" in market_data:
-            return market_data["atr"]
+            return cast(float, market_data["atr"])
 
         # OHLCデータからATRを計算
         if "ohlc_data" in market_data:
@@ -97,7 +97,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
         # ボラティリティから推定
         if "volatility" in market_data:
-            return current_price * market_data["volatility"]
+            return cast(float, current_price * market_data["volatility"])
 
         return None
 
@@ -120,7 +120,7 @@ class VolatilityCalculator(BaseTPSLCalculator):
 
             # ATR = 平均True Range
             atr = sum(true_ranges[-atr_period:]) / atr_period
-            return atr
+            return float(atr)
 
         except Exception as e:
             logger.error(f"ATR計算エラー: {e}")

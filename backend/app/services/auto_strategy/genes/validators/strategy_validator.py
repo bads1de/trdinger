@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class StrategyValidator:
     """戦略遺伝子の妥当性検証を担当します。"""
 
-    def __init__(self, indicator_validator, condition_validator) -> None:
+    def __init__(self, indicator_validator: Any, condition_validator: Any) -> None:
         """初期化"""
         self.indicator_validator = indicator_validator
         self.condition_validator = condition_validator
@@ -26,7 +26,7 @@ class StrategyValidator:
         default_return=(False, ["バリデーションエラー"]),
     )
     def validate_strategy_gene(
-        self, strategy_gene, config: Any | None = None
+        self, strategy_gene: Any, config: Any | None = None
     ) -> tuple[bool, list[str]]:
         """戦略遺伝子の妥当性を検証"""
         errors: list[str] = []
@@ -82,11 +82,13 @@ class StrategyValidator:
 
         return len(errors) == 0, errors
 
-    def _validate_all_conditions(self, cond_list: list, label: str, errors: list[str]):
+    def _validate_all_conditions(
+        self, cond_list: list, label: str, errors: list[str]
+    ) -> None:
         """条件リストを再帰的に検証"""
         from ..conditions import ConditionGroup
 
-        def _recursive(cond, path: str):
+        def _recursive(cond: Any, path: str) -> None:
             if isinstance(cond, ConditionGroup):
                 for j, sub in enumerate(cond.conditions):
                     _recursive(sub, f"{path} -> グループ{j}")

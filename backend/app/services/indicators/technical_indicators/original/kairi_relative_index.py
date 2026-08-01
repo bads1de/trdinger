@@ -11,7 +11,9 @@ from ._window_helpers import _window_mean
 
 
 @njit(cache=True)
-def _njit_kairi_loop(prices, length):
+def _njit_kairi_loop(  # type: ignore[no-untyped-def]
+    prices, length
+):
     n = len(prices)
     result = np.full(n, np.nan, dtype=np.float64)
     if n < length:
@@ -24,7 +26,9 @@ def _njit_kairi_loop(prices, length):
 
 
 @handle_pandas_ta_errors
-def kairi_relative_index(close, length=14, signal_length=3):
+def kairi_relative_index(
+    close: pd.Series, length: int = 14, signal_length: int = 3
+) -> tuple[pd.Series, pd.Series]:
     """Kairi Relative Index (KRI).
 
     Percentage deviation of price from its moving average.
@@ -52,5 +56,5 @@ def kairi_relative_index(close, length=14, signal_length=3):
     result = _njit_kairi_loop(close.values.astype(float), length)
     osc = pd.Series(result, index=close.index, name=f"KRI_{length}")
     sig = osc.rolling(window=signal_length, min_periods=1).mean()
-    sig.name = f"KRI_SIGNAL_{length}"  # type: ignore[reportAttributeAccessIssue]
+    sig.name = f"KRI_SIGNAL_{length}"
     return osc, sig

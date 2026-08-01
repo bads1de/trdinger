@@ -29,7 +29,7 @@ class BaseResourceManager(ABC):
     メモリリークの防止と保守性の向上を実現します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cleanup_level = CleanupLevel.STANDARD
         self._is_cleaned_up = False
 
@@ -40,7 +40,7 @@ class BaseResourceManager(ABC):
 
         lvl = level or self._cleanup_level
         mem_before = self._get_memory_usage()
-        stats = {
+        stats: dict[str, Any] = {
             "level": lvl.value,
             "memory_before": mem_before,
             "errors": [],
@@ -77,18 +77,18 @@ class BaseResourceManager(ABC):
         return stats
 
     @abstractmethod
-    def _cleanup_temporary_files(self, level: CleanupLevel):
+    def _cleanup_temporary_files(self, level: CleanupLevel) -> None:
         """一時ファイルのクリーンアップ（サブクラスで実装）"""
 
     @abstractmethod
-    def _cleanup_cache(self, level: CleanupLevel):
+    def _cleanup_cache(self, level: CleanupLevel) -> None:
         """キャッシュのクリーンアップ（サブクラスで実装）"""
 
     @abstractmethod
-    def _cleanup_models(self, level: CleanupLevel):
+    def _cleanup_models(self, level: CleanupLevel) -> None:
         """モデルオブジェクトのクリーンアップ（サブクラスで実装）"""
 
-    def _cleanup_other_resources(self, level: CleanupLevel):
+    def _cleanup_other_resources(self, level: CleanupLevel) -> None:
         """その他のリソースクリーンアップ（オプション、サブクラスでオーバーライド可能）"""
 
     def _force_garbage_collection(self) -> int:

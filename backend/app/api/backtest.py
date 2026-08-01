@@ -48,7 +48,7 @@ class BacktestResultsResponse(BaseModel):
 
 @router.get("/results", response_model=BacktestResultsResponse)
 @ErrorHandler.api_endpoint("バックテスト結果一覧の取得に失敗しました")
-async def get_backtest_results(
+async def get_backtest_results(  # type: ignore[no-untyped-def]
     limit: int = Query(
         _BACKTEST_CONFIG.default_results_limit,
         ge=1,
@@ -97,7 +97,7 @@ async def get_backtest_results(
 
 @router.delete("/results-all")
 @ErrorHandler.api_endpoint("全バックテスト結果の削除に失敗しました")
-async def delete_all_backtest_results(
+async def delete_all_backtest_results(  # type: ignore[no-untyped-def]
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
         get_backtest_orchestration_service
@@ -118,7 +118,7 @@ async def delete_all_backtest_results(
 
 @router.get("/results/{result_id}/", response_model=BacktestResponse)
 @ErrorHandler.api_endpoint("バックテスト結果の取得に失敗しました")
-async def get_backtest_result_by_id(
+async def get_backtest_result_by_id(  # type: ignore[no-untyped-def]
     result_id: int,
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
@@ -160,7 +160,7 @@ async def get_backtest_result_by_id(
 
 @router.delete("/results/{result_id}/")
 @ErrorHandler.api_endpoint("バックテスト結果の削除に失敗しました")
-async def delete_backtest_result(
+async def delete_backtest_result(  # type: ignore[no-untyped-def]
     result_id: int,
     db: Session = Depends(get_db),
     orchestration_service: BacktestOrchestrationService = Depends(
@@ -194,7 +194,7 @@ async def delete_backtest_result(
 
 @router.get("/strategies")
 @ErrorHandler.api_endpoint("サポートされている戦略一覧の取得に失敗しました")
-async def get_supported_strategies(
+async def get_supported_strategies(  # type: ignore[no-untyped-def]
     orchestration_service: BacktestOrchestrationService = Depends(
         get_backtest_orchestration_service
     ),

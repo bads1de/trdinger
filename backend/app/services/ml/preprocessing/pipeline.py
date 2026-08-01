@@ -110,7 +110,7 @@ def create_ml_pipeline(
     return Pipeline(steps)
 
 
-def create_classification_pipeline(**kwargs) -> Pipeline:
+def create_classification_pipeline(**kwargs: Any) -> Pipeline:
     """分類タスク用のMLパイプラインを作成する。
 
     create_ml_pipeline() の分類バージョンショートカットです。
@@ -126,7 +126,7 @@ def create_classification_pipeline(**kwargs) -> Pipeline:
     return create_ml_pipeline(is_classification=True, **kwargs)
 
 
-def create_regression_pipeline(**kwargs) -> Pipeline:
+def create_regression_pipeline(**kwargs: Any) -> Pipeline:
     """回帰タスク用のMLパイプラインを作成する。
 
     create_ml_pipeline() の回帰バージョンショートカットです。

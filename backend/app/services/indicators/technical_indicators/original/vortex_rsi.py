@@ -12,7 +12,7 @@ from ...data_validation import (
 )
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_vortex_rsi_loop(
     high_values: np.ndarray,
     low_values: np.ndarray,

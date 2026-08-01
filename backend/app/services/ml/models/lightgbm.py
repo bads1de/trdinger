@@ -29,7 +29,7 @@ class LightGBMModel(BaseGradientBoostingModel):
         random_state: int = 42,
         n_estimators: int = 100,
         learning_rate: float = 0.1,
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         LightGBMモデルを初期化します。
@@ -63,7 +63,7 @@ class LightGBMModel(BaseGradientBoostingModel):
         """
         return lgb.Dataset(X, label=y, weight=sample_weight, free_raw_data=False)
 
-    def _get_model_params(self, num_classes: int, **kwargs) -> dict[str, Any]:
+    def _get_model_params(self, num_classes: int, **kwargs: Any) -> dict[str, Any]:
         """
         タスクタイプとクラス数に基づいて、LightGBM 固有のパラメータセットを生成します。
 
@@ -117,7 +117,7 @@ class LightGBMModel(BaseGradientBoostingModel):
         valid_data: lgb.Dataset | None,
         params: dict[str, Any],
         early_stopping_rounds: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> lgb.Booster:
         """
         LightGBM の学習エンジンを呼び出し、モデル（Booster）を構築します。

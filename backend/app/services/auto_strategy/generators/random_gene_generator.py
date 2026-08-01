@@ -15,11 +15,13 @@ from typing import (
     Any,
     Protocol,
     TypeVar,
+    cast,
 )
 
 if TYPE_CHECKING:
     from ..config.ga.ga_config import GAConfig
 
+from app.types import SerializableValue
 from app.utils.error_handler import safe_operation
 
 from ..genes import (
@@ -415,7 +417,7 @@ class RandomGeneGenerator:
         # ロング・ショート条件を生成（SmartConditionGeneratorを使用）
         # geneに含まれる指標一覧を渡して、素名比較時のフォールバックを安定化
         try:
-            self.smart_condition_generator.indicators = indicators
+            cast(Any, self.smart_condition_generator).indicators = indicators
         except Exception as e:
             logger.debug("指標キャッシュの設定に失敗しました: %s", e)
             pass
@@ -465,7 +467,9 @@ class RandomGeneGenerator:
             long_exit_conditions=long_exit_conditions,
             short_exit_conditions=short_exit_conditions,
             tool_genes=tool_genes,
-            risk_management=risk_management,
+            risk_management=cast(
+                dict[str, SerializableValue], risk_management
+            ),
             metadata={"generated_by": "RandomGeneGenerator"},
         )
 

@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from ....utils.error_handler import ModelError
+from ..common.base_resource_manager import CleanupLevel
 from ..common.registry import algorithm_registry
 from ..common.utils import predict_class_from_proba, validate_training_inputs
 from ..evaluation.metrics import metrics_collector
@@ -276,10 +277,10 @@ class EnsembleTrainer(BaseMLTrainer):
                     primary_proba=primary_proba_series,
                     base_model_probs_df=base_model_probs_df,
                 )
-                return filtered_predictions.to_numpy()  # Seriesをnp.ndarrayに変換
+                return np.asarray(filtered_predictions)  # Seriesをnp.ndarrayに変換
             else:
                 # メタラベリングが有効でない場合は、予測確率をそのまま返す
-                return predictions_proba
+                return np.asarray(predictions_proba)
 
         except Exception as e:
             logger.error(f"アンサンブル予測エラー: {e}")
@@ -329,9 +330,9 @@ class EnsembleTrainer(BaseMLTrainer):
             # スタッキングアンサンブルモデルを作成
             if self.ensemble_method.lower() == "stacking":
                 # スタッキング設定を準備
-                stacking_params_raw = self.ensemble_config.get("stacking_params")  # type: ignore[arg-type]
+                stacking_params_raw = self.ensemble_config.get("stacking_params")
                 stacking_config: dict[str, Any] = (
-                    cast(dict[str, Any], stacking_params_raw)
+                    stacking_params_raw
                     if isinstance(stacking_params_raw, dict)
                     else {}
                 )
@@ -409,7 +410,7 @@ class EnsembleTrainer(BaseMLTrainer):
             self.is_trained = True
 
             # BaseMLTrainer用のモデル参照を設定
-            self._model = self.ensemble_model  # type: ignore[assignment]
+            self._model = self.ensemble_model
 
             # 精度を取得
             accuracy = detailed_metrics.get("accuracy", 0.0)
@@ -443,9 +444,9 @@ class EnsembleTrainer(BaseMLTrainer):
                     return result
 
                 # メタラベリングの設定
-                meta_params_raw = self.ensemble_config.get("meta_labeling_params")  # type: ignore[arg-type]
+                meta_params_raw = self.ensemble_config.get("meta_labeling_params")
                 meta_config: dict[str, Any] = (
-                    cast(dict[str, Any], meta_params_raw)
+                    meta_params_raw
                     if isinstance(meta_params_raw, dict)
                     else {}
                 )
@@ -522,7 +523,7 @@ class EnsembleTrainer(BaseMLTrainer):
             try:
                 from ..models.model_manager import model_manager
 
-                meta_model_path: str = model_manager.save_model(
+                meta_model_path: str | None = model_manager.save_model(
                     model=self.meta_labeling_service,
                     model_name=f"{model_name}_meta",
                     metadata={"primary_model_name": model_name},
@@ -536,7 +537,7 @@ class EnsembleTrainer(BaseMLTrainer):
 
         return metadata
 
-    def load_model(self, model_path: str) -> bool:  # type: ignore[override]
+    def load_model(self, model_path: str) -> bool:
         """
         アンサンブルモデルを読み込み
 
@@ -559,15 +560,15 @@ class EnsembleTrainer(BaseMLTrainer):
                 self.current_model_metadata or getattr(self, "metadata", {}) or {}
             )
             self.metadata = metadata
-            self.ensemble_config = metadata.get("ensemble_config", {})  # type: ignore[assignment]
+            self.ensemble_config = cast(
+                EnsembleConfig, metadata.get("ensemble_config", {})
+            )
             self.ensemble_method = str(metadata.get("ensemble_method", "stacking"))
 
             # メタラベリングモデルのロード
             meta_model_path_raw = metadata.get("meta_model_path")
             meta_model_path: str | None = (
-                cast(str, meta_model_path_raw)
-                if isinstance(meta_model_path_raw, str)
-                else None
+                meta_model_path_raw if isinstance(meta_model_path_raw, str) else None
             )
             if meta_model_path:
                 try:
@@ -617,7 +618,7 @@ class EnsembleTrainer(BaseMLTrainer):
             logger.error(f"アンサンブルモデル読み込みエラー: {e}")
             return False
 
-    def _cleanup_models(self, level):
+    def _cleanup_models(self, level: CleanupLevel) -> None:
         """
         EnsembleTrainer固有のモデルクリーンアップ
 

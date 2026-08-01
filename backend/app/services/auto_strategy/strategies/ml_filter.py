@@ -6,6 +6,7 @@ UniversalStrategyのMLフィルター関連ロジックを担当します。
 """
 
 import logging
+from typing import Any
 
 import pandas as pd
 
@@ -20,7 +21,7 @@ class MLFilter:
     特徴量事前計算、エントリー可否判定、特徴量準備などの機能を提供します。
     """
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any) -> None:
         """
         初期化
 

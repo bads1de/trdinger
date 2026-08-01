@@ -36,7 +36,7 @@ class BacktestOrchestrationService:
     - 実験データの統合: GAの実行結果（実験）と、個別のバックテスト実行結果を紐付けて管理します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         BacktestOrchestrationServiceを初期化
 
@@ -73,7 +73,7 @@ class BacktestOrchestrationService:
         """
 
         @safe_operation(context="バックテスト結果取得", is_api_call=True)
-        def _get_backtest_results():
+        def _get_backtest_results() -> dict[str, Any]:
             backtest_repo = BacktestResultRepository(db)
 
             results = backtest_repo.get_backtest_results(
@@ -112,7 +112,7 @@ class BacktestOrchestrationService:
         @safe_operation(
             context=f"バックテスト結果取得 (ID: {result_id})", is_api_call=True
         )
-        def _get_backtest_result_by_id():
+        def _get_backtest_result_by_id() -> dict[str, Any]:
             backtest_repo = BacktestResultRepository(db)
             result = backtest_repo.get_backtest_result_by_id(result_id)
 
@@ -144,7 +144,7 @@ class BacktestOrchestrationService:
         @safe_operation(
             context=f"バックテスト結果削除 (ID: {result_id})", is_api_call=True
         )
-        def _delete_backtest_result():
+        def _delete_backtest_result() -> dict[str, Any]:
             # 関連する戦略のリンクを解除
             strategy_repo = GeneratedStrategyRepository(db)
             strategy_repo.unlink_backtest_result(result_id)
@@ -175,7 +175,7 @@ class BacktestOrchestrationService:
         """
 
         @safe_operation(context="全バックテスト結果削除", is_api_call=True)
-        def _delete_all_backtest_results():
+        def _delete_all_backtest_results() -> dict[str, Any]:
             backtest_repo = BacktestResultRepository(db)
             ga_experiment_repo = GAExperimentRepository(db)
             generated_strategy_repo = GeneratedStrategyRepository(db)
@@ -211,7 +211,7 @@ class BacktestOrchestrationService:
         """
 
         @safe_operation(context="サポート戦略取得", is_api_call=True)
-        def _get_supported_strategies():
+        def _get_supported_strategies() -> dict[str, Any]:
             from ..config.constants import SUPPORTED_STRATEGIES
 
             return api_response(success=True, data={"strategies": SUPPORTED_STRATEGIES})

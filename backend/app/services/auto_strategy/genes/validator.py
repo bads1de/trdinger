@@ -7,11 +7,12 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..config.ga.ga_config import GAConfig
+    from .conditions import Condition, ConditionGroup
+    from .indicator import IndicatorGene
 
 from .validators.condition_validator import ConditionValidator
 from .validators.indicator_validator import IndicatorValidator
@@ -34,14 +35,14 @@ class GeneValidator:
             self._indicator_validator, self._condition_validator
         )
 
-    def validate_indicator_gene(self, indicator_gene: object) -> bool:
+    def validate_indicator_gene(self, indicator_gene: IndicatorGene) -> bool:
         """指標遺伝子の妥当性を検証"""
         return self._indicator_validator.validate_indicator_gene(indicator_gene)
 
     def validate_indicator_gene_for_generation(
         self,
-        indicator_gene: object,
-        indicator_universe_mode: str | Enum = "curated",
+        indicator_gene: IndicatorGene,
+        indicator_universe_mode: str = "curated",
         allowed_indicators: Collection[str] | None = None,
     ) -> bool:
         """GA 生成・変異で使う指標遺伝子をユニバース込みで検証する。"""
@@ -49,11 +50,11 @@ class GeneValidator:
             indicator_gene, indicator_universe_mode, allowed_indicators
         )
 
-    def validate_condition(self, condition: object) -> tuple[bool, str]:
+    def validate_condition(self, condition: Condition) -> tuple[bool, str]:
         """条件の妥当性を検証"""
         return self._condition_validator.validate_condition(condition)
 
-    def clean_condition(self, condition: object) -> bool:
+    def clean_condition(self, condition: Condition | ConditionGroup) -> bool:
         """条件をクリーニングして修正可能な問題を自動修正"""
         return self._condition_validator.clean_condition(condition)
 

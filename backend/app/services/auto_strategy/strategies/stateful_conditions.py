@@ -6,6 +6,7 @@ UniversalStrategyのステートフル条件評価ロジックを担当します
 """
 
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class StatefulConditionsEvaluator:
     トリガーチェック、条件評価、エントリー方向取得などの機能を提供します。
     """
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any) -> None:
         """
         初期化
 

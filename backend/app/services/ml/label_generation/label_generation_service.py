@@ -31,7 +31,7 @@ class LabelGenerationService:
         use_cusum: bool = False,
         cusum_threshold: float | None = None,
         cusum_vol_multiplier: float = 1.0,
-        **training_params,
+        **training_params: Any,
     ) -> tuple[pd.DataFrame, pd.Series]:
         """
         高度な統計手法を用いて、機械学習モデルの学習に最適な「意味のある」正解ラベルを生成します。

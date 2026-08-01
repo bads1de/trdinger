@@ -5,6 +5,7 @@ Trdinger Trading API のエントリーポイント
 """
 
 import logging
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,7 +25,7 @@ from app.api.strategies import router as strategies_router
 from app.config.unified_config import unified_config
 
 
-def setup_logging():
+def setup_logging() -> None:
     """ログ設定を初期化します。
 
     重複ログフィルターを適用してログ設定を初期化します。
@@ -102,7 +103,9 @@ def create_app() -> FastAPI:
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)
-    async def global_exception_handler(request: Request, exc: Exception):
+    async def global_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         """グローバル例外ハンドラです。
 
         未処理の例外をキャッチして標準化されたエラーレスポンスを返します。
@@ -126,7 +129,7 @@ def create_app() -> FastAPI:
 
     # ヘルスチェックエンドポイント
     @app.get("/health")
-    async def health_check():
+    async def health_check() -> dict[str, Any]:
         """ヘルスチェックエンドポイントです。
 
         アプリケーションの状態を確認するためのエンドポイントです。

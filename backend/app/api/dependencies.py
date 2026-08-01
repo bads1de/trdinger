@@ -7,6 +7,7 @@ Orchestration Serviceパターンに基づいて、API層とサービス層の�
 
 import logging
 from collections.abc import Callable
+from typing import Any, cast
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -70,7 +71,7 @@ def _lazy_import_service(module_path: str, class_name: str) -> type:
     import importlib
 
     module = importlib.import_module(module_path)
-    return getattr(module, class_name)
+    return cast(type, getattr(module, class_name))
 
 
 def create_service_factory(
@@ -135,7 +136,7 @@ def create_service_factory_with_deps(
 
     if dep_factory is not None:
 
-        def wrapper_with_deps(dep=Depends(dep_factory)) -> object:
+        def wrapper_with_deps(dep: Any = Depends(dep_factory)) -> object:
             def inner_factory() -> object:
                 service_class = _lazy_import_service(module_path, class_name)
                 return service_class(dep)

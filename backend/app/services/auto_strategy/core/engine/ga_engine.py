@@ -107,7 +107,7 @@ class GeneticAlgorithmEngine:
             logger.info("[Standard] 標準GAモードで起動")
             self.individual_evaluator = IndividualEvaluator(backtest_service)  # type: ignore[assignment]
 
-        self.individual_class = None  # setup_deap時に設定
+        self.individual_class: Any = None  # setup_deap時に設定
         self.fitness_sharing: Any = None  # setup_deap時に初期化
         self.parameter_tuning_manager: ParameterTuningManager = ParameterTuningManager(
             self.individual_evaluator
@@ -137,13 +137,13 @@ class GeneticAlgorithmEngine:
         self.deap_setup.setup_deap(
             config,
             self._create_strategy_individual,
-            self.individual_evaluator.evaluate,
+            self.individual_evaluator.evaluate,  # type: ignore[arg-type]  # 評価関数は(individual, config, ...)シグネチャ
             crossover_strategy_genes,
             mutate_strategy_gene,
         )
 
         # 個体クラスを取得（個体生成時に使用）
-        self.individual_class = self.deap_setup.get_individual_class()  # type: ignore[assignment]
+        self.individual_class = self.deap_setup.get_individual_class()
 
         # フィットネス共有の初期化
         fitness_sharing_config = config.fitness_sharing
@@ -261,7 +261,7 @@ class GeneticAlgorithmEngine:
             stats = self._create_statistics()
 
             # 初期個体群の生成（評価なし）
-            population = toolbox.population(n=config.population_size)  # type: ignore[attr-defined]
+            population = toolbox.population(n=config.population_size)
 
             # シード戦略の注入（ハイブリッド初期化）
             if config.use_seed_strategies:
@@ -347,7 +347,7 @@ class GeneticAlgorithmEngine:
         finally:
             self.is_running = False
 
-    def _set_generator_context(self, backtest_config: dict[str, Any]):
+    def _set_generator_context(self, backtest_config: dict[str, Any]) -> None:
         """ジェネレーターにコンテキストを設定します。
 
         Args:
@@ -389,7 +389,7 @@ class GeneticAlgorithmEngine:
 
         return seeds
 
-    def _create_statistics(self):
+    def _create_statistics(self) -> Any:
         """
         統計情報収集オブジェクトを作成
 
@@ -406,7 +406,7 @@ class GeneticAlgorithmEngine:
         stats.register("max", np.max)
         return stats
 
-    def _create_parallel_evaluator(self, config: GAConfig):
+    def _create_parallel_evaluator(self, config: GAConfig) -> ParallelEvaluator | None:
         """並列評価器を作成します。
 
         Args:
@@ -427,7 +427,7 @@ class GeneticAlgorithmEngine:
         )
 
         # 並列ワーカー用のデータ準備
-        worker_initargs = ()
+        worker_initargs: Any = ()
 
         try:
             worker_config = (
@@ -463,12 +463,12 @@ class GeneticAlgorithmEngine:
 
     def _create_evolution_runner(
         self,
-        toolbox,
-        stats,
-        population=None,
-        config=None,
-        parallel_evaluator=None,
-    ):
+        toolbox: Any,
+        stats: Any,
+        population: Any = None,
+        config: GAConfig | None = None,
+        parallel_evaluator: ParallelEvaluator | None = None,
+    ) -> EvolutionRunner:
         """独立したEvolutionRunnerインスタンスを作成します。
 
         Args:
@@ -499,10 +499,10 @@ class GeneticAlgorithmEngine:
     def _run_optimization(
         self,
         runner: EvolutionRunner,
-        population,
+        population: Any,
         config: GAConfig,
         progress_callback: Callable[[int, int, float | None], None] | None = None,
-    ):
+    ) -> tuple[Any, Any, Any]:
         """独立したEvolutionRunnerを使用して最適化アルゴリズムを実行します。
 
         Args:
@@ -531,12 +531,12 @@ class GeneticAlgorithmEngine:
 
     def _process_results(
         self,
-        population,
+        population: Any,
         config: GAConfig,
-        logbook,
+        logbook: Any,
         start_time: float,
-        halloffame=None,
-    ):
+        halloffame: Any = None,
+    ) -> dict[str, Any]:
         """最適化結果を処理します。
 
         Args:
@@ -624,7 +624,7 @@ class GeneticAlgorithmEngine:
 
         return result
 
-    def stop_evolution(self):
+    def stop_evolution(self) -> None:
         """進化を停止します。"""
         self._stop_event.set()
         self.is_running = False
@@ -640,7 +640,7 @@ class GeneticAlgorithmEngine:
                 raise EvolutionStoppedError(f"停止要求により中断されました: {context}")
             raise EvolutionStoppedError("停止要求により中断されました")
 
-    def _create_strategy_individual(self):
+    def _create_strategy_individual(self) -> Any:
         """戦略個体生成を行います。
 
         Returns:

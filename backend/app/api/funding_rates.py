@@ -4,6 +4,8 @@
 ファンディングレートデータの取得・収集機能を提供するAPIエンドポイント
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -33,7 +35,7 @@ async def get_funding_rates(
         get_funding_rate_orchestration_service
     ),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     ファンディングレートデータを取得します
 
@@ -83,7 +85,7 @@ async def collect_funding_rate_data(
         get_funding_rate_orchestration_service
     ),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     ファンディングレートデータを収集してデータベースに保存します
 
@@ -116,7 +118,7 @@ async def bulk_collect_funding_rates(
         get_funding_rate_orchestration_service
     ),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     BTCシンボルのファンディングレートデータを一括収集します
 

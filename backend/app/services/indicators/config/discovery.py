@@ -50,7 +50,7 @@ _VERSION_FILE = os.path.join(_CACHE_DIR, "indicator_discovery_version.txt")
 def _get_cache_version() -> str:
     """キャッシュバージョンを取得（pandas-taのバージョンに基づく）"""
     try:
-        return ta.version
+        return cast(str, ta.version)
     except Exception:
         return "unknown"
 
@@ -87,7 +87,7 @@ def _load_cache() -> list[IndicatorConfig] | None:
             if config.pandas_function or hasattr(ta, config.indicator_name.lower()):
                 config.min_length_func = lambda p, ind=config.indicator_name.lower(): (
                     calculate_min_length(ind, p)
-                )  # type: ignore[misc]
+                )
             # _SPECIAL_CONFIG_OVERRIDESにあるインジケーターのmin_length_funcも再構成
             elif (
                 config.indicator_name
@@ -145,7 +145,7 @@ def _load_cache() -> list[IndicatorConfig] | None:
                                 except Exception:
                                     continue
                                 if config.adapter_function is not None:
-                                    break
+                                    break  # type: ignore[unreachable]
                             if config.adapter_function is not None:
                                 break
                 except Exception:
@@ -735,7 +735,7 @@ class DynamicIndicatorDiscovery:
         if result.ndim == 0 or result.size == 0:
             return False
 
-        return result.shape[0] == len(expected_index)
+        return bool(result.shape[0] == len(expected_index))
 
     @classmethod
     def _can_probe_with_sample(cls, required_data: list[str]) -> bool:
@@ -974,7 +974,7 @@ class DynamicIndicatorDiscovery:
         return configs
 
     @classmethod
-    def _apply_special_overrides(cls, config: IndicatorConfig):
+    def _apply_special_overrides(cls, config: IndicatorConfig) -> None:
         """
         特定の指標に対する特別な設定の上書き
 
@@ -1206,7 +1206,7 @@ class DynamicIndicatorDiscovery:
 
                     required_data.append(source)
                     # 引数名 -> ソース名のマッピングを記録（アダプター用）
-                    param_map[source] = param_name  # type: ignore[assignment]
+                    param_map[source] = param_name
                 else:
                     # パラメータ
                     default_val = param.default

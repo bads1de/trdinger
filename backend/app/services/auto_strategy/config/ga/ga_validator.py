@@ -130,7 +130,7 @@ class ConfigValidator:
 
     @staticmethod
     def _validate_numeric_range(
-        val, min_v, max_v, name, is_int: bool = True
+        val: Any, min_v: float, max_v: float, name: str, is_int: bool = True
     ) -> list[str]:
         """
         汎用的な数値範囲検証
@@ -193,10 +193,12 @@ class ConfigValidator:
             )
         )
 
-        if isinstance(config.elite_size, (int, float)) and isinstance(
-            config.population_size, (int, float)
+        elite_size: Any = config.elite_size
+        population_size: Any = config.population_size
+        if isinstance(elite_size, (int, float)) and isinstance(
+            population_size, (int, float)
         ):
-            if config.elite_size < 0 or config.elite_size >= config.population_size:
+            if elite_size < 0 or elite_size >= population_size:
                 errors.append("エリート保存数は0以上、個体数未満である必要があります")
         else:
             errors.append("elite_size と population_size は数値である必要があります")
@@ -317,7 +319,8 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        if not isinstance(parameter_ranges, dict):
+        raw_ranges: Any = parameter_ranges
+        if not isinstance(raw_ranges, dict):
             errors.append("パラメータ範囲は辞書である必要があります")
             return errors
 
@@ -470,7 +473,7 @@ class ConfigValidator:
                 "min_trades は正の整数である必要があります"
             )
 
-        expectancy = settings.min_expectancy
+        expectancy: Any = settings.min_expectancy
         if expectancy is not None and not isinstance(expectancy, (int, float)):
             errors.append(
                 "evaluation_config.early_termination_settings."
@@ -576,7 +579,7 @@ class ConfigValidator:
             List[str]: エラーメッセージのリスト。問題がなければ空リスト。
         """
         errors: list[str] = []
-        validation_symbols = config.robustness_config.validation_symbols
+        validation_symbols: Any = config.robustness_config.validation_symbols
         if validation_symbols is not None and not isinstance(validation_symbols, list):
             errors.append(
                 "robustness_config.validation_symbols はリストである必要があります"
@@ -608,7 +611,7 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        regime_windows = config.robustness_config.regime_windows
+        regime_windows: Any = config.robustness_config.regime_windows
         if not isinstance(regime_windows, list):
             errors.append(
                 "robustness_config.regime_windows はリストである必要があります"
@@ -638,7 +641,8 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        if not isinstance(values, list):
+        raw_values: Any = values
+        if not isinstance(raw_values, list):
             errors.append(f"{label} はリストである必要があります")
             return errors
 
@@ -662,7 +666,8 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
-        if not isinstance(values, list):
+        raw_values: Any = values
+        if not isinstance(raw_values, list):
             errors.append(f"{label} はリストである必要があります")
             return errors
 

@@ -307,15 +307,14 @@ def normalize_market_symbol(symbol: Any) -> str:
         return ""
 
     # 非文字列入力はstr()変換
-    if not isinstance(symbol, str):
-        symbol = str(symbol)
+    symbol_str = str(symbol)
 
     # 空文字列の場合はそのまま返す
-    if not symbol:
-        return symbol
+    if not symbol_str:
+        return symbol_str
 
     # 大文字に変換
-    normalized = symbol.upper().strip()
+    normalized = symbol_str.upper().strip()
 
     # すでにコロン付きの場合はそのまま返す（例: "BTC/USDT:USDT"）
     if ":" in normalized:

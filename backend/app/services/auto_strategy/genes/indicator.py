@@ -8,7 +8,7 @@ import logging
 import random
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     pass
@@ -176,12 +176,12 @@ def generate_random_indicators(config: Any) -> list[IndicatorGene]:
 
     validator = GeneValidator()
 
-    def get_random_timeframe():
+    def get_random_timeframe() -> str | None:
         if not config.enable_multi_timeframe:
             return None
         if random.random() > config.mtf_indicator_probability:
             return None
-        return random.choice(available_timeframes)
+        return cast(str, random.choice(available_timeframes))
 
     # 各指標を生成
     attempts = 0

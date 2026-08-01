@@ -6,18 +6,22 @@ ProcessPoolExecutor を使用してタイムアウト時のゾンビプロセス
 CPU バウンドな計算を効率化します。
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import time
 from collections.abc import Callable
 from concurrent.futures import (
     FIRST_COMPLETED,
+    Executor,
     ProcessPoolExecutor,
     ThreadPoolExecutor,
     wait,
 )
 from concurrent.futures import TimeoutError as FuturesTimeoutError
 from dataclasses import dataclass
+from types import TracebackType
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -31,7 +35,10 @@ class ParallelEvaluationResult:
     behavior_summary: dict[str, float] | None = None
 
 
-def _combined_initializer(init_func, init_args):
+def _combined_initializer(
+    init_func: Callable | None,
+    init_args: tuple[Any, ...],
+) -> None:
     """内部初期化関数とユーザー指定初期化関数を組み合わせる（Pickle対応用トップレベル関数）"""
     if init_func:
         init_func(*init_args)
@@ -78,7 +85,7 @@ class ParallelEvaluator:
         self.worker_initargs = worker_initargs
 
         # 永続的なExecutor
-        self._executor = None
+        self._executor: ProcessPoolExecutor | ThreadPoolExecutor | None = None
 
         # 評価統計
         self._total_evaluations = 0
@@ -109,7 +116,7 @@ class ParallelEvaluator:
         self._cache_misses = 0
         self._behavior_summary_cache: dict[object, dict[str, float]] = {}
 
-    def start(self):
+    def start(self) -> None:
         """
         Executorを起動して保持します。
         """
@@ -127,7 +134,7 @@ class ParallelEvaluator:
         else:
             self._executor = ThreadPoolExecutor(max_workers=self.max_workers)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """
         Executorを停止します。
         """
@@ -136,11 +143,16 @@ class ParallelEvaluator:
             self._executor.shutdown(wait=True)
             self._executor = None
 
-    def __enter__(self):
+    def __enter__(self) -> ParallelEvaluator:
         self.start()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
         self.shutdown()
 
     def evaluate_population(
@@ -186,6 +198,7 @@ class ParallelEvaluator:
             # 一時的なExecutorを使用（コンテキストマネージャで管理）
             self.start()
             try:
+                assert self._executor is not None
                 results = self._evaluate_on_executor(
                     self._executor, population, results, default_fitness
                 )
@@ -193,6 +206,7 @@ class ParallelEvaluator:
                 self.shutdown()
         else:
             # 永続的なExecutorを使用
+            assert self._executor is not None
             results = self._evaluate_on_executor(
                 self._executor, population, results, default_fitness
             )
@@ -209,7 +223,7 @@ class ParallelEvaluator:
 
     def _evaluate_on_executor(
         self,
-        executor,
+        executor: Executor,
         population: list[Any],
         results: list[tuple[float, ...] | None],
         default_fitness: tuple[float, ...],
@@ -358,7 +372,7 @@ class ParallelEvaluator:
 
     def _collect_expired_futures(
         self,
-        futures,
+        futures: set[Any],
         future_started_at: dict[Any, float],
     ) -> list[Any]:
         """個体ごとの timeout を超過した Future を抽出する。"""
@@ -521,7 +535,7 @@ class ParallelEvaluator:
 _WORKER_DATA_CONTEXT: dict[str, Any] = {}
 
 
-def initialize_worker(data_context: dict[str, Any]):
+def initialize_worker(data_context: dict[str, Any]) -> None:
     """
     ワーカープロセスの初期化
 

@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import Any, cast
+
+from app.types import SerializableValue
 
 from ..config.constants import TPSLMethod
 from ..genes.conditions import Condition, ConditionGroup, EntryDirection
@@ -131,7 +133,7 @@ class SeedStrategyFactory:
         }
 
     @staticmethod
-    def _seed_metadata(seed_name: str) -> dict[str, str]:
+    def _seed_metadata(seed_name: str) -> dict[str, SerializableValue]:
         """シード戦略の共通メタデータを生成"""
         return {"seed_strategy": seed_name, "version": "1.0"}
 
@@ -222,7 +224,7 @@ class SeedStrategyFactory:
         """
         method_name = cls._SEED_MAPPING.get(name.lower())
         if method_name:
-            return getattr(cls, method_name)()
+            return cast(StrategyGene, getattr(cls, method_name)())
         return None
 
     # =========================================================================

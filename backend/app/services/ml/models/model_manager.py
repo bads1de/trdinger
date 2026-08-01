@@ -9,7 +9,7 @@ import logging
 import os
 import warnings
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 import joblib
 
@@ -32,7 +32,7 @@ class ModelManager:
     およびメタデータのサイドカー保存（JSON）などを担当します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         初期化
         """
@@ -40,7 +40,7 @@ class ModelManager:
         self._config_override: Any | None = None
 
     @property
-    def config(self):
+    def config(self) -> Any:
         """現在の ML 設定を取得"""
         if self._config_override is not None:
             return self._config_override
@@ -51,7 +51,7 @@ class ModelManager:
         """テスト用に設定を差し替える"""
         self._config_override = value
 
-    def _ensure_directories(self):
+    def _ensure_directories(self) -> None:
         """必要なディレクトリを作成"""
         os.makedirs(self.config.model_save_path, exist_ok=True)
 
@@ -142,7 +142,7 @@ class ModelManager:
                 return "ensemble"
             if "single" in model_type_lower:
                 return "single"
-            return model_type_lower
+            return str(model_type_lower)
 
         # 2.5. 直接保存されたスタッキング用辞書構造を判定
         if isinstance(model, dict):
@@ -162,7 +162,7 @@ class ModelManager:
 
         return "unknown"
 
-    @safe_ml_operation(  # type: ignore[misc,arg-type]
+    @safe_ml_operation(
         default_return=None, context="モデル保存でエラーが発生しました"
     )
     def save_model(
@@ -260,7 +260,7 @@ class ModelManager:
             logger.error(f"モデル保存エラー: {e}")
             raise MLModelError(f"モデル保存に失敗しました: {e}")
 
-    @safe_ml_operation(  # type: ignore[misc,arg-type]
+    @safe_ml_operation(
         default_return=None, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> dict[str, Any] | None:
@@ -387,7 +387,7 @@ class ModelManager:
             logger.error(f"モデル一覧取得エラー: {e}")
             return []
 
-    def cleanup_expired_models(self):
+    def cleanup_expired_models(self) -> None:
         """期限切れのモデルファイルをクリーンアップ"""
         try:
             cutoff_date = datetime.now() - timedelta(
@@ -414,7 +414,7 @@ class ModelManager:
         except Exception as e:
             logger.error(f"期限切れモデルクリーンアップエラー: {e}")
 
-    def _cleanup_old_models(self, model_name: str):
+    def _cleanup_old_models(self, model_name: str) -> None:
         """古いモデルファイルをクリーンアップ"""
         try:
             # 同じモデル名のファイルを検索
@@ -569,7 +569,7 @@ class ModelManager:
                     sidecar_data = json.load(f)
 
                 logger.debug(f"サイドカーJSONからメタデータを読み込み: {sidecar_path}")
-                return sidecar_data
+                return cast(dict[str, Any], sidecar_data)
 
             # サイドカーJSONが存在しない場合はフォールバック
             logger.debug(

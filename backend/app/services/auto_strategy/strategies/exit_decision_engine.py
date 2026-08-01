@@ -7,6 +7,7 @@ UniversalStrategy.next() に集中していた決済の責務を分離する。
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from ..config.constants import ExitType
 from ..genes import Condition, ConditionGroup
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 class ExitDecisionEngine:
     """イグジット方向の決定と決済実行を担当するクラス。"""
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any) -> None:
         self.strategy = strategy
 
     def determine_exit_direction(self) -> float:
@@ -108,7 +109,7 @@ class ExitDecisionEngine:
 
         return False
 
-    def _get_cached_exit_signal(self):
+    def _get_cached_exit_signal(self) -> Any:
         """ベクトル化されたExit条件のキャッシュ信号を安全に取得する。"""
         position = self.strategy.position
         if not position:
@@ -144,7 +145,7 @@ class ExitDecisionEngine:
             logger.debug("キャッシュ済みExitシグナルの取得に失敗しました: %s", e)
             return None
 
-    def _evaluate_condition_group(self, group: ConditionGroup, evaluator) -> bool:
+    def _evaluate_condition_group(self, group: ConditionGroup, evaluator: Any) -> bool:
         """ConditionGroupを再帰的に評価。"""
         if not group.conditions:
             return False
@@ -160,15 +161,15 @@ class ExitDecisionEngine:
                 for cond in group.conditions
             )
 
-    def _evaluate_single_condition(self, cond, evaluator) -> bool:
+    def _evaluate_single_condition(self, cond: object, evaluator: Any) -> bool:
         """単一条件を評価。"""
         if isinstance(cond, ConditionGroup):
             return self._evaluate_condition_group(cond, evaluator)
-        elif isinstance(cond, Condition):
-            return evaluator.evaluate_single_condition(cond, self.strategy)
+        if isinstance(cond, Condition):
+            return bool(evaluator.evaluate_single_condition(cond, self.strategy))
         return False
 
-    def _execute_partial_exit(self, direction: float, exit_gene) -> bool:
+    def _execute_partial_exit(self, direction: float, exit_gene: Any) -> bool:
         """部分決済を実行。"""
         position = self.strategy.position
         if not position:
@@ -215,7 +216,7 @@ class ExitDecisionEngine:
 
         return True
 
-    def _activate_trailing_stop(self, direction: float, exit_gene) -> bool:
+    def _activate_trailing_stop(self, direction: float, exit_gene: Any) -> bool:
         """
         トレーリングSLを起動する。
         決済は実行せず、PositionManagerにトレーリング開始を通知。

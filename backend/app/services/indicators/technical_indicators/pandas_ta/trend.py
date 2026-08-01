@@ -31,7 +31,7 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-import pandas_ta_classic as ta  # type: ignore
+import pandas_ta_classic as ta
 from numba import njit
 
 from ...data_validation import (
@@ -55,7 +55,9 @@ class TrendIndicators:
 
     @staticmethod
     @njit(cache=True)
-    def _sar_loop(high_arr, low_arr, af, max_af):
+    def _sar_loop(  # type: ignore[no-untyped-def]
+        high_arr, low_arr, af, max_af
+    ):
         """
         パラボリック SAR を計算する Numba 加速ループ。
         """
@@ -407,7 +409,7 @@ class TrendIndicators:
         if isinstance(result, tuple):
             return cast(tuple[pd.Series, pd.Series], result)
 
-        return cast(tuple[pd.Series, pd.Series], (result.iloc[:, 0], result.iloc[:, 1]))
+        return (result.iloc[:, 0], result.iloc[:, 1])
 
     @staticmethod
     @handle_pandas_ta_errors

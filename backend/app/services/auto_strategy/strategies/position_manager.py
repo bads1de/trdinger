@@ -6,6 +6,7 @@ UniversalStrategyのポジション管理と決済ロジックを担当します
 """
 
 import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class PositionManager:
     悲観的約定判定、トレーリングストップ、トレーリングTPなどの機能を提供します。
     """
 
-    def __init__(self, strategy):
+    def __init__(self, strategy: Any) -> None:
         """
         初期化
 
@@ -28,7 +29,7 @@ class PositionManager:
         self.strategy = strategy
 
     @property
-    def state(self):
+    def state(self) -> Any:
         """strategy に紐づく実行時状態を返す。"""
         return self.strategy.runtime_state
 

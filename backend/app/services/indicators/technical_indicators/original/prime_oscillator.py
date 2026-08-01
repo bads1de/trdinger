@@ -16,7 +16,7 @@ from ...data_validation import (
 from ._window_helpers import _window_sum
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_is_prime(n: int) -> bool:
     if n < 2:
         return False
@@ -40,7 +40,7 @@ def _get_prime_sequence(length: int) -> list[int]:
     return primes
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_prime_oscillator_loop(
     prices: np.ndarray, primes: np.ndarray, lookback_limit: int = 200
 ) -> np.ndarray:
@@ -147,6 +147,6 @@ def prime_oscillator(
 
     oscillator = pd.Series(result, index=close.index, name=f"PRIME_OSC_{length}")
     signal = oscillator.rolling(window=signal_length).mean()
-    signal.name = f"PRIME_SIGNAL_{length}_{signal_length}"  # type: ignore[reportAttributeAccessIssue]
+    signal.name = f"PRIME_SIGNAL_{length}_{signal_length}"
 
-    return cast(tuple[pd.Series, pd.Series], (oscillator, signal))
+    return (oscillator, signal)

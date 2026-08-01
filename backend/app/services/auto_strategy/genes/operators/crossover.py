@@ -119,7 +119,12 @@ def crossover_strategy_genes_batch(
     return results
 
 
-def uniform_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
+def uniform_crossover(
+    strategy_gene_class: type[StrategyGene],
+    parent1: StrategyGene,
+    parent2: StrategyGene,
+    config: GAConfig,
+) -> tuple[StrategyGene, StrategyGene]:
     """ユニフォーム交叉（一様交叉）。"""
     selection_prob = config.mutation_config.crossover_field_selection_probability
 
@@ -149,7 +154,12 @@ def uniform_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
     return strategy_gene_class(**child1_params), strategy_gene_class(**child2_params)
 
 
-def single_point_crossover(strategy_gene_class, parent1, parent2, config: GAConfig):
+def single_point_crossover(
+    strategy_gene_class: type[StrategyGene],
+    parent1: StrategyGene,
+    parent2: StrategyGene,
+    config: GAConfig,
+) -> tuple[StrategyGene, StrategyGene]:
     """一点交叉。"""
     max_indicators_parent1 = len(parent1.indicators)
     max_indicators_parent2 = len(parent2.indicators)
@@ -173,8 +183,8 @@ def single_point_crossover(strategy_gene_class, parent1, parent2, config: GAConf
     c1_ind = c1_ind[:max_indicators]
     c2_ind = c2_ind[:max_indicators]
 
-    c1_risk = {}
-    c2_risk = {}
+    c1_risk: dict[str, Any] = {}
+    c2_risk: dict[str, Any] = {}
     all_keys = set(parent1.risk_management.keys()) | set(parent2.risk_management.keys())
     for key in all_keys:
         val1 = parent1.risk_management.get(key, 0)

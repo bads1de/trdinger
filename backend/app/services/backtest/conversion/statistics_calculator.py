@@ -257,9 +257,9 @@ class BacktestStatisticsCalculator:
         """エクイティカーブの特定インデックスの値を取得"""
         try:
             if hasattr(equity_df, "columns") and "Equity" in equity_df.columns:
-                return equity_df.iloc[index]["Equity"]
+                return cast(float | None, equity_df.iloc[index]["Equity"])
             elif hasattr(equity_df, "iloc"):
-                return equity_df.iloc[index]
+                return cast(float | None, equity_df.iloc[index])
             return None
         except Exception as e:
             logger.warning(f"エクイティ値の取得失敗 (index={index}): {e}")

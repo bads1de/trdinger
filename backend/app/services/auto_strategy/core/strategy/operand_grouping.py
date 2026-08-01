@@ -84,7 +84,7 @@ class OperandGroupingSystem:
         ],
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         オペランドグループ化システムを初期化
 
@@ -225,7 +225,7 @@ class OperandGroupingSystem:
         return compatible
 
     def validate_condition(
-        self, left_operand: str, right_operand: str
+        self, left_operand: str, right_operand: str | float
     ) -> tuple[bool, str]:
         """条件の妥当性を検証
 
@@ -282,7 +282,9 @@ def get_compatibility_score(operand1: str, operand2: str) -> float:
     return operand_grouping_system.get_compatibility_score(operand1, operand2)
 
 
-def validate_condition(left_operand: str, right_operand) -> tuple[bool, str]:
+def validate_condition(
+    left_operand: str, right_operand: str | float
+) -> tuple[bool, str]:
     """
     条件の妥当性を検証（グローバルインターフェース）
 

@@ -35,7 +35,7 @@ class CatBoostModel(BaseGradientBoostingModel):
         random_state: int = 42,
         iterations: int = 100,
         learning_rate: float = 0.1,
-        **kwargs,
+        **kwargs: Any,
     ):
         """
         初期化
@@ -94,7 +94,7 @@ class CatBoostModel(BaseGradientBoostingModel):
             return (X_data, y_data, sample_weight)
         return (X_data, None, sample_weight)
 
-    def _get_model_params(self, num_classes: int, **kwargs) -> dict[str, Any]:
+    def _get_model_params(self, num_classes: int, **kwargs: Any) -> dict[str, Any]:
         """CatBoost固有のパラメータを生成"""
         params = {
             "iterations": kwargs.get("iterations", self.iterations),
@@ -126,7 +126,7 @@ class CatBoostModel(BaseGradientBoostingModel):
         valid_data: Any,
         params: dict[str, Any],
         early_stopping_rounds: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> cb.CatBoostRegressor:
         """
         CatBoost固有の学習プロセスを実行します。
@@ -182,7 +182,7 @@ class CatBoostModel(BaseGradientBoostingModel):
         予測用の入力データを準備します。
         CatBoostはnumpy配列を直接受け取ります。
         """
-        return X.values
+        return np.asarray(X.to_numpy())
 
     def _predict_raw(self, data: Any) -> np.ndarray:
         """
@@ -191,4 +191,4 @@ class CatBoostModel(BaseGradientBoostingModel):
         """
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
-        return self.model.predict(data)
+        return np.asarray(self.model.predict(data))

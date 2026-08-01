@@ -251,7 +251,7 @@ class MLTrainingService(BaseResourceManager):
                 "model_type": model_type,
                 "models": [model_type],
                 "method": "stacking",
-                **single_model_config,  # type: ignore[typeddict-item]
+                **single_model_config,
             }
         else:
             raise ValueError(f"サポートされていないトレーナータイプ: {trainer_type}")
@@ -259,7 +259,7 @@ class MLTrainingService(BaseResourceManager):
     # --- オーケストレーション（API向け）機能 ---
 
     async def start_training(
-        self, config, background_tasks, db: Session
+        self, config: Any, background_tasks: Any, db: Session
     ) -> dict[str, Any]:
         """
         MLトレーニングをバックグラウンドタスクとして開始します。
@@ -339,7 +339,7 @@ class MLTrainingService(BaseResourceManager):
             logger.error(f"MLトレーニング開始エラー: {e}")
             raise
 
-    def _validate_training_config(self, config) -> None:
+    def _validate_training_config(self, config: Any) -> None:
         """
         トレーニング設定の検証（委譲メソッド）
 
@@ -455,7 +455,7 @@ class MLTrainingService(BaseResourceManager):
         background_task_manager.cleanup_all_tasks()
         return api_response(success=True, message="MLトレーニングを停止しました")
 
-    async def _train_in_background(self, config, training_id: str):
+    async def _train_in_background(self, config: Any, training_id: str) -> None:
         """
         実際のトレーニング処理をバックグラウンドスレッドで実行します。
 
@@ -627,13 +627,13 @@ class MLTrainingService(BaseResourceManager):
 
     def _execute_actual_training(
         self,
-        trainer_type,
-        ensemble_cfg,
-        single_cfg,
-        config,
-        training_data,
-        training_params,
-    ):
+        trainer_type: str,
+        ensemble_cfg: dict[str, Any] | None,
+        single_cfg: dict[str, Any] | None,
+        config: Any,
+        training_data: Any,
+        training_params: dict[str, Any],
+    ) -> None:
         """
         トレーナーを初期化し、実際の学習・評価プロセスを実行します。
 
@@ -656,7 +656,6 @@ class MLTrainingService(BaseResourceManager):
         """
         # 現在のインスタンスを更新
         self.trainer_type = trainer_type
-        self.trainer: VolatilityRegressionTrainer | EnsembleTrainer
         if config.task_type == "volatility_regression":
             model_type = (single_cfg or {}).get("model_type", "lightgbm")
             self.trainer = VolatilityRegressionTrainer(
@@ -824,7 +823,7 @@ class MLTrainingService(BaseResourceManager):
         optimization_settings: OptimizationSettings | None = None,
         test_size: float = 0.2,
         random_state: int = 42,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         モデルの学習、ハイパーパラメータ最適化（オプション）、評価を実行します。
@@ -927,13 +926,13 @@ class MLTrainingService(BaseResourceManager):
         return ["lightgbm", "xgboost"]
 
     # --- リソース管理 ---
-    def _cleanup_temporary_files(self, level: CleanupLevel):
+    def _cleanup_temporary_files(self, level: CleanupLevel) -> None:
         pass
 
-    def _cleanup_cache(self, level: CleanupLevel):
+    def _cleanup_cache(self, level: CleanupLevel) -> None:
         pass
 
-    def _cleanup_models(self, level: CleanupLevel):
+    def _cleanup_models(self, level: CleanupLevel) -> None:
         if self.trainer and hasattr(self.trainer, "cleanup_resources"):
             self.trainer.cleanup_resources(level)
 

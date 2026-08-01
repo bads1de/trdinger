@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from datetime import datetime, timezone
 from numbers import Real
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 
@@ -49,7 +49,7 @@ def parse_datetime_value(value: Any) -> datetime:
         raise ValueError(f"サポートされていない日付形式: {type(value)}")
 
     if isinstance(value, pd.Timestamp):
-        return value.to_pydatetime()
+        return cast(datetime, value.to_pydatetime())
 
     if isinstance(value, datetime):
         return value
@@ -58,7 +58,7 @@ def parse_datetime_value(value: Any) -> datetime:
         try:
             return datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError:
-            return pd.to_datetime(value).to_pydatetime()
+            return cast(datetime, pd.to_datetime(value).to_pydatetime())
 
     raise ValueError(f"サポートされていない日付形式: {type(value)}")
 
@@ -145,7 +145,7 @@ def parse_timestamp_safe(value: Any) -> datetime | None:
 
     try:
         if isinstance(value, pd.Timestamp):
-            return value.to_pydatetime()
+            return cast(datetime, value.to_pydatetime())
 
         if isinstance(value, datetime):
             return value

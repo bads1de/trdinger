@@ -79,7 +79,7 @@ class USMarketOpenFilter(BaseTool):
 
             window = params.get("window_minutes", 30)
 
-            return abs(current_min - target_min) <= window
+            return bool(abs(current_min - target_min) <= window)
 
     def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """

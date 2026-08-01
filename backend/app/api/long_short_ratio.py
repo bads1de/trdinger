@@ -3,6 +3,7 @@
 """
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
@@ -33,7 +34,7 @@ async def get_long_short_ratio_data(
     start_date: str | None = Query(None, description="開始日時（ISO形式）"),
     end_date: str | None = Query(None, description="終了日時（ISO形式）"),
     repository: LongShortRatioRepository = Depends(get_long_short_ratio_repository),
-):
+) -> Any:
     """
     ロング/ショート比率データを取得
 
@@ -90,7 +91,7 @@ async def collect_long_short_ratio_data(
     ),
     service: BybitLongShortRatioService = Depends(get_long_short_ratio_service),
     repository: LongShortRatioRepository = Depends(get_long_short_ratio_repository),
-):
+) -> Any:
     """
     ロング/ショート比率データの収集を実行（バックグラウンド）
 
@@ -110,7 +111,7 @@ async def collect_long_short_ratio_data(
         収集開始通知を含むJSONレスポンス
     """
 
-    async def _collect_task():
+    async def _collect_task() -> None:
         try:
             if mode == "incremental":
                 result = await service.fetch_incremental_long_short_ratio_data(

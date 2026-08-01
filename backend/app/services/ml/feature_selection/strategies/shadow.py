@@ -47,9 +47,9 @@ class ShadowFeatureStrategy(BaseSelectionStrategy):
                 random_state=config.random_state + iteration,
                 n_jobs=config.n_jobs,
             )
-            model.fit(X_extended, y)  # type: ignore[reportAttributeAccessIssue]
+            model.fit(X_extended, y)
 
-            importances = model.feature_importances_  # type: ignore[reportAttributeAccessIssue]
+            importances = model.feature_importances_
             real_importances = importances[:n_features]
             shadow_importances = importances[n_features:]
 

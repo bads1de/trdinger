@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pandas as pd
 from numba import njit, prange
@@ -11,7 +9,7 @@ from numba import njit, prange
 from ...data_validation import handle_pandas_ta_errors, validate_series_params
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_fibonacci_cycle_loop(
     prices: np.ndarray,
     cycle_periods: np.ndarray,
@@ -107,6 +105,6 @@ def fibonacci_cycle(
         result, index=close.index, name=f"FIBO_CYCLE_{len(cycle_periods)}"
     )
     signal = fibonacci_cycle_result.rolling(window=3).mean()
-    signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"  # type: ignore[reportAttributeAccessIssue]
+    signal.name = f"FIBO_SIGNAL_{len(cycle_periods)}"
 
-    return cast(tuple[pd.Series, pd.Series], (fibonacci_cycle_result, signal))
+    return (fibonacci_cycle_result, signal)

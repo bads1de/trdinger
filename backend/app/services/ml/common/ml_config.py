@@ -6,7 +6,7 @@ ML関連設定クラス
 """
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -374,7 +374,7 @@ class MLTrainingConfig(BaseSettings):
             ValueError: バリデーションエラーの場合
         """
         if hasattr(v, "__class__") and v.__class__.__name__ == "LabelGenerationConfig":
-            return v
+            return cast(LabelGenerationConfig, v)
         if isinstance(v, dict):
             return LabelGenerationConfig(**v)
         if v is None:

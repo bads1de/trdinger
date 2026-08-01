@@ -8,6 +8,7 @@ ML共通ユーティリティモジュール
 from __future__ import annotations
 
 from importlib import import_module
+from typing import cast
 
 from .base_resource_manager import BaseResourceManager, CleanupLevel
 from .exceptions import (
@@ -45,7 +46,7 @@ _CONFIG_EXPORTS = {
 def __getattr__(name: str) -> type:
     if name in _CONFIG_EXPORTS:
         module = import_module(".config", __name__)
-        return getattr(module, name)
+        return cast(type, getattr(module, name))
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

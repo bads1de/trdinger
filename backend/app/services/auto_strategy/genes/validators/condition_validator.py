@@ -5,12 +5,15 @@
 from __future__ import annotations
 
 import logging
+from typing import Any, cast
 
 import numpy as np
 
 from app.utils.error_handler import safe_operation
 
 from ...config.constants import DATA_SOURCES, OPERATORS
+from ..conditions import Condition, ConditionGroup
+from .indicator_validator import IndicatorValidator
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +21,7 @@ logger = logging.getLogger(__name__)
 class ConditionValidator:
     """条件の妥当性検証を担当します。"""
 
-    def __init__(self, indicator_validator) -> None:
+    def __init__(self, indicator_validator: IndicatorValidator) -> None:
         """初期化"""
         self.indicator_validator = indicator_validator
         self.valid_operators = OPERATORS
@@ -29,7 +32,7 @@ class ConditionValidator:
         is_api_call=False,
         default_return=(False, "バリデーションエラー"),
     )
-    def validate_condition(self, condition) -> tuple[bool, str]:
+    def validate_condition(self, condition: Condition) -> tuple[bool, str]:
         """条件の妥当性を検証"""
         if not all(
             hasattr(condition, attr)
@@ -40,10 +43,16 @@ class ConditionValidator:
         if condition.operator not in self.valid_operators:
             return False, f"無効な演算子: {condition.operator}"
 
-        left_valid, left_error = self._is_valid_operand_detailed(condition.left_operand)
+        left_valid: bool
+        left_error: str
+        left_valid, left_error = self._is_valid_operand_detailed(
+            condition.left_operand
+        )
         if not left_valid:
             return False, f"無効な左オペランド: {left_error}"
 
+        right_valid: bool
+        right_error: str
         right_valid, right_error = self._is_valid_operand_detailed(
             condition.right_operand
         )
@@ -161,10 +170,8 @@ class ConditionValidator:
         return False
 
     @safe_operation(context="条件クリーニング", is_api_call=False, default_return=False)
-    def clean_condition(self, condition) -> bool:
+    def clean_condition(self, condition: Condition | ConditionGroup) -> bool:
         """条件をクリーニングして修正可能な問題を自動修正"""
-        from ..conditions import ConditionGroup
-
         if isinstance(condition, ConditionGroup):
             return True
 
@@ -201,13 +208,13 @@ class ConditionValidator:
         return True
 
     @safe_operation(context="辞書オペランド抽出", is_api_call=False, default_return="")
-    def _extract_operand_from_dict(self, operand_dict: dict) -> str:
+    def _extract_operand_from_dict(self, operand_dict: dict[str, Any]) -> str:
         """辞書形式のオペランドから文字列を抽出"""
         if (
             operand_dict.get("type") == "indicator"
             or operand_dict.get("type") == "price"
         ):
-            return operand_dict.get("name", "")
+            return cast(str, operand_dict.get("name", ""))
         elif operand_dict.get("type") == "value":
             value = operand_dict.get("value")
             return str(value) if value is not None else ""
@@ -217,7 +224,7 @@ class ConditionValidator:
     @safe_operation(
         context="条件のトリビアル判定", is_api_call=False, default_return=False
     )
-    def _is_trivial_condition(self, condition) -> bool:
+    def _is_trivial_condition(self, condition: Condition) -> bool:
         """条件がシンプルすぎる（トリビアル）かどうかを判定"""
         if not hasattr(condition, "left_operand") or not hasattr(
             condition, "right_operand"

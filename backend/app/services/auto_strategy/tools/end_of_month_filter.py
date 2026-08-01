@@ -59,7 +59,7 @@ class EndOfMonthFilter(BaseTool):
 
         # 残り日数が指定範囲内ならスキップ
         # days_left == 0 (最終日) <= 0 -> True
-        return days_left <= days_before
+        return bool(days_left <= days_before)
 
     def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """

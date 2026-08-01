@@ -7,7 +7,8 @@ DB操作や永続化の責務を持たず、純粋なバックテストの実行
 
 import copy
 import logging
-from typing import Any
+from datetime import datetime
+from typing import Any, cast
 
 import pandas as pd
 from pydantic import ValidationError
@@ -123,8 +124,8 @@ class BacktestOrchestrator:
                 strategy_parameters=strategy_parameters,
                 symbol=backtest_config.symbol,
                 timeframe=backtest_config.timeframe,
-                start_date=backtest_config.start_date,
-                end_date=backtest_config.end_date,
+                start_date=cast(datetime, backtest_config.start_date),
+                end_date=cast(datetime, backtest_config.end_date),
                 initial_capital=backtest_config.initial_capital,
                 commission_rate=backtest_config.commission_rate,
                 slippage=backtest_config.spread,

@@ -11,7 +11,7 @@ import sys
 from abc import ABC, abstractmethod
 from dataclasses import is_dataclass
 from datetime import datetime
-from typing import get_type_hints
+from typing import cast, get_type_hints
 
 from typing_extensions import Self
 
@@ -43,7 +43,7 @@ class BaseGene(ABC):
         """オブジェクトを辞書形式に変換"""
         # dataclass サブクラスは汎用ユーティリティに委譲
         if is_dataclass(self):
-            return dataclass_to_dict(self)
+            return dataclass_to_dict(self)  # type: ignore[unreachable]
 
         # 非 dataclass サブクラス向けフォールバック
         result = {}
@@ -78,12 +78,12 @@ class BaseGene(ABC):
         return result
 
     @staticmethod
-    def _is_enum_type(param_type) -> bool:
+    def _is_enum_type(param_type: type) -> bool:
         """パラメータタイプがEnum型かどうかをチェック"""
         return hasattr(param_type, "__members__")
 
     @staticmethod
-    def _is_datetime_type(param_type) -> bool:
+    def _is_datetime_type(param_type: type) -> bool:
         """パラメータタイプがdatetime型かどうかをチェック"""
         return param_type == datetime
 
@@ -106,7 +106,7 @@ class BaseGene(ABC):
         """
         if isinstance(value, str):
             try:
-                return param_type(value)
+                return cast(SerializableValue | object, param_type(value))
             except ValueError:
                 logger.warning(f"無効なEnum値 {value} を無視、既定値へフォールバック")
                 return BaseGene._SKIP_FIELD_CONVERSION
@@ -200,7 +200,7 @@ class BaseGene(ABC):
                             name,
                             e,
                         )
-                        annotations[name] = raw  # type: ignore[assignment]
+                        annotations[name] = raw
 
         return annotations
 
@@ -293,13 +293,16 @@ class BaseGene(ABC):
         """
         from .genetic_utils import GeneticUtils
 
-        return GeneticUtils.mutate_generic_gene(
-            gene=self,
-            gene_class=self.__class__,
-            mutation_rate=mutation_rate,
-            numeric_fields=self.NUMERIC_FIELDS,
-            enum_fields=self.ENUM_FIELDS,
-            numeric_ranges=self.NUMERIC_RANGES,
+        return cast(
+            BaseGene,
+            GeneticUtils.mutate_generic_gene(
+                gene=self,
+                gene_class=self.__class__,
+                mutation_rate=mutation_rate,
+                numeric_fields=self.NUMERIC_FIELDS,
+                enum_fields=self.ENUM_FIELDS,
+                numeric_ranges=self.NUMERIC_RANGES,
+            ),
         )
 
     @classmethod

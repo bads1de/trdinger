@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass, field
+from typing import cast
 
 from app.types import SerializableValue, StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
@@ -52,9 +53,9 @@ class ToolGene:
             ToolGene インスタンス
         """
         return cls(
-            tool_name=data.get("tool_name", ""),
-            enabled=data.get("enabled", True),
-            params=deepcopy(data.get("params", {})),
+            tool_name=cast(str, data.get("tool_name", "")),
+            enabled=cast(bool, data.get("enabled", True)),
+            params=deepcopy(cast(dict[str, SerializableValue], data.get("params", {}))),
         )
 
     def clone(self) -> ToolGene:

@@ -5,7 +5,7 @@ GA実行、進捗管理、結果保存、戦略テストを統合的に管理し
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.services.backtest.services.backtest_service import BacktestService
 from app.utils.error_handler import ErrorHandler
@@ -178,7 +178,7 @@ class AutoStrategyService:
         experiment_name: str,
         ga_config: GAConfig,
         backtest_config: dict[str, Any],
-    ):
+    ) -> None:
         """
         データベースに実験レコードを作成
 
@@ -193,7 +193,7 @@ class AutoStrategyService:
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
-    def _initialize_ga_engine(self, experiment_id: str, ga_config: GAConfig):
+    def _initialize_ga_engine(self, experiment_id: str, ga_config: GAConfig) -> None:
         """
         GAエンジンを初期化
 
@@ -211,7 +211,7 @@ class AutoStrategyService:
         ga_config: GAConfig,
         backtest_config: dict[str, Any],
         task_scheduler: TaskScheduler,
-    ):
+    ) -> None:
         """実験をバックグラウンドタスクで開始する"""
         self._get_experiment_application_service().schedule_experiment(
             experiment_id,
@@ -238,7 +238,10 @@ class AutoStrategyService:
         try:
             if not self.experiment_application_service:
                 return []
-            return self.experiment_application_service.list_experiments()
+            return cast(
+                list[dict[str, Any]],
+                self.experiment_application_service.list_experiments(),
+            )
         except Exception as e:
             logger.error("エラー in 実験一覧取得: %s", e)
             return []
@@ -256,8 +259,11 @@ class AutoStrategyService:
         try:
             if not self.experiment_application_service:
                 return None
-            return self.experiment_application_service.get_experiment_detail(
-                experiment_id
+            return cast(
+                dict[str, Any] | None,
+                self.experiment_application_service.get_experiment_detail(
+                    experiment_id
+                ),
             )
         except Exception as e:
             logger.error("エラー in 実験詳細取得: %s", e)

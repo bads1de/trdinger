@@ -255,10 +255,10 @@ class DataIntegrationService:
             return {"error": "データがありません"}
 
         # 安全に日付を取得
-        start_date_val: pd.Timestamp = pd.to_datetime(df.index.min(), errors="coerce")  # type: ignore
+        start_date_val: pd.Timestamp = pd.to_datetime(df.index.min(), errors="coerce")
         start_date = start_date_val.isoformat() if pd.notna(start_date_val) else None
 
-        end_date_val: pd.Timestamp = pd.to_datetime(df.index.max(), errors="coerce")  # type: ignore
+        end_date_val: pd.Timestamp = pd.to_datetime(df.index.max(), errors="coerce")
         end_date = end_date_val.isoformat() if pd.notna(end_date_val) else None
 
         # カラム名を小文字に統一して取得

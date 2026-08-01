@@ -8,10 +8,10 @@ TP/SL計算サービス
 import logging
 import math
 import threading
-from typing import Any
+from typing import Any, cast
 
 from ..genes import TPSLGene, TPSLMethod
-from .calculator import TPSLCalculatorFactory
+from .calculator import BaseTPSLCalculator, TPSLCalculatorFactory
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +23,13 @@ class TPSLService:
     Calculatorパターンを使用して、各計算方式を個別のクラスとして実装しています。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         # ファクトリーを使用して計算機を管理（スレッドセーフなキャッシュ）
         self._calculator_cache: dict[TPSLMethod, Any] = {}
         self._cache_lock = threading.Lock()
 
-    def _get_calculator(self, method: TPSLMethod):
+    def _get_calculator(self, method: TPSLMethod) -> BaseTPSLCalculator:
         """
         指定された方式の計算機を取得（キャッシュ付き・スレッドセーフ）
 
@@ -46,7 +46,7 @@ class TPSLService:
                     self._calculator_cache[method] = (
                         TPSLCalculatorFactory.create_calculator(method)
                     )
-        return self._calculator_cache[method]
+        return cast(BaseTPSLCalculator, self._calculator_cache[method])
 
     def calculate_tpsl_prices(
         self,
@@ -80,7 +80,7 @@ class TPSLService:
             is_api_call=False,
             default_return=self._calculate_fallback(current_price, position_direction),
         )
-        def _calculate_tpsl_prices():
+        def _calculate_tpsl_prices() -> tuple[float | None, float | None]:
             """TP/SL価格計算の内部実行関数"""
             # TP/SL遺伝子が利用可能な場合（GA最適化対象）
             if tpsl_gene and hasattr(tpsl_gene, "enabled") and tpsl_gene.enabled:
@@ -125,7 +125,7 @@ class TPSLService:
             is_api_call=False,
             default_return=self._calculate_fallback(current_price, position_direction),
         )
-        def _calculate_from_gene():
+        def _calculate_from_gene() -> tuple[float | None, float | None]:
             """遺伝子ベースのTP/SL価格計算の内部実行関数"""
             # ファクトリーを使用して適切な計算機を取得
             calculator = self._get_calculator(tpsl_gene.method)
@@ -196,7 +196,7 @@ class TPSLService:
                 position_direction,
             ),
         )
-        def _calculate_basic_tpsl_prices():
+        def _calculate_basic_tpsl_prices() -> tuple[float | None, float | None]:
             """基本的なTP/SL価格計算の内部実行関数"""
             # 高度なTP/SL計算方式が使用されているかチェック
             if self._is_advanced_tpsl_used(risk_management):
@@ -370,21 +370,17 @@ class TPSLService:
             logger.error(f"RR比調整エラー: {e}")
             return sl_price, tp_price
 
-    def _validate_price(self, price: float) -> bool:
+    def _validate_price(self, price: float | None) -> bool:
         """価格の妥当性を検証"""
         if price is None:
-            return False
-        if not isinstance(price, (int, float)):
             return False
         if not math.isfinite(price):
             return False
         return not price <= 0
 
-    def _validate_percentage(self, percentage: float, label: str) -> bool:
+    def _validate_percentage(self, percentage: float | None, label: str) -> bool:
         """割合の妥当性を検証"""
         if percentage is None:
-            return False
-        if not isinstance(percentage, (int, float)):
             return False
         if not math.isfinite(percentage):
             return False

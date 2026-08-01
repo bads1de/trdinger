@@ -63,10 +63,10 @@ def _build_sample_ohlcv_frame(
         low = close - 1
         volume = np.random.randint(100, 1000, rows).astype(float)
     else:
-        open_ = np.random.uniform(100, 110, rows)  # type: ignore[assignment]
-        high = np.random.uniform(105, 115, rows)  # type: ignore[assignment]
-        low = np.random.uniform(95, 105, rows)  # type: ignore[assignment]
-        close = np.random.uniform(100, 110, rows)  # type: ignore[assignment]
+        open_ = np.random.uniform(100, 110, rows)
+        high = np.random.uniform(105, 115, rows)
+        low = np.random.uniform(95, 105, rows)
+        close = np.random.uniform(100, 110, rows)
         volume = np.random.uniform(1000, 5000, rows)
 
     frame = pd.DataFrame(
@@ -575,7 +575,7 @@ def get_indicator_category(indicator_name: str) -> str | None:
 
     for cat, items in ta.Category.items():
         if name_lower in items:
-            return cat
+            return str(cat)
 
     return None
 

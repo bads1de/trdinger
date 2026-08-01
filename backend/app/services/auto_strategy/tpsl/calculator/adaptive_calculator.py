@@ -23,7 +23,7 @@ class AdaptiveCalculator(BaseTPSLCalculator):
     適応的TP/SL計算器
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         super().__init__("adaptive")
         self.calculators = {
@@ -39,7 +39,7 @@ class AdaptiveCalculator(BaseTPSLCalculator):
         tpsl_gene: TPSLGene | None,
         market_data: dict[str, Any] | None,
         position_direction: float,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[float, float, float, dict[str, Any]]:
         """
         適応的アルゴリズムによるTP/SL計算の実装
@@ -74,7 +74,7 @@ class AdaptiveCalculator(BaseTPSLCalculator):
             result.stop_loss_pct,
             result.take_profit_pct,
             result.confidence_score,
-            {**result.expected_performance, "adaptive_selection": best_method},
+            {**(result.expected_performance or {}), "adaptive_selection": best_method},
         )
 
     def _select_best_method(

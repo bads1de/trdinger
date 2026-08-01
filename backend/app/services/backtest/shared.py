@@ -105,7 +105,7 @@ def safe_duration_conversion(value: Any) -> float:
             if pd.isna(parsed):
                 logger.warning(f"duration変換に失敗しました: {value!r}")
                 return 0.0
-            return parsed.total_seconds() / 86400.0
+            return float(parsed.total_seconds()) / 86400.0
 
     try:
         return float(value)
@@ -118,7 +118,7 @@ def safe_duration_conversion(value: Any) -> float:
         if pd.isna(parsed):
             logger.warning(f"duration変換に失敗しました: {value!r}")
             return 0.0
-        return parsed.total_seconds() / 86400.0
+        return float(parsed.total_seconds()) / 86400.0
 
 
 def safe_int_conversion(value: Any) -> int:

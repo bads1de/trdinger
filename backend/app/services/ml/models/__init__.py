@@ -27,7 +27,7 @@ __all__ = [
 ]
 
 
-def get_available_models():
+def get_available_models() -> list[str]:
     """
     利用可能なモデルラッパーのリストを取得（Essential 3 Models）
 
@@ -36,7 +36,7 @@ def get_available_models():
     """
     import importlib.util
 
-    available = []
+    available: list[str] = []
 
     # Essential 3 Modelsをチェック
     essential_models = ["lightgbm", "xgboost", "catboost"]

@@ -18,7 +18,7 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
     固定パーセンテージ方式のTP/SL計算器
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         super().__init__("fixed_percentage")
 
@@ -28,7 +28,7 @@ class FixedPercentageCalculator(BaseTPSLCalculator):
         tpsl_gene: TPSLGene | None,
         market_data: dict[str, Any] | None,
         position_direction: float,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[float, float, float, dict[str, Any]]:
         """
         固定パーセンテージ方式によるTP/SL計算の実装

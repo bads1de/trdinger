@@ -27,8 +27,8 @@ class XGBoostModel(BaseGradientBoostingModel):
         max_depth: int = 6,
         learning_rate: float = 0.1,
         n_estimators: int = 100,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         初期化
         """
@@ -55,7 +55,7 @@ class XGBoostModel(BaseGradientBoostingModel):
             X, label=y, feature_names=self.feature_names, weight=sample_weight
         )
 
-    def _get_model_params(self, num_classes: int, **kwargs) -> dict[str, Any]:
+    def _get_model_params(self, num_classes: int, **kwargs: Any) -> dict[str, Any]:
         """
         XGBoost固有のパラメータディクショナリを生成します。
         """
@@ -91,7 +91,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         valid_data: xgb.DMatrix | None,
         params: dict[str, Any],
         early_stopping_rounds: int | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> xgb.Booster:
         """
         XGBoost固有の学習プロセスを実行します。
@@ -126,7 +126,7 @@ class XGBoostModel(BaseGradientBoostingModel):
         """
         if self.model is None:
             raise ModelError("学習済みモデルがありません")
-        return self.model.predict(data)
+        return np.asarray(self.model.predict(data))
 
     def _prepare_input_for_prediction(self, X: pd.DataFrame) -> xgb.DMatrix:
         """
@@ -167,8 +167,10 @@ class XGBoostModel(BaseGradientBoostingModel):
         # 早期停止の最適イテレーションを使用
         if self.best_iteration is not None:
             # XGBoost >= 1.6.0 では iteration_range を使用
-            return self.model.predict(
-                data, iteration_range=(0, self.best_iteration + 1)
+            return np.asarray(
+                self.model.predict(
+                    data, iteration_range=(0, self.best_iteration + 1)
+                )
             )
 
-        return self.model.predict(data)
+        return np.asarray(self.model.predict(data))

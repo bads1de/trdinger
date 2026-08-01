@@ -5,7 +5,7 @@
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from ..config.constants import EntryType
 from ..genes.entry import EntryGene
@@ -46,7 +46,7 @@ class EntryExecutor:
         if entry_gene is None or not entry_gene.enabled:
             return {}
 
-        entry_type = entry_gene.entry_type
+        entry_type = cast(Any, entry_gene.entry_type)
 
         # 成行注文: パラメータなし
         if entry_type == EntryType.MARKET:

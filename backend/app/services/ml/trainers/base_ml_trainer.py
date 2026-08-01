@@ -106,7 +106,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.metadata: dict[str, SerializableValue] | None = None
 
     @property
-    def config(self):
+    def config(self) -> Any:
         """現在のML設定を取得"""
         return ml_config_manager.config
 
@@ -128,7 +128,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """特徴量選択器のインスタンスを生成する。"""
         return FeatureSelector(**_FEATURE_SELECTION_PARAMS)  # type: ignore[arg-type]
 
-    @safe_ml_operation(  # type: ignore[misc,arg-type]
+    @safe_ml_operation(
         default_return={"success": False},
         context="MLモデル学習でエラーが発生しました",
     )
@@ -139,7 +139,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         open_interest_data: pd.DataFrame | None = None,
         save_model: bool = True,
         model_name: str | None = None,
-        **training_params,
+        **training_params: Any,
     ) -> dict[str, SerializableValue]:
         """
         MLモデルを学習（テンプレートメソッド）
@@ -259,12 +259,16 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         """
         if not self.is_trained:
             logger.warning("学習済みモデルがありません")
-            return self.config.prediction.get_default_predictions()
+            return cast(
+                dict[str, float], self.config.prediction.get_default_predictions()
+            )
 
         try:
             if self.feature_columns is None:
                 logger.warning("特徴量カラムが設定されていません")
-                return self.config.prediction.get_default_predictions()
+                return cast(
+                    dict[str, float], self.config.prediction.get_default_predictions()
+                )
 
             # 1. 前処理（カラム調整、スケーリング）- 共通ユーティリティを直接使用
             processed_features = prepare_data_for_prediction(
@@ -305,7 +309,9 @@ class BaseMLTrainer(BaseResourceManager, ABC):
 
         except Exception as e:
             logger.error(f"ボラティリティ予測エラー: {e}")
-            return self.config.prediction.get_default_predictions()
+            return cast(
+                dict[str, float], self.config.prediction.get_default_predictions()
+            )
 
     @abstractmethod
     def _train_model_impl(
@@ -314,7 +320,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         X_test: pd.DataFrame,
         y_train: pd.Series,
         y_test: pd.Series,
-        **training_params,
+        **training_params: Any,
     ) -> dict[str, SerializableValue]:
         """
         モデル学習の実装（抽象メソッド）
@@ -349,7 +355,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self,
         features_df: pd.DataFrame,
         ohlcv_df: pd.DataFrame,
-        **training_params,
+        **training_params: Any,
     ) -> tuple[pd.DataFrame, pd.Series]:
         """学習用データを準備"""
         try:
@@ -409,7 +415,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             return X_tr, X_te
 
     def _split_data(
-        self, X: pd.DataFrame, y: pd.Series, **training_params
+        self, X: pd.DataFrame, y: pd.Series, **training_params: Any
     ) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """データを分割（常に時系列分割）"""
         test_size = resolve_holdout_test_size(
@@ -450,7 +456,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             return X_train, y_train
 
     def _time_series_cross_validate(
-        self, X: pd.DataFrame, y: pd.Series, **training_params
+        self, X: pd.DataFrame, y: pd.Series, **training_params: Any
     ) -> dict[str, SerializableValue]:
         """時間軸を考慮したパージング・エンバーゴ付きクロスバリデーションを実行
 
@@ -652,7 +658,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             logger.warning("保存対象モデルがNoneです。トレーナー自体を保存します。")
             model_to_save = self
 
-        model_path: str = model_manager.save_model(
+        model_path: str | None = model_manager.save_model(
             model=model_to_save,
             model_name=model_name,
             metadata=final_metadata,
@@ -691,7 +697,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self._model, self.feature_columns, top_n=top_n
         )
 
-    @safe_ml_operation(  # type: ignore[arg-type]
+    @safe_ml_operation(
         default_return=False, context="モデル読み込みでエラーが発生しました"
     )
     def load_model(self, model_path: str) -> bool:
@@ -732,17 +738,17 @@ class BaseMLTrainer(BaseResourceManager, ABC):
         self.metadata = self.current_model_metadata
         return True
 
-    def _cleanup_temporary_files(self, level: CleanupLevel):
+    def _cleanup_temporary_files(self, level: CleanupLevel) -> None:
         pass
 
-    def _cleanup_cache(self, level: CleanupLevel):
+    def _cleanup_cache(self, level: CleanupLevel) -> None:
         pass
 
-    def _cleanup_models(self, level: CleanupLevel):
+    def _cleanup_models(self, level: CleanupLevel) -> None:
         try:
             if self.feature_service is not None:
                 if hasattr(self.feature_service, "cleanup_resources"):
-                    self.feature_service.cleanup_resources()  # type: ignore[reportAttributeAccessIssue]
+                    self.feature_service.cleanup_resources()
 
             self._model = None
             self.scaler = None
@@ -761,7 +767,7 @@ class BaseMLTrainer(BaseResourceManager, ABC):
             self.current_model_metadata = None
             self.metadata = None
 
-    @safe_ml_operation(  # type: ignore[arg-type]
+    @safe_ml_operation(
         default_return={
             "fold": 0,
             "error": "フォールド学習でエラーが発生しました",

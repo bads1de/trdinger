@@ -110,7 +110,8 @@ class EvaluationWindowService:
     @staticmethod
     def extract_lookback_from_parameters(parameters: dict[str, Any]) -> int:
         """インディケーターパラメータから lookback 長を推定する。"""
-        if not isinstance(parameters, dict):
+        raw_parameters: Any = parameters
+        if not isinstance(raw_parameters, dict):
             return 0
 
         excluded_tokens = ("multiplier", "threshold", "offset", "shift", "std")
@@ -335,11 +336,11 @@ class EvaluationWindowService:
             if trades_df.empty:
                 return trades_df
             trades_df["EntryBar"] = (
-                pd.to_numeric(trades_df["EntryBar"], errors="coerce").astype(int)  # type: ignore[reportAttributeAccessIssue]
+                pd.to_numeric(trades_df["EntryBar"], errors="coerce").astype(int)
                 - start_pos
             )
             trades_df["ExitBar"] = (
-                pd.to_numeric(trades_df["ExitBar"], errors="coerce").astype(int)  # type: ignore[reportAttributeAccessIssue]
+                pd.to_numeric(trades_df["ExitBar"], errors="coerce").astype(int)
                 - start_pos
             )
         return trades_df
@@ -353,7 +354,7 @@ class EvaluationWindowService:
         ohlc_data: pd.DataFrame,
     ) -> object:
         """評価窓だけを対象に backtesting.py の統計を再計算する。"""
-        from backtesting._stats import compute_stats  # type: ignore
+        from backtesting._stats import compute_stats
 
         return compute_stats(
             trades=trades_df,

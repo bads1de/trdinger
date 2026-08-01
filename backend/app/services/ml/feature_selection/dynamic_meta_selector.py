@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -26,15 +27,15 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         min_features: int = 5,
         n_shadow_iterations: int = 5,
         random_state: int = 42,
-        **kwargs,  # 予期しない引数を無視するために追加
+        **kwargs: Any,  # 予期しない引数を無視するために追加
     ):
         self.clustering_threshold = clustering_threshold
         self.min_features = min_features
         self.n_shadow_iterations = n_shadow_iterations
         self.random_state = random_state
         self.support_mask_: np.ndarray | None = None
-        self.feature_names_in_ = None
-        self.selected_features_ = None
+        self.feature_names_in_: list[Any] | None = None
+        self.selected_features_: list[Any] | None = None
 
     def _cluster_features(self, X: pd.DataFrame) -> dict[int, list[str]]:
         # ... (既存のコードと同じ)
@@ -195,5 +196,5 @@ class DynamicMetaSelector(BaseEstimator, SelectorMixin):
         # NumPy配列の場合はマスクを適用
         return X[:, self.support_mask_]
 
-    def _get_support_mask(self) -> np.ndarray | None:  # type: ignore[override]
+    def _get_support_mask(self) -> np.ndarray | None:
         return self.support_mask_

@@ -14,11 +14,12 @@ from .entry import EntryGene
 from .exit import ExitGene
 from .indicator import IndicatorGene
 from .position_sizing import PositionSizingGene, PositionSizingMethod
+from .strategy import StrategyGene
 from .tool import ToolGene
 from .tpsl import TPSLGene
 
 
-def create_default_strategy_gene(strategy_gene_class):
+def create_default_strategy_gene(strategy_gene_class: type[StrategyGene]) -> StrategyGene:
     """デフォルトの StrategyGene を構築する。"""
     indicators = [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
 
@@ -43,7 +44,7 @@ def create_default_strategy_gene(strategy_gene_class):
 
 
 def assemble_strategy_gene(
-    strategy_gene_class,
+    strategy_gene_class: type[StrategyGene],
     indicators: list[IndicatorGene],
     long_entry_conditions: list[Condition | ConditionGroup],
     short_entry_conditions: list[Condition | ConditionGroup],
@@ -60,7 +61,7 @@ def assemble_strategy_gene(
     tool_genes: list[ToolGene] | None = None,
     risk_management: dict[str, SerializableValue] | None = None,
     metadata: dict[str, SerializableValue] | None = None,
-):
+) -> StrategyGene:
     """部品から StrategyGene を構築する。"""
     final_metadata = dict(metadata or {})
     final_metadata.setdefault("assembled_at", now_iso())

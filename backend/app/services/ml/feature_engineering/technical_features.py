@@ -39,7 +39,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
     従来のテクニカル指標特徴量を計算します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         super().__init__()
 
@@ -178,7 +178,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
         )
         return self.create_result_dataframe_efficient(df, features)
 
-    @safe_ml_operation(  # type: ignore[arg-type]
+    @safe_ml_operation(
         default_return={}, context="出来高特徴量計算でエラーが発生しました"
     )
     def _calculate_volume_features_internal(

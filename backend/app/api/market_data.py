@@ -7,6 +7,7 @@
 """
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query
 
@@ -45,7 +46,7 @@ async def get_ohlcv_data(
     service: MarketDataOrchestrationService = Depends(
         get_market_data_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     OHLCVデータを取得します
 

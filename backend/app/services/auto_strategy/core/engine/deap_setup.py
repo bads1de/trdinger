@@ -7,6 +7,7 @@ DEAPライブラリの設定とツールボックスの初期化を担当するD
 import logging
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 from deap import base, creator, tools
 
@@ -24,7 +25,7 @@ class DEAPSetup:
     DEAPライブラリの設定とツールボックスの初期化を担当します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         初期化
 
@@ -109,8 +110,8 @@ class DEAPSetup:
         fitness_class = getattr(creator, fitness_class_name)
 
         # StrategyGeneを継承し、fitness属性を持つクラスを作成
-        creator.create(individual_class_name, StrategyGene, fitness=fitness_class)  # type: ignore
-        self.Individual = getattr(creator, individual_class_name)  # type: ignore
+        creator.create(individual_class_name, StrategyGene, fitness=fitness_class)
+        self.Individual = getattr(creator, individual_class_name)
 
         # ツールボックスの初期化
         self.toolbox = base.Toolbox()
@@ -121,7 +122,7 @@ class DEAPSetup:
             "population",
             tools.initRepeat,
             list,
-            self.toolbox.individual,  # type: ignore
+            self.toolbox.individual,
         )
 
         # 評価関数の登録
@@ -131,12 +132,12 @@ class DEAPSetup:
         self.toolbox.register("mate", crossover_func, config=config)
 
         # 突然変異の登録（DEAP互換の返り値 (ind,) を保証するラッパー）
-        def _mutate_wrapper(individual):
+        def _mutate_wrapper(individual: Any) -> tuple[Any, ...]:
             """突然変異処理のラッパー。
 
             DEAPの要件に合わせて、突然変異後の個体をタプルでラップして返す。
             """
-            res = mutate_func(individual, mutation_rate=config.mutation_rate)
+            res: Any = mutate_func(individual, mutation_rate=config.mutation_rate)
             if isinstance(res, tuple):
                 return res
             return (res,)

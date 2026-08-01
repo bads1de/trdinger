@@ -9,7 +9,7 @@ import asyncio
 import logging
 from abc import ABC
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import ccxt.async_support as ccxt
 
@@ -164,7 +164,7 @@ class BybitService(ABC):
         max_pages: int | None = None,
         latest_existing_timestamp: int | None = None,
         pagination_strategy: str = "until",
-        **fetch_kwargs,
+        **fetch_kwargs: Any,
     ) -> list[dict[str, Any]]:
         """
         ページネーション処理で全期間データを取得（汎用版）
@@ -218,7 +218,7 @@ class BybitService(ABC):
         page_limit: int,
         max_pages: int,
         latest_existing_timestamp: int | None,
-        **fetch_kwargs,
+        **fetch_kwargs: Any,
     ) -> list[dict[str, Any]]:
         """
         untilパラメータを使用したページネーション（ファンディングレート用）
@@ -291,7 +291,7 @@ class BybitService(ABC):
         max_pages: int,
         latest_existing_timestamp: int | None,
         interval: str = "1h",
-        **fetch_kwargs,
+        **fetch_kwargs: Any,
     ) -> list[dict[str, Any]]:
         """
         時間範囲を使用したページネーション（オープンインタレスト用）
@@ -449,7 +449,7 @@ class BybitService(ABC):
         }
         return interval_map.get(interval, 60 * 60 * 1000)  # デフォルトは1時間
 
-    def _convert_to_api_symbol(self, symbol: str) -> str:
+    def _convert_to_api_symbol(self, symbol: str | int) -> str:
         """
         シンボルをAPI用形式に変換
 
@@ -462,7 +462,6 @@ class BybitService(ABC):
         # 入力の型を確認
         if not isinstance(symbol, str):
             symbol = str(symbol)
-
         # スラッシュを削除
         api_symbol = symbol.replace("/", "")
         # コロン以降を削除
@@ -495,7 +494,7 @@ class BybitService(ABC):
         get_timestamp_method_name: str,
         symbol: str,
         repository: Any | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> int | None:
         """
         データベースから最新のタイムスタンプを汎用的に取得する
@@ -511,7 +510,9 @@ class BybitService(ABC):
             最新のタイムスタンプ（ミリ秒）
         """
 
-        async def get_timestamp(db, repository: Any | None = None, **_):
+        async def get_timestamp(
+            db: Any, repository: Any | None = None, **_kwargs: Any
+        ) -> int | None:
             repo = repository or repository_class(db)
             get_timestamp_method = getattr(repo, get_timestamp_method_name)
             latest_datetime = get_timestamp_method(symbol, **kwargs)
@@ -520,8 +521,11 @@ class BybitService(ABC):
             return None
 
         try:
-            return await self._execute_with_db_session(
-                func=get_timestamp, repository=repository
+            return cast(
+                int | None,
+                await self._execute_with_db_session(
+                    func=get_timestamp, repository=repository
+                ),
             )
         except Exception as e:
             logger.error(
@@ -535,7 +539,7 @@ class BybitService(ABC):
         symbol: str,
         config: Any,
         repository: Any | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict:
         """
         差分データを取得してデータベースに保存（汎用版）
@@ -639,7 +643,7 @@ class BybitService(ABC):
         limit: int | None = None,
         repository: Any | None = None,
         fetch_all: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict:
         """
         データを取得してデータベースに保存（汎用版）
@@ -754,7 +758,7 @@ class BybitService(ABC):
         # データベース挿入
         try:
             insert_method = getattr(repository, config.insert_method_name)
-            inserted_count = insert_method(records)
+            inserted_count: int = insert_method(records)
             logger.info(
                 f"{config.log_prefix}データのDB保存完了: {inserted_count}件挿入"
             )
@@ -773,10 +777,13 @@ class BybitService(ABC):
     ) -> int:
         """履歴データの保存処理を共通化する。"""
 
-        async def save_with_db(db, repository):
+        async def save_with_db(db: Any, repository: Any) -> int:
             repo = repository or config.repository_class(db)
             return await self._save_data_to_database(history_data, symbol, repo, config)
 
-        return await self._execute_with_db_session(
-            func=save_with_db, repository=repository
+        return cast(
+            int,
+            await self._execute_with_db_session(
+                func=save_with_db, repository=repository
+            ),
         )

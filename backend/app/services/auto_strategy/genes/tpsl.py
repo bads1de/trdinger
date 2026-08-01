@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from app.types import StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
@@ -51,7 +51,7 @@ class TPSLGene(BaseGene):
     @classmethod
     def from_dict(cls, data: StrategyGeneDict) -> TPSLGene:
         """辞書形式からTPSLGeneオブジェクトを復元"""
-        return BaseGene.from_dict.__func__(cls, data)  # type: ignore[attr-defined]
+        return cast(TPSLGene, BaseGene.from_dict.__func__(cls, data))  # type: ignore[attr-defined]
 
     method: TPSLMethod = TPSLMethod.RISK_REWARD_RATIO
     stop_loss_pct: float = 0.03
@@ -82,7 +82,9 @@ class TPSLGene(BaseGene):
     def _validate_parameters(self, errors: list[str]) -> None:
         """パラメータ固有の検証を実装"""
         if not isinstance(self.method, TPSLMethod):
-            errors.append("methodは有効なTPSLMethodである必要があります")
+            errors.append(  # type: ignore[unreachable]
+                "methodは有効なTPSLMethodである必要があります"
+            )
 
         # NUMERIC_RANGESを使用して検証（config非依存）
         for field_name, (min_val, max_val) in self.NUMERIC_RANGES.items():
@@ -136,7 +138,7 @@ class TPSLGene(BaseGene):
                 for key in mutated_gene.method_weights:
                     mutated_gene.method_weights[key] /= total_weight
 
-        return mutated_gene
+        return cast(TPSLGene, mutated_gene)
 
     @classmethod
     def crossover(

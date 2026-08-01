@@ -83,7 +83,7 @@ class VolatilityRegressionTrainer(BaseMLTrainer):
         X_test: pd.DataFrame,
         y_train: pd.Series,
         y_test: pd.Series,
-        **training_params,
+        **training_params: Any,
     ) -> dict[str, Any]:
         """
         モデルの学習を実際に実行します。

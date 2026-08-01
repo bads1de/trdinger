@@ -10,7 +10,7 @@ OHLCV、ファンディングレート（FR）、建玉残高（OI）データ�
 import logging
 from datetime import datetime
 from itertools import combinations
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -48,9 +48,9 @@ class FeatureEngineeringService:
     計算結果のキャッシュ、データ型最適化、欠損値補完などの共通処理も一括管理します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
-        self.feature_cache = {}
+        self.feature_cache: dict[str, Any] = {}
         self.max_cache_size = 10  # 最大キャッシュサイズ
         self.cache_ttl = 3600  # キャッシュ有効期限（秒）
 
@@ -206,7 +206,7 @@ class FeatureEngineeringService:
             result_df = optimize_dtypes(result_df)
 
             # 1. 基本的な特徴量計算（result_dfを直接更新するタイプ）
-            core_calculators = [
+            core_calculators: list[tuple[Any, dict[str, Any]]] = [
                 (
                     self.price_calculator,
                     {"lookback_periods": lookback_periods},
@@ -240,7 +240,7 @@ class FeatureEngineeringService:
             additional_features_list = []
 
             # (電卓, 引数リスト) の形式で定義
-            additional_calculators = [
+            additional_calculators: list[tuple[Any, list[Any]]] = [
                 (self.volume_profile_calculator, [result_df]),
                 (self.time_anomaly_calculator, [result_df]),
                 (
@@ -261,12 +261,12 @@ class FeatureEngineeringService:
                 ),
             ]
 
-            for calc, args in additional_calculators:
+            for feature_calc, args in additional_calculators:
                 try:
-                    feat_df = calc.calculate_features(*args)
+                    feat_df = feature_calc.calculate_features(*args)
                     additional_features_list.append(feat_df)
                 except Exception as e:
-                    logger.error(f"{calc.__class__.__name__} の計算中にエラー: {e}")
+                    logger.error(f"{feature_calc.__class__.__name__} の計算中にエラー: {e}")
 
             # === 分数次差分特徴量 (Fractional Differentiation) ===
             logger.info("分数次差分特徴量を計算中...")
@@ -352,7 +352,7 @@ class FeatureEngineeringService:
         up_volume = ohlcv_1m["volume"] * is_up
 
         # 2. 1時間ごとに集計用のラベル
-        hour_labels = pd.DatetimeIndex(ohlcv_1m.index).floor("1h")  # type: ignore[reportAttributeAccessIssue]
+        hour_labels = pd.DatetimeIndex(ohlcv_1m.index).floor("1h")
         resampler = ohlcv_1m.resample("1h")
 
         agg_features = pd.DataFrame(index=resampler.last().index)
@@ -616,7 +616,7 @@ class FeatureEngineeringService:
                 del self.feature_cache[key]
         return None
 
-    def _save_to_cache(self, key: str, data: pd.DataFrame):
+    def _save_to_cache(self, key: str, data: pd.DataFrame) -> None:
         """キャッシュにデータを保存"""
         if len(self.feature_cache) >= self.max_cache_size:
             # 最も古いエントリを削除

@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class MarketDataHandler:
     """市場データ処理ハンドラ"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache: MarketDataCache | None = None
 
     def prepare_market_data(
@@ -90,7 +90,7 @@ class MarketDataHandler:
         atr_values: dict[str, float],
         volatility_metrics: dict[str, float],
         price_data: pd.DataFrame | None = None,
-    ):
+    ) -> None:
         """キャッシュの更新"""
         self._cache = MarketDataCache(
             atr_values=atr_values,
@@ -103,7 +103,7 @@ class MarketDataHandler:
         """キャッシュの取得"""
         return self._cache
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """キャッシュのクリア"""
         self._cache = None
 

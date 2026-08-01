@@ -19,7 +19,11 @@ class HalfOptimalFCalculator(BaseCalculator):
     """ハーフオプティマルF方式計算クラス"""
 
     def calculate(
-        self, gene, account_balance: float, current_price: float, **kwargs
+        self,
+        gene: Any,
+        account_balance: float,
+        current_price: float,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         ハーフオプティマルF方式を用いてポジションサイズを計算
@@ -69,12 +73,12 @@ class HalfOptimalFCalculator(BaseCalculator):
 
     def _calculate_simplified_optimal_f(
         self,
-        gene,
+        gene: Any,
         account_balance: float,
         current_price: float,
         warnings: list[str],
         details: dict[str, Any],
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """簡易オプティマルF計算"""
         trade_history = kwargs.get("trade_history")
@@ -88,7 +92,7 @@ class HalfOptimalFCalculator(BaseCalculator):
                 "details": {"fallback_reason": "simplified_calculation_failed"},
             },
         )
-        def _simplified_optimal_f():
+        def _simplified_optimal_f() -> dict[str, Any]:
             # 統計的仮定値を使用した簡易計算
             assumed_win_rate = AUTO_STRATEGY_DEFAULTS["assumed_win_rate"]
             assumed_avg_win = AUTO_STRATEGY_DEFAULTS["assumed_avg_win"]
@@ -130,37 +134,18 @@ class HalfOptimalFCalculator(BaseCalculator):
             }
 
         simplified_result = _simplified_optimal_f()
-        if isinstance(simplified_result, dict):
-            warnings.extend(simplified_result.get("warnings", []))
-            details.update(simplified_result.get("details", {}))
-            return simplified_result
-        else:
-            # フォールバック
-            position_amount = account_balance * gene.fixed_ratio
-            position_size = self._safe_calculate_with_price_check(
-                lambda: position_amount / current_price,
-                current_price,
-                0,
-                "取引履歴が不足、固定比率にフォールバック",
-                warnings,
-            )
-            details.update(
-                {
-                    "fallback_reason": "insufficient_trade_history_to_fixed",
-                    "trade_count": len(trade_history) if trade_history else 0,
-                    "fallback_ratio": gene.fixed_ratio,
-                }
-            )
-            return {"position_size": position_size}
+        warnings.extend(simplified_result.get("warnings", []))
+        details.update(simplified_result.get("details", {}))
+        return simplified_result
 
     def _calculate_with_trade_history(
         self,
-        gene,
+        gene: Any,
         account_balance: float,
         current_price: float,
         warnings: list[str],
         details: dict[str, Any],
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """取引履歴を使用した計算"""
         trade_history = kwargs.get("trade_history", [])
@@ -239,7 +224,7 @@ class HalfOptimalFCalculator(BaseCalculator):
 
     def _volatility_fallback(
         self,
-        gene,
+        gene: Any,
         account_balance: float,
         current_price: float,
         warnings: list[str],
@@ -263,7 +248,7 @@ class HalfOptimalFCalculator(BaseCalculator):
                 },
             },
         )
-        def _fallback():
+        def _fallback() -> dict[str, Any]:
             fallback_atr_multiplier = AUTO_STRATEGY_DEFAULTS["fallback_atr_multiplier"]
             # 簡易ボラティリティ計算
             atr_value = current_price * fallback_atr_multiplier

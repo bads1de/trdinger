@@ -179,7 +179,7 @@ class ModelMetadata:
     gate_cutoff_vol: float = 1.0
     created_at: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.created_at is None:
             self.created_at = now_iso()
 

@@ -10,7 +10,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
 from app.types import SerializablePrimitive
 
@@ -137,7 +137,7 @@ class IndicatorConfig:
     # 絶対的最小データ長
     absolute_min_length: int = 1
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """後処理でパラメータおよび派生属性を構築"""
         if not self.parameters:
             self.parameters = self._build_parameters_from_defaults()
@@ -335,7 +335,7 @@ class IndicatorConfig:
         params = {}
         for param_name, param_config in self.parameters.items():
             if not isinstance(param_config, ParameterConfig):
-                continue
+                continue  # type: ignore[unreachable]
 
             # プリセットが指定されている場合はプリセット範囲を使用
             if preset:
@@ -369,7 +369,7 @@ class IndicatorConfigRegistry:
     名前やエイリアスによる検索を提供します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._configs: dict[str, IndicatorConfig] = {}
         self._aliases: dict[str, IndicatorConfig] = {}
         self._initialized: bool = False
@@ -472,7 +472,7 @@ def get_cached_indicators() -> list[str]:
     with _cache_lock:
         if "indicators" not in _indicator_cache:
             _indicator_cache["indicators"] = indicator_registry.list_indicators()
-        return _indicator_cache["indicators"]
+        return cast(list[str], _indicator_cache["indicators"])
 
 
 def _initialize_registry(registry: IndicatorConfigRegistry) -> None:

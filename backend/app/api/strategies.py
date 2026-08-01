@@ -55,7 +55,7 @@ async def get_strategies(
     strategy_service: GeneratedStrategyService = Depends(
         get_generated_strategy_service_with_db
     ),
-):
+) -> StrategiesResponse:
     """
     生成された戦略の一覧を取得
 

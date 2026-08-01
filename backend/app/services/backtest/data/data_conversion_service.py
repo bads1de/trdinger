@@ -77,7 +77,7 @@ class DataConversionService:
 
             df = pd.DataFrame(
                 records,
-                columns=["timestamp", "open", "high", "low", "close", "volume"],  # type: ignore[arg-type]
+                columns=["timestamp", "open", "high", "low", "close", "volume"],
             )
 
             # インデックスをdatetimeに設定

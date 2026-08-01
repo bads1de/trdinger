@@ -36,7 +36,7 @@ def to_timezone_minutes(
     if normalized is None:
         return None
     localized = normalized.tz_convert(timezone_name)
-    return localized.hour * 60 + localized.minute
+    return int(localized.hour) * 60 + int(localized.minute)
 
 
 def to_utc_minutes(
@@ -103,4 +103,4 @@ def is_summer_time_by_month(timestamp: pd.Timestamp) -> bool:
     Returns:
         夏時間期間内であればTrue。
     """
-    return 3 <= timestamp.month <= 11
+    return 3 <= int(timestamp.month) <= 11

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 _MISSING = object()
 
@@ -91,7 +91,7 @@ def _normalize_strategy_config(strategy_config: Any) -> dict[str, Any]:
         TypeError: mappingまたはmodel_dump対応オブジェクトでない場合
     """
     if hasattr(strategy_config, "model_dump"):
-        return strategy_config.model_dump()
+        return cast(dict[str, Any], strategy_config.model_dump())
     if isinstance(strategy_config, Mapping):
         return dict(strategy_config)
     raise TypeError(

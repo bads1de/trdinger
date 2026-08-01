@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from typing import cast
 
 import numpy as np
-from scipy.spatial import cKDTree  # type: ignore[reportAttributeAccessIssue]
+from scipy.spatial import cKDTree
 
 # 定数
 DEFAULT_NICHE_COUNT = 1.0
@@ -81,7 +81,7 @@ def normalize_vectors(vectors: np.ndarray) -> np.ndarray:
     range_vals = max_vals - min_vals
     range_vals[range_vals == 0] = DEFAULT_RANGE_VALUE
 
-    return (vectors - min_vals) / range_vals
+    return cast(np.ndarray, (vectors - min_vals) / range_vals)
 
 
 def compute_niche_counts_sampling(
@@ -118,6 +118,6 @@ def compute_niche_counts_sampling(
         niche_counts = np.maximum(
             DEFAULT_NICHE_COUNT, neighbors_in_sample * scale_factor
         )
-        return niche_counts
+        return cast(np.ndarray, niche_counts)
     finally:
         np.random.set_state(rng_state)

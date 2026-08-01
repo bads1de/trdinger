@@ -72,7 +72,7 @@ class StrategyParameterSpace:
         ("short_tpsl_gene", "short_tpsl"),
     )
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         pass
 

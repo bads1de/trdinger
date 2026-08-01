@@ -80,7 +80,7 @@ class OICollectionOrchestrator:
 
     async def _collect_historical_oi_background(
         self, symbol: str, interval: str, db: Session
-    ):
+    ) -> None:
         """バックグラウンドでのOI履歴データ収集"""
         try:
             logger.info(f"OI履歴データ収集開始: {symbol} {interval}")

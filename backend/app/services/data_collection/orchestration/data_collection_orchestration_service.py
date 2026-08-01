@@ -36,7 +36,7 @@ class DataCollectionOrchestrationService:
     および API レスポンス形式の統一も担当します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         DataCollectionOrchestrationServiceを初期化
 
@@ -96,7 +96,7 @@ class DataCollectionOrchestrationService:
 
         return normalized_symbol
 
-    def _resolve_ohlcv_repository_class(self):
+    def _resolve_ohlcv_repository_class(self) -> Any:
         """
         patchされたOHLCVRepositoryを優先して解決する
 

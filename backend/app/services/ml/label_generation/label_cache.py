@@ -65,7 +65,7 @@ class LabelCache:
         t_events: pd.DatetimeIndex | None = None,
         min_window: int = 5,
         window_step: int = 1,
-        **kwargs,
+        **kwargs: Any,
     ) -> pd.Series:
         """キャッシュを使ってラベルを取得する。
 

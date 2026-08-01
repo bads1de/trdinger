@@ -27,7 +27,7 @@ async def get_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     学習済みモデルの一覧を取得
 
@@ -46,7 +46,7 @@ async def delete_all_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     すべてのモデルを削除
 
@@ -63,7 +63,7 @@ async def delete_model(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     指定されたモデルを削除
 
@@ -83,7 +83,7 @@ async def get_ml_status(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     MLモデルの現在の状態を取得
 
@@ -103,7 +103,7 @@ async def get_feature_importance(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     特徴量重要度を取得
 
@@ -130,7 +130,7 @@ async def load_model(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     指定されたモデルを読み込み
 
@@ -156,7 +156,7 @@ async def get_current_model(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     現在読み込まれているモデル情報を取得
 
@@ -185,7 +185,7 @@ async def get_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     ML設定を取得
 
@@ -205,7 +205,7 @@ async def update_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     ML設定を更新
 
@@ -238,7 +238,7 @@ async def reset_ml_config(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     ML設定をデフォルト値にリセット
 
@@ -266,7 +266,7 @@ async def cleanup_old_models(
     ml_service: MLManagementOrchestrationService = Depends(
         get_ml_management_orchestration_service
     ),
-):
+) -> dict[str, Any]:
     """
     古いモデルファイルをクリーンアップ
 

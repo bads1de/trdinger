@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 @njit
-def _numba_calc_bins(w_high, w_low, w_vol, price_min, bin_step, num_bins):
+def _numba_calc_bins(  # type: ignore[no-untyped-def]
+    w_high, w_low, w_vol, price_min, bin_step, num_bins
+):
     """ビンごとの出来高を計算"""
     bin_volume = np.zeros(num_bins)
     for j in range(len(w_high)):
@@ -31,7 +33,7 @@ def _numba_calc_bins(w_high, w_low, w_vol, price_min, bin_step, num_bins):
     return bin_volume
 
 
-@njit
+@njit  # type: ignore[untyped-decorator]
 def _numba_rolling_volume_profile(
     high_arr: np.ndarray,
     low_arr: np.ndarray,
@@ -86,7 +88,7 @@ def _numba_rolling_volume_profile(
     return poc_arr, vah_arr, val_arr
 
 
-@njit
+@njit  # type: ignore[untyped-decorator]
 def _numba_detect_volume_nodes_signed(
     high_arr: np.ndarray,
     low_arr: np.ndarray,
@@ -135,7 +137,7 @@ def _numba_detect_volume_nodes_signed(
     return hvn_dist, lvn_dist
 
 
-@njit
+@njit  # type: ignore[untyped-decorator]
 def _numba_vp_skewness_kurtosis(
     close_arr: np.ndarray, volume_arr: np.ndarray, window: int
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -188,7 +190,9 @@ class VolumeProfileFeatureCalculator:
 
             # 手動でのNaN埋めをベクトル化 (Forward fill)
             def safe_fill(arr: np.ndarray) -> np.ndarray:
-                return pd.Series(arr).ffill().fillna(0.0).to_numpy(dtype=np.float64)
+                return np.asarray(
+                    pd.Series(arr).ffill().fillna(0.0).to_numpy(dtype=np.float64)
+                )
 
             poc_f, vah_f, val_f = (
                 safe_fill(poc),

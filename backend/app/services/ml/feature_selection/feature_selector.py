@@ -143,7 +143,7 @@ class FeatureSelector(SelectorMixin, BaseEstimator):
 
         return self
 
-    def _get_support_mask(self) -> np.ndarray:  # type: ignore[override]
+    def _get_support_mask(self) -> np.ndarray:
         """SelectorMixinの要求する選択マスクを返します。"""
         check_is_fitted(self, "support_")
         return self.support_

@@ -50,7 +50,7 @@ class BeginningOfMonthFilter(BaseTool):
         # day == 1 <= 2 -> True
         # day == 2 <= 2 -> True
         # day == 3 <= 2 -> False
-        return day <= days_from_start
+        return bool(day <= days_from_start)
 
     def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """

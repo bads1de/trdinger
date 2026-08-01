@@ -21,7 +21,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
     市場データ特徴量計算クラス（超安全・環境不具合回避版）
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
     def calculate_features(
@@ -96,7 +96,7 @@ class MarketDataFeatureCalculator(BaseFeatureCalculator):
         )
 
         # 元のインデックスに戻す
-        merged.index = merged["__orig_index__"]  # type: ignore[reportAttributeAccessIssue]
+        merged.index = merged["__orig_index__"]
         res[target_col + suffix] = merged[target_col].fillna(0.0)
 
         return res, target_col + suffix

@@ -32,7 +32,7 @@ class MLManagementOrchestrationService:
     ML管理機能のビジネスロジックを集約したサービスクラス
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     async def get_formatted_models(self) -> dict[str, list[dict[str, Any]]]:
@@ -464,7 +464,7 @@ class MLManagementOrchestrationService:
             # 現在ロードされているモデルと比較してアクティブか判定
             current_model_path = ml_training_service.get_current_model_path()
             if current_model_path:
-                return model["path"] == current_model_path
+                return bool(model["path"] == current_model_path)
 
             return False
 

@@ -6,7 +6,7 @@ APIルーター内に散在していたデータ削除・管理関連のビジ�
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
@@ -39,11 +39,13 @@ class DataManagementOrchestrationService:
     責務を明確化します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
 
     @contextmanager
-    def _get_db_session(self, db_session: Session | None = None):
+    def _get_db_session(
+        self, db_session: Session | None = None
+    ) -> Iterator[Session]:
         """
         データベースセッションを取得するコンテキストマネージャ
 

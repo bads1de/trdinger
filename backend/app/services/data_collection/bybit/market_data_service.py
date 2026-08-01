@@ -4,7 +4,7 @@ CCXT ライブラリを使用してBybit取引所からOHLCVデータを取得�
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.config.unified_config import unified_config
 from app.utils.data_conversion import OHLCVDataConverter
@@ -23,7 +23,7 @@ class BybitMarketDataService(BybitService):
     適切なエラーハンドリングとデータ検証を提供します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         サービスを初期化します
         """
@@ -75,7 +75,7 @@ class BybitMarketDataService(BybitService):
         # データの検証
         self._validate_ohlcv_data(ohlcv_data)
 
-        return ohlcv_data
+        return cast(list[list], ohlcv_data)
 
     async def _save_ohlcv_to_database(
         self,

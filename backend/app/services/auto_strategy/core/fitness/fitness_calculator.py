@@ -79,7 +79,7 @@ class FitnessCalculator:
                 それ以外はstr()変換。
         """
         if isinstance(value, np.generic):
-            return value.item()
+            return cast(SerializableValue, value.item())
         return str(value)
 
     @staticmethod
@@ -369,7 +369,7 @@ class FitnessCalculator:
         self,
         backtest_result: dict[str, SerializableValue],
         config: GAConfig,
-        **kwargs,
+        **kwargs: Any,
     ) -> float:
         """
         フィットネス計算（ロング・ショートバランス評価を含む）
@@ -603,7 +603,7 @@ class FitnessCalculator:
         self,
         backtest_result: dict[str, SerializableValue],
         config: GAConfig,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[float, ...]:
         """
         複数の目的関数（利益、リスク、安定性等）に基づいて個体の多次元適応度を計算します。

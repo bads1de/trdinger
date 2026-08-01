@@ -2,7 +2,9 @@
 
 import importlib
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, cast
+
+import pandas as pd
 
 from app.services.auto_strategy.config.ga import GAConfig
 from app.services.auto_strategy.config.helpers import (
@@ -60,7 +62,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         self._cache_size = cache_size
 
     def _prepare_run_config(
-        self, gene, backtest_config: dict[str, Any], config: GAConfig
+        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
     ) -> dict[str, Any] | None:
         """
         ハイブリッド評価用のバックテスト実行設定を構築します。
@@ -103,7 +105,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         )
 
     def _get_evaluation_context(
-        self, gene, backtest_config: dict[str, Any], config: GAConfig
+        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
     ) -> dict[str, Any]:
         """
         評価計算に必要な追加コンテキスト（ML予測シグナル等）を取得します。
@@ -152,7 +154,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         module = importlib.import_module(
             "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter"
         )
-        return module.HybridFeatureAdapter
+        return cast(type["HybridFeatureAdapter"], module.HybridFeatureAdapter)
 
     def _should_apply_preprocessing(self, ga_config: GAConfig) -> bool:
         """前処理を適用するか判定"""
@@ -166,7 +168,7 @@ class HybridIndividualEvaluator(IndividualEvaluator):
         self,
         backtest_config: dict[str, Any],
         ga_config: GAConfig,
-    ):
+    ) -> pd.DataFrame | None:
         """
         バックテスト設定に基づきOHLCVデータを取得（キャッシュ対応）
 

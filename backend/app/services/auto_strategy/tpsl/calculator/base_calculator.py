@@ -32,7 +32,7 @@ class BaseTPSLCalculator(ABC):
         tpsl_gene: TPSLGene | None = None,
         market_data: dict[str, Any] | None = None,
         position_direction: float = 1.0,
-        **kwargs,
+        **kwargs: Any,
     ) -> TPSLResult:
         """
         TP/SLを計算（テンプレートメソッド）
@@ -65,7 +65,7 @@ class BaseTPSLCalculator(ABC):
         tpsl_gene: TPSLGene | None,
         market_data: dict[str, Any] | None,
         position_direction: float,
-        **kwargs,
+        **kwargs: Any,
     ) -> tuple[float, float, float, dict[str, Any]]:
         """固有の計算ロジック（(sl_pct, tp_pct, confidence, metrics) を返す）"""
 

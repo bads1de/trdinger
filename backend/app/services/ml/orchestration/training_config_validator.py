@@ -122,7 +122,7 @@ def validate_ensemble_config(
             )
 
 
-def validate_training_config(config) -> None:
+def validate_training_config(config: Any) -> None:
     """
     トレーニング設定の包括的バリデーション（エントリーポイント）
 

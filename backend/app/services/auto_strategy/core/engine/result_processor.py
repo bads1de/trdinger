@@ -5,7 +5,7 @@ GA結果処理モジュール
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from deap import tools
 
@@ -65,7 +65,7 @@ class ResultProcessor:
             pareto_front.update(population)
             best_individuals = list(pareto_front)
         else:
-            best_individuals = list(halloffame)
+            best_individuals = list(cast(Any, halloffame))
 
         if not best_individuals:
             best_individuals = [tools.selBest(population, 1)[0]]
@@ -83,8 +83,8 @@ class ResultProcessor:
             best_strategies.append(
                 {
                     "strategy": gene,
-                    "fitness_values": list(ind.fitness.values),
-                }  # type: ignore[union-attr]
+                    "fitness_values": list(cast(Any, ind).fitness.values),
+                }
             )
 
         if isinstance(best_individual, StrategyGene):

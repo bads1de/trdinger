@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pandas as pd
 from numba import njit, prange
@@ -12,7 +10,7 @@ from ...data_validation import handle_pandas_ta_errors, validate_series_params
 from ._window_helpers import _window_min_max
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_entropy_loop(data: np.ndarray, window: int) -> np.ndarray:
     n = len(data)
     result = np.full(n, np.nan)
@@ -105,7 +103,7 @@ def adaptive_entropy(
         index=close.index,
         name=f"ADAPTIVE_ENTROPY_OSC_{short_length}_{long_length}",
     )
-    signal.name = (  # type: ignore[reportAttributeAccessIssue]
+    signal.name = (
         f"ADAPTIVE_ENTROPY_SIGNAL_{short_length}_{long_length}_{signal_length}"
     )
     ratio = pd.Series(
@@ -114,4 +112,4 @@ def adaptive_entropy(
         name=f"ADAPTIVE_ENTROPY_RATIO_{short_length}_{long_length}",
     )
 
-    return cast(tuple[pd.Series, pd.Series, pd.Series], (oscillator, signal, ratio))
+    return (oscillator, signal, ratio)

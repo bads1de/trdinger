@@ -13,12 +13,15 @@
 import logging
 from collections.abc import Callable, Mapping
 from functools import wraps
-from typing import Any, cast
+from typing import Any, ParamSpec, TypeVar, cast
 
 import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+P = ParamSpec("P")
+T = TypeVar("T")
 
 
 class PandasTAError(Exception):
@@ -29,7 +32,7 @@ class PandasTAError(Exception):
     """
 
 
-def _get_indicator_config(indicator_type: str):
+def _get_indicator_config(indicator_type: str) -> Any:
     """
     indicator_registry から設定を取得する共通 helper
 
@@ -436,7 +439,7 @@ def nan_result_for(
         return result
     except Exception:
         if fallback_factory is not None:
-            return fallback_factory()
+            return cast(tuple[Any, ...], fallback_factory())
         raise
 
 
@@ -510,12 +513,12 @@ def extract_tuple_result(
             return extracted
 
         if fallback_factory is not None:
-            return fallback_factory()
+            return cast(tuple[Any, ...], fallback_factory())
 
         raise TypeError(f"Unsupported result type: {type(result)}")
     except Exception:
         if fallback_factory is not None:
-            return fallback_factory()
+            return cast(tuple[Any, ...], fallback_factory())
         raise
 
 
@@ -562,7 +565,7 @@ def get_minimum_data_length(indicator_type: str, params: dict[str, Any]) -> int:
     """
     config = _get_indicator_config(indicator_type)
     if config and config.min_length_func:
-        return config.min_length_func(params)
+        return int(config.min_length_func(params))
 
     # フォールバック：デフォルト値 - lengthまたはwindowパラメータをサポート
     if config and config.default_values:
@@ -780,7 +783,7 @@ def validate_multi_series_params(
     )
 
 
-def handle_pandas_ta_errors(func):
+def handle_pandas_ta_errors(func: Callable[P, T]) -> Callable[P, T]:
     """
     pandas-taエラーハンドリングデコレーター
 
@@ -803,7 +806,7 @@ def handle_pandas_ta_errors(func):
     """
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
             result = func(*args, **kwargs)
 

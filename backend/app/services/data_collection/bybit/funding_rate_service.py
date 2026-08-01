@@ -6,7 +6,7 @@ CCXTライブラリを使用してBybitからファンディングレートデ�
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import (
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class BybitFundingRateService(BybitService):
     """Bybitファンディングレートサービス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         BybitFundingRateServiceを初期化
 
@@ -35,7 +35,7 @@ class BybitFundingRateService(BybitService):
         super().__init__()
         self.config = get_funding_rate_config()
 
-    def _validate_parameters(self, symbol: str, limit: int | None = None):
+    def _validate_parameters(self, symbol: str, limit: int | None = None) -> None:
         """
         パラメータの検証（funding rate専用）
 
@@ -59,10 +59,13 @@ class BybitFundingRateService(BybitService):
             現在のファンディングレートデータ
         """
         normalized_symbol = normalize_market_symbol(symbol)
-        return await self._handle_ccxt_errors(
-            f"現在のファンディングレート取得: {normalized_symbol}",
-            self.exchange.fetch_funding_rate,
-            normalized_symbol,
+        return cast(
+            dict[str, Any],
+            await self._handle_ccxt_errors(
+                f"現在のファンディングレート取得: {normalized_symbol}",
+                self.exchange.fetch_funding_rate,
+                normalized_symbol,
+            ),
         )
 
     async def fetch_funding_rate_history(
@@ -81,12 +84,15 @@ class BybitFundingRateService(BybitService):
         """
         self._validate_parameters(symbol, limit)
         normalized_symbol = normalize_market_symbol(symbol)
-        return await self._handle_ccxt_errors(
-            f"ファンディングレート履歴取得: {normalized_symbol}, limit={limit}",
-            self.exchange.fetch_funding_rate_history,
-            normalized_symbol,
-            since,
-            limit,
+        return cast(
+            list[dict[str, Any]],
+            await self._handle_ccxt_errors(
+                f"ファンディングレート履歴取得: {normalized_symbol}, limit={limit}",
+                self.exchange.fetch_funding_rate_history,
+                normalized_symbol,
+                since,
+                limit,
+            ),
         )
 
     async def fetch_all_funding_rate_history(self, symbol: str) -> list[dict[str, Any]]:

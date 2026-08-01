@@ -6,11 +6,11 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Collection
-from typing import Any
 
 from app.utils.error_handler import safe_operation
 
 from ...utils.indicators import get_all_indicators
+from ..indicator import IndicatorGene
 
 logger = logging.getLogger(__name__)
 
@@ -27,14 +27,10 @@ class IndicatorValidator:
         is_api_call=False,
         default_return=False,
     )
-    def validate_indicator_gene(self, indicator_gene) -> bool:
+    def validate_indicator_gene(self, indicator_gene: IndicatorGene) -> bool:
         """指標遺伝子の妥当性を検証"""
         if not indicator_gene.type or not isinstance(indicator_gene.type, str):
             logger.warning(f"指標タイプが無効: {indicator_gene.type}")
-            return False
-
-        if not isinstance(indicator_gene.parameters, dict):
-            logger.warning(f"指標パラメータが無効: {indicator_gene.parameters}")
             return False
 
         # ログ: 指標タイプが有効リストに含まれているかを確認
@@ -86,8 +82,8 @@ class IndicatorValidator:
     )
     def validate_indicator_gene_for_generation(
         self,
-        indicator_gene,
-        indicator_universe_mode: Any = "curated",
+        indicator_gene: IndicatorGene,
+        indicator_universe_mode: str = "curated",
         allowed_indicators: Collection[str] | None = None,
     ) -> bool:
         """GA 生成・変異で使う指標遺伝子をユニバース込みで検証する。"""

@@ -17,20 +17,24 @@ logger = logging.getLogger(__name__)
 class BaseCalculator(ABC):
     """ベースポジションサイジング計算クラス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
 
     @abstractmethod
     def calculate(
-        self, gene, account_balance: float, current_price: float, **kwargs
+        self,
+        gene: Any,
+        account_balance: float,
+        current_price: float,
+        **kwargs: Any,
     ) -> dict[str, object]:
         """計算実行（サブクラスで実装）"""
 
-    def _get_param(self, gene, attr_name: str, default: Any) -> Any:
+    def _get_param(self, gene: Any, attr_name: str, default: Any) -> Any:
         """遺伝子から安全にパラメータを取得"""
         return getattr(gene, attr_name, default)
 
-    def _get_risk_params(self, gene) -> dict[str, Any]:
+    def _get_risk_params(self, gene: Any) -> dict[str, Any]:
         """共通のリスク管理パラメータを一括取得"""
         return {
             "var_confidence": self._get_param(gene, "var_confidence", 0.95),
@@ -44,7 +48,7 @@ class BaseCalculator(ABC):
         position_size: float,
         details: dict[str, Any],
         warnings: list[str],
-        gene,
+        gene: Any,
     ) -> dict[str, Any]:
         """
         計算されたサイズに対して最小・最大制限を適用し、最終結果を構築
@@ -106,7 +110,7 @@ class BaseCalculator(ABC):
         position_size: float,
         details: dict[str, Any],
         warnings: list[str],
-        gene,
+        gene: Any,
     ) -> dict[str, Any]:
         """計算結果の統一作成"""
         return self._apply_size_limits_and_finalize(

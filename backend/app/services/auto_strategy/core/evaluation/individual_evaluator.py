@@ -115,7 +115,7 @@ class IndividualEvaluator(EvaluationWindowService):
         self._gene_serializer = GeneSerializer()
         self._data_provider = BacktestDataProvider(
             backtest_service=self.backtest_service,
-            data_cache=self._data_cache,  # type: ignore
+            data_cache=self._data_cache,
             lock=self._lock,
         )
 
@@ -138,7 +138,7 @@ class IndividualEvaluator(EvaluationWindowService):
             logger.debug("キャッシュキー生成に失敗しました: %s", e)
             return str(gene)
 
-    def set_backtest_config(self, backtest_config: dict[str, Any]):
+    def set_backtest_config(self, backtest_config: dict[str, Any]) -> None:
         """バックテスト設定を設定"""
         # バリデーションのためPydanticモデルを通す
         # strategy_configは個体ごとに生成されるため、ここではダミーを入れておく
@@ -261,7 +261,7 @@ class IndividualEvaluator(EvaluationWindowService):
         minute_key = ("minute", symbol, "1m", str(start_date), str(end_date))
         return main_key, minute_key
 
-    def __getstate__(self):
+    def __getstate__(self) -> dict[str, Any]:
         """Pickle化時の状態取得（ロック、キャッシュ、委譲先を除外）"""
         state = self.__dict__.copy()
         # ロックはPickle不可
@@ -293,7 +293,7 @@ class IndividualEvaluator(EvaluationWindowService):
 
         return state
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: dict[str, Any]) -> None:
         """Pickle復元時の状態設定（ロック、キャッシュ、委譲先を再生成）"""
         self.__dict__.update(state)
         self._lock = threading.Lock()
@@ -380,7 +380,9 @@ class IndividualEvaluator(EvaluationWindowService):
             cache_key = self._build_cache_key(gene)
 
             with self._lock:
-                cached = None if force_refresh else self._result_cache.get(cache_key)
+                cached: tuple[float, ...] | None = (
+                    None if force_refresh else self._result_cache.get(cache_key)
+                )
                 if cached is not None:
                     self._cache_hits += 1
                     self._last_evaluation_report = self._report_cache.get(cache_key)
@@ -424,7 +426,9 @@ class IndividualEvaluator(EvaluationWindowService):
         try:
             gene = self._resolve_gene(individual)
             cache_key = self._build_robustness_cache_key(gene, config)
-            cached = self._robustness_report_cache.get(cache_key)
+            cached: EvaluationReport | None = self._robustness_report_cache.get(
+                cache_key
+            )
             if cached is not None:
                 self._last_evaluation_report = cached
                 return cached
@@ -572,7 +576,7 @@ class IndividualEvaluator(EvaluationWindowService):
         )
 
     def _perform_single_evaluation(
-        self, gene, backtest_config: dict[str, Any], config: GAConfig
+        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
     ) -> tuple[float, ...]:
         """単一期間評価を実行し、適応度タプルのみ返す。"""
         return self._perform_single_evaluation_report(
@@ -583,7 +587,7 @@ class IndividualEvaluator(EvaluationWindowService):
 
     def _perform_single_evaluation_report(
         self,
-        gene,
+        gene: Any,
         backtest_config: dict[str, Any],
         config: GAConfig,
         *,
@@ -615,7 +619,7 @@ class IndividualEvaluator(EvaluationWindowService):
                 gene, prepared_backtest_config, config
             )
             if not run_config:
-                return ScenarioEvaluation(  # type: ignore[call-arg]
+                return ScenarioEvaluation(
                     name=scenario_name,
                     fitness=tuple(0.0 for _ in config.objectives),
                     passed=False,
@@ -681,7 +685,7 @@ class IndividualEvaluator(EvaluationWindowService):
                     prepared_backtest_config["_evaluation_start"]
                 )
 
-            return ScenarioEvaluation(  # type: ignore[call-arg]
+            return ScenarioEvaluation(
                 name=scenario_name,
                 fitness=tuple(float(value) for value in fitness),
                 passed=self._is_backtest_result_passing(result, config),
@@ -694,7 +698,7 @@ class IndividualEvaluator(EvaluationWindowService):
             scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata["early_terminated"] = True
             scenario_metadata["termination_reason"] = getattr(e, "reason", str(e))
-            return ScenarioEvaluation(  # type: ignore[call-arg]
+            return ScenarioEvaluation(
                 name=scenario_name,
                 fitness=self._fitness_calculator.get_penalty_values(config),
                 passed=False,
@@ -705,7 +709,7 @@ class IndividualEvaluator(EvaluationWindowService):
             logger.error(f"単一評価実行エラー: {e}")
             scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata["error"] = str(e)
-            return ScenarioEvaluation(  # type: ignore[call-arg]
+            return ScenarioEvaluation(
                 name=scenario_name,
                 fitness=tuple(0.0 for _ in config.objectives),
                 passed=False,
@@ -724,7 +728,7 @@ class IndividualEvaluator(EvaluationWindowService):
             return False
 
     def _prepare_run_config(
-        self, gene, backtest_config: dict[str, Any], config: GAConfig
+        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
     ) -> dict[str, Any] | None:
         """バックテスト実行用設定の構築（高速化版）"""
         run_config = self._run_config_builder.build_run_config(
@@ -746,7 +750,7 @@ class IndividualEvaluator(EvaluationWindowService):
         )
 
     def _get_evaluation_context(
-        self, gene, backtest_config: dict[str, Any], config: GAConfig
+        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
     ) -> dict[str, Any]:
         """評価計算に必要な追加コンテキストを取得（サブクラスでオーバーライド）"""
         return {}
@@ -761,7 +765,7 @@ class IndividualEvaluator(EvaluationWindowService):
 
     def _evaluate_with_oos(
         self,
-        gene,
+        gene: Any,
         base_backtest_config: dict[str, Any],
         config: GAConfig,
         oos_ratio: float,
@@ -774,7 +778,7 @@ class IndividualEvaluator(EvaluationWindowService):
 
     def _evaluate_with_walk_forward(
         self,
-        gene,
+        gene: Any,
         base_backtest_config: dict[str, Any],
         config: GAConfig,
     ) -> tuple[float, ...]:
@@ -792,7 +796,7 @@ class IndividualEvaluator(EvaluationWindowService):
         return self._fitness_calculator.extract_performance_metrics(backtest_result)
 
     def _calculate_fitness(
-        self, backtest_result: dict[str, Any], config: GAConfig, **kwargs
+        self, backtest_result: dict[str, Any], config: GAConfig, **kwargs: Any
     ) -> float:
         """フィットネス計算（FitnessCalculatorに委譲）"""
         return self._fitness_calculator.calculate_fitness(
@@ -804,7 +808,7 @@ class IndividualEvaluator(EvaluationWindowService):
         return self._fitness_calculator.calculate_long_short_balance(backtest_result)
 
     def _calculate_multi_objective_fitness(
-        self, backtest_result: dict[str, Any], config: GAConfig, **kwargs
+        self, backtest_result: dict[str, Any], config: GAConfig, **kwargs: Any
     ) -> tuple[float, ...]:
         """多目的適応度計算（FitnessCalculatorに委譲）"""
         return self._fitness_calculator.calculate_multi_objective_fitness(

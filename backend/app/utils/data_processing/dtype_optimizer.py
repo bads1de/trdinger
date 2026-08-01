@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from typing import Any
 
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -64,7 +65,7 @@ def _get_column_series(df: pd.DataFrame, col: str) -> pd.Series:
     """
     col_data = df[col]
     if isinstance(col_data, pd.DataFrame):
-        return col_data.iloc[:, 0]  # type: ignore
+        return col_data.iloc[:, 0]
     return col_data
 
 
@@ -189,14 +190,14 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
     （例: float64 -> float32, int64 -> int32/int16/int8）
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         DtypeOptimizerを初期化
 
         sklearn BaseEstimatorおよびTransformerMixinとの互換性を提供します。
         """
 
-    def fit(self, X, y=None):
+    def fit(self, X: Any, y: Any = None) -> "DtypeOptimizer":
         """
         データの範囲を分析して最適なdtypeを決定してトランスフォーマーを適合
 
@@ -215,7 +216,7 @@ class DtypeOptimizer(BaseEstimator, TransformerMixin):
         self.dtypes_ = build_optimized_dtype_map(X)
         return self
 
-    def transform(self, X):
+    def transform(self, X: Any) -> pd.DataFrame:
         """
         データ型を最適化されたバージョンに変換
 

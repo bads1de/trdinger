@@ -7,7 +7,7 @@ UniversalStrategyから注文管理の責務を分離するためのクラスで
 
 import logging
 import weakref
-from typing import cast
+from typing import Any
 
 import pandas as pd
 
@@ -25,7 +25,7 @@ class OrderManager:
     保留注文の管理と執行ロジックをカプセル化します。
     """
 
-    def __init__(self, strategy, lower_tf_simulator: LowerTimeframeSimulator):
+    def __init__(self, strategy: Any, lower_tf_simulator: LowerTimeframeSimulator):
         """
         初期化
 
@@ -39,14 +39,14 @@ class OrderManager:
         self.pending_orders: list[PendingOrder] = []
 
     @property
-    def strategy(self):
+    def strategy(self) -> Any:
         """戦略インスタンスへのアクセス（弱参照解決）"""
         return self._strategy_ref()
 
     def check_pending_order_fills(
         self,
         minute_data: pd.DataFrame,
-        current_bar_time,
+        current_bar_time: Any,
         current_bar_index: int,
     ) -> None:
         """保留注文の約定をチェックする。
@@ -244,4 +244,4 @@ class OrderManager:
             "4h": pd.Timedelta(hours=4),
             "1d": pd.Timedelta(days=1),
         }
-        return cast(pd.Timedelta | None, timeframe_map.get(timeframe))
+        return timeframe_map.get(timeframe)

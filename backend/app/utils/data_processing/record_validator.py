@@ -52,12 +52,14 @@ class RecordValidator:
             bool: 全てのレコードが有効な場合はTrue、
                 1つでも無効なレコードがある場合はFalse。
         """
-        if not ohlcv_records or not isinstance(ohlcv_records, list):
+        raw_records: Any = ohlcv_records
+        if not raw_records or not isinstance(raw_records, list):
             return False
 
         try:
             for record in ohlcv_records:
-                if not isinstance(record, dict):
+                raw_record: Any = record
+                if not isinstance(raw_record, dict):
                     return False
 
                 # 必須フィールドの存在確認

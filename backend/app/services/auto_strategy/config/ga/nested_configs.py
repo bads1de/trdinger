@@ -49,7 +49,7 @@ def _read_value(source: object, key: str, default: object = None) -> object:
 
 
 def _filter_known_fields(
-    cls, data: Mapping[str, Any], config_name: str
+    cls: type, data: Mapping[str, Any], config_name: str
 ) -> dict[str, Any]:
     """既知フィールドのみを残し、未知キーは警告する。"""
     known = {field_info.name for field_info in fields(cls)}
@@ -67,7 +67,7 @@ class NestedConfigMixin:
     """ネスト設定 dataclass の共通変換処理。"""
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]):
+    def from_dict(cls, data: Mapping[str, Any]) -> Any:
         filtered = _filter_known_fields(cls, dict(data), cls.__name__)
         return cls(**filtered)
 
@@ -86,12 +86,12 @@ class EarlyTerminationSettings(NestedConfigMixin):
     expectancy_progress: float = 0.1
 
     @classmethod
-    def from_source(cls, source: Mapping[str, Any]) -> "EarlyTerminationSettings":
+    def from_source(cls, source: object) -> "EarlyTerminationSettings":
         """dict / オブジェクトのどちらからでも設定を生成する。"""
         if isinstance(source, cls):
             return source
         if isinstance(source, Mapping):
-            return cls.from_dict(source)
+            return cast("EarlyTerminationSettings", cls.from_dict(source))
 
         filtered: dict[str, Any] = {
             field_name: _read_value(source, field_name, default)
@@ -104,7 +104,7 @@ class EarlyTerminationSettings(NestedConfigMixin):
 class MutationConfig(NestedConfigMixin):
     """突然変異関連設定。"""
 
-    rate: float = float(cast(float, GA_DEFAULT_CONFIG["mutation_rate"]))
+    rate: float = float(GA_DEFAULT_CONFIG["mutation_rate"])
     crossover_field_selection_probability: float = float(
         cast(float, GA_MUTATION_SETTINGS["crossover_field_selection_probability"])
     )

@@ -13,9 +13,9 @@ import math
 import platform
 import signal
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
-from typing import Any, TypeVar
+from typing import Any, ParamSpec, TypeVar, cast
 
 from fastapi import HTTPException, status
 
@@ -24,6 +24,8 @@ from .response import error_response
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+P = ParamSpec("P")
+R = TypeVar("R")
 
 
 class TimeoutError(Exception):
@@ -239,7 +241,7 @@ class ErrorHandler:
     def api_endpoint(
         message: str = "Internal Server Error",
         status_code: int = 500,
-    ):
+    ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
         """
         APIエンドポイント用の簡潔なデコレータ
 
@@ -256,11 +258,16 @@ class ErrorHandler:
         Args:
             message: エラーメッセージ
             status_code: エラー時のHTTPステータスコード
+
+        Returns:
+            デコレートされた関数を返すデコレータ
         """
 
-        def decorator(func):
+        def decorator(
+            func: Callable[P, Awaitable[R]],
+        ) -> Callable[P, Awaitable[R]]:
             @functools.wraps(func)
-            async def wrapper(*args, **kwargs):
+            async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 try:
                     return await func(*args, **kwargs)
                 except HTTPException as e:
@@ -278,7 +285,7 @@ class ErrorHandler:
     def api_safe_execute(
         message: str = "Internal Server Error",
         status_code: int = 500,
-    ):
+    ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
         """
         APIエンドポイント用の安全な実行デコレータ
 
@@ -287,6 +294,9 @@ class ErrorHandler:
         Args:
             message: エラーメッセージ
             status_code: エラー時のHTTPステータスコード
+
+        Returns:
+            APIエンドポイント用デコレータ
         """
         return ErrorHandler.api_endpoint(message, status_code)
 
@@ -426,10 +436,10 @@ class ErrorHandler:
 
 def safe_operation(
     default_return: object | str = "RAISE_EXCEPTION",
-    error_handler: Callable[[Exception, str], T] | None = None,
+    error_handler: Callable[[Exception, str], Any] | None = None,
     context: str = "統一操作",
     is_api_call: bool = False,
-) -> Callable[[Callable[..., T]], Callable[..., T]]:
+) -> Callable[[Callable[P, T]], Callable[P, T]]:
     """
     関数（同期・非同期）を例外から保護し、一貫したエラーハンドリングを提供する共通デコレータです。
 
@@ -449,7 +459,7 @@ def safe_operation(
         Callable[[Callable[..., T]], Callable[..., T]]: ラップされた関数。同期・非同期を自動判別します。
     """
 
-    def _handle_error(e: Exception) -> T:
+    def _handle_error(e: Exception) -> object:
         """エラーハンドリングの共通ロジック"""
         if error_handler:
             return error_handler(e, context)
@@ -458,35 +468,35 @@ def safe_operation(
         logger.error(f"エラー in {context}: {e}")
         if isinstance(default_return, str) and default_return == "RAISE_EXCEPTION":
             raise e
-        return default_return  # type: ignore[return-value]
+        return default_return
 
-    def decorator(func: Callable[..., T]) -> Callable[..., T]:
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
         if inspect.iscoroutinefunction(func):
 
             @functools.wraps(func)
-            async def async_wrapper(*args, **kwargs) -> T:
+            async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
                 try:
-                    return await func(*args, **kwargs)
+                    return cast(T, await func(*args, **kwargs))
                 except Exception as e:
-                    return _handle_error(e)
+                    return cast(T, _handle_error(e))
 
             return async_wrapper  # type: ignore[return-value]
         else:
 
             @functools.wraps(func)
-            def sync_wrapper(*args, **kwargs) -> T:
+            def sync_wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    return _handle_error(e)
+                    return cast(T, _handle_error(e))
 
-            return sync_wrapper  # type: ignore[return-value]
+            return sync_wrapper
 
     return decorator
 
 
 @contextmanager
-def operation_context(operation_name: str):
+def operation_context(operation_name: str) -> Iterator[None]:
     """統一操作のコンテキストマネージャー
 
     操作の実行時間計測とログ出力を行うコンテキストマネージャーです。
@@ -532,7 +542,7 @@ def get_memory_usage_mb() -> float:
         import psutil
 
         process = psutil.Process()
-        return process.memory_info().rss / 1024 / 1024
+        return cast(float, process.memory_info().rss) / 1024 / 1024
     except ImportError:
         return 0.0
     except Exception as e:
@@ -576,7 +586,9 @@ def ensure_db_initialized(
     )
 
 
-def timeout_decorator(timeout_seconds: int = 30):
+def timeout_decorator(
+    timeout_seconds: int = 30,
+) -> Callable[[Callable[..., T]], Callable[..., T]]:
     """タイムアウトデコレータ
 
     関数の実行時間を制限し、指定時間内に完了しない場合は

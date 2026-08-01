@@ -70,7 +70,7 @@ class StrategyGeneDictCodec:
                 strategy_gene.risk_management
             )
 
-            result = {
+            result: dict[str, Any] = {
                 "id": strategy_gene.id,
                 "indicators": [
                     self.converter.indicator_gene_to_dict(ind)
@@ -114,7 +114,7 @@ class StrategyGeneDictCodec:
             logger.error(f"戦略遺伝子辞書変換エラー: {e}")
             raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
 
-    def dict_to_strategy_gene(self, data: dict[str, Any], strategy_gene_class: type):
+    def dict_to_strategy_gene(self, data: dict[str, Any], strategy_gene_class: type) -> Any:
         """辞書形式のデータから戦略遺伝子オブジェクトを復元。"""
         try:
             if isinstance(data, strategy_gene_class):
@@ -142,7 +142,7 @@ class StrategyGeneDictCodec:
 
             from ..genes import ConditionGroup
 
-            def parse_condition_or_group(cond_data):
+            def parse_condition_or_group(cond_data: Any) -> Any:
                 if not isinstance(cond_data, dict):
                     raise TypeError(
                         "条件データはdictである必要があります: "
@@ -188,7 +188,7 @@ class StrategyGeneDictCodec:
                 if cls is None:
                     continue
                 gene_data = data.get(field)
-                sub_genes[field] = cls.from_dict(gene_data) if gene_data else None  # type: ignore[attr-defined]
+                sub_genes[field] = cls.from_dict(gene_data) if gene_data else None
 
             stateful_conditions = [
                 self.converter.dict_to_stateful_condition(sc_data)
@@ -218,7 +218,7 @@ class StrategyGeneDictCodec:
             logger.error(f"戦略遺伝子辞書復元エラー: {e}")
             raise ValueError(f"戦略遺伝子の復元に失敗: {e}") from e
 
-    def dict_to_condition(self, data: dict[str, Any]):
+    def dict_to_condition(self, data: dict[str, Any]) -> Any:
         """辞書形式から条件を復元。"""
         try:
             from ..genes import Condition

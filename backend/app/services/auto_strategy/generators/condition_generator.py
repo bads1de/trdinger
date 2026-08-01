@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Any, cast
+from typing import Any
 
 from app.services.indicators.config import (
     IndicatorScaleType,
@@ -66,7 +66,7 @@ class ConditionGenerator:
         symbol: str | None = None,
         threshold_profile: str | None = None,
         regime_thresholds: dict | None = None,
-    ):
+    ) -> None:
         """生成コンテキストを設定（RSI閾値などに利用）"""
         if timeframe is not None:
             self.context["timeframe"] = timeframe
@@ -138,10 +138,7 @@ class ConditionGenerator:
         )
 
         if len(flat) == 1 and isinstance(flat[0], Condition):
-            return cast(
-                list[Condition | ConditionGroup],
-                flat if exists else flat + [fallback],
-            )
+            return flat if exists else flat + [fallback]
 
         top_level: list[Condition | ConditionGroup] = [
             ConditionGroup(operator="OR", conditions=flat)
@@ -278,7 +275,9 @@ class ConditionGenerator:
         """
         max_conds = getattr(self.ga_config_obj, "max_conditions", 3)
 
-        def _finalize(lst, side):
+        def _finalize(
+            lst: list[Condition | ConditionGroup], side: str
+        ) -> list[Condition | ConditionGroup]:
             if not lst:
                 return self.normalize_conditions([], side, indicators, purpose=purpose)
             res = random.sample(lst, max_conds) if len(lst) > max_conds else lst

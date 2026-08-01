@@ -30,7 +30,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
     OHLCV価格データから基本的な価格関連特徴量（変化率、実体、ヒゲなど）を計算します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         super().__init__()
 

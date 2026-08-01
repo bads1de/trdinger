@@ -3,6 +3,7 @@
 """
 
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from app.services.auto_strategy.genes import StrategyGene
@@ -29,7 +30,7 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
     2つの戦略遺伝子間の類似度を計算する。
     """
     try:
-        components = [
+        components: list[tuple[Any, Any, Callable[[Any, Any], float], float]] = [
             (
                 gene1.indicators,
                 gene2.indicators,
@@ -70,7 +71,7 @@ def calculate_similarity(gene1: StrategyGene, gene2: StrategyGene) -> float:
 
         total_similarity = 0.0
         for val1, val2, calc_func, weight in components:
-            similarity = calc_func(val1, val2)  # type: ignore[operator,arg-type]
+            similarity = calc_func(val1, val2)
             total_similarity += similarity * weight
 
         return max(0.0, min(1.0, total_similarity))

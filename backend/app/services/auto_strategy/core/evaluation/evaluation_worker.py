@@ -28,7 +28,7 @@ def initialize_worker_process(
     backtest_config: dict[str, Any],
     ga_config: Any,
     shared_data: dict[str, Any] | None = None,
-):
+) -> None:
     """
     ワーカープロセスの初期化関数
 
@@ -82,7 +82,7 @@ def worker_evaluate_individual(individual: Any) -> ParallelEvaluationResult:
         return ParallelEvaluationResult(fitness=(0.0,))
 
     try:
-        fitness = _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)  # type: ignore[arg-type]
+        fitness = _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)
         report = _WORKER_EVALUATOR.get_last_evaluation_report()
         behavior_summary = build_behavior_profile(
             fitness_values=fitness,

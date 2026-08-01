@@ -7,7 +7,7 @@ Pickle化可能にするため、filesのトップレベルで定義されてい
 """
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 import pandas as pd
 from backtesting import Strategy
@@ -15,7 +15,7 @@ from backtesting import Strategy
 from ..config.ga.nested_configs import EarlyTerminationSettings
 from ..config.helpers import normalize_ml_gate_fields
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
-from ..genes import IndicatorGene, TPSLGene
+from ..genes import ExitGene, IndicatorGene, TPSLGene
 from ..genes.conditions import StateTracker
 from ..genes.entry import EntryGene
 from ..positions.entry_executor import EntryExecutor
@@ -124,7 +124,7 @@ class UniversalStrategy(Strategy):
     def _trailing_tp_sl(self, value: float | None) -> None:
         self.runtime_state.trailing_tp_sl = value
 
-    def __init__(self, broker, data, params):
+    def __init__(self, broker: Any, data: Any, params: Any) -> None:
         """
         初期化
 
@@ -217,7 +217,7 @@ class UniversalStrategy(Strategy):
             mtf_data_provider=self.mtf_data_provider
         )
 
-        self.indicators = {}
+        self.indicators: dict[str, Any] = {}
 
         # === ML フィルター設定 ===
         # HybridPredictor インスタンス（オプション）
@@ -227,8 +227,8 @@ class UniversalStrategy(Strategy):
         self.volatility_model_path = ml_gate_fields["volatility_model_path"]
 
         # ベクトル化評価結果のキャッシュ
-        self._precomputed_signals = {}
-        self._precomputed_exit_signals = {}
+        self._precomputed_signals: dict[float, Any] = {}
+        self._precomputed_exit_signals: dict[float, Any] = {}
 
     def _has_mtf_indicators(self) -> bool:
         """MTF指標が存在するかチェック"""
@@ -281,10 +281,8 @@ class UniversalStrategy(Strategy):
         target = self._get_effective_sub_gene(direction, "entry")
         return cast(EntryGene | None, target)
 
-    def _get_effective_exit_gene(self, direction: float):
+    def _get_effective_exit_gene(self, direction: float) -> ExitGene | None:
         """有効なイグジット遺伝子を取得（方向別設定を優先し、共通設定にフォールバック）"""
-        from ..genes import ExitGene
-
         target = self._get_effective_sub_gene(direction, "exit")
         return cast(ExitGene | None, target)
 
@@ -348,7 +346,7 @@ class UniversalStrategy(Strategy):
         """ポジションサイズを計算"""
         return self.entry_decision_engine.calculate_position_size()
 
-    def init(self):
+    def init(self) -> None:
         """
         戦略の初期化フェーズ（`backtesting.py` のライフサイクル）。
 
@@ -365,7 +363,7 @@ class UniversalStrategy(Strategy):
         """
         self.strategy_initializer.initialize()
 
-    def _init_indicator(self, indicator_gene: IndicatorGene):
+    def _init_indicator(self, indicator_gene: IndicatorGene) -> None:
         """
         単一のテクニカル指標を初期化します。
 
@@ -393,7 +391,7 @@ class UniversalStrategy(Strategy):
             current_price,
         )
 
-    def next(self):
+    def next(self) -> None:
         """
         メインの戦略実行ループ（`backtesting.py` のライフサイクル）。
 
@@ -448,7 +446,7 @@ class UniversalStrategy(Strategy):
         """
         return self.ml_filter.prepare_current_features()
 
-    def _process_stateful_triggers(self):
+    def _process_stateful_triggers(self) -> None:
         """ステートフルトリガーを処理"""
         self.stateful_conditions_evaluator.process_stateful_triggers()
 

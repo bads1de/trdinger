@@ -61,9 +61,9 @@ class USLunchFilter(BaseTool):
             hour = context.timestamp.hour
 
             if is_summer:
-                return hour == 16
+                return bool(hour == 16)
             else:
-                return hour == 17
+                return bool(hour == 17)
 
 
 # グローバルインスタンスを作成してレジストリに登録

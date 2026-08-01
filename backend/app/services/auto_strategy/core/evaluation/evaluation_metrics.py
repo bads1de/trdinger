@@ -33,7 +33,7 @@ def _ensure_datetime(value: object | None) -> datetime | None:
     return parse_datetime_optional(value)
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _calculate_ulcer_index_numba(dd_array: np.ndarray) -> float:
     """
     NumbaでUlcer Indexの数値計算を高速化
@@ -62,7 +62,7 @@ def _calculate_ulcer_index_numba(dd_array: np.ndarray) -> float:
     if count == 0:
         return 0.0
 
-    return np.sqrt(squared_sum / count)
+    return math.sqrt(squared_sum / count)
 
 
 def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
@@ -97,7 +97,7 @@ def calculate_ulcer_index(equity_curve: Sequence[Mapping[str, Any]]) -> float:
             dtype=np.float64,
         )
 
-        return _calculate_ulcer_index_numba(dd_array)
+        return float(_calculate_ulcer_index_numba(dd_array))
 
     except Exception as e:
         logger.warning(f"Ulcer Index計算エラー: {e}")

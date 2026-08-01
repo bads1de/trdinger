@@ -58,7 +58,7 @@ class FundingRateFilter(BaseTool):
         # extra_data にファンディングレートが渡されているかチェック
         funding_rate = context.extra_data.get("funding_rate")
         if funding_rate is not None:
-            return abs(funding_rate) > max_funding_rate
+            return bool(abs(funding_rate) > max_funding_rate)
 
         # データがない場合はスキップしない
         return False

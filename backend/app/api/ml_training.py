@@ -193,7 +193,7 @@ async def start_ml_training(
     background_tasks: BackgroundTasks,
     ml_service: MLTrainingService = Depends(get_ml_training_service),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     スタッキングアンサンブル学習またはシングルモデルによるMLモデルのトレーニングを開始
 
@@ -229,7 +229,7 @@ async def start_ml_training(
 @ErrorHandler.api_endpoint("MLトレーニング状態の取得に失敗しました")
 async def get_ml_training_status(
     ml_service: MLTrainingService = Depends(get_ml_training_service),
-):
+) -> Any:
     """
     MLトレーニングの状態を取得
 
@@ -250,7 +250,7 @@ async def get_ml_training_status(
 @ErrorHandler.api_endpoint("MLモデル情報の取得に失敗しました")
 async def get_ml_model_info(
     ml_service: MLTrainingService = Depends(get_ml_training_service),
-):
+) -> Any:
     """
     現在のMLモデル情報を取得
 
@@ -270,7 +270,7 @@ async def get_ml_model_info(
 @ErrorHandler.api_endpoint("MLトレーニングの停止に失敗しました")
 async def stop_ml_training(
     ml_service: MLTrainingService = Depends(get_ml_training_service),
-):
+) -> Any:
     """
     MLトレーニングを停止
 

@@ -46,7 +46,7 @@ class IndicatorCalculator:
         self.mtf_data_provider = mtf_data_provider
 
     def calculate_indicator(
-        self, data, indicator_type: str, parameters: dict[str, Any]
+        self, data: Any, indicator_type: str, parameters: dict[str, Any]
     ) -> (
         np.ndarray
         | pd.Series
@@ -86,15 +86,7 @@ class IndicatorCalculator:
             )
 
         result = _calculate_indicator()
-        return cast(
-            np.ndarray
-            | pd.Series
-            | pd.DataFrame
-            | tuple[np.ndarray, ...]
-            | tuple[pd.Series, ...]
-            | None,
-            result,
-        )
+        return result
 
     def _calculate_indicator_from_dataframe(
         self, df: pd.DataFrame, indicator_type: str, parameters: dict[str, Any]
@@ -151,7 +143,9 @@ class IndicatorCalculator:
             logger.error(f"MTF指標計算エラー ({indicator_type}): {e}", exc_info=True)
             return None
 
-    def init_indicator(self, indicator_gene: IndicatorGene, strategy_instance):
+    def init_indicator(
+        self, indicator_gene: IndicatorGene, strategy_instance: Any
+    ) -> None:
         """
         単一指標の初期化
 
@@ -169,7 +163,7 @@ class IndicatorCalculator:
         @safe_operation(
             context=f"指標初期化 ({indicator_gene.type})", is_api_call=False
         )
-        def _init_indicator():
+        def _init_indicator() -> None:
             indicator_timeframe = getattr(indicator_gene, "timeframe", None)
 
             # logger.warning(
@@ -196,6 +190,14 @@ class IndicatorCalculator:
                 # ベースデータのインデックスに合わせてリインデックス（ffill）
                 # 1つ前の（確定済みの）足を参考にするため、上位足の時点で1つシフトする
                 # これにより未来予知（Look-ahead bias）を防止する
+                result: (
+                    np.ndarray
+                    | pd.Series
+                    | pd.DataFrame
+                    | tuple[np.ndarray, ...]
+                    | tuple[pd.Series, ...]
+                    | None
+                )
                 if raw_result is not None:
                     base_index = strategy_instance.data.df.index
 
@@ -259,7 +261,7 @@ class IndicatorCalculator:
                     strategy_instance.indicators = {}
 
                 # 指標を戦略インスタンスに登録する共通ヘルパー
-                def _register(name, val):
+                def _register(name: str, val: Any) -> None:
                     try:
                         # 1. indicators辞書（独自の管理用）
                         strategy_instance.indicators[name] = val

@@ -53,7 +53,7 @@ class MondayReversalFilter(BaseTool):
         skip_hours = params.get("skip_hours", 12)
 
         # 指定時間未満ならスキップ (例: skip_hours=12なら 00:00〜11:59 までスキップ)
-        return hour < skip_hours
+        return bool(hour < skip_hours)
 
     def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """

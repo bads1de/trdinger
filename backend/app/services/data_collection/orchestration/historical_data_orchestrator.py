@@ -25,7 +25,7 @@ class HistoricalDataOrchestrator:
     OHLCV履歴データの収集を管理します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         self.historical_service = HistoricalDataService()
 
@@ -127,7 +127,7 @@ class HistoricalDataOrchestrator:
         db: Session,
         start_date: str | None = None,
         ohlcv_repository_class: Any = None,
-    ):
+    ) -> None:
         """バックグラウンドでの履歴データ収集（ページネーションで全期間取得）"""
         try:
             logger.info(f"履歴データ収集開始: {symbol} {timeframe}")

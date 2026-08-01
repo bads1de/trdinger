@@ -44,7 +44,7 @@ def _convert_value(value: object) -> SerializableValue:
         SerializableValue: JSONシリアライズ可能な型に変換された値。
     """
     if isinstance(value, Enum):
-        return value.value
+        return cast(SerializableValue, value.value)
     if isinstance(value, datetime):
         return value.isoformat()
     if is_dataclass(value) and not isinstance(value, type):
@@ -153,8 +153,9 @@ def dataclass_from_dict(cls: type[T], data: dict[str, SerializableValue]) -> T:
     """
     try:
         # クラス側に from_dict があればそちらを優先
-        if hasattr(cls, "from_dict") and callable(cls.from_dict):
-            return cls.from_dict(data)  # type: ignore[attr-defined, return-value]
+        from_dict_method = getattr(cls, "from_dict", None)
+        if callable(from_dict_method):
+            return cast(T, from_dict_method(data))
 
         # フォールバック: デフォルトインスタンスを作って setattr
         instance = cls()

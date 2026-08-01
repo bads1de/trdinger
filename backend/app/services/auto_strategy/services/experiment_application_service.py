@@ -3,7 +3,8 @@
 """
 
 import logging
-from typing import Any, Protocol
+from collections.abc import Callable
+from typing import Any, Protocol, cast
 
 from ..config.ga import GAConfig
 
@@ -13,14 +14,14 @@ logger = logging.getLogger(__name__)
 class TaskScheduler(Protocol):
     """バックグラウンド実行を抽象化する scheduler protocol。"""
 
-    def add_task(self, func, *args, **kwargs) -> None:
+    def add_task(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> None:
         """タスクを登録する。"""
 
 
 class ExperimentApplicationService:
     """実験 workflow を framework 非依存にまとめる。"""
 
-    def __init__(self, experiment_manager, persistence_service) -> None:
+    def __init__(self, experiment_manager: Any, persistence_service: Any) -> None:
         self.experiment_manager = experiment_manager
         self.persistence_service = persistence_service
 
@@ -91,11 +92,11 @@ class ExperimentApplicationService:
 
         return experiment_id
 
-    def list_experiments(self):
+    def list_experiments(self) -> list[Any]:
         """実験一覧を取得する。"""
-        return self.persistence_service.list_experiments()
+        return cast(list[Any], self.persistence_service.list_experiments())
 
-    def get_experiment_detail(self, experiment_id: str):
+    def get_experiment_detail(self, experiment_id: str) -> Any:
         """実験詳細を取得する。"""
         return self.persistence_service.get_experiment_detail(experiment_id)
 

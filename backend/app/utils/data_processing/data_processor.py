@@ -44,7 +44,7 @@ class DataProcessor:
     データのクリーニング、検証、補間、型最適化を一括して実行できます。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         DataProcessorを初期化します。
 
@@ -128,7 +128,7 @@ class DataProcessor:
 
         return result_df
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """
         キャッシュをクリアします。
 

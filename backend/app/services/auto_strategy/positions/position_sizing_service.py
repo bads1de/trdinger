@@ -46,7 +46,7 @@ class PositionSizingService:
     市場データの統合、計算結果のキャッシュ、パフォーマンス最適化を提供します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         self.logger = logging.getLogger(__name__)
         self._market_data_handler = MarketDataHandler()
@@ -56,7 +56,7 @@ class PositionSizingService:
     def _calculate_with_calculator(
         self,
         *,
-        gene,
+        gene: Any,
         account_balance: float,
         current_price: float,
         market_data: dict[str, Any] | None,
@@ -77,7 +77,7 @@ class PositionSizingService:
     @safe_operation(context="ポジションサイズ計算", is_api_call=False)
     def calculate_position_size(
         self,
-        gene,
+        gene: Any,
         account_balance: float,
         current_price: float,
         symbol: str = DEFAULT_MARKET_SYMBOL,
@@ -151,7 +151,7 @@ class PositionSizingService:
         return final_result
 
     def _validate_inputs(
-        self, gene, account_balance: float, current_price: float
+        self, gene: Any, account_balance: float, current_price: float
     ) -> dict[str, Any]:
         """入力値の検証"""
         if not gene:
@@ -186,7 +186,7 @@ class PositionSizingService:
         account_balance: float,
         current_price: float,
         market_data: dict[str, Any],
-        gene,
+        gene: Any,
     ) -> dict[str, float]:
         """リスクメトリクスの計算"""
         # 基本メトリクス
@@ -236,7 +236,7 @@ class PositionSizingService:
     @safe_operation(context="信頼度スコア計算", is_api_call=False)
     def _calculate_confidence_score(
         self,
-        gene,
+        gene: Any,
         market_data: dict[str, Any],
         trade_history: list[dict[str, Any]] | None,
     ) -> float:
@@ -278,13 +278,13 @@ class PositionSizingService:
             timestamp=datetime.now(),
         )
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """キャッシュのクリア"""
         self._market_data_handler.clear_cache()
 
     def calculate_position_size_fast(
         self,
-        gene,
+        gene: Any,
         account_balance: float,
         current_price: float,
         market_data: dict[str, Any] | None = None,
@@ -323,7 +323,7 @@ class PositionSizingService:
                 trade_history=None,
             )
 
-            return result["position_size"]
+            return float(result["position_size"])
 
         except Exception as e:
             self.logger.warning(f"高速ポジションサイズ計算エラー: {e}")

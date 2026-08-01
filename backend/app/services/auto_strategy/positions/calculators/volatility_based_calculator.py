@@ -18,7 +18,7 @@ class VolatilityBasedCalculator(BaseCalculator):
     """ボラティリティベース方式計算クラス"""
 
     def calculate(
-        self, gene, account_balance: float, current_price: float, **kwargs
+        self, gene: Any, account_balance: float, current_price: float, **kwargs: Any
     ) -> dict[str, Any]:
         """
         ボラティリティ（ATR）に基づいてポジションサイズを計算

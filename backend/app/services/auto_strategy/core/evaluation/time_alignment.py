@@ -32,7 +32,7 @@ def _get_index_timezone(index: pd.Index) -> object | None:
     if len(index) == 0:
         return None
 
-    index_tz = getattr(index, "tz", None)
+    index_tz = cast(object | None, getattr(index, "tz", None))
     if index_tz is not None:
         return index_tz
 
@@ -41,7 +41,7 @@ def _get_index_timezone(index: pd.Index) -> object | None:
     except Exception as e:
         logger.debug(f"Indexの先頭値からTimestampの生成に失敗しました: {e}")
         return None
-    return first_value.tzinfo
+    return cast(object | None, first_value.tzinfo)
 
 
 def align_timestamp_to_tz(value: Any, target_tz: Any | None) -> pd.Timestamp:
@@ -64,18 +64,18 @@ def align_timestamp_to_tz(value: Any, target_tz: Any | None) -> pd.Timestamp:
 
     # NaT check
     if _is_nat(timestamp):
-        return cast(pd.Timestamp, timestamp)  # type: ignore[return-value]
+        return cast(pd.Timestamp, timestamp)
 
     if target_tz is None:
         if timestamp.tzinfo is not None:
-            return timestamp.tz_localize(None)  # type: ignore[return-value]
-        return timestamp  # type: ignore[return-value]
+            return timestamp.tz_localize(None)
+        return timestamp
 
     if timestamp.tzinfo is None:
-        return timestamp.tz_localize(target_tz)  # type: ignore[return-value]
+        return timestamp.tz_localize(target_tz)
     if timestamp.tzinfo != target_tz:
-        return timestamp.tz_convert(target_tz)  # type: ignore[return-value]
-    return timestamp  # type: ignore[return-value]
+        return timestamp.tz_convert(target_tz)
+    return timestamp
 
 
 def align_timestamp_to_reference(value: Any, reference: Any) -> pd.Timestamp:

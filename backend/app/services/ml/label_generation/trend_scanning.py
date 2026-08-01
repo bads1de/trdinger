@@ -8,7 +8,7 @@ from numba import njit
 logger = logging.getLogger(__name__)
 
 
-@njit
+@njit  # type: ignore[untyped-decorator]
 def _compute_window_t_value(
     sum_y: float,
     sum_yy: float,
@@ -50,7 +50,7 @@ def _compute_window_t_value(
     return t_val
 
 
-@njit
+@njit  # type: ignore[untyped-decorator]
 def _label_from_t_value(
     t_val: float, min_t_value: float, return_t_value_as_label: bool
 ) -> float:
@@ -64,7 +64,7 @@ def _label_from_t_value(
     return 0.0
 
 
-@njit
+@njit  # type: ignore[untyped-decorator]
 def _trend_scanning_loop_numba(
     close_vals: np.ndarray,
     t0_indices: np.ndarray,

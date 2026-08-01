@@ -9,7 +9,7 @@ from numba import njit
 from ...data_validation import handle_pandas_ta_errors, validate_series_params
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_instantaneous_trendline_loop(
     prices: np.ndarray,
     alpha: float,

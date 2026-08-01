@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import cast
-
 import numpy as np
 import pandas as pd
 from numba import njit, prange
@@ -15,7 +13,7 @@ from ...data_validation import (
 from ._window_helpers import _window_mean_and_std_finite
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _calculate_correlation_dimension_impl(
     prices: np.ndarray, embedding_dim: int = 3, time_delay: int = 1
 ) -> float:
@@ -73,12 +71,12 @@ def _calculate_correlation_dimension_impl(
                     dimension = 1.0
                 if dimension > 5.0:
                     dimension = 5.0
-                return dimension
+                return float(dimension)
 
     return 1.0
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_solve_3x3(A: np.ndarray, b: np.ndarray) -> np.ndarray:
     det = (
         A[0, 0] * (A[1, 1] * A[2, 2] - A[1, 2] * A[2, 1])
@@ -112,7 +110,7 @@ def _njit_solve_3x3(A: np.ndarray, b: np.ndarray) -> np.ndarray:
     return np.array([x, y, z])
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_ctfd_raw_pass(
     prices: np.ndarray,
     volumes: np.ndarray,
@@ -209,7 +207,7 @@ def _njit_ctfd_raw_pass(
     return raw_scores
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_ctfd_normalize(raw_scores: np.ndarray, min_period: int) -> np.ndarray:
     n = len(raw_scores)
     result = np.full(n, np.nan)
@@ -247,7 +245,7 @@ def _chaos_fractal_dimension_loop(
 ) -> np.ndarray:
     min_period = max(length, 30)
     raw_scores = _njit_ctfd_raw_pass(prices, volumes, length, embedding_dim, min_period)
-    return _njit_ctfd_normalize(raw_scores, min_period)
+    return np.asarray(_njit_ctfd_normalize(raw_scores, min_period))
 
 
 @handle_pandas_ta_errors
@@ -291,6 +289,6 @@ def chaos_fractal_dimension(
 
     ctf_series = pd.Series(result, index=close.index, name="CHAOS_FRACTAL_DIM")
     signal = ctf_series.rolling(window=signal_length, min_periods=1).mean()
-    signal.name = "CTFD_SIGNAL"  # type: ignore[reportAttributeAccessIssue]
+    signal.name = "CTFD_SIGNAL"
 
-    return cast(tuple[pd.Series, pd.Series], (ctf_series, signal))
+    return ctf_series, signal

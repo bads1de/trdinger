@@ -88,7 +88,7 @@ def generate_cache_key(
         try:
             if isinstance(obj, pd.DataFrame):
                 # 1. データ内容とインデックスのハッシュ
-                data_hash = pd.util.hash_pandas_object(obj, index=True).values.tobytes()  # type: ignore[reportAttributeAccessIssue]
+                data_hash = pd.util.hash_pandas_object(obj, index=True).values.tobytes()
                 # 2. カラム名のハッシュ（カラム名が変われば結果も変わる可能性があるため）
                 col_hash = str(list(obj.columns)).encode()
 
@@ -173,7 +173,7 @@ def validate_training_inputs(
 def prepare_data_for_prediction(
     features_df: pd.DataFrame,
     expected_columns: list[str],
-    scaler=None,
+    scaler: Any = None,
 ) -> pd.DataFrame:
     """
     予測用のデータを前処理（カラム調整、スケーリング）
@@ -249,12 +249,12 @@ def predict_class_from_proba(
         - 1次元配列: (predictions_proba > threshold).astype(int)
     """
     if predictions_proba.ndim == 2:
-        return np.argmax(predictions_proba, axis=1)
+        return cast(np.ndarray, np.argmax(predictions_proba, axis=1))
     return (predictions_proba > threshold).astype(int)
 
 
 def get_feature_importance_unified(
-    model,
+    model: Any,
     feature_columns: list[str],
     top_n: int = 10,
 ) -> dict[str, float]:
@@ -295,13 +295,13 @@ def get_feature_importance_unified(
 
         if importance_scores is not None:
             if hasattr(importance_scores, "tolist") and callable(
-                importance_scores.tolist  # type: ignore[reportAttributeAccessIssue]
+                importance_scores.tolist
             ):
-                scores = importance_scores.tolist()  # type: ignore[reportAttributeAccessIssue]
+                scores = importance_scores.tolist()
             elif isinstance(importance_scores, (list, tuple)):
                 scores = importance_scores
             else:
-                scores = [float(x) for x in importance_scores]  # type: ignore
+                scores = [float(x) for x in importance_scores]
 
             scores = cast(list, scores)
 

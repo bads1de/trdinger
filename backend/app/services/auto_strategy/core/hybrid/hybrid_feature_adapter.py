@@ -77,7 +77,7 @@ class HybridFeatureAdapter:
                 logger.warning("WaveletFeatureTransformer初期化に失敗しました: %s", exc)
                 self._wavelet_transformer = None
 
-    def _compute_config_hash(self, wavelet_config, use_derived):
+    def _compute_config_hash(self, wavelet_config: Any, use_derived: bool) -> str:
         """設定の一意なハッシュを計算"""
         content = f"{str(wavelet_config)}{use_derived}"
         return hashlib.md5(content.encode()).hexdigest()
@@ -87,7 +87,7 @@ class HybridFeatureAdapter:
         try:
             from pandas.util import hash_pandas_object
 
-            return int(hash_pandas_object(df, index=True).sum())  # type: ignore[call-arg]
+            return int(hash_pandas_object(df, index=True).sum())
         except Exception as e:
             logger.debug(f"DataFrameのハッシュ生成に失敗しました: {e}")
             return None
@@ -104,7 +104,9 @@ class HybridFeatureAdapter:
             return None
         return cached.copy(deep=True)
 
-    def _cache_derived_features(self, df: pd.DataFrame, features: pd.DataFrame):
+    def _cache_derived_features(
+        self, df: pd.DataFrame, features: pd.DataFrame
+    ) -> None:
         """派生特徴量をキャッシュに保存"""
         data_hash = self._get_dataframe_hash(df)
         if data_hash is None:
@@ -209,7 +211,7 @@ class HybridFeatureAdapter:
                     .ffill()
                     .rolling(self.SENTIMENT_ROLLING_WINDOW, min_periods=1)
                     .mean()
-                    .fillna(self.DEFAULT_FILL_VALUE)  # type: ignore[reportAttributeAccessIssue]
+                    .fillna(self.DEFAULT_FILL_VALUE)
                 )
             else:
                 features_df["sentiment_smoothed"] = self.DEFAULT_FILL_VALUE
@@ -232,7 +234,7 @@ class HybridFeatureAdapter:
                 derived_features = temp_df[new_cols]
 
                 # キャッシュ保存
-                self._cache_derived_features(ohlcv_data, derived_features)  # type: ignore[arg-type]
+                self._cache_derived_features(ohlcv_data, derived_features)
 
             # 派生特徴量を結合
             if not derived_features.empty:
@@ -335,7 +337,9 @@ class HybridFeatureAdapter:
             return self._fallback_preprocess(features_df)
 
         try:
-            processed = preprocess_callable(features_df, features_df.copy())
+            processed: pd.DataFrame | tuple[
+                pd.DataFrame, pd.DataFrame
+            ] = preprocess_callable(features_df, features_df.copy())
             if isinstance(processed, tuple):
                 return processed[0]
             return processed
@@ -448,7 +452,7 @@ class WaveletFeatureTransformer:
 
             numeric_series = series.astype(float)
             for scale in self.scales:
-                detail = self._haar_detail(numeric_series, scale)  # type: ignore[arg-type]
+                detail = self._haar_detail(numeric_series, scale)
                 new_column = f"wavelet_{column}_scale_{scale}"
                 features_df[new_column] = detail
 

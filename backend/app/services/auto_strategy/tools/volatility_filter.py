@@ -61,13 +61,13 @@ class VolatilityFilter(BaseTool):
         atr_value = context.extra_data.get("atr")
         if atr_value is not None and atr_value > 0:
             atr_pct = atr_value / max(context.current_price, 1e-12)
-            return atr_pct < min_atr_pct
+            return bool(atr_pct < min_atr_pct)
 
         # ATRがない場合、extra_dataのvolatility（標準偏差）で判定
         volatility = context.extra_data.get("volatility")
         if volatility is not None and volatility > 0:
             vol_pct = volatility / max(context.current_price, 1e-12)
-            return vol_pct < min_atr_pct
+            return bool(vol_pct < min_atr_pct)
 
         # データがない場合はスキップしない（安全側に倒す）
         return False

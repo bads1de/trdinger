@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 # 共通定数
 from .constants import (
@@ -47,7 +47,7 @@ _UNIFIED_CONFIG_EXPORTS = {
 def __getattr__(name: str) -> type:
     if name in _UNIFIED_CONFIG_EXPORTS:
         module = import_module(".unified_config", __name__)
-        return getattr(module, name)
+        return cast(type, getattr(module, name))
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 

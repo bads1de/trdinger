@@ -72,7 +72,7 @@ class LSRMerger:
                     left_index=True,
                     right_index=True,
                     direction="backward",
-                    tolerance=tolerance,  # type: ignore[arg-type]
+                    tolerance=tolerance,
                 )
 
             else:

@@ -6,7 +6,7 @@ Bybitオープンインタレストサービス
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.services.data_collection.bybit.bybit_service import BybitService
 from app.services.data_collection.bybit.data_config import (
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class BybitOpenInterestService(BybitService):
     """Bybitオープンインタレストサービス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         BybitOpenInterestServiceを初期化
 
@@ -63,14 +63,17 @@ class BybitOpenInterestService(BybitService):
         """
         self._validate_parameters(symbol, limit)
         normalized_symbol = normalize_market_symbol(symbol)
-        return await self._handle_ccxt_errors(
-            f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
-            self.exchange.fetch_open_interest_history,  # type: ignore[reportAttributeAccessIssue]
-            normalized_symbol,
-            interval,  # timeframeパラメータを追加
-            since,
-            limit,
-            {"intervalTime": interval},
+        return cast(
+            list[dict[str, Any]],
+            await self._handle_ccxt_errors(
+                f"オープンインタレスト履歴取得: {normalized_symbol}, limit={limit}",
+                self.exchange.fetch_open_interest_history,
+                normalized_symbol,
+                interval,  # timeframeパラメータを追加
+                since,
+                limit,
+                {"intervalTime": interval},
+            ),
         )
 
     async def fetch_incremental_open_interest_data(

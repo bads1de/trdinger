@@ -324,13 +324,13 @@ class HybridPredictor:
 
         try:
             if hasattr(service, "run_time_series_cv"):
-                service.run_time_series_cv(features_df)  # type: ignore[reportAttributeAccessIssue]
+                service.run_time_series_cv(features_df)
             elif hasattr(service, "time_series_cross_validate"):
-                service.time_series_cross_validate(features_df)  # type: ignore[reportAttributeAccessIssue]
+                service.time_series_cross_validate(features_df)
             elif hasattr(service, "trainer") and hasattr(
                 service.trainer, "time_series_cross_validate"
             ):
-                service.trainer.time_series_cross_validate(features_df)  # type: ignore[reportAttributeAccessIssue]
+                service.trainer.time_series_cross_validate(features_df)
         except Exception as exc:
             logger.warning(f"時系列クロスバリデーション実行エラー: {exc}")
 
@@ -447,7 +447,7 @@ class HybridPredictor:
         module = importlib.import_module(
             "app.services.ml.orchestration.ml_training_orchestration_service"
         )
-        return module.MLTrainingService
+        return cast(type["MLTrainingService"], module.MLTrainingService)
 
     @staticmethod
     def _resolve_model_manager(
@@ -458,7 +458,7 @@ class HybridPredictor:
 
         module = importlib.import_module("app.services.ml.models.model_manager")
         manager_cls = module.ModelManager
-        return manager_cls()
+        return cast("ModelManager", manager_cls())
 
     @staticmethod
     def _service_is_trained(service: "MLTrainingService") -> bool:
@@ -543,7 +543,7 @@ class HybridPredictor:
                     HybridPredictor.DEFAULT_FORECAST_LOG_RV,
                 )
             )
-            raw_gate_open = prediction.get("gate_open")
+            raw_gate_open: Any = prediction.get("gate_open")
             if isinstance(raw_gate_open, bool):
                 gate_open = raw_gate_open
             elif raw_gate_open is None:

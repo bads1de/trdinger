@@ -5,7 +5,7 @@ Bybit ロング/ショート比率データ収集サービス
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 import ccxt.async_support as ccxt
 
@@ -67,7 +67,7 @@ class BybitLongShortRatioService(BybitService):
         try:
             response = await self._handle_ccxt_errors(
                 "Bybit V5 Market Account Ratio",
-                self.exchange.publicGetV5MarketAccountRatio,  # type: ignore[reportAttributeAccessIssue]
+                self.exchange.publicGetV5MarketAccountRatio,
                 params=params,
             )
         except Exception as e:
@@ -91,7 +91,7 @@ class BybitLongShortRatioService(BybitService):
             # アプリケーション内での統一のため、シンボルはリクエスト時のCCXT形式（例: BTC/USDT:USDT）で上書きする
             item["symbol"] = symbol
 
-        return data_list
+        return cast(list[dict[str, Any]], data_list)
 
     async def fetch_incremental_long_short_ratio_data(
         self,
@@ -120,7 +120,7 @@ class BybitLongShortRatioService(BybitService):
                 # Bybitの仕様上、指定時刻を含むデータを返す可能性があるため、
                 # 重複排除はリポジトリ層（INSERT OR IGNORE）に任せるか、ここでフィルタリングする。
                 # 安全のため、少し前から取得して重複チェックに任せる。
-                start_time = to_millis(latest_db_record.timestamp)
+                start_time = to_millis(cast(datetime, latest_db_record.timestamp))
 
             logger.info(
                 f"LS比率差分データ収集開始: {symbol} ({period}) start_time={start_time}"

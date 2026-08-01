@@ -22,12 +22,12 @@ class BacktestDataProvider:
 
     def __init__(
         self,
-        backtest_service,
-        data_cache,
-        lock,
+        backtest_service: Any,
+        data_cache: Any,
+        lock: Any,
         prefetch_enabled: bool = True,
         max_prefetch_workers: int = 2,
-    ):
+    ) -> None:
         self.backtest_service = backtest_service
         self._data_cache = data_cache
         self._lock = lock or threading.RLock()
@@ -121,7 +121,7 @@ class BacktestDataProvider:
 
         worker_start, worker_end = worker_range
         expected_start, expected_end = expected_range
-        return worker_start <= expected_start <= expected_end <= worker_end
+        return bool(worker_start <= expected_start <= expected_end <= worker_end)
 
     def get_cached_backtest_data(
         self, backtest_config: dict[str, SerializableValue]
@@ -157,17 +157,17 @@ class BacktestDataProvider:
             pd.to_datetime(start_date).tz_localize("UTC")
             if pd.to_datetime(start_date).tzinfo is None
             else pd.to_datetime(start_date)
-        )  # type: ignore[reportArgumentType]
+        )
         end_dt = (
             pd.to_datetime(end_date).tz_localize("UTC")
             if pd.to_datetime(end_date).tzinfo is None
             else pd.to_datetime(end_date)
-        )  # type: ignore[reportArgumentType]
+        )
         data = self.backtest_service.data_service.get_data_for_backtest(
             symbol=symbol,
             timeframe=timeframe,
-            start_date=start_dt,  # type: ignore[reportArgumentType]
-            end_date=end_dt,  # type: ignore[reportArgumentType]
+            start_date=start_dt,
+            end_date=end_dt,
         )
         with self._lock:
             if key in self._data_cache:
@@ -333,7 +333,7 @@ class BacktestDataProvider:
             if cache_key in self._data_cache:
                 return
 
-        def _prefetch_task():
+        def _prefetch_task() -> None:
             try:
                 data_service = getattr(self.backtest_service, "data_service", None)
                 if data_service is None:

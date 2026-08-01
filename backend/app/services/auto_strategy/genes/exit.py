@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from app.types import StrategyGeneDict
 from app.utils.serialization import dataclass_to_dict
@@ -78,9 +78,10 @@ class ExitGene:
             )
 
         # exit_type が有効な値かチェック
-        if not isinstance(self.exit_type, ExitType):
+        raw_exit_type: Any = self.exit_type
+        if not isinstance(raw_exit_type, ExitType):
             try:
-                ExitType(self.exit_type)
+                ExitType(raw_exit_type)
             except ValueError:
                 errors.append(f"無効な exit_type です: {self.exit_type}")
 
@@ -109,18 +110,20 @@ class ExitGene:
         exit_type_value = data.get("exit_type", "full")
         if isinstance(exit_type_value, str):
             exit_type = ExitType(exit_type_value)
-        elif isinstance(exit_type_value, ExitType):
-            exit_type = exit_type_value
         else:
             exit_type = ExitType.FULL
 
         return cls(
             exit_type=exit_type,
-            partial_exit_pct=data.get("partial_exit_pct", 0.5),
-            partial_exit_enabled=data.get("partial_exit_enabled", False),
-            trailing_stop_activation=data.get("trailing_stop_activation", False),
-            enabled=data.get("enabled", True),
-            priority=data.get("priority", 1.0),
+            partial_exit_pct=cast(float, data.get("partial_exit_pct", 0.5)),
+            partial_exit_enabled=cast(
+                bool, data.get("partial_exit_enabled", False)
+            ),
+            trailing_stop_activation=cast(
+                bool, data.get("trailing_stop_activation", False)
+            ),
+            enabled=cast(bool, data.get("enabled", True)),
+            priority=cast(float, data.get("priority", 1.0)),
         )
 
     def clone(self) -> ExitGene:

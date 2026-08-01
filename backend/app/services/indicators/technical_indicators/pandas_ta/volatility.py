@@ -56,7 +56,7 @@ class VolatilityIndicators:
     ) -> pd.Series:
         """平均真の値幅"""
 
-        def compute():
+        def compute() -> pd.Series | None:
             """ATR を計算するヘルパー関数"""
             result = ta.atr(high=high, low=low, close=close, length=length)
             if result is None:
@@ -124,7 +124,7 @@ class VolatilityIndicators:
         # 上位、中位、下位バンドを特定（安全なインデックスアクセス）
         def find_column(pattern: str, fallback_index: int) -> str:
             matches = [col for col in columns if pattern in col]
-            return matches[0] if matches else columns[fallback_index]
+            return str(matches[0] if matches else columns[fallback_index])
 
         upper_col = find_column("BBU", 0)
         middle_col = find_column("BBM", 1)

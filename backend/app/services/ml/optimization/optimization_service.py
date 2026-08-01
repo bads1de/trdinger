@@ -32,7 +32,7 @@ class OptimizationSettings:
         enabled: bool = False,
         n_calls: int = 50,
         parameter_space: dict[str, dict[str, Any]] | None = None,
-    ):
+    ) -> None:
         self.enabled = enabled
         self.n_calls = n_calls
         self.parameter_space = parameter_space or {}
@@ -49,7 +49,7 @@ class OptimizationService:
     モデル性能（主にマクロ F1 スコア）を最大化します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.optimizer = OptunaOptimizer()
 
     @safe_operation(context="パラメータ最適化", is_api_call=False)
@@ -61,7 +61,7 @@ class OptimizationService:
         funding_rate_data: pd.DataFrame | None = None,
         open_interest_data: pd.DataFrame | None = None,
         model_name: str | None = None,
-        **training_params,
+        **training_params: Any,
     ) -> dict[str, Any]:
         """
         MLモデル（単一またはアンサンブル）のハイパーパラメータ最適化を実行します。
@@ -515,7 +515,7 @@ class OptimizationService:
         meta_feature_cols = [
             c
             for c in X_meta.columns
-            if any(k in c for k in micro_keywords)  # type: ignore[reportAttributeAccessIssue]
+            if any(k in c for k in micro_keywords)
         ]
 
         X_meta_specialized: pd.DataFrame = cast(
@@ -564,7 +564,7 @@ class OptimizationService:
                     cv=TimeSeriesSplit(n_splits=3),
                     scoring="f1",
                 )
-                return scores.mean()
+                return float(scores.mean())
             except Exception:
                 return 0.0
 
@@ -704,7 +704,7 @@ class OptimizationService:
         optimization_settings: OptimizationSettings,
         funding_rate_data: pd.DataFrame | None = None,
         open_interest_data: pd.DataFrame | None = None,
-        **base_training_params,
+        **base_training_params: Any,
     ) -> Callable[[dict[str, Any]], float]:
         """
         Optuna に渡す目的関数（Objective Function）を作成
@@ -759,7 +759,7 @@ class OptimizationService:
                         .get("f1-score", f1_score)
                     )
 
-                return f1_score
+                return float(f1_score)
 
             except Exception as e:
                 logger.warning(f"目的関数評価エラー: {e}")

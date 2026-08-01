@@ -18,7 +18,7 @@ ALPHA_MIN: Final[float] = 0.01
 ALPHA_MAX: Final[float] = 1.0
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_frama_loop(
     prices: np.ndarray,
     length: int,

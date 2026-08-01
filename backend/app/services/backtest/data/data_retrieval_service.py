@@ -69,7 +69,7 @@ class DataRetrievalService:
                     )
                     logger.error(error_msg)
                     raise DataRetrievalError(error_msg)
-                return data
+                return cast(list[Any], data)
             except DataRetrievalError:
                 raise
             except Exception as e:
@@ -91,7 +91,7 @@ class DataRetrievalService:
             data = query()
             if data is None:
                 return default_return
-            return data
+            return cast(list[Any], data)
 
         return _run_query()
 

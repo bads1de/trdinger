@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Iterator
 from typing import Any
 
 import numpy as np
@@ -54,7 +55,7 @@ class PurgedKFold(_BaseKFold):
         X: pd.DataFrame,
         y: pd.Series | None = None,
         groups: Any | None = None,
-    ):
+    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
         """
         データを訓練セットとテストセットに分割するためのインデックスを生成します。
 
@@ -98,7 +99,7 @@ class PurgedKFold(_BaseKFold):
             t1_subset_ints = t1_values_ints[test_idx]
             # NaT は負の値（通常 -9223372036854775808）なので、maxで正しく最新時刻が取れる
             # すべてNaTの場合は 0 または負の値になる
-            test_max_t1_ns = np.max(t1_subset_ints)  # type: ignore
+            test_max_t1_ns = np.max(t1_subset_ints)
 
             if test_max_t1_ns < 0:  # 全てNaTの場合
                 test_max_t1_ns = x_index_ints[end - 1]  # テストセットの末尾を使用

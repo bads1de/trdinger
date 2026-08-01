@@ -56,7 +56,7 @@ def _dataframe_to_series_tuple(
     return tuple(result.iloc[:, i] for i in range(result.shape[1]))
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_rvol_loop(
     volumes: np.ndarray, time_indices: np.ndarray, window: int
 ) -> np.ndarray:

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class DataFrequencyManager:
     """データ頻度統一マネージャー"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         # 各timeframeに対する推奨データ頻度マッピング
         self.frequency_mappings = {

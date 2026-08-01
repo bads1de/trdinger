@@ -31,7 +31,7 @@ class BulkDataOrchestrator:
     一括差分更新・一括収集を管理します。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初期化"""
         self.historical_service = HistoricalDataService()
 
@@ -259,7 +259,7 @@ class BulkDataOrchestrator:
 
     async def _collect_all_data_background(
         self, symbol: str, timeframe: str, db: Session
-    ):
+    ) -> None:
         """バックグラウンドでの全データ収集（OHLCV・FR・OI・TI）"""
         try:
             logger.info(f"全データ収集開始: {symbol} {timeframe}")

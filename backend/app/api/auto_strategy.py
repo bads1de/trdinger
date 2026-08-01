@@ -102,7 +102,7 @@ class ExperimentDetailResponse(BaseModel):
     response_model=ExperimentDetailResponse,
 )
 @ErrorHandler.api_endpoint("実験詳細の取得に失敗しました")
-async def get_experiment_detail(
+async def get_experiment_detail(  # type: ignore[no-untyped-def]
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):
@@ -136,7 +136,7 @@ async def get_experiment_detail(
     response_model=GAGenerationResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
-async def generate_strategy(
+async def generate_strategy(  # type: ignore[no-untyped-def]
     request: GAGenerationRequest,
     background_tasks: BackgroundTasks,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
@@ -169,7 +169,7 @@ async def generate_strategy(
         で確認可能です。
     """
 
-    async def _generate_strategy():
+    async def _generate_strategy() -> Any:
         """戦略生成のメインロジックを実行します。"""
         try:
             logger.info("=== GA戦略生成API呼び出し開始 ===")
@@ -209,7 +209,7 @@ async def generate_strategy(
 
 @router.get("/experiments", response_model=ListExperimentsResponse)
 @ErrorHandler.api_endpoint("実験一覧の取得に失敗しました")
-async def list_experiments(
+async def list_experiments(  # type: ignore[no-untyped-def]
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):
     """
@@ -234,7 +234,7 @@ async def list_experiments(
     status_code=status.HTTP_200_OK,
 )
 @ErrorHandler.api_endpoint("実験の停止に失敗しました")
-async def stop_experiment(
+async def stop_experiment(  # type: ignore[no-untyped-def]
     experiment_id: str,
     auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
 ):

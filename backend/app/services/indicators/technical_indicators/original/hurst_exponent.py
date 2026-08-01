@@ -9,7 +9,7 @@ from numba import njit, prange
 from ...data_validation import handle_pandas_ta_errors, validate_series_params
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_hurst_loop(prices: np.ndarray, win: int, max_lag: int) -> np.ndarray:
     n = len(prices)
     res = np.full(n, np.nan)

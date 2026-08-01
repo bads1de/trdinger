@@ -11,7 +11,7 @@ class FixedRatioCalculator(BaseCalculator):
     """固定比率方式計算クラス"""
 
     def calculate(
-        self, gene, account_balance: float, current_price: float, **kwargs
+        self, gene: Any, account_balance: float, current_price: float, **kwargs: Any
     ) -> dict[str, Any]:
         """固定比率方式の拡張計算"""
         details: dict[str, Any] = {"method": "fixed_ratio"}

@@ -5,7 +5,6 @@
 """
 
 from enum import Enum
-from typing import cast
 
 from ...utils.normalization import normalize_enum_name
 from .base_calculator import BaseCalculator
@@ -39,11 +38,8 @@ class CalculatorFactory:
         # enumからの変換
         method_str = normalize_enum_name(method)
 
-        calculator_class = cast(
-            type[BaseCalculator],
-            method_map.get(method_str, FixedRatioCalculator),
-        )
-        return calculator_class()
+        calculator_class = method_map.get(method_str, FixedRatioCalculator)
+        return calculator_class()  # type: ignore[abstract]
 
     @staticmethod
     def get_available_methods() -> dict[str, str]:

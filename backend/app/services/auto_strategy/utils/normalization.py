@@ -5,7 +5,7 @@ auto_strategy全体で使用されるパラメータ正規化・Enum正規化の
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class NormalizationUtils:
             - min_val >= max_valの場合、ゼロ除算が発生するため適切な範囲を指定してください。
             - 値が範囲外の場合、クランプ处理后に正規化されます。
         """
-        if not isinstance(value, (int, float)):
+        if not isinstance(cast(Any, value), (int, float)):
             logger.warning(
                 f"数値でないパラメータを正規化: {value}, デフォルト値0.1を返却"
             )

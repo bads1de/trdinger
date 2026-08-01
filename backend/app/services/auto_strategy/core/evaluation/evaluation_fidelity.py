@@ -179,6 +179,6 @@ def _format_timestamp_like_input(value: pd.Timestamp | None, source: object) -> 
         return ""
     if isinstance(source, str):
         if "T" in source:
-            return value.isoformat(sep="T")
-        return value.strftime(_DATETIME_FORMAT)
+            return str(value.isoformat(sep="T"))
+        return str(value.strftime(_DATETIME_FORMAT))
     return str(value)

@@ -8,13 +8,19 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import Any, Union, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import numpy as np
 import pandas as pd
 
 from app.services.auto_strategy.genes import Condition, ConditionGroup
 from app.utils.error_handler import safe_operation
+
+if TYPE_CHECKING:
+    from app.services.auto_strategy.genes.conditions import (
+        StatefulCondition,
+        StateTracker,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +40,7 @@ class ConditionEvaluator:
     パフォーマンス最適化のため、演算子関数や属性アクセサをキャッシュします。
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         初期化
         """
@@ -94,7 +100,7 @@ class ConditionEvaluator:
     def evaluate_conditions(
         self,
         conditions: list[Condition | ConditionGroup],
-        strategy_instance,
+        strategy_instance: Any,
     ) -> bool:
         """
         条件リストの全体評価を実行（論理積：AND）
@@ -112,7 +118,7 @@ class ConditionEvaluator:
     def calculate_conditions_vectorized(
         self,
         conditions: list[Condition | ConditionGroup],
-        strategy_instance,
+        strategy_instance: Any,
     ) -> pd.Series | np.ndarray | None:
         """
         条件リストの全体評価をベクトル化して実行（論理積：AND）
@@ -143,18 +149,16 @@ class ConditionEvaluator:
         return final_mask
 
     def _evaluate_recursive_item_vectorized(
-        self, item: Condition | ConditionGroup, strategy_instance
+        self, item: Condition | ConditionGroup, strategy_instance: Any
     ) -> pd.Series | np.ndarray | None:
         """再帰的なベクトル化評価"""
         # 型チェックの順序を頻度順に最適化（Conditionの方が多いと仮定）
         if isinstance(item, Condition):
             return self.evaluate_single_condition_vectorized(item, strategy_instance)
-        elif isinstance(item, ConditionGroup):
-            return self._evaluate_condition_group_vectorized(item, strategy_instance)
-        return None
+        return self._evaluate_condition_group_vectorized(item, strategy_instance)
 
     def _evaluate_condition_group_vectorized(
-        self, group: ConditionGroup, strategy_instance
+        self, group: ConditionGroup, strategy_instance: Any
     ) -> pd.Series | np.ndarray | None:
         """条件グループのベクトル化評価"""
         if not group or group.is_empty():
@@ -182,7 +186,7 @@ class ConditionEvaluator:
         return combined
 
     def evaluate_single_condition_vectorized(
-        self, condition: Condition, strategy_instance
+        self, condition: Condition, strategy_instance: Any
     ) -> pd.Series | np.ndarray | None:
         """単一条件のベクトル化評価"""
         try:
@@ -240,7 +244,7 @@ class ConditionEvaluator:
     def get_condition_vector(
         self,
         operand: dict[str, Any] | str | int | float,
-        strategy_instance,
+        strategy_instance: Any,
     ) -> pd.Series | np.ndarray | float | None:
         """オペランドからベクトル（またはスカラー）を取得"""
         # 1. スカラー (頻出パス)
@@ -275,7 +279,7 @@ class ConditionEvaluator:
             return None
 
     def _get_ohlcv_vector(
-        self, operand: str, strategy_instance
+        self, operand: str, strategy_instance: Any
     ) -> pd.Series | np.ndarray | None:
         """OHLCVの全データを取得"""
         # 小文字変換のコスト削減のため、operandが既に小文字であることを期待したいが
@@ -305,18 +309,16 @@ class ConditionEvaluator:
         return None
 
     def _evaluate_recursive_item(
-        self, item: Condition | ConditionGroup, strategy_instance
+        self, item: Condition | ConditionGroup, strategy_instance: Any
     ) -> bool:
         """再帰的に評価"""
         # 型チェックの順序最適化
         if isinstance(item, Condition):
             return self.evaluate_single_condition(item, strategy_instance)
-        elif isinstance(item, ConditionGroup):
-            return self._evaluate_condition_group(item, strategy_instance)
-        return False
+        return self._evaluate_condition_group(item, strategy_instance)
 
     def _evaluate_condition_group(
-        self, group: ConditionGroup, strategy_instance
+        self, group: ConditionGroup, strategy_instance: Any
     ) -> bool:
         """条件グループ評価"""
         if not group or group.is_empty():
@@ -341,7 +343,7 @@ class ConditionEvaluator:
             return False
 
     def evaluate_single_condition(
-        self, condition: Condition, strategy_instance
+        self, condition: Condition, strategy_instance: Any
     ) -> bool:
         """
         最末端の単一条件を評価（最適化版）
@@ -389,7 +391,7 @@ class ConditionEvaluator:
         # logger.warning(f"未対応の演算子: {op}")
         return False
 
-    def _get_previous_value(self, operand, strategy_instance) -> float:
+    def _get_previous_value(self, operand: object, strategy_instance: Any) -> float:
         """オペランドの1つ前の値を取得"""
         if isinstance(operand, (int, float, np.number)):
             return float(operand)
@@ -419,7 +421,7 @@ class ConditionEvaluator:
                 # pandas Series / DataFrame
                 if hasattr(val, "iloc"):
                     if len(val) >= PREVIOUS_VALUE_INDEX:
-                        return float(val.iloc[PREVIOUS_VALUE_ILOC_INDEX])  # type: ignore[reportAttributeAccessIssue]
+                        return float(val.iloc[PREVIOUS_VALUE_ILOC_INDEX])
                 # numpy array / list
                 elif hasattr(val, "__getitem__"):
                     # 0次元配列（スカラー）の場合は len() がエラーになるためチェック
@@ -466,7 +468,7 @@ class ConditionEvaluator:
     def get_condition_value(
         self,
         operand: dict[str, Any] | str | int | float,
-        strategy_instance,
+        strategy_instance: Any,
     ) -> float:
         """
         オペランドから具体的な数値を取得（最適化版）
@@ -484,7 +486,7 @@ class ConditionEvaluator:
             data = strategy_instance.data
 
             # ヘルパー関数: 安全に最後の値を取得
-            def _safe_get_last(obj):
+            def _safe_get_last(obj: Any) -> float:
                 if isinstance(obj, (pd.Series, pd.DataFrame)):
                     return float(obj.values[LAST_VALUE_INDEX])
                 # 0次元配列（スカラー）の対応
@@ -495,7 +497,7 @@ class ConditionEvaluator:
                 except (TypeError, KeyError, IndexError):
                     # PandasのRangeIndexなどで[-1]がキーエラーになる場合のフォールバック
                     if hasattr(obj, "iloc"):
-                        return float(obj.iloc[LAST_VALUE_INDEX])  # type: ignore[reportAttributeAccessIssue]
+                        return float(obj.iloc[LAST_VALUE_INDEX])
                     raise
 
             try:
@@ -556,9 +558,9 @@ class ConditionEvaluator:
 
     def evaluate_stateful_condition(
         self,
-        stateful_condition,
-        strategy_instance,
-        state_tracker,
+        stateful_condition: StatefulCondition,
+        strategy_instance: Any,
+        state_tracker: StateTracker,
         current_bar: int,
     ) -> bool:
         """
@@ -586,9 +588,9 @@ class ConditionEvaluator:
 
     def check_and_record_trigger(
         self,
-        stateful_condition,
-        strategy_instance,
-        state_tracker,
+        stateful_condition: StatefulCondition,
+        strategy_instance: Any,
+        state_tracker: StateTracker,
         current_bar: int,
     ) -> bool:
         """

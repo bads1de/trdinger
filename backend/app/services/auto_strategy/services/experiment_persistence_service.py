@@ -34,7 +34,7 @@ class ExperimentPersistenceService:
     実験永続化サービス
     """
 
-    def __init__(self, db_session_factory):
+    def __init__(self, db_session_factory: Any) -> None:
         """
         初期化
 
@@ -73,7 +73,7 @@ class ExperimentPersistenceService:
                     self._active_session = None
                     raise
 
-    def _close_active_session(self):
+    def _close_active_session(self) -> None:
         """アクティブなセッションを閉じる"""
         if self._active_session is not None:
             try:
@@ -160,7 +160,7 @@ class ExperimentPersistenceService:
         experiment_info: dict[str, Any],
         result: dict[str, Any],
         ga_config: GAConfig,
-    ):
+    ) -> None:
         """最良戦略を保存する"""
         generated_strategy_repo = GeneratedStrategyRepository(db)
 
@@ -197,7 +197,7 @@ class ExperimentPersistenceService:
         experiment_info: dict[str, Any],
         result: dict[str, Any],
         ga_config: GAConfig,
-    ):
+    ) -> None:
         """最良戦略以外の戦略をバッチ保存する"""
         all_strategies = result.get("all_strategies", [])
         if not all_strategies or len(all_strategies) <= 1:
@@ -239,7 +239,7 @@ class ExperimentPersistenceService:
         experiment_info: dict[str, Any],
         result: dict[str, Any],
         ga_config: GAConfig,
-    ):
+    ) -> None:
         """パレート最適解を保存する"""
         pareto_front = result.get("pareto_front", [])
         if not pareto_front:
@@ -275,15 +275,15 @@ class ExperimentPersistenceService:
             saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
             logger.info(f"パレート最適解を一括保存しました: {saved_count} 件")
 
-    def complete_experiment(self, experiment_id: str):
+    def complete_experiment(self, experiment_id: str) -> None:
         """実験を完了状態にする"""
         self._update_experiment_status(experiment_id, "completed")
 
-    def fail_experiment(self, experiment_id: str):
+    def fail_experiment(self, experiment_id: str) -> None:
         """実験を失敗状態にする"""
         self._update_experiment_status(experiment_id, "failed")
 
-    def stop_experiment(self, experiment_id: str):
+    def stop_experiment(self, experiment_id: str) -> None:
         """実験を停止状態にする"""
         self._update_experiment_status(experiment_id, "stopped")
 

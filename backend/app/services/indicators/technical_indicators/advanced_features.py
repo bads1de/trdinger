@@ -41,7 +41,7 @@ from ..data_validation import (
 logger = logging.getLogger(__name__)
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_hurst_loop(data: np.ndarray, win: int) -> np.ndarray:
     """
     ハースト指数を計算する Numba 加速ループ。
@@ -99,7 +99,7 @@ def _njit_hurst_loop(data: np.ndarray, win: int) -> np.ndarray:
     return res
 
 
-@njit(cache=True)
+@njit(cache=True)  # type: ignore[untyped-decorator]
 def _njit_count_matches(data: np.ndarray, m_len: int, threshold: float) -> int:
     """
     サンプル・エントロピー計算のためのパターン一致数をカウントする Numba 加速関数。
@@ -126,7 +126,7 @@ def _njit_count_matches(data: np.ndarray, m_len: int, threshold: float) -> int:
     return count
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_sample_entropy_loop(
     data: np.ndarray, win: int, m_val: int, r_val: float
 ) -> np.ndarray:
@@ -174,7 +174,7 @@ def _njit_sample_entropy_loop(
     return res
 
 
-@njit(parallel=True, cache=True)
+@njit(parallel=True, cache=True)  # type: ignore[untyped-decorator]
 def _njit_katz_loop(data: np.ndarray, win: int) -> np.ndarray:
     """
     Katz フラクタル次元を計算する Numba 加速ループ。
@@ -658,7 +658,7 @@ class AdvancedFeatures:
             """
             result = close.diff().rolling(window=window).corr(open_interest.diff())
             if isinstance(result, pd.DataFrame):
-                return result.iloc[:, 0].fillna(0.0)  # type: ignore
+                return result.iloc[:, 0].fillna(0.0)
             return result.fillna(0.0)
 
         return cast(

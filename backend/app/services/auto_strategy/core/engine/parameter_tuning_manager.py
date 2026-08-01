@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 from app.services.auto_strategy.genes import StrategyGene
 
 from ..evaluation.evaluation_fidelity import is_multi_fidelity_enabled
-from ..evaluation.evaluation_report import EvaluationReport
 from .fitness_utils import normalize_fitness_values
 from .report_selection import (
     build_report_rank_key_from_primary_fitness,
@@ -205,10 +204,7 @@ class ParameterTuningManager:
 
             rank_key = build_report_rank_key_from_primary_fitness(
                 primary_fitness,
-                cast(
-                    EvaluationReport | None,
-                    report if is_evaluation_report(report) else None,
-                ),
+                report if is_evaluation_report(report) else None,
                 min_pass_rate=float(
                     getattr(
                         getattr(config, "two_stage_selection_config", None),
@@ -283,12 +279,18 @@ class ParameterTuningManager:
         必要に応じて full fidelity で個体を再評価する。
         """
         if is_multi_fidelity_enabled(config):
-            return self.individual_evaluator.evaluate(
-                individual,
-                config,
-                force_refresh=True,
+            return cast(
+                tuple[float, ...],
+                self.individual_evaluator.evaluate(
+                    individual,
+                    config,
+                    force_refresh=True,
+                ),
             )
-        return self.individual_evaluator.evaluate(individual, config)
+        return cast(
+            tuple[float, ...],
+            self.individual_evaluator.evaluate(individual, config),
+        )
 
     @staticmethod
     def extract_primary_fitness_from_result(result: object) -> float:
@@ -491,7 +493,7 @@ class ParameterTuningManager:
             selection_score = None
 
         return build_report_summary(
-            cast(EvaluationReport, report),
+            report,
             selection_rank=(
                 selection_rank if isinstance(selection_rank, int) else None
             ),

@@ -352,7 +352,7 @@ class BaseEnsemble(ABC):
                 "feature_count": len(self.feature_columns or []),
                 "fitted_base_models": list(self._fitted_base_models.keys()),
             }
-            path: str = model_manager.save_model(
+            path: str | None = model_manager.save_model(
                 model=data,
                 model_name=m_name,
                 metadata=meta,
