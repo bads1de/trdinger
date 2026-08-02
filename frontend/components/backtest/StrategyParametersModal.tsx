@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Info, TrendingUp, Shield, DollarSign, BarChart3 } from "lucide-react";
 import { BacktestResult } from "@/types/backtest";
-import { formatPercentage, formatNumber } from "@/utils/formatters";
+import { formatNumber } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 
 interface StrategyParametersModalProps {
@@ -164,7 +164,7 @@ export default function StrategyParametersModal({
               <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700/50">
                 <p className="text-sm text-gray-400 mb-1">手数料率</p>
                 <p className="text-lg font-semibold text-yellow-400">
-                  {formatPercentage(result.commission_rate)}
+                  {`${(Number(result.commission_rate) * 100).toFixed(2)}%`}
                 </p>
               </div>
             </div>

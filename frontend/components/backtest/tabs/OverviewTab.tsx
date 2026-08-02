@@ -30,11 +30,12 @@ interface OverviewTabProps {
 export default function OverviewTab({ result }: OverviewTabProps) {
   const metrics = (result.performance_metrics || {}) as Record<string, unknown>;
 
+  // バックエンドは total_return 等を % 値（例: 15.0 = 15%）で返すため、
+  // 最終資産計算は 1 + total_return/100 を使う
+  const totalReturnPct = Number(metrics.total_return ?? 0);
   const finalEquity =
-    result.initial_capital &&
-    metrics.total_return !== undefined &&
-    metrics.total_return !== null
-      ? result.initial_capital * (1 + Number(metrics.total_return))
+    result.initial_capital && metrics.total_return !== undefined
+      ? result.initial_capital * (1 + totalReturnPct / 100)
       : result.initial_capital;
 
   const SectionHeader = ({
@@ -127,7 +128,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
               Number(metrics.losing_trades) || 0
             }敗`}
             color={
-              Number(metrics.win_rate) > 0.5 ? "green" : "yellow"
+              Number(metrics.win_rate) > 50 ? "green" : "yellow"
             }
             icon={<CheckCircle className="w-6 h-6" />}
           />
@@ -191,7 +192,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
           />
           <InfoCard
             label="手数料率"
-            value={formatPercentage(result.commission_rate)}
+            value={`${(Number(result.commission_rate) * 100).toFixed(2)}%`}
             icon={Percent}
           />
         </div>

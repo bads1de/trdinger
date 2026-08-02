@@ -103,7 +103,7 @@ export default function MLModelStatus() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {(modelStatus.model_info?.accuracy ?? 0 * 100).toFixed(1)}%
+                  {((modelStatus.model_info?.accuracy ?? 0) * 100).toFixed(1)}%
                 </div>
                 <div className="text-sm text-gray-600">精度</div>
               </div>

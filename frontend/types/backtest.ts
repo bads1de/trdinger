@@ -27,7 +27,7 @@ export interface Trade {
   exit_price: number;
   /** 損益（通貨建て） */
   pnl: number;
-  /** 取引リターン（0-1の割合） */
+  /** 取引リターン（%値。例: 2.5 = 2.5%） */
   return_pct: number;
   /** エントリー時刻（ISO） */
   entry_time: string;
@@ -104,13 +104,13 @@ export interface BacktestResult {
   commission_rate: number;
   /** 実行時の設定 */
   config_json: Record<string, unknown>;
-  /** 総リターン（0-1の割合） */
+  /** 総リターン（%値。例: 15.0 = 15%） */
   total_return: number;
   /** シャープレシオ */
   sharpe_ratio: number;
-  /** 最大ドローダウン（0-1） */
+  /** 最大ドローダウン（%値。例: 20.0 = 20%） */
   max_drawdown: number;
-  /** 勝率（0-1） */
+  /** 勝率（%値。例: 55.0 = 55%） */
   win_rate: number;
   /** プロフィットファクター */
   profit_factor: number;
