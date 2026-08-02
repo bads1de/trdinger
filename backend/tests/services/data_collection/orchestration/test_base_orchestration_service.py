@@ -69,8 +69,17 @@ class TestParseDatetime:
     ):
         """不正な形式の文字列を渡すと None が返る"""
         assert service._parse_datetime("not-a-date") is None
-        assert service._parse_datetime("2024/01/01") is None
         assert service._parse_datetime("invalid") is None
+
+    def test_parse_slash_date_format(
+        self, service: BaseDataCollectionOrchestrationService
+    ):
+        """スラッシュ区切りの日付もパースされる（共通ユーティリティ委譲による拡張）"""
+        result = service._parse_datetime("2024/01/01")
+        assert isinstance(result, datetime)
+        assert result.year == 2024
+        assert result.month == 1
+        assert result.day == 1
 
     def test_parse_date_only(self, service: BaseDataCollectionOrchestrationService):
         """日付のみの文字列がパースされる"""

@@ -13,6 +13,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from app.utils.datetime_utils import parse_datetime_optional
 from app.utils.response import api_response, error_response
 from database.connection import get_db
 
@@ -32,32 +33,25 @@ class BaseDataCollectionOrchestrationService:
         """
         文字列の日付をdatetimeオブジェクトに変換する。
 
-        ISO 8601形式の日付文字列をdatetimeオブジェクトに変換します。
-        'Z'サフィックスを'+00:00'に置換してUTCタイムゾーンとして扱います。
+        app.utils.datetime_utils.parse_datetime_optional に委譲します。
+        ISO 8601形式の他、'Z'サフィックスや pandas が解釈可能な
+        スラッシュ区切り形式なども変換できます。
 
         Args:
-            date_str: 日付文字列（ISO 8601 形式、例: "2023-01-01T00:00:00"）
+            date_str: 日付文字列（例: "2023-01-01T00:00:00"）
 
         Returns:
             Optional[datetime]: 変換されたdatetimeオブジェクト、失敗時または空文字時はNone
         """
-        if not date_str:
-            return None
-
-        normalized = date_str.strip()
-        if not normalized:
-            return None
-
-        try:
-            return datetime.fromisoformat(normalized.replace("Z", "+00:00"))
-        except ValueError:
-            logger.error(f"日付文字列のパースに失敗しました: {date_str}")
-            return None
+        # app.utils.datetime_utils.parse_datetime_optional へ委譲
+        # （Zサフィックス対応・pandasフォールバック・失敗時Noneを含む）
+        result = parse_datetime_optional(date_str)
+        if result is None and date_str and str(date_str).strip():
+            logger.warning(f"日付文字列のパースに失敗しました: {date_str}")
+        return result
 
     @contextmanager
-    def _get_db_session(
-        self, db_session: Session | None = None
-    ) -> Iterator[Session]:
+    def _get_db_session(self, db_session: Session | None = None) -> Iterator[Session]:
         """
         データベースセッションを取得するコンテキストマネージャ
 

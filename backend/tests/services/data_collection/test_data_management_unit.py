@@ -141,13 +141,13 @@ class TestDataManagementOrchestrationUnit:
             await service.reset_open_interest_data(mock_session)
 
     def test_get_db_session_logic(self, service, mock_session):
-        # セッション取得ロジック
+        # セッション取得ロジック（基底クラス BaseDataCollectionOrchestrationService の実装を継承）
         with service._get_db_session(mock_session) as s:
             assert s == mock_session
         with patch(
-            "app.services.data_collection.orchestration.data_management_orchestration_service.SessionLocal"
-        ) as mock_local:
-            mock_local.return_value = MagicMock()
+            "app.services.data_collection.orchestration.base_orchestration_service.get_db"
+        ) as mock_get_db:
+            mock_get_db.return_value = iter([MagicMock()])
             with service._get_db_session(None) as s:
                 assert s is not None
 

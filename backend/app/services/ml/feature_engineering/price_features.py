@@ -17,6 +17,7 @@ from ...indicators.technical_indicators.pandas_ta import (
     MomentumIndicators,
     TrendIndicators,
 )
+from ..common.utils import calculate_historical_volatility
 from .base_feature_calculator import BaseFeatureCalculator
 from .volatility_estimators import parkinson_volatility
 
@@ -60,8 +61,8 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
             df["high"].rolling(w).max() - df["low"].rolling(w).min()
         ).fillna(0.0)
         log_rets = pd.Series(np.log(df["close"] / df["close"].shift(1)), index=df.index)
-        df[f"Historical_Volatility_{w}"] = (
-            log_rets.rolling(w).std() * np.sqrt(252)
+        df[f"Historical_Volatility_{w}"] = calculate_historical_volatility(
+            log_rets, window=w
         ).fillna(0.0)
         df[f"Price_Skewness_{w}"] = df["close"].rolling(w).skew().fillna(0.0)
         return df

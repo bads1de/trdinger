@@ -6,16 +6,16 @@ APIルーター内に散在していたデータ削除・管理関連のビジ�
 """
 
 import logging
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
-from datetime import datetime, timezone
+from collections.abc import Callable
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.config.constants import DEFAULT_MARKET_SYMBOL
-from app.utils.response import api_response, error_response
-from database.connection import SessionLocal
+from app.services.data_collection.orchestration.base_orchestration_service import (
+    BaseDataCollectionOrchestrationService,
+)
+from app.utils.response import api_response, error_response, now_iso
 from database.models import (
     FundingRateData,
     OHLCVData,
@@ -30,39 +30,14 @@ from database.repositories.open_interest_repository import (
 logger = logging.getLogger(__name__)
 
 
-class DataManagementOrchestrationService:
+class DataManagementOrchestrationService(BaseDataCollectionOrchestrationService):
     """
     データ管理統合管理サービス
 
     各種データの削除、リセット、管理等の
     統一的な処理を担当します。APIルーターからビジネスロジックを分離し、
-    責務を明確化します。
+    責務を明確化します。DBセッション管理は基底クラスを継承します。
     """
-
-    def __init__(self) -> None:
-        """初期化"""
-
-    @contextmanager
-    def _get_db_session(
-        self, db_session: Session | None = None
-    ) -> Iterator[Session]:
-        """
-        データベースセッションを取得するコンテキストマネージャ
-
-        Args:
-            db_session: 既存のセッション（Noneの場合は新規作成）
-
-        Yields:
-            Session: データベースセッション
-        """
-        if db_session is not None:
-            yield db_session
-        else:
-            session = SessionLocal()
-            try:
-                yield session
-            finally:
-                session.close()
 
     def _reset_single_data_type(
         self,
@@ -92,7 +67,7 @@ class DataManagementOrchestrationService:
             response_data = {
                 "deleted_count": deleted_count,
                 "data_type": data_type,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": now_iso(),
             }
             message = f"{display_name}データを{deleted_count}件削除しました"
 
@@ -170,7 +145,7 @@ class DataManagementOrchestrationService:
                 "deleted_counts": deleted_counts,
                 "total_deleted": total_deleted,
                 "errors": errors,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": now_iso(),
             }
 
             message = (
