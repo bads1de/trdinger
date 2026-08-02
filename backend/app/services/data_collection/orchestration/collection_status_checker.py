@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import Session
 
+from app.utils.datetime_utils import isoformat_or_none
 from app.utils.error_handler import safe_operation
 from app.utils.response import api_response
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -136,11 +137,7 @@ class CollectionStatusChecker:
                 "timeframe": timeframe,
                 "data_count": data_count,
                 "status": "data_exists",
-                "latest_timestamp": (
-                    latest_timestamp.isoformat() if latest_timestamp else None
-                ),
-                "oldest_timestamp": (
-                    oldest_timestamp.isoformat() if oldest_timestamp else None
-                ),
+                "latest_timestamp": isoformat_or_none(latest_timestamp),
+                "oldest_timestamp": isoformat_or_none(oldest_timestamp),
             },
         )

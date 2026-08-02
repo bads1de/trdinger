@@ -15,6 +15,7 @@ from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.services.data_collection.orchestration.base_orchestration_service import (
     BaseDataCollectionOrchestrationService,
 )
+from app.utils.datetime_utils import isoformat_or_none
 from app.utils.response import api_response, error_response, now_iso
 from database.models import (
     FundingRateData,
@@ -359,8 +360,8 @@ class DataManagementOrchestrationService(BaseDataCollectionOrchestrationService)
 
                     ohlcv_details[tf] = {
                         "count": count,
-                        "latest_timestamp": (latest.isoformat() if latest else None),
-                        "oldest_timestamp": (oldest.isoformat() if oldest else None),
+                        "latest_timestamp": isoformat_or_none(latest),
+                        "oldest_timestamp": isoformat_or_none(oldest),
                     }
 
                 # ファンディングレート詳細情報
@@ -387,22 +388,14 @@ class DataManagementOrchestrationService(BaseDataCollectionOrchestrationService)
                         "funding_rates": {
                             "symbol": symbol,
                             "count": fr_count,
-                            "latest_timestamp": (
-                                fr_latest.isoformat() if fr_latest else None
-                            ),
-                            "oldest_timestamp": (
-                                fr_oldest.isoformat() if fr_oldest else None
-                            ),
+                            "latest_timestamp": isoformat_or_none(fr_latest),
+                            "oldest_timestamp": isoformat_or_none(fr_oldest),
                         },
                         "open_interest": {
                             "symbol": symbol,
                             "count": oi_count,
-                            "latest_timestamp": (
-                                oi_latest.isoformat() if oi_latest else None
-                            ),
-                            "oldest_timestamp": (
-                                oi_oldest.isoformat() if oi_oldest else None
-                            ),
+                            "latest_timestamp": isoformat_or_none(oi_latest),
+                            "oldest_timestamp": isoformat_or_none(oi_oldest),
                         },
                     },
                 }

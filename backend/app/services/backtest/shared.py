@@ -13,6 +13,7 @@ from typing import Any
 
 import pandas as pd
 
+from app.utils.data_processing.data_validator import OHLCV_COLUMNS
 from app.utils.datetime_utils import current_datetime_like as _current_datetime_like
 from app.utils.datetime_utils import (
     normalize_datetimes_for_comparison as _normalize_datetimes_for_comparison,
@@ -21,7 +22,6 @@ from app.utils.datetime_utils import parse_datetime_value as _parse_datetime_val
 from app.utils.datetime_utils import parse_timestamp_safe as _parse_timestamp_safe
 
 TRADE_PNL_COLUMNS: tuple[str, ...] = ("PnL", "Pnl", "Profit", "ProfitLoss")
-OHLCV_COLUMNS: tuple[str, ...] = ("open", "high", "low", "close", "volume")
 
 logger = logging.getLogger(__name__)
 

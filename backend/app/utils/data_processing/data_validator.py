@@ -14,6 +14,9 @@ from collections.abc import Sequence
 
 import pandas as pd
 
+# OHLCV 基本カラム（小文字・標準形式）
+OHLCV_COLUMNS: tuple[str, ...] = ("open", "high", "low", "close", "volume")
+
 
 def _validate_empty_data(df: pd.DataFrame) -> bool:
     """
@@ -82,7 +85,7 @@ def validate_ohlcv_data(df: pd.DataFrame) -> bool:
     Raises:
         ValueError: 検証失敗時
     """
-    required_columns = ["open", "high", "low", "close", "volume"]
+    required_columns = OHLCV_COLUMNS
 
     # 空データチェック
     if _validate_empty_data(df):

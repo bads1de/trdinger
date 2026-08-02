@@ -239,6 +239,22 @@ def ensure_utc_timezone(dt: datetime | None) -> datetime | None:
     return dt.astimezone(timezone.utc)
 
 
+def isoformat_or_none(value: datetime | None) -> str | None:
+    """
+    datetime を ISO8601 文字列に変換し、None は None のまま返す。
+
+    レスポンス辞書で ``x.isoformat() if x is not None else None`` と
+    繰り返し書かれていた定型パターンの共通化です。
+
+    Args:
+        value: datetime オブジェクト（None 許容）
+
+    Returns:
+        Optional[str]: ISO8601 形式の文字列。None の場合は None
+    """
+    return value.isoformat() if value is not None else None
+
+
 def to_millis(dt: datetime) -> int:
     """
     datetime をミリ秒単位のUNIXタイムスタンプ（int）に変換する。

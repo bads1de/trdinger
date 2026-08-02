@@ -6,6 +6,7 @@
 """
 
 import logging
+from datetime import datetime
 from typing import Any, cast
 
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from app.services.auto_strategy.core.evaluation.report_persistence import (
 )
 from app.services.auto_strategy.genes import StrategyGene
 from app.utils import response as response_utils
+from app.utils.datetime_utils import isoformat_or_none
 from database.models import BacktestResult, GeneratedStrategy
 from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
@@ -193,17 +195,10 @@ class GeneratedStrategyService:
                     if isinstance(evaluation_summary, dict)
                     else None
                 ),
-                "created_at": (
-                    strategy.created_at.isoformat()
-                    if strategy.created_at is not None
-                    else None
+                "created_at": isoformat_or_none(
+                    cast(datetime | None, strategy.created_at)
                 ),
-                "updated_at": (
-                    strategy.updated_at.isoformat()
-                    if hasattr(strategy, "updated_at")
-                    and strategy.updated_at is not None
-                    else None
-                ),
+                "updated_at": isoformat_or_none(getattr(strategy, "updated_at", None)),
             }
 
         except Exception as e:

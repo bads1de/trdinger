@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from .data_validator import (
+    OHLCV_COLUMNS,
     validate_data_integrity,
     validate_extended_data,
     validate_ohlcv_data,
@@ -91,7 +92,7 @@ class DataProcessor:
         result_df = self._clip_extended_data_ranges(result_df)
 
         # 必要なカラムを定義
-        ohlcv_columns = ["open", "high", "low", "close", "volume"]
+        ohlcv_columns = OHLCV_COLUMNS
 
         # データ補間 (NaN/null値を先に処理)
         if interpolate:

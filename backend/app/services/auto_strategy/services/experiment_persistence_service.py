@@ -6,7 +6,8 @@ GA実験に関連するデータのデータベースへの保存、更新、取
 import logging
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any
+from datetime import datetime
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,7 @@ from app.services.auto_strategy.core.evaluation.report_persistence import (
     attach_validation_summary,
 )
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
+from app.utils.datetime_utils import isoformat_or_none
 from database.repositories.backtest_result_repository import (
     BacktestResultRepository,
 )
@@ -137,17 +139,27 @@ class ExperimentPersistenceService:
 
         with self.db_session_factory() as db:
             self._save_best_strategy(
-                db, experiment_id, experiment_info, result, ga_config,
+                db,
+                experiment_id,
+                experiment_info,
+                result,
+                ga_config,
                 validation_results=validation_results,
             )
             self._save_other_strategies(
-                db, experiment_info, result, ga_config,
+                db,
+                experiment_info,
+                result,
+                ga_config,
                 validation_results=validation_results,
             )
 
             if "pareto_front" in result:
                 self._save_pareto_front(
-                    db, experiment_info, result, ga_config,
+                    db,
+                    experiment_info,
+                    result,
+                    ga_config,
                     validation_results=validation_results,
                 )
 
@@ -367,15 +379,11 @@ class ExperimentPersistenceService:
                     "current_generation": exp.current_generation,
                     "total_generations": exp.total_generations,
                     "best_fitness": exp.best_fitness,
-                    "created_at": (
-                        exp.created_at.isoformat()
-                        if exp.created_at is not None
-                        else None
+                    "created_at": isoformat_or_none(
+                        cast(datetime | None, exp.created_at)
                     ),
-                    "completed_at": (
-                        exp.completed_at.isoformat()
-                        if exp.completed_at is not None
-                        else None
+                    "completed_at": isoformat_or_none(
+                        cast(datetime | None, exp.completed_at)
                     ),
                 }
                 for exp in experiments
@@ -397,13 +405,9 @@ class ExperimentPersistenceService:
                 "current_generation": exp.current_generation,
                 "total_generations": exp.total_generations,
                 "best_fitness": exp.best_fitness,
-                "created_at": (
-                    exp.created_at.isoformat() if exp.created_at is not None else None
-                ),
-                "completed_at": (
-                    exp.completed_at.isoformat()
-                    if exp.completed_at is not None
-                    else None
+                "created_at": isoformat_or_none(cast(datetime | None, exp.created_at)),
+                "completed_at": isoformat_or_none(
+                    cast(datetime | None, exp.completed_at)
                 ),
             }
 
