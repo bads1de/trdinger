@@ -64,3 +64,68 @@ class TestAutoStrategyPackageLazyImports:
         assert "HybridFeatureAdapter" not in module.__dict__
         assert "HybridIndividualEvaluator" not in module.__dict__
         assert "WaveletFeatureTransformer" not in module.__dict__
+
+    def test_positions_package_defers_position_sizing_import(self) -> None:
+        """positions パッケージは属性アクセスまで個別モジュールを読み込まない。"""
+        sys.modules.pop("app.services.auto_strategy.positions", None)
+
+        module = importlib.import_module("app.services.auto_strategy.positions")
+
+        assert "PositionSizingService" not in module.__dict__
+
+        exported = module.PositionSizingService
+
+        assert exported.__name__ == "PositionSizingService"
+        assert module.__dict__["PositionSizingService"] is exported
+        # 他のモジュールはまだ読み込まれていない（個別遅延）
+        assert "EntryExecutor" not in module.__dict__
+        assert "PositionSizingResult" not in module.__dict__
+
+    def test_calculators_package_defers_calculator_import(self) -> None:
+        """calculators パッケージは属性アクセスまで個別計算機を読み込まない。"""
+        sys.modules.pop("app.services.auto_strategy.positions.calculators", None)
+
+        module = importlib.import_module(
+            "app.services.auto_strategy.positions.calculators"
+        )
+
+        assert "CalculatorFactory" not in module.__dict__
+
+        exported = module.CalculatorFactory
+
+        assert exported.__name__ == "CalculatorFactory"
+        assert module.__dict__["CalculatorFactory"] is exported
+        # 他の計算機はまだ読み込まれていない（個別遅延）
+        assert "BaseCalculator" not in module.__dict__
+        assert "HalfOptimalFCalculator" not in module.__dict__
+
+    def test_optimization_package_defers_parameter_tuner_import(self) -> None:
+        """optimization パッケージは属性アクセスまで個別モジュールを読み込まない。"""
+        sys.modules.pop("app.services.auto_strategy.optimization", None)
+
+        module = importlib.import_module("app.services.auto_strategy.optimization")
+
+        assert "StrategyParameterTuner" not in module.__dict__
+
+        exported = module.StrategyParameterTuner
+
+        assert exported.__name__ == "StrategyParameterTuner"
+        assert module.__dict__["StrategyParameterTuner"] is exported
+        # 他のモジュールはまだ読み込まれていない（個別遅延）
+        assert "StrategyParameterSpace" not in module.__dict__
+
+    def test_generators_package_defers_random_gene_generator_import(self) -> None:
+        """generators パッケージは属性アクセスまで個別モジュールを読み込まない。"""
+        sys.modules.pop("app.services.auto_strategy.generators", None)
+
+        module = importlib.import_module("app.services.auto_strategy.generators")
+
+        assert "RandomGeneGenerator" not in module.__dict__
+
+        exported = module.RandomGeneGenerator
+
+        assert exported.__name__ == "RandomGeneGenerator"
+        assert module.__dict__["RandomGeneGenerator"] is exported
+        # 他のモジュールはまだ読み込まれていない（個別遅延）
+        assert "ConditionGenerator" not in module.__dict__
+        assert "SeedStrategyFactory" not in module.__dict__
