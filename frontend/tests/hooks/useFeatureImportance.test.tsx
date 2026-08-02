@@ -187,14 +187,14 @@ describe("useFeatureImportance", () => {
     // feature_bが最大値（0.8）なので、それが100%になる
     const maxItem = result.current.chartData.find(
       (d: any) => d.feature_name === "feature_b"
-    );
+    )!;
     expect(maxItem.importancePercent).toBe("100.00");
     expect(maxItem.normalizedImportance).toBe(1);
 
     // feature_aは相対的に 0.5/0.8 = 62.5%
     const midItem = result.current.chartData.find(
       (d: any) => d.feature_name === "feature_a"
-    );
+    )!;
     expect(midItem.importancePercent).toBe("62.50");
     expect(midItem.normalizedImportance).toBe(0.625);
   });
@@ -223,7 +223,7 @@ describe("useFeatureImportance", () => {
     // feature_a: 0.5/1.6 = 31.25%
     const item = result.current.chartData.find(
       (d: any) => d.feature_name === "feature_a"
-    );
+    )!;
     expect(item.absoluteImportancePercent).toBe("31.25");
   });
 
