@@ -258,7 +258,7 @@ def test_train_in_background_closes_own_session(
                         "app.services.ml.orchestration.ml_training_orchestration_service.FundingRateRepository"
                     ) as mock_fr_repo:
                         with patch(
-                            "app.services.backtest.backtest_data_service.BacktestDataService",
+                            "app.services.backtest.services.backtest_data_service.BacktestDataService",
                             return_value=mock_data_service,
                         ) as mock_backtest_cls:
                             with patch.object(
