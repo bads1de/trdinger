@@ -4,7 +4,7 @@ Responseユーティリティのユニットテスト
 APIレスポンス生成関数のテストモジュール
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from app.utils.response import (
@@ -29,13 +29,16 @@ class TestNowIso:
         assert "T" in result
 
     def test_returns_current_time(self):
-        """現在時刻を返す"""
-        before = datetime.now()
+        """現在時刻（UTC）を返す"""
+        before = datetime.now(timezone.utc)
         result = now_iso()
-        after = datetime.now()
+        after = datetime.now(timezone.utc)
 
         result_dt = datetime.fromisoformat(result)
         assert before <= result_dt <= after
+        # UTC aware であること（+00:00 サフィックス）
+        assert result_dt.tzinfo is not None
+        assert result_dt.utcoffset() == timedelta(0)
 
 
 class TestEnsureResponseDict:

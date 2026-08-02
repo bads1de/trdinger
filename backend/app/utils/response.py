@@ -1,16 +1,19 @@
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 
 def now_iso() -> str:
     """
-    現在時刻をISO8601形式の文字列で返します。
+    現在時刻をISO8601形式（UTC）の文字列で返します。
+
+    naive なローカル時刻を返すとタイムゾーン解釈が不定になるため、
+    DB層（DateTime(timezone=True)）と同じ UTC で統一します。
 
     Returns:
-        str: ISO8601形式の現在時刻
+        str: ISO8601形式の現在時刻（UTC、'+00:00'付き）
     """
-    return datetime.now().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def ensure_response_dict(result: Any) -> dict[str, Any]:
