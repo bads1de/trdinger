@@ -126,6 +126,7 @@ class ConfigValidator:
         errors.extend(ConfigValidator._validate_ga_early_termination_settings(config))
         errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
         errors.extend(ConfigValidator._validate_ga_robustness_settings(config))
+        errors.extend(ConfigValidator._validate_ga_validation_settings(config))
         return errors
 
     @staticmethod
@@ -732,4 +733,74 @@ class ConfigValidator:
             )
         )
         errors.extend(ConfigValidator._validate_aggregate_method(config))
+        return errors
+
+    @staticmethod
+    def _validate_ga_validation_settings(config: GAConfig) -> list[str]:
+        """自動検証パイプライン設定の検証。"""
+        errors: list[str] = []
+        validation_config = getattr(config, "validation_config", None)
+        if validation_config is None:
+            return errors
+        if not validation_config.enabled:
+            return errors
+
+        min_pass_rate: Any = validation_config.min_pass_rate
+        if (
+            not isinstance(min_pass_rate, (int, float))
+            or not 0.0 <= float(min_pass_rate) <= 1.0
+        ):
+            errors.append(
+                "validation_config.min_pass_rate は0.0-1.0の範囲である必要があります"
+            )
+
+        wfa_n_folds: Any = validation_config.wfa_n_folds
+        if (
+            not isinstance(wfa_n_folds, (int, float))
+            or int(wfa_n_folds) <= 0
+        ):
+            errors.append(
+                "validation_config.wfa_n_folds は正の整数である必要があります"
+            )
+
+        wfa_train_ratio: Any = validation_config.wfa_train_ratio
+        if (
+            not isinstance(wfa_train_ratio, (int, float))
+            or not 0.0 < float(wfa_train_ratio) < 1.0
+        ):
+            errors.append(
+                "validation_config.wfa_train_ratio は0より大きく1.0未満である必要があります"
+            )
+
+        min_trades: Any = validation_config.min_trades
+        if min_trades is not None and (
+            not isinstance(min_trades, (int, float)) or int(min_trades) <= 0
+        ):
+            errors.append(
+                "validation_config.min_trades は正の整数である必要があります"
+            )
+
+        max_drawdown: Any = validation_config.max_drawdown
+        if max_drawdown is not None and (
+            not isinstance(max_drawdown, (int, float))
+            or not 0.0 < float(max_drawdown) <= 1.0
+        ):
+            errors.append(
+                "validation_config.max_drawdown は0より大きく1.0以下である必要があります"
+            )
+
+        min_primary_fitness: Any = validation_config.min_primary_fitness
+        if min_primary_fitness is not None and not isinstance(
+            min_primary_fitness, (int, float)
+        ):
+            errors.append(
+                "validation_config.min_primary_fitness は数値である必要があります"
+            )
+
+        max_candidates: Any = validation_config.max_candidates
+        if not isinstance(max_candidates, (int, float)) or int(max_candidates) <= 0:
+            errors.append(
+                "validation_config.max_candidates は正の整数である必要があります"
+            )
+
         return errors

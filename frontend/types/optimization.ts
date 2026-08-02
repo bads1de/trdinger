@@ -53,6 +53,29 @@ export interface FitnessSharingConfig {
   sampling_ratio?: number;
 }
 
+export interface GAValidationConfig {
+  /** 自動検証パイプラインを有効化するか */
+  enabled?: boolean;
+  /** WFA のフォールド合格率の下限（0.0-1.0） */
+  min_pass_rate?: number;
+  /** 集約プライマリフィットネスの下限（null の場合はチェックしない） */
+  min_primary_fitness?: number | null;
+  /** 全フォールドの最小取引回数（null の場合はチェックしない） */
+  min_trades?: number | null;
+  /** 全フォールドの最大ドローダウン上限（null の場合はチェックしない） */
+  max_drawdown?: number | null;
+  /** 検証用 WFA フォールド数 */
+  wfa_n_folds?: number;
+  /** 検証用 WFA トレーニング比率 */
+  wfa_train_ratio?: number;
+  /** 検証用 WFA anchored モード */
+  wfa_anchored?: boolean;
+  /** 候補戦略も検証するか */
+  validate_candidates?: boolean;
+  /** 候補検証の対象数 */
+  max_candidates?: number;
+}
+
 export interface GAHybridConfig {
   mode?: boolean;
   model_type?: string;
@@ -128,6 +151,9 @@ export interface GAConfig {
 
     /** 評価設定 */
     evaluation_config?: GAEvaluationConfig;
+
+    /** 自動検証パイプライン設定 */
+    validation_config?: GAValidationConfig;
 
     // マルチタイムフレーム
     /** MTFを有効化するか */

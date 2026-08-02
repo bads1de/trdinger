@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.services.auto_strategy.core.evaluation.report_persistence import (
     extract_evaluation_summary,
+    extract_validation_summary,
 )
 from app.services.auto_strategy.genes import StrategyGene
 from app.utils import response as response_utils
@@ -156,6 +157,7 @@ class GeneratedStrategyService:
             # リスクレベルの計算
             risk_level = self._calculate_risk_level(performance_metrics)
             evaluation_summary = self._extract_evaluation_summary(gene_data)
+            validation_summary = self._extract_validation_summary(gene_data)
 
             return {
                 "id": f"auto_{strategy.id}",
@@ -175,6 +177,12 @@ class GeneratedStrategyService:
                 "generation": strategy.generation,
                 "fitness_score": strategy.fitness_score,
                 "evaluation_summary": evaluation_summary,
+                "validation_summary": validation_summary,
+                "validation_passed": (
+                    validation_summary.get("passed")
+                    if isinstance(validation_summary, dict)
+                    else None
+                ),
                 "robustness_pass_rate": (
                     evaluation_summary.get("pass_rate")
                     if isinstance(evaluation_summary, dict)
@@ -252,6 +260,12 @@ class GeneratedStrategyService:
     ) -> dict[str, Any] | None:
         """保存済みの評価 summary を取得する。"""
         return extract_evaluation_summary(gene_data)
+
+    def _extract_validation_summary(
+        self, gene_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
+        """保存済みの自動検証結果を取得する。"""
+        return extract_validation_summary(gene_data)
 
     def _extract_performance_metrics(
         self, backtest_result: BacktestResult | None

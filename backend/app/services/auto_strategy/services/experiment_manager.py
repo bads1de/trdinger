@@ -15,6 +15,7 @@ from ..core.engine.ga_engine import GeneticAlgorithmEngine
 from .experiment_backtest_service import ExperimentBacktestService
 from .experiment_engine_registry import ExperimentEngineRegistry
 from .experiment_persistence_service import ExperimentPersistenceService
+from .strategy_validation_service import StrategyValidationService
 
 logger = logging.getLogger(__name__)
 
@@ -106,9 +107,37 @@ class ExperimentManager:
                     self.persistence_service.stop_experiment(experiment_id)
                     return
 
+                # 自動検証パイプライン（WFA + 合格判定）
+                # 有効時は合格した戦略だけが保存対象となる
+                if ga_config.validation_config.enabled:
+                    validation_service = self._get_validation_service(engine)
+                    result = validation_service.validate_and_filter_result(
+                        result=result,
+                        ga_config=ga_config,
+                        backtest_config=run_backtest_config,
+                    )
+                    validation_results = result.get("validation_results", {})
+                    passed_count = sum(
+                        1
+                        for v in validation_results.values()
+                        if v.get("passed", False)
+                    )
+                    logger.info(
+                        f"自動検証結果: 検証 {len(validation_results)} 件 / "
+                        f"合格 {passed_count} 件"
+                    )
+
                 experiment_info = self.persistence_service.get_experiment_info(
                     experiment_id
                 )
+
+                # 合格した最良戦略が無い場合は詳細バックテストと保存をスキップ
+                if result.get("best_strategy") is None:
+                    logger.warning(
+                        f"合格した戦略が無いため保存をスキップします: {experiment_id}"
+                    )
+                    self.persistence_service.complete_experiment(experiment_id)
+                    return
 
                 detailed_backtest_result_data = self.experiment_backtest_service.create_detailed_backtest_result_data(
                     result=result,
@@ -154,6 +183,30 @@ class ExperimentManager:
             logger.error(f"実験実行エラー ({experiment_id}): {e}")
             self.persistence_service.fail_experiment(experiment_id)
             self.release_experiment(experiment_id)
+
+    def _get_validation_service(
+        self, engine: GeneticAlgorithmEngine | None = None
+    ) -> StrategyValidationService:
+        """
+        自動検証サービスを生成します。
+
+        GA エンジンの評価器を再利用することで、データキャッシュを
+        共有し、WFA 検証時のデータ再取得を避けます。
+
+        Args:
+            engine: GA エンジン（評価器の取得元）
+
+        Returns:
+            StrategyValidationService: 自動検証サービス
+        """
+        evaluator = None
+        if engine is not None:
+            evaluator = getattr(engine, "individual_evaluator", None)
+        if evaluator is None:
+            from ..core.evaluation.individual_evaluator import IndividualEvaluator
+
+            evaluator = IndividualEvaluator(self.backtest_service)
+        return StrategyValidationService(evaluator)
 
     def initialize_ga_engine(
         self, ga_config: GAConfig, experiment_id: str | None = None

@@ -14,6 +14,7 @@ from .nested_configs import (
     RobustnessConfig,
     TuningConfig,
     TwoStageSelectionConfig,
+    ValidationConfig,
 )
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "RobustnessConfig",
     "TuningConfig",
     "TwoStageSelectionConfig",
+    "ValidationConfig",
 ]

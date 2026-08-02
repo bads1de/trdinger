@@ -26,6 +26,7 @@ from .ga import (
     RobustnessConfig,
     TuningConfig,
     TwoStageSelectionConfig,
+    ValidationConfig,
 )
 
 # ヘルパー関数（軽量、依存なし）
@@ -75,6 +76,7 @@ __all__ = [
     "TuningConfig",
     "TwoStageSelectionConfig",
     "RobustnessConfig",
+    "ValidationConfig",
     "MLGateSettings",
     "RobustnessRegimeWindow",
     "resolve_ml_gate_settings",

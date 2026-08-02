@@ -81,6 +81,16 @@ class TestConfigValidator:
         config.two_stage_selection_config.candidate_pool_size = 5
         config.two_stage_selection_config.min_pass_rate = 0.5
 
+        config.validation_config = MagicMock()
+        config.validation_config.enabled = False
+        config.validation_config.min_pass_rate = 0.5
+        config.validation_config.wfa_n_folds = 5
+        config.validation_config.wfa_train_ratio = 0.7
+        config.validation_config.min_trades = None
+        config.validation_config.max_drawdown = None
+        config.validation_config.min_primary_fitness = None
+        config.validation_config.max_candidates = 5
+
         config.robustness_config = MagicMock()
         config.robustness_config.stress_slippage = [0.0003]
         config.robustness_config.stress_commission_multipliers = [1.5]
@@ -292,6 +302,25 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any("robustness_config.aggregate_method" in e for e in errors)
+
+    def test_validate_ga_config_validation_settings(self, ga_config):
+        ga_config.validation_config.enabled = True
+        ga_config.validation_config.min_pass_rate = 1.5
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("validation_config.min_pass_rate" in e for e in errors)
+
+        ga_config.validation_config.min_pass_rate = 0.5
+        ga_config.validation_config.max_candidates = 0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("validation_config.max_candidates" in e for e in errors)
+
+        ga_config.validation_config.max_candidates = 5
+        ga_config.validation_config.wfa_train_ratio = 1.0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("validation_config.wfa_train_ratio" in e for e in errors)
 
     def test_validate_robustness_window_supports_z_suffix(self):
         errors = ConfigValidator._validate_robustness_window(

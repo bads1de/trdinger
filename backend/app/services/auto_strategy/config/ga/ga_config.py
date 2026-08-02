@@ -35,6 +35,7 @@ from .nested_configs import (
     RobustnessConfig,
     TuningConfig,
     TwoStageSelectionConfig,
+    ValidationConfig,
 )
 
 logger = logging.getLogger(__name__)
@@ -174,6 +175,9 @@ class GAConfig:
     # 二段階選抜用 robustness 設定
     # サブ設定: robustness_config
 
+    # 自動検証パイプライン設定（GA後のWFA検証 + 合格判定）
+    # サブ設定: validation_config
+
     # サブ設定（ネスト辞書からの復元用）
     mutation_config: MutationConfig = field(default_factory=MutationConfig)
     evaluation_config: EvaluationConfig = field(default_factory=EvaluationConfig)
@@ -183,6 +187,7 @@ class GAConfig:
         default_factory=TwoStageSelectionConfig
     )
     robustness_config: RobustnessConfig = field(default_factory=RobustnessConfig)
+    validation_config: ValidationConfig = field(default_factory=ValidationConfig)
 
     def __init__(self, **data: dict[str, Any]) -> None:
         """canonical フィールドのみを受け付ける手動初期化器。"""
@@ -287,6 +292,12 @@ class GAConfig:
                 self,
                 "robustness_config",
                 RobustnessConfig.from_dict(self.robustness_config),
+            )
+        if isinstance(self.validation_config, dict):
+            object.__setattr__(
+                self,
+                "validation_config",
+                ValidationConfig.from_dict(self.validation_config),
             )
 
         mutation_config = self.mutation_config

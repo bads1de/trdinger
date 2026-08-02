@@ -291,6 +291,39 @@ class RobustnessConfig(NestedConfigMixin):
     aggregate_method: str = "robust"
 
 
+@dataclass
+class ValidationConfig(NestedConfigMixin):
+    """自動検証パイプライン関連設定。
+
+    GA実行後に Walk-Forward Analysis で最終候補戦略を検証し、
+    合格（Pass）/不合格（Fail）を判定するための設定。
+    合格した戦略だけが DB へ保存される。
+    """
+
+    # 自動検証パイプラインを有効化するか
+    enabled: bool = False
+
+    # 合格判定基準
+    # WFA のフォールド合格率（0.0-1.0）。この値以上の戦略のみ合格。
+    min_pass_rate: float = 0.5
+    # 集約プライマリフィットネスの下限（None の場合はチェックしない）
+    min_primary_fitness: float | None = None
+    # 全フォールドの最小取引回数（None の場合はチェックしない）
+    min_trades: int | None = None
+    # 全フォールドの最大ドローダウン上限（0.0-1.0、None の場合はチェックしない）
+    max_drawdown: float | None = None
+
+    # WFA 設定（検証用。評価設定を上書きする）
+    wfa_n_folds: int = 5
+    wfa_train_ratio: float = 0.7
+    wfa_anchored: bool = False
+
+    # 候補戦略も検証するか（False の場合は最良戦略のみ検証）
+    validate_candidates: bool = True
+    # 候補検証の対象数（上位 N 件）
+    max_candidates: int = 5
+
+
 __all__ = [
     "EarlyTerminationSettings",
     "MutationConfig",
@@ -299,4 +332,5 @@ __all__ = [
     "TuningConfig",
     "TwoStageSelectionConfig",
     "RobustnessConfig",
+    "ValidationConfig",
 ]

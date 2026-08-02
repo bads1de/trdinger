@@ -100,3 +100,35 @@ def extract_evaluation_summary(
         return None
 
     return deepcopy(dict(summary))
+
+
+def attach_validation_summary(
+    gene_data: dict[str, Any],
+    validation: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """戦略 gene_data の metadata へ自動検証結果を埋め込む。"""
+    merged = deepcopy(gene_data)
+    metadata = merged.get("metadata")
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    if isinstance(validation, Mapping):
+        metadata["validation"] = deepcopy(dict(validation))
+
+    merged["metadata"] = metadata
+    return merged
+
+
+def extract_validation_summary(
+    gene_data: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    """gene_data.metadata から保存済み自動検証結果を取り出す。"""
+    metadata = gene_data.get("metadata")
+    if not isinstance(metadata, Mapping):
+        return None
+
+    validation = metadata.get("validation")
+    if not isinstance(validation, Mapping):
+        return None
+
+    return deepcopy(dict(validation))

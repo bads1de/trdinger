@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.services.auto_strategy.core.evaluation.report_persistence import (
     attach_evaluation_summary,
+    attach_validation_summary,
 )
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from database.repositories.backtest_result_repository import (
@@ -131,14 +132,24 @@ class ExperimentPersistenceService:
 
         logger.info(f"実験結果保存開始: {experiment_id}")
 
+        # 自動検証結果（戦略キー → 検証辞書）
+        validation_results = result.get("validation_results", {})
+
         with self.db_session_factory() as db:
             self._save_best_strategy(
-                db, experiment_id, experiment_info, result, ga_config
+                db, experiment_id, experiment_info, result, ga_config,
+                validation_results=validation_results,
             )
-            self._save_other_strategies(db, experiment_info, result, ga_config)
+            self._save_other_strategies(
+                db, experiment_info, result, ga_config,
+                validation_results=validation_results,
+            )
 
             if "pareto_front" in result:
-                self._save_pareto_front(db, experiment_info, result, ga_config)
+                self._save_pareto_front(
+                    db, experiment_info, result, ga_config,
+                    validation_results=validation_results,
+                )
 
         logger.info(f"実験結果保存完了: {experiment_id}")
 
@@ -160,12 +171,18 @@ class ExperimentPersistenceService:
         experiment_info: dict[str, Any],
         result: dict[str, Any],
         ga_config: GAConfig,
+        *,
+        validation_results: dict[str, Any] | None = None,
     ) -> None:
         """最良戦略を保存する"""
         generated_strategy_repo = GeneratedStrategyRepository(db)
 
+        best_strategy = result.get("best_strategy")
+        if best_strategy is None:
+            logger.warning("最良戦略が無いため保存をスキップします")
+            return
+
         db_experiment_id = experiment_info["db_id"]
-        best_strategy = result["best_strategy"]
         best_fitness = result["best_fitness"]
         evaluation_summary = result.get("best_evaluation_summary")
 
@@ -181,6 +198,11 @@ class ExperimentPersistenceService:
 
         gene_data = self.serializer.strategy_gene_to_dict(best_strategy)
         gene_data = attach_evaluation_summary(gene_data, evaluation_summary)
+        if validation_results:
+            best_key = self._get_strategy_result_key(best_strategy)
+            gene_data = attach_validation_summary(
+                gene_data, validation_results.get(best_key)
+            )
         best_strategy_record = generated_strategy_repo.save_strategy(
             experiment_id=db_experiment_id,
             gene_data=gene_data,
@@ -197,13 +219,18 @@ class ExperimentPersistenceService:
         experiment_info: dict[str, Any],
         result: dict[str, Any],
         ga_config: GAConfig,
+        *,
+        validation_results: dict[str, Any] | None = None,
     ) -> None:
         """最良戦略以外の戦略をバッチ保存する"""
         all_strategies = result.get("all_strategies", [])
         if not all_strategies or len(all_strategies) <= 1:
             return
 
-        best_strategy = result["best_strategy"]
+        best_strategy = result.get("best_strategy")
+        if best_strategy is None:
+            return
+
         db_experiment_id = experiment_info["db_id"]
         generated_strategy_repo = GeneratedStrategyRepository(db)
         evaluation_summaries = result.get("evaluation_summaries", {})
@@ -220,6 +247,10 @@ class ExperimentPersistenceService:
                     gene_data,
                     evaluation_summaries.get(strategy_key),
                 )
+                if validation_results:
+                    gene_data = attach_validation_summary(
+                        gene_data, validation_results.get(strategy_key)
+                    )
                 strategies_data.append(
                     {
                         "experiment_id": db_experiment_id,
@@ -239,6 +270,8 @@ class ExperimentPersistenceService:
         experiment_info: dict[str, Any],
         result: dict[str, Any],
         ga_config: GAConfig,
+        *,
+        validation_results: dict[str, Any] | None = None,
     ) -> None:
         """パレート最適解を保存する"""
         pareto_front = result.get("pareto_front", [])
@@ -261,6 +294,10 @@ class ExperimentPersistenceService:
                     gene_data,
                     evaluation_summaries.get(strategy_key),
                 )
+                if validation_results:
+                    gene_data = attach_validation_summary(
+                        gene_data, validation_results.get(strategy_key)
+                    )
                 strategies_data.append(
                     {
                         "experiment_id": db_experiment_id,

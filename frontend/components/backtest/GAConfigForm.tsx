@@ -16,6 +16,7 @@ import {
   GAConfig as GAConfigType,
   GAEvaluationConfig,
   GAHybridConfig,
+  GAValidationConfig,
   FitnessSharingConfig,
 } from "@/types/optimization";
 import { BacktestConfig as BacktestConfigType } from "@/types/backtest";
@@ -72,6 +73,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       {}) as FitnessSharingConfig;
     const initialHybridConfig = (initialGAConfig.hybrid_config ??
       {}) as GAHybridConfig;
+    const initialValidationConfig = (initialGAConfig.validation_config ??
+      {}) as GAValidationConfig;
     const initialFitnessWeights = {
       ...(initialGAConfig.fitness_weights || {}),
     };
@@ -175,6 +178,31 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           wfa_n_folds: initialEvaluationConfig.wfa_n_folds ?? 5,
           wfa_train_ratio: initialEvaluationConfig.wfa_train_ratio ?? 0.7,
           wfa_anchored: initialEvaluationConfig.wfa_anchored ?? false,
+        },
+
+        // 自動検証パイプライン設定
+        validation_config: {
+          ...initialValidationConfig,
+          enabled: initialValidationConfig.enabled ?? false,
+          min_pass_rate: initialValidationConfig.min_pass_rate ?? 0.5,
+          min_primary_fitness:
+            initialValidationConfig.min_primary_fitness === undefined
+              ? null
+              : initialValidationConfig.min_primary_fitness,
+          min_trades:
+            initialValidationConfig.min_trades === undefined
+              ? null
+              : initialValidationConfig.min_trades,
+          max_drawdown:
+            initialValidationConfig.max_drawdown === undefined
+              ? null
+              : initialValidationConfig.max_drawdown,
+          wfa_n_folds: initialValidationConfig.wfa_n_folds ?? 5,
+          wfa_train_ratio: initialValidationConfig.wfa_train_ratio ?? 0.7,
+          wfa_anchored: initialValidationConfig.wfa_anchored ?? false,
+          validate_candidates:
+            initialValidationConfig.validate_candidates ?? true,
+          max_candidates: initialValidationConfig.max_candidates ?? 5,
         },
 
         // 制限設定
@@ -297,6 +325,21 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
+  const handleValidationConfigChange = (
+    updates: Partial<GAValidationConfig>,
+  ) => {
+    setConfig((prev) => ({
+      ...prev,
+      ga_config: {
+        ...prev.ga_config,
+        validation_config: {
+          ...(prev.ga_config.validation_config ?? {}),
+          ...updates,
+        },
+      },
+    }));
+  };
+
   const evaluationConfig: GAEvaluationConfig =
     config.ga_config.evaluation_config ?? {};
   const earlyTerminationSettings: EarlyTerminationSettingsConfig =
@@ -304,6 +347,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   const fitnessSharingConfig: FitnessSharingConfig =
     config.ga_config.fitness_sharing ?? {};
   const hybridConfig: GAHybridConfig = config.ga_config.hybrid_config ?? {};
+  const validationConfig: GAValidationConfig =
+    config.ga_config.validation_config ?? {};
 
   const handleSubmit = () => {
     onSubmit(config);
@@ -575,6 +620,124 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             gaConfig={config.ga_config}
             onGAConfigChange={handleGAConfigChange}
           />
+        </div>
+
+        {/* 自動検証パイプライン設定 */}
+        <div className="p-4 bg-rose-900/20 border border-rose-500/30 rounded-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-rose-200">
+              🛂 自動検証パイプライン
+            </label>
+            <input
+              type="checkbox"
+              checked={validationConfig.enabled ?? false}
+              onChange={(e) =>
+                handleValidationConfigChange({ enabled: e.target.checked })
+              }
+              className="w-5 h-5 rounded border-rose-500 text-rose-600 focus:ring-rose-500"
+              aria-label="自動検証パイプラインを有効化"
+            />
+          </div>
+
+          {validationConfig.enabled && (
+            <>
+              <p className="text-xs text-rose-300">
+                💡
+                GA生成後にWalk-Forward Analysisで最終候補を検証し、
+                合格した戦略だけが保存されます。
+              </p>
+              <InputField
+                label="合格率下限 (min_pass_rate)"
+                type="number"
+                value={validationConfig.min_pass_rate ?? 0.5}
+                onChange={(value) =>
+                  handleValidationConfigChange({ min_pass_rate: value })
+                }
+                min={0}
+                max={1}
+                step={0.05}
+                description="WFAフォールド合格率がこの値以上の戦略のみ保存"
+              />
+              <InputField
+                label="検証用WFAフォールド数"
+                type="number"
+                value={validationConfig.wfa_n_folds ?? 5}
+                onChange={(value) =>
+                  handleValidationConfigChange({ wfa_n_folds: value })
+                }
+                min={2}
+                max={10}
+                step={1}
+                description="検証で使用する期間分割数"
+              />
+              <InputField
+                label="集約フィットネス下限"
+                type="number"
+                value={validationConfig.min_primary_fitness}
+                onChange={(value) =>
+                  handleValidationConfigChange({ min_primary_fitness: value })
+                }
+                allowEmptyNumber
+                description="この値未満の戦略は不合格（空欄でチェックなし）"
+              />
+              <InputField
+                label="最少取引回数"
+                type="number"
+                value={validationConfig.min_trades}
+                onChange={(value) =>
+                  handleValidationConfigChange({ min_trades: value })
+                }
+                allowEmptyNumber
+                min={1}
+                step={1}
+                description="全フォールドの最小取引回数（空欄でチェックなし）"
+              />
+              <InputField
+                label="最大ドローダウン"
+                type="number"
+                value={validationConfig.max_drawdown}
+                onChange={(value) =>
+                  handleValidationConfigChange({ max_drawdown: value })
+                }
+                allowEmptyNumber
+                min={0.01}
+                max={1}
+                step={0.01}
+                description="全フォールドの最大DD上限（空欄でチェックなし）"
+              />
+              <label className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  checked={validationConfig.validate_candidates ?? true}
+                  onChange={(e) =>
+                    handleValidationConfigChange({
+                      validate_candidates: e.target.checked,
+                    })
+                  }
+                  className="rounded border-rose-500 text-rose-600 focus:ring-rose-500"
+                />
+                <span className="text-sm text-rose-200">
+                  候補戦略も検証（最良戦略以外の上位候補）
+                </span>
+              </label>
+              <p className="text-xs text-rose-300">
+                ※ オフの場合は最良戦略のみが検証・保存されます。
+                未検証の戦略は保存されません。
+              </p>
+              <InputField
+                label="候補検証数 (max_candidates)"
+                type="number"
+                value={validationConfig.max_candidates ?? 5}
+                onChange={(value) =>
+                  handleValidationConfigChange({ max_candidates: value })
+                }
+                min={1}
+                max={20}
+                step={1}
+                description="候補検証の対象数（上位N件）"
+              />
+            </>
+          )}
         </div>
 
         {/* ハイブリッドGA+MLモード設定 */}
