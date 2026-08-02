@@ -8,7 +8,7 @@ import logging
 from typing import Any
 
 from sqlalchemy import Float, cast, desc
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Query, Session, selectinload
 
 from database.models import GeneratedStrategy
 
@@ -23,7 +23,7 @@ class GeneratedStrategyRepository(BaseRepository):
     def __init__(self, db: Session):
         super().__init__(db, GeneratedStrategy)
 
-    def _query_with_backtest_result(self):
+    def _query_with_backtest_result(self) -> Query[GeneratedStrategy]:
         """
         backtest_result を eager load 済みのクエリを返す。
 
@@ -74,7 +74,7 @@ class GeneratedStrategyRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="戦略保存", is_api_call=False)
-        def _save_strategy():
+        def _save_strategy() -> GeneratedStrategy:
             # 遺伝子データの整合性を確保
             validated_gene_data = self._validate_gene_data(gene_data)
 
@@ -111,8 +111,8 @@ class GeneratedStrategyRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="戦略一括保存", is_api_call=False)
-        def _save_strategies_batch():
-            strategies = []
+        def _save_strategies_batch() -> list[GeneratedStrategy]:
+            strategies: list[GeneratedStrategy] = []
             for data in strategies_data:
                 # 遺伝子データの整合性を確保
                 validated_gene_data = self._validate_gene_data(data["gene_data"])
@@ -162,7 +162,7 @@ class GeneratedStrategyRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="実験別戦略取得", is_api_call=False, default_return=[])
-        def _get_strategies_by_experiment():
+        def _get_strategies_by_experiment() -> list[GeneratedStrategy]:
             query = self.db.query(GeneratedStrategy).filter(
                 GeneratedStrategy.experiment_id == experiment_id
             )
@@ -199,7 +199,7 @@ class GeneratedStrategyRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="世代別戦略取得", is_api_call=False, default_return=[])
-        def _get_strategies_by_generation():
+        def _get_strategies_by_generation() -> list[GeneratedStrategy]:
             query = self.db.query(GeneratedStrategy).filter(
                 GeneratedStrategy.experiment_id == experiment_id,
                 GeneratedStrategy.generation == generation,
@@ -213,6 +213,63 @@ class GeneratedStrategyRepository(BaseRepository):
             return query.all()
 
         return _get_strategies_by_generation()
+
+    def get_strategies_by_fitness(
+        self,
+        limit: int = 20,
+        min_fitness: float | None = None,
+        validation_passed_only: bool = True,
+    ) -> list[GeneratedStrategy]:
+        """
+        フィットネス上位の生成戦略を取得（反復改善ループのシード用）
+
+        自動検証に合格した戦略（gene_data.metadata.validation.passed=True）を
+        優先的に取得します。validation_passed_only=False の場合は
+        検証結果に関わらず全戦略からフィットネス上位を返します。
+
+        Args:
+            limit: 取得件数制限
+            min_fitness: 最低フィットネス（None の場合はチェックしない）
+            validation_passed_only: 検証合格戦略のみを対象にするか
+
+        Returns:
+            生成戦略のリスト（フィットネス降順）
+        """
+        from app.services.auto_strategy.core.evaluation.report_persistence import (
+            extract_validation_summary,
+        )
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="フィットネス上位戦略取得", is_api_call=False, default_return=[]
+        )
+        def _get_strategies_by_fitness() -> list[GeneratedStrategy]:
+            query = self.db.query(GeneratedStrategy).filter(
+                GeneratedStrategy.fitness_score.isnot(None)
+            )
+
+            if min_fitness is not None:
+                query = query.filter(GeneratedStrategy.fitness_score >= min_fitness)
+
+            # フィットネス降順で余分に取得してからPython側で検証結果をフィルタ
+            # （JSONカラムのmetadataはDB方言に依存せず確実に扱うため）
+            candidates = query.order_by(desc(GeneratedStrategy.fitness_score)).limit(
+                limit * 10
+            ).all()
+
+            strategies: list[GeneratedStrategy] = []
+            for strategy in candidates:
+                if validation_passed_only:
+                    gene_data = dict(strategy.gene_data or {})
+                    summary = extract_validation_summary(gene_data)
+                    if not (summary and summary.get("passed", False)):
+                        continue
+                strategies.append(strategy)
+                if len(strategies) >= limit:
+                    break
+            return strategies
+
+        return _get_strategies_by_fitness()
 
     def get_strategies_with_backtest_results(
         self, limit: int = 50, offset: int = 0, experiment_id: int | None = None
@@ -233,7 +290,7 @@ class GeneratedStrategyRepository(BaseRepository):
         @safe_operation(
             context="バックテスト結果付き戦略取得", is_api_call=False, default_return=[]
         )
-        def _get_strategies_with_backtest_results():
+        def _get_strategies_with_backtest_results() -> list[GeneratedStrategy]:
             query = self._query_with_backtest_result()
             query = query.filter(
                 GeneratedStrategy.fitness_score.isnot(None),
@@ -286,7 +343,7 @@ class GeneratedStrategyRepository(BaseRepository):
         @safe_operation(
             context="フィルタリング戦略取得", is_api_call=False, default_return=(0, [])
         )
-        def _get_filtered_and_sorted_strategies():
+        def _get_filtered_and_sorted_strategies() -> tuple[int, list[GeneratedStrategy]]:
             from sqlalchemy import func
 
             # カウント用の軽量クエリ（eager loadingなし）
@@ -378,7 +435,7 @@ class GeneratedStrategyRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="全戦略削除", is_api_call=False)
-        def _delete_all_strategies():
+        def _delete_all_strategies() -> int:
             deleted_count = self.db.query(GeneratedStrategy).delete()
             self.db.commit()
             return deleted_count
@@ -445,7 +502,7 @@ class GeneratedStrategyRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="戦略バックテストリンク解除", is_api_call=False)
-        def _unlink_backtest_result():
+        def _unlink_backtest_result() -> int:
             count = (
                 self.db.query(GeneratedStrategy)
                 .filter(GeneratedStrategy.backtest_result_id == backtest_result_id)

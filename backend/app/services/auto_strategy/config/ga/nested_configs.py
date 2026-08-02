@@ -292,6 +292,24 @@ class RobustnessConfig(NestedConfigMixin):
 
 
 @dataclass
+class IterativeImprovementConfig(NestedConfigMixin):
+    """反復改善ループ設定。
+
+    自動検証に合格した過去の生成戦略を、次のGA実験のシード戦略として
+    自動注入し、戦略開発を反復的に改善させるための設定。
+    """
+
+    # 反復改善ループを有効化するか
+    enabled: bool = False
+    # 注入する過去戦略の最大数（上位N件をシードとして使用）
+    max_seed_strategies: int = 5
+    # シードとして再利用する戦略の最低フィットネス（None の場合はチェックしない）
+    min_fitness: float | None = None
+    # 自動検証に合格した戦略のみをシードにするか（False の場合は全戦略から選択）
+    validation_passed_only: bool = True
+
+
+@dataclass
 class ValidationConfig(NestedConfigMixin):
     """自動検証パイプライン関連設定。
 
@@ -332,5 +350,6 @@ __all__ = [
     "TuningConfig",
     "TwoStageSelectionConfig",
     "RobustnessConfig",
+    "IterativeImprovementConfig",
     "ValidationConfig",
 ]

@@ -76,6 +76,17 @@ export interface GAValidationConfig {
   max_candidates?: number;
 }
 
+export interface GAIterativeImprovementConfig {
+  /** 反復改善ループを有効化するか */
+  enabled?: boolean;
+  /** 注入する過去戦略の最大数 */
+  max_seed_strategies?: number;
+  /** シードとして再利用する戦略の最低フィットネス（null の場合はチェックしない） */
+  min_fitness?: number | null;
+  /** 自動検証に合格した戦略のみをシードにするか */
+  validation_passed_only?: boolean;
+}
+
 export interface GAHybridConfig {
   mode?: boolean;
   model_type?: string;
@@ -154,6 +165,9 @@ export interface GAConfig {
 
     /** 自動検証パイプライン設定 */
     validation_config?: GAValidationConfig;
+
+    /** 反復改善ループ設定（合格した過去戦略をシードとして再利用） */
+    iterative_improvement_config?: GAIterativeImprovementConfig;
 
     // マルチタイムフレーム
     /** MTFを有効化するか */

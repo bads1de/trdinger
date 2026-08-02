@@ -93,7 +93,7 @@ class LongShortRatioRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="ロング/ショート比率データ挿入", is_api_call=False)
-        def _insert_data():
+        def _insert_data() -> int:
             # 重複チェック対象のカラム
             conflict_columns = ["symbol", "period", "timestamp"]
 

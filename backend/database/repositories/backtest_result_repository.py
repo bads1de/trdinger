@@ -6,6 +6,7 @@
 import logging
 from datetime import date, datetime, time
 from decimal import Decimal
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -57,16 +58,16 @@ class BacktestResultRepository(BaseRepository):
                 return obj.isoformat()
             # pandas Timestamp
             if isinstance(obj, pd.Timestamp):
-                return obj.isoformat()
+                return cast(str, obj.isoformat())
             # Decimal
             if isinstance(obj, Decimal):
                 return float(obj)
             # numpyスカラ
             if isinstance(obj, np.generic):
-                return obj.item()
+                return cast(SerializableValue, obj.item())
             # numpy配列
             if isinstance(obj, np.ndarray):
-                return obj.tolist()
+                return cast(list[SerializableValue], obj.tolist())
             # 辞書
             if isinstance(obj, dict):
                 return {k: self._to_json_safe(v) for k, v in obj.items()}
@@ -98,11 +99,11 @@ class BacktestResultRepository(BaseRepository):
         """
 
         # 日付の処理
-        start_date = result_data.get("start_date")
+        start_date = cast("str | datetime | None", result_data.get("start_date"))
         if isinstance(start_date, str):
             start_date = datetime.fromisoformat(start_date)
 
-        end_date = result_data.get("end_date")
+        end_date = cast("str | datetime | None", result_data.get("end_date"))
         if isinstance(end_date, str):
             end_date = datetime.fromisoformat(end_date)
 
@@ -175,7 +176,7 @@ class BacktestResultRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="バックテスト結果保存", is_api_call=False)
-        def _save_result():
+        def _save_result() -> dict[str, SerializableValue]:
             log_data = {
                 k: v
                 for k, v in result_data.items()
@@ -218,7 +219,7 @@ class BacktestResultRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="バックテスト結果一覧取得", is_api_call=False)
-        def _get_results():
+        def _get_results() -> list[dict[str, SerializableValue]]:
             # フィルター条件を構築
             filters = {}
             if symbol:
@@ -255,7 +256,7 @@ class BacktestResultRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="ID指定バックテスト結果取得", is_api_call=False)
-        def _get_result_by_id():
+        def _get_result_by_id() -> dict[str, SerializableValue] | None:
             # BaseRepositoryの汎用メソッドを使用
             results = self.get_filtered_data(
                 filters={"id": result_id},
@@ -283,7 +284,7 @@ class BacktestResultRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="バックテスト結果削除", is_api_call=False)
-        def _delete_result():
+        def _delete_result() -> bool:
             result = (
                 self.db.query(BacktestResult)
                 .filter(BacktestResult.id == result_id)
@@ -308,7 +309,7 @@ class BacktestResultRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="全バックテスト結果削除", is_api_call=False)
-        def _delete_all_results():
+        def _delete_all_results() -> int:
             deleted_count = self.db.query(BacktestResult).delete()
             self.db.commit()
             return deleted_count
@@ -331,7 +332,7 @@ class BacktestResultRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="バックテスト結果総数取得", is_api_call=False)
-        def _count_results():
+        def _count_results() -> int:
             query = self.db.query(BacktestResult)
 
             # フィルター適用
@@ -367,7 +368,7 @@ class BacktestResultRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="最近バックテスト結果取得", is_api_call=False)
-        def _get_recent_results():
+        def _get_recent_results() -> list[dict[str, SerializableValue]]:
             query = (
                 self.db.query(BacktestResult)
                 .order_by(BacktestResult.created_at.desc())

@@ -51,7 +51,7 @@ class OHLCVRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="OHLCVデータ挿入", is_api_call=False)
-        def _insert_data():
+        def _insert_data() -> int:
             # データの検証
             if not DataValidator.validate_ohlcv_records_simple(ohlcv_records):
                 raise ValueError(
@@ -207,7 +207,7 @@ class OHLCVRepository(BaseRepository):
 
     def get_date_range(
         self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
-    ):
+    ) -> tuple[datetime | None, datetime | None]:
         """
         データ期間を取得（BaseRepositoryのメソッドをオーバーライド）
 

@@ -216,8 +216,22 @@ class ExperimentManager:
             GeneticAlgorithmEngineFactory,
         )
 
+        # 反復改善ループが有効な場合は、過去の合格戦略をシードとして
+        # 提供するプロバイダをエンジンへ注入する
+        seed_strategy_provider = None
+        iterative_config = ga_config.iterative_improvement_config
+        if iterative_config.enabled:
+            from .seed_strategy_provider import PreviousStrategySeedProvider
+
+            seed_strategy_provider = PreviousStrategySeedProvider(
+                self.persistence_service.db_session_factory
+            )
+            logger.info("反復改善ループを有効化: 過去の合格戦略をシードとして再利用します")
+
         engine = GeneticAlgorithmEngineFactory.create_engine(
-            self.backtest_service, ga_config
+            self.backtest_service,
+            ga_config,
+            seed_strategy_provider=seed_strategy_provider,
         )
         if experiment_id:
             self._register_active_engine(experiment_id, engine)

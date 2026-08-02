@@ -37,7 +37,7 @@ class OpenInterestRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="オープンインタレストデータ挿入", is_api_call=False)
-        def _insert_data():
+        def _insert_data() -> int:
             # 重複処理付き一括挿入
             inserted_count = self.bulk_insert_with_conflict_handling(
                 open_interest_records, ["symbol", "data_timestamp"]

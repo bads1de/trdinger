@@ -67,6 +67,7 @@ class GeneticAlgorithmEngine:
         hybrid_mode: bool = False,
         hybrid_predictor: Any | None = None,
         hybrid_feature_adapter: Any | None = None,
+        seed_strategy_provider: Any | None = None,
     ):
         """初期化します。
 
@@ -78,10 +79,13 @@ class GeneticAlgorithmEngine:
                 （hybrid_mode=Trueの場合）。
             hybrid_feature_adapter (Optional[Any]): 特徴量アダプタ
                 （hybrid_mode=Trueの場合）。
+            seed_strategy_provider (Optional[Any]): 反復改善ループ用の
+                シード戦略プロバイダ（get_seed_strategies(config) を実装）。
         """
         self.backtest_service = backtest_service
         self.gene_generator = gene_generator
         self.hybrid_mode = hybrid_mode
+        self.seed_strategy_provider = seed_strategy_provider
 
         # 実行状態
         self.is_running = False
@@ -264,27 +268,43 @@ class GeneticAlgorithmEngine:
             population = cast(Any, toolbox).population(n=config.population_size)
 
             # シード戦略の注入（ハイブリッド初期化）
-            if config.use_seed_strategies:
-                seeds = self._get_seed_strategies_for_injection(config)
-                num_to_inject = min(
-                    int(len(population) * config.seed_injection_rate),
-                    len(seeds),
-                )
-                if num_to_inject > 0:
-                    individual_class = self.deap_setup.get_individual_class()
-                    if individual_class is not None:
-                        for i in range(num_to_inject):
-                            seed = seeds[i % len(seeds)]
-                            population[i] = individual_class(
-                                **GeneticUtils.extract_gene_params(seed)
-                            )
-                    else:
-                        logger.warning(
-                            "個体クラスが未初期化のため、シード戦略の注入をスキップしました"
+            # 反復改善シード（過去の合格戦略）は use_seed_strategies に関係なく
+            # 常に優先注入し、組み込みシードは注入率に従って注入する。
+            previous_seeds = self._get_previous_seed_strategies(config)
+            builtin_seeds = (
+                self._get_builtin_seed_strategies(config)
+                if config.use_seed_strategies
+                else []
+            )
+            seeds = list(previous_seeds) + list(builtin_seeds)
+            if seeds:
+                individual_class = self.deap_setup.get_individual_class()
+                if individual_class is not None:
+                    num_builtin_to_inject = min(
+                        int(len(population) * config.seed_injection_rate),
+                        len(builtin_seeds),
+                    )
+                    num_to_inject = min(
+                        len(previous_seeds) + num_builtin_to_inject,
+                        len(seeds),
+                        len(population),
+                    )
+                    for i in range(num_to_inject):
+                        seed = seeds[i]
+                        population[i] = individual_class(
+                            **GeneticUtils.extract_gene_params(seed)
                         )
                     logger.info(
-                        f"シード戦略を {num_to_inject} 個注入しました "
-                        f"(注入率: {config.seed_injection_rate * 100:.1f}%)"
+                        "シード戦略を %d 個注入しました "
+                        "(反復改善 %d 件 + 組み込み %d 件, 注入率 %.1f%%)",
+                        num_to_inject,
+                        min(len(previous_seeds), num_to_inject),
+                        max(0, num_to_inject - len(previous_seeds)),
+                        config.seed_injection_rate * 100,
+                    )
+                else:
+                    logger.warning(
+                        "個体クラスが未初期化のため、シード戦略の注入をスキップしました"
                     )
 
             self._raise_if_stop_requested("初期集団生成後")
@@ -364,13 +384,17 @@ class GeneticAlgorithmEngine:
             logger.debug(f"コンテキスト設定スキップ: {e}")
 
     def _get_seed_strategies_for_injection(self, config: GAConfig) -> list[Any]:
-        """初期集団へ注入する seed 戦略を、
+        """初期集団へ注入する組み込み seed 戦略を、
         固定順の偏りが出ないよう整列します。
 
         `random_state` が指定されている場合はその値で
         deterministic に並び替えます。
         指定がない場合は実行時の乱数でシャッフルします。
         """
+        return self._get_builtin_seed_strategies(config)
+
+    def _get_builtin_seed_strategies(self, config: GAConfig) -> list[Any]:
+        """組み込みシード戦略（SeedStrategyFactory）をシャッフルして返す。"""
         from app.services.auto_strategy.generators.seed_strategy_factory import (  # noqa: E501
             SeedStrategyFactory,
         )
@@ -388,6 +412,47 @@ class GeneticAlgorithmEngine:
             random.shuffle(seeds)
 
         return seeds
+
+    def _get_previous_seed_strategies(self, config: GAConfig) -> list[Any]:
+        """反復改善ループ用の過去の合格戦略を取得する。
+
+        無効な場合や取得失敗時は空リストを返します。
+        過去戦略同士は注入順の偏りが出ないようシャッフルします。
+        """
+        iterative_config = getattr(config, "iterative_improvement_config", None)
+        if (
+            iterative_config is None
+            or not getattr(iterative_config, "enabled", False)
+            or self.seed_strategy_provider is None
+        ):
+            return []
+
+        try:
+            previous = list(self.seed_strategy_provider.get_seed_strategies(config))
+        except Exception as exc:
+            logger.warning(
+                "反復改善シードの取得に失敗したため従来のシードのみ使用します: %s",
+                exc,
+            )
+            return []
+
+        if not previous:
+            return []
+
+        if len(previous) > 1:
+            seed = getattr(config, "random_state", None)
+            if seed is not None:
+                # 組み込みシードと異なる順序になるよう seed+1 を使用
+                rng = random.Random(int(seed) + 1)
+                rng.shuffle(previous)
+            else:
+                random.shuffle(previous)
+
+        logger.info(
+            "反復改善: 過去の合格戦略 %d 件をシードとして優先注入します",
+            len(previous),
+        )
+        return previous
 
     def _create_statistics(self) -> Any:
         """

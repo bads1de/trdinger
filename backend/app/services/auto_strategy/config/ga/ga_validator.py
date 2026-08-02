@@ -127,6 +127,9 @@ class ConfigValidator:
         errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
         errors.extend(ConfigValidator._validate_ga_robustness_settings(config))
         errors.extend(ConfigValidator._validate_ga_validation_settings(config))
+        errors.extend(
+            ConfigValidator._validate_ga_iterative_improvement_settings(config)
+        )
         return errors
 
     @staticmethod
@@ -801,6 +804,34 @@ class ConfigValidator:
         if not isinstance(max_candidates, (int, float)) or int(max_candidates) <= 0:
             errors.append(
                 "validation_config.max_candidates は正の整数である必要があります"
+            )
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_iterative_improvement_settings(config: GAConfig) -> list[str]:
+        """反復改善ループ設定の検証。"""
+        errors: list[str] = []
+        iterative_config = getattr(config, "iterative_improvement_config", None)
+        if iterative_config is None:
+            return errors
+        if not iterative_config.enabled:
+            return errors
+
+        max_seed_strategies: Any = iterative_config.max_seed_strategies
+        if (
+            not isinstance(max_seed_strategies, (int, float))
+            or int(max_seed_strategies) <= 0
+        ):
+            errors.append(
+                "iterative_improvement_config.max_seed_strategies "
+                "は正の整数である必要があります"
+            )
+
+        min_fitness: Any = iterative_config.min_fitness
+        if min_fitness is not None and not isinstance(min_fitness, (int, float)):
+            errors.append(
+                "iterative_improvement_config.min_fitness は数値である必要があります"
             )
 
         return errors

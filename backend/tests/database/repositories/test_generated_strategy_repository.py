@@ -294,6 +294,128 @@ class TestGetFilteredAndSortedStrategies:
         mock_query.options.assert_called()
 
 
+class TestGetStrategiesByFitness:
+    """get_strategies_by_fitnessメソッドのテスト"""
+
+    @staticmethod
+    def _strategy(
+        strategy_id: int,
+        fitness: float,
+        passed: bool = True,
+    ) -> GeneratedStrategy:
+        """検証結果付きの戦略モデルを構築する。"""
+        return GeneratedStrategy(
+            id=strategy_id,
+            experiment_id=100,
+            gene_data={
+                "id": f"strategy_{strategy_id}",
+                "indicators": [],
+                "risk_management": {},
+                "metadata": {
+                    "validation": {"passed": passed, "pass_rate": 0.8 if passed else 0.2}
+                },
+            },
+            generation=10,
+            fitness_score=fitness,
+        )
+
+    def test_filters_out_non_passing_when_validation_passed_only(
+        self,
+        repository: GeneratedStrategyRepository,
+    ) -> None:
+        """validation_passed_only=True では合格していない戦略は除外される"""
+        passing = self._strategy(1, 0.9, passed=True)
+        failing = self._strategy(2, 0.8, passed=False)
+
+        mock_query = MagicMock()
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.all.return_value = [passing, failing]
+        repository.db.query.return_value = mock_query
+
+        results = repository.get_strategies_by_fitness(limit=5)
+
+        assert results == [passing]
+        # min_fitness=None のため .filter() は1回のみ
+        assert mock_query.filter.call_count == 1
+
+    def test_includes_all_when_validation_passed_only_false(
+        self,
+        repository: GeneratedStrategyRepository,
+    ) -> None:
+        """validation_passed_only=False では全戦略が対象になる"""
+        passing = self._strategy(1, 0.9, passed=True)
+        failing = self._strategy(2, 0.8, passed=False)
+
+        mock_query = MagicMock()
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.all.return_value = [passing, failing]
+        repository.db.query.return_value = mock_query
+
+        results = repository.get_strategies_by_fitness(
+            limit=5, validation_passed_only=False
+        )
+
+        assert results == [passing, failing]
+
+    def test_min_fitness_filters_in_query(
+        self,
+        repository: GeneratedStrategyRepository,
+    ) -> None:
+        """min_fitness 指定時は .filter() が2回呼ばれる"""
+        strategy = self._strategy(1, 0.9, passed=True)
+
+        mock_query = MagicMock()
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.all.return_value = [strategy]
+        repository.db.query.return_value = mock_query
+
+        results = repository.get_strategies_by_fitness(
+            limit=5, min_fitness=0.5
+        )
+
+        assert results == [strategy]
+        # fitness_score.isnot(None) + fitness_score >= min_fitness の2回
+        assert mock_query.filter.call_count == 2
+
+    def test_respects_limit_and_queries_extra_candidates(
+        self,
+        repository: GeneratedStrategyRepository,
+    ) -> None:
+        """limit を超えず、候補は limit*10 件取得する"""
+        strategies = [self._strategy(i, 0.9 - i * 0.01, passed=True) for i in range(1, 4)]
+
+        mock_query = MagicMock()
+        mock_query.filter.return_value = mock_query
+        mock_query.order_by.return_value = mock_query
+        mock_query.limit.return_value = mock_query
+        mock_query.all.return_value = strategies
+        repository.db.query.return_value = mock_query
+
+        results = repository.get_strategies_by_fitness(limit=2)
+
+        # 3件候補があるが limit=2 で打ち切られる
+        assert len(results) == 2
+        # 候補取得は limit*10 = 20 件
+        mock_query.limit.assert_called_once_with(20)
+
+    def test_db_error_returns_empty_list(
+        self,
+        repository: GeneratedStrategyRepository,
+    ) -> None:
+        """DBエラー時は空リストを返す"""
+        repository.db.query.side_effect = Exception("DB Error")
+
+        results = repository.get_strategies_by_fitness(limit=5)
+
+        assert results == []
+
+
 class TestUnlinkBacktestResult:
     """unlink_backtest_resultメソッドのテスト"""
 

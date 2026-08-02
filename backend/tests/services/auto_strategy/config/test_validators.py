@@ -91,6 +91,11 @@ class TestConfigValidator:
         config.validation_config.min_primary_fitness = None
         config.validation_config.max_candidates = 5
 
+        config.iterative_improvement_config = MagicMock()
+        config.iterative_improvement_config.enabled = False
+        config.iterative_improvement_config.max_seed_strategies = 5
+        config.iterative_improvement_config.min_fitness = None
+
         config.robustness_config = MagicMock()
         config.robustness_config.stress_slippage = [0.0003]
         config.robustness_config.stress_commission_multipliers = [1.5]
@@ -321,6 +326,23 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any("validation_config.wfa_train_ratio" in e for e in errors)
+
+    def test_validate_ga_config_iterative_improvement(self, ga_config):
+        ga_config.iterative_improvement_config.enabled = True
+        ga_config.iterative_improvement_config.max_seed_strategies = 0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any(
+            "iterative_improvement_config.max_seed_strategies" in e for e in errors
+        )
+
+        ga_config.iterative_improvement_config.max_seed_strategies = 5
+        ga_config.iterative_improvement_config.min_fitness = "invalid"
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any(
+            "iterative_improvement_config.min_fitness" in e for e in errors
+        )
 
     def test_validate_robustness_window_supports_z_suffix(self):
         errors = ConfigValidator._validate_robustness_window(

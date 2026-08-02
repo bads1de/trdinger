@@ -26,7 +26,9 @@ class GeneticAlgorithmEngineFactory:
 
     @staticmethod
     def create_engine(
-        backtest_service: BacktestService, ga_config: GAConfig
+        backtest_service: BacktestService,
+        ga_config: GAConfig,
+        seed_strategy_provider: object | None = None,
     ) -> "GeneticAlgorithmEngine":
         """
         指定された設定とサービス依存関係を用いて GA エンジンを構築します。
@@ -40,6 +42,8 @@ class GeneticAlgorithmEngineFactory:
         Args:
             backtest_service (BacktestService): 個体評価に使用するバックテスト実行サービス。
             ga_config (GAConfig): アルゴリズムのパラメータ、目的関数、ハイブリッド設定を含む統合構成。
+            seed_strategy_provider (Optional[object]): 反復改善ループ用の
+                シード戦略プロバイダ（get_seed_strategies(config) を実装）。
 
         Returns:
             GeneticAlgorithmEngine: 実行準備が整ったGAエンジンインスタンス。
@@ -72,6 +76,7 @@ class GeneticAlgorithmEngineFactory:
             hybrid_mode=hybrid_config.mode,
             hybrid_predictor=hybrid_predictor,
             hybrid_feature_adapter=hybrid_feature_adapter,
+            seed_strategy_provider=seed_strategy_provider,
         )
 
         logger.debug(

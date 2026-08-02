@@ -63,6 +63,22 @@ const renderWithTooltipProvider = (component: React.ReactElement) => {
   );
 };
 
+/**
+ * InputField のラベルから対応する input 要素を特定するヘルパー。
+ * InputField は <label> と <Input> が別々の div に存在し htmlFor を持たないため、
+ * getByLabelText では特定できない。DOM構造（label → gap div → header div → root div → input）
+ * を辿って input を取得する。
+ */
+const getInputFieldByLabel = (labelText: string): HTMLInputElement => {
+  const label = screen.getByText(labelText);
+  const root = label.closest("div")?.parentElement?.parentElement;
+  const input = root?.querySelector("input");
+  if (!input) {
+    throw new Error(`Input not found for label: ${labelText}`);
+  }
+  return input as HTMLInputElement;
+};
+
 // テストスイート
 describe("GAConfigForm", () => {
   beforeEach(() => {
@@ -203,5 +219,206 @@ describe("GAConfigForm", () => {
 
     // チェックされていることを確認
     expect(regimeCheckbox).toBeChecked();
+  });
+
+  // ------------------------------------------------------------------
+  // 自動検証パイプライン
+  // ------------------------------------------------------------------
+
+  test("自動検証パイプラインがデフォルトで無効であること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
+    expect(validationToggle).not.toBeChecked();
+    // 無効時は詳細設定が表示されない
+    expect(screen.queryByText("合格率下限 (min_pass_rate)")).not.toBeInTheDocument();
+  });
+
+  test("自動検証パイプラインを有効化すると詳細設定が表示され設定が送信されること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
+    fireEvent.click(validationToggle);
+
+    // 詳細設定が表示される（InputFieldはlabelがinputと関連付かないためテキストで確認）
+    expect(screen.getByText("合格率下限 (min_pass_rate)")).toBeInTheDocument();
+    expect(screen.getByText("検証用WFAフォールド数")).toBeInTheDocument();
+
+    // フォームを送信
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.validation_config.enabled).toBe(true);
+    expect(submittedConfig.ga_config.validation_config.min_pass_rate).toBe(0.5);
+    expect(submittedConfig.ga_config.validation_config.wfa_n_folds).toBe(5);
+    expect(submittedConfig.ga_config.validation_config.validate_candidates).toBe(true);
+    expect(submittedConfig.ga_config.validation_config.max_candidates).toBe(5);
+  });
+
+  test("自動検証パイプラインの設定値を変更して送信できること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
+    fireEvent.click(validationToggle);
+
+    // 合格率下限を変更（InputFieldのinputは表示値で特定）
+    const minPassRateInput = screen.getByDisplayValue("0.5");
+    fireEvent.change(minPassRateInput, { target: { value: "0.8" } });
+
+    // 候補検証をオフにする
+    const candidatesCheckbox = screen.getByLabelText(/候補戦略も検証/);
+    fireEvent.click(candidatesCheckbox);
+
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.validation_config.min_pass_rate).toBe(0.8);
+    expect(submittedConfig.ga_config.validation_config.validate_candidates).toBe(false);
+  });
+
+  test("自動検証パイプラインの最少取引回数を変更して送信できること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
+    fireEvent.click(validationToggle);
+
+    // 最少取引回数（空欄の allowEmptyNumber input）をラベルから特定して変更
+    const minTradesInput = getInputFieldByLabel("最少取引回数");
+    fireEvent.change(minTradesInput, { target: { value: "30" } });
+
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.validation_config.min_trades).toBe(30);
+  });
+
+  test("validation_configが初期設定で有効ならチェックされていること", () => {
+    const configWithValidation = {
+      ...initialConfig,
+      ga_config: {
+        ...initialConfig.ga_config,
+        validation_config: {
+          enabled: true,
+          min_pass_rate: 0.7,
+          max_candidates: 3,
+        },
+      },
+    };
+
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={configWithValidation}
+      />
+    );
+
+    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
+    expect(validationToggle).toBeChecked();
+    // InputFieldはlabelがinputと関連付かないためヘルパーで対象inputを特定して値を検証
+    // number input の toHaveValue は数値比較が正しい
+    expect(getInputFieldByLabel("合格率下限 (min_pass_rate)")).toHaveValue(0.7);
+    expect(getInputFieldByLabel("候補検証数 (max_candidates)")).toHaveValue(3);
+  });
+
+  // ------------------------------------------------------------------
+  // 反復改善ループ
+  // ------------------------------------------------------------------
+
+  test("反復改善ループがデフォルトで無効であること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const iterativeToggle = screen.getByLabelText("反復改善ループを有効化");
+    expect(iterativeToggle).not.toBeChecked();
+    expect(screen.queryByText("シード戦略数 (max_seed_strategies)")).not.toBeInTheDocument();
+  });
+
+  test("反復改善ループを有効化すると詳細設定が表示され設定が送信されること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const iterativeToggle = screen.getByLabelText("反復改善ループを有効化");
+    fireEvent.click(iterativeToggle);
+
+    expect(screen.getByText("シード戦略数 (max_seed_strategies)")).toBeInTheDocument();
+    expect(screen.getByLabelText(/自動検証に合格した戦略のみ使用/)).toBeInTheDocument();
+
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.iterative_improvement_config.enabled).toBe(true);
+    expect(submittedConfig.ga_config.iterative_improvement_config.max_seed_strategies).toBe(5);
+    expect(submittedConfig.ga_config.iterative_improvement_config.validation_passed_only).toBe(true);
+  });
+
+  test("反復改善ループのシード戦略数と最低フィットネスを変更して送信できること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    const iterativeToggle = screen.getByLabelText("反復改善ループを有効化");
+    fireEvent.click(iterativeToggle);
+
+    // InputFieldのinputはラベルから特定する
+    const seedCountInput = getInputFieldByLabel("シード戦略数 (max_seed_strategies)");
+    fireEvent.change(seedCountInput, { target: { value: "8" } });
+
+    const minFitnessInput = getInputFieldByLabel("最低フィットネス");
+    fireEvent.change(minFitnessInput, { target: { value: "0.4" } });
+
+    // 合格戦略のみ使用をオフにする
+    const passedOnlyCheckbox = screen.getByLabelText(/自動検証に合格した戦略のみ使用/);
+    fireEvent.click(passedOnlyCheckbox);
+
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.iterative_improvement_config.max_seed_strategies).toBe(8);
+    expect(submittedConfig.ga_config.iterative_improvement_config.min_fitness).toBe(0.4);
+    expect(submittedConfig.ga_config.iterative_improvement_config.validation_passed_only).toBe(false);
   });
 });

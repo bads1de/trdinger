@@ -62,7 +62,7 @@ class GAExperimentRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="GA実験作成", is_api_call=False)
-        def _create_experiment():
+        def _create_experiment() -> GAExperiment:
             experiment = GAExperiment(
                 experiment_id=experiment_id,
                 name=name,
@@ -101,7 +101,7 @@ class GAExperimentRepository(BaseRepository):
         @safe_operation(
             context="実験ステータス更新", is_api_call=False, default_return=False
         )
-        def _update_experiment_status():
+        def _update_experiment_status() -> bool:
             # BaseRepositoryの汎用メソッドを使用して実験を取得
             experiments = self.get_filtered_data(
                 filters={"id": experiment_id},
@@ -113,7 +113,7 @@ class GAExperimentRepository(BaseRepository):
                 return False
 
             experiment = experiments[0]
-            experiment.status = status  # type: ignore
+            experiment.status = status
 
             if completed_at:
                 experiment.completed_at = cast(datetime, completed_at)  # type: ignore
@@ -144,7 +144,7 @@ class GAExperimentRepository(BaseRepository):
         @safe_operation(
             context="ステータス別実験取得", is_api_call=False, default_return=[]
         )
-        def _get_experiments_by_status():
+        def _get_experiments_by_status() -> list[GAExperiment]:
             # BaseRepositoryの汎用メソッドを使用
             return self.get_filtered_data(
                 filters={"status": status},
@@ -168,7 +168,7 @@ class GAExperimentRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="最近実験取得", is_api_call=False, default_return=[])
-        def _get_recent_experiments():
+        def _get_recent_experiments() -> list[GAExperiment]:
             # BaseRepositoryの汎用メソッドを使用
             return self.get_latest_records(
                 timestamp_column="created_at",
@@ -194,7 +194,7 @@ class GAExperimentRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="実験完了処理", is_api_call=False, default_return=False)
-        def _complete_experiment():
+        def _complete_experiment() -> bool:
             experiment = (
                 self.db.query(GAExperiment)
                 .filter(GAExperiment.id == experiment_id)
@@ -243,7 +243,7 @@ class GAExperimentRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="実験進捗更新", is_api_call=False, default_return=False)
-        def _update_progress():
+        def _update_progress() -> bool:
             experiment = (
                 self.db.query(GAExperiment)
                 .filter(GAExperiment.id == experiment_id)
@@ -277,7 +277,7 @@ class GAExperimentRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="全GA実験削除", is_api_call=False)
-        def _delete_all_experiments():
+        def _delete_all_experiments() -> int:
             deleted_count = self.db.query(GAExperiment).delete()
             self.db.commit()
             return deleted_count

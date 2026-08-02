@@ -507,6 +507,137 @@ class TestStrategyValidationService:
         assert len(filtered["pareto_front"]) == 1
         assert filtered["pareto_front"][0]["strategy"] is pareto_pass
 
+    def test_duplicate_candidate_key_validated_once(self, mock_evaluator):
+        """同一キーの候補が重複しても検証は1回だけ実行される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.6,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        best = MagicMock()
+        best.id = "best"
+        # 同一キーの戦略が all_strategies に重複して含まれるケース
+        dup1 = MagicMock()
+        dup1.id = "dup"
+        dup2 = MagicMock()
+        dup2.id = "dup"
+
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            return_value=_make_report(pass_rate=0.9, primary_fitness=0.8),
+        ) as mock_execute:
+            result = {
+                "best_strategy": best,
+                "best_fitness": 0.8,
+                "all_strategies": [dup1, dup2],
+                "fitness_scores": [0.8, 0.8],
+                "pareto_front": [],
+                "evaluation_summaries": {},
+            }
+            filtered = service.validate_and_filter_result(result, config, {})
+
+        # best + dup の2キーのみ検証される（dup は重複スキップ）
+        assert mock_execute.call_count == 2
+        assert set(filtered["validation_results"].keys()) == {"best", "dup"}
+
+    def test_validate_strategy_public_api(self, mock_evaluator):
+        """公開 API validate_strategy が単一戦略を検証して判定を返す"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.6,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        strategy = MagicMock()
+        strategy.id = "single"
+
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            return_value=_make_report(pass_rate=0.8, primary_fitness=0.7),
+        ):
+            validation = service.validate_strategy(strategy, config, {})
+
+        assert validation["passed"] is True
+        assert validation["pass_rate"] == 0.8
+        assert validation["mode"] == "walk_forward"
+
+    def test_min_primary_fitness_maximize_direction(self, mock_evaluator):
+        """最大化目的（total_return）では min_primary_fitness 未満は不合格になる"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                min_primary_fitness=0.5,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        best = MagicMock()
+        best.id = "best"
+
+        # total_return 目的: fitness 0.3 は下限 0.5 未満 → 不合格
+        below_report = _make_report(pass_rate=1.0, primary_fitness=0.3)
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            return_value=below_report,
+        ):
+            result = {
+                "best_strategy": best,
+                "best_fitness": 0.3,
+                "all_strategies": [best],
+                "fitness_scores": [0.3],
+                "pareto_front": [],
+                "evaluation_summaries": {},
+            }
+            filtered = service.validate_and_filter_result(result, config, {})
+
+        assert filtered["best_strategy"] is None
+        assert filtered["validation_results"]["best"]["passed"] is False
+        assert any(
+            "集約フィットネス" in reason
+            for reason in filtered["validation_results"]["best"]["reasons"]
+        )
+
+        # total_return 目的: fitness 0.7 は下限 0.5 以上 → 合格
+        within_report = _make_report(pass_rate=1.0, primary_fitness=0.7)
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            return_value=within_report,
+        ):
+            result2 = {
+                "best_strategy": best,
+                "best_fitness": 0.7,
+                "all_strategies": [best],
+                "fitness_scores": [0.7],
+                "pareto_front": [],
+                "evaluation_summaries": {},
+            }
+            filtered2 = service.validate_and_filter_result(result2, config, {})
+
+        assert filtered2["best_strategy"] is best
+        assert filtered2["validation_results"]["best"]["passed"] is True
+
+    def test_get_strategy_key_fallback_without_id(self):
+        """id を持たない戦略は id() ベースのキーにフォールバックする"""
+        strategy = object()
+        key = StrategyValidationService._get_strategy_key(strategy)
+        assert key == str(id(strategy))
+
 
 class TestValidationConfig:
     """ValidationConfig の設定テスト"""

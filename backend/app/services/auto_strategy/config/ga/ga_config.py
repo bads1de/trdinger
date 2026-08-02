@@ -31,6 +31,7 @@ from ..indicator_universe import normalize_indicator_universe_mode
 from .nested_configs import (
     EvaluationConfig,
     HybridConfig,
+    IterativeImprovementConfig,
     MutationConfig,
     RobustnessConfig,
     TuningConfig,
@@ -178,6 +179,9 @@ class GAConfig:
     # 自動検証パイプライン設定（GA後のWFA検証 + 合格判定）
     # サブ設定: validation_config
 
+    # 反復改善ループ設定（合格した過去戦略を次のシードとして再利用）
+    # サブ設定: iterative_improvement_config
+
     # サブ設定（ネスト辞書からの復元用）
     mutation_config: MutationConfig = field(default_factory=MutationConfig)
     evaluation_config: EvaluationConfig = field(default_factory=EvaluationConfig)
@@ -187,6 +191,9 @@ class GAConfig:
         default_factory=TwoStageSelectionConfig
     )
     robustness_config: RobustnessConfig = field(default_factory=RobustnessConfig)
+    iterative_improvement_config: IterativeImprovementConfig = field(
+        default_factory=IterativeImprovementConfig
+    )
     validation_config: ValidationConfig = field(default_factory=ValidationConfig)
 
     def __init__(self, **data: dict[str, Any]) -> None:
@@ -292,6 +299,14 @@ class GAConfig:
                 self,
                 "robustness_config",
                 RobustnessConfig.from_dict(self.robustness_config),
+            )
+        if isinstance(self.iterative_improvement_config, dict):
+            object.__setattr__(
+                self,
+                "iterative_improvement_config",
+                IterativeImprovementConfig.from_dict(
+                    self.iterative_improvement_config
+                ),
             )
         if isinstance(self.validation_config, dict):
             object.__setattr__(

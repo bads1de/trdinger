@@ -5,7 +5,7 @@
 import logging
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Generic, NoReturn, TypeVar, cast
 
 import pandas as pd
 from sqlalchemy import asc, delete, desc, func, select
@@ -271,7 +271,7 @@ class BaseRepository(Generic[T]):
             from app.utils.error_handler import safe_operation
 
             @safe_operation(context="最新タイムスタンプ取得", is_api_call=False)
-            def _handle_latest_timestamp_error():
+            def _handle_latest_timestamp_error() -> None:
                 raise
 
             # 例外が再送出されるため、この行は通常実行されない
@@ -333,7 +333,7 @@ class BaseRepository(Generic[T]):
 
     def get_date_range(
         self, timestamp_column: str, filter_conditions: dict[str, Any] | None = None
-    ):
+    ) -> tuple[datetime | None, datetime | None]:
         """
         データ期間を取得（SQLAlchemy 2.0 標準API使用）
 
@@ -409,7 +409,7 @@ class BaseRepository(Generic[T]):
             )
             raise
 
-    def _handle_delete_error(self, e: Exception, message_prefix: str, **kwargs):
+    def _handle_delete_error(self, e: Exception, message_prefix: str, **kwargs: Any) -> NoReturn:
         """
         削除時のエラーを処理し、ログを記録する汎用メソッド
 
@@ -583,7 +583,7 @@ class BaseRepository(Generic[T]):
         if not records:
             # 空のDataFrameを返す
             columns = list(column_mapping.values()) if column_mapping else []
-            return pd.DataFrame(columns=columns)  # type: ignore
+            return pd.DataFrame(columns=columns)
 
         try:
             data = []

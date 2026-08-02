@@ -110,7 +110,7 @@ class FundingRateRepository(BaseRepository):
         from app.utils.error_handler import safe_operation
 
         @safe_operation(context="ファンディングレートデータ挿入", is_api_call=False)
-        def _insert_data():
+        def _insert_data() -> int:
             inserted_count = self.bulk_insert_with_conflict_handling(
                 processed_records, ["symbol", "funding_timestamp"]
             )

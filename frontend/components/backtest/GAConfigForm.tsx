@@ -16,6 +16,7 @@ import {
   GAConfig as GAConfigType,
   GAEvaluationConfig,
   GAHybridConfig,
+  GAIterativeImprovementConfig,
   GAValidationConfig,
   FitnessSharingConfig,
 } from "@/types/optimization";
@@ -75,6 +76,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       {}) as GAHybridConfig;
     const initialValidationConfig = (initialGAConfig.validation_config ??
       {}) as GAValidationConfig;
+    const initialIterativeImprovementConfig = (initialGAConfig.iterative_improvement_config ??
+      {}) as GAIterativeImprovementConfig;
     const initialFitnessWeights = {
       ...(initialGAConfig.fitness_weights || {}),
     };
@@ -203,6 +206,20 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           validate_candidates:
             initialValidationConfig.validate_candidates ?? true,
           max_candidates: initialValidationConfig.max_candidates ?? 5,
+        },
+
+        // 反復改善ループ設定
+        iterative_improvement_config: {
+          ...initialIterativeImprovementConfig,
+          enabled: initialIterativeImprovementConfig.enabled ?? false,
+          max_seed_strategies:
+            initialIterativeImprovementConfig.max_seed_strategies ?? 5,
+          min_fitness:
+            initialIterativeImprovementConfig.min_fitness === undefined
+              ? null
+              : initialIterativeImprovementConfig.min_fitness,
+          validation_passed_only:
+            initialIterativeImprovementConfig.validation_passed_only ?? true,
         },
 
         // 制限設定
@@ -340,6 +357,21 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
+  const handleIterativeImprovementConfigChange = (
+    updates: Partial<GAIterativeImprovementConfig>,
+  ) => {
+    setConfig((prev) => ({
+      ...prev,
+      ga_config: {
+        ...prev.ga_config,
+        iterative_improvement_config: {
+          ...(prev.ga_config.iterative_improvement_config ?? {}),
+          ...updates,
+        },
+      },
+    }));
+  };
+
   const evaluationConfig: GAEvaluationConfig =
     config.ga_config.evaluation_config ?? {};
   const earlyTerminationSettings: EarlyTerminationSettingsConfig =
@@ -349,6 +381,8 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   const hybridConfig: GAHybridConfig = config.ga_config.hybrid_config ?? {};
   const validationConfig: GAValidationConfig =
     config.ga_config.validation_config ?? {};
+  const iterativeImprovementConfig: GAIterativeImprovementConfig =
+    config.ga_config.iterative_improvement_config ?? {};
 
   const handleSubmit = () => {
     onSubmit(config);
@@ -736,6 +770,82 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 step={1}
                 description="候補検証の対象数（上位N件）"
               />
+            </>
+          )}
+        </div>
+
+        {/* 反復改善ループ設定 */}
+        <div className="p-4 bg-amber-900/20 border border-amber-500/30 rounded-lg space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-amber-200">
+              🔁 反復改善ループ
+            </label>
+            <input
+              type="checkbox"
+              checked={iterativeImprovementConfig.enabled ?? false}
+              onChange={(e) =>
+                handleIterativeImprovementConfigChange({
+                  enabled: e.target.checked,
+                })
+              }
+              className="w-5 h-5 rounded border-amber-500 text-amber-600 focus:ring-amber-500"
+              aria-label="反復改善ループを有効化"
+            />
+          </div>
+
+          {iterativeImprovementConfig.enabled && (
+            <>
+              <p className="text-xs text-amber-300">
+                💡
+                過去に自動検証へ合格した戦略を、この実験のシード戦略として
+                自動注入します。戦略開発を反復的に改善できます
+                （自動検証パイプラインとの併用を推奨）。
+              </p>
+              <InputField
+                label="シード戦略数 (max_seed_strategies)"
+                type="number"
+                value={iterativeImprovementConfig.max_seed_strategies ?? 5}
+                onChange={(value) =>
+                  handleIterativeImprovementConfigChange({
+                    max_seed_strategies: value,
+                  })
+                }
+                min={1}
+                max={20}
+                step={1}
+                description="注入する過去の合格戦略数（上位N件）"
+              />
+              <InputField
+                label="最低フィットネス"
+                type="number"
+                value={iterativeImprovementConfig.min_fitness}
+                onChange={(value) =>
+                  handleIterativeImprovementConfigChange({ min_fitness: value })
+                }
+                allowEmptyNumber
+                description="この値以上の戦略のみシードとして使用（空欄でチェックなし）"
+              />
+              <label className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  checked={
+                    iterativeImprovementConfig.validation_passed_only ?? true
+                  }
+                  onChange={(e) =>
+                    handleIterativeImprovementConfigChange({
+                      validation_passed_only: e.target.checked,
+                    })
+                  }
+                  className="rounded border-amber-500 text-amber-600 focus:ring-amber-500"
+                />
+                <span className="text-sm text-amber-200">
+                  自動検証に合格した戦略のみ使用
+                </span>
+              </label>
+              <p className="text-xs text-amber-300">
+                ※ オフの場合は検証結果に関わらずフィットネス上位の戦略を
+                シードとして使用します。
+              </p>
             </>
           )}
         </div>
