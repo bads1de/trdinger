@@ -566,8 +566,7 @@ class TestToolsBlockEntry:
             assert engine.tools_block_entry() is True
         finally:
             # クリーンアップ
-            if "blocking_test_tool" in tool_registry._tools:
-                del tool_registry._tools["blocking_test_tool"]
+            tool_registry.remove("blocking_test_tool")
 
     def test_continues_when_tool_not_in_registry(self):
         tools = [ToolGene(tool_name="nonexistent_tool_xyz", enabled=True)]

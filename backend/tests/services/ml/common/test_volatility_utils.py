@@ -5,6 +5,7 @@ import pytest
 from app.services.ml.common.utils import (
     calculate_historical_volatility,
     calculate_realized_volatility,
+    calculate_true_range,
     calculate_volatility_atr,
     calculate_volatility_std,
 )
@@ -35,6 +36,18 @@ class TestVolatilityUtils:
 
         # 空
         assert calculate_volatility_std(pd.Series([])).empty
+
+    def test_calculate_true_range(self, sample_ohlc):
+        """True Range の計算"""
+        res = calculate_true_range(
+            sample_ohlc["high"], sample_ohlc["low"], sample_ohlc["close"]
+        )
+        assert len(res) == 50
+        # 先頭は前回Closeがないため high-low のみ（maxがNaNをスキップする既存仕様）
+        assert pytest.approx(res.iloc[0]) == 4.0
+        # h=102, l=98, c=100 なら TR=4
+        assert pytest.approx(res.iloc[1]) == 4.0
+        assert pytest.approx(res.iloc[10]) == 4.0
 
     def test_calculate_volatility_atr(self, sample_ohlc):
         """ATRベースのボラティリティ"""

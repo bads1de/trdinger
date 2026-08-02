@@ -104,6 +104,10 @@ class TestMLCommonInitExports:
         """calculate_realized_volatilityがエクスポートされている"""
         assert hasattr(common_package, "calculate_realized_volatility")
 
+    def test_calculate_true_range_exported(self):
+        """calculate_true_rangeがエクスポートされている"""
+        assert hasattr(common_package, "calculate_true_range")
+
     def test_ml_config_manager_lazy_load(self):
         """MLConfigManagerが遅延ロードされる"""
         from app.services.ml.common.config import MLConfigManager
@@ -167,6 +171,7 @@ class TestMLCommonInitExports:
             "calculate_volatility_atr",
             "calculate_historical_volatility",
             "calculate_realized_volatility",
+            "calculate_true_range",
             "MLConfigManager",
             "ml_config_manager",
             "get_default_ensemble_config",

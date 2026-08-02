@@ -7,6 +7,10 @@ Volatility Calculator
 import logging
 from typing import Any, cast
 
+import pandas as pd
+
+from app.services.ml.common.utils import calculate_true_range
+
 from ...genes import TPSLGene
 from .base_calculator import BaseTPSLCalculator
 
@@ -109,18 +113,18 @@ class VolatilityCalculator(BaseTPSLCalculator):
             if len(ohlc_data) < atr_period:
                 return None
 
-            true_ranges = []
-            for i in range(1, len(ohlc_data)):
-                high = ohlc_data[i]["high"]
-                low = ohlc_data[i]["low"]
-                prev_close = ohlc_data[i - 1]["close"]
+            # True Range 計算は共通ユーティリティに委譲（手書きループを排除）
+            # 先頭バーは前回Closeが無いため除外（元実装のループ開始位置 i=1 と同じ）
+            df = pd.DataFrame(ohlc_data)
+            true_ranges = calculate_true_range(df["high"], df["low"], df["close"]).iloc[
+                1:
+            ]
 
-                tr = max(high - low, abs(high - prev_close), abs(low - prev_close))
-                true_ranges.append(tr)
-
-            # ATR = 平均True Range
-            atr = sum(true_ranges[-atr_period:]) / atr_period
-            return float(atr)
+            # ATR = 直近 atr_period 個の True Range の平均（元実装の除算仕様を維持）
+            last_trs = true_ranges.iloc[-(atr_period):]
+            if last_trs.empty:
+                return None
+            return float(last_trs.sum() / atr_period)
 
         except Exception as e:
             logger.error(f"ATR計算エラー: {e}")

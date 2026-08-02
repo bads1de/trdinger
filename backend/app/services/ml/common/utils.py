@@ -88,9 +88,11 @@ def generate_cache_key(
         try:
             if isinstance(obj, pd.DataFrame):
                 # 1. データ内容とインデックスのハッシュ
-                data_hash = cast(Any, pd).util.hash_pandas_object(
-                    obj, index=True
-                ).values.tobytes()
+                data_hash = (
+                    cast(Any, pd)
+                    .util.hash_pandas_object(obj, index=True)
+                    .values.tobytes()
+                )
                 # 2. カラム名のハッシュ（カラム名が変われば結果も変わる可能性があるため）
                 col_hash = str(list(obj.columns)).encode()
 
@@ -418,6 +420,38 @@ def calculate_volatility_std(
     )
 
 
+def calculate_true_range(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+) -> pd.Series:
+    """
+    True Range を計算する共通関数
+
+    True Rangeは以下の最大値です：
+    - High - Low
+    - |High - 前回のClose|
+    - |Low - 前回のClose|
+
+    Args:
+        high: 高値のSeries
+        low: 安値のSeries
+        close: 終値のSeries
+
+    Returns:
+        pd.Series: True Range のSeries
+
+    Note:
+        先頭行は前回Closeがないため max が NaN 成分をスキップし、high - low になります。
+    """
+    previous_close = close.shift(1)
+    tr = pd.concat(
+        [high - low, (high - previous_close).abs(), (low - previous_close).abs()],
+        axis=1,
+    ).max(axis=1)
+    return cast(pd.Series, tr)
+
+
 def calculate_volatility_atr(
     high: pd.Series,
     low: pd.Series,
@@ -429,10 +463,7 @@ def calculate_volatility_atr(
     ATRベースのボラティリティ計算
 
     Average True Range（ATR）を計算してボラティリティを求めます。
-    True Rangeは以下の最大値です：
-    - High - Low
-    - |High - 前回のClose|
-    - |Low - 前回のClose|
+    True Rangeは calculate_true_range で計算します。
 
     Args:
         high: 高値のSeries
@@ -449,11 +480,7 @@ def calculate_volatility_atr(
     """
     if len(high) == 0:
         return pd.Series([], dtype=float)
-    pc = close.shift(1)
-    tr = pd.concat([high - low, (high - pc).abs(), (low - pc).abs()], axis=1).max(
-        axis=1
-    )
-    atr = tr.rolling(window=window).mean()
+    atr = calculate_true_range(high, low, close).rolling(window=window).mean()
     return atr / close if as_percentage else atr
 
 

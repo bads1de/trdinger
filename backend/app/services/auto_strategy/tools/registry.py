@@ -8,12 +8,14 @@ import logging
 from copy import deepcopy
 from typing import Optional
 
+from app.utils.registry import Registry
+
 from .base import BaseTool, ToolDefinition
 
 logger = logging.getLogger(__name__)
 
 
-class ToolRegistry:
+class ToolRegistry(Registry[str, BaseTool]):
     """
     ツールレジストリ
 
@@ -21,14 +23,17 @@ class ToolRegistry:
     """
 
     _instance: Optional["ToolRegistry"] = None
-    _tools: dict[str, BaseTool] = {}
 
     def __new__(cls) -> "ToolRegistry":
         """シングルトンパターン"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._tools = {}
         return cls._instance
+
+    def __init__(self) -> None:
+        """シングルトンの再初期化を防ぐ"""
+        if not hasattr(self, "_items"):
+            super().__init__()
 
     def register(self, tool: BaseTool) -> None:
         """
@@ -37,32 +42,11 @@ class ToolRegistry:
         Args:
             tool: 登録するツールインスタンス
         """
-        if tool.name in self._tools:
+        if tool.name in self._items:
             logger.warning(
                 f"ツール '{tool.name}' は既に登録されています。上書きします。"
             )
-        self._tools[tool.name] = tool
-
-    def get(self, name: str) -> BaseTool | None:
-        """
-        名前でツールを取得
-
-        Args:
-            name: ツール名
-
-        Returns:
-            ツールインスタンス、見つからない場合は None
-        """
-        return self._tools.get(name)
-
-    def get_all(self) -> list[BaseTool]:
-        """
-        すべての登録済みツールを取得
-
-        Returns:
-            ツールのリスト
-        """
-        return list(self._tools.values())
+        self.set(tool.name, tool)
 
     def get_definitions(self) -> list[ToolDefinition]:
         """
@@ -71,20 +55,7 @@ class ToolRegistry:
         Returns:
             ツール定義のリスト
         """
-        return [deepcopy(tool.definition) for tool in self._tools.values()]
-
-    def get_names(self) -> list[str]:
-        """
-        すべての登録済みツール名を取得
-
-        Returns:
-            ツール名のリスト
-        """
-        return list(self._tools.keys())
-
-    def clear(self) -> None:
-        """登録をクリア（テスト用）"""
-        self._tools.clear()
+        return [deepcopy(tool.definition) for tool in self._items.values()]
 
 
 # グローバルレジストリインスタンス

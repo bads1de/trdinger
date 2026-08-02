@@ -13,6 +13,7 @@ from enum import Enum
 from typing import Any, cast
 
 from app.types import SerializablePrimitive
+from app.utils.registry import Registry
 
 logger = logging.getLogger(__name__)
 
@@ -362,7 +363,7 @@ class IndicatorConfig:
         return params
 
 
-class IndicatorConfigRegistry:
+class IndicatorConfigRegistry(Registry[str, IndicatorConfig]):
     """インジケーター設定レジストリ
 
     すべてのインジケーター設定を一元管理し、
@@ -370,7 +371,7 @@ class IndicatorConfigRegistry:
     """
 
     def __init__(self) -> None:
-        self._configs: dict[str, IndicatorConfig] = {}
+        super().__init__()
         self._aliases: dict[str, IndicatorConfig] = {}
         self._initialized: bool = False
         self._auto_initialize_on_access: bool = True
@@ -392,7 +393,7 @@ class IndicatorConfigRegistry:
     def register(self, config: IndicatorConfig) -> None:
         """設定を登録"""
         primary_key = self._normalize_key(config.indicator_name)
-        self._configs[primary_key] = config
+        self.set(primary_key, config)
 
         # 同一主指標の再登録時に古い alias が残らないようにする
         self._aliases = {
@@ -410,7 +411,7 @@ class IndicatorConfigRegistry:
 
     def reset(self) -> None:
         """レジストリをクリア（テスト用）"""
-        self._configs.clear()
+        self.clear()
         self._aliases.clear()
         self._initialized = False
         self._auto_initialize_on_access = False
@@ -419,17 +420,17 @@ class IndicatorConfigRegistry:
         """設定を取得"""
         self._ensure_ready()
         normalized_name = self._normalize_key(indicator_name)
-        return self._configs.get(normalized_name) or self._aliases.get(normalized_name)
+        return self._items.get(normalized_name) or self._aliases.get(normalized_name)
 
     def list_indicators(self) -> list[str]:
         """登録されているインジケーター名のリストを取得"""
         self._ensure_ready()
-        return list(self._configs.keys())
+        return list(self._items.keys())
 
     def get_all_indicators(self) -> dict[str, IndicatorConfig]:
         """登録済みインジケーターの辞書を取得"""
         self._ensure_ready()
-        return dict(self._configs)
+        return dict(self._items)
 
     def generate_parameters_for_indicator(
         self, indicator_type: str, preset: str | None = None

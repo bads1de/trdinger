@@ -3,46 +3,29 @@
 """
 
 import threading
-from typing import Optional
+
+from app.utils.registry import Registry
 
 from ..core.engine.ga_engine import GeneticAlgorithmEngine
 
 
-class ExperimentEngineRegistry:
+class ExperimentEngineRegistry(Registry[str, GeneticAlgorithmEngine]):
     """実行中の GA エンジンをスレッドセーフに保持する。"""
 
-    def __init__(self) -> None:
-        self._active_engines: dict[str, GeneticAlgorithmEngine] = {}
-        self._lock = threading.RLock()
-
     @property
-    def active_engines(self) -> dict[str, "GeneticAlgorithmEngine"]:
-        return self._active_engines
+    def active_engines(self) -> dict[str, GeneticAlgorithmEngine]:
+        return self._items
 
     @property
     def lock(self) -> threading.RLock:
         return self._lock
 
-    def register(self, experiment_id: str, engine: "GeneticAlgorithmEngine") -> None:
-        with self._lock:
-            self._active_engines[experiment_id] = engine
-
-    def get(self, experiment_id: str) -> Optional["GeneticAlgorithmEngine"]:
-        with self._lock:
-            return self._active_engines.get(experiment_id)
+    def register(self, experiment_id: str, engine: GeneticAlgorithmEngine) -> None:
+        self.set(experiment_id, engine)
 
     def release(
         self,
         experiment_id: str,
-        engine: Optional["GeneticAlgorithmEngine"] = None,
+        engine: GeneticAlgorithmEngine | None = None,
     ) -> None:
-        with self._lock:
-            current = self._active_engines.get(experiment_id)
-            if current is None:
-                return
-            if engine is None or current is engine:
-                self._active_engines.pop(experiment_id, None)
-
-    def clear(self) -> None:
-        with self._lock:
-            self._active_engines.clear()
+        self.remove(experiment_id, expected=engine)
