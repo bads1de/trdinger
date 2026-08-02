@@ -78,6 +78,9 @@ backend/data/feature_evaluation/plots/
 backend/results/
 .claude/
 
+# Command Code (local settings & personal taste learnings)
+.commandcode/
+
 # Note: .python-version and uv.lock are intentionally tracked for reproducibility
 
 
