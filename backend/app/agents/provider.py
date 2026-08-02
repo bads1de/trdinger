@@ -3,6 +3,7 @@
 import os
 
 from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 # デフォルトで使用する OpenRouter モデル（:free は無料枠）
 DEFAULT_OPENROUTER_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
@@ -30,7 +31,7 @@ def get_llm_provider(model: str = DEFAULT_OPENROUTER_MODEL) -> ChatOpenAI:
 
     return ChatOpenAI(
         model=model,
-        api_key=api_key,
+        api_key=SecretStr(api_key),
         base_url=OPENROUTER_BASE_URL,
         temperature=0,
     )

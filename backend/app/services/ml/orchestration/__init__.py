@@ -6,8 +6,7 @@ MLトレーニングの管理と自動化機能を提供します。
 
 from __future__ import annotations
 
-from importlib import import_module
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .bg_task_orchestration_service import (
@@ -30,22 +29,6 @@ _ATTRIBUTE_EXPORTS = {
     "ml_training_service": ".ml_training_orchestration_service",
 }
 
-
-def __getattr__(name: str) -> type:
-    module_path = _ATTRIBUTE_EXPORTS.get(name)
-    if module_path is None:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-    module = import_module(module_path, __name__)
-    value = getattr(module, name)
-    globals()[name] = value
-    return cast(type, value)
-
-
-def __dir__() -> list[str]:
-    return sorted({*globals().keys(), *_ATTRIBUTE_EXPORTS})
-
-
 __all__ = [
     # Core services
     "MLManagementOrchestrationService",
@@ -55,3 +38,7 @@ __all__ = [
     "BackgroundTaskManager",
     "background_task_manager",
 ]
+
+from app.utils.lazy_import import setup_lazy_import  # noqa: E402
+
+setup_lazy_import(globals(), _ATTRIBUTE_EXPORTS)

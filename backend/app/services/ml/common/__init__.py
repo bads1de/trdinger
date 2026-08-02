@@ -7,9 +7,6 @@ ML共通ユーティリティモジュール
 
 from __future__ import annotations
 
-from importlib import import_module
-from typing import cast
-
 from .base_resource_manager import BaseResourceManager, CleanupLevel
 from .exceptions import (
     MLBaseError,
@@ -36,23 +33,11 @@ from .utils import (
 )
 
 _CONFIG_EXPORTS = {
-    "MLConfigManager",
-    "ml_config_manager",
-    "get_default_ensemble_config",
-    "get_default_single_model_config",
+    "MLConfigManager": ".config",
+    "ml_config_manager": ".config",
+    "get_default_ensemble_config": ".config",
+    "get_default_single_model_config": ".config",
 }
-
-
-def __getattr__(name: str) -> type:
-    if name in _CONFIG_EXPORTS:
-        module = import_module(".config", __name__)
-        return cast(type, getattr(module, name))
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def __dir__() -> list[str]:
-    return sorted({*globals().keys(), *_CONFIG_EXPORTS})
-
 
 __all__ = [
     "CleanupLevel",
@@ -83,3 +68,7 @@ __all__ = [
     "get_default_ensemble_config",
     "get_default_single_model_config",
 ]
+
+from app.utils.lazy_import import setup_lazy_import  # noqa: E402
+
+setup_lazy_import(globals(), _CONFIG_EXPORTS)

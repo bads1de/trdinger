@@ -9,8 +9,6 @@ Triple Barrier MethodやTrend Scanningを用いて、ダマシ（False Signal）
 - LabelGenerationService: イベントベースのメタラベリングをサポート
 """
 
-from typing import Any
-
 from .event_driven import BarrierProfile, EventDrivenLabelGenerator
 from .label_cache import LabelCache, ThresholdMethod
 from .presets import (
@@ -19,15 +17,10 @@ from .presets import (
 )
 from .signal_generator import SignalGenerator
 
-
-def __getattr__(name: str) -> Any:
-    """遅延インポートで循環依存を回避する。"""
-    if name == "LabelGenerationService":
-        from .label_generation_service import LabelGenerationService
-
-        return LabelGenerationService
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
+# LabelGenerationService は循環依存回避のため遅延インポート
+_ATTRIBUTE_EXPORTS = {
+    "LabelGenerationService": ".label_generation_service",
+}
 
 # パブリックAPIを明示的に定義
 __all__ = [
@@ -39,3 +32,7 @@ __all__ = [
     "SignalGenerator",
     "LabelCache",
 ]
+
+from app.utils.lazy_import import setup_lazy_import  # noqa: E402
+
+setup_lazy_import(globals(), _ATTRIBUTE_EXPORTS)

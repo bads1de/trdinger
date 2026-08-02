@@ -1,5 +1,5 @@
 """
-_lazy_import ヘルパーのユニットテスト
+lazy_import ヘルパーのユニットテスト
 
 遅延インポートを統一的に扱うためのヘルパー関数をテストします。
 """
@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from app.services.auto_strategy import _lazy_import
-from app.services.auto_strategy._lazy_import import setup_lazy_import
+from app.utils import lazy_import
+from app.utils.lazy_import import setup_lazy_import
 
 # ---------------------------------------------------------------------------
 # ヘルパー
@@ -31,7 +31,7 @@ def _make_globals(**extra) -> dict:
 class TestSetupLazyImportInjects:
     def test_setup_injects_getattr_and_dir(self) -> None:
         module_globals = _make_globals()
-        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"}, ["BaseTool"])
+        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"})
         assert callable(module_globals["__getattr__"])
         assert callable(module_globals["__dir__"])
 
@@ -39,13 +39,13 @@ class TestSetupLazyImportInjects:
         """__name__ がない場合、警告で '<unknown>' が使われる"""
         module_globals = {"__getattr__": lambda name: None}
         with pytest.warns(UserWarning, match="<unknown>"):
-            setup_lazy_import(module_globals, {"X": ".tools.base"}, ["X"])
+            setup_lazy_import(module_globals, {"X": ".tools.base"})
 
     def test_getattr_resolves_known_attribute(self) -> None:
         """既存パッケージ内のモジュールを相対指定で遅延ロードできる"""
         # 実在するパッケージ名を __name__ にして、相対パスが解決できるようにする
         module_globals = {"__name__": "app.services.auto_strategy"}
-        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"}, ["BaseTool"])
+        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"})
 
         # アクセス前は存在しない
         assert "BaseTool" not in module_globals
@@ -60,7 +60,7 @@ class TestSetupLazyImportInjects:
     def test_resolved_attribute_is_cached_in_globals(self) -> None:
         """解決済み属性は module_globals にキャッシュされ、直接アクセスで取得できる"""
         module_globals = {"__name__": "app.services.auto_strategy"}
-        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"}, ["BaseTool"])
+        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"})
 
         # 初回アクセスで解決
         module_globals["__getattr__"]("BaseTool")
@@ -74,7 +74,7 @@ class TestSetupLazyImportInjects:
     def test_getattr_raises_attribute_error_for_unknown(self) -> None:
         """未定義の属性名は AttributeError"""
         module_globals = _make_globals()
-        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"}, ["BaseTool"])
+        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"})
 
         with pytest.raises(AttributeError, match="has no attribute 'Missing'"):
             module_globals["__getattr__"]("Missing")
@@ -82,7 +82,7 @@ class TestSetupLazyImportInjects:
     def test_dir_includes_existing_and_lazy_attributes(self) -> None:
         """__dir__ は既存属性と遅延属性の和集合をソートして返す"""
         module_globals = _make_globals(AlreadyHere=1)
-        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"}, ["BaseTool"])
+        setup_lazy_import(module_globals, {"BaseTool": ".tools.base"})
 
         names = module_globals["__dir__"]()
         assert "AlreadyHere" in names
@@ -106,7 +106,7 @@ class TestSetupLazyImportWhenGetattrExists:
         module_globals = _make_globals(__getattr__=existing_getattr)
 
         with pytest.warns(UserWarning, match="already has __getattr__"):
-            setup_lazy_import(module_globals, {"X": ".tools.base"}, ["X"])
+            setup_lazy_import(module_globals, {"X": ".tools.base"})
 
         # __getattr__ は上書きされず、__dir__ も追加されない
         assert module_globals["__getattr__"] is existing_getattr
@@ -118,7 +118,7 @@ class TestSetupLazyImportWhenGetattrExists:
             __name__="my_custom_module", __getattr__=lambda name: None
         )
         with pytest.warns(UserWarning, match="my_custom_module"):
-            setup_lazy_import(module_globals, {"X": ".tools.base"}, ["X"])
+            setup_lazy_import(module_globals, {"X": ".tools.base"})
 
 
 # ---------------------------------------------------------------------------
@@ -131,16 +131,14 @@ class TestSetupLazyImportCallsImportModule:
         """import_module に相対パスと呼び出し元モジュール名が渡される"""
         sentinel_cls = type("Sentinel", (), {})
 
-        with patch.object(_lazy_import, "import_module") as mock_import:
+        with patch.object(lazy_import, "import_module") as mock_import:
             mock_module = ModuleType("resolved")
             mock_module.DummyClass = sentinel_cls
             mock_import.return_value = mock_module
 
             host_name = "app.services.auto_strategy"
             module_globals = {"__name__": host_name}
-            setup_lazy_import(
-                module_globals, {"DummyClass": ".tools.base"}, ["DummyClass"]
-            )
+            setup_lazy_import(module_globals, {"DummyClass": ".tools.base"})
 
             value = module_globals["__getattr__"]("DummyClass")
             assert value is sentinel_cls
@@ -158,7 +156,7 @@ class TestSetupLazyImportDebugLog:
         """__name__ がない場合、'module {__name__!r} has no attribute' で unknown"""
         # __name__ キーを明示的に渡さず、ヘルパーも経由しない
         module_globals: dict = {}
-        setup_lazy_import(module_globals, {"X": ".tools.base"}, ["X"])
+        setup_lazy_import(module_globals, {"X": ".tools.base"})
         with pytest.raises(
             AttributeError, match=r"module '<unknown>' has no attribute"
         ):

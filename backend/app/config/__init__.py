@@ -7,8 +7,7 @@
 
 from __future__ import annotations
 
-from importlib import import_module
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 # 共通定数
 from .constants import (
@@ -35,30 +34,13 @@ if TYPE_CHECKING:
     )
 
 _UNIFIED_CONFIG_EXPORTS = {
-    "AppConfig",
-    "DatabaseConfig",
-    "LoggingConfig",
-    "MarketConfig",
-    "DataCollectionConfig",
-    "UnifiedConfig",
+    "AppConfig": ".unified_config",
+    "DatabaseConfig": ".unified_config",
+    "LoggingConfig": ".unified_config",
+    "MarketConfig": ".unified_config",
+    "DataCollectionConfig": ".unified_config",
+    "UnifiedConfig": ".unified_config",
 }
-
-
-def __getattr__(name: str) -> type:
-    if name in _UNIFIED_CONFIG_EXPORTS:
-        module = import_module(".unified_config", __name__)
-        return cast(type, getattr(module, name))
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def __dir__() -> list[str]:
-    return sorted(
-        {
-            *globals().keys(),
-            *_UNIFIED_CONFIG_EXPORTS,
-        }
-    )
-
 
 __all__ = [
     # 共通定数
@@ -80,3 +62,7 @@ __all__ = [
     "MarketConfig",
     "DataCollectionConfig",
 ]
+
+from app.utils.lazy_import import setup_lazy_import  # noqa: E402
+
+setup_lazy_import(globals(), _UNIFIED_CONFIG_EXPORTS)

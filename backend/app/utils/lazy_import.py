@@ -17,23 +17,19 @@
     __all__ = ["MyClass"]
 
     # 以下の2行を追加するだけ
-    from ._lazy_import import setup_lazy_import
-    setup_lazy_import(globals(), _EXPORTS, __all__)
+    from app.utils.lazy_import import setup_lazy_import
+    setup_lazy_import(globals(), _EXPORTS)
 """
 
 from __future__ import annotations
 
 from importlib import import_module
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 
 def setup_lazy_import(
     module_globals: dict[str, Any],
     exports: dict[str, str],
-    all_list: list[str],
 ) -> None:
     """
     モジュールに遅延インポート機能を設定
@@ -44,7 +40,6 @@ def setup_lazy_import(
     Args:
         module_globals: 対象モジュールのglobals()辞書
         exports: {属性名: モジュールパス}のマッピング
-        all_list: __all__リスト
     """
     module_name = module_globals.get("__name__", "<unknown>")
 

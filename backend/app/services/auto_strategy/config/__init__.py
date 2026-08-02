@@ -102,6 +102,6 @@ __all__ = [
     "is_minimize_objective",
 ]
 
-from .._lazy_import import setup_lazy_import  # noqa: E402
+from app.utils.lazy_import import setup_lazy_import  # noqa: E402
 
-setup_lazy_import(globals(), _LAZY_EXPORTS, __all__)
+setup_lazy_import(globals(), _LAZY_EXPORTS)

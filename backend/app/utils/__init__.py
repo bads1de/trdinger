@@ -31,6 +31,7 @@ from .error_handler import (
     safe_execute,
     safe_operation,
 )
+from .lazy_import import setup_lazy_import
 from .response import api_response, error_response
 from .serialization import (
     dataclass_from_dict,
@@ -49,6 +50,8 @@ __all__ = [
     "safe_operation",
     "operation_context",
     "get_memory_usage_mb",
+    # 遅延インポート
+    "setup_lazy_import",
     # カスタム例外
     "TimeoutError",
     "ValidationError",

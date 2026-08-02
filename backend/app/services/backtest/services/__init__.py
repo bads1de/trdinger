@@ -4,20 +4,16 @@
 バックテストのデータ供給と実行管理を提供するファサードサービス群です。
 """
 
-from importlib import import_module
-from typing import Any
-
 _LAZY_EXPORTS = {
     "BacktestDataService": ".backtest_data_service",
     "BacktestService": ".backtest_service",
 }
 
+__all__ = [
+    "BacktestDataService",
+    "BacktestService",
+]
 
-def __getattr__(name: str) -> Any:
-    if name not in _LAZY_EXPORTS:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+from app.utils.lazy_import import setup_lazy_import  # noqa: E402
 
-    module = import_module(_LAZY_EXPORTS[name], __name__)
-    value: Any = getattr(module, name)
-    globals()[name] = value
-    return value
+setup_lazy_import(globals(), _LAZY_EXPORTS)

@@ -6,6 +6,7 @@ GAによって生成された戦略の永続化処理を管理します。
 
 import logging
 from typing import Any
+from typing import cast as typing_cast
 
 from sqlalchemy import Float, cast, desc
 from sqlalchemy.orm import Query, Session, selectinload
@@ -260,7 +261,7 @@ class GeneratedStrategyRepository(BaseRepository):
             strategies: list[GeneratedStrategy] = []
             for strategy in candidates:
                 if validation_passed_only:
-                    gene_data = dict(strategy.gene_data or {})
+                    gene_data = typing_cast(dict[str, Any], strategy.gene_data or {})
                     summary = extract_validation_summary(gene_data)
                     if not (summary and summary.get("passed", False)):
                         continue

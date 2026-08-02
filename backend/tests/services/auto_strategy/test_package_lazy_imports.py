@@ -47,3 +47,20 @@ class TestAutoStrategyPackageLazyImports:
 
         assert exported.__name__ == "EvolutionRunner"
         assert module.__dict__["EvolutionRunner"] is exported
+
+    def test_hybrid_package_defers_hybrid_module_import(self) -> None:
+        """hybrid パッケージは属性アクセスまで個別モジュールを読み込まない。"""
+        sys.modules.pop("app.services.auto_strategy.core.hybrid", None)
+
+        module = importlib.import_module("app.services.auto_strategy.core.hybrid")
+
+        assert "HybridPredictor" not in module.__dict__
+
+        exported = module.HybridPredictor
+
+        assert exported.__name__ == "HybridPredictor"
+        assert module.__dict__["HybridPredictor"] is exported
+        # 他のハイブリッドモジュールはまだ読み込まれていない（個別遅延）
+        assert "HybridFeatureAdapter" not in module.__dict__
+        assert "HybridIndividualEvaluator" not in module.__dict__
+        assert "WaveletFeatureTransformer" not in module.__dict__
