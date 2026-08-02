@@ -56,7 +56,7 @@ class TestBacktestInitExports:
     def test_getattr_raises_for_non_existent(self):
         """存在しない属性でAttributeErrorが発生する"""
         with pytest.raises(AttributeError, match="module.*has no attribute"):
-            _ = backtest_package.NonExistentAttribute
+            _ = backtest_package.NonExistentAttribute  # type: ignore[attr-defined]
 
     def test_dir_includes_exports(self):
         """__dir__にエクスポートが含まれる"""

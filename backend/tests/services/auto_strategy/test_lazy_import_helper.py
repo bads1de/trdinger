@@ -5,6 +5,7 @@ lazy_import ヘルパーのユニットテスト
 """
 
 from types import ModuleType
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -17,7 +18,7 @@ from app.utils.lazy_import import setup_lazy_import
 # ---------------------------------------------------------------------------
 
 
-def _make_globals(**extra) -> dict:
+def _make_globals(**extra: Any) -> dict[str, Any]:
     base = {"__name__": "app.services.auto_strategy._test_target_module"}
     base.update(extra)
     return base
@@ -44,7 +45,7 @@ class TestSetupLazyImportInjects:
     def test_getattr_resolves_known_attribute(self) -> None:
         """既存パッケージ内のモジュールを相対指定で遅延ロードできる"""
         # 実在するパッケージ名を __name__ にして、相対パスが解決できるようにする
-        module_globals = {"__name__": "app.services.auto_strategy"}
+        module_globals = _make_globals(__name__="app.services.auto_strategy")
         setup_lazy_import(module_globals, {"BaseTool": ".tools.base"})
 
         # アクセス前は存在しない
@@ -59,7 +60,7 @@ class TestSetupLazyImportInjects:
 
     def test_resolved_attribute_is_cached_in_globals(self) -> None:
         """解決済み属性は module_globals にキャッシュされ、直接アクセスで取得できる"""
-        module_globals = {"__name__": "app.services.auto_strategy"}
+        module_globals = _make_globals(__name__="app.services.auto_strategy")
         setup_lazy_import(module_globals, {"BaseTool": ".tools.base"})
 
         # 初回アクセスで解決
@@ -133,11 +134,11 @@ class TestSetupLazyImportCallsImportModule:
 
         with patch.object(lazy_import, "import_module") as mock_import:
             mock_module = ModuleType("resolved")
-            mock_module.DummyClass = sentinel_cls
+            mock_module.__dict__["DummyClass"] = sentinel_cls
             mock_import.return_value = mock_module
 
             host_name = "app.services.auto_strategy"
-            module_globals = {"__name__": host_name}
+            module_globals = _make_globals(__name__=host_name)
             setup_lazy_import(module_globals, {"DummyClass": ".tools.base"})
 
             value = module_globals["__getattr__"]("DummyClass")

@@ -88,7 +88,7 @@ class TestLazyLoadGetAttr:
     def test_getattr_raises_for_non_existent(self):
         """存在しない属性でAttributeErrorが発生する"""
         with pytest.raises(AttributeError, match="module.*has no attribute"):
-            _ = config_package.NonExistentAttribute
+            _ = config_package.NonExistentAttribute  # type: ignore[attr-defined]
 
 
 class TestLazyLoadDir:

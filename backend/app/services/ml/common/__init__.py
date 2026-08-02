@@ -7,6 +7,8 @@ ML共通ユーティリティモジュール
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from .base_resource_manager import BaseResourceManager, CleanupLevel
 from .exceptions import (
     MLBaseError,
@@ -31,6 +33,14 @@ from .utils import (
     prepare_data_for_prediction,
     validate_training_inputs,
 )
+
+if TYPE_CHECKING:
+    from .config import (
+        MLConfigManager,
+        get_default_ensemble_config,
+        get_default_single_model_config,
+        ml_config_manager,
+    )
 
 _CONFIG_EXPORTS = {
     "MLConfigManager": ".config",
