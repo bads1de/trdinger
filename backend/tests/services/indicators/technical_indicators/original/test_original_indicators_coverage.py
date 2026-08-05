@@ -1070,10 +1070,3 @@ class TestWindowHelpersDeepCoverage:
         min_val, max_val = m._window_min_max(arr, 0, 8)
         assert min_val == 1.0
         assert max_val == 9.0
-
-    def test_window_range(self) -> None:
-        m = _import_original_module("_window_helpers")
-        arr = np.array([1.0, 3.0, 5.0, 2.0])
-        # range / scale
-        assert m._window_range(arr, 0, 4, scale=2.0) == 2.0  # (5-1)/2
-        assert m._window_range(arr, 0, 4, scale=1.0) == 4.0

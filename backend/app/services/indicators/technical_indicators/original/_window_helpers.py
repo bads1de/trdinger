@@ -15,7 +15,7 @@ def _window_sum(values: np.ndarray, start: int, end: int) -> float:
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_mean(values: np.ndarray, start: int, end: int) -> float:  # pyright: ignore[reportUnusedFunction]
+def _window_mean(values: np.ndarray, start: int, end: int) -> float:
     length = end - start
     if length <= 0:
         return 0.0
@@ -23,7 +23,7 @@ def _window_mean(values: np.ndarray, start: int, end: int) -> float:  # pyright:
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_mean_and_std(  # pyright: ignore[reportUnusedFunction]
+def _window_mean_and_std(
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float]:
     length = end - start
@@ -45,7 +45,7 @@ def _window_mean_and_std(  # pyright: ignore[reportUnusedFunction]
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_mean_and_std_finite(  # pyright: ignore[reportUnusedFunction]
+def _window_mean_and_std_finite(
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float, int]:
     total = 0.0
@@ -80,9 +80,3 @@ def _window_min_max(values: np.ndarray, start: int, end: int) -> tuple[float, fl
         if val > max_val:
             max_val = val
     return min_val, max_val
-
-
-@njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_range(values: np.ndarray, start: int, end: int, scale: float) -> float:  # pyright: ignore[reportUnusedFunction]
-    min_val, max_val = _window_min_max(values, start, end)
-    return float(max_val - min_val) / scale

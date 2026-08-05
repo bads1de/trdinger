@@ -31,13 +31,13 @@ def _njit_frama_loop(
     n = len(prices)
     filt = np.full(n, np.nan)
     for i in prange(length - 1, n):
-        n1_high, n1_low = _window_min_max(prices, i - length + 1, i - half + 1)
+        n1_low, n1_high = _window_min_max(prices, i - length + 1, i - half + 1)
         n1 = (n1_high - n1_low) / half
 
-        n2_high, n2_low = _window_min_max(prices, i - half + 1, i + 1)
+        n2_low, n2_high = _window_min_max(prices, i - half + 1, i + 1)
         n2 = (n2_high - n2_low) / half
 
-        n3_high, n3_low = _window_min_max(prices, i - length + 1, i + 1)
+        n3_low, n3_high = _window_min_max(prices, i - length + 1, i + 1)
         n3 = (n3_high - n3_low) / length
 
         if n1 > 1e-9 and n2 > 1e-9 and n3 > 1e-9:
