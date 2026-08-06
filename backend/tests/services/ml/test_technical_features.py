@@ -122,7 +122,8 @@ def test_advanced_technical_indicators(sample_ohlcv_data):
         "NATR",
         "Yang_Zhang_Vol_20",
         "Garman_Klass_Vol_20",
-        "Parkinson_Vol_20",
+        # Parkinson_Vol_20 は PriceFeatureCalculator の正規提供のため
+        # ここでは生成しない（重複列による MultiTimeframe 計算失敗の防止）
     ]
 
     for feature in expected_features:

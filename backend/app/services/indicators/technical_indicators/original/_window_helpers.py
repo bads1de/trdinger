@@ -15,7 +15,9 @@ def _window_sum(values: np.ndarray, start: int, end: int) -> float:
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_mean(values: np.ndarray, start: int, end: int) -> float:
+def _window_mean(  # pyright: ignore[reportUnusedFunction] - @njit デコレータ経由で他モジュールから参照されるため
+    values: np.ndarray, start: int, end: int
+) -> float:
     length = end - start
     if length <= 0:
         return 0.0
@@ -23,7 +25,7 @@ def _window_mean(values: np.ndarray, start: int, end: int) -> float:
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_mean_and_std(
+def _window_mean_and_std(  # pyright: ignore[reportUnusedFunction] - @njit デコレータ経由で他モジュールから参照されるため
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float]:
     length = end - start
@@ -45,7 +47,7 @@ def _window_mean_and_std(
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_mean_and_std_finite(
+def _window_mean_and_std_finite(  # pyright: ignore[reportUnusedFunction] - @njit デコレータ経由で他モジュールから参照されるため
     values: np.ndarray, start: int, end: int
 ) -> tuple[float, float, int]:
     total = 0.0
@@ -70,7 +72,9 @@ def _window_mean_and_std_finite(
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
-def _window_min_max(values: np.ndarray, start: int, end: int) -> tuple[float, float]:
+def _window_min_max(  # pyright: ignore[reportUnusedFunction] - @njit デコレータ経由で他モジュールから参照されるため
+    values: np.ndarray, start: int, end: int
+) -> tuple[float, float]:
     min_val = values[start]
     max_val = values[start]
     for idx in range(start + 1, end):

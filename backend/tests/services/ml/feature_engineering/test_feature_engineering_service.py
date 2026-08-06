@@ -84,6 +84,96 @@ class TestFeatureEngineeringServicePerformance:
                 f"Column {col} contains inf values"
             )
 
+    def test_calculate_advanced_features_frac_diff_not_constant(
+        self, sample_ohlcv_data
+    ):
+        """FracDiff特徴量が定数0に潰れないことを検証（window=200 修正の回帰テスト）"""
+        from app.services.ml.feature_engineering.feature_engineering_service import (
+            FeatureEngineeringService,
+        )
+
+        service = FeatureEngineeringService()
+        result = service.calculate_advanced_features(sample_ohlcv_data)
+
+        # 回帰テストの前提: 500本データは window=200 の重み数（200）以上あるため
+        # FracDiff が有効値を返すこと（旧 window=2000 では全NaN→定数0に潰れていた）
+        assert len(sample_ohlcv_data) >= 200
+
+        # FracDiff_04 は technical_features.py（デフォルトwindow）、
+        # FracDiff_Price は本サービス（window=200 明示）由来で、補完経路が異なる
+        frac_cols = [c for c in result.columns if c.startswith("FracDiff")]
+        assert frac_cols, (
+            f"FracDiff列が存在しません。Columns: {result.columns.tolist()}"
+        )
+
+        for col in frac_cols:
+            series = result[col]
+            # 全NaN→0埋めで定数0になっていないこと（旧バグの検知）
+            assert series.nunique() > 1, (
+                f"{col} が定数になっています（全NaN→0埋めの可能性）。"
+                f"nunique={series.nunique()}"
+            )
+            # 補完後も完全なNaN列が残っていないこと
+            assert not series.isna().all()
+
+    def test_calculate_advanced_features_multi_timeframe_features_present(
+        self, sample_ohlcv_data
+    ):
+        """
+        MultiTimeframe（HTF）特徴量が生成されることを検証。
+
+        回帰テスト: price_features と technical_features の両方が Parkinson_Vol_20 を
+        生成し重複列が発生していたため、MultiTimeframeFeatureCalculator の
+        resample().agg() が失敗し HTF 系11列が全て静かに消失していた。
+        """
+        from app.services.ml.feature_engineering.feature_engineering_service import (
+            FeatureEngineeringService,
+        )
+
+        service = FeatureEngineeringService()
+        result = service.calculate_advanced_features(sample_ohlcv_data)
+
+        # 1. 出力に重複カラムがないこと（重複列が MTF 計算を壊すため）
+        duplicated = result.columns[result.columns.duplicated()].tolist()
+        assert not duplicated, f"重複カラムが存在します: {duplicated}"
+
+        # 2. MultiTimeframe 由来の全11列が存在すること
+        expected_mtf_cols = [
+            "HTF_4h_Trend_Direction",
+            "HTF_4h_Trend_Strength",
+            "HTF_4h_RSI",
+            "HTF_1d_Trend_Direction",
+            "HTF_1d_Trend_Strength",
+            "Timeframe_Alignment_Score",
+            "Timeframe_Alignment_Direction",
+            "HTF_4h_Divergence",
+            "HTF_1d_Divergence",
+            "Price_Distance_From_4h_SMA50",
+            "Price_Distance_From_1d_SMA50",
+        ]
+        missing = [c for c in expected_mtf_cols if c not in result.columns]
+        assert not missing, (
+            "MultiTimeframe特徴量が生成されていません。"
+            f"Missing: {missing}, Columns: {result.columns.tolist()}"
+        )
+
+    def test_calculate_advanced_features_no_duplicate_parkinson_vol(
+        self, sample_ohlcv_data
+    ):
+        """Parkinson_Vol_20 が1列だけ生成されることを検証（重複生成の回帰テスト）"""
+        from app.services.ml.feature_engineering.feature_engineering_service import (
+            FeatureEngineeringService,
+        )
+
+        service = FeatureEngineeringService()
+        result = service.calculate_advanced_features(sample_ohlcv_data)
+
+        parkinson_cols = [c for c in result.columns if c == "Parkinson_Vol_20"]
+        assert len(parkinson_cols) == 1, (
+            f"Parkinson_Vol_20 が {len(parkinson_cols)} 個あります（重複生成）: "
+            f"{parkinson_cols}"
+        )
+
     def test_calculate_advanced_features_performance(self, sample_ohlcv_data):
         """calculate_advanced_features のパフォーマンステスト"""
         from app.services.ml.feature_engineering.feature_engineering_service import (

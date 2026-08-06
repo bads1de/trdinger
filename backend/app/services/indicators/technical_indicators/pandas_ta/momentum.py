@@ -94,17 +94,9 @@ class MomentumIndicators:
             if result is None:
                 return create_nan_series_like(data)
 
-            result = cast(pd.Series, result)
-
-            # 一定価格など、変動がない場合のRSIは50とする
-            # pandas_ta_classicはRS=0/0のケースで0を返すことがある
-            valid_values = result.dropna()
-            if not valid_values.empty and bool(valid_values.eq(0.0).all()):
-                std_value = data.std()
-                if isinstance(std_value, float) and std_value == 0.0:
-                    return pd.Series(50.0, index=result.index)
-
-            return result
+            # 一定価格（変動なし）では RS=0/0 となり pandas_ta_classic は NaN を返す。
+            # TradingView / pandas_ta の標準挙動に合わせ、そのまま返す。
+            return cast(pd.Series, result)
 
         return cast(
             pd.Series,

@@ -111,7 +111,8 @@ class TestMomentumIndicatorsLogic:
         assert result.dropna().between(0, 100).all()
         assert result.iloc[:13].isna().all()
 
-    def test_rsi_constant_zero_output_is_normalized_to_50(self, sample_df, monkeypatch):
+    def test_rsi_constant_zero_output_is_preserved(self, sample_df, monkeypatch):
+        """pandas_ta が0を返す場合も正規化せずそのまま返すことを検証"""
         close = pd.Series([100.0] * len(sample_df), index=sample_df.index)
         zero_rsi = pd.Series(0.0, index=close.index)
 
@@ -122,8 +123,25 @@ class TestMomentumIndicatorsLogic:
 
         result = MomentumIndicators.rsi(close, period=14)
 
+        # 全系列が0のまま返されることを検証（NaNが混ざると np.allclose は False）
         assert isinstance(result, pd.Series)
-        assert result.dropna().eq(50.0).all()
+        assert np.allclose(result, 0.0)
+
+    def test_rsi_constant_nan_output_is_preserved(self, sample_df, monkeypatch):
+        """定数価格で pandas_ta が全NaNを返す場合もそのまま返すことを検証"""
+        close = pd.Series([100.0] * len(sample_df), index=sample_df.index)
+        nan_rsi = pd.Series(np.nan, index=close.index)
+
+        monkeypatch.setattr(
+            "app.services.indicators.technical_indicators.pandas_ta.momentum.ta.rsi",
+            lambda *args, **kwargs: nan_rsi,
+        )
+
+        result = MomentumIndicators.rsi(close, period=14)
+
+        # 全系列が NaN のまま返されることを検証（業界標準の挙動）
+        assert isinstance(result, pd.Series)
+        assert result.isna().all()
 
     def test_dm_matches_pandas_ta(self, sample_df):
         high = sample_df["high"]

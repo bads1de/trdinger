@@ -25,7 +25,6 @@ from ...indicators.technical_indicators.pandas_ta import (
 from .base_feature_calculator import BaseFeatureCalculator
 from .volatility_estimators import (
     garman_klass_volatility,
-    parkinson_volatility,
     yang_zhang_volatility,
 )
 
@@ -141,7 +140,10 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 fill_value=0.0,
             )
 
-            # Yang-Zhang, Parkinson, Garman-Klass
+            # Yang-Zhang, Garman-Klass
+            # ※ Parkinson は PriceFeatureCalculator が Parkinson_Vol_20 として
+            #    正規提供しているため、ここでは重複生成しない（重複列があると
+            #    MultiTimeframeFeatureCalculator の resample().agg() が失敗する）
             if "open" in df.columns:
                 features["Yang_Zhang_Vol_20"] = yang_zhang_volatility(
                     open_=cast(pd.Series, df["open"]),
@@ -157,12 +159,6 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                     close=cast(pd.Series, df["close"]),
                     window=vol_p,
                 ).fillna(0.0)
-
-            features[f"Parkinson_Vol_{vol_p}"] = parkinson_volatility(
-                high=cast(pd.Series, df["high"]),
-                low=cast(pd.Series, df["low"]),
-                window=vol_p,
-            ).fillna(0.0)
 
             return features
         except Exception as e:

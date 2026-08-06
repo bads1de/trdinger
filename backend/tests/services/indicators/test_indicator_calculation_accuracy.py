@@ -231,16 +231,12 @@ class TestRSICalculationAccuracy:
         )
 
     def test_rsi_constant_prices(self):
-        """一定価格ではRSIは計算できない（変動なし）ことを検証"""
+        """一定価格ではRSIはNaNになることを検証（TradingView/pandas_ta標準）"""
         prices = pd.Series([100.0] * 30)
         result = MomentumIndicators.rsi(prices, period=14)
 
-        valid_values = result.dropna()
-        # 変動がない場合、pandas-taのRSIはNaNを返す（損益ゼロのため）
-        # これは正常な動作
-        assert len(valid_values) == 0 or np.allclose(valid_values, 50.0, atol=1.0), (
-            "一定価格のRSIはNaNまたは50付近であるべき"
-        )
+        # 変動がない場合、RS=0/0 となり NaN になる（業界標準の挙動）
+        assert result.isna().all(), f"一定価格のRSIは全NaNであるべき: {result.unique()}"
 
     def test_rsi_range(self, known_prices):
         """RSIが0-100の範囲にあることを検証"""

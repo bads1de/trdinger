@@ -170,14 +170,20 @@ class MultiTimeframeFeatureCalculator:
 
     def _resample_to_timeframe(self, df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
         """1時間足データを指定時間足にリサンプル"""
-        resampled = df.resample(timeframe).agg(
-            {
-                "open": "first",
-                "high": "max",
-                "low": "min",
-                "close": "last",
-                "volume": "sum",
-            }
+        # 必要なカラムのみ選択してからリサンプルする。
+        # 重複カラムが存在する DataFrame で resample().agg(dict) を呼ぶと
+        # pandas が 'first' is not a valid function ... で失敗するため、
+        # 重複列の影響を受けないよう、選択カラムに合わせて集約指定も絞る。
+        agg_map = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+            "volume": "sum",
+        }
+        ohlcv_cols = [c for c in agg_map if c in df.columns]
+        resampled = (
+            df[ohlcv_cols].resample(timeframe).agg({c: agg_map[c] for c in ohlcv_cols})
         )
         return cast(pd.DataFrame, resampled.ffill())
 

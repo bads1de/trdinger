@@ -266,14 +266,16 @@ class FeatureEngineeringService:
                     feat_df = feature_calc.calculate_features(*args)
                     additional_features_list.append(feat_df)
                 except Exception as e:
-                    logger.error(f"{feature_calc.__class__.__name__} の計算中にエラー: {e}")
+                    logger.error(
+                        f"{feature_calc.__class__.__name__} の計算中にエラー: {e}"
+                    )
 
             # === 分数次差分特徴量 (Fractional Differentiation) ===
             logger.info("分数次差分特徴量を計算中...")
             try:
                 # 価格の分数差分
                 frac_price = AdvancedFeatures.frac_diff_ffd(
-                    cast(pd.Series, result_df["close"]), d=0.4, window=2000
+                    cast(pd.Series, result_df["close"]), d=0.4, window=200
                 )
                 additional_features_list.append(frac_price.rename("FracDiff_Price"))
 
@@ -283,7 +285,7 @@ class FeatureEngineeringService:
                     oi_col = open_interest_data.columns[0]
                     oi_series = cast(pd.Series, open_interest_data[oi_col])
                     frac_oi = AdvancedFeatures.frac_diff_ffd(
-                        oi_series, d=0.4, window=2000
+                        oi_series, d=0.4, window=200
                     )
                     additional_features_list.append(frac_oi.rename("FracDiff_OI"))
             except Exception as e:
@@ -447,7 +449,7 @@ class FeatureEngineeringService:
             try:
                 # 価格の分数次差分
                 frac_price = AdvancedFeatures.frac_diff_ffd(
-                    cast(pd.Series, result_df["close"]), d=d, window=2000
+                    cast(pd.Series, result_df["close"]), d=d, window=200
                 )
                 frac_diff_features.append(frac_price.rename(f"FracDiff_Price_d{d}"))
             except Exception as e:
@@ -470,7 +472,7 @@ class FeatureEngineeringService:
                         )
 
                     frac_oi = AdvancedFeatures.frac_diff_ffd(
-                        cast(pd.Series, oi_series), d=d, window=2000
+                        cast(pd.Series, oi_series), d=d, window=200
                     )
                     frac_diff_features.append(frac_oi.rename(f"FracDiff_OI_d{d}"))
                 except Exception as e:

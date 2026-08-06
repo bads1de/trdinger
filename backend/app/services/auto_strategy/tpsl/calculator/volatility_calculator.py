@@ -116,9 +116,12 @@ class VolatilityCalculator(BaseTPSLCalculator):
             # True Range 計算は共通ユーティリティに委譲（手書きループを排除）
             # 先頭バーは前回Closeが無いため除外（元実装のループ開始位置 i=1 と同じ）
             df = pd.DataFrame(ohlc_data)
-            true_ranges = calculate_true_range(df["high"], df["low"], df["close"]).iloc[
-                1:
-            ]
+            # ohlc_data が未型付けのため pandas-stubs が列型を推論できず、Series に明示キャストする
+            true_ranges = calculate_true_range(
+                cast(pd.Series, df["high"]),
+                cast(pd.Series, df["low"]),
+                cast(pd.Series, df["close"]),
+            ).iloc[1:]
 
             # ATR = 直近 atr_period 個の True Range の平均（元実装の除算仕様を維持）
             last_trs = true_ranges.iloc[-(atr_period):]

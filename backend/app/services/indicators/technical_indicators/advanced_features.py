@@ -519,11 +519,18 @@ class AdvancedFeatures:
         series: pd.Series,
         d: float = 0.4,
         thres: float = 1e-5,
-        window: int = 2000,
+        window: int = 200,
     ) -> pd.Series:
         """
         分数微分（固定ウィンドウFFD）。
         np.convolveを用いた高速なベクトル化実装。
+
+        Note:
+            window は重みの上限ラグ数。d=0.4 程度では重みの減衰が遅いため
+            window=2000 だと実データ長（収集は1リクエスト1000本程度）では
+            ほぼ常に全NaNになり、下流で黙って定数0に潰れていた。
+            学習・推論で一貫した変換にするため固定の window=200 を既定とし、
+            データ長が足りない場合は警告を出して全NaNを返す。
         """
 
         def _calculate_frac_diff_ffd() -> pd.Series:
@@ -545,6 +552,15 @@ class AdvancedFeatures:
             if len(series_vals) < width:
                 # データがウィンドウサイズに満たない場合は、
                 # 過去の実装に合わせてすべてNaNを返す
+                logger.warning(
+                    "frac_diff_ffd: データ長(%d)が重み数(%d)に満たないため全NaNを返します。"
+                    "FracDiff特徴量(d=%s)が無効になります。window(%d)を小さくするか、"
+                    "データ収集量を増やしてください。",
+                    len(series_vals),
+                    width,
+                    d,
+                    window,
+                )
                 return pd.Series(np.nan, index=series.index, name=series.name)
 
             # np.convolve(x, w, mode='valid') で

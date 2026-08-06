@@ -56,6 +56,36 @@ class TestAdvancedFeatures:
         corr = diff_one.corr(simple_diff)
         assert corr > 0.9
 
+    def test_frac_diff_ffd_default_window_short_data(self):
+        """
+        短いデータでもデフォルト window で有効な FFD 値が得られることを検証。
+
+        回帰テスト: 以前は window=2000（有効重み数1458）だったため、
+        データが1458本未満だと全NaNになり、下流で黙って定数0に潰れていた。
+        デフォルト window=200 なら 400本程度のデータでも半分以上が有効になる。
+        """
+        dates = pd.date_range(start="2024-01-01", periods=400, freq="1h")
+        close = pd.Series(np.cumsum(np.random.randn(400)) + 100, index=dates)
+
+        diff_series = AdvancedFeatures.frac_diff_ffd(close, d=0.4)
+
+        valid_count = int(diff_series.notna().sum())
+        assert len(diff_series) == len(close)
+        # window=200 のウォームアップ(199本)を除いた値が計算されている
+        assert valid_count >= 100, f"有効値が少なすぎます: {valid_count}"
+        # 全NaN（定数0に潰れる）ではないこと
+        assert not diff_series.isna().all()
+
+    def test_frac_diff_ffd_too_short_data_returns_all_nan(self):
+        """データが重み数に満たない場合は全NaNを返す（既存仕様の維持）"""
+        dates = pd.date_range(start="2024-01-01", periods=50, freq="1h")
+        close = pd.Series(np.cumsum(np.random.randn(50)) + 100, index=dates)
+
+        diff_series = AdvancedFeatures.frac_diff_ffd(close, d=0.4, window=200)
+
+        assert len(diff_series) == len(close)
+        assert diff_series.isna().all()
+
     def test_liquidation_cascade_score(self, sample_data):
         """清算カスケードスコアのテスト"""
         score = AdvancedFeatures.liquidation_cascade_score(
