@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -47,9 +46,7 @@ interface EnsembleSettingsProps {
   availableModels?: string[];
 }
 
-import SingleModelSettings, {
-  SingleModelSettingsConfig as ExtractedSingleModelSettingsConfig,
-} from "./SingleModelSettings";
+import SingleModelSettings from "./SingleModelSettings";
 
 export default function EnsembleSettings({
   settings,

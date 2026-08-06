@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import { LongShortRatioChart } from "@/components/data/LongShortRatioChart";
 import { LongShortRatioData } from "@/types/long-short-ratio";

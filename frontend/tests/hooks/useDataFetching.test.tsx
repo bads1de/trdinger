@@ -109,7 +109,7 @@ describe("useDataFetching", () => {
   });
 
   it("依存関係が不足している場合、フェッチが行われないこと", () => {
-    const { result } = renderHook(() =>
+    renderHook(() =>
       useDataFetching({
         endpoint: "/test-endpoint",
         dependencies: [null], // 依存関係がnull

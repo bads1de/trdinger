@@ -51,5 +51,5 @@ class TestXGBoostModel:
                 model.fit(X, y, early_stopping_rounds=5)
                 assert model.is_trained is True
                 assert mock_train.called
-                args, kwargs = mock_train.call_args
+                _, kwargs = mock_train.call_args
                 assert kwargs["early_stopping_rounds"] == 5

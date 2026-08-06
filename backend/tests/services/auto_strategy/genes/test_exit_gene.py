@@ -52,11 +52,11 @@ class TestExitGene:
     def test_validate_boundary_values(self):
         """境界値のテスト"""
         gene = ExitGene(partial_exit_pct=0.1)
-        is_valid, errors = gene.validate()
+        is_valid, _ = gene.validate()
         assert is_valid is True
 
         gene = ExitGene(partial_exit_pct=0.9)
-        is_valid, errors = gene.validate()
+        is_valid, _ = gene.validate()
         assert is_valid is True
 
     def test_to_dict(self):

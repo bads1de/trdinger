@@ -207,7 +207,7 @@ class TestProductionPipeline:
         self, production_data: tuple[pd.DataFrame, pd.Series]
     ):
         """正常系: 多項式特徴量付き本番パイプライン."""
-        X, y = production_data
+        X, _ = production_data
         pipeline = create_production_pipeline(
             target_column="target",
             include_polynomial=True,
@@ -220,7 +220,7 @@ class TestProductionPipeline:
         self, production_data: tuple[pd.DataFrame, pd.Series]
     ):
         """正常系: 本番パイプラインのスケーリング."""
-        X, y = production_data
+        X, _ = production_data
 
         for scaling_method in ["robust", "standard"]:
             pipeline = create_production_pipeline(

@@ -125,7 +125,7 @@ class TestEnsembleTrainerErrorHandling:
     @pytest.fixture
     def trained_trainer(self, sample_data):
         """学習済みトレーナーのフィクスチャ"""
-        X, y = sample_data
+        X, _ = sample_data
         config = {
             "method": "stacking",
             "models": ["lightgbm"],

@@ -15,11 +15,6 @@ from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 
 
-def _single_output_ref_name(strategy: StrategyGene, indicator_type: str) -> str:
-    indicator = next(i for i in strategy.indicators if i.type == indicator_type)
-    return f"{indicator.type}_{indicator.id[:8]}"
-
-
 def _multi_output_ref_name(
     strategy: StrategyGene, indicator_type: str, output_index: int
 ) -> str:

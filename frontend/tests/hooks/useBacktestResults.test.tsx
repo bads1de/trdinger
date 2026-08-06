@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { useBacktestResults } from "@/hooks/useBacktestResults";
 import { useParameterizedDataFetching } from "@/hooks/useDataFetching";
 import { useApiCall } from "@/hooks/useApiCall";

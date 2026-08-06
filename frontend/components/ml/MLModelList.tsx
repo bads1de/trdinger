@@ -11,12 +11,10 @@ import { useMLModels, MLModel } from "@/hooks/useMLModels";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   Trash2,
-  Eye,
   Calendar,
   Database,
   TrendingUp,
   MoreVertical,
-  Archive,
   RefreshCw,
 } from "lucide-react";
 import {
@@ -40,7 +38,6 @@ export default function MLModelList({
   limit,
   showActions = true,
 }: MLModelListProps) {
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isDeleteAllConfirmOpen, setIsDeleteAllConfirmOpen] = useState(false);
   const [modelToDelete, setModelToDelete] = useState<{id: string, name: string} | null>(null);
@@ -178,15 +175,6 @@ export default function MLModelList({
 
               {showActions && (
                 <div className="flex items-center space-x-2">
-                  <ActionButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setSelectedModel(model.id)}
-                    icon={<Eye className="h-4 w-4" />}
-                  >
-                    詳細
-                  </ActionButton>
-
                   <DropdownMenu>
                     <DropdownMenuTrigger>
                       <ActionButton

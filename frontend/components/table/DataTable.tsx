@@ -12,11 +12,10 @@ import {
   SortAscIcon,
   SortDescIcon,
   SortNeutralIcon,
-  ErrorIcon,
   ExportIcon,
   SearchIcon,
 } from "@/components/common/Icons";
-import { DataTableProps, TableColumn } from "@/types/common";
+import { DataTableProps } from "@/types/common";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 

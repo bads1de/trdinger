@@ -35,7 +35,7 @@ class TestBacktestDataService:
             assert result is mock_df
             mock_method.assert_called_once()
             # include_oi/fr が False で呼ばれていることを確認
-            args, kwargs = mock_method.call_args
+            _, kwargs = mock_method.call_args
             assert kwargs["include_oi"] is False
             assert kwargs["include_fr"] is False
 

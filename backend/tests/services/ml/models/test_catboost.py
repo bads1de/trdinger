@@ -51,7 +51,7 @@ class TestCatBoostModel:
 
             assert model.is_trained is True
             # パラメータが正しく渡されたか
-            args, kwargs = mock_cb.call_args
+            _, kwargs = mock_cb.call_args
             assert kwargs["iterations"] == 10
 
             # 予測

@@ -15,8 +15,6 @@ import {
   THRESHOLD_METHOD_LABELS,
   THRESHOLD_METHOD_DESCRIPTIONS,
   TIMEFRAME_LABELS,
-  getPresetNames,
-  getPresetsByCategory,
   PRESET_CATEGORIES,
 } from "@/constants/ml-config-constants";
 import type { LabelGenerationConfig } from "@/types/ml-config";

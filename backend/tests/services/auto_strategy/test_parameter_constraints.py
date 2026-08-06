@@ -90,7 +90,7 @@ class TestParameterConstraints:
 
         params = {"fast": 20, "slow": 20, "signal": 9}
 
-        is_valid, errors = config.validate_constraints(params)
+        is_valid, _ = config.validate_constraints(params)
         assert is_valid is False
 
     def test_validate_constraints_missing_param_skipped(self):
@@ -105,7 +105,7 @@ class TestParameterConstraints:
         # slow が存在しない
         params = {"fast": 12, "signal": 9}
 
-        is_valid, errors = config.validate_constraints(params)
+        is_valid, _ = config.validate_constraints(params)
         # 制約チェックはスキップされるので True
         assert is_valid is True
 
@@ -233,12 +233,12 @@ class TestGreaterThanConstraint:
 
         # 有効なパラメータ
         valid_params = {"upper_band": 2.0, "lower_band": 1.0, "period": 20}
-        is_valid, errors = config.validate_constraints(valid_params)
+        is_valid, _ = config.validate_constraints(valid_params)
         assert is_valid is True
 
         # 無効なパラメータ
         invalid_params = {"upper_band": 1.0, "lower_band": 2.0, "period": 20}
-        is_valid, errors = config.validate_constraints(invalid_params)
+        is_valid, _ = config.validate_constraints(invalid_params)
         assert is_valid is False
 
 
@@ -261,10 +261,10 @@ class TestMinDifferenceConstraint:
 
         # 有効なパラメータ（差が 5 以上）
         valid_params = {"fast": 10, "slow": 20}  # diff = 10
-        is_valid, errors = config.validate_constraints(valid_params)
+        is_valid, _ = config.validate_constraints(valid_params)
         assert is_valid is True
 
         # 無効なパラメータ（差が 5 未満）
         invalid_params = {"fast": 10, "slow": 12}  # diff = 2
-        is_valid, errors = config.validate_constraints(invalid_params)
+        is_valid, _ = config.validate_constraints(invalid_params)
         assert is_valid is False

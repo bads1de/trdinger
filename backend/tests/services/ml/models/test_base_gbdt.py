@@ -71,7 +71,7 @@ class TestBaseGradientBoostingModel:
         with patch.object(model, "_train_model_impl") as mock_train:
             model.fit(X, y, early_stopping_rounds=5)
             # 引数を確認
-            args, kwargs = mock_train.call_args
+            args, _ = mock_train.call_args
             # X_train, X_val, y_train, y_val が渡されているはず
             assert args[0].shape[0] == 16  # 80%
             assert args[1].shape[0] == 4  # 20%

@@ -118,11 +118,11 @@ class TestOperandGroupingSystem:
     def test_validate_condition_string_right_operand(self, grouping_system):
         """文字列右オペランドとの条件検証"""
         # 互換性が高い
-        is_valid, message = grouping_system.validate_condition("close", "open")
+        is_valid, _ = grouping_system.validate_condition("close", "open")
         assert is_valid is True
 
         # 互換性が低い
-        is_valid, message = grouping_system.validate_condition("VOLUME", "RSI")
+        is_valid, _ = grouping_system.validate_condition("VOLUME", "RSI")
         assert is_valid is False
 
     def test_error_handling_invalid_operand(self, grouping_system):

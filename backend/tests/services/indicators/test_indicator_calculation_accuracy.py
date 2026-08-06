@@ -267,7 +267,7 @@ class TestMACDCalculationAccuracy:
     def test_macd_line_is_fast_ema_minus_slow_ema(self, known_prices):
         """MACDライン = Fast EMA - Slow EMAであることを検証"""
         fast, slow = 3, 5
-        macd_line, signal, histogram = MomentumIndicators.macd(
+        macd_line, _, _ = MomentumIndicators.macd(
             known_prices, fast=fast, slow=slow, signal=3
         )
 
@@ -403,7 +403,7 @@ class TestBollingerBandsAccuracy:
         """BBの中間線がSMAと一致することを検証"""
         length = 5
         std_dev = 2.0
-        upper, middle, lower = VolatilityIndicators.bbands(
+        _, middle, _ = VolatilityIndicators.bbands(
             known_prices, length=length, std=std_dev
         )
 
@@ -586,7 +586,7 @@ class TestStochasticAccuracy:
             }
         )
 
-        k, d = MomentumIndicators.stoch(
+        k, _ = MomentumIndicators.stoch(
             data["high"], data["low"], data["close"], k=5, d=3, smooth_k=3
         )
 
@@ -607,7 +607,7 @@ class TestStochasticAccuracy:
             }
         )
 
-        k, d = MomentumIndicators.stoch(
+        k, _ = MomentumIndicators.stoch(
             data["high"], data["low"], data["close"], k=5, d=3, smooth_k=3
         )
 

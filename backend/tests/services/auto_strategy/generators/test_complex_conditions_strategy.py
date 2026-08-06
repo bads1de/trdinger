@@ -67,7 +67,7 @@ def test_generate_hierarchical_structure():
 
     # Try multiple times if randomness is involved
     for _iteration in range(50):  # 試行回数を増やす
-        longs, shorts, exits = strategy.generate_conditions(indicators)
+        longs, shorts, _ = strategy.generate_conditions(indicators)
 
         # グループが見つかったか、または複数の条件が生成されたか
         has_group = any(

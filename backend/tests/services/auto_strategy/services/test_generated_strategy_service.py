@@ -232,7 +232,7 @@ class TestGeneratedStrategyService:
 
             assert response == {"status": "mocked"}
             mock_api_response.assert_called_once()
-            args, kwargs = mock_api_response.call_args
+            _, kwargs = mock_api_response.call_args
             assert kwargs["success"] is True
             assert kwargs["data"]["total_count"] == 1
             assert len(kwargs["data"]["strategies"]) == 1

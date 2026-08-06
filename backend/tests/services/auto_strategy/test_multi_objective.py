@@ -254,7 +254,7 @@ class TestEvolutionRunnerMultiObjective:
 
         mock_halloffame = Mock()
 
-        result_pop, logbook = runner.run_evolution(
+        _, _ = runner.run_evolution(
             mock_population, mock_config, halloffame=mock_halloffame
         )
 

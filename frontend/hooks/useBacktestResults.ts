@@ -5,7 +5,7 @@
  * ページネーション、フィルタリング、一括削除などの機能をサポートします。
  */
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useApiCall } from "@/hooks/useApiCall";
 import { useParameterizedDataFetching } from "./useDataFetching";
 import { BacktestResult } from "@/types/backtest";

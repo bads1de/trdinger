@@ -3,7 +3,6 @@ import {
   render,
   screen,
   fireEvent,
-  within,
   waitFor,
 } from "@testing-library/react";
 import "@testing-library/jest-dom";
@@ -70,7 +69,7 @@ jest.mock("@/components/ui/select", () => ({
 }));
 
 jest.mock("@/components/common/InputField", () => ({
-  InputField: ({ label, value, onChange }: any) => (
+  InputField: ({ value, onChange }: any) => (
     <div data-testid="input-field">
       <div data-testid="current-input-value">{value}</div>
       <button

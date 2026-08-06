@@ -1,7 +1,7 @@
 import React from "react";
 import { BacktestResult } from "@/types/backtest";
 import MetricCard from "../MetricCard";
-import { formatPercentage, formatNumber } from "@/utils/formatters";
+import { formatPercentage, formatNumber, formatRatioPercent } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 import { getReturnColor, getSharpeColor } from "@/utils/colorUtils";
 import {
@@ -192,7 +192,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
           />
           <InfoCard
             label="手数料率"
-            value={`${(Number(result.commission_rate) * 100).toFixed(2)}%`}
+            value={formatRatioPercent(Number(result.commission_rate))}
             icon={Percent}
           />
         </div>

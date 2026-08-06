@@ -4,6 +4,7 @@ import CollapsibleJson from "@/components/common/CollapsibleJson";
 import StrategyGeneDisplay from "../StrategyGeneDisplay";
 import StrategyParametersModal from "../StrategyParametersModal";
 import { formatCurrency } from "@/utils/financialFormatters";
+import { formatRatioPercent } from "@/utils/formatters";
 
 interface ParametersTabProps {
   result: BacktestResult;
@@ -82,7 +83,7 @@ export default function ParametersTab({ result }: ParametersTabProps) {
                       手数料率
                     </span>
                     <span className="text-yellow-300 font-mono text-lg font-semibold">
-                      {`${(Number(result.commission_rate) * 100).toFixed(2)}%`}
+                      {formatRatioPercent(Number(result.commission_rate))}
                     </span>
                   </div>
                   <div className="absolute inset-0 bg-purple-400/5 rounded-lg pointer-events-none"></div>
@@ -127,7 +128,7 @@ export default function ParametersTab({ result }: ParametersTabProps) {
                   <div className="flex flex-col space-y-1">
                     <span className="text-gray-400 text-sm">手数料率</span>
                     <span className="text-yellow-400 font-medium text-lg">
-                      {`${(Number(result.commission_rate) * 100).toFixed(2)}%`}
+                      {formatRatioPercent(Number(result.commission_rate))}
                     </span>
                   </div>
                 </div>

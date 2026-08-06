@@ -268,7 +268,7 @@ class TestSelectBestTunedCandidateByFitness:
             )
 
         assert result is not None
-        best_gene, best_fitness, summary = result
+        best_gene, best_fitness, _ = result
         assert best_gene is c2
         assert best_fitness == 0.9
 

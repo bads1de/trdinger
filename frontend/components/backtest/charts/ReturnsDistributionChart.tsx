@@ -50,7 +50,7 @@ interface ReturnsDistributionChartProps {
 /**
  * カスタムツールチップコンポーネント
  */
-const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<any> = ({ active, payload }) => {
   if (!active || !payload || !payload.length) {
     return null;
   }
@@ -97,7 +97,6 @@ const ReturnsDistributionChart: React.FC<ReturnsDistributionChartProps> = ({
   error,
   height = 400,
   className = "",
-  theme = "dark",
 }) => {
   // 分布データの計算
   const distributionData = useMemo(() => {

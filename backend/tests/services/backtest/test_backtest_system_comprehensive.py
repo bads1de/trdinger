@@ -151,10 +151,6 @@ class TestBacktestSystemComprehensive:
     def test_backtest_execution_basic(self, backtest_executor, sample_ohlcv_data):
         """基本バックテスト実行のテスト"""
 
-        # モック戦略クラス
-        class MockStrategy:
-            pass
-
         # データサービスのモック（メソッド名を修正）
         with patch.object(
             backtest_executor.data_service, "get_data_for_backtest"

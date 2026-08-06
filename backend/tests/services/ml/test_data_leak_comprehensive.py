@@ -82,7 +82,7 @@ class TestDataLeakComprehensive:
         X = sample_ohlcv_data.copy()
         y = pd.Series(np.random.randint(0, 3, len(X)), index=X.index)
 
-        X_train, X_test, y_train, y_test = mock_trainer._split_data(
+        X_train, X_test, _, _ = mock_trainer._split_data(
             X, y, use_time_series_split=True, test_size=0.2
         )
 
@@ -173,7 +173,7 @@ class TestDataLeakComprehensive:
         )
 
         mock_trainer.scaler = StandardScaler()
-        X_train_scaled, X_test_scaled = mock_trainer._preprocess_data(X_train, X_test)
+        _, X_test_scaled = mock_trainer._preprocess_data(X_train, X_test)
 
         # スケーラーの平均が学習データの平均と一致することを確認
         np.testing.assert_allclose(

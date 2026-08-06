@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,10 +16,8 @@ import {
 import {
   Clock,
   TrendingUp,
-  TrendingDown,
   Activity,
   RefreshCw,
-  Settings,
 } from "lucide-react";
 
 interface MainContentProps {

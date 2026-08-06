@@ -65,7 +65,7 @@ class TestStochasticRSI:
         """デフォルトパラメータでのテスト"""
         result = MomentumIndicators.stochrsi(sample_price_data)
 
-        stoch_k, stoch_d = result
+        stoch_k, _ = result
 
         # NaN値が適切に配置されているか確認
         # 最初のrsi_length + stoch_length期間は計算不可能
@@ -132,7 +132,7 @@ class TestStochasticRSI:
             base + noise, index=pd.date_range("2024-01-01", periods=100)
         )
 
-        stoch_k, stoch_d = MomentumIndicators.stochrsi(uptrend)
+        stoch_k, _ = MomentumIndicators.stochrsi(uptrend)
 
         # StochRSIは0-100の範囲で変動し、有効なデータが生成されることを確認
         valid_k = stoch_k.dropna()

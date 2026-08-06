@@ -99,7 +99,6 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
   error,
   height = 350,
   className = "",
-  theme = "dark",
 }) => {
   // データの前処理とサンプリング
   const processedData = useMemo(() => {

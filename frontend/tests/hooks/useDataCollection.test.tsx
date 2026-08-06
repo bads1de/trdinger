@@ -34,7 +34,7 @@ describe("useDataCollection", () => {
     const onError = jest.fn();
 
     // モックの実装：executeが呼ばれたらonSuccessを発火させる
-    mockExecute.mockImplementation(async (url, options) => {
+    mockExecute.mockImplementation(async (_url, options) => {
       if (options && options.onSuccess) {
         options.onSuccess("mock data");
       }
@@ -91,7 +91,7 @@ describe("useDataCollection", () => {
     const onError = jest.fn();
 
     // エラーケースのモック
-    mockExecute.mockImplementation(async (url, options) => {
+    mockExecute.mockImplementation(async (_url, options) => {
       if (options && options.onError) {
         options.onError("API Error");
       }

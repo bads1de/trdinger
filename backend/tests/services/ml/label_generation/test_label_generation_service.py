@@ -136,7 +136,7 @@ class TestLabelGenerationServiceWithEvents:
         service = LabelGenerationService()
 
         # フィルタなし
-        features_all, labels_all = service.prepare_labels(
+        features_all, _ = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
             threshold_method="TRIPLE_BARRIER",
@@ -147,7 +147,7 @@ class TestLabelGenerationServiceWithEvents:
         )
 
         # フィルタあり
-        features_filtered, labels_filtered = service.prepare_labels(
+        features_filtered, _ = service.prepare_labels(
             features_df=sample_features,
             ohlcv_df=sample_ohlcv,
             threshold_method="TRIPLE_BARRIER",

@@ -34,7 +34,7 @@ def sample_data():
 
 
 def test_create_meta_labels(sample_data):
-    X, y, primary_proba, base_probs = sample_data
+    _, y, primary_proba, _ = sample_data
     service = MetaLabelingService()
 
     threshold = 0.5

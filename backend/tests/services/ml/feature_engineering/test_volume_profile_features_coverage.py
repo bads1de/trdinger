@@ -229,7 +229,7 @@ class TestNumbaRollingVolumeProfileExpansion:
         vol = np.zeros(n)
         vol[5:15] = 1000.0  # One region of high volume
 
-        poc, vah, val = vpf._numba_rolling_volume_profile(high, low, close, vol, 15, 5)
+        poc, _, _ = vpf._numba_rolling_volume_profile(high, low, close, vol, 15, 5)
         assert poc.shape == (n,)
         assert not np.all(np.isnan(poc[15:]))
 
@@ -244,7 +244,7 @@ class TestNumbaRollingVolumeProfileExpansion:
         vol[10] = 500.0
         vol[30] = 500.0
 
-        poc, vah, val = vpf._numba_rolling_volume_profile(high, low, close, vol, 20, 10)
+        poc, _, _ = vpf._numba_rolling_volume_profile(high, low, close, vol, 20, 10)
         # Should not crash, some values might be NaN or 0
         assert poc.shape == (n,)
 

@@ -61,9 +61,6 @@ const AlgorithmSelector: React.FC<AlgorithmSelectorProps> = ({
 }) => {
   const {
     algorithms,
-    algorithmsByType,
-    probabilityAlgorithms,
-    featureImportanceAlgorithms,
     statistics,
     searchAlgorithms,
     getRecommendedAlgorithms,

@@ -212,7 +212,7 @@ class TestFactoryHybridMode:
         )
 
         # Falls back to "lightgbm"
-        args, kwargs = mock_predictor_cls.call_args
+        _, kwargs = mock_predictor_cls.call_args
         assert kwargs.get("model_type") == "lightgbm"
 
     @patch(

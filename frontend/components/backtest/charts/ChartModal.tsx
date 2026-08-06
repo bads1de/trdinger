@@ -87,27 +87,6 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
     return null;
   }
 
-  // オーバーレイクリックでモーダルを閉じる
-  const handleOverlayClick = (event: React.MouseEvent) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  // レスポンシブ対応のクラス
-  const modalClasses = `
-    fixed inset-0 z-50 flex items-center justify-center
-  `;
-
-  const contentClasses = `
-    bg-black rounded-lg shadow-2xl border border-gray-800
-    w-screen h-screen
-    sm:w-screen sm:h-screen
-    md:w-screen md:h-screen
-    lg:w-screen lg:h-screen
-    flex flex-col
-  `;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div

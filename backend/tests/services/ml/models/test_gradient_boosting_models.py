@@ -21,7 +21,7 @@ class TestGradientBoostingModels:
 
     def test_lightgbm_predict_logic(self, sample_data):
         """BaseGradientBoostingModelを経由したLightGBMModelの予測ロジックをテスト"""
-        X, y = sample_data
+        X, _ = sample_data
         model = LightGBMModel()
         model.is_trained = True
         model.feature_columns = ["f1", "f2"]
@@ -48,7 +48,7 @@ class TestGradientBoostingModels:
 
     def test_xgboost_predict_logic(self, sample_data):
         """BaseGradientBoostingModelを経由したXGBoostModelの予測ロジックをテスト"""
-        X, y = sample_data
+        X, _ = sample_data
         model = XGBoostModel()
         model.is_trained = True
         model.feature_columns = ["f1", "f2"]
@@ -76,7 +76,7 @@ class TestGradientBoostingModels:
 
     def test_catboost_predict_logic(self, sample_data):
         """CatBoostModelの予測ロジックテスト (BaseGradientBoostingModelを継承)"""
-        X, y = sample_data
+        X, _ = sample_data
         model = CatBoostModel()
         model.is_trained = True  # BaseGradientBoostingModelの規約に合わせる
         model.feature_columns = ["f1", "f2"]

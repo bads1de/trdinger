@@ -447,7 +447,7 @@ class TestRefreshBestGeneReporting:
                 return_value=None,
             ),
         ):
-            fitness, summary = manager.refresh_best_gene_reporting(
+            _, summary = manager.refresh_best_gene_reporting(
                 best_gene=best,
                 config=GAConfig(),
                 fallback_fitness=0.0,

@@ -680,7 +680,7 @@ class TestGAConfigRuntime:
             "max_drawdown": 0.2,
             "win_rate": 0.1,
         }
-        is_valid, errors = ConfigValidator.validate(config)
+        is_valid, _ = ConfigValidator.validate(config)
         assert is_valid is True
 
     def test_multi_objective_settings(self):
@@ -689,7 +689,7 @@ class TestGAConfigRuntime:
             objectives=["sharpe_ratio", "total_return"],
             objective_weights=[1.0, -0.5],
         )
-        is_valid, errors = ConfigValidator.validate(config)
+        is_valid, _ = ConfigValidator.validate(config)
         assert is_valid is True
         assert config.objectives == ["sharpe_ratio", "total_return"]
         assert config.objective_weights == [1.0, -0.5]

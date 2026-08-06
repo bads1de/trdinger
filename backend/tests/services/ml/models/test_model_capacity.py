@@ -100,7 +100,7 @@ class TestModelCapacity:
 
     def test_lightgbm_with_class_weight(self, synthetic_pattern_data):
         """class_weight='balanced' の影響を確認"""
-        X, y = synthetic_pattern_data
+        X, _ = synthetic_pattern_data
 
         # 不均衡データを模倣 (y=1を減らす)
         # feature2 > 0.9 のみ y=1 にする (10%程度)

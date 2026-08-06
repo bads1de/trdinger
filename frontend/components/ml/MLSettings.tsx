@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { InputField } from "@/components/common/InputField";
@@ -328,16 +328,6 @@ export default function MLSettings() {
               config={config.training.label_generation}
               onChange={(key, value) => {
                 if (!config) return;
-                const newConfig = {
-                  ...config,
-                  training: {
-                    ...config.training,
-                    label_generation: {
-                      ...config.training.label_generation,
-                      [key]: value,
-                    },
-                  },
-                };
                 updateConfig("training", "label_generation", {
                   ...config.training.label_generation,
                   [key]: value,

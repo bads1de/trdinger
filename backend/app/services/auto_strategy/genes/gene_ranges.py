@@ -80,21 +80,9 @@ ENTRY_GENERATION_RANGES: dict[str, tuple[float, float]] = {
     "priority": (0.5, 1.5),
 }
 
-ENTRY_VALIDATION_RANGES: dict[str, tuple[float, float]] = {
-    "limit_offset_pct": (0.0, 0.1),
-    "stop_offset_pct": (0.0, 0.1),
-    "order_validity_bars": (0, 100),
-    "priority": (0.5, 1.5),
-}
-
 # ==================== ExitGene ====================
 
 EXIT_GENERATION_RANGES: dict[str, tuple[float, float]] = {
     "partial_exit_pct": (0.5, 0.8),
-    "priority": (0.5, 1.5),
-}
-
-EXIT_VALIDATION_RANGES: dict[str, tuple[float, float]] = {
-    "partial_exit_pct": (0.1, 0.9),
     "priority": (0.5, 1.5),
 }

@@ -15,7 +15,6 @@ interface BaseBacktestConfigFormProps {
 export const BaseBacktestConfigForm: React.FC<BaseBacktestConfigFormProps> = ({
   config,
   onConfigChange,
-  isOptimization = false,
 }) => {
   const symbolOptions = [{ value: "BTC/USDT:USDT", label: "BTC/USDT:USDT" }];
 

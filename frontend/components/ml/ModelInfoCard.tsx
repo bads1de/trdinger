@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useModelInfo } from "@/hooks/useModelInfo";
-import { formatDateTime, formatFileSize } from "@/utils/formatters";
+import { formatDateTime, formatFileSize, formatRatioPercent } from "@/utils/formatters";
 import {
   Brain,
   Database,
@@ -153,7 +153,7 @@ export default function ModelInfoCard({
                   <span className="text-gray-400 text-sm">精度</span>
                   <Badge variant={getAccuracyBadgeVariant(modelInfo?.accuracy)}>
                     {modelInfo?.accuracy
-                      ? `${(modelInfo.accuracy * 100).toFixed(2)}%`
+                      ? formatRatioPercent(modelInfo.accuracy)
                       : "不明"}
                   </Badge>
                 </div>

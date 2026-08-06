@@ -223,7 +223,7 @@ class TestWindowHelpersVarianceClamp:
         assert not np.isnan(std)
         assert mean > 0.0
 
-        mean_f, std_f, count = m._window_mean_and_std_finite(arr, 0, 5)
+        _, std_f, count = m._window_mean_and_std_finite(arr, 0, 5)
         assert count == 5
         assert std_f >= 0.0
         assert not np.isnan(std_f)
@@ -644,7 +644,7 @@ class TestPrimeOscillatorResidualBranches:
     def test_constant_prices_zero_variance(self) -> None:
         m = _import_original_module("prime_oscillator")
         close = pd.Series(np.full(60, 100.0))
-        osc, sig = m.prime_oscillator(close, length=14)
+        osc, _ = m.prime_oscillator(close, length=14)
         # Constant prices => chg == 0 => variance 0 => raw oscillator kept.
         valid = osc.dropna()
         assert (valid == 0.0).all()

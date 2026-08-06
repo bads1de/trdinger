@@ -1133,7 +1133,7 @@ class TestIndividualEvaluator:
         assert initial_call_count >= 1  # 最低1回（メインTF用）
 
         # 検証2: run_backtestにpreloaded_dataが渡されたか
-        args, kwargs = self.mock_backtest_service.run_backtest.call_args
+        _, kwargs = self.mock_backtest_service.run_backtest.call_args
         # preloaded_dataはkwargsで渡される実装にした
         assert kwargs.get("preloaded_data") == mock_data
 
@@ -1151,7 +1151,7 @@ class TestIndividualEvaluator:
         assert call_count_after_2nd == call_count_before_2nd
 
         # 検証4: それでもrun_backtestには依然としてcached dataが渡されていること
-        args, kwargs = self.mock_backtest_service.run_backtest.call_args
+        _, kwargs = self.mock_backtest_service.run_backtest.call_args
         assert kwargs.get("preloaded_data") == mock_data
 
     def test_evaluate_individual_caching_with_oos(self):

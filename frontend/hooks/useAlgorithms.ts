@@ -2,7 +2,6 @@ import { useCallback, useMemo } from "react";
 import {
   ALGORITHMS,
   ALGORITHM_LIST,
-  ALGORITHM_NAMES,
   ALGORITHMS_BY_TYPE,
   ALGORITHMS_BY_CAPABILITY,
   PROBABILITY_ALGORITHMS,

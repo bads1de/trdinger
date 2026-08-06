@@ -50,7 +50,7 @@ export const useBulkIncrementalUpdate = () => {
   const bulkUpdate = useCallback(
     async (
       symbol: string,
-      timeframe: TimeFrame,
+      _timeframe: TimeFrame,
       options: BulkIncrementalUpdateOptions = {}
     ) => {
       const { onSuccess, onError } = options;

@@ -223,7 +223,7 @@ export const useAutoStrategy = (loadResults: () => void) => {
     await runAutoStrategy(`${BACKEND_API_URL}/api/auto-strategy/generate`, {
       method: "POST",
       body: requestBody,
-      onSuccess: (data) => {
+      onSuccess: () => {
         setShowAutoStrategyModal(false);
         // フロントエンドで生成したIDを使用
         const message = `🚀 戦略生成を開始しました！\n\n実験ID: ${experimentId}\n\n生成完了後、結果一覧に自動的に表示されます。\n数分お待ちください。`;

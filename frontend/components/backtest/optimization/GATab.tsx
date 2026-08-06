@@ -19,7 +19,6 @@ interface GATabProps {
 
 export default function GATab({
   baseConfig,
-  selectedStrategy,
   onRun,
   isLoading,
 }: GATabProps) {

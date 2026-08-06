@@ -247,7 +247,7 @@ class TestTripleBarrierPublicAPIEdgeCases:
 
     def test_fallback_path_when_side_column_missing(self) -> None:
         # The fallback path uses pt/sl directly on returns
-        dates, close, target = self._make_setup()
+        dates, close, _ = self._make_setup()
         tb = TripleBarrier(pt=1.0, sl=1.0, min_ret=0.0001)
         # Manually construct an events DataFrame WITHOUT the "side" column
         events = pd.DataFrame(
@@ -268,7 +268,7 @@ class TestTripleBarrierPublicAPIEdgeCases:
         assert "ret" in bins.columns
 
     def test_fallback_with_pt_positive(self) -> None:
-        dates, close, target = self._make_setup()
+        dates, close, _ = self._make_setup()
         tb = TripleBarrier(pt=1.0, sl=0.0, min_ret=0.0001)  # only pt checked
         # Pick an event where ret is large
         events = pd.DataFrame(
@@ -282,7 +282,7 @@ class TestTripleBarrierPublicAPIEdgeCases:
         assert not bins.empty
 
     def test_fallback_with_sl_positive(self) -> None:
-        dates, close, target = self._make_setup()
+        dates, close, _ = self._make_setup()
         tb = TripleBarrier(pt=0.0, sl=1.0, min_ret=0.0001)  # only sl checked
         events = pd.DataFrame(
             {
@@ -311,7 +311,7 @@ class TestTripleBarrierPublicAPIEdgeCases:
             assert ((valid == 0.0) | (valid == 1.0)).all()
 
     def test_t1_out_of_index_excluded(self) -> None:
-        dates, close, target = self._make_setup()
+        dates, close, _ = self._make_setup()
         tb = TripleBarrier(pt=1.0, sl=1.0, min_ret=0.0001)
         # Create events with t1 outside the close index
         events = pd.DataFrame(
@@ -328,7 +328,7 @@ class TestTripleBarrierPublicAPIEdgeCases:
         assert isinstance(bins, pd.DataFrame)
 
     def test_init_with_initial_price_missing_excluded(self) -> None:
-        dates, close, target = self._make_setup()
+        dates, close, _ = self._make_setup()
         # Pick an event whose start time is NOT in close.index
         tb = TripleBarrier(pt=1.0, sl=1.0, min_ret=0.0001)
         events = pd.DataFrame(

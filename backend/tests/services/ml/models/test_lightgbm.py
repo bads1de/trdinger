@@ -65,7 +65,7 @@ class TestLightGBMModel:
 
     def test_not_trained_error(self, sample_data):
         """未学習時のエラー"""
-        X, y = sample_data
+        X, _ = sample_data
         model = LightGBMModel()
         with pytest.raises(ModelError, match="学習済みモデルがありません"):
             model.predict(X)

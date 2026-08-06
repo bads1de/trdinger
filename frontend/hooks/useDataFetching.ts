@@ -132,7 +132,7 @@ export const useDataFetching = <TData = any, TParams = Record<string, any>>(
       const searchParams = buildSearchParams(params as Record<string, any>);
       const url = searchParams ? `${endpoint}?${searchParams}` : endpoint;
 
-      const response = await execute(url, {
+      await execute(url, {
         method,
         onSuccess: (result) => {
           let extractedData: TData[] = [];

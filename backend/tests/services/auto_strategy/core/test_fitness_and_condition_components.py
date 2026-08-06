@@ -599,7 +599,7 @@ class TestIndicatorCalculation:
         )
 
         prices = pd.Series([100.0 + i + np.random.randn() * 2 for i in range(50)])
-        macd_line, signal, histogram = MomentumIndicators.macd(
+        macd_line, _, _ = MomentumIndicators.macd(
             prices, fast=12, slow=26, signal=9
         )
 
@@ -629,7 +629,7 @@ class TestIndicatorCalculation:
             }
         )
 
-        k, d = MomentumIndicators.stoch(
+        k, _ = MomentumIndicators.stoch(
             data["high"], data["low"], data["close"], k=5, d=3, smooth_k=3
         )
 

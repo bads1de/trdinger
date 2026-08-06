@@ -542,7 +542,7 @@ class TestBaseMLTrainer:
         X = pd.DataFrame(np.random.randn(150, 3), index=sample_data.index)
         y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
 
-        X_tr, X_te, y_tr, y_te = trainer._split_data(X, y, test_size=0.2)
+        X_tr, X_te, _, _ = trainer._split_data(X, y, test_size=0.2)
 
         assert len(X_tr) == 120
         assert len(X_te) == 30
@@ -554,7 +554,7 @@ class TestBaseMLTrainer:
         X = pd.DataFrame(np.random.randn(150, 3), index=sample_data.index)
         y = pd.Series(np.random.randint(0, 2, 150), index=sample_data.index)
 
-        X_tr, X_te, y_tr, y_te = trainer._split_data(X, y, test_size=0.3)
+        X_tr, X_te, _, _ = trainer._split_data(X, y, test_size=0.3)
         assert len(X_tr) == 105
         assert len(X_te) == 45
 

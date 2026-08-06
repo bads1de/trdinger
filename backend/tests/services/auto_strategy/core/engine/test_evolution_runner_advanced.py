@@ -125,7 +125,7 @@ class TestEvolutionRunnerAdvanced:
         halloffame = MagicMock()
         halloffame.update = MagicMock()
 
-        result_population, logbook = runner.run_evolution(
+        result_population, _ = runner.run_evolution(
             population=mock_population,
             config=mock_config,
             halloffame=halloffame,
@@ -571,7 +571,7 @@ class TestEvolutionRunnerWithParallelEvaluator:
             parallel_evaluator=mock_parallel_evaluator,
         )
 
-        result_population, logbook = runner.run_evolution(
+        result_population, _ = runner.run_evolution(
             population=mock_population,
             config=mock_config,
         )

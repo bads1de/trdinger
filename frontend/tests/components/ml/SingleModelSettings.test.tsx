@@ -73,9 +73,7 @@ describe("SingleModelSettings", () => {
       />
     );
 
-    // モック化されたSelect内でoptionを探す
-    const options = screen.getAllByRole("option"); // <option>タグはrole='option'を持つ
-    // SelectItemはoptionに変換されている
+    // モック化されたSelect内でoptionを探す（SelectItemはoptionに変換されている）
 
     // NormalizedModelsロジックにより、重複排除やソートが行われる可能性があるが、
     // ここでは単純に存在確認

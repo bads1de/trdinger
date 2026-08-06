@@ -82,7 +82,7 @@ class TestStrategyGene:
         parent2 = StrategyGene.create_default()
         parent2.id = "parent2"
 
-        child1, child2 = StrategyGene.crossover(
+        child1, _ = StrategyGene.crossover(
             sample_gene, parent2, mock_config, crossover_type="uniform"
         )
 

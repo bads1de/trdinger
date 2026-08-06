@@ -76,13 +76,13 @@ class TestHybridFeatureAdapter:
         # Check derived features
         assert "close_return_1" in df.columns
 
-        def test_gene_to_features_validation(self, adapter):
-            """入力検証エラー"""
-            with pytest.raises(MLFeatureError, match="変換失敗"):
-                adapter.gene_to_features(None, pd.DataFrame())
+    def test_gene_to_features_validation(self, adapter):
+        """入力検証エラー"""
+        with pytest.raises(MLFeatureError, match="変換失敗"):
+            adapter.gene_to_features(None, pd.DataFrame())
 
-            with pytest.raises(MLFeatureError, match="変換失敗"):
-                adapter.gene_to_features(Mock(), pd.DataFrame())
+        with pytest.raises(MLFeatureError, match="変換失敗"):
+            adapter.gene_to_features(Mock(), pd.DataFrame())
 
     def test_augment_derived_features(self, adapter, sample_ohlcv):
         """派生特徴量生成"""

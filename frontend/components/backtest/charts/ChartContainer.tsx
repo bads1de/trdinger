@@ -106,7 +106,6 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
   error,
   height = 400,
   className = "",
-  theme = "dark",
 }) => {
   // ローディング状態
   if (loading) {

@@ -78,17 +78,6 @@ export default function ConfirmDialog({
     }
   };
 
-  const getConfirmButtonVariant = () => {
-    switch (variant) {
-      case "destructive":
-        return "destructive";
-      case "warning":
-        return "default";
-      default:
-        return "default";
-    }
-  };
-
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="sm:max-w-[425px]">

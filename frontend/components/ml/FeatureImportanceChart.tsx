@@ -84,7 +84,7 @@ export default function FeatureImportanceChart({
   };
 
   // カスタムツールチップ
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
@@ -268,7 +268,7 @@ export default function FeatureImportanceChart({
                   stroke="#0891b2"
                   strokeWidth={1}
                 >
-                  {chartData.map((entry, index) => (
+                  {chartData.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={getBarColor(index, chartData.length)}

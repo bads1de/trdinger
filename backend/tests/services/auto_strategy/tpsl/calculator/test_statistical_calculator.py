@@ -95,7 +95,7 @@ class TestStatisticalCalculator:
         assert result.take_profit_pct == 0.2
 
         # Min constraints
-        historical_prices = [100.0 for i in range(200)]
+        historical_prices = [100.0 for _ in range(200)]
         market_data = {"historical_prices": historical_prices}
 
         result = calculator.calculate(

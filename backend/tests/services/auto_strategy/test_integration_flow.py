@@ -41,7 +41,7 @@ class TestAutoStrategyFlow:
             print(f"Parent1 invalid: {errors1}")
 
         # 3. 交叉
-        child1, child2 = StrategyGene.crossover(parent1, parent2, config)
+        child1, _ = StrategyGene.crossover(parent1, parent2, config)
 
         assert child1.long_tpsl_gene is not None
         assert child1.short_tpsl_gene is not None

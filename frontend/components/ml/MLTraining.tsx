@@ -18,15 +18,9 @@ import {
   AlertCircle,
   Clock,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import OptimizationSettings, {
   OptimizationSettingsConfig,
 } from "./OptimizationSettings";
-import DataPreprocessingSettings, {
-  defaultDataPreprocessingConfig,
-} from "./DataPreprocessingSettings";
 import EnsembleSettings, { EnsembleSettingsConfig } from "./EnsembleSettings";
 import { SingleModelSettingsConfig } from "./SingleModelSettings";
 import { StopTrainingDialog } from "@/components/common/ConfirmDialog";
@@ -44,10 +38,7 @@ export default function MLTraining() {
     error,
     startTraining,
     stopTraining,
-    getActiveProcesses,
-    forceStopProcess,
     availableModels,
-    fetchAvailableModels,
   } = useMLTraining();
 
   const [optimizationSettings, setOptimizationSettings] =
@@ -57,10 +48,6 @@ export default function MLTraining() {
       n_calls: 50,
       parameter_space: {},
     });
-
-  const [preprocessingSettings, setPreprocessingSettings] = useState(
-    defaultDataPreprocessingConfig
-  );
 
   const [ensembleSettings, setEnsembleSettings] =
     useState<EnsembleSettingsConfig>({

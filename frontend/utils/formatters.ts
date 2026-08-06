@@ -148,6 +148,18 @@ export const formatLargeNumber = (num: number, digits = 2) => {
 };
 
 /**
+ * 0〜1 の比率をパーセンテージ文字列にフォーマットする
+ * @param value - 比率 (0-1の範囲、例: 0.1234 = 12.34%)
+ * @returns フォーマットされたパーセンテージ文字列 (例: '12.34%')
+ * @example
+ * // returns '12.34%'
+ * formatRatioPercent(0.1234)
+ */
+export const formatRatioPercent = (value: number) => {
+  return `${(value * 100).toFixed(2)}%`;
+};
+
+/**
  * 確率をパーセンテージでフォーマットする
  * @param prob - 確率 (0-1の範囲)
  * @returns フォーマットされた確率文字列 (例: '12.3%') または 'N/A'

@@ -116,7 +116,7 @@ describe("useFeatureImportance", () => {
       },
     };
 
-    mockUseDataFetching.mockImplementation((options: any) => {
+    mockUseDataFetching.mockImplementation(() => {
       // sortOrderが"asc"の時の変換をシミュレート
       return {
         data: Object.entries(response.feature_importance)

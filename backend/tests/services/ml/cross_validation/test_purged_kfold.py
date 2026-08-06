@@ -26,7 +26,7 @@ class TestPurgedKFold:
 
     def test_split_index_mismatch(self, sample_data):
         """Xとt1のインデックス不一致時のエラー"""
-        X, y, t1 = sample_data
+        X, _, t1 = sample_data
         pkf = PurgedKFold(n_splits=5, t1=t1)
         # インデックスが異なるXを渡す
         X_wrong = X.copy()

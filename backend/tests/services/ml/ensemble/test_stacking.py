@@ -56,7 +56,7 @@ class TestStackingEnsemble:
 
     def test_predict_proba(self, config, sample_data):
         """予測値の取得テスト（回帰タスク）"""
-        X, y = sample_data
+        X, _ = sample_data
         ensemble = StackingEnsemble(config)
 
         # 最小限の状態をセットアップ
@@ -108,7 +108,7 @@ class TestStackingEnsemble:
 
     def test_create_cv_splitter(self, config, sample_data):
         """CV分割器の作成テスト"""
-        X, y = sample_data
+        X, _ = sample_data
         ensemble = StackingEnsemble(config)
 
         # 1. KFold
@@ -208,7 +208,7 @@ class TestStackingEnsemble:
 
     def test_predict_proba_raises_when_not_fitted(self, config, sample_data):
         """未学習状態で predict_proba を呼ぶとエラー"""
-        X, y = sample_data
+        X, _ = sample_data
         ensemble = StackingEnsemble(config)
 
         with pytest.raises(Exception):
@@ -216,7 +216,7 @@ class TestStackingEnsemble:
 
     def test_predict(self, config, sample_data):
         """predict メソッドのテスト"""
-        X, y = sample_data
+        X, _ = sample_data
         ensemble = StackingEnsemble(config)
 
         # 最小限の状態をセットアップ

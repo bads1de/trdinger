@@ -486,7 +486,7 @@ class TestIntegration:
 
     def test_optimize_ml_hyperparameters(self, sample_training_data):
         """MLハイパーパラメータの最適化統合テスト"""
-        X_train, y_train, X_val, y_val = sample_training_data
+        _, _, _, _ = sample_training_data
 
         optimizer = OptunaOptimizer()
         parameter_space = {

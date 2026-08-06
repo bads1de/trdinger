@@ -70,7 +70,6 @@ export const useFeatureImportance = (
     data,
     loading,
     error,
-    params,
     setParams,
     refetch: loadFeatureImportance,
   } = useDataFetching<FeatureImportanceData, FeatureImportanceParams>({

@@ -75,12 +75,6 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
     }
   };
 
-  // TP/SL遺伝子が有効かどうかを判定
-  const isTPSLEnabled = () => {
-    return strategyGene.tpsl_gene &&
-           (strategyGene.tpsl_gene.enabled === undefined || strategyGene.tpsl_gene.enabled === true);
-  };
-
   return (
     <div className="space-y-4">
       {/* 指標セクション */}

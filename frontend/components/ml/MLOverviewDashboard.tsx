@@ -33,12 +33,7 @@ export default function MLOverviewDashboard({
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   // モデル一覧データを取得
-  const {
-    models,
-    isLoading: modelsLoading,
-    error: modelsError,
-    fetchModels,
-  } = useMLModels(5);
+  const { models, fetchModels } = useMLModels(5);
 
   // 手動更新関数
   const handleManualRefresh = () => {

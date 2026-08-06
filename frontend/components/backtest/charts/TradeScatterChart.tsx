@@ -124,7 +124,6 @@ const TradeScatterChart: React.FC<TradeScatterChartProps> = ({
   error,
   height = 400,
   className = "",
-  theme = "dark",
 }) => {
   // データの前処理とサンプリング
   const processedData = useMemo(() => {

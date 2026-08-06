@@ -12,7 +12,7 @@ import { FundingRateData } from "@/types/funding-rate";
 import { PriceData } from "@/types/market-data";
 import { OpenInterestData } from "@/types/open-interest";
 import { LongShortRatioData } from "@/types/long-short-ratio";
-import { formatDateTime } from "@/utils/formatters";
+import { formatDateTime, formatRatioPercent } from "@/utils/formatters";
 import {
   formatPrice,
   formatSymbol,
@@ -24,14 +24,29 @@ import {
 import { getFundingRateColor, getPriceChangeColor } from "@/utils/colorUtils";
 
 /**
- * 数値をフォーマット
+ * 日時を2行（日付 + 時刻）で表示するテーブルセル
  */
-const formatNumber = (value: number | null, decimals: number = 2): string => {
-  if (value === null || value === undefined) return "-";
-  return value.toLocaleString("ja-JP", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+const DateTimeCell = ({
+  value,
+  className = "font-mono text-sm",
+}: {
+  value?: string | null;
+  className?: string;
+}) => {
+  if (!value) {
+    return <span className={className}>-</span>;
+  }
+  const { date, time } = formatDateTime(value);
+  if (time) {
+    return (
+      <span className={className}>
+        {date}
+        <br />
+        {time}
+      </span>
+    );
+  }
+  return <span className={className}>{date}</span>;
 };
 
 /**
@@ -70,19 +85,7 @@ export const fundingRateColumns: TableColumn<FundingRateData>[] = [
     header: "ファンディング時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => {
-      const { date, time } = formatDateTime(value);
-      if (time) {
-        return (
-          <span className="font-mono text-sm">
-            {date}
-            <br />
-            {time}
-          </span>
-        );
-      }
-      return <span className="font-mono text-sm">{date}</span>;
-    },
+    formatter: (value: string) => <DateTimeCell value={value} />,
   },
   {
     key: "mark_price",
@@ -113,40 +116,18 @@ export const fundingRateColumns: TableColumn<FundingRateData>[] = [
     header: "次回ファンディング",
     width: "180px",
     sortable: true,
-    formatter: (value: string | null) => {
-      if (!value)
-        return <span className="font-mono text-sm text-gray-400">-</span>;
-      const { date, time } = formatDateTime(value);
-      if (time) {
-        return (
-          <span className="font-mono text-sm text-gray-400">
-            {date}
-            <br />
-            {time}
-          </span>
-        );
-      }
-      return <span className="font-mono text-sm text-gray-400">{date}</span>;
-    },
+    formatter: (value: string | null) => (
+      <DateTimeCell value={value} className="font-mono text-sm text-gray-400" />
+    ),
   },
   {
     key: "timestamp",
     header: "取得時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => {
-      const { date, time } = formatDateTime(value);
-      if (time) {
-        return (
-          <span className="font-mono text-xs text-gray-500">
-            {date}
-            <br />
-            {time}
-          </span>
-        );
-      }
-      return <span className="font-mono text-xs text-gray-500">{date}</span>;
-    },
+    formatter: (value: string) => (
+      <DateTimeCell value={value} className="font-mono text-xs text-gray-500" />
+    ),
   },
 ];
 
@@ -159,19 +140,7 @@ export const ohlcvColumns: TableColumn<PriceData>[] = [
     header: "日時",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => {
-      const { date, time } = formatDateTime(value);
-      if (time) {
-        return (
-          <span className="font-mono text-sm">
-            {date}
-            <br />
-            {time}
-          </span>
-        );
-      }
-      return <span className="font-mono text-sm">{date}</span>;
-    },
+    formatter: (value: string) => <DateTimeCell value={value} />,
   },
   {
     key: "open",
@@ -271,38 +240,18 @@ export const openInterestColumns: TableColumn<OpenInterestData>[] = [
     header: "データ時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => {
-      const { date, time } = formatDateTime(value);
-      if (time) {
-        return (
-          <span className="font-mono text-sm text-gray-400">
-            {date}
-            <br />
-            {time}
-          </span>
-        );
-      }
-      return <span className="font-mono text-sm text-gray-400">{date}</span>;
-    },
+    formatter: (value: string) => (
+      <DateTimeCell value={value} className="font-mono text-sm text-gray-400" />
+    ),
   },
   {
     key: "timestamp",
     header: "取得時刻",
     width: "180px",
     sortable: true,
-    formatter: (value: string) => {
-      const { date, time } = formatDateTime(value);
-      if (time) {
-        return (
-          <span className="font-mono text-xs text-gray-500">
-            {date}
-            <br />
-            {time}
-          </span>
-        );
-      }
-      return <span className="font-mono text-xs text-gray-500">{date}</span>;
-    },
+    formatter: (value: string) => (
+      <DateTimeCell value={value} className="font-mono text-xs text-gray-500" />
+    ),
   },
 ];
 
@@ -327,7 +276,7 @@ export const longShortRatioColumns: TableColumn<LongShortRatioData>[] = [
     sortable: true,
     formatter: (value: number) => (
       <span className="font-mono text-sm text-green-500 font-bold">
-        {(value * 100).toFixed(2)}%
+        {formatRatioPercent(value)}
       </span>
     ),
     cellClassName: "text-right",
@@ -339,7 +288,7 @@ export const longShortRatioColumns: TableColumn<LongShortRatioData>[] = [
     sortable: true,
     formatter: (value: number) => (
       <span className="font-mono text-sm text-red-500 font-bold">
-        {(value * 100).toFixed(2)}%
+        {formatRatioPercent(value)}
       </span>
     ),
     cellClassName: "text-right",

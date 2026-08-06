@@ -23,7 +23,7 @@ class TestMetaLabelingService:
 
     def test_create_meta_labels(self, sample_data):
         """メタラベル生成ロジックのテスト"""
-        X, y, primary_proba, base_probs = sample_data
+        _, y, primary_proba, _ = sample_data
         service = MetaLabelingService()
 
         # 一時的に閾値を 0.5 に設定
@@ -55,7 +55,7 @@ class TestMetaLabelingService:
             assert service.is_trained is True
             # メタ特徴量が構築されて fit に渡されたか
             assert mock_model.fit.called
-            args, kwargs = mock_model.fit.call_args
+            args, _ = mock_model.fit.call_args
             X_meta = args[0]
             # 特徴量が少なくとも1つ以上存在することを確認
             assert len(X_meta.columns) > 0
@@ -63,7 +63,7 @@ class TestMetaLabelingService:
 
     def test_predict_flow(self, sample_data):
         """予測フローのテスト"""
-        X, y, primary_proba, base_probs = sample_data
+        X, _, primary_proba, base_probs = sample_data
         service = MetaLabelingService(model_type="random_forest")
 
         # 学習済み状態をシミュレート
@@ -107,7 +107,7 @@ class TestMetaLabelingService:
 
     def test_predict_raises_when_not_trained(self, sample_data):
         """未学習状態で predict を呼ぶと RuntimeError"""
-        X, y, primary_proba, base_probs = sample_data
+        X, _, primary_proba, base_probs = sample_data
         service = MetaLabelingService()
 
         with pytest.raises(RuntimeError, match="学習されていません"):

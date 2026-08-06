@@ -64,7 +64,7 @@ class TestMTFStrategy:
             IndicatorGene(type="RSI", parameters={"period": 14}),  # モメンタム
         ]
 
-        longs, shorts, exits = strategy.generate_conditions(indicators)
+        longs, shorts, _ = strategy.generate_conditions(indicators)
 
         # 少なくとも1つの条件セットが生成されるべき
         assert len(longs) > 0
