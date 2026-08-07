@@ -148,6 +148,21 @@ export const formatLargeNumber = (num: number, digits = 2) => {
 };
 
 /**
+ * 比率 (0-1) をパーセンテージ文字列にフォーマットする共通関数
+ * @param value - 比率 (0-1の範囲、例: 0.1234 = 12.34%)
+ * @param digits - 小数点以下の桁数 (デフォルト: 2)
+ * @returns フォーマットされたパーセンテージ文字列 (例: '12.34%')
+ * @example
+ * // returns '12.34%'
+ * formatPercent(0.1234)
+ * // returns '12.3%'
+ * formatPercent(0.123, 1)
+ */
+export const formatPercent = (value: number, digits = 2) => {
+  return `${(value * 100).toFixed(digits)}%`;
+};
+
+/**
  * 0〜1 の比率をパーセンテージ文字列にフォーマットする
  * @param value - 比率 (0-1の範囲、例: 0.1234 = 12.34%)
  * @returns フォーマットされたパーセンテージ文字列 (例: '12.34%')
@@ -156,7 +171,7 @@ export const formatLargeNumber = (num: number, digits = 2) => {
  * formatRatioPercent(0.1234)
  */
 export const formatRatioPercent = (value: number) => {
-  return `${(value * 100).toFixed(2)}%`;
+  return formatPercent(value, 2);
 };
 
 /**
@@ -170,7 +185,7 @@ export const formatRatioPercent = (value: number) => {
 export const formatProbability = (prob?: number) => {
   if (prob === undefined || prob === null) return "N/A";
 
-  return `${(prob * 100).toFixed(1)}%`;
+  return formatPercent(prob, 1);
 };
 
 /**

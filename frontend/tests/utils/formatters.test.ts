@@ -5,6 +5,7 @@ import {
   formatFileSize,
   formatTrainingTime,
   formatLargeNumber,
+  formatPercent,
   formatProbability,
   formatRatioPercent,
   formatDuration,
@@ -124,6 +125,28 @@ describe("formatLargeNumber", () => {
 
   it("小数点以下の桁数を指定する", () => {
     expect(formatLargeNumber(1234, 1)).toBe("1.2K");
+  });
+});
+
+describe("formatPercent", () => {
+  it("0-1の比率をパーセンテージでフォーマットする", () => {
+    expect(formatPercent(0.1234)).toBe("12.34%");
+  });
+
+  it("小数点以下の桁数を指定できる", () => {
+    expect(formatPercent(0.123, 1)).toBe("12.3%");
+  });
+
+  it("4桁でフォーマットする", () => {
+    expect(formatPercent(0.0123, 4)).toBe("1.2300%");
+  });
+
+  it("0をフォーマットする", () => {
+    expect(formatPercent(0)).toBe("0.00%");
+  });
+
+  it("負の値をフォーマットする", () => {
+    expect(formatPercent(-0.001, 4)).toBe("-0.1000%");
   });
 });
 

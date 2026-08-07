@@ -7,6 +7,7 @@ import {
   longShortRatioColumns,
 } from "@/components/common";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { formatFundingRate } from "@/utils/financialFormatters";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";
 import { OpenInterestData } from "@/types/open-interest";
@@ -128,7 +129,7 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                     </span>
                     <span className="badge-info">
                       最新レート:{" "}
-                      {(fundingRateData[0]?.funding_rate * 100).toFixed(4)}%
+                      {formatFundingRate(fundingRateData[0].funding_rate)}
                     </span>
                   </>
                 )}

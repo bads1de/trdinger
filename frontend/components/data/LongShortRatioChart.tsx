@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Download } from 'lucide-react';
 import { LongShortRatioData } from '@/types/long-short-ratio';
 import { format } from 'date-fns';
+import { formatPercent } from '@/utils/formatters';
 
 interface LongShortRatioChartProps {
   data: LongShortRatioData[];
@@ -87,7 +88,7 @@ export const LongShortRatioChart: React.FC<LongShortRatioChartProps> = ({
                     <YAxis 
                         yAxisId="left" 
                         domain={[0, 1]} 
-                        tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} 
+                        tickFormatter={(value) => formatPercent(value, 0)} 
                     />
                     <YAxis 
                         yAxisId="right" 

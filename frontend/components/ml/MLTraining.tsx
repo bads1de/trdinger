@@ -9,6 +9,7 @@ import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { Progress } from "@/components/ui/progress";
 import { useMLTraining } from "@/hooks/useMLTraining";
 import { getStatusColor } from "@/utils/colorUtils";
+import { formatPercent } from "@/utils/formatters";
 import {
   Play,
   Square,
@@ -331,7 +332,7 @@ export default function MLTraining() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {(trainingStatus.model_info.accuracy * 100).toFixed(1)}%
+                  {formatPercent(trainingStatus.model_info.accuracy, 1)}
                 </div>
                 <div className="text-sm text-gray-600">精度</div>
               </div>

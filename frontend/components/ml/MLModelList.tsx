@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { formatDateTime, formatFileSize } from "@/utils/formatters";
+import { formatDateTime, formatFileSize, formatPercent } from "@/utils/formatters";
 import { Card, CardContent } from "@/components/ui/card";
 import ActionButton from "@/components/common/ActionButton";
 import { Badge } from "@/components/ui/badge";
@@ -142,14 +142,14 @@ export default function MLModelList({
                   {model.accuracy && model.accuracy > 0 && (
                     <div className="flex items-center space-x-1">
                       <TrendingUp className="h-4 w-4" />
-                      <span>精度: {(model.accuracy * 100).toFixed(1)}%</span>
+                      <span>精度: {formatPercent(model.accuracy, 1)}</span>
                     </div>
                   )}
 
                   {model.f1_score && model.f1_score > 0 && (
                     <div className="flex items-center space-x-1">
                       <TrendingUp className="h-4 w-4" />
-                      <span>F1: {(model.f1_score * 100).toFixed(1)}%</span>
+                      <span>F1: {formatPercent(model.f1_score, 1)}</span>
                     </div>
                   )}
 

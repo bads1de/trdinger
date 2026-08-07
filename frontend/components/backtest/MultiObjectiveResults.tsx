@@ -9,7 +9,7 @@
 import React, { useState } from "react";
 import { TrendingUp, Target, BarChart3, Info } from "lucide-react";
 import { MultiObjectiveGAResult, ParetoSolution } from "@/types/optimization";
-import { formatRatioPercent } from "@/utils/formatters";
+import { formatPercent, formatRatioPercent } from "@/utils/formatters";
 
 interface MultiObjectiveResultsProps {
   result: MultiObjectiveGAResult;
@@ -50,7 +50,7 @@ export default function MultiObjectiveResults({
     if (objective === "total_return" || objective === "max_drawdown") {
       return formatRatioPercent(value);
     } else if (objective === "win_rate") {
-      return `${(value * 100).toFixed(1)}%`;
+      return formatPercent(value, 1);
     } else {
       return value.toFixed(3);
     }

@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useFeatureImportance } from "@/hooks/useFeatureImportance";
+import { formatPercent } from "@/utils/formatters";
 import { TrendingUp, BarChart3, RefreshCw, Download } from "lucide-react";
 
 interface FeatureImportanceChartProps {
@@ -257,7 +258,7 @@ export default function FeatureImportanceChart({
                   tick={{ fill: "#9CA3AF", fontSize: 12 }}
                   tickLine={{ stroke: "#6B7280" }}
                   axisLine={{ stroke: "#6B7280" }}
-                  tickFormatter={(value) => `${(value * 100).toFixed(1)}%`}
+                  tickFormatter={(value) => formatPercent(value, 1)}
                 />
 
                 <Tooltip content={<CustomTooltip />} />

@@ -1,4 +1,4 @@
-import { formatLargeNumber } from "./formatters";
+import { formatLargeNumber, formatPercent } from "./formatters";
 
 /**
  * 通貨の値をフォーマットする
@@ -59,7 +59,7 @@ export const formatSymbol = (symbol: string) => {
  * formatFundingRate(0.0123)
  */
 export const formatFundingRate = (value: number) => {
-  return `${(value * 100).toFixed(4)}%`;
+  return formatPercent(value, 4);
 };
 
 /**

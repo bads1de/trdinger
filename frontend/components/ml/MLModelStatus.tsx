@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useMLModelStatus } from "@/hooks/useMLModelStatus";
-import { formatProbability } from "@/utils/formatters";
+import { formatPercent, formatProbability } from "@/utils/formatters";
 import { Brain, TrendingUp, BarChart3, Activity } from "lucide-react";
 
 /**
@@ -103,7 +103,7 @@ export default function MLModelStatus() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {((modelStatus.model_info?.accuracy ?? 0) * 100).toFixed(1)}%
+                  {formatPercent(modelStatus.model_info?.accuracy ?? 0, 1)}
                 </div>
                 <div className="text-sm text-gray-600">精度</div>
               </div>
