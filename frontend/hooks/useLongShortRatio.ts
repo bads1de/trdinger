@@ -1,30 +1,22 @@
 import { useCallback } from "react";
 import { LongShortRatioData } from "@/types/long-short-ratio";
-import { useParameterizedDataFetching } from "./useDataFetching";
-import { useSetLimit } from "@/utils/hookUtils";
+import { useMarketDataFetching } from "./useMarketDataFetching";
 import { useApiCall } from "./useApiCall";
-
-interface LongShortRatioParams {
-  symbol: string;
-  period: string;
-  limit: number;
-  start_date?: string;
-  end_date?: string;
-}
 
 /**
  * Long/Short Ratio データ管理フック
  */
 export const useLongShortRatio = (symbol: string, period: string, initialLimit = 100) => {
-  // データ取得
+  // データ取得（共通フックを利用）
   const {
     data,
     loading,
     error,
-    params,
-    setParams,
     refetch,
-  } = useParameterizedDataFetching<LongShortRatioData, LongShortRatioParams>(
+    setLimit,
+    setParams,
+    limit,
+  } = useMarketDataFetching<LongShortRatioData>(
     "/api/long-short-ratio/",
     { symbol, period, limit: initialLimit },
     {
@@ -47,11 +39,9 @@ export const useLongShortRatio = (symbol: string, period: string, initialLimit =
     }
   );
 
-  const setLimit = useSetLimit(setParams);
-  
   const setPeriod = useCallback(
     (newPeriod: string) => {
-        setParams({ period: newPeriod });
+      setParams({ period: newPeriod });
     },
     [setParams]
   );
@@ -84,7 +74,7 @@ export const useLongShortRatio = (symbol: string, period: string, initialLimit =
     collectData,
     setLimit,
     setPeriod,
-    limit: params.limit,
-    period: params.period
+    limit,
+    period
   };
 };

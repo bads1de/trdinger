@@ -1,13 +1,5 @@
 import { FundingRateData } from "@/types/funding-rate";
-import { useParameterizedDataFetching } from "./useDataFetching";
-import { useSetLimit } from "@/utils/hookUtils";
-
-interface FundingRateParams {
-  symbol: string;
-  limit: number;
-  start_date?: string;
-  end_date?: string;
-}
+import { useMarketDataFetching } from "./useMarketDataFetching";
 
 /**
  * ファンディングレートデータ管理フック
@@ -45,14 +37,7 @@ interface FundingRateParams {
  * }} ファンディングレートデータ管理関連の状態と操作関数
  */
 export const useFundingRateData = (symbol: string, initialLimit = 100) => {
-  const {
-    data,
-    loading,
-    error,
-    params,
-    setParams,
-    refetch,
-  } = useParameterizedDataFetching<FundingRateData, FundingRateParams>(
+  return useMarketDataFetching<FundingRateData>(
     "/api/funding-rates/",
     { symbol, limit: initialLimit },
     {
@@ -72,21 +57,4 @@ export const useFundingRateData = (symbol: string, initialLimit = 100) => {
       errorMessage: "資金調達率データの取得に失敗しました",
     }
   );
-
-  const setLimit = useSetLimit(setParams);
-
-  return {
-    /** ファンディングレートデータの配列 */
-    data,
-    /** データ取得中のローディング状態 */
-    loading,
-    /** エラーメッセージ */
-    error,
-    /** データを再取得する関数 */
-    refetch,
-    /** 表示件数を設定する関数 */
-    setLimit,
-    /** 現在の表示件数 */
-    limit: params.limit,
-  };
 };

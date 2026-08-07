@@ -1,24 +1,5 @@
 import { PriceData, TimeFrame } from "@/types/market-data";
-import { useParameterizedDataFetching } from "./useDataFetching";
-import { useSetLimit } from "@/utils/hookUtils";
-
-/**
- * OHLCVパラメータインターフェース
- *
- * OHLCVデータ取得時のパラメータを定義します。
- */
-interface OhlcvParams {
-  /** 取引シンボル */
-  symbol: string;
-  /** 時間枠 */
-  timeframe: TimeFrame;
-  /** 取得するデータ数の上限 */
-  limit: number;
-  /** 開始日（オプション） */
-  start_date?: string;
-  /** 終了日（オプション） */
-  end_date?: string;
-}
+import { useMarketDataFetching } from "./useMarketDataFetching";
 
 /**
  * OHLCVデータ取得フック
@@ -61,63 +42,40 @@ export const useOhlcvData = (
   timeframe: TimeFrame,
   initialLimit = 100
 ) => {
-  const { data, loading, error, params, setParams, refetch } =
-    useParameterizedDataFetching<PriceData, OhlcvParams>(
-      "/api/market-data/ohlcv",
-      { symbol, timeframe, limit: initialLimit },
-      {
-        transform: (response: any) => {
-          const ohlcvData = response.data?.ohlcv_data || [];
+  return useMarketDataFetching<PriceData>(
+    "/api/market-data/ohlcv",
+    { symbol, timeframe, limit: initialLimit },
+    {
+      transform: (response: any) => {
+        const ohlcvData = response.data?.ohlcv_data || [];
 
-          if (!Array.isArray(ohlcvData)) {
-            console.error("OHLCV data is not an array:", ohlcvData);
-            return [];
-          }
+        if (!Array.isArray(ohlcvData)) {
+          console.error("OHLCV data is not an array:", ohlcvData);
+          return [];
+        }
 
-          const safeNumber = (val: unknown, fallback: number = 0): number => {
-            if (val == null || typeof val !== 'number') return fallback;
-            return Number(val.toFixed(2));
-          };
+        const safeNumber = (val: unknown, fallback: number = 0): number => {
+          if (val == null || typeof val !== 'number') return fallback;
+          return Number(val.toFixed(2));
+        };
 
-          return ohlcvData
-            .map((candle: number[]) => {
-              const [timestamp, open, high, low, close, volume] = candle;
+        return ohlcvData
+          .map((candle: number[]) => {
+            const [timestamp, open, high, low, close, volume] = candle;
 
-              return {
-                timestamp: timestamp != null ? new Date(timestamp).toISOString() : null,
-                open: safeNumber(open),
-                high: safeNumber(high),
-                low: safeNumber(low),
-                close: safeNumber(close),
-                volume: safeNumber(volume),
-              };
-            })
-            .filter((candle): candle is typeof candle & { timestamp: string } => candle.timestamp !== null);
-        },
-        dependencies: [symbol, timeframe],
-        errorMessage: "OHLCVデータの取得に失敗しました",
-      }
-    );
-
-  /**
-   * 取得数を設定
-   *
-   * @param {number} newLimit - 新しい取得数
-   */
-  const setLimit = useSetLimit(setParams);
-
-  return {
-    /** OHLCVデータ */
-    data,
-    /** ローディング状態 */
-    loading,
-    /** エラーメッセージ */
-    error,
-    /** データを再取得する関数 */
-    refetch,
-    /** 取得数を設定する関数 */
-    setLimit,
-    /** 現在の取得数 */
-    limit: params.limit,
-  };
+            return {
+              timestamp: timestamp != null ? new Date(timestamp).toISOString() : null,
+              open: safeNumber(open),
+              high: safeNumber(high),
+              low: safeNumber(low),
+              close: safeNumber(close),
+              volume: safeNumber(volume),
+            };
+          })
+          .filter((candle): candle is typeof candle & { timestamp: string } => candle.timestamp !== null);
+      },
+      dependencies: [symbol, timeframe],
+      errorMessage: "OHLCVデータの取得に失敗しました",
+    }
+  );
 };

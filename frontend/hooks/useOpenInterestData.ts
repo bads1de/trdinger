@@ -1,22 +1,5 @@
 import { OpenInterestData } from "@/types/open-interest";
-import { useParameterizedDataFetching } from "./useDataFetching";
-import { useSetLimit } from "@/utils/hookUtils";
-
-/**
- * オープンインタレストパラメータインターフェース
- *
- * オープンインタレストデータ取得時のパラメータを定義します。
- */
-interface OpenInterestParams {
-  /** 取引シンボル */
-  symbol: string;
-  /** 取得するデータ数の上限 */
-  limit: number;
-  /** 開始日（オプション） */
-  start_date?: string;
-  /** 終了日（オプション） */
-  end_date?: string;
-}
+import { useMarketDataFetching } from "./useMarketDataFetching";
 
 /**
  * オープンインタレストデータ取得フック
@@ -54,14 +37,7 @@ interface OpenInterestParams {
  * }} オープンインタレストデータ取得関連の状態と操作関数
  */
 export const useOpenInterestData = (symbol: string, initialLimit = 100) => {
-  const {
-    data,
-    loading,
-    error,
-    params,
-    setParams,
-    refetch,
-  } = useParameterizedDataFetching<OpenInterestData, OpenInterestParams>(
+  return useMarketDataFetching<OpenInterestData>(
     "/api/open-interest/",
     { symbol, limit: initialLimit },
     {
@@ -70,21 +46,4 @@ export const useOpenInterestData = (symbol: string, initialLimit = 100) => {
       errorMessage: "オープンインタレストデータの取得に失敗しました",
     }
   );
-
-  const setLimit = useSetLimit(setParams);
-
-  return {
-    /** オープンインタレストデータ */
-    data,
-    /** ローディング状態 */
-    loading,
-    /** エラーメッセージ */
-    error,
-    /** データを再取得する関数 */
-    refetch,
-    /** 取得数を設定する関数 */
-    setLimit,
-    /** 現在の取得数 */
-    limit: params.limit,
-  };
 };
