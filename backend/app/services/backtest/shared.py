@@ -14,12 +14,10 @@ from typing import Any
 import pandas as pd
 
 from app.utils.data_processing.data_validator import OHLCV_COLUMNS
-from app.utils.datetime_utils import current_datetime_like as _current_datetime_like
-from app.utils.datetime_utils import (
-    normalize_datetimes_for_comparison as _normalize_datetimes_for_comparison,
-)
-from app.utils.datetime_utils import parse_datetime_value as _parse_datetime_value
-from app.utils.datetime_utils import parse_timestamp_safe as _parse_timestamp_safe
+from app.utils.datetime_utils import current_datetime_like
+from app.utils.datetime_utils import normalize_datetimes_for_comparison
+from app.utils.datetime_utils import parse_datetime_value
+from app.utils.datetime_utils import parse_timestamp_safe as safe_timestamp_conversion
 
 TRADE_PNL_COLUMNS: tuple[str, ...] = ("PnL", "Pnl", "Profit", "ProfitLoss")
 
@@ -154,39 +152,6 @@ def safe_int_conversion(value: Any) -> int:
         return 0
 
 
-def parse_datetime_value(value: Any) -> datetime:
-    """
-    datetime値をパースする。
-
-    datetime_utils.parse_datetime_value のラッパー関数です。
-
-    Args:
-        value: 変換対象の値（datetime、ISO8601文字列等）
-
-    Returns:
-        datetime: 変換されたdatetimeオブジェクト
-
-    Raises:
-        ValueError: 変換できない形式の値が渡された場合
-    """
-    return _parse_datetime_value(value)
-
-
-def safe_timestamp_conversion(value: Any) -> datetime | None:
-    """
-    timestamp値を安全にdatetimeへ変換する。
-
-    datetime_utils.parse_timestamp_safe のラッパー関数です。
-
-    Args:
-        value: 変換対象のタイムスタンプ値（数値、文字列、datetime等）
-
-    Returns:
-        Optional[datetime]: 変換されたdatetimeオブジェクト（失敗時はNone）
-    """
-    return _parse_timestamp_safe(value)
-
-
 def resolve_trade_pnl_column(
     trades_df: Any,
     preferred_columns: Sequence[str] = TRADE_PNL_COLUMNS,
@@ -256,38 +221,3 @@ def normalize_ohlcv_columns(
         normalized = normalized.copy()
         normalized[volume_column] = volume_default
     return normalized
-
-
-def normalize_datetimes_for_comparison(
-    start_date: datetime, end_date: datetime
-) -> tuple[datetime, datetime]:
-    """
-    datetime値を比較用に正規化する。
-
-    datetime_utils.normalize_datetimes_for_comparison のラッパー関数です。
-    タイムゾーンの正規化を行い、比較可能な状態にします。
-
-    Args:
-        start_date: 開始日時
-        end_date: 終了日時
-
-    Returns:
-        Tuple[datetime, datetime]: UTCタイムゾーンに正規化された(開始日時, 終了日時)のタプル
-    """
-    return _normalize_datetimes_for_comparison(start_date, end_date)
-
-
-def current_datetime_like(reference: datetime) -> datetime:
-    """
-    referenceと同じ種類の現在時刻を返す。
-
-    datetime_utils.current_datetime_like のラッパー関数です。
-    参照用のdatetimeオブジェクトと同じタイムゾーン設定で現在時刻を取得します。
-
-    Args:
-        reference: タイムゾーン設定の参照元datetimeオブジェクト
-
-    Returns:
-        datetime: referenceと同じタイムゾーン設定の現在時刻
-    """
-    return _current_datetime_like(reference)

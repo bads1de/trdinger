@@ -2,29 +2,9 @@ import { useState, useCallback } from "react";
 import { useDataFetching } from "./useDataFetching";
 import { wrapInArray } from "@/utils/hookUtils";
 import { DataResetResult } from "@/components/button/DataResetButton";
+import type { DataStatusData } from "./useDataStatus";
 
-interface DataStatus {
-  data_counts: {
-    ohlcv: number;
-    funding_rates: number;
-    open_interest: number;
-  };
-  total_records: number;
-  details?: {
-    ohlcv?: any;
-    funding_rates?: {
-      count: number;
-      latest_timestamp?: string;
-      oldest_timestamp?: string;
-    };
-    open_interest?: {
-      count: number;
-      latest_timestamp?: string;
-      oldest_timestamp?: string;
-    };
-  };
-  timestamp: string;
-}
+type DataStatus = DataStatusData;
 
 /**
  * データリセット管理フック

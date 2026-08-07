@@ -14,12 +14,10 @@ import pandas as pd
 from app.services.backtest.shared import (
     resolve_stats_object,
     resolve_trade_pnl_column,
+    safe_duration_conversion,
+    safe_float_conversion,
+    safe_int_conversion,
 )
-from app.services.backtest.shared import (
-    safe_duration_conversion as _safe_duration_conversion,
-)
-from app.services.backtest.shared import safe_float_conversion as _safe_float_conversion
-from app.services.backtest.shared import safe_int_conversion as _safe_int_conversion
 
 # backtesting.pyからのnumpy RuntimeWarningをグローバルに抑制
 warnings.filterwarnings(
@@ -82,7 +80,7 @@ class BacktestStatisticsCalculator:
     def _extract_metrics(self, stats: Any) -> dict[str, Any]:
         """Series/Dict 共通の統計指標を抽出"""
         statistics = self._extract_common_metrics(stats.get)
-        statistics["total_trades"] = self._safe_int_conversion(stats.get("# Trades", 0))
+        statistics["total_trades"] = safe_int_conversion(stats.get("# Trades", 0))
         statistics["avg_win"] = 0.0
         statistics["avg_loss"] = 0.0
         return statistics
@@ -93,52 +91,52 @@ class BacktestStatisticsCalculator:
         """Series/Dict 共通の統計指標を抽出"""
         statistics: dict[str, Any] = {}
 
-        statistics["total_return"] = self._safe_float_conversion(
+        statistics["total_return"] = safe_float_conversion(
             getter("Return [%]", 0.0)
         )
-        statistics["win_rate"] = self._safe_float_conversion(
+        statistics["win_rate"] = safe_float_conversion(
             getter("Win Rate [%]", 0.0)
         )
-        statistics["profit_factor"] = self._safe_float_conversion(
+        statistics["profit_factor"] = safe_float_conversion(
             getter("Profit Factor", 0.0)
         )
-        statistics["best_trade"] = self._safe_float_conversion(
+        statistics["best_trade"] = safe_float_conversion(
             getter("Best Trade [%]", 0.0)
         )
-        statistics["worst_trade"] = self._safe_float_conversion(
+        statistics["worst_trade"] = safe_float_conversion(
             getter("Worst Trade [%]", 0.0)
         )
-        statistics["avg_trade"] = self._safe_float_conversion(
+        statistics["avg_trade"] = safe_float_conversion(
             getter("Avg. Trade [%]", 0.0)
         )
-        statistics["max_drawdown"] = self._safe_float_conversion(
+        statistics["max_drawdown"] = safe_float_conversion(
             getter("Max. Drawdown [%]", 0.0)
         )
-        statistics["avg_drawdown"] = self._safe_float_conversion(
+        statistics["avg_drawdown"] = safe_float_conversion(
             getter("Avg. Drawdown [%]", 0.0)
         )
-        statistics["max_drawdown_duration"] = self._safe_duration_conversion(
+        statistics["max_drawdown_duration"] = safe_duration_conversion(
             getter("Max. Drawdown Duration", 0)
         )
-        statistics["avg_drawdown_duration"] = self._safe_duration_conversion(
+        statistics["avg_drawdown_duration"] = safe_duration_conversion(
             getter("Avg. Drawdown Duration", 0)
         )
-        statistics["sharpe_ratio"] = self._safe_float_conversion(
+        statistics["sharpe_ratio"] = safe_float_conversion(
             getter("Sharpe Ratio", 0.0)
         )
-        statistics["sortino_ratio"] = self._safe_float_conversion(
+        statistics["sortino_ratio"] = safe_float_conversion(
             getter("Sortino Ratio", 0.0)
         )
-        statistics["calmar_ratio"] = self._safe_float_conversion(
+        statistics["calmar_ratio"] = safe_float_conversion(
             getter("Calmar Ratio", 0.0)
         )
-        statistics["final_equity"] = self._safe_float_conversion(
+        statistics["final_equity"] = safe_float_conversion(
             getter("Equity Final [$]", 0.0)
         )
-        statistics["equity_peak"] = self._safe_float_conversion(
+        statistics["equity_peak"] = safe_float_conversion(
             getter("Equity Peak [$]", 0.0)
         )
-        statistics["buy_hold_return"] = self._safe_float_conversion(
+        statistics["buy_hold_return"] = safe_float_conversion(
             getter("Buy & Hold Return [%]", 0.0)
         )
 
@@ -283,18 +281,3 @@ class BacktestStatisticsCalculator:
             statistics["avg_trade"] = 0.0
 
         return statistics
-
-    @staticmethod
-    def _safe_float_conversion(value: Any) -> float:
-        """安全なfloat変換"""
-        return _safe_float_conversion(value)
-
-    @staticmethod
-    def _safe_int_conversion(value: Any) -> int:
-        """安全なint変換"""
-        return _safe_int_conversion(value)
-
-    @staticmethod
-    def _safe_duration_conversion(value: Any) -> float:
-        """安全な期間変換"""
-        return _safe_duration_conversion(value)

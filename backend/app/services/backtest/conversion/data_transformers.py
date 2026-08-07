@@ -155,7 +155,7 @@ class EquityCurveTransformer:
                 step = len(df) // max_points
                 df = df.iloc[::step]
 
-            df["timestamp"] = [self._safe_timestamp_conversion(t) for t in df.index]
+            df["timestamp"] = [safe_timestamp_conversion(t) for t in df.index]
             # Equity 列が存在しない場合は最後の数値列をフォールバックとする
             equity_col = (
                 "Equity"

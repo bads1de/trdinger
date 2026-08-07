@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.utils.datetime_utils import (
-    parse_timestamp_safe as _parse_timestamp_safe,
+    parse_timestamp_safe,
 )
 from app.utils.datetime_utils import (
     to_millis,
@@ -25,25 +25,6 @@ class DataConversionError(Exception):
 
     データ変換処理中に発生したエラーを表す例外クラスです。
     """
-
-
-def parse_timestamp_safe(value: Any) -> datetime | None:
-    """
-    タイムスタンプを安全にパースする（警告ログ付き）。
-
-    datetime_utils.parse_timestamp_safe のラッパー関数で、
-    変換失敗時に警告ログを出力します。
-
-    Args:
-        value: 変換対象のタイムスタンプ値（数値、文字列、datetime等）
-
-    Returns:
-        Optional[datetime]: 変換されたdatetimeオブジェクト（失敗時はNone）
-    """
-    result = _parse_timestamp_safe(value)
-    if result is None and value is not None:
-        logger.warning("タイムスタンプ変換エラー: %s - 型: %s", value, type(value))
-    return result
 
 
 class OHLCVDataConverter:

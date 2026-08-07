@@ -1,8 +1,6 @@
 import { useCallback } from "react";
-import { useDataFetching } from "./useDataFetching";
-import { wrapInArray } from "@/utils/hookUtils";
+import { useModelInfo } from "./useModelInfo";
 import { getScoreBadgeVariant, getStatusBadgeVariant } from "@/utils/mlModelUtils";
-import type { ModelStatusResponse } from "@/types/ml-model";
 
 /**
  * モデルパフォーマンス管理フック
@@ -42,17 +40,11 @@ import type { ModelStatusResponse } from "@/types/ml-model";
  */
 export const useModelPerformance = () => {
   const {
-    data: modelStatusArray,
+    modelStatus,
     loading,
     error,
-    refetch: loadModelStatus,
-  } = useDataFetching<ModelStatusResponse>({
-    endpoint: "/api/ml/status",
-    transform: wrapInArray,
-    errorMessage: "モデルパフォーマンスの取得に失敗しました",
-  });
-
-  const modelStatus = modelStatusArray.length > 0 ? modelStatusArray[0] : null;
+    loadModelStatus,
+  } = useModelInfo();
 
   /**
    * 状態に応じたバッジバリアントを取得

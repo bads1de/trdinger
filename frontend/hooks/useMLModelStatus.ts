@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useDataFetching } from "./useDataFetching";
 import { wrapInArray } from "@/utils/hookUtils";
+import { useModelInfo } from "./useModelInfo";
 import type { ModelStatusResponse, FeatureImportance } from "@/types/ml-model";
 
 /**
@@ -37,21 +38,15 @@ import type { ModelStatusResponse, FeatureImportance } from "@/types/ml-model";
  * }} MLモデル状態管理関連の状態と操作関数
  */
 export const useMLModelStatus = () => {
-  // /api/ml/status を useDataFetching に置換（単一オブジェクトを配列化）
+  // useModelInfo からモデル状態情報を取得（共通化）
   const {
-    data: statusArray,
-    loading: statusLoading,
-    error: statusError,
-    refetch: refetchStatus,
-  } = useDataFetching<ModelStatusResponse>({
-    endpoint: "/api/ml/status",
-    transform: wrapInArray,
-    errorMessage: "モデル状態の取得に失敗しました",
-  });
+    modelStatus,
+    loading: modelStatusLoading,
+    error: modelStatusError,
+    loadModelStatus,
+  } = useModelInfo();
 
-  const modelStatus = statusArray.length > 0 ? statusArray[0] : null;
-
-  // /api/ml/feature-importance も useDataFetching で取得
+  // /api/ml/feature-importance を useDataFetching で取得
   const {
     data: importanceArray,
     loading: importanceLoading,
@@ -70,8 +65,8 @@ export const useMLModelStatus = () => {
 
   // 既存APIと同じ外部インターフェースを保つため、refetch関数を公開
   const fetchModelStatus = useCallback(() => {
-    return refetchStatus();
-  }, [refetchStatus]);
+    return loadModelStatus();
+  }, [loadModelStatus]);
 
   const fetchFeatureImportance = useCallback(() => {
     return refetchImportance();
@@ -83,9 +78,9 @@ export const useMLModelStatus = () => {
     /** 特徴量重要度情報 */
     featureImportance,
     /** データ取得中のローディング状態 */
-    isLoading: statusLoading || importanceLoading,
+    isLoading: modelStatusLoading || importanceLoading,
     /** エラーメッセージ */
-    error: statusError || importanceError || null,
+    error: modelStatusError || importanceError || null,
     /** モデル状態を再取得する関数 */
     fetchModelStatus,
     /** 特徴量重要度を再取得する関数 */
