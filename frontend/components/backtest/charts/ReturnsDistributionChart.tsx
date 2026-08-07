@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
+import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
 import { calculateReturnDistribution } from "@/utils/chartDataTransformers";
 import { Trade } from "@/types/backtest";
 
@@ -58,28 +59,24 @@ const CustomTooltip: React.FC<any> = ({ active, payload }) => {
   const data = payload[0].payload;
 
   return (
-    <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
-      <p className="text-white font-semibold mb-2">リターン範囲</p>
-
+    <ChartTooltipContainer active={active} payload={payload} title="リターン範囲">
       <div className="space-y-1 text-sm">
-        <div className="flex justify-between">
-          <span className="text-gray-400">範囲:</span>
-          <span className="text-white">
-            {data.rangeStart.toFixed(1)}% ～ {data.rangeEnd.toFixed(1)}%
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">取引数:</span>
-          <span className="text-blue-400 font-medium">{data.count}件</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">頻度:</span>
-          <span className="text-green-400 font-medium">
-            {data.frequency.toFixed(1)}%
-          </span>
-        </div>
+        <TooltipRow
+          label="範囲"
+          value={`${data.rangeStart.toFixed(1)}% ～ ${data.rangeEnd.toFixed(1)}%`}
+        />
+        <TooltipRow
+          label="取引数"
+          value={`${data.count}件`}
+          valueClassName="text-blue-400 font-medium"
+        />
+        <TooltipRow
+          label="頻度"
+          value={`${data.frequency.toFixed(1)}%`}
+          valueColor="green"
+        />
       </div>
-    </div>
+    </ChartTooltipContainer>
   );
 };
 

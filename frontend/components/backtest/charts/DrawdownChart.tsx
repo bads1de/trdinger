@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
+import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
 import { sampleData } from "@/utils/chartDataTransformers";
 import { formatDateTime } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
@@ -64,23 +65,22 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
   const drawdown = data.drawdown || 0;
 
   return (
-    <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
-      <p className="text-white font-semibold mb-2">{date}</p>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm text-red-400 mr-3">ドローダウン:</span>
-        <span className="text-red-400 font-medium">
-          -{drawdown.toFixed(2)}%
-        </span>
-      </div>
+    <ChartTooltipContainer active={active} payload={payload} title={date}>
+      <TooltipRow
+        label="ドローダウン"
+        value={`-${drawdown.toFixed(2)}%`}
+        className="flex items-center justify-between mb-1"
+        labelColor="red"
+        valueColor="red"
+      />
       {data.equity && (
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-600">
-          <span className="text-sm text-gray-400">資産額:</span>
-          <span className="text-white font-medium">
-            {formatCurrency(data.equity)}
-          </span>
-        </div>
+        <TooltipRow
+          label="資産額"
+          value={formatCurrency(data.equity)}
+          className="flex items-center justify-between mt-2 pt-2 border-t border-gray-600"
+        />
       )}
-    </div>
+    </ChartTooltipContainer>
   );
 };
 

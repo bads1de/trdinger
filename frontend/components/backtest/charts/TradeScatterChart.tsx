@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
+import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
 import { formatDateTime } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 import { sampleData } from "@/utils/chartDataTransformers";
@@ -65,47 +66,28 @@ const CustomTooltip: React.FC<any> = ({ active, payload }) => {
   const exitDate = new Date(data.exitDate).toLocaleDateString("ja-JP");
 
   return (
-    <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
-      <p className="text-white font-semibold mb-2">取引詳細</p>
-
+    <ChartTooltipContainer active={active} payload={payload} title="取引詳細">
       <div className="space-y-1 text-sm">
-        <div className="flex justify-between">
-          <span className="text-gray-400">エントリー:</span>
-          <span className="text-white">{entryDate}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">イグジット:</span>
-          <span className="text-white">{exitDate}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">タイプ:</span>
-          <span
-            className={
-              data.type === "long" ? "text-green-400" : "text-yellow-400"
-            }
-          >
-            {data.type === "long" ? "ロング" : "ショート"}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">リターン:</span>
-          <span className={data.isWin ? "text-green-400" : "text-red-400"}>
-            {data.returnPct > 0 ? "+" : ""}
-            {data.returnPct.toFixed(2)}%
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">損益:</span>
-          <span className={data.isWin ? "text-green-400" : "text-red-400"}>
-            {formatCurrency(data.pnl)}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-gray-400">サイズ:</span>
-          <span className="text-white">{data.size.toFixed(2)}</span>
-        </div>
+        <TooltipRow label="エントリー" value={entryDate} />
+        <TooltipRow label="イグジット" value={exitDate} />
+        <TooltipRow
+          label="タイプ"
+          value={data.type === "long" ? "ロング" : "ショート"}
+          valueColor={data.type === "long" ? "green" : "yellow"}
+        />
+        <TooltipRow
+          label="リターン"
+          value={`${data.returnPct > 0 ? "+" : ""}${data.returnPct.toFixed(2)}%`}
+          valueColor={data.isWin ? "green" : "red"}
+        />
+        <TooltipRow
+          label="損益"
+          value={formatCurrency(data.pnl)}
+          valueColor={data.isWin ? "green" : "red"}
+        />
+        <TooltipRow label="サイズ" value={data.size.toFixed(2)} />
       </div>
-    </div>
+    </ChartTooltipContainer>
   );
 };
 

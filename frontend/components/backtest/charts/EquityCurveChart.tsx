@@ -20,6 +20,7 @@ import {
 } from "recharts";
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
+import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
 import { formatDateTime } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 import { sampleData } from "@/utils/chartDataTransformers";
@@ -68,29 +69,31 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
   const date = new Date(label).toLocaleDateString("ja-JP");
 
   return (
-    <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg">
-      <p className="text-white font-semibold mb-2">{date}</p>
+    <ChartTooltipContainer active={active} payload={payload} title={date}>
       {payload.map((entry: any, index: number) => (
-        <div key={index} className="flex items-center justify-between mb-1">
-          <span className="text-sm mr-3" style={{ color: entry.color }}>
-            {entry.name}:
-          </span>
-          <span className="text-white font-medium">
-            {entry.dataKey === "equity" || entry.dataKey === "buyHold"
+        <TooltipRow
+          key={index}
+          label={entry.name}
+          value={
+            entry.dataKey === "equity" || entry.dataKey === "buyHold"
               ? formatCurrency(entry.value)
-              : `${entry.value.toFixed(2)}%`}
-          </span>
-        </div>
+              : `${entry.value.toFixed(2)}%`
+          }
+          className="flex items-center justify-between mb-1"
+          labelClassName="text-sm"
+          labelStyle={{ color: entry.color }}
+        />
       ))}
       {data.drawdown > 0 && (
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-600">
-          <span className="text-sm text-red-400">ドローダウン:</span>
-          <span className="text-red-400 font-medium">
-            -{data.drawdown.toFixed(2)}%
-          </span>
-        </div>
+        <TooltipRow
+          label="ドローダウン"
+          value={`-${data.drawdown.toFixed(2)}%`}
+          className="flex items-center justify-between mt-2 pt-2 border-t border-gray-600"
+          labelColor="red"
+          valueColor="red"
+        />
       )}
-    </div>
+    </ChartTooltipContainer>
   );
 };
 
