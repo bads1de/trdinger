@@ -170,6 +170,69 @@ export interface BacktestConfig {
 }
 
 /**
+ * 戦略遺伝子（GA戦略）の単一条件
+ */
+export interface StrategyCondition {
+  /** 左辺オペランド（例: "rsi"） */
+  left_operand: string;
+  /** 比較演算子（例: ">", "<", "crosses_above"） */
+  operator: string;
+  /** 右辺オペランド（数値または文字列） */
+  right_operand: string | number;
+}
+
+/**
+ * OR条件で結合された条件グループ
+ */
+export interface StrategyConditionGroup {
+  /** グループ内の条件群（OR結合） */
+  conditions: StrategyCondition[];
+}
+
+/**
+ * 単一条件または条件グループ
+ */
+export type StrategyConditionOrGroup =
+  | StrategyCondition
+  | StrategyConditionGroup;
+
+/**
+ * 戦略遺伝子で使用するインジケーター
+ */
+export interface StrategyIndicator {
+  /** インジケータータイプ（例: "rsi", "ema"） */
+  type: string;
+  /** パラメータ辞書 */
+  parameters: Record<string, any>;
+  /** 有効フラグ */
+  enabled: boolean;
+}
+
+/**
+ * GAで生成された戦略遺伝子
+ */
+export interface StrategyGene {
+  /** 遺伝子ID（任意） */
+  id?: string;
+  /** 使用インジケーター群 */
+  indicators?: StrategyIndicator[];
+  /** エントリー条件（全方向共通。旧形式） */
+  entry_conditions?: StrategyConditionOrGroup[];
+  /** ロングエントリー条件 */
+  long_entry_conditions?: StrategyConditionOrGroup[];
+  /** ショートエントリー条件 */
+  short_entry_conditions?: StrategyConditionOrGroup[];
+  /** エグジット条件 */
+  exit_conditions?: StrategyConditionOrGroup[];
+  /** TP/SL設定 */
+  tpsl_gene?: Record<string, any>;
+  /** 資金管理設定 */
+  position_sizing_gene?: Record<string, any>;
+  /** メタデータ */
+  metadata?: Record<string, any>;
+}
+
+/**
  * チャートコンテナのProps
  */
 export interface ChartContainerProps {

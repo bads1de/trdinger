@@ -10,40 +10,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Info, TrendingUp, Shield, DollarSign, BarChart3 } from "lucide-react";
-import { BacktestResult } from "@/types/backtest";
+import { BacktestResult, StrategyConditionOrGroup, StrategyGene } from "@/types/backtest";
 import { formatNumber, formatRatioPercent } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
+import { formatCondition } from "@/utils/strategyGene";
 
 interface StrategyParametersModalProps {
   result: BacktestResult;
-}
-
-interface Condition {
-  left_operand: string;
-  operator: string;
-  right_operand: string | number;
-}
-
-interface ConditionGroup {
-  conditions: Condition[];
-}
-
-type ConditionOrGroup = Condition | ConditionGroup;
-
-interface StrategyGene {
-  id?: string;
-  indicators?: Array<{
-    type: string;
-    parameters: Record<string, any>;
-    enabled: boolean;
-  }>;
-  entry_conditions?: ConditionOrGroup[];
-  long_entry_conditions?: ConditionOrGroup[];
-  short_entry_conditions?: ConditionOrGroup[];
-  exit_conditions?: ConditionOrGroup[];
-  tpsl_gene?: Record<string, any>;
-  position_sizing_gene?: Record<string, any>;
-  metadata?: Record<string, any>;
 }
 
 export default function StrategyParametersModal({
@@ -71,7 +44,7 @@ export default function StrategyParametersModal({
     return String(value);
   };
 
-  const getEffectiveLongConditions = (): ConditionOrGroup[] => {
+  const getEffectiveLongConditions = (): StrategyConditionOrGroup[] => {
     if (!strategyGene) return [];
     if (
       strategyGene.long_entry_conditions &&
@@ -82,7 +55,7 @@ export default function StrategyParametersModal({
     return strategyGene.entry_conditions || [];
   };
 
-  const getEffectiveShortConditions = (): ConditionOrGroup[] => {
+  const getEffectiveShortConditions = (): StrategyConditionOrGroup[] => {
     if (!strategyGene) return [];
     if (
       strategyGene.short_entry_conditions &&
@@ -97,18 +70,6 @@ export default function StrategyParametersModal({
       return strategyGene.entry_conditions || [];
     }
     return [];
-  };
-
-  const formatCondition = (condition: ConditionOrGroup): string => {
-    if ("conditions" in condition) {
-      const subConditions = condition.conditions.map(
-        (subCond) =>
-          `${subCond.left_operand} ${subCond.operator} ${subCond.right_operand}`
-      );
-      return `(${subConditions.join(" OR ")})`;
-    } else {
-      return `${condition.left_operand} ${condition.operator} ${condition.right_operand}`;
-    }
   };
 
   const effectiveLongConditions = getEffectiveLongConditions();

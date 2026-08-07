@@ -8,33 +8,8 @@
 
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-
-interface Condition {
-  left_operand: string;
-  operator: string;
-  right_operand: string | number;
-}
-
-interface ConditionGroup {
-  conditions: Condition[];
-}
-
-type ConditionOrGroup = Condition | ConditionGroup;
-
-interface StrategyGene {
-  id?: string;
-  indicators?: Array<{
-    type: string;
-    parameters: Record<string, any>;
-    enabled: boolean;
-  }>;
-  long_entry_conditions?: ConditionOrGroup[];
-  short_entry_conditions?: ConditionOrGroup[];
-  exit_conditions?: ConditionOrGroup[];
-  tpsl_gene?: Record<string, any>;
-  position_sizing_gene?: Record<string, any>;
-  metadata?: Record<string, any>;
-}
+import { StrategyConditionOrGroup, StrategyGene } from "@/types/backtest";
+import { formatCondition } from "@/utils/strategyGene";
 
 interface StrategyGeneDisplayProps {
   strategyGene: StrategyGene;
@@ -61,19 +36,6 @@ const StrategyGeneDisplay: React.FC<StrategyGeneDisplayProps> = ({
 
   const effectiveLongConditions = strategyGene.long_entry_conditions || [];
   const effectiveShortConditions = strategyGene.short_entry_conditions || [];
-
-  const formatCondition = (condition: ConditionOrGroup): string => {
-    if ('conditions' in condition) {
-      // ConditionGroupの場合
-      const subConditions = condition.conditions.map(subCond =>
-        `${subCond.left_operand} ${subCond.operator} ${subCond.right_operand}`
-      );
-      return `(${subConditions.join(' OR ')})`;
-    } else {
-      // Conditionの場合
-      return `${condition.left_operand} ${condition.operator} ${condition.right_operand}`;
-    }
-  };
 
   return (
     <div className="space-y-4">
