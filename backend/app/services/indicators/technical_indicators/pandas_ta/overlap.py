@@ -45,12 +45,12 @@ import pandas as pd
 import pandas_ta_classic as _pandas_ta_classic
 
 from ...data_validation import (
-    create_nan_series_bundle,
     create_nan_series_like,
     create_nan_series_map,
     handle_pandas_ta_errors,
     run_multi_series_indicator,
     run_series_indicator,
+    run_tuple_indicator,
     validate_multi_series_params,
 )
 
@@ -351,9 +351,28 @@ class OverlapIndicators:
         if "factor" in kwargs:
             multiplier = kwargs["factor"]
 
-        result = cast(
-            pd.DataFrame | tuple[pd.Series, pd.Series, pd.Series],
-            run_multi_series_indicator(
+        def extract_supertrend(
+            result: pd.DataFrame,
+        ) -> tuple[pd.Series, pd.Series, pd.Series]:
+            # カラム名: SUPERTl_{length}_{multiplier}, SUPERTs_{length}_{multiplier}, SUPERTd_{length}_{multiplier}
+            try:
+                # 浮動小数点形式 (例: 3.0)
+                return (
+                    result[f"SUPERTl_{period}_{float(multiplier)}"],
+                    result[f"SUPERTs_{period}_{float(multiplier)}"],
+                    result[f"SUPERTd_{period}_{float(multiplier)}"],
+                )
+            except KeyError:
+                # 整数形式 (例: 3)
+                return (
+                    result[f"SUPERTl_{period}_{int(multiplier)}"],
+                    result[f"SUPERTs_{period}_{int(multiplier)}"],
+                    result[f"SUPERTd_{period}_{int(multiplier)}"],
+                )
+
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
                 {"high": high, "low": low, "close": close},
                 period,
                 lambda: ta.supertrend(
@@ -363,34 +382,10 @@ class OverlapIndicators:
                     length=period,
                     multiplier=multiplier,
                 ),
-                fallback_factory=lambda: create_nan_series_bundle(high, 3),
+                count=3,
+                extract=extract_supertrend,
             ),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        # カラム名: SUPERTl_{length}_{multiplier}, SUPERTs_{length}_{multiplier}, SUPERTd_{length}_{multiplier}
-        try:
-            # 浮動小数点形式 (例: 3.0)
-            return (
-                cast(pd.Series, result[f"SUPERTl_{period}_{float(multiplier)}"]),
-                cast(pd.Series, result[f"SUPERTs_{period}_{float(multiplier)}"]),
-                cast(pd.Series, result[f"SUPERTd_{period}_{float(multiplier)}"]),
-            )
-        except KeyError:
-            try:
-                # 整数形式 (例: 3)
-                return (
-                    cast(pd.Series, result[f"SUPERTl_{period}_{int(multiplier)}"]),
-                    cast(pd.Series, result[f"SUPERTs_{period}_{int(multiplier)}"]),
-                    cast(pd.Series, result[f"SUPERTd_{period}_{int(multiplier)}"]),
-                )
-            except (KeyError, Exception):
-                return cast(
-                    tuple[pd.Series, pd.Series, pd.Series],
-                    create_nan_series_bundle(high, 3),
-                )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -486,9 +481,9 @@ class OverlapIndicators:
         offset: int = 0,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Gann HiLo"""
-        result = cast(
-            pd.DataFrame | tuple[pd.Series, pd.Series, pd.Series],
-            run_multi_series_indicator(
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
                 {"high": high, "low": low, "close": close},
                 max(high_length, low_length),
                 lambda: ta.hilo(
@@ -500,15 +495,10 @@ class OverlapIndicators:
                     mamode=mamode,
                     offset=offset,
                 ),
-                fallback_factory=lambda: create_nan_series_bundle(close, 3),
+                count=3,
+                reference=close,
             ),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        # Returns HILO, HILOl, HILOs
-        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     @handle_pandas_ta_errors

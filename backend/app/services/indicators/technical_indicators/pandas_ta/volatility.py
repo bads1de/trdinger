@@ -29,10 +29,10 @@ import pandas as pd
 import pandas_ta_classic as _pandas_ta_classic
 
 from ...data_validation import (
-    create_nan_series_bundle,
     handle_pandas_ta_errors,
     run_multi_series_indicator,
     run_series_indicator,
+    run_tuple_indicator,
 )
 
 ta: Any = _pandas_ta_classic
@@ -95,35 +95,12 @@ class VolatilityIndicators:
         )
 
     @staticmethod
-    @handle_pandas_ta_errors
-    def bbands(
-        data: pd.Series, length: int = 20, std: float = 2.0
+    def _extract_bbands(
+        result: pd.DataFrame,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
-        """ボリンジャーバンド"""
-        result: Any = run_series_indicator(
-            data,
-            length,
-            lambda: ta.bbands(data, length=length, std=std),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(data, 3),
-            ),
-        )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
-
-        if result is None:
-            logger.error("BBands: Calculation returned None - returning NaN series")
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(data, 3),
-            )
-
-        # 列名を動的に取得（pandas-taのバージョンによって異なる可能性がある）
+        """Bollinger Bands の DataFrame から 3バンドを列名検索で抽出する。"""
         columns = result.columns.tolist()
 
-        # 上位、中位、下位バンドを特定（安全なインデックスアクセス）
         def find_column(pattern: str, fallback_index: int) -> str:
             matches = [col for col in columns if pattern in col]
             return str(matches[0] if matches else columns[fallback_index])
@@ -140,6 +117,23 @@ class VolatilityIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def bbands(
+        data: pd.Series, length: int = 20, std: float = 2.0
+    ) -> tuple[pd.Series, pd.Series, pd.Series]:
+        """ボリンジャーバンド"""
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                data,
+                length,
+                lambda: ta.bbands(data, length=length, std=std),
+                count=3,
+                extract=VolatilityIndicators._extract_bbands,
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def keltner(
         high: pd.Series,
         low: pd.Series,
@@ -151,53 +145,45 @@ class VolatilityIndicators:
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Keltner Channels: returns (upper, middle, lower)"""
 
-        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
-            """計算失敗時に NaN の Series を返すヘルパー関数"""
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
-            )
-
-        df: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            period,
-            lambda: ta.kc(
-                high=high,
-                low=low,
-                close=close,
-                length=period,
-                scalar=scalar,
-                mamode=mamode,
-            ),
-            fallback_factory=nan_result,
-        )
-
-        if isinstance(df, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], df)
-
-        if hasattr(df, "empty") and getattr(df, "empty", False):
-            return nan_result()
-
-        # カラム名: KC{mamode[0]}_{length}_{scalar}
-        m = mamode[0].lower()
-        # pandas-ta は整数として埋め込む場合と浮動小数点として埋め込む場合があるため、両方試行
-        try:
-            # 浮動小数点形式 (例: 2.0)
-            return (
-                df[f"KCU{m}_{period}_{float(scalar)}"],
-                df[f"KCB{m}_{period}_{float(scalar)}"],
-                df[f"KCL{m}_{period}_{float(scalar)}"],
-            )
-        except KeyError:
+        def extract_keltner(
+            result: pd.DataFrame,
+        ) -> tuple[pd.Series, pd.Series, pd.Series]:
+            # カラム名: KC{mamode[0]}_{length}_{scalar}
+            m = mamode[0].lower()
+            # pandas-ta は整数として埋め込む場合と浮動小数点として埋め込む場合があるため、両方試行
             try:
+                # 浮動小数点形式 (例: 2.0)
+                return (
+                    result[f"KCU{m}_{period}_{float(scalar)}"],
+                    result[f"KCB{m}_{period}_{float(scalar)}"],
+                    result[f"KCL{m}_{period}_{float(scalar)}"],
+                )
+            except KeyError:
                 # 整数形式 (例: 2)
                 return (
-                    df[f"KCU{m}_{period}_{int(scalar)}"],
-                    df[f"KCB{m}_{period}_{int(scalar)}"],
-                    df[f"KCL{m}_{period}_{int(scalar)}"],
+                    result[f"KCU{m}_{period}_{int(scalar)}"],
+                    result[f"KCB{m}_{period}_{int(scalar)}"],
+                    result[f"KCL{m}_{period}_{int(scalar)}"],
                 )
-            except (KeyError, Exception):
-                return nan_result()
+
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                period,
+                lambda: ta.kc(
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=period,
+                    scalar=scalar,
+                    mamode=mamode,
+                ),
+                count=3,
+                reference=close,
+                extract=extract_keltner,
+            ),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -208,39 +194,31 @@ class VolatilityIndicators:
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Donchian Channels: returns (upper, middle, lower)"""
 
-        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(high, 3),
-            )
-
-        df: Any = run_multi_series_indicator(
-            {"high": high, "low": low},
-            length,
-            lambda: ta.donchian(
-                high=high,
-                low=low,
-                lower_length=length,
-                upper_length=length,
-            ),
-            fallback_factory=nan_result,
-        )
-
-        if isinstance(df, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], df)
-
-        if hasattr(df, "empty") and getattr(df, "empty", False):
-            return nan_result()
-
-        # カラム名: DCU_{length}_{length}, DCM_{length}_{length}, DCL_{length}_{length}
-        try:
+        def extract_donchian(
+            result: pd.DataFrame,
+        ) -> tuple[pd.Series, pd.Series, pd.Series]:
+            # カラム名: DCU_{length}_{length}, DCM_{length}_{length}, DCL_{length}_{length}
             return (
-                df[f"DCU_{length}_{length}"],
-                df[f"DCM_{length}_{length}"],
-                df[f"DCL_{length}_{length}"],
+                result[f"DCU_{length}_{length}"],
+                result[f"DCM_{length}_{length}"],
+                result[f"DCL_{length}_{length}"],
             )
-        except (KeyError, Exception):
-            return nan_result()
+
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low},
+                length,
+                lambda: ta.donchian(
+                    high=high,
+                    low=low,
+                    lower_length=length,
+                    upper_length=length,
+                ),
+                count=3,
+                extract=extract_donchian,
+            ),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -252,34 +230,27 @@ class VolatilityIndicators:
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Acceleration Bands: returns (upper, middle, lower)"""
 
-        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
-            )
-
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            period,
-            lambda: ta.accbands(high=high, low=low, close=close, length=period),
-            fallback_factory=nan_result,
-        )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
-
-        if hasattr(result, "empty") and getattr(result, "empty", False):
-            return nan_result()
-
-        # カラム名: ACCBU_{length}, ACCBM_{length}, ACCBL_{length}
-        try:
+        def extract_accbands(
+            result: pd.DataFrame,
+        ) -> tuple[pd.Series, pd.Series, pd.Series]:
+            # カラム名: ACCBU_{length}, ACCBM_{length}, ACCBL_{length}
             return (
                 result[f"ACCBU_{period}"],
                 result[f"ACCBM_{period}"],
                 result[f"ACCBL_{period}"],
             )
-        except (KeyError, Exception):
-            return nan_result()
+
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                period,
+                lambda: ta.accbands(high=high, low=low, close=close, length=period),
+                count=3,
+                reference=close,
+                extract=extract_accbands,
+            ),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -387,37 +358,21 @@ class VolatilityIndicators:
         atr_length: int = 15,
     ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """Aberration"""
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            max(length, atr_length),
-            lambda: ta.aberration(
-                high=high,
-                low=low,
-                close=close,
-                length=length,
-                atr_length=atr_length,
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                max(length, atr_length),
+                lambda: ta.aberration(
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=length,
+                    atr_length=atr_length,
+                ),
+                count=4,
+                reference=close,
             ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 4),
-            ),
-        )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
-
-        if hasattr(result, "empty") and getattr(result, "empty", False):
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 4),
-            )
-
-        # Returns multiple columns. Usually ZG, SG, XG, ATR
-        return (
-            result.iloc[:, 0],
-            result.iloc[:, 1],
-            result.iloc[:, 2],
-            result.iloc[:, 3],
         )
 
     @staticmethod
@@ -437,26 +392,15 @@ class VolatilityIndicators:
                 category=RuntimeWarning,
                 module=r"pandas_ta_classic\.volatility\.hwc",
             )
-            result: Any = run_series_indicator(
-                close,
-                max(na, nb, nc),
-                lambda: ta.hwc(close=close, na=na, nb=nb, nc=nc),
-                fallback_factory=lambda: cast(
-                    tuple[pd.Series, pd.Series, pd.Series],
-                    create_nan_series_bundle(close, 3),
-                ),
-            )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
-
-        if hasattr(result, "empty") and getattr(result, "empty", False):
             return cast(
                 tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
+                run_tuple_indicator(
+                    close,
+                    max(na, nb, nc),
+                    lambda: ta.hwc(close=close, na=na, nb=nb, nc=nc),
+                    count=3,
+                ),
             )
-
-        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -488,37 +432,20 @@ class VolatilityIndicators:
         drift: int = 1,
     ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
         """Thermo"""
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low},
-            length,
-            lambda: ta.thermo(
-                high=high,
-                low=low,
-                length=length,
-                long=long_,
-                short=short,
-                mamode=mamode,
-                drift=drift,
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low},
+                length,
+                lambda: ta.thermo(
+                    high=high,
+                    low=low,
+                    length=length,
+                    long=long_,
+                    short=short,
+                    mamode=mamode,
+                    drift=drift,
+                ),
+                count=4,
             ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(high, 4),
-            ),
-        )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series, pd.Series], result)
-
-        if hasattr(result, "empty") and getattr(result, "empty", False):
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(high, 4),
-            )
-
-        # Returns Thermo, ThermoMa, ThermoLa, ThermoSa
-        return (
-            result.iloc[:, 0],
-            result.iloc[:, 1],
-            result.iloc[:, 2],
-            result.iloc[:, 3],
         )

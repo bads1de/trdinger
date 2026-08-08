@@ -37,25 +37,16 @@ import pandas_ta_classic as _pandas_ta_classic
 from numba import njit
 
 from ...data_validation import (
-    create_nan_series_bundle,
     handle_pandas_ta_errors,
     normalize_non_finite,
     run_multi_series_indicator,
     run_series_indicator,
+    run_tuple_indicator,
 )
 
 ta: Any = _pandas_ta_classic
 
 logger = logging.getLogger(__name__)
-
-
-def _dataframe_to_series_tuple(
-    result: pd.DataFrame | None,
-) -> tuple[pd.Series, ...] | None:
-    """pandas-ta の DataFrame 結果を Series のタプルに変換する。"""
-    if result is None or result.empty:
-        return None
-    return tuple(result.iloc[:, i] for i in range(result.shape[1]))
 
 
 @njit(cache=True)  # type: ignore[untyped-decorator]
@@ -406,19 +397,17 @@ class VolumeIndicators:
 
         return cast(
             tuple[pd.Series, pd.Series, pd.Series],
-            run_series_indicator(
+            run_tuple_indicator(
                 volume,
                 slow,
-                lambda: _dataframe_to_series_tuple(
-                    ta.pvo(
-                        volume=volume,
-                        fast=fast,
-                        slow=slow,
-                        signal=signal,
-                        scalar=scalar,
-                    )
+                lambda: ta.pvo(
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                    signal=signal,
+                    scalar=scalar,
                 ),
-                fallback_factory=lambda: create_nan_series_bundle(volume, 3),
+                count=3,
             ),
         )
 
@@ -454,24 +443,22 @@ class VolumeIndicators:
         """
         return cast(
             tuple[pd.Series, pd.Series],
-            run_multi_series_indicator(
+            run_tuple_indicator(
                 {"high": high, "low": low, "close": close, "volume": volume},
                 max(fast, slow),
-                lambda: _dataframe_to_series_tuple(
-                    ta.kvo(
-                        high=high,
-                        low=low,
-                        close=close,
-                        volume=volume,
-                        fast=fast,
-                        slow=slow,
-                        signal=signal,
-                        scalar=scalar,
-                        mamode=mamode,
-                        drift=drift,
-                    )
+                lambda: ta.kvo(
+                    high=high,
+                    low=low,
+                    close=close,
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                    signal=signal,
+                    scalar=scalar,
+                    mamode=mamode,
+                    drift=drift,
                 ),
-                fallback_factory=lambda: create_nan_series_bundle(high, 2),
+                count=2,
             ),
         )
 
@@ -610,22 +597,20 @@ class VolumeIndicators:
                 pd.Series,
                 pd.Series,
             ],
-            run_multi_series_indicator(
+            run_tuple_indicator(
                 {"close": close, "volume": volume},
                 slow,
-                lambda: _dataframe_to_series_tuple(
-                    ta.aobv(
-                        close=close,
-                        volume=volume,
-                        fast=fast,
-                        slow=slow,
-                        max_lookback=max_lookback,
-                        min_lookback=min_lookback,
-                        mamode=mamode,
-                        scalar=scalar,
-                    )
+                lambda: ta.aobv(
+                    close=close,
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                    max_lookback=max_lookback,
+                    min_lookback=min_lookback,
+                    mamode=mamode,
+                    scalar=scalar,
                 ),
-                fallback_factory=lambda: create_nan_series_bundle(close, 7),
+                count=7,
             ),
         )
 

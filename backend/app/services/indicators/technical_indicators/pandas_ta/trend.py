@@ -35,11 +35,11 @@ import pandas_ta_classic as _pandas_ta_classic
 from numba import njit
 
 from ...data_validation import (
-    create_nan_series_bundle,
     create_nan_series_like,
     handle_pandas_ta_errors,
     run_multi_series_indicator,
     run_series_indicator,
+    run_tuple_indicator,
 )
 
 ta: Any = _pandas_ta_classic
@@ -222,25 +222,22 @@ class TrendIndicators:
         if drift <= 0:
             raise ValueError(f"drift must be positive: {drift}")
 
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.vortex(
-                high=high,
-                low=low,
-                close=close,
-                length=length,
-                drift=drift,
-                offset=offset,
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.vortex(
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=length,
+                    drift=drift,
+                    offset=offset,
+                ),
+                count=2,
             ),
         )
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -255,42 +252,34 @@ class TrendIndicators:
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """ADX: returns (adx, dmp, dmn)"""
 
-        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(high, 3),
-            )
-
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.adx(
-                high=high,
-                low=low,
-                close=close,
-                length=length,
-                lensig=lensig,
-                scalar=scalar,
-                mamode=mamode,
-            ),
-            fallback_factory=nan_result,
-        )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
-
-        if hasattr(result, "empty") and getattr(result, "empty", False):
-            return nan_result()
-
-        # カラム名: ADX_{length}, DMP_{length}, DMN_{length}
-        try:
+        def extract_adx(
+            result: pd.DataFrame,
+        ) -> tuple[pd.Series, pd.Series, pd.Series]:
+            # カラム名: ADX_{length}, DMP_{length}, DMN_{length}
             return (
                 result[f"ADX_{length}"],
                 result[f"DMP_{length}"],
                 result[f"DMN_{length}"],
             )
-        except (KeyError, Exception):
-            return nan_result()
+
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.adx(
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=length,
+                    lensig=lensig,
+                    scalar=scalar,
+                    mamode=mamode,
+                ),
+                count=3,
+                extract=extract_adx,
+            ),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -302,34 +291,26 @@ class TrendIndicators:
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Aroon: returns (aroon_up, aroon_down, aroon_osc)"""
 
-        def nan_result() -> tuple[pd.Series, pd.Series, pd.Series]:
-            return cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(high, 3),
-            )
-
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low},
-            length,
-            lambda: ta.aroon(high=high, low=low, length=length, scalar=scalar),
-            fallback_factory=nan_result,
-        )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
-
-        if hasattr(result, "empty") and getattr(result, "empty", False):
-            return nan_result()
-
-        # カラム名: AROONU_{length}, AROOND_{length}, AROONOSC_{length}
-        try:
+        def extract_aroon(
+            result: pd.DataFrame,
+        ) -> tuple[pd.Series, pd.Series, pd.Series]:
+            # カラム名: AROONU_{length}, AROOND_{length}, AROONOSC_{length}
             return (
                 result[f"AROONU_{length}"],
                 result[f"AROOND_{length}"],
                 result[f"AROONOSC_{length}"],
             )
-        except (KeyError, Exception):
-            return nan_result()
+
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low},
+                length,
+                lambda: ta.aroon(high=high, low=low, length=length, scalar=scalar),
+                count=3,
+                extract=extract_aroon,
+            ),
+        )
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -399,19 +380,16 @@ class TrendIndicators:
         q: int = 9,
     ) -> tuple[pd.Series, pd.Series]:
         """Chande Kroll Stop"""
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            p,
-            lambda: ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                p,
+                lambda: ta.cksp(high=high, low=low, close=close, p=p, x=x, q=q),
+                count=2,
+                reference=close,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return (result.iloc[:, 0], result.iloc[:, 1])
 
     @staticmethod
     @handle_pandas_ta_errors

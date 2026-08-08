@@ -22,9 +22,11 @@ from app.services.indicators.data_validation import (
     create_nan_series_map,
     get_param_value,
     handle_pandas_ta_errors,
+    make_nan_bundle_fallback,
     normalize_non_finite,
     run_multi_series_indicator,
     run_series_indicator,
+    run_tuple_indicator,
     validate_input,
     validate_multi_series_params,
     validate_series_params,
@@ -330,6 +332,128 @@ class TestRunMultiSeriesIndicator:
             min_data_length=100,
         )
         assert result.isna().all()
+
+
+# ---------------------------------------------------------------------------
+# make_nan_bundle_fallback / run_tuple_indicator
+# ---------------------------------------------------------------------------
+
+
+class TestMakeNanBundleFallback:
+    def test_returns_nan_bundle_factory(self, sample_series):
+        factory = make_nan_bundle_fallback(sample_series, 3)
+        bundle = factory()
+        assert len(bundle) == 3
+        for s in bundle:
+            assert len(s) == len(sample_series)
+            assert s.isna().all()
+
+    def test_preserves_reference_name(self, sample_series):
+        factory = make_nan_bundle_fallback(sample_series, 1)
+        assert factory()[0].name == sample_series.name
+
+
+class TestRunTupleIndicator:
+    def test_extracts_columns_from_dataframe(self, sample_series):
+        df = pd.DataFrame(
+            {"a": sample_series, "b": sample_series * 2, "c": sample_series * 3}
+        )
+
+        result = run_tuple_indicator(sample_series, None, lambda: df, count=3)
+
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+        assert (result[0] == sample_series).all()
+        assert (result[1] == sample_series * 2).all()
+        assert (result[2] == sample_series * 3).all()
+
+    def test_multi_series_input(self, sample_series):
+        df = pd.DataFrame(
+            {"a": sample_series, "b": sample_series * 2, "c": sample_series * 3}
+        )
+
+        result = run_tuple_indicator(
+            {"x": sample_series, "y": sample_series}, None, lambda: df, count=2
+        )
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+    def test_tuple_result_passthrough(self, sample_series):
+        bundle = create_nan_series_bundle(sample_series, 3)
+
+        result = run_tuple_indicator(sample_series, None, lambda: bundle, count=3)
+        assert result is bundle
+
+    def test_default_fallback_when_result_missing(self, sample_series):
+        result = run_tuple_indicator(sample_series, None, lambda: None, count=3)
+        assert isinstance(result, tuple)
+        assert len(result) == 3
+        for s in result:
+            assert len(s) == len(sample_series)
+            assert s.isna().all()
+
+    def test_default_fallback_when_data_too_short(self, sample_series):
+        result = run_tuple_indicator(
+            sample_series, None, lambda: sample_series, count=2, min_data_length=100
+        )
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        for s in result:
+            assert s.isna().all()
+
+    def test_custom_fallback_used(self, sample_series):
+        fallback = (pd.Series([42.0] * 3), pd.Series([42.0] * 3))
+        result = run_tuple_indicator(
+            sample_series,
+            None,
+            lambda: None,
+            count=2,
+            fallback_factory=lambda: fallback,
+        )
+        assert result == fallback
+
+    def test_reference_overrides_fallback_series(self, sample_series, nan_series):
+        result = run_tuple_indicator(
+            sample_series,
+            None,
+            lambda: None,
+            count=1,
+            reference=nan_series,
+        )
+        assert len(result[0]) == len(nan_series)
+        assert result[0].index.equals(nan_series.index)
+
+    def test_custom_extract(self, sample_series):
+        df = pd.DataFrame(
+            {"a": sample_series, "b": sample_series * 2, "c": sample_series * 3}
+        )
+
+        def extract(result):
+            return (result["c"], result["a"])
+
+        result = run_tuple_indicator(
+            sample_series, None, lambda: df, count=2, extract=extract
+        )
+        assert (result[0] == sample_series * 3).all()
+        assert (result[1] == sample_series).all()
+
+    def test_extract_failure_falls_back(self, sample_series):
+        df = pd.DataFrame({"one": sample_series})
+
+        def extract(result):
+            return result["missing"]
+
+        result = run_tuple_indicator(
+            sample_series, None, lambda: df, count=2, extract=extract
+        )
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+        for s in result:
+            assert s.isna().all()
+
+    def test_zero_count_raises(self, sample_series):
+        with pytest.raises(ValueError, match="positive"):
+            run_tuple_indicator(sample_series, None, lambda: sample_series, count=0)
 
 
 # ---------------------------------------------------------------------------

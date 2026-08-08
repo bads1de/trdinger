@@ -304,6 +304,102 @@ def run_multi_series_indicator(
     )
 
 
+def make_nan_bundle_fallback(
+    reference: pd.Series, count: int
+) -> Callable[[], tuple[pd.Series, ...]]:
+    """
+    run_*_indicator の fallback_factory 用ファクトリを作る。
+
+    参照 Series と同じ index・長さ・名前を持つ NaN Series を count 個
+    まとめて返すクロージャを生成します。
+
+    Args:
+        reference: 参照Series（インデックスと長さを取得）
+        count: 生成するSeries数
+
+    Returns:
+        Callable: fallback_factoryとして渡せる関数
+    """
+    return lambda: create_nan_series_bundle(reference, count)
+
+
+def run_tuple_indicator(
+    data: pd.Series | Mapping[str, pd.Series],
+    length: int | None,
+    result_factory: Callable[[], Any],
+    *,
+    count: int,
+    min_data_length: int = 0,
+    fallback_factory: Callable[[], tuple[Any, ...]] | None = None,
+    reference: pd.Series | None = None,
+    extract: Callable[[Any], tuple[Any, ...]] | None = None,
+) -> tuple[Any, ...]:
+    """
+    複数系列を返す指標計算を、検証・抽出・NaNフォールバック込みで実行する。
+
+    run_series_indicator / run_multi_series_indicator の共通後処理
+    （NaN bundle フォールバック → タプル結果のパススルー → 列の抽出）
+    を1つにまとめます。
+
+    Args:
+        data: 入力Series、または複数Seriesの辞書
+        length: 期間（オプション）
+        result_factory: インジケーター計算を実行する関数
+        count: 期待する出力系列数
+        min_data_length: 最小必要データ長（デフォルト: 0）
+        fallback_factory: フォールバック用関数（オプション、未指定時は
+            count個のNaN Seriesタプルを生成）
+        reference: フォールバック生成時の参照Series（オプション、
+            未指定時はdataがSeriesならdata、辞書なら最初のSeries）
+        extract: DataFrame結果からタプルを抽出する関数（オプション、
+            未指定時は先頭count列を.ilocで抽出）。抽出失敗時はフォールバック。
+
+    Returns:
+        Tuple[Any, ...]: 計算結果またはフォールバック結果
+    """
+    if count <= 0:
+        raise ValueError(f"count must be positive: {count}")
+
+    if not isinstance(data, (pd.Series, Mapping)):
+        raise TypeError(f"data must be pandas Series or a dict of Series: {type(data)}")
+
+    nan_fallback = fallback_factory
+    if nan_fallback is None:
+        reference_series = reference
+        if reference_series is None:
+            reference_series = (
+                data if isinstance(data, pd.Series) else next(iter(data.values()))
+            )
+        nan_fallback = make_nan_bundle_fallback(reference_series, count)
+
+    if isinstance(data, pd.Series):
+        result: Any = run_series_indicator(
+            data,
+            length,
+            result_factory,
+            min_data_length=min_data_length,
+            fallback_factory=nan_fallback,
+        )
+    else:
+        result = run_multi_series_indicator(
+            data,
+            length,
+            result_factory,
+            min_data_length=min_data_length,
+            fallback_factory=nan_fallback,
+        )
+
+    if isinstance(result, tuple):
+        return result
+
+    try:
+        if extract is not None:
+            return extract(result)
+        return tuple(result.iloc[:, i] for i in range(count))
+    except Exception:
+        return nan_fallback()
+
+
 def normalize_non_finite(series: pd.Series, fill_value: Any = np.nan) -> pd.Series:
     """
     inf/-inf を NaN 経由で指定値に揃える。

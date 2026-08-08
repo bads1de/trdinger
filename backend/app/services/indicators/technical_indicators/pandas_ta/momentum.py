@@ -59,12 +59,13 @@ import pandas as pd
 import pandas_ta_classic as _pandas_ta_classic
 
 from ...data_validation import (
-    create_nan_series_bundle,
     create_nan_series_like,
     handle_pandas_ta_errors,
+    make_nan_bundle_fallback,
     normalize_non_finite,
     run_multi_series_indicator,
     run_series_indicator,
+    run_tuple_indicator,
 )
 
 ta: Any = _pandas_ta_classic
@@ -133,38 +134,25 @@ class MomentumIndicators:
             histogram = macd_line - signal_line
             return macd_line, signal_line, histogram
 
-        # Use run_series_indicator with fallback for the full computation
         result: Any = run_series_indicator(
             data,
             min_length,
             compute_macd,
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(data, 3),
-            ),
+            fallback_factory=make_nan_bundle_fallback(data, 3),
         )
 
         if isinstance(result, tuple):
             return cast(tuple[pd.Series, pd.Series, pd.Series], result)
 
         # Fallback: pandas_taの直接呼び出し（互換性のため）
-        raw_result: Any = run_series_indicator(
-            data,
-            None,
-            lambda: ta.macd(data, fast=fast, slow=slow, signal=signal),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(data, 3),
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                data,
+                None,
+                lambda: ta.macd(data, fast=fast, slow=slow, signal=signal),
+                count=3,
             ),
-        )
-
-        if isinstance(raw_result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], raw_result)
-
-        return (
-            raw_result.iloc[:, 0],
-            raw_result.iloc[:, 1],
-            raw_result.iloc[:, 2],
         )
 
     @staticmethod
@@ -176,23 +164,14 @@ class MomentumIndicators:
         signal: int = 9,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Percentage Price Oscillator"""
-        result: Any = run_series_indicator(
-            data,
-            None,
-            lambda: ta.ppo(data, fast=fast, slow=slow, signal=signal),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(data, 3),
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                data,
+                None,
+                lambda: ta.ppo(data, fast=fast, slow=slow, signal=signal),
+                count=3,
             ),
-        )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series, pd.Series], result)
-
-        return (
-            result.iloc[:, 0],
-            result.iloc[:, 1],
-            result.iloc[:, 2],
         )
 
     @staticmethod
@@ -206,27 +185,32 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """TRIX (Triple Exponential Average)"""
-        result: Any = run_series_indicator(
-            data,
-            length,
-            lambda: ta.trix(
-                close=data,
-                length=length,
-                signal=signal,
-                scalar=scalar,
-                drift=drift,
-                offset=offset,
+
+        def extract_trix(
+            result: pd.DataFrame,
+        ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+            trix_line = result.iloc[:, 0].to_numpy()
+            signal_line = result.iloc[:, 1].to_numpy()
+            return trix_line, signal_line, trix_line - signal_line
+
+        return cast(
+            tuple[np.ndarray, np.ndarray, np.ndarray],
+            run_tuple_indicator(
+                data,
+                length,
+                lambda: ta.trix(
+                    close=data,
+                    length=length,
+                    signal=signal,
+                    scalar=scalar,
+                    drift=drift,
+                    offset=offset,
+                ),
+                count=3,
+                fallback_factory=lambda: _create_nan_array_bundle(len(data), 3),
+                extract=extract_trix,
             ),
-            fallback_factory=lambda: _create_nan_array_bundle(len(data), 3),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        trix_line = result.iloc[:, 0].to_numpy()
-        signal_line = result.iloc[:, 1].to_numpy()
-        histogram = trix_line - signal_line
-        return trix_line, signal_line, histogram
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -240,33 +224,24 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> tuple[pd.Series, pd.Series]:
         """Directional Movement"""
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low},
-            length,
-            lambda: ta.dm(
-                high=high,
-                low=low,
-                length=length,
-                mamode=mamode,
-                talib=talib,
-                drift=drift,
-                offset=offset,
-            ),
-            min_data_length=length,
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low},
+                length,
+                lambda: ta.dm(
+                    high=high,
+                    low=low,
+                    length=length,
+                    mamode=mamode,
+                    talib=talib,
+                    drift=drift,
+                    offset=offset,
+                ),
+                count=2,
+                min_data_length=length,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        if result is None or (
-            hasattr(result, "empty") and getattr(result, "empty", False)
-        ):
-            return cast(tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2))
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -332,27 +307,22 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """TRIX Histogram"""
-        result: Any = run_series_indicator(
-            close,
-            length,
-            lambda: ta.trixh(
-                close=close,
-                length=length,
-                signal=signal,
-                scalar=scalar,
-                drift=drift,
-                offset=offset,
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                close,
+                length,
+                lambda: ta.trixh(
+                    close=close,
+                    length=length,
+                    signal=signal,
+                    scalar=scalar,
+                    drift=drift,
+                    offset=offset,
+                ),
+                count=3,
             ),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -365,27 +335,22 @@ class MomentumIndicators:
         offset: int = 0,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Volume Weighted MACD"""
-        result: Any = run_multi_series_indicator(
-            {"close": close, "volume": volume},
-            max(fast, slow, signal),
-            lambda: ta.vwmacd(
-                close=close,
-                volume=volume,
-                fast=fast,
-                slow=slow,
-                signal=signal,
-                offset=offset,
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"close": close, "volume": volume},
+                max(fast, slow, signal),
+                lambda: ta.vwmacd(
+                    close=close,
+                    volume=volume,
+                    fast=fast,
+                    slow=slow,
+                    signal=signal,
+                    offset=offset,
+                ),
+                count=3,
             ),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -411,26 +376,22 @@ class MomentumIndicators:
         Returns:
             Tuple[%K, %D]
         """
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            k,
-            lambda: ta.stoch(
-                high=high,
-                low=low,
-                close=close,
-                length=k,
-                smoothd=d,
-                smoothk=smooth_k,
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                k,
+                lambda: ta.stoch(
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=k,
+                    smoothd=d,
+                    smoothk=smooth_k,
+                ),
+                count=2,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -462,27 +423,22 @@ class MomentumIndicators:
         if stoch_length <= 0 or k <= 0 or d <= 0:
             raise ValueError("stoch_length, k, and d must be positive")
 
-        result: Any = run_series_indicator(
-            data,
-            rsi_length,
-            lambda: ta.stochrsi(
-                close=data,
-                rsi_length=rsi_length,
-                stoch_length=stoch_length,
-                k=k,
-                d=d,
-            ),
-            min_data_length=min_required_length,
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(data, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                data,
+                rsi_length,
+                lambda: ta.stochrsi(
+                    close=data,
+                    rsi_length=rsi_length,
+                    stoch_length=stoch_length,
+                    k=k,
+                    d=d,
+                ),
+                count=2,
+                min_data_length=min_required_length,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        # pandas-taの返り値は通常 STOCHRSIk_*, STOCHRSId_* の2列
-        return (result.iloc[:, 0], result.iloc[:, 1])
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -605,19 +561,15 @@ class MomentumIndicators:
         if signal <= 0:
             raise ValueError(f"signal must be positive: {signal}")
 
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low},
-            length,
-            lambda: ta.fisher(high=high, low=low, length=length, signal=signal),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(high, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low},
+                length,
+                lambda: ta.fisher(high=high, low=low, length=length, signal=signal),
+                count=2,
             ),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -635,30 +587,26 @@ class MomentumIndicators:
     ) -> tuple[pd.Series, pd.Series]:
         """Know Sure Thing"""
         max_period = max(roc1, roc2, roc3, roc4, sma1, sma2, sma3, sma4, signal)
-        result: Any = run_series_indicator(
-            data,
-            max_period,
-            lambda: ta.kst(
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
                 data,
-                roc1=roc1,
-                roc2=roc2,
-                roc3=roc3,
-                roc4=roc4,
-                sma1=sma1,
-                sma2=sma2,
-                sma3=sma3,
-                sma4=sma4,
-                signal=signal,
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(data, 2)
+                max_period,
+                lambda: ta.kst(
+                    data,
+                    roc1=roc1,
+                    roc2=roc2,
+                    roc3=roc3,
+                    roc4=roc4,
+                    sma1=sma1,
+                    sma2=sma2,
+                    sma3=sma3,
+                    sma4=sma4,
+                    signal=signal,
+                ),
+                count=2,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -812,27 +760,23 @@ class MomentumIndicators:
         if drift <= 0:
             raise ValueError("drift must be positive")
 
-        result: Any = run_series_indicator(
-            data,
-            max_period,
-            lambda: ta.tsi(
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
                 data,
-                fast=fast,
-                slow=slow,
-                signal=signal,
-                scalar=scalar,
-                mamode=mamode,
-                drift=drift,
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(data, 2)
+                max_period,
+                lambda: ta.tsi(
+                    data,
+                    fast=fast,
+                    slow=slow,
+                    signal=signal,
+                    scalar=scalar,
+                    mamode=mamode,
+                    drift=drift,
+                ),
+                count=2,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1090,21 +1034,18 @@ class MomentumIndicators:
         length: int = 26,
     ) -> tuple[pd.Series, pd.Series]:
         """BRAR (Brayer)"""
-        result: Any = run_multi_series_indicator(
-            {"open_": open_, "high": high, "low": low, "close": close},
-            length,
-            lambda: ta.brar(
-                open_=open_, high=high, low=low, close=close, length=length
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"open_": open_, "high": high, "low": low, "close": close},
+                length,
+                lambda: ta.brar(
+                    open_=open_, high=high, low=low, close=close, length=length
+                ),
+                count=2,
+                reference=close,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1126,19 +1067,16 @@ class MomentumIndicators:
         length: int = 13,
     ) -> tuple[pd.Series, pd.Series]:
         """Elder Ray Index"""
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.eri(high=high, low=low, close=close, length=length),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.eri(high=high, low=low, close=close, length=length),
+                count=2,
+                reference=close,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1184,22 +1122,18 @@ class MomentumIndicators:
         signal: int = 3,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """KDJ"""
-        result: Any = run_multi_series_indicator(
-            {"high": high, "low": low, "close": close},
-            length,
-            lambda: ta.kdj(
-                high=high, low=low, close=close, length=length, signal=signal
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"high": high, "low": low, "close": close},
+                length,
+                lambda: ta.kdj(
+                    high=high, low=low, close=close, length=length, signal=signal
+                ),
+                count=3,
+                reference=close,
             ),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1225,26 +1159,23 @@ class MomentumIndicators:
         swma_length: int = 4,
     ) -> tuple[pd.Series, pd.Series]:
         """Relative Vigor Index"""
-        result: Any = run_multi_series_indicator(
-            {"open_": open_, "high": high, "low": low, "close": close},
-            length,
-            lambda: ta.rvgi(
-                open_=open_,
-                high=high,
-                low=low,
-                close=close,
-                length=length,
-                swma_length=swma_length,
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series], create_nan_series_bundle(close, 2)
+        return cast(
+            tuple[pd.Series, pd.Series],
+            run_tuple_indicator(
+                {"open_": open_, "high": high, "low": low, "close": close},
+                length,
+                lambda: ta.rvgi(
+                    open_=open_,
+                    high=high,
+                    low=low,
+                    close=close,
+                    length=length,
+                    swma_length=swma_length,
+                ),
+                count=2,
+                reference=close,
             ),
         )
-
-        if isinstance(result, tuple):
-            return cast(tuple[pd.Series, pd.Series], result)
-
-        return result.iloc[:, 0], result.iloc[:, 1]
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -1267,22 +1198,17 @@ class MomentumIndicators:
         scalar: float = 1.0,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """SMI Ergodic"""
-        result: Any = run_series_indicator(
-            close,
-            slow,
-            lambda: ta.smi(
-                close=close, fast=fast, slow=slow, signal=signal, scalar=scalar
-            ),
-            fallback_factory=lambda: cast(
-                tuple[pd.Series, pd.Series, pd.Series],
-                create_nan_series_bundle(close, 3),
+        return cast(
+            tuple[pd.Series, pd.Series, pd.Series],
+            run_tuple_indicator(
+                close,
+                slow,
+                lambda: ta.smi(
+                    close=close, fast=fast, slow=slow, signal=signal, scalar=scalar
+                ),
+                count=3,
             ),
         )
-
-        if isinstance(result, tuple):
-            return result
-
-        return result.iloc[:, 0], result.iloc[:, 1], result.iloc[:, 2]
 
     @staticmethod
     @handle_pandas_ta_errors
