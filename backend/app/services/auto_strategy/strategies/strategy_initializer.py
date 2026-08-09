@@ -7,7 +7,7 @@ UniversalStrategy.init() に集約されていた初期化責務を分離する�
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -172,35 +172,37 @@ class StrategyInitializer:
                 14,
             )
             try:
-                import pandas_ta_classic as ta
-
-                temp_df = pd.DataFrame(
-                    {
-                        "high": self.strategy.data.High,
-                        "low": self.strategy.data.Low,
-                        "close": self.strategy.data.Close,
-                    }
+                atr_result = self.strategy.indicator_calculator.calculate_indicator(
+                    self.strategy.data, "ATR", {"length": lookback}
                 )
-                atr_series = cast(Any, ta).atr(
-                    cast(pd.Series, temp_df["high"]),
-                    cast(pd.Series, temp_df["low"]),
-                    cast(pd.Series, temp_df["close"]),
-                    length=lookback,
-                )
-                if atr_series is not None:
-                    self.strategy._precomputed_atr = cast(
-                        pd.Series,
-                        atr_series,
-                    ).values
+                atr_values = self._extract_atr_values(atr_result)
+                if atr_values is not None:
+                    self.strategy._precomputed_atr = atr_values
                     logger.debug("ATR事前計算完了")
                 else:
-                    logger.warning("ATR事前計算失敗: ta.atr が None を返しました")
-            except ImportError:
-                logger.warning("pandas-taが見つからないためATR事前計算をスキップ")
+                    logger.warning("ATR事前計算失敗: 計算結果が None を返しました")
             except Exception as e:
                 logger.debug("ATR事前計算中のエラー（フォールバック使用）: %s", e)
         except Exception as e:
             logger.debug("ATR事前計算失敗: %s", e)
+
+    @staticmethod
+    def _extract_atr_values(result: Any) -> np.ndarray | None:
+        """指標計算結果から ATR 値の numpy 配列を抽出する"""
+        if result is None:
+            return None
+        if isinstance(result, pd.Series):
+            return result.to_numpy()
+        if isinstance(result, np.ndarray):
+            return result
+        if isinstance(result, pd.DataFrame):
+            return result.iloc[:, 0].to_numpy()
+        if isinstance(result, tuple):
+            first = result[0]
+            if isinstance(first, (pd.Series, pd.DataFrame)):
+                return first.iloc[:, 0].to_numpy()
+            return np.asarray(first)
+        return None
 
     def _precompute_tpsl_atr(self) -> None:
         self.strategy._precomputed_tpsl_atr = {}
@@ -215,16 +217,17 @@ class StrategyInitializer:
                     atr_period = getattr(tpsl_gene, "atr_period", 14)
                     if atr_period not in self.strategy._precomputed_tpsl_atr:
                         if hasattr(self.strategy.data, "df"):
-                            import pandas_ta_classic as ta
-
-                            high = self.strategy.data.df["High"]
-                            low = self.strategy.data.df["Low"]
-                            close = self.strategy.data.df["Close"]
-                            atr_result = cast(Any, ta).atr(high, low, close, length=atr_period)
-                            if atr_result is not None:
-                                self.strategy._precomputed_tpsl_atr[atr_period] = cast(
-                                    pd.Series,
-                                    atr_result,
-                                ).values
+                            atr_result = (
+                                self.strategy.indicator_calculator.calculate_indicator(
+                                    self.strategy.data,
+                                    "ATR",
+                                    {"length": atr_period},
+                                )
+                            )
+                            atr_values = self._extract_atr_values(atr_result)
+                            if atr_values is not None:
+                                self.strategy._precomputed_tpsl_atr[
+                                    atr_period
+                                ] = atr_values
                 except Exception as e:
                     logger.debug("TP/SL ATR事前計算失敗: %s", e)

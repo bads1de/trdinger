@@ -28,8 +28,11 @@ def gri(
 
     hh = high.rolling(window=length).max()
     ll = low.rolling(window=length).min()
-    tr = (hh - ll).replace(0, 1e-9)
-    result = np.log(tr) / np.log(float(length))
+    # 原著(Gopalakrishnan)定義: ln(HH/LL) / ln(N)
+    # 比方式は価格スケールに依存せず、異なる価格帯の銘柄間で比較可能。
+    with np.errstate(divide="ignore", invalid="ignore"):
+        result = np.log(hh / ll.replace(0, np.nan)) / np.log(float(length))
+    result = result.replace([np.inf, -np.inf], np.nan)
 
     if offset != 0:
         result = result.shift(offset)

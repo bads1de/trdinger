@@ -167,10 +167,15 @@ def _njit_sample_entropy_loop(
         a_count = _njit_count_matches(chunk, m_val + 1, thresh)
         b_count = _njit_count_matches(chunk, m_val, thresh)
 
-        if a_count > 0 and b_count > 0:
+        if b_count == 0:
+            # m次元でもペアが無い: 未知数 0/0 → 0.0 (従来挙動を維持)
+            res[i] = 0.0
+        elif a_count > 0:
             res[i] = -np.log(a_count / b_count)
         else:
-            res[i] = 0.0
+            # m次元は一致するが(m+1)次元に一致しない = 完全に規則的
+            # サンプルエントロピーの理論値は +∞
+            res[i] = np.inf
     return res
 
 

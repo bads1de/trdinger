@@ -258,7 +258,7 @@ class VolatilityIndicators:
         """Ulcer Index"""
         return cast(
             pd.Series,
-            run_series_indicator(data, None, lambda: ta.ui(data, window=period)),
+            run_series_indicator(data, None, lambda: ta.ui(data, length=period)),
         )
 
     @staticmethod

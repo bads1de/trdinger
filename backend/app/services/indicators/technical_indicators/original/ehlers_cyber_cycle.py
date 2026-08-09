@@ -17,17 +17,26 @@ def _njit_cyber_cycle_loop(
 ) -> np.ndarray:
     n = len(prices)
     result = np.full(n, np.nan, dtype=np.float64)
-    if n < 7:
+    if n < length + 2:
         return result
 
-    smooth = np.full(n, np.nan, dtype=np.float64)
-    cycle = np.full(n, np.nan, dtype=np.float64)
+    # Symmetric triangular smoothing window (1, 2, ..., 2, 1).
+    # length=4 gives the classic (1, 2, 2, 1) / 6 coefficients.
+    weights = np.empty(length, dtype=np.float64)
+    total = 0.0
+    for k in range(length):
+        w = float(min(k + 1, length - k))
+        weights[k] = w
+        total += w
 
-    # Smooth = (price + 2*price[1] + 2*price[2] + price[3]) / 6
-    for i in range(3, n):
-        smooth[i] = (
-            prices[i] + 2.0 * prices[i - 1] + 2.0 * prices[i - 2] + prices[i - 3]
-        ) / 6.0
+    smooth = np.full(n, np.nan, dtype=np.float64)
+    for i in range(length - 1, n):
+        acc = 0.0
+        for k in range(length):
+            acc += prices[i - k] * weights[k]
+        smooth[i] = acc / total
+
+    cycle = np.full(n, np.nan, dtype=np.float64)
 
     # Cyber Cycle = (1 - 0.5*alpha)^2 * (smooth - 2*smooth[1] + smooth[2])
     #               + 2*(1-alpha)*cycle[1] - (1-alpha)^2 * cycle[2]
@@ -36,26 +45,18 @@ def _njit_cyber_cycle_loop(
     coeff2 = 2.0 * a2
     coeff3 = a2**2
 
-    # Initialize first valid cycle value at index 5
-    # (needs smooth[3], smooth[4], smooth[5] which are all valid)
-    # Use simple difference as seed for cycle[4]
-    cycle[4] = (smooth[4] - smooth[3]) * 0.5
-    # cycle[5] from the recursive formula using cycle[4] and a pseudo cycle[3]
-    cycle[5] = (
-        coeff1 * (smooth[5] - 2.0 * smooth[4] + smooth[3])
-        + coeff2 * cycle[4]
-        - coeff3 * 0.0  # assume cycle[3] = 0 for seed
-    )
-
-    for i in range(6, n):
+    # Seed the recursion with zeros at the first two valid smooth indices.
+    start = length - 1
+    cycle[start] = 0.0
+    cycle[start + 1] = 0.0
+    for i in range(start + 2, n):
         cycle[i] = (
             coeff1 * (smooth[i] - 2.0 * smooth[i - 1] + smooth[i - 2])
             + coeff2 * cycle[i - 1]
             - coeff3 * cycle[i - 2]
         )
 
-    # Fill result from index 4 onward
-    for i in range(4, n):
+    for i in range(start, n):
         result[i] = cycle[i]
 
     return result
@@ -72,6 +73,8 @@ def ehlers_cyber_cycle(
     John Ehlersのサイバー・サイクルアルゴリズム。
     市場サイクルを検出し、トレンドとサイクルの分離を行う。
     alphaが小さいほど平滑化が強く、遅延が増える。
+    length は平滑化窓(対称三角窓)の幅を制御する。length=4 で
+    Ehlers オリジナルの 4点平滑化 (1,2,2,1)/6 と一致する。
     """
     if length < 2:
         raise ValueError("length must be >= 2")

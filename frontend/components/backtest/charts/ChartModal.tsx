@@ -137,7 +137,9 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
             <DrawdownChart
               data={chartData.equity}
               maxDrawdown={
-                Math.abs(Number(result.performance_metrics?.max_drawdown) || 0) * 100
+                Number(result.performance_metrics?.max_drawdown)
+                  ? Math.abs(Number(result.performance_metrics?.max_drawdown)) / 100
+                  : 0
               }
               title="ドローダウン分析"
               subtitle="最大下落期間と回復パターンの可視化"

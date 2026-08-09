@@ -119,7 +119,7 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
   // Y軸のドメインを計算
   const yAxisDomain = useMemo(() => {
     if (!processedData || processedData.length === 0) {
-      return [-20, 0]; // デフォルトで-20%から0%
+      return [-0.2, 0]; // デフォルトで-20%から0%
     }
 
     const drawdownValues = processedData.map((d) => d.drawdown);
@@ -176,7 +176,7 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
 
           <YAxis
             domain={yAxisDomain}
-            tickFormatter={(value) => `${Math.abs(value).toFixed(1)}%`}
+            tickFormatter={(value) => `${Math.abs(value * 100).toFixed(1)}%`}
             {...chartStyles.axis}
           />
 
@@ -190,7 +190,7 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
               strokeDasharray="5 5"
               strokeWidth={2}
               label={{
-                value: `最大DD: ${Math.abs(calculatedMaxDrawdown).toFixed(1)}%`,
+                value: `最大DD: ${Math.abs(calculatedMaxDrawdown * 100).toFixed(1)}%`,
                 position: "topLeft" as any,
                 style: { fill: chartColors.maxDrawdown },
               }}

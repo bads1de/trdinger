@@ -76,6 +76,29 @@ class TestVolatilityUtils:
         expected = sample_returns.rolling(20).std() * np.sqrt(252)
         assert pytest.approx(res.iloc[20]) == expected.iloc[20]
 
+    def test_calculate_historical_volatility_auto_periods(self):
+        """periods_per_year 未指定時のインデックスからの自動推定"""
+        values = np.random.normal(0, 0.01, 100)
+        hourly = pd.Series(
+            values,
+            index=pd.date_range("2024-01-01", periods=100, freq="h"),
+        )
+        daily = pd.Series(
+            values,
+            index=pd.date_range("2024-01-01", periods=100, freq="D"),
+        )
+
+        # 1時間足 = 8760期間/年、日足 = 365期間/年
+        hourly_vol = calculate_historical_volatility(hourly, window=20)
+        daily_vol = calculate_historical_volatility(daily, window=20)
+
+        assert pytest.approx(hourly_vol.iloc[20]) == (
+            hourly.rolling(20).std().iloc[20] * np.sqrt(365 * 24)
+        )
+        assert pytest.approx(daily_vol.iloc[20]) == (
+            daily.rolling(20).std().iloc[20] * np.sqrt(365)
+        )
+
     def test_calculate_realized_volatility(self, sample_returns):
         """実現ボラティリティ（日次換算）"""
         res = calculate_realized_volatility(

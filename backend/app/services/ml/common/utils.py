@@ -484,11 +484,25 @@ def calculate_volatility_atr(
     return atr / close if as_percentage else atr
 
 
+def _infer_periods_per_year(returns: pd.Series) -> int:
+    """DatetimeIndex の観測間隔から1年あたりの期間数を推定する。"""
+    index = returns.index
+    if isinstance(index, pd.DatetimeIndex) and len(index) >= 2:
+        diffs = index.to_series().diff().dropna().dt.total_seconds()
+        if len(diffs) > 0:
+            median_seconds = float(diffs.median())
+            if median_seconds > 0:
+                return max(
+                    1, int(round(365 * 86400 / min(median_seconds, 86400 * 365)))
+                )
+    return 365
+
+
 def calculate_historical_volatility(
     returns: pd.Series,
     window: int = 20,
     annualize: bool = True,
-    periods_per_year: int = 252,
+    periods_per_year: int | None = None,
 ) -> pd.Series:
     """
     年率換算のヒストリカルボラティリティ計算
@@ -499,7 +513,8 @@ def calculate_historical_volatility(
         returns: リターンデータのSeries
         window: 移動窓のサイズ（デフォルト: 20）
         annualize: 年率換算するか（デフォルト: True）
-        periods_per_year: 1年あたりの期間数（デフォルト: 252）
+        periods_per_year: 1年あたりの期間数（デフォルト: None=インデックスから自動推定。
+            DatetimeIndexでない場合や推定できない場合は365日基準）
 
     Returns:
         pd.Series: ヒストリカルボラティリティのSeries
@@ -509,6 +524,8 @@ def calculate_historical_volatility(
     """
     vol = returns.rolling(window=window).std()
     if annualize:
+        if periods_per_year is None:
+            periods_per_year = _infer_periods_per_year(returns)
         vol = vol * np.sqrt(periods_per_year)
     return cast(pd.Series, vol)
 

@@ -6,7 +6,7 @@ StrategyInitializer の追加ユニットテスト
 """
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import numpy as np
 import pandas as pd
@@ -76,7 +76,9 @@ def _make_strategy(
     strategy = SimpleNamespace(
         data=data,
         gene=gene,
-        indicator_calculator=SimpleNamespace(init_indicator=MagicMock()),
+        indicator_calculator=SimpleNamespace(
+            init_indicator=MagicMock(), calculate_indicator=MagicMock()
+        ),
         ml_filter=SimpleNamespace(precompute_ml_features=MagicMock()),
         condition_evaluator=SimpleNamespace(
             calculate_conditions_vectorized=MagicMock(
@@ -248,17 +250,33 @@ class TestPrecomputePositionSizingAtr:
         strategy = _make_strategy(position_sizing_gene=gene)
 
         mock_atr = np.array([1.5, 2.0, 2.5])
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=pd.Series(mock_atr)
+        )
 
-        with patch.dict(
-            "sys.modules",
-            {
-                "pandas_ta_classic": MagicMock(
-                    atr=MagicMock(return_value=pd.Series(mock_atr))
-                )
-            },
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_position_sizing_atr()
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_position_sizing_atr()
+
+        strategy.indicator_calculator.calculate_indicator.assert_called_once_with(
+            strategy.data, "ATR", {"length": 14}
+        )
+        np.testing.assert_array_equal(strategy._precomputed_atr, mock_atr)
+
+    def test_computes_atr_from_ndarray_result(self):
+        gene = PositionSizingGene(
+            enabled=True,
+            method=PositionSizingMethod.VOLATILITY_BASED,
+            lookback_period=14,
+        )
+        strategy = _make_strategy(position_sizing_gene=gene)
+
+        mock_atr = np.array([1.5, 2.0, 2.5])
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=mock_atr
+        )
+
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_position_sizing_atr()
 
         np.testing.assert_array_equal(strategy._precomputed_atr, mock_atr)
 
@@ -270,29 +288,28 @@ class TestPrecomputePositionSizingAtr:
         )
         strategy = _make_strategy(position_sizing_gene=gene)
 
-        with patch.dict(
-            "sys.modules",
-            {"pandas_ta_classic": MagicMock(atr=MagicMock(return_value=None))},
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_position_sizing_atr()
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=None
+        )
+
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_position_sizing_atr()
 
         # ATR 計算が None の場合は _precomputed_atr が None のまま
         assert strategy._precomputed_atr is None
 
-    def test_handles_pandas_ta_import_error(self):
+    def test_handles_missing_indicator_calculator(self):
         gene = PositionSizingGene(
             enabled=True,
             method=PositionSizingMethod.VOLATILITY_BASED,
             lookback_period=14,
         )
         strategy = _make_strategy(position_sizing_gene=gene)
+        delattr(strategy, "indicator_calculator")
 
-        # pandas_ta_classic が存在しない状態をシミュレート
-        with patch.dict("sys.modules", {"pandas_ta_classic": None}):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_position_sizing_atr()
-        # ImportError 発生時もクラッシュせず、_precomputed_atr は None
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_position_sizing_atr()
+        # IndicatorCalculator が存在しない場合もクラッシュせず、_precomputed_atr は None
         assert strategy._precomputed_atr is None
 
     def test_handles_atr_computation_error(self):
@@ -303,16 +320,12 @@ class TestPrecomputePositionSizingAtr:
         )
         strategy = _make_strategy(position_sizing_gene=gene)
 
-        with patch.dict(
-            "sys.modules",
-            {
-                "pandas_ta_classic": MagicMock(
-                    atr=MagicMock(side_effect=Exception("atr error"))
-                )
-            },
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_position_sizing_atr()
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            side_effect=Exception("atr error")
+        )
+
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_position_sizing_atr()
         # 例外時もクラッシュしない
         assert strategy._precomputed_atr is None
 
@@ -347,17 +360,12 @@ class TestPrecomputeTpslAtr:
         strategy = _make_strategy(tpsl_gene_long=gene)
 
         mock_atr = np.array([1.5, 2.0, 2.5])
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=pd.Series(mock_atr)
+        )
 
-        with patch.dict(
-            "sys.modules",
-            {
-                "pandas_ta_classic": MagicMock(
-                    atr=MagicMock(return_value=pd.Series(mock_atr))
-                )
-            },
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_tpsl_atr()
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_tpsl_atr()
 
         np.testing.assert_array_equal(strategy._precomputed_tpsl_atr[14], mock_atr)
 
@@ -366,17 +374,12 @@ class TestPrecomputeTpslAtr:
         strategy = _make_strategy(tpsl_gene_short=gene)
 
         mock_atr = np.array([1.0, 1.5, 2.0])
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=pd.Series(mock_atr)
+        )
 
-        with patch.dict(
-            "sys.modules",
-            {
-                "pandas_ta_classic": MagicMock(
-                    atr=MagicMock(return_value=pd.Series(mock_atr))
-                )
-            },
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_tpsl_atr()
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_tpsl_atr()
 
         np.testing.assert_array_equal(strategy._precomputed_tpsl_atr[20], mock_atr)
 
@@ -385,17 +388,12 @@ class TestPrecomputeTpslAtr:
         strategy = _make_strategy(tpsl_gene_long=gene)
 
         mock_atr = np.array([0.5, 0.8, 1.0])
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=pd.Series(mock_atr)
+        )
 
-        with patch.dict(
-            "sys.modules",
-            {
-                "pandas_ta_classic": MagicMock(
-                    atr=MagicMock(return_value=pd.Series(mock_atr))
-                )
-            },
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_tpsl_atr()
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_tpsl_atr()
 
         np.testing.assert_array_equal(strategy._precomputed_tpsl_atr[10], mock_atr)
 
@@ -406,26 +404,27 @@ class TestPrecomputeTpslAtr:
         strategy = _make_strategy(tpsl_gene_long=gene_long, tpsl_gene_short=gene_short)
 
         mock_atr = np.array([1.5, 2.0, 2.5])
-        mock_ta = MagicMock(atr=MagicMock(return_value=pd.Series(mock_atr)))
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=pd.Series(mock_atr)
+        )
 
-        with patch.dict("sys.modules", {"pandas_ta_classic": mock_ta}):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_tpsl_atr()
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_tpsl_atr()
 
         # atr は 1 回だけ計算される
-        assert mock_ta.atr.call_count == 1
+        assert strategy.indicator_calculator.calculate_indicator.call_count == 1
         np.testing.assert_array_equal(strategy._precomputed_tpsl_atr[14], mock_atr)
 
     def test_handles_pandas_ta_returning_none(self):
         gene = TPSLGene(method=TPSLMethod.VOLATILITY_BASED, atr_period=14)
         strategy = _make_strategy(tpsl_gene_long=gene)
 
-        with patch.dict(
-            "sys.modules",
-            {"pandas_ta_classic": MagicMock(atr=MagicMock(return_value=None))},
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_tpsl_atr()
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            return_value=None
+        )
+
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_tpsl_atr()
         # ATR が None でもクラッシュしない
         assert 14 not in strategy._precomputed_tpsl_atr
 
@@ -433,16 +432,12 @@ class TestPrecomputeTpslAtr:
         gene = TPSLGene(method=TPSLMethod.VOLATILITY_BASED, atr_period=14)
         strategy = _make_strategy(tpsl_gene_long=gene)
 
-        with patch.dict(
-            "sys.modules",
-            {
-                "pandas_ta_classic": MagicMock(
-                    atr=MagicMock(side_effect=Exception("boom"))
-                )
-            },
-        ):
-            initializer = StrategyInitializer(strategy)
-            initializer._precompute_tpsl_atr()
+        strategy.indicator_calculator.calculate_indicator = MagicMock(
+            side_effect=Exception("boom")
+        )
+
+        initializer = StrategyInitializer(strategy)
+        initializer._precompute_tpsl_atr()
         # 例外時もクラッシュしない
         assert 14 not in strategy._precomputed_tpsl_atr
 

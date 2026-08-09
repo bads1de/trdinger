@@ -83,6 +83,8 @@ class BacktestStatisticsCalculator:
         statistics["total_trades"] = safe_int_conversion(stats.get("# Trades", 0))
         statistics["avg_win"] = 0.0
         statistics["avg_loss"] = 0.0
+        statistics["winning_trades"] = 0
+        statistics["losing_trades"] = 0
         return statistics
 
     def _extract_common_metrics(
@@ -91,29 +93,21 @@ class BacktestStatisticsCalculator:
         """Series/Dict 共通の統計指標を抽出"""
         statistics: dict[str, Any] = {}
 
-        statistics["total_return"] = safe_float_conversion(
-            getter("Return [%]", 0.0)
-        )
-        statistics["win_rate"] = safe_float_conversion(
-            getter("Win Rate [%]", 0.0)
-        )
+        statistics["total_return"] = safe_float_conversion(getter("Return [%]", 0.0))
+        statistics["win_rate"] = safe_float_conversion(getter("Win Rate [%]", 0.0))
         statistics["profit_factor"] = safe_float_conversion(
             getter("Profit Factor", 0.0)
         )
-        statistics["best_trade"] = safe_float_conversion(
-            getter("Best Trade [%]", 0.0)
-        )
+        statistics["best_trade"] = safe_float_conversion(getter("Best Trade [%]", 0.0))
         statistics["worst_trade"] = safe_float_conversion(
             getter("Worst Trade [%]", 0.0)
         )
-        statistics["avg_trade"] = safe_float_conversion(
-            getter("Avg. Trade [%]", 0.0)
+        statistics["avg_trade"] = safe_float_conversion(getter("Avg. Trade [%]", 0.0))
+        statistics["max_drawdown"] = abs(
+            safe_float_conversion(getter("Max. Drawdown [%]", 0.0))
         )
-        statistics["max_drawdown"] = safe_float_conversion(
-            getter("Max. Drawdown [%]", 0.0)
-        )
-        statistics["avg_drawdown"] = safe_float_conversion(
-            getter("Avg. Drawdown [%]", 0.0)
+        statistics["avg_drawdown"] = abs(
+            safe_float_conversion(getter("Avg. Drawdown [%]", 0.0))
         )
         statistics["max_drawdown_duration"] = safe_duration_conversion(
             getter("Max. Drawdown Duration", 0)
@@ -121,15 +115,11 @@ class BacktestStatisticsCalculator:
         statistics["avg_drawdown_duration"] = safe_duration_conversion(
             getter("Avg. Drawdown Duration", 0)
         )
-        statistics["sharpe_ratio"] = safe_float_conversion(
-            getter("Sharpe Ratio", 0.0)
-        )
+        statistics["sharpe_ratio"] = safe_float_conversion(getter("Sharpe Ratio", 0.0))
         statistics["sortino_ratio"] = safe_float_conversion(
             getter("Sortino Ratio", 0.0)
         )
-        statistics["calmar_ratio"] = safe_float_conversion(
-            getter("Calmar Ratio", 0.0)
-        )
+        statistics["calmar_ratio"] = safe_float_conversion(getter("Calmar Ratio", 0.0))
         statistics["final_equity"] = safe_float_conversion(
             getter("Equity Final [$]", 0.0)
         )
@@ -175,6 +165,8 @@ class BacktestStatisticsCalculator:
                     statistics["profit_factor"] = 0.0
                     statistics["avg_win"] = 0.0
                     statistics["avg_loss"] = 0.0
+                    statistics["winning_trades"] = 0
+                    statistics["losing_trades"] = 0
 
             return statistics
         except Exception as e:
@@ -214,8 +206,25 @@ class BacktestStatisticsCalculator:
 
         statistics["win_rate"] = calculated_win_rate
         statistics["profit_factor"] = calculated_profit_factor
-        statistics["avg_win"] = winning_pnl / win_count if win_count > 0 else 0.0
-        statistics["avg_loss"] = abs(losing_pnl) / loss_count if loss_count > 0 else 0.0
+        statistics["winning_trades"] = win_count
+        statistics["losing_trades"] = loss_count
+
+        return_pct_series: pd.Series | None = None
+        if "ReturnPct" in trades_df.columns:
+            return_pct_series = cast(
+                pd.Series, pd.to_numeric(trades_df["ReturnPct"], errors="coerce")
+            ).fillna(0.0)
+
+        statistics["avg_win"] = (
+            float(return_pct_series[wins_mask].mean() * 100.0)
+            if return_pct_series is not None and win_count > 0
+            else (winning_pnl / win_count if win_count > 0 else 0.0)
+        )
+        statistics["avg_loss"] = (
+            float(abs(return_pct_series[losses_mask].mean()) * 100.0)
+            if return_pct_series is not None and loss_count > 0
+            else (abs(losing_pnl) / loss_count if loss_count > 0 else 0.0)
+        )
 
     def _enrich_metrics_from_equity(
         self, statistics: dict[str, Any], stats: Any
@@ -276,6 +285,8 @@ class BacktestStatisticsCalculator:
             statistics["profit_factor"] = 0.0
             statistics["avg_win"] = 0.0
             statistics["avg_loss"] = 0.0
+            statistics["winning_trades"] = 0
+            statistics["losing_trades"] = 0
             statistics["best_trade"] = 0.0
             statistics["worst_trade"] = 0.0
             statistics["avg_trade"] = 0.0

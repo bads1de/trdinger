@@ -290,6 +290,9 @@ class GeneratedStrategyService:
         """リスクレベルを計算"""
         max_drawdown = performance_metrics.get("max_drawdown", 0.0)
 
+        if max_drawdown > 1.0:
+            max_drawdown = max_drawdown / 100.0
+
         if max_drawdown <= 0.05:  # 5%以下
             return "low"
         elif max_drawdown <= 0.15:  # 15%以下

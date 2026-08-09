@@ -91,7 +91,7 @@ class MomentumIndicators:
         """相対力指数"""
 
         def compute_rsi() -> pd.Series:
-            result: Any = ta.rsi(data, window=period)
+            result: Any = ta.rsi(data, length=period)
             if result is None:
                 return create_nan_series_like(data)
 
@@ -625,7 +625,7 @@ class MomentumIndicators:
 
         return cast(
             pd.Series,
-            run_series_indicator(data, length, lambda: ta.roc(data, window=length)),
+            run_series_indicator(data, length, lambda: ta.roc(data, length=length)),
         )
 
     @staticmethod
@@ -857,11 +857,11 @@ class MomentumIndicators:
                     high=high,
                     low=low,
                     close=close,
-                    bb_window=bb_length,
+                    bb_length=bb_length,
                     bb_std=bb_std,
-                    kc_window=kc_length,
+                    kc_length=kc_length,
                     kc_scalar=kc_scalar,
-                    mom_window=mom_length,
+                    mom_length=mom_length,
                     mom_smooth=mom_smooth,
                     use_tr=use_tr,
                 ),

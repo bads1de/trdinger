@@ -67,11 +67,10 @@ def rwi(
     low_candidates: list[pd.Series] = []
 
     for period in range(1, length + 1):
-        atr_mean = pd.Series(
+        atr = pd.Series(
             true_range.rolling(window=period, min_periods=period).mean(),
             index=true_range.index,
         )
-        atr = atr_mean.shift(1)
         scale = np.sqrt(float(period))
 
         with np.errstate(divide="ignore", invalid="ignore"):

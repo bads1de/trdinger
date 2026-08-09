@@ -134,6 +134,63 @@ def test_extract_performance_metrics(fitness_calculator, sample_backtest_result)
     assert "total_trades" in metrics
 
 
+def test_extract_performance_metrics_normalizes_percentage_drawdown(
+    fitness_calculator,
+):
+    """パーセント単位の max_drawdown が 0.0〜1.0 の割合に正規化されることをテスト"""
+    backtest_result = {
+        "performance_metrics": {
+            "total_return": 20.0,
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -47.98,
+            "win_rate": 55.0,
+            "total_trades": 50,
+        },
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(backtest_result)
+
+    assert metrics["max_drawdown"] == pytest.approx(0.4798, abs=1e-9)
+
+
+def test_extract_performance_metrics_normalizes_percentage_returns(
+    fitness_calculator,
+):
+    """% 単位の total_return / win_rate が 0.0〜1.0 の割合に正規化されることをテスト"""
+    backtest_result = {
+        "performance_metrics": {
+            "total_return": 47.98,
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -47.98,
+            "win_rate": 55.0,
+            "total_trades": 50,
+        },
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(backtest_result)
+
+    assert metrics["total_return"] == pytest.approx(0.4798, abs=1e-9)
+    assert metrics["win_rate"] == pytest.approx(0.55, abs=1e-9)
+    assert metrics["max_drawdown"] == pytest.approx(0.4798, abs=1e-9)
+
+
+def test_meets_constraints_drawdown_percentage_over_limit(
+    fitness_calculator, sample_backtest_result, sample_config
+):
+    """% 単位のドローダウン(47.98%)が制約の20%を超えて制約違反になることをテスト"""
+    sample_backtest_result["performance_metrics"] = {
+        "total_return": 0.5,
+        "sharpe_ratio": 1.5,
+        "max_drawdown": 47.98,
+        "win_rate": 0.6,
+        "total_trades": 50,
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(sample_backtest_result)
+
+    assert not fitness_calculator.meets_constraints(metrics, sample_config)
+
+
 def test_meets_constraints(fitness_calculator, sample_backtest_result, sample_config):
     """制約チェックをテスト"""
     # 正常なケース

@@ -209,6 +209,12 @@ class TestGeneratedStrategyService:
         assert service._calculate_risk_level({"max_drawdown": 0.151}) == "high"
         assert service._calculate_risk_level({"max_drawdown": 0.50}) == "high"
 
+    def test_calculate_risk_level_with_percentage_input(self, service):
+        # パーセンテージ(%)で渡された場合も割合として正しく判定される
+        assert service._calculate_risk_level({"max_drawdown": 3.0}) == "low"
+        assert service._calculate_risk_level({"max_drawdown": 12.0}) == "medium"
+        assert service._calculate_risk_level({"max_drawdown": 47.98}) == "high"
+
     def test_get_strategies_with_response_success(self, service, sample_strategy):
         # Arrange
         service.generated_strategy_repo.get_filtered_and_sorted_strategies.return_value = (

@@ -230,7 +230,7 @@ class TestWindowHelpersVarianceClamp:
 
 
 class TestEntropyVolatilityNoMatchBranch:
-    """Cover the ``a_count == 0 or b_count == 0`` fallback (EVI = 0)."""
+    """Cover the ``b_count == 0`` fallback (no m-vector pairs => EVI = 0)."""
 
     def test_no_matching_subsequences_returns_zero(self) -> None:
         m = _import_original_module("entropy_volatility_index")
@@ -239,6 +239,20 @@ class TestEntropyVolatilityNoMatchBranch:
         result = m._njit_entropy_volatility_loop(returns, 30, 2, 0.01)
         valid = result[~np.isnan(result)]
         assert (valid == 0.0).all()
+
+
+class TestEntropyVolatilityRegularBranch:
+    """Cover the ``a_count == 0, b_count > 0`` branch (regular chunks => +inf)."""
+
+    def test_regular_segments_return_inf(self) -> None:
+        m = _import_original_module("entropy_volatility_index")
+        # Every m-chunk pairs match (0 vs 0) but never extend: the true sample
+        # entropy of a perfectly regular segment is +inf.
+        returns = np.tile(np.array([0.0, 1.0, 0.0, 2.0, 0.0, 3.0, 0.0, 4.0]), 5)
+        result = m._njit_entropy_volatility_loop(returns, 8, 1, 0.01)
+        valid = result[~np.isnan(result)]
+        assert len(valid) > 0
+        assert np.isinf(valid).all()
 
 
 class TestAdaptiveEntropyShortInput:
@@ -459,13 +473,15 @@ class TestConnorsRSIResidualBranches:
         m = _import_original_module("connors_rsi")
         # Alternating +/- 1e308 overflows every close-RSI change to +/- inf,
         # so close_rsi becomes NaN and the outer loop takes the count == 2
-        # path, where (total / 2) * 1.5 can exceed 100 and get clamped.
+        # path: (streak_rsi + rank) / 2 * 1.5.
         prices = pd.Series(np.array([1e308, -1e308] * 60, dtype=float))
         result = m.connors_rsi(prices, rsi_periods=2, streak_periods=2, rank_periods=2)
         valid = result.iloc[2:].to_numpy()
         assert np.isfinite(valid).all()
         assert ((valid >= 0.0) & (valid <= 100.0)).all()
-        assert (valid == 100.0).any()
+        # Strict `<` percentile: the current bar never counts itself, so the
+        # count==2 path peaks at (66.7 + 50) / 2 * 1.5 = 87.5, below the clamp.
+        assert (valid < 100.0).all()
 
 
 class TestChaosFractalDimensionResidualBranches:

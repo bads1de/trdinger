@@ -80,7 +80,7 @@ def frama(close: pd.Series, length: int = 16, slow: int = 200) -> pd.Series:
     half = length // 2
     log2 = np.log(2.0)
     slow_float = float(slow)
-    w = 2.303 * np.log(2.0 / (slow_float + 1.0))
+    w = np.log(2.0 / (slow_float + 1.0))
 
     result = _njit_frama_loop(
         prices,

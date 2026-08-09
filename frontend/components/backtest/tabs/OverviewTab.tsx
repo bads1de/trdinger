@@ -158,18 +158,14 @@ export default function OverviewTab({ result }: OverviewTabProps) {
           />
           <MetricCard
             title="平均利益"
-            value={formatCurrency(Number(metrics.avg_win ?? 0))}
+            value={formatPercentage(Number(metrics.avg_win ?? 0))}
             subtitle="勝ちトレードあたり"
             color="green"
             icon={<ArrowUpRight className="w-6 h-6" />}
           />
           <MetricCard
             title="平均損失"
-            value={formatCurrency(
-              metrics.avg_loss !== undefined && metrics.avg_loss !== null
-                ? Math.abs(Number(metrics.avg_loss))
-                : 0
-            )}
+            value={formatPercentage(Number(metrics.avg_loss ?? 0))}
             subtitle="負けトレードあたり"
             color="red"
             icon={<ArrowDownRight className="w-6 h-6" />}

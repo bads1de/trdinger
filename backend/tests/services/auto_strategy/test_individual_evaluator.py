@@ -627,7 +627,7 @@ class TestIndividualEvaluator:
         # 無効な値が適切に処理されているか確認
         assert metrics["total_return"] == 0.0
         assert metrics["sharpe_ratio"] == 0.0
-        assert metrics["max_drawdown"] == 0.0  # 負の値は0に修正
+        assert metrics["max_drawdown"] == 0.1  # 負の値は絶対値で修正
         assert metrics["win_rate"] == 0.0
 
     def test_calculate_fitness_zero_trades(self):

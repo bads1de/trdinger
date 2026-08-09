@@ -247,13 +247,14 @@ class TestRSICalculationAccuracy:
         assert (valid_values <= 100).all(), f"RSIが100超: {valid_values.max()}"
 
     def test_rsi_initial_nan(self, known_prices):
-        """RSIの最初のperiod個がNaNであることを検証"""
+        """RSIの最初のperiod-1個がNaNであることを検証"""
         period = 5
         result = MomentumIndicators.rsi(known_prices, period=period)
 
-        # 最初のperiod個はNaN（pandas-taの実装による）
-        for i in range(period):
+        # 最初のperiod-1個はNaN、period-1番目から有効値
+        for i in range(period - 1):
             assert np.isnan(result.iloc[i]), f"RSI[{i}]はNaNであるべき"
+        assert np.isfinite(result.iloc[period - 1])
 
 
 # =============================================================================

@@ -228,6 +228,12 @@ class FitnessCalculator:
         """
         バックテスト結果からパフォーマンスメトリクスを抽出
 
+        performance_metrics の各指標はパーセンテージ(%)
+        (例: max_drawdown=-47.98, total_return=47.98, win_rate=55.0)
+        で保持されており、0.0〜1.0 の割合に正規化して返す。
+        (例: max_drawdown=0.4798, total_return=0.4798, win_rate=0.55)
+        なお、既に割合単位で渡された場合はそのまま通す。
+
         Args:
             backtest_result: バックテスト結果
 
@@ -283,7 +289,14 @@ class FitnessCalculator:
         total_trades = int(_sanitize_float(total_trades, 0.0))
 
         if max_drawdown < 0:
-            max_drawdown = 0.0
+            max_drawdown = abs(max_drawdown)
+        if max_drawdown > 1.0:
+            max_drawdown = min(max_drawdown / 100.0, 1.0)
+
+        if abs(total_return) > 1.0:
+            total_return = total_return / 100.0
+        if win_rate > 1.0:
+            win_rate = win_rate / 100.0
 
         equity_curve = backtest_result.get("equity_curve")
         equity_curve_list = (

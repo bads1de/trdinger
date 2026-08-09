@@ -74,7 +74,7 @@ def _njit_connors_rsi_loop(
         current_price = prices[i]
         count_lower = 0
         for j in range(i - rank_periods + 1, i + 1):
-            if prices[j] <= current_price:
+            if prices[j] < current_price:
                 count_lower += 1
         rank_values[i] = (count_lower / rank_periods) * 100.0
 

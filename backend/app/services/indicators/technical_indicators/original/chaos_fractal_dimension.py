@@ -221,7 +221,7 @@ def _njit_ctfd_normalize(raw_scores: np.ndarray, min_period: int) -> np.ndarray:
             start_k = 0
 
         recent_mean, recent_std, recent_count = _window_mean_and_std_finite(
-            result, start_k, i
+            raw_scores, start_k, i
         )
 
         if recent_count > 10:

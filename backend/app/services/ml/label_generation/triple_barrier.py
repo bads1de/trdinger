@@ -147,7 +147,8 @@ class TripleBarrier:
         Args:
             close (pd.Series): 市場の終値データ（DatetimeIndex）。
             t_events (pd.DatetimeIndex): ラベル付けの対象となる時刻（エントリー候補点）のリスト。
-            pt_sl (List[float]): 利食い・損切り幅のリスト（通常は `[pt, sl]`。本クラスでは `self.pt`, `self.sl` が優先されます）。
+            pt_sl (List[float]): 利食い・損切り幅の倍率リスト `[pt_mult, sl_mult]`
+                (例: `[1.0, 1.0]` は target ボラティリティの1倍)。
             target (pd.Series): 各時刻のボラティリティ等に基づく動的なバリア幅。
             min_ret (float): ラベル付与に必要な最小リターン閾値。
             vertical_barrier_times (Optional[pd.Series]): 各イベントに対する時間制限バリア（決済期限）の時刻。
@@ -229,9 +230,8 @@ class TripleBarrier:
             v_bar_times_int,
             target_vals,
             side_vals,
-            pt_mult
-            * self.pt,  # クラスのptと引数のpt_slを掛け合わせる（元実装の挙動に準拠）
-            sl_mult * self.sl,
+            pt_mult,
+            sl_mult,
         )
 
         # 結果の構築

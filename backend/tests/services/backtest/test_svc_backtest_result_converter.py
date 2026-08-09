@@ -536,8 +536,8 @@ class TestRiskMetrics:
 
         assert "max_drawdown" in statistics
         assert "avg_drawdown" in statistics
-        assert statistics["max_drawdown"] == -12.5
-        assert statistics["avg_drawdown"] == -5.2
+        assert statistics["max_drawdown"] == 12.5
+        assert statistics["avg_drawdown"] == 5.2
 
     def test_extract_risk_ratios(self, stats_calculator, mock_backtest_stats):
         """リスク比率の抽出"""
@@ -554,9 +554,9 @@ class TestRiskMetrics:
         """リスク指標の妥当な範囲を検証"""
         statistics = stats_calculator.calculate_statistics(mock_backtest_stats)
 
-        # ドローダウンは負の値
-        assert statistics["max_drawdown"] <= 0
-        assert statistics["avg_drawdown"] <= 0
+        # ドローダウンは正のパーセンテージ値
+        assert statistics["max_drawdown"] >= 0
+        assert statistics["avg_drawdown"] >= 0
 
         # シャープレシオは通常-3から5の範囲
         assert -5 <= statistics["sharpe_ratio"] <= 10
@@ -649,6 +649,8 @@ class TestPerformanceCalculation:
         statistics = stats_calculator.calculate_statistics(stats)
 
         assert statistics["win_rate"] == 60.0
+        assert statistics["winning_trades"] == 6
+        assert statistics["losing_trades"] == 4
 
     def test_calculate_average_win_loss(self, stats_calculator):
         """平均利益と平均損失の計算"""
@@ -670,6 +672,27 @@ class TestPerformanceCalculation:
         assert statistics["avg_win"] == pytest.approx(123.33, rel=0.01)
         # 平均損失 = (50 + 60) / 2 = 55.0
         assert statistics["avg_loss"] == pytest.approx(55.0, rel=0.01)
+
+    def test_calculate_average_win_loss_from_return_pct(self, stats_calculator):
+        """ReturnPctが存在する場合は平均利益・損失を%単位で計算"""
+        stats = pd.Series({"Return [%]": 5.0})
+
+        trades_data = [
+            {"PnL": 100.0, "ReturnPct": 0.05},
+            {"PnL": 150.0, "ReturnPct": 0.10},
+            {"PnL": 120.0, "ReturnPct": 0.08},
+            {"PnL": -50.0, "ReturnPct": -0.02},
+            {"PnL": -60.0, "ReturnPct": -0.04},
+        ]
+        stats._trades = pd.DataFrame(trades_data)
+        stats._equity_curve = pd.DataFrame()
+
+        statistics = stats_calculator.calculate_statistics(stats)
+
+        # 平均利益 = (5 + 10 + 8) / 3 = 7.667%
+        assert statistics["avg_win"] == pytest.approx(7.6667, rel=0.01)
+        # 平均損失 = (2 + 4) / 2 = 3.0%
+        assert statistics["avg_loss"] == pytest.approx(3.0, rel=0.01)
 
     def test_calculate_total_return_from_equity(self, stats_calculator):
         """エクイティカーブからの総リターン計算"""
