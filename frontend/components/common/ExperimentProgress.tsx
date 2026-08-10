@@ -5,6 +5,7 @@
  */
 
 import { ExperimentProgress } from "@/hooks/useAutoStrategy";
+import { formatScore } from "@/utils/formatters";
 
 interface ExperimentProgressCardProps {
   progress: ExperimentProgress;
@@ -72,7 +73,7 @@ export const ExperimentProgressCard: React.FC<ExperimentProgressCardProps> = ({
         <div className="text-xs text-gray-500 dark:text-gray-400">
           最高フィットネス:{" "}
           <span className="font-medium text-gray-700 dark:text-gray-300">
-            {progress.best_fitness.toFixed(4)}
+            {formatScore(progress.best_fitness)}
           </span>
         </div>
       )}

@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useModelManagement, ModelInfo } from "@/hooks/useModelManagement";
+import { formatFileSize } from "@/utils/formatters";
 import {
   Database,
   Download,
@@ -118,7 +119,7 @@ const ModelCard: React.FC<{
           </div>
           <div className="flex items-center gap-2 text-gray-300">
             <HardDrive className="h-4 w-4 text-cyan-400" />
-            <span>サイズ: {model.size_mb.toFixed(1)}MB</span>
+            <span>サイズ: {formatFileSize(model.size_mb)}</span>
           </div>
         </div>
 

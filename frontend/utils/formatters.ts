@@ -37,20 +37,59 @@ export const formatDateTime = (
 /**
  * パーセンテージをフォーマットする
  * @param value - フォーマットする値 (既に%単位の数値、例: 12.345 = 12.345%)
+ * @param digits - 小数点以下の桁数 (デフォルト: 2)
  * @returns フォーマットされたパーセンテージ文字列 (例: '12.35%') または 'N/A'
  * @example
  * // returns '12.35%'
  * formatPercentage(12.345)
+ * // returns '12.3%'
+ * formatPercentage(12.345, 1)
  * @see formatPercent - 比率 (0-1) を%に変換する場合はこちらを使用する
  */
-export const formatPercentage = (value?: number | null) => {
+export const formatPercentage = (value?: number | null, digits: number = 2) => {
   if (value === undefined || value === null || isNaN(value)) {
     return "N/A";
   }
 
-  const formatted = value.toFixed(2);
+  const formatted = value.toFixed(digits);
 
   return `${formatted}%`;
+};
+
+/**
+ * 符号付きパーセンテージをフォーマットする
+ * @param value - フォーマットする値 (既に%単位の数値。正の値には+が付く)
+ * @param digits - 小数点以下の桁数 (デフォルト: 2)
+ * @returns フォーマットされたパーセンテージ文字列 (例: '+12.35%', '-5.00%') または 'N/A'
+ * @example
+ * // returns '+12.35%'
+ * formatSignedPercentage(12.345)
+ * // returns '-5.00%'
+ * formatSignedPercentage(-5)
+ */
+export const formatSignedPercentage = (
+  value?: number | null,
+  digits: number = 2
+) => {
+  if (value === undefined || value === null || isNaN(value)) {
+    return "N/A";
+  }
+
+  return `${value > 0 ? "+" : ""}${value.toFixed(digits)}%`;
+};
+
+/**
+ * 比率 (0-1) を%記号なしのパーセンテージ数値文字列にフォーマットする
+ * @param value - 比率 (0-1の範囲、例: 0.625 = 62.5%)
+ * @param digits - 小数点以下の桁数 (デフォルト: 2)
+ * @returns フォーマットされた数値文字列 (例: '62.50')
+ * @example
+ * // returns '62.50'
+ * formatPercentValue(0.625)
+ * @see formatPercent - %記号付きの文字列が必要な場合はこちらを使用する
+ */
+export const formatPercentValue = (value: number, digits: number = 2) => {
+  return (value * 100).toFixed(digits);
 };
 
 /**
@@ -210,13 +249,16 @@ export const formatDuration = (seconds?: number) => {
 /**
  * スコアをフォーマットする
  * @param score - フォーマットするスコア
- * @returns フォーマットされたスコア文字列 (小数点以下4桁) または 'N/A'
+ * @param digits - 小数点以下の桁数 (デフォルト: 4)
+ * @returns フォーマットされたスコア文字列 (例: '0.1234') または 'N/A'
  * @example
  * // returns '0.1234'
  * formatScore(0.12345)
+ * // returns '0.123'
+ * formatScore(0.12345, 3)
  */
-export const formatScore = (score?: number) => {
+export const formatScore = (score?: number, digits: number = 4) => {
   if (score === undefined || score === null || isNaN(score)) return "N/A";
 
-  return score.toFixed(4);
+  return score.toFixed(digits);
 };

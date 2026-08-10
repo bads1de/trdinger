@@ -18,6 +18,7 @@ import TradeScatterChart from "./TradeScatterChart";
 import ReturnsDistributionChart from "./ReturnsDistributionChart";
 import TabButton from "../../common/TabButton";
 import { X } from "lucide-react";
+import { formatPercentage } from "@/utils/formatters";
 
 interface ChartModalProps {
   isOpen: boolean;
@@ -170,7 +171,9 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               <div className="text-gray-400">総リターン</div>
               <div className="text-white font-semibold">
                 {result.performance_metrics?.total_return
-                  ? `${Number(result.performance_metrics.total_return).toFixed(2)}%`
+                  ? formatPercentage(
+                      Number(result.performance_metrics.total_return)
+                    )
                   : "N/A"}
               </div>
             </div>
@@ -178,9 +181,9 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               <div className="text-gray-400">最大ドローダウン</div>
               <div className="text-red-400 font-semibold">
                 {result.performance_metrics?.max_drawdown
-                  ? `${Math.abs(
-                      Number(result.performance_metrics.max_drawdown)
-                    ).toFixed(2)}%`
+                  ? formatPercentage(
+                      Math.abs(Number(result.performance_metrics.max_drawdown))
+                    )
                   : "N/A"}
               </div>
             </div>
@@ -188,7 +191,10 @@ const ChartModal: React.FC<ChartModalProps> = ({ isOpen, onClose, result }) => {
               <div className="text-gray-400">勝率</div>
               <div className="text-green-400 font-semibold">
                 {result.performance_metrics?.win_rate
-                  ? `${Number(result.performance_metrics.win_rate).toFixed(1)}%`
+                  ? formatPercentage(
+                      Number(result.performance_metrics.win_rate),
+                      1
+                    )
                   : "N/A"}
               </div>
             </div>

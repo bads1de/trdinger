@@ -12,7 +12,11 @@ import { FundingRateData } from "@/types/funding-rate";
 import { PriceData } from "@/types/market-data";
 import { OpenInterestData } from "@/types/open-interest";
 import { LongShortRatioData } from "@/types/long-short-ratio";
-import { formatDateTime, formatPercent } from "@/utils/formatters";
+import {
+  formatDateTime,
+  formatNumber,
+  formatPercent,
+} from "@/utils/formatters";
 import {
   formatPrice,
   formatSymbol,
@@ -300,7 +304,7 @@ export const longShortRatioColumns: TableColumn<LongShortRatioData>[] = [
     sortable: true,
     formatter: (value: number | undefined) => (
       <span className="font-mono text-sm text-yellow-500">
-        {value ? value.toFixed(4) : '-'}
+        {value ? formatNumber(value, 4, 4) : '-'}
       </span>
     ),
     cellClassName: "text-right",

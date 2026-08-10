@@ -483,20 +483,149 @@ class TestHelperMethods:
 class TestOptimizeMetaModelWithOOF:
     """optimize_meta_model_with_oof メソッドのテスト"""
 
-    # 注: このメソッドは複雑な依存関係（TimeSeriesSplit、実際のパイプラインfitなど）があり、
-    # ユニットテストで適切にモックするのが困難です。統合テストでカバーすることを推奨します。
+    @pytest.fixture
+    def service(self):
+        return OptimizationService()
 
-    @pytest.mark.skip(reason="複雑すぎてユニットテストで適切にモックできない")
-    def test_optimize_meta_model_with_oof_success(self):
+    @pytest.fixture
+    def sample_superset(self):
+        """マイクロストラクチャ系特徴量を含むサンプル特徴量スーパーセット"""
+        rng = np.random.default_rng(42)
+        n = 240
+        return pd.DataFrame(
+            {
+                "LS_ratio_1h": rng.random(n),
+                "OI_change_1h": rng.random(n),
+                "VPIN_1h": rng.random(n),
+                "close": rng.random(n) * 100 + 100,
+            },
+            index=pd.RangeIndex(n),
+        )
+
+    @pytest.fixture
+    def sample_labels(self, sample_superset):
+        """0/1のサンプルラベル（スーパーセットと同一インデックス）"""
+        rng = np.random.default_rng(7)
+        return pd.Series(
+            rng.integers(0, 2, len(sample_superset)),
+            index=sample_superset.index,
+        )
+
+    def _build_primary_pipeline(self, prob: float):
+        """OOF予測確率を固定値で返す一次モデルのモック"""
+        mock_primary = MagicMock()
+        mock_primary.predict_proba.side_effect = (
+            lambda X: np.full((len(X), 2), prob)
+        )
+        return mock_primary
+
+    def test_optimize_meta_model_with_oof_success(
+        self, service, sample_superset, sample_labels
+    ):
         """メタモデル最適化の成功テスト"""
-        pass
+        mock_primary = self._build_primary_pipeline(prob=0.9)
 
-    @pytest.mark.skip(reason="複雑すぎてユニットテストで適切にモックできない")
-    def test_optimize_meta_model_with_oof_insufficient_samples(self):
+        # Optuna最適化をモック（目的関数は実行しない）
+        mock_result = MagicMock()
+        mock_result.best_params = {
+            "frac_diff_d": 0.3,
+            "selection_method": "staged",
+        }
+        mock_result.best_score = 0.75
+
+        with patch.object(
+            service.optimizer, "optimize", return_value=mock_result
+        ) as mock_optimize:
+            result = service.optimize_meta_model_with_oof(
+                primary_pipeline=mock_primary,
+                X_superset=sample_superset,
+                y_true=sample_labels,
+                n_trials=5,
+                cv_splits=4,
+            )
+
+        # 最適化が1回だけ呼ばれる
+        mock_optimize.assert_called_once()
+
+        # 結果の構造と値の検証
+        assert result["best_params"] == {
+            "frac_diff_d": 0.3,
+            "selection_method": "staged",
+        }
+        assert result["best_f1"] == 0.75
+        # TimeSeriesSplit(4分割)で OOF 予測が付与されるのは 192 サンプル
+        assert result["n_samples"] >= 100
+        assert isinstance(result["base_win_rate"], float)
+        # マイクロストラクチャ列(3) + primary_prob(1)
+        assert result["n_meta_features"] == 4
+
+    def test_optimize_meta_model_with_oof_insufficient_samples(
+        self, service, sample_superset, sample_labels
+    ):
         """サンプル数が不足している場合のテスト"""
-        pass
+        # 全ての予測確率が0.5未満 → エントリー判定で0件
+        mock_primary = self._build_primary_pipeline(prob=0.1)
 
-    @pytest.mark.skip(reason="複雑すぎてユニットテストで適切にモックできない")
-    def test_optimize_meta_model_with_oof_exception_handling(self):
-        """例外処理のテスト"""
-        pass
+        with patch.object(
+            service.optimizer, "optimize"
+        ) as mock_optimize:
+            result = service.optimize_meta_model_with_oof(
+                primary_pipeline=mock_primary,
+                X_superset=sample_superset,
+                y_true=sample_labels,
+                n_trials=5,
+                cv_splits=4,
+            )
+
+        # エントリー不足でスキップされ、最適化は実行されない
+        assert result["status"] == "skipped"
+        assert "too few entries" in result["reason"]
+        mock_optimize.assert_not_called()
+
+    def test_optimize_meta_model_with_oof_exception_handling(
+        self, service, sample_superset, sample_labels
+    ):
+        """目的関数の内部例外が0.0に変換されること"""
+        mock_primary = self._build_primary_pipeline(prob=0.9)
+
+        mock_result = MagicMock()
+        mock_result.best_params = {}
+        mock_result.best_score = 0.5
+
+        captured: dict[str, object] = {}
+
+        def fake_optimize(
+            objective, parameter_space, n_calls
+        ):
+            captured["objective"] = objective
+            return mock_result
+
+        with patch.object(
+            service.optimizer, "optimize", side_effect=fake_optimize
+        ):
+            service.optimize_meta_model_with_oof(
+                primary_pipeline=mock_primary,
+                X_superset=sample_superset,
+                y_true=sample_labels,
+                n_trials=5,
+                cv_splits=4,
+            )
+
+        objective = captured["objective"]
+        assert callable(objective)
+
+        # 特徴量フィルタが失敗した場合、目的関数は0.0を返す
+        with patch(
+            "app.services.ml.feature_engineering.feature_engineering_service.FeatureEngineeringService.filter_superset_for_d",
+            side_effect=Exception("filter failed"),
+        ):
+            score = objective(
+                {
+                    "frac_diff_d": 0.3,
+                    "selection_method": "staged",
+                    "min_features": 5,
+                    "learning_rate": 0.05,
+                    "num_leaves": 31,
+                }
+            )
+            assert score == 0.0

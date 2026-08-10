@@ -8,16 +8,22 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 import pandas as pd
 
+# 以下の datetime_utils の再エクスポートは backtest 系モジュールから参照されるため意図的
+# （F401 対策として各行に noqa を付与）
 from app.utils.data_processing.data_validator import OHLCV_COLUMNS
-from app.utils.datetime_utils import current_datetime_like
-from app.utils.datetime_utils import normalize_datetimes_for_comparison
-from app.utils.datetime_utils import parse_datetime_value
-from app.utils.datetime_utils import parse_timestamp_safe as safe_timestamp_conversion
+from app.utils.datetime_utils import (
+    current_datetime_like,  # noqa: F401
+    normalize_datetimes_for_comparison,  # noqa: F401
+    parse_datetime_value,  # noqa: F401
+)
+from app.utils.datetime_utils import (
+    parse_timestamp_safe as safe_timestamp_conversion,  # noqa: F401
+)
 
 TRADE_PNL_COLUMNS: tuple[str, ...] = ("PnL", "Pnl", "Profit", "ProfitLoss")
 

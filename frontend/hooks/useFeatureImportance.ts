@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDataFetching } from "./useDataFetching";
 import { getBarColor } from "@/utils/colorUtils";
+import { formatPercentValue, formatScore } from "@/utils/formatters";
 
 interface FeatureImportanceData {
   feature_name: string;
@@ -124,18 +125,18 @@ export const useFeatureImportance = (
       // 正規化された重要度をパーセンテージで表示（相対値）
       importancePercent:
         maxImportance > 0
-          ? ((item.importance / maxImportance) * 100).toFixed(2)
+          ? formatPercentValue(item.importance / maxImportance, 2)
           : "0.00",
       // 絶対値での重要度をパーセンテージで表示
       absoluteImportancePercent:
         totalImportance > 0
-          ? ((item.importance / totalImportance) * 100).toFixed(2)
+          ? formatPercentValue(item.importance / totalImportance, 2)
           : "0.00",
       // チャート用には正規化された値（0-1の範囲）を使用
       normalizedImportance:
         maxImportance > 0 ? item.importance / maxImportance : 0,
       // 実際の重要度値
-      rawImportance: item.importance.toFixed(6),
+      rawImportance: formatScore(item.importance, 6),
       colorIndex: index,
     }));
   }, [data]);

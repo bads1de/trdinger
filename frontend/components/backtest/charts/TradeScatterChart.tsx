@@ -21,7 +21,7 @@ import {
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
 import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
-import { formatDateTime } from "@/utils/formatters";
+import { formatDateTime, formatPercentage, formatNumber, formatSignedPercentage } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 import { sampleData } from "@/utils/chartDataTransformers";
 import { ChartTradePoint } from "@/types/backtest";
@@ -77,7 +77,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload }) => {
         />
         <TooltipRow
           label="リターン"
-          value={`${data.returnPct > 0 ? "+" : ""}${data.returnPct.toFixed(2)}%`}
+          value={formatSignedPercentage(data.returnPct)}
           valueColor={data.isWin ? "green" : "red"}
         />
         <TooltipRow
@@ -85,7 +85,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload }) => {
           value={formatCurrency(data.pnl)}
           valueColor={data.isWin ? "green" : "red"}
         />
-        <TooltipRow label="サイズ" value={data.size.toFixed(2)} />
+        <TooltipRow label="サイズ" value={formatNumber(data.size, 2, 2)} />
       </div>
     </ChartTooltipContainer>
   );
@@ -174,7 +174,7 @@ const TradeScatterChart: React.FC<TradeScatterChartProps> = ({
           <YAxis
             dataKey="returnPct"
             domain={yAxisDomain}
-            tickFormatter={(value) => `${value.toFixed(1)}%`}
+            tickFormatter={(value) => formatPercentage(value, 1)}
             {...chartStyles.axis}
           />
 

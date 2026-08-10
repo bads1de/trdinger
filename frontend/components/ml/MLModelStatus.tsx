@@ -6,7 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import { useMLModelStatus } from "@/hooks/useMLModelStatus";
-import { formatPercent, formatProbability } from "@/utils/formatters";
+import {
+  formatPercent,
+  formatProbability,
+  formatScore,
+} from "@/utils/formatters";
 import { Brain, TrendingUp, BarChart3, Activity } from "lucide-react";
 
 /**
@@ -153,7 +157,7 @@ export default function MLModelStatus() {
                         {feature}
                       </span>
                       <span className="text-sm font-medium text-gray-900">
-                        {importance.toFixed(3)}
+                        {formatScore(importance, 3)}
                       </span>
                     </div>
                     <div className="w-24 bg-gray-200 rounded-full h-2">

@@ -21,6 +21,7 @@ import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
 import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
 import { calculateReturnDistribution } from "@/utils/chartDataTransformers";
+import { formatPercentage, formatNumber } from "@/utils/formatters";
 import { Trade } from "@/types/backtest";
 
 interface ReturnsDistributionChartProps {
@@ -63,7 +64,10 @@ const CustomTooltip: React.FC<any> = ({ active, payload }) => {
       <div className="space-y-1 text-sm">
         <TooltipRow
           label="範囲"
-          value={`${data.rangeStart.toFixed(1)}% ～ ${data.rangeEnd.toFixed(1)}%`}
+          value={`${formatPercentage(data.rangeStart, 1)} ～ ${formatPercentage(
+            data.rangeEnd,
+            1
+          )}`}
         />
         <TooltipRow
           label="取引数"
@@ -72,7 +76,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload }) => {
         />
         <TooltipRow
           label="頻度"
-          value={`${data.frequency.toFixed(1)}%`}
+          value={formatPercentage(data.frequency, 1)}
           valueColor="green"
         />
       </div>
@@ -106,7 +110,7 @@ const ReturnsDistributionChart: React.FC<ReturnsDistributionChartProps> = ({
     // チャート表示用にラベルを追加
     return distribution.map((bin) => ({
       ...bin,
-      rangeLabel: `${bin.rangeStart.toFixed(1)}%`,
+      rangeLabel: formatPercentage(bin.rangeStart, 1),
       color: bin.rangeStart >= 0 ? chartColors.winTrade : chartColors.lossTrade,
     }));
   }, [data, bins]);
@@ -176,7 +180,7 @@ const ReturnsDistributionChart: React.FC<ReturnsDistributionChartProps> = ({
 
           <YAxis
             domain={yAxisDomain}
-            tickFormatter={(value) => `${value.toFixed(1)}%`}
+            tickFormatter={(value) => formatPercentage(value, 1)}
             {...chartStyles.axis}
           />
 
@@ -211,31 +215,31 @@ const ReturnsDistributionChart: React.FC<ReturnsDistributionChartProps> = ({
             <div className="text-center">
               <div className="text-gray-400">平均</div>
               <div className="text-white font-medium">
-                {statistics.mean.toFixed(2)}%
+                {formatPercentage(statistics.mean)}
               </div>
             </div>
             <div className="text-center">
               <div className="text-gray-400">標準偏差</div>
               <div className="text-white font-medium">
-                {statistics.stdDev.toFixed(2)}%
+                {formatPercentage(statistics.stdDev)}
               </div>
             </div>
             <div className="text-center">
               <div className="text-gray-400">歪度</div>
               <div className="text-white font-medium">
-                {statistics.skewness.toFixed(2)}
+                {formatNumber(statistics.skewness, 2, 2)}
               </div>
             </div>
             <div className="text-center">
               <div className="text-gray-400">最小値</div>
               <div className="text-red-400 font-medium">
-                {statistics.min.toFixed(2)}%
+                {formatPercentage(statistics.min)}
               </div>
             </div>
             <div className="text-center">
               <div className="text-gray-400">最大値</div>
               <div className="text-green-400 font-medium">
-                {statistics.max.toFixed(2)}%
+                {formatPercentage(statistics.max)}
               </div>
             </div>
           </div>

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Download } from 'lucide-react';
 import { LongShortRatioData } from '@/types/long-short-ratio';
 import { format } from 'date-fns';
-import { formatPercent } from '@/utils/formatters';
+import { formatPercent, formatPercentValue, formatNumber } from '@/utils/formatters';
 
 interface LongShortRatioChartProps {
   data: LongShortRatioData[];
@@ -42,9 +42,9 @@ export const LongShortRatioChart: React.FC<LongShortRatioChartProps> = ({
       .map(item => ({
         ...item,
         displayTime: format(new Date(item.timestamp), 'MM/dd HH:mm'),
-        buyPercent: (item.buy_ratio * 100).toFixed(2),
-        sellPercent: (item.sell_ratio * 100).toFixed(2),
-        ratio: item.ls_ratio?.toFixed(4)
+        buyPercent: formatPercentValue(item.buy_ratio, 2),
+        sellPercent: formatPercentValue(item.sell_ratio, 2),
+        ratio: item.ls_ratio != null ? formatNumber(item.ls_ratio, 4, 4) : undefined
       }));
   }, [data]);
 

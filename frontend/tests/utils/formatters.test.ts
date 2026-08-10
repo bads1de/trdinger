@@ -1,6 +1,8 @@
 import {
   formatDateTime,
   formatPercentage,
+  formatSignedPercentage,
+  formatPercentValue,
   formatNumber,
   formatFileSize,
   formatTrainingTime,
@@ -56,6 +58,46 @@ describe("formatPercentage", () => {
 
   it("NaNの場合はN/Aを返す", () => {
     expect(formatPercentage(NaN)).toBe("N/A");
+  });
+
+  it("小数点以下の桁数を指定できる", () => {
+    expect(formatPercentage(12.345, 1)).toBe("12.3%");
+  });
+});
+
+describe("formatSignedPercentage", () => {
+  it("正の値に+を付けてフォーマットする", () => {
+    expect(formatSignedPercentage(12.345)).toBe("+12.35%");
+  });
+
+  it("負の値は-付きでフォーマットする", () => {
+    expect(formatSignedPercentage(-5)).toBe("-5.00%");
+  });
+
+  it("0には符号を付けない", () => {
+    expect(formatSignedPercentage(0)).toBe("0.00%");
+  });
+
+  it("小数点以下の桁数を指定できる", () => {
+    expect(formatSignedPercentage(3.14159, 1)).toBe("+3.1%");
+  });
+
+  it("undefinedの場合はN/Aを返す", () => {
+    expect(formatSignedPercentage(undefined)).toBe("N/A");
+  });
+});
+
+describe("formatPercentValue", () => {
+  it("比率を%記号なしの数値文字列にフォーマットする", () => {
+    expect(formatPercentValue(0.625)).toBe("62.50");
+  });
+
+  it("小数点以下の桁数を指定できる", () => {
+    expect(formatPercentValue(0.123, 1)).toBe("12.3");
+  });
+
+  it("0をフォーマットする", () => {
+    expect(formatPercentValue(0)).toBe("0.00");
   });
 });
 
@@ -184,5 +226,13 @@ describe("formatScore", () => {
 
   it("NaNの場合はN/Aを返す", () => {
     expect(formatScore(NaN)).toBe("N/A");
+  });
+
+  it("小数点以下の桁数を指定できる", () => {
+    expect(formatScore(0.12345, 3)).toBe("0.123");
+  });
+
+  it("6桁でフォーマットする", () => {
+    expect(formatScore(0.123456789, 6)).toBe("0.123457");
   });
 });

@@ -15,6 +15,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { formatFileSize } from "@/utils/formatters";
 
 interface CollapsibleJsonProps {
   data: any;
@@ -122,7 +123,7 @@ const CollapsibleJson: React.FC<CollapsibleJsonProps> = ({
               <span
                 className={cn("ml-2 text-xs px-2 py-1 rounded", styles.button)}
               >
-                {(jsonSize / 1024).toFixed(1)}KB
+                {formatFileSize(jsonSize / (1024 * 1024))}
               </span>
             )}
           </div>

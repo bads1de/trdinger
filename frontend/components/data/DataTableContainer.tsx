@@ -7,7 +7,8 @@ import {
   longShortRatioColumns,
 } from "@/components/common";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { formatFundingRate } from "@/utils/financialFormatters";
+import { formatFundingRate, formatPrice } from "@/utils/financialFormatters";
+import { formatNumber } from "@/utils/formatters";
 import { PriceData, TimeFrame } from "@/types/market-data";
 import { FundingRateData } from "@/types/funding-rate";
 import { OpenInterestData } from "@/types/open-interest";
@@ -116,7 +117,10 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                 <>
                   <span className="badge-primary">{ohlcvData.length}件</span>
                   <span className="badge-success">
-                    最新: ${ohlcvData[ohlcvData.length - 1]?.close.toFixed(2)}
+                    {"最新: $"}
+                    {formatPrice(
+                      ohlcvData[ohlcvData.length - 1]?.close ?? null
+                    )}
                   </span>
                 </>
               )}
@@ -159,7 +163,10 @@ const DataTableContainer: React.FC<DataTableContainerProps> = ({
                       {longShortRatioData.length}件
                     </span>
                     <span className="badge-success">
-                      最新L/S: {longShortRatioData[0]?.ls_ratio?.toFixed(4)}
+                      最新L/S:{" "}
+                      {longShortRatioData[0]?.ls_ratio != null
+                        ? formatNumber(longShortRatioData[0].ls_ratio, 4, 4)
+                        : "-"}
                     </span>
                   </>
                 )}

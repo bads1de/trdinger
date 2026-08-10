@@ -1,6 +1,7 @@
 import React from "react";
 import { AVAILABLE_OBJECTIVES } from "@/constants/backtest";
 import { GAConfig } from "@/types/optimization";
+import { formatNumber } from "@/utils/formatters";
 
 interface ObjectiveSelectionProps {
   gaConfig: GAConfig["ga_config"];
@@ -109,7 +110,8 @@ export const ObjectiveSelection: React.FC<ObjectiveSelectionProps> = ({
                   </span>
                   <span className="text-indigo-300">
                     重み:{" "}
-                    {gaConfig.objective_weights?.[index]?.toFixed(1) || "1.0"}
+                    {formatNumber(gaConfig.objective_weights?.[index], 1, 1) ||
+                      "1.0"}
                   </span>
                 </div>
               ))}

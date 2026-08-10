@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { useFeatureImportance } from "@/hooks/useFeatureImportance";
-import { formatPercent } from "@/utils/formatters";
+import { formatPercent, formatPercentage } from "@/utils/formatters";
 import { TrendingUp, BarChart3, RefreshCw, Download } from "lucide-react";
 
 interface FeatureImportanceChartProps {
@@ -302,14 +302,14 @@ export default function FeatureImportanceChart({
                 <p className="text-gray-400">平均重要度</p>
                 <p className="text-white font-medium">
                   {chartData.length > 0
-                    ? (
+                    ? formatPercentage(
                         chartData.reduce(
                           (sum, d) => sum + parseFloat(d.absoluteImportancePercent),
                           0
-                        ) / chartData.length
-                      ).toFixed(2)
-                    : "0.00"}
-                  %
+                        ) / chartData.length,
+                        2
+                      )
+                    : "0.00%"}
                 </p>
               </div>
               <div className="text-center">

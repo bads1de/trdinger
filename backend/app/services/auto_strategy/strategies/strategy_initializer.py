@@ -192,15 +192,15 @@ class StrategyInitializer:
         if result is None:
             return None
         if isinstance(result, pd.Series):
-            return result.to_numpy()
+            return np.asarray(result.to_numpy())
         if isinstance(result, np.ndarray):
             return result
         if isinstance(result, pd.DataFrame):
-            return result.iloc[:, 0].to_numpy()
+            return np.asarray(result.iloc[:, 0].to_numpy())
         if isinstance(result, tuple):
             first = result[0]
             if isinstance(first, (pd.Series, pd.DataFrame)):
-                return first.iloc[:, 0].to_numpy()
+                return np.asarray(first.iloc[:, 0].to_numpy())
             return np.asarray(first)
         return None
 

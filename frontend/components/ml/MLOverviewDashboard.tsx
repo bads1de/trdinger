@@ -8,6 +8,7 @@ import ModelInfoCard from "./ModelInfoCard";
 import ModelPerformanceCard from "./ModelPerformanceCard";
 import ModelManagement from "./ModelManagement";
 import { useMLModels } from "@/hooks/useMLModels";
+import { formatFileSize } from "@/utils/formatters";
 import {
   Brain,
   Database,
@@ -119,7 +120,7 @@ export default function MLOverviewDashboard({
               <div>
                 <p className="text-sm text-gray-400">総ファイルサイズ</p>
                 <p className="p-1 text-2xl font-bold text-purple-400">
-                  {stats.totalSize.toFixed(1)} MB
+                  {formatFileSize(stats.totalSize)}
                 </p>
               </div>
               <BarChart3 className="h-10 w-10 text-purple-400" />

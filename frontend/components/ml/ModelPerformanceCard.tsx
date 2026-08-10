@@ -8,7 +8,11 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import InfoModal from "@/components/common/InfoModal";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
-import { formatPercent, formatTrainingTime } from "@/utils/formatters";
+import {
+  formatPercent,
+  formatScore,
+  formatTrainingTime,
+} from "@/utils/formatters";
 import { getScoreColorClass } from "@/utils/colorUtils";
 import { ML_METRICS_INFO } from "@/constants/ml-metrics-info";
 import {
@@ -140,7 +144,7 @@ export default function ModelPerformanceCard({
       isModelNotLoaded && value === 0
         ? "未学習"
         : metricKey.includes("loss") || metricKey.includes("brier")
-        ? value.toFixed(4)
+        ? formatScore(value)
         : formatPercent(value);
 
     return (
@@ -192,7 +196,7 @@ export default function ModelPerformanceCard({
         </div>
         <Badge variant={getScoreBadgeVariant(value)}>
           {metricKey.includes("loss") || metricKey.includes("brier")
-            ? value.toFixed(4)
+            ? formatScore(value)
             : formatPercent(value)}
         </Badge>
       </div>
@@ -531,7 +535,7 @@ export default function ModelPerformanceCard({
                             <div className="flex justify-between items-center">
                               <span className="text-gray-400">損失:</span>
                               <span className="text-white font-medium">
-                                {metrics.loss.toFixed(4)}
+                                {formatScore(metrics.loss)}
                               </span>
                             </div>
                           )}
@@ -551,7 +555,7 @@ export default function ModelPerformanceCard({
                             <div className="flex justify-between items-center">
                               <span className="text-gray-400">検証損失:</span>
                               <span className="text-white font-medium">
-                                {metrics.val_loss.toFixed(4)}
+                                {formatScore(metrics.val_loss)}
                               </span>
                             </div>
                           )}

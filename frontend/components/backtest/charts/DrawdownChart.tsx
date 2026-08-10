@@ -21,7 +21,7 @@ import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
 import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
 import { sampleData } from "@/utils/chartDataTransformers";
-import { formatDateTime } from "@/utils/formatters";
+import { formatDateTime, formatPercentage, formatPercent } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 import { ChartEquityPoint } from "@/types/backtest";
 
@@ -68,7 +68,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
     <ChartTooltipContainer active={active} payload={payload} title={date}>
       <TooltipRow
         label="ドローダウン"
-        value={`-${drawdown.toFixed(2)}%`}
+        value={`-${formatPercentage(Math.abs(drawdown))}`}
         className="flex items-center justify-between mb-1"
         labelColor="red"
         valueColor="red"
@@ -176,7 +176,7 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
 
           <YAxis
             domain={yAxisDomain}
-            tickFormatter={(value) => `${Math.abs(value * 100).toFixed(1)}%`}
+            tickFormatter={(value) => formatPercent(Math.abs(value), 1)}
             {...chartStyles.axis}
           />
 
@@ -190,7 +190,10 @@ const DrawdownChart: React.FC<DrawdownChartProps> = ({
               strokeDasharray="5 5"
               strokeWidth={2}
               label={{
-                value: `最大DD: ${Math.abs(calculatedMaxDrawdown * 100).toFixed(1)}%`,
+                value: `最大DD: ${formatPercent(
+                  Math.abs(calculatedMaxDrawdown),
+                  1
+                )}`,
                 position: "topLeft" as any,
                 style: { fill: chartColors.maxDrawdown },
               }}

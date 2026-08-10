@@ -21,7 +21,7 @@ import {
 import ChartContainer from "./ChartContainer";
 import { chartColors, chartStyles } from "./ChartTheme";
 import { ChartTooltipContainer, TooltipRow } from "./ChartTooltip";
-import { formatDateTime } from "@/utils/formatters";
+import { formatDateTime, formatPercentage } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
 import { sampleData } from "@/utils/chartDataTransformers";
 import { ChartEquityPoint } from "@/types/backtest";
@@ -77,7 +77,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
           value={
             entry.dataKey === "equity" || entry.dataKey === "buyHold"
               ? formatCurrency(entry.value)
-              : `${entry.value.toFixed(2)}%`
+              : formatPercentage(entry.value)
           }
           className="flex items-center justify-between mb-1"
           labelClassName="text-sm"
@@ -87,7 +87,7 @@ const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
       {data.drawdown > 0 && (
         <TooltipRow
           label="ドローダウン"
-          value={`-${data.drawdown.toFixed(2)}%`}
+          value={`-${formatPercentage(data.drawdown)}`}
           className="flex items-center justify-between mt-2 pt-2 border-t border-gray-600"
           labelColor="red"
           valueColor="red"

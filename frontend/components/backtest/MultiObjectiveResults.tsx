@@ -9,7 +9,7 @@
 import React, { useState } from "react";
 import { TrendingUp, Target, BarChart3, Info } from "lucide-react";
 import { MultiObjectiveGAResult, ParetoSolution } from "@/types/optimization";
-import { formatPercent } from "@/utils/formatters";
+import { formatPercent, formatNumber } from "@/utils/formatters";
 
 interface MultiObjectiveResultsProps {
   result: MultiObjectiveGAResult;
@@ -52,7 +52,7 @@ export default function MultiObjectiveResults({
     } else if (objective === "win_rate") {
       return formatPercent(value, 1);
     } else {
-      return value.toFixed(3);
+      return formatNumber(value, 3, 3);
     }
   };
 
@@ -128,7 +128,7 @@ export default function MultiObjectiveResults({
               <span className="text-secondary-200 font-medium">実行時間</span>
             </div>
             <div className="text-2xl font-bold text-blue-400">
-              {result.result.execution_time.toFixed(1)}s
+              {formatNumber(result.result.execution_time, 1, 1)}s
             </div>
           </div>
         </div>
