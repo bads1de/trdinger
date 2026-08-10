@@ -9,30 +9,20 @@ import pytest
 from app.services.ml.feature_engineering.microstructure_features import (
     MicrostructureFeatureCalculator,
 )
+from tests.helpers.data import make_ohlcv_df
 
 
 @pytest.fixture
 def sample_ohlcv() -> pd.DataFrame:
-    index = pd.date_range("2024-01-01", periods=100, freq="h")
-    np.random.seed(42)
-    close = pd.Series(100.0 + np.cumsum(np.random.randn(100) * 0.5), index=index)
-    return pd.DataFrame(
-        {
-            "open": close.shift(1).fillna(close.iloc[0]),
-            "high": close + 1.0,
-            "low": close - 1.0,
-            "close": close,
-            "volume": pd.Series(1000.0 + np.random.rand(100) * 500, index=index),
-        },
-        index=index,
-    )
+    return make_ohlcv_df(periods=100)
 
 
 @pytest.fixture
 def sample_fr() -> pd.DataFrame:
     index = pd.date_range("2024-01-01", periods=100, freq="h")
+    rng = np.random.default_rng(7)
     return pd.DataFrame(
-        {"funding_rate": np.random.randn(100) * 0.0001},
+        {"funding_rate": rng.standard_normal(100) * 0.0001},
         index=index,
     )
 
@@ -40,8 +30,9 @@ def sample_fr() -> pd.DataFrame:
 @pytest.fixture
 def sample_ls() -> pd.DataFrame:
     index = pd.date_range("2024-01-01", periods=100, freq="h")
+    rng = np.random.default_rng(11)
     return pd.DataFrame(
-        {"long_short_ratio": 1.0 + np.random.randn(100) * 0.1},
+        {"long_short_ratio": 1.0 + rng.standard_normal(100) * 0.1},
         index=index,
     )
 

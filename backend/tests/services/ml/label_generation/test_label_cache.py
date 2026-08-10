@@ -2,28 +2,16 @@
 label_cache モジュールのユニットテスト
 """
 
-import numpy as np
 import pandas as pd
 import pytest
 
 from app.services.ml.label_generation.label_cache import LabelCache, ThresholdMethod
+from tests.helpers.data import make_ohlcv_df
 
 
 @pytest.fixture
 def sample_ohlcv():
-    index = pd.date_range("2024-01-01", periods=200, freq="h")
-    np.random.seed(42)
-    close = 100.0 + np.cumsum(np.random.randn(200) * 0.5)
-    return pd.DataFrame(
-        {
-            "open": close + np.random.randn(200) * 0.1,
-            "high": close + np.abs(np.random.randn(200) * 0.5),
-            "low": close - np.abs(np.random.randn(200) * 0.5),
-            "close": close,
-            "volume": np.random.rand(200) * 1000 + 500,
-        },
-        index=index,
-    )
+    return make_ohlcv_df(periods=200)
 
 
 class TestThresholdMethod:

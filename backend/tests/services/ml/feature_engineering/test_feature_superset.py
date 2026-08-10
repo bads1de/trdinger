@@ -12,6 +12,7 @@ import pytest
 from app.services.ml.feature_engineering.feature_engineering_service import (
     FeatureEngineeringService,
 )
+from tests.helpers.data import make_ohlcv_df
 
 
 class TestCreateFeatureSuperset:
@@ -25,26 +26,7 @@ class TestCreateFeatureSuperset:
     @pytest.fixture
     def sample_ohlcv(self):
         """テスト用 OHLCV データ"""
-        np.random.seed(42)
-        n = 500
-        dates = pd.date_range("2024-01-01", periods=n, freq="1h")
-
-        close = 50000 + np.cumsum(np.random.randn(n) * 100)
-        high = close + np.abs(np.random.randn(n) * 50)
-        low = close - np.abs(np.random.randn(n) * 50)
-        open_ = close + np.random.randn(n) * 30
-        volume = np.abs(np.random.randn(n) * 1000) + 100
-
-        return pd.DataFrame(
-            {
-                "open": open_,
-                "high": high,
-                "low": low,
-                "close": close,
-                "volume": volume,
-            },
-            index=dates,
-        )
+        return make_ohlcv_df(periods=500, base_price=50000, close_vol=100)
 
     @pytest.fixture
     def sample_oi(self, sample_ohlcv):

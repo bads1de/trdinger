@@ -1,9 +1,9 @@
 import React from "react";
 import { BacktestResult } from "@/types/backtest";
 import MetricCard from "../MetricCard";
-import { formatPercentage, formatNumber, formatRatioPercent } from "@/utils/formatters";
+import { formatPercentage, formatNumber, formatPercent } from "@/utils/formatters";
 import { formatCurrency } from "@/utils/financialFormatters";
-import { getReturnColor, getSharpeColor } from "@/utils/colorUtils";
+import { getPnlColor, getSharpeColor } from "@/utils/colorUtils";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -104,7 +104,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
             title="総リターン"
             value={formatPercentage(Number(metrics.total_return ?? 0))}
             subtitle={`最終資産: ${formatCurrency(finalEquity)}`}
-            color={getReturnColor(Number(metrics.total_return))}
+            color={getPnlColor(Number(metrics.total_return))}
             icon={<TrendingUp className="w-6 h-6" />}
           />
           <MetricCard
@@ -188,7 +188,7 @@ export default function OverviewTab({ result }: OverviewTabProps) {
           />
           <InfoCard
             label="手数料率"
-            value={formatRatioPercent(Number(result.commission_rate))}
+            value={formatPercent(Number(result.commission_rate))}
             icon={Percent}
           />
         </div>

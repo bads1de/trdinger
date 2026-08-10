@@ -22,6 +22,7 @@ from app.services.auto_strategy.core.evaluation.condition_evaluator import (
 )
 from app.services.auto_strategy.core.fitness.fitness_calculator import FitnessCalculator
 from app.services.auto_strategy.genes import Condition, ConditionGroup
+from tests.helpers.indicators import calculate_rsi
 
 # =============================================================================
 # フィクスチャ
@@ -95,15 +96,6 @@ def mock_strategy(mock_ohlcv_data):
         "rsi_14": calculate_rsi(mock_ohlcv_data["Close"], 14),
     }
     return strategy
-
-
-def calculate_rsi(prices, period):
-    """RSIを計算"""
-    delta = prices.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
 
 
 # =============================================================================

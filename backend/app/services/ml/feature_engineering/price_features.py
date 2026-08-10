@@ -15,7 +15,7 @@ import pandas as pd
 from ....utils.error_handler import safe_ml_operation
 from ...indicators.technical_indicators.pandas_ta import (
     MomentumIndicators,
-    TrendIndicators,
+    OverlapIndicators,
 )
 from ..common.utils import calculate_historical_volatility
 from .base_feature_calculator import BaseFeatureCalculator
@@ -72,7 +72,7 @@ class PriceFeatureCalculator(BaseFeatureCalculator):
         self, df: pd.DataFrame, lookback_periods: dict[str, int]
     ) -> pd.DataFrame:
         """時系列特徴量を計算"""
-        df["Trend_strength_20"] = TrendIndicators.linregslope(
+        df["Trend_strength_20"] = OverlapIndicators.linregslope(
             cast(pd.Series, df["close"]), length=20
         ).fillna(0.0)
         return df

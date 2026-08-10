@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/common/LoadingSpinner";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import InfoModal from "@/components/common/InfoModal";
 import { useModelPerformance } from "@/hooks/useModelPerformance";
-import { formatRatioPercent, formatTrainingTime } from "@/utils/formatters";
+import { formatPercent, formatTrainingTime } from "@/utils/formatters";
 import { getScoreColorClass } from "@/utils/colorUtils";
 import { ML_METRICS_INFO } from "@/constants/ml-metrics-info";
 import {
@@ -141,7 +141,7 @@ export default function ModelPerformanceCard({
         ? "未学習"
         : metricKey.includes("loss") || metricKey.includes("brier")
         ? value.toFixed(4)
-        : formatRatioPercent(value);
+        : formatPercent(value);
 
     return (
       <div className="text-center p-3 bg-gray-800/50 rounded-lg">
@@ -193,7 +193,7 @@ export default function ModelPerformanceCard({
         <Badge variant={getScoreBadgeVariant(value)}>
           {metricKey.includes("loss") || metricKey.includes("brier")
             ? value.toFixed(4)
-            : formatRatioPercent(value)}
+            : formatPercent(value)}
         </Badge>
       </div>
     );
@@ -543,7 +543,7 @@ export default function ModelPerformanceCard({
                                   metrics.val_accuracy
                                 )}
                               >
-                                {formatRatioPercent(metrics.val_accuracy)}
+                                {formatPercent(metrics.val_accuracy)}
                               </Badge>
                             </div>
                           )}

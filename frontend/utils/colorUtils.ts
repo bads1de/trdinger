@@ -40,7 +40,9 @@ export const getValueColorClass = (
   return "text-secondary-400";
 };
 
-export const getPnlColor = (value: number): "green" | "red" | "gray" => {
+export const getPnlColor = (
+  value: number | null
+): "green" | "red" | "gray" => {
   return getSemanticColor(value);
 };
 
@@ -50,12 +52,6 @@ export const getPnlTextColor = (pnl: number) => {
 
 export const getPriceChangeColor = (open: number, close: number) => {
   return getValueColorClass(close - open);
-};
-
-export const getReturnColor = (
-  value: number | null
-): "green" | "red" | "gray" => {
-  return getSemanticColor(value);
 };
 
 export const getSharpeColor = (

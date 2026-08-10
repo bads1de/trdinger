@@ -80,10 +80,10 @@ OVERLAP_CASES = [
     _case("rma", OverlapIndicators.rma, "close", 10),
     _case("linreg", OverlapIndicators.linreg, "close"),
     _case("linreg", OverlapIndicators.linregslope, "close"),
+    _case("sma", OverlapIndicators.sma, "close", 10),
 ]
 
 TREND_CASES = [
-    _case("sma", TrendIndicators.sma, "close", 10),
     _case("amat", TrendIndicators.amat, "close"),
     _case("dpo", TrendIndicators.dpo, "close", 10),
     _case("vhf", TrendIndicators.vhf, "close"),

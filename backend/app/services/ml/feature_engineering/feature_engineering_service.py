@@ -309,14 +309,16 @@ class FeatureEngineeringService:
                 result_df = sanitize_numeric_dataframe(
                     result_df, fill_value=None, forward_fill=True
                 )
-                # それでも残るNaNのみを、指標の中央値で埋める（0埋めより安全）
-                # 0が有効な値として使われる指標（RSI等）で誤ったシグナルを防止
+                # それでも残るNaN（先頭のウォームアップ期間）を補完する
+                # 列全体の中央値は将来情報を含み、学習/推論で補完値が変わる
+                # リークの原因になるため、最初の有効値（bfill）で埋める
+                # （0埋めはRSI等「0が有効値」の指標で誤シグナルを生むため不採用）
                 if cast(pd.Series, result_df.isna().any()).any():
                     logger.warning(
                         f"前方修正後も{result_df.isna().sum().sum()}個のNaNが残っています。"
-                        f"指標の中央値で補完します。"
+                        f"ウォームアップ期間を最初の有効値で補完します。"
                     )
-                    result_df = result_df.fillna(result_df.median())
+                    result_df = result_df.bfill()
                     # それでも残るNaN（全ての値がNaNの列など）のみ0埋め
                     result_df = result_df.fillna(0.0)
                 logger.info("データ前処理完了")

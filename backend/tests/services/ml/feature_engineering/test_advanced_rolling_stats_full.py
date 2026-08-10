@@ -9,23 +9,12 @@ import pytest
 from app.services.ml.feature_engineering.advanced_rolling_stats import (
     AdvancedRollingStatsCalculator,
 )
+from tests.helpers.data import make_ohlcv_df
 
 
 @pytest.fixture
 def sample_ohlcv() -> pd.DataFrame:
-    index = pd.date_range("2024-01-01", periods=120, freq="h")
-    np.random.seed(42)
-    close = pd.Series(100.0 + np.cumsum(np.random.randn(120) * 0.5), index=index)
-    return pd.DataFrame(
-        {
-            "open": close.shift(1).fillna(close.iloc[0]),
-            "high": close + np.abs(np.random.randn(120) * 0.3),
-            "low": close - np.abs(np.random.randn(120) * 0.3),
-            "close": close,
-            "volume": pd.Series(1000.0 + np.random.rand(120) * 500, index=index),
-        },
-        index=index,
-    )
+    return make_ohlcv_df(periods=120)
 
 
 class TestAdvancedRollingStatsCalculator:

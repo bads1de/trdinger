@@ -409,14 +409,15 @@ def calculate_volatility_std(
 
     Note:
         入力が空の場合は空のSeriesを返します。
+        非年率換算版のため、calculate_historical_volatility(annualize=False) に委譲します。
     """
     if len(returns) == 0:
         return pd.Series([], dtype=float)
-    if min_periods is None:
-        min_periods = window
-    return cast(
-        pd.Series,
-        returns.rolling(window=window, min_periods=min_periods).std(),
+    return calculate_historical_volatility(
+        returns,
+        window=window,
+        annualize=False,
+        min_periods=min_periods,
     )
 
 
@@ -503,6 +504,7 @@ def calculate_historical_volatility(
     window: int = 20,
     annualize: bool = True,
     periods_per_year: int | None = None,
+    min_periods: int | None = None,
 ) -> pd.Series:
     """
     年率換算のヒストリカルボラティリティ計算
@@ -515,6 +517,7 @@ def calculate_historical_volatility(
         annualize: 年率換算するか（デフォルト: True）
         periods_per_year: 1年あたりの期間数（デフォルト: None=インデックスから自動推定。
             DatetimeIndexでない場合や推定できない場合は365日基準）
+        min_periods: 最小期間（デフォルト: window）
 
     Returns:
         pd.Series: ヒストリカルボラティリティのSeries
@@ -522,7 +525,9 @@ def calculate_historical_volatility(
     Note:
         annualize=Trueの場合、標準偏差にsqrt(periods_per_year)を乗算します。
     """
-    vol = returns.rolling(window=window).std()
+    if min_periods is None:
+        min_periods = window
+    vol = returns.rolling(window=window, min_periods=min_periods).std()
     if annualize:
         if periods_per_year is None:
             periods_per_year = _infer_periods_per_year(returns)
@@ -539,6 +544,7 @@ def calculate_realized_volatility(
     実現ボラティリティ計算
 
     リターンの移動標準偏差を計算し、1日あたりの期間数で換算します。
+    年率換算と同じ計算のため、calculate_historical_volatility に委譲します。
 
     Args:
         returns: リターンデータのSeries
@@ -551,5 +557,9 @@ def calculate_realized_volatility(
     Note:
         標準偏差にsqrt(periods_per_day)を乗算して換算します。
     """
-    vol = returns.rolling(window=window).std()
-    return vol * np.sqrt(periods_per_day)
+    return calculate_historical_volatility(
+        returns,
+        window=window,
+        annualize=True,
+        periods_per_year=periods_per_day,
+    )

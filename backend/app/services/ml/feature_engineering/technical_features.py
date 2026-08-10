@@ -18,6 +18,7 @@ from ...indicators.technical_indicators.advanced_features import (
 )
 from ...indicators.technical_indicators.pandas_ta import (
     MomentumIndicators,
+    OverlapIndicators,
     TrendIndicators,
     VolatilityIndicators,
     VolumeIndicators,
@@ -189,7 +190,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             vol_p = lookback_periods.get("volume", 20)
 
             # 出来高MA
-            v_ma = TrendIndicators.sma(
+            v_ma = OverlapIndicators.sma(
                 cast(pd.Series, df["volume"]), length=vol_p
             ).fillna(cast(pd.Series, df["volume"]))
             v_max = df["volume"].quantile(0.99) * 10
@@ -383,7 +384,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 high=cast(pd.Series, df["high"]),
                 low=cast(pd.Series, df["low"]),
             )
-            ichimoku = TrendIndicators.ichimoku(
+            ichimoku = OverlapIndicators.ichimoku(
                 high=cast(pd.Series, df["high"]),
                 low=cast(pd.Series, df["low"]),
                 close=cast(pd.Series, df["close"]),
@@ -393,11 +394,11 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                 low=cast(pd.Series, df["low"]),
             )
 
-            # Ichimoku安全策
+            # Ichimoku安全策 (OverlapIndicators.ichimoku は dict を返す)
             if (
-                not ichimoku.empty
-                and "tenkan_sen" in ichimoku.columns
-                and "kijun_sen" in ichimoku.columns
+                ichimoku
+                and "tenkan_sen" in ichimoku
+                and "kijun_sen" in ichimoku
             ):
                 tenkan = ichimoku["tenkan_sen"]
                 kijun = ichimoku["kijun_sen"]
@@ -408,7 +409,7 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
             new_features = {
                 "ADX": adx.fillna(0.0),
                 "AROONOSC": aroon_osc.fillna(0.0),
-                "MA_Long": TrendIndicators.sma(
+                "MA_Long": OverlapIndicators.sma(
                     cast(pd.Series, df["close"]),
                     length=lookback_periods.get("long_ma", 50),
                 ).fillna(cast(pd.Series, df["close"])),
@@ -428,8 +429,8 @@ class TechnicalFeatureCalculator(BaseFeatureCalculator):
                     fill_value=0.0,
                 ),
                 "SMA_Cross_50_200": self.safe_ratio_calculation(
-                    TrendIndicators.sma(cast(pd.Series, df["close"]), 50)
-                    - TrendIndicators.sma(cast(pd.Series, df["close"]), 200),
+                    OverlapIndicators.sma(cast(pd.Series, df["close"]), 50)
+                    - OverlapIndicators.sma(cast(pd.Series, df["close"]), 200),
                     cast(pd.Series, df["close"]),
                     fill_value=0.0,
                 ),

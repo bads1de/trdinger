@@ -36,11 +36,12 @@ export const formatDateTime = (
 
 /**
  * パーセンテージをフォーマットする
- * @param value - フォーマットする値 (0-1の範囲)
- * @returns フォーマットされたパーセンテージ文字列 (例: '12.34%') または 'N/A'
+ * @param value - フォーマットする値 (既に%単位の数値、例: 12.345 = 12.345%)
+ * @returns フォーマットされたパーセンテージ文字列 (例: '12.35%') または 'N/A'
  * @example
- * // returns '12.34%'
- * formatPercentage(0.1234)
+ * // returns '12.35%'
+ * formatPercentage(12.345)
+ * @see formatPercent - 比率 (0-1) を%に変換する場合はこちらを使用する
  */
 export const formatPercentage = (value?: number | null) => {
   if (value === undefined || value === null || isNaN(value)) {
@@ -96,6 +97,13 @@ export const formatFileSize = (sizeInMB?: number) => {
 };
 
 /**
+ * 秒数を intervalToDuration の結果に変換するプライベートヘルパー
+ */
+const toDurationParts = (seconds: number) => {
+  return intervalToDuration({ start: 0, end: seconds * 1000 });
+};
+
+/**
  * トレーニング時間をフォーマットする
  * @param seconds - 秒数
  * @returns フォーマットされた時間文字列 (例: '2時間30分15秒')
@@ -106,7 +114,7 @@ export const formatFileSize = (sizeInMB?: number) => {
 export const formatTrainingTime = (seconds?: number) => {
   if (seconds === undefined || seconds === null) return "不明";
 
-  const duration = intervalToDuration({ start: 0, end: seconds * 1000 });
+  const duration = toDurationParts(seconds);
   const parts = [];
   if (duration.hours) parts.push(`${duration.hours}時間`);
   if (duration.minutes) parts.push(`${duration.minutes}分`);
@@ -163,18 +171,6 @@ export const formatPercent = (value: number, digits = 2) => {
 };
 
 /**
- * 0〜1 の比率をパーセンテージ文字列にフォーマットする
- * @param value - 比率 (0-1の範囲、例: 0.1234 = 12.34%)
- * @returns フォーマットされたパーセンテージ文字列 (例: '12.34%')
- * @example
- * // returns '12.34%'
- * formatRatioPercent(0.1234)
- */
-export const formatRatioPercent = (value: number) => {
-  return formatPercent(value, 2);
-};
-
-/**
  * 確率をパーセンテージでフォーマットする
  * @param prob - 確率 (0-1の範囲)
  * @returns フォーマットされた確率文字列 (例: '12.3%') または 'N/A'
@@ -203,7 +199,7 @@ export const formatDuration = (seconds?: number) => {
     return `${seconds.toFixed(1)}秒`;
   }
 
-  const duration = intervalToDuration({ start: 0, end: seconds * 1000 });
+  const duration = toDurationParts(seconds);
   const parts = [];
   if (duration.minutes) parts.push(`${duration.minutes}分`);
   if (duration.seconds) parts.push(`${duration.seconds.toFixed(0)}秒`);

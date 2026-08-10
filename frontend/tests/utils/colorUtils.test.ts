@@ -3,7 +3,6 @@ import {
   getPnlColor,
   getPnlTextColor,
   getPriceChangeColor,
-  getReturnColor,
   getSharpeColor,
   getFundingRateColor,
   getScoreColorClass,
@@ -56,6 +55,10 @@ describe("getPnlColor", () => {
   it("0はgrayを返す", () => {
     expect(getPnlColor(0)).toBe("gray");
   });
+
+  it("nullはgrayを返す", () => {
+    expect(getPnlColor(null)).toBe("gray");
+  });
 });
 
 describe("getPnlTextColor", () => {
@@ -75,20 +78,6 @@ describe("getPriceChangeColor", () => {
 
   it("下落は赤色を返す", () => {
     expect(getPriceChangeColor(100, 90)).toBe("text-red-400");
-  });
-});
-
-describe("getReturnColor", () => {
-  it("正のリターンはgreenを返す", () => {
-    expect(getReturnColor(0.05)).toBe("green");
-  });
-
-  it("負のリターンはredを返す", () => {
-    expect(getReturnColor(-0.05)).toBe("red");
-  });
-
-  it("nullはgrayを返す", () => {
-    expect(getReturnColor(null)).toBe("gray");
   });
 });
 

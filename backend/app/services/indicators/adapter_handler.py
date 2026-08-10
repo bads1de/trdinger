@@ -492,9 +492,10 @@ class AdapterHandler:
         pandasのSeries/DataFrameをnumpy配列に変換します。
         result_typeに基づいてDataFrameの複数列をタプルに変換するか、
         最初の列のみを返すかを決定します。
+        ICHIMOKU等、dictで複数系列を返す指標は挿入順を保持したタプルに変換します。
 
         Args:
-            result: 計算結果（Series、DataFrame、タプル等）
+            result: 計算結果（Series、DataFrame、タプル、dict等）
             config: インジケーター設定（result_typeを含む）
 
         Returns:
@@ -519,6 +520,22 @@ class AdapterHandler:
                     )
                 )
                 for arr in result
+            )
+        elif isinstance(result, dict):
+            # ICHIMOKU等、dictで複数系列を返す指標への対応（挿入順を保持）
+            series_list = list(result.values())
+            if config.result_type == IndicatorResultType.SINGLE:
+                first = series_list[0]
+                return np.asarray(
+                    first.to_numpy()
+                    if isinstance(first, (pd.Series, pd.DataFrame))
+                    else first
+                )
+            return tuple(
+                np.asarray(
+                    s.to_numpy() if isinstance(s, (pd.Series, pd.DataFrame)) else s
+                )
+                for s in series_list
             )
         else:
             return result

@@ -7,7 +7,6 @@ import {
   formatLargeNumber,
   formatPercent,
   formatProbability,
-  formatRatioPercent,
   formatDuration,
   formatScore,
 } from "@/utils/formatters";
@@ -157,20 +156,6 @@ describe("formatProbability", () => {
 
   it("undefinedの場合はN/Aを返す", () => {
     expect(formatProbability(undefined)).toBe("N/A");
-  });
-});
-
-describe("formatRatioPercent", () => {
-  it("0-1の比率をパーセンテージでフォーマットする", () => {
-    expect(formatRatioPercent(0.1234)).toBe("12.34%");
-  });
-
-  it("0をフォーマットする", () => {
-    expect(formatRatioPercent(0)).toBe("0.00%");
-  });
-
-  it("1をフォーマットする", () => {
-    expect(formatRatioPercent(1)).toBe("100.00%");
   });
 });
 

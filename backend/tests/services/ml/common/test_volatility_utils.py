@@ -37,6 +37,31 @@ class TestVolatilityUtils:
         # 空
         assert calculate_volatility_std(pd.Series([])).empty
 
+    def test_calculate_volatility_std_delegates_to_historical(self, sample_returns):
+        """calculate_volatility_std は historical(annualize=False) と同一のコアを持つ"""
+        # デフォルト(min_periods=None)
+        res = calculate_volatility_std(sample_returns, window=10)
+        expected = calculate_historical_volatility(
+            sample_returns, window=10, annualize=False
+        )
+        pd.testing.assert_series_equal(res, expected)
+
+        # min_periods 指定時も一致
+        res_mp = calculate_volatility_std(sample_returns, window=10, min_periods=5)
+        expected_mp = calculate_historical_volatility(
+            sample_returns, window=10, annualize=False, min_periods=5
+        )
+        pd.testing.assert_series_equal(res_mp, expected_mp)
+
+    def test_calculate_historical_volatility_min_periods(self, sample_returns):
+        """historical の min_periods 指定が rolling に反映される"""
+        res = calculate_historical_volatility(
+            sample_returns, window=10, annualize=False, min_periods=2
+        )
+        # min_periods=2 なら2番目の要素から値を持つ（1番目は ddof=1 のため NaN）
+        assert np.isnan(res.iloc[0])
+        assert not np.isnan(res.iloc[1])
+
     def test_calculate_true_range(self, sample_ohlc):
         """True Range の計算"""
         res = calculate_true_range(

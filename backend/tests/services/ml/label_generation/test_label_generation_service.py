@@ -14,6 +14,7 @@ from app.services.ml.common.config import ml_config_manager
 from app.services.ml.label_generation.label_generation_service import (
     LabelGenerationService,
 )
+from tests.helpers.data import make_ohlcv_df
 
 
 class TestLabelGenerationServiceWithEvents:
@@ -22,23 +23,7 @@ class TestLabelGenerationServiceWithEvents:
     @pytest.fixture
     def sample_ohlcv(self):
         """テスト用のOHLCVデータを生成"""
-        dates = pd.date_range(start="2023-01-01", periods=100, freq="h")
-        np.random.seed(42)
-
-        close_prices = 100 + np.cumsum(np.random.normal(0, 1, 100))
-
-        df = pd.DataFrame(
-            {
-                "open": close_prices + np.random.normal(0, 0.5, 100),
-                "high": close_prices + np.abs(np.random.normal(1, 0.5, 100)),
-                "low": close_prices - np.abs(np.random.normal(1, 0.5, 100)),
-                "close": close_prices,
-                "volume": np.random.uniform(1000, 5000, 100),
-            },
-            index=dates,
-        )
-
-        return df
+        return make_ohlcv_df(periods=100, start="2023-01-01", close_vol=1.0)
 
     @pytest.fixture
     def sample_features(self, sample_ohlcv):
