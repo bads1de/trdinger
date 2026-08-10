@@ -110,9 +110,9 @@ class VolatilityIndicators:
         lower_col = find_column("BBL", 2)
 
         return (
-            result[upper_col],
-            result[middle_col],
-            result[lower_col],
+            cast(pd.Series, result[upper_col]),
+            cast(pd.Series, result[middle_col]),
+            cast(pd.Series, result[lower_col]),
         )
 
     @staticmethod
@@ -154,16 +154,16 @@ class VolatilityIndicators:
             try:
                 # 浮動小数点形式 (例: 2.0)
                 return (
-                    result[f"KCU{m}_{period}_{float(scalar)}"],
-                    result[f"KCB{m}_{period}_{float(scalar)}"],
-                    result[f"KCL{m}_{period}_{float(scalar)}"],
+                    cast(pd.Series, result[f"KCU{m}_{period}_{float(scalar)}"]),
+                    cast(pd.Series, result[f"KCB{m}_{period}_{float(scalar)}"]),
+                    cast(pd.Series, result[f"KCL{m}_{period}_{float(scalar)}"]),
                 )
             except KeyError:
                 # 整数形式 (例: 2)
                 return (
-                    result[f"KCU{m}_{period}_{int(scalar)}"],
-                    result[f"KCB{m}_{period}_{int(scalar)}"],
-                    result[f"KCL{m}_{period}_{int(scalar)}"],
+                    cast(pd.Series, result[f"KCU{m}_{period}_{int(scalar)}"]),
+                    cast(pd.Series, result[f"KCB{m}_{period}_{int(scalar)}"]),
+                    cast(pd.Series, result[f"KCL{m}_{period}_{int(scalar)}"]),
                 )
 
         return cast(
@@ -199,9 +199,9 @@ class VolatilityIndicators:
         ) -> tuple[pd.Series, pd.Series, pd.Series]:
             # カラム名: DCU_{length}_{length}, DCM_{length}_{length}, DCL_{length}_{length}
             return (
-                result[f"DCU_{length}_{length}"],
-                result[f"DCM_{length}_{length}"],
-                result[f"DCL_{length}_{length}"],
+                cast(pd.Series, result[f"DCU_{length}_{length}"]),
+                cast(pd.Series, result[f"DCM_{length}_{length}"]),
+                cast(pd.Series, result[f"DCL_{length}_{length}"]),
             )
 
         return cast(
@@ -235,9 +235,9 @@ class VolatilityIndicators:
         ) -> tuple[pd.Series, pd.Series, pd.Series]:
             # カラム名: ACCBU_{length}, ACCBM_{length}, ACCBL_{length}
             return (
-                result[f"ACCBU_{period}"],
-                result[f"ACCBM_{period}"],
-                result[f"ACCBL_{period}"],
+                cast(pd.Series, result[f"ACCBU_{period}"]),
+                cast(pd.Series, result[f"ACCBM_{period}"]),
+                cast(pd.Series, result[f"ACCBL_{period}"]),
             )
 
         return cast(

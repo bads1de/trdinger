@@ -254,9 +254,9 @@ class TrendIndicators:
         ) -> tuple[pd.Series, pd.Series, pd.Series]:
             # カラム名: ADX_{length}, DMP_{length}, DMN_{length}
             return (
-                result[f"ADX_{length}"],
-                result[f"DMP_{length}"],
-                result[f"DMN_{length}"],
+                cast(pd.Series, result[f"ADX_{length}"]),
+                cast(pd.Series, result[f"DMP_{length}"]),
+                cast(pd.Series, result[f"DMN_{length}"]),
             )
 
         return cast(
@@ -293,9 +293,9 @@ class TrendIndicators:
         ) -> tuple[pd.Series, pd.Series, pd.Series]:
             # カラム名: AROONU_{length}, AROOND_{length}, AROONOSC_{length}
             return (
-                result[f"AROONU_{length}"],
-                result[f"AROOND_{length}"],
-                result[f"AROONOSC_{length}"],
+                cast(pd.Series, result[f"AROONU_{length}"]),
+                cast(pd.Series, result[f"AROOND_{length}"]),
+                cast(pd.Series, result[f"AROONOSC_{length}"]),
             )
 
         return cast(

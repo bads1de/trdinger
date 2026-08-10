@@ -41,6 +41,7 @@ pandas-ta の overlap カテゴリに対応。
 
 from typing import Any, cast
 
+import numpy as np
 import pandas as pd
 import pandas_ta_classic as _pandas_ta_classic
 
@@ -358,16 +359,16 @@ class OverlapIndicators:
             try:
                 # 浮動小数点形式 (例: 3.0)
                 return (
-                    result[f"SUPERTl_{period}_{float(multiplier)}"],
-                    result[f"SUPERTs_{period}_{float(multiplier)}"],
-                    result[f"SUPERTd_{period}_{float(multiplier)}"],
+                    cast(pd.Series, result[f"SUPERTl_{period}_{float(multiplier)}"]),
+                    cast(pd.Series, result[f"SUPERTs_{period}_{float(multiplier)}"]),
+                    cast(pd.Series, result[f"SUPERTd_{period}_{float(multiplier)}"]),
                 )
             except KeyError:
                 # 整数形式 (例: 3)
                 return (
-                    result[f"SUPERTl_{period}_{int(multiplier)}"],
-                    result[f"SUPERTs_{period}_{int(multiplier)}"],
-                    result[f"SUPERTd_{period}_{int(multiplier)}"],
+                    cast(pd.Series, result[f"SUPERTl_{period}_{int(multiplier)}"]),
+                    cast(pd.Series, result[f"SUPERTs_{period}_{int(multiplier)}"]),
+                    cast(pd.Series, result[f"SUPERTd_{period}_{int(multiplier)}"]),
                 )
 
         return cast(
@@ -481,7 +482,7 @@ class OverlapIndicators:
         offset: int = 0,
     ) -> tuple[pd.Series, pd.Series, pd.Series]:
         """Gann HiLo"""
-        return cast(
+        result = cast(
             tuple[pd.Series, pd.Series, pd.Series],
             run_tuple_indicator(
                 {"high": high, "low": low, "close": close},
@@ -499,6 +500,17 @@ class OverlapIndicators:
                 reference=close,
             ),
         )
+
+        if all(
+            isinstance(series, pd.Series) and series.isna().all() for series in result
+        ):
+            # pandas_ta の hilo は、価格が high/low MA のチャネル内に留まると
+            # 前日値(NaN)を引き継ぎ続け、データによっては全期間 NaN になる。
+            # その場合のみ NaN 伝播を防いだ自前計算にフォールバックする。
+            return _compute_hilo_without_nan_propagation(
+                high, low, close, high_length, low_length, mamode, offset
+            )
+        return result
 
     @staticmethod
     @handle_pandas_ta_errors
@@ -683,3 +695,70 @@ class OverlapIndicators:
                 close, length, lambda: ta.swma(close=close, length=length)
             ),
         )
+
+
+def _compute_hilo_without_nan_propagation(
+    high: pd.Series,
+    low: pd.Series,
+    close: pd.Series,
+    high_length: int,
+    low_length: int,
+    mamode: str,
+    offset: int,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """pandas_ta の hilo と同一ロジックで NaN 伝播のみを防いだ実装。
+
+    Gann HiLo は close が high/low MA のチャネル内にある間、前回値を引き継ぐ。
+    pandas_ta はブレイクアウト未発生のままホールド状態に入ると初期 NaN を
+    引き継ぎ続けて全期間 NaN になるため、ホールド開始時に close のチャネル内
+    位置から初期値を決定する。
+    """
+    high_ma = ta.ma(mamode, high, length=high_length)
+    low_ma = ta.ma(mamode, low, length=low_length)
+
+    m = len(close)
+    hilo: pd.Series = pd.Series(np.nan, index=close.index, dtype=float)
+    hilo_long: pd.Series = pd.Series(np.nan, index=close.index, dtype=float)
+    hilo_short: pd.Series = pd.Series(np.nan, index=close.index, dtype=float)
+
+    if high_ma is None or low_ma is None:
+        return hilo, hilo_long, hilo_short
+
+    high_arr = high_ma.to_numpy(dtype=float)
+    low_arr = low_ma.to_numpy(dtype=float)
+    close_arr = close.to_numpy(dtype=float)
+
+    for i in range(1, m):
+        high_prev = high_arr[i - 1]
+        low_prev = low_arr[i - 1]
+        if not np.isfinite(high_prev) or not np.isfinite(low_prev):
+            continue
+
+        current = close_arr[i]
+        if not np.isfinite(current):
+            # close が欠損の場合は pandas_ta 同様に前回値を引き継ぐ
+            previous = hilo.iloc[i - 1]
+            hilo.iloc[i] = hilo_long.iloc[i] = hilo_short.iloc[i] = previous
+            continue
+
+        if current > high_prev:
+            hilo.iloc[i] = hilo_long.iloc[i] = low_arr[i]
+        elif current < low_prev:
+            hilo.iloc[i] = hilo_short.iloc[i] = high_arr[i]
+        else:
+            # ホールド状態: 前回値が NaN の場合は close のチャネル内位置から初期化
+            previous = hilo.iloc[i - 1]
+            if not np.isfinite(previous):
+                previous = (
+                    low_arr[i]
+                    if current >= (high_prev + low_prev) / 2.0
+                    else high_arr[i]
+                )
+            hilo.iloc[i] = hilo_long.iloc[i] = hilo_short.iloc[i] = previous
+
+    if offset:
+        hilo = cast(pd.Series, hilo.shift(offset))
+        hilo_long = cast(pd.Series, hilo_long.shift(offset))
+        hilo_short = cast(pd.Series, hilo_short.shift(offset))
+
+    return cast(tuple[pd.Series, pd.Series, pd.Series], (hilo, hilo_long, hilo_short))

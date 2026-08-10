@@ -10,21 +10,22 @@ import pytest
 @pytest.fixture
 def sample_ohlcv() -> pd.DataFrame:
     """テスト用のOHLCVデータを生成（十分な長さ）"""
+    rng = np.random.default_rng(42)  # 再現性のためシード固定
     periods = 500
     index = pd.date_range("2022-01-01", periods=periods, freq="h")
 
     # ランダム性とトレンドを含むデータ
     base = np.linspace(10000, 15000, periods)
-    noise = np.random.normal(0, 100, periods)
+    noise = rng.normal(0, 100, periods)
     close = base + noise
 
     df = pd.DataFrame(
         {
-            "Open": close * np.random.uniform(0.99, 1.01, periods),
-            "High": close * np.random.uniform(1.01, 1.03, periods),
-            "Low": close * np.random.uniform(0.97, 0.99, periods),
+            "Open": close * rng.uniform(0.99, 1.01, periods),
+            "High": close * rng.uniform(1.01, 1.03, periods),
+            "Low": close * rng.uniform(0.97, 0.99, periods),
             "Close": close,
-            "Volume": np.random.uniform(1000, 5000, periods),
+            "Volume": rng.uniform(1000, 5000, periods),
         },
         index=index,
     )
@@ -32,11 +33,11 @@ def sample_ohlcv() -> pd.DataFrame:
     # ボラティリティを追加
     df["High"] = np.maximum(
         df["High"],
-        df[["Open", "Close"]].max(axis=1) * np.random.uniform(1.0, 1.05, periods),
+        df[["Open", "Close"]].max(axis=1) * rng.uniform(1.0, 1.05, periods),
     )
     df["Low"] = np.minimum(
         df["Low"],
-        df[["Open", "Close"]].min(axis=1) * np.random.uniform(0.95, 1.0, periods),
+        df[["Open", "Close"]].min(axis=1) * rng.uniform(0.95, 1.0, periods),
     )
 
     return df

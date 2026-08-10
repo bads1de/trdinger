@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterator
+from collections.abc import Generator
 from typing import Any
 
 import numpy as np
@@ -55,7 +55,7 @@ class PurgedKFold(_BaseKFold):
         X: pd.DataFrame,
         y: pd.Series | None = None,
         groups: Any | None = None,
-    ) -> Iterator[tuple[np.ndarray, np.ndarray]]:
+    ) -> Generator[tuple[np.ndarray, np.ndarray], Any, None]:
         """
         データを訓練セットとテストセットに分割するためのインデックスを生成します。
 
