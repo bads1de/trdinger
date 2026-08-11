@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
@@ -34,6 +35,30 @@ class SampleGene:
         # メタデータは属性として持つ
         self.metadata = kwargs.get("metadata", {})
         self.id = kwargs.get("id", "dummy_id")
+
+
+class TestGetStrategyResultKey:
+    """``get_strategy_result_key`` 共通ヘルパーのテスト"""
+
+    def test_uses_id_attribute_when_present(self):
+        strategy = SimpleNamespace(id="my-strategy-123")
+        assert GeneticUtils.get_strategy_result_key(strategy) == "my-strategy-123"
+
+    def test_falls_back_to_object_id_when_id_is_none(self):
+        strategy = SimpleNamespace(id=None)
+        assert GeneticUtils.get_strategy_result_key(strategy) == str(id(strategy))
+
+    def test_falls_back_to_object_id_when_id_is_empty_string(self):
+        strategy = SimpleNamespace(id="")
+        assert GeneticUtils.get_strategy_result_key(strategy) == str(id(strategy))
+
+    def test_falls_back_to_object_id_when_id_attribute_missing(self):
+        strategy = SimpleNamespace()
+        assert GeneticUtils.get_strategy_result_key(strategy) == str(id(strategy))
+
+    def test_coerces_id_to_string(self):
+        strategy = SimpleNamespace(id=12345)
+        assert GeneticUtils.get_strategy_result_key(strategy) == "12345"
 
 
 class TestGeneticUtils:

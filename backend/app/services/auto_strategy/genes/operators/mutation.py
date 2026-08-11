@@ -292,36 +292,6 @@ def mutate_conditions(
             maybe_mutate_branch(conditions)
 
 
-def mutate_indicators_batch(
-    individuals: list["StrategyGene"], mutation_rate: float, config: "GAConfig"
-) -> list["StrategyGene"]:
-    """指標遺伝子の突然変異処理（バッチ版）。"""
-    results: list[StrategyGene] = []
-    for individual in individuals:
-        try:
-            mutated = individual.clone()
-        except AttributeError:
-            mutated = individual
-        mutate_indicators(mutated, mutation_rate, config)
-        results.append(mutated)
-    return results
-
-
-def mutate_conditions_batch(
-    individuals: list[StrategyGene], mutation_rate: float, config: GAConfig
-) -> list[StrategyGene]:
-    """条件の突然変異処理（バッチ版）。"""
-    results: list[StrategyGene] = []
-    for individual in individuals:
-        try:
-            mutated = individual.clone()
-        except AttributeError:
-            mutated = individual
-        mutate_conditions(mutated, mutation_rate, config)
-        results.append(mutated)
-    return results
-
-
 def mutate_strategy_gene(
     gene: StrategyGene, config: GAConfig, mutation_rate: float = 0.1
 ) -> StrategyGene:
@@ -418,20 +388,6 @@ def mutate_strategy_gene(
         except AttributeError:
             pass
         return mutated
-
-
-def mutate_strategy_gene_batch(
-    individuals: list[object], config: GAConfig, mutation_rate: float = 0.1
-) -> list[object]:
-    """StrategyGene の突然変異をバッチで実行する。"""
-    return [
-        mutate_strategy_gene(
-            individual,  # type: ignore[arg-type]
-            config,
-            mutation_rate=mutation_rate,
-        )
-        for individual in individuals
-    ]
 
 
 def adaptive_mutate_strategy_gene(

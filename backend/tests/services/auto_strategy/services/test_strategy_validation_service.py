@@ -602,11 +602,22 @@ class TestStrategyValidationService:
         assert filtered2["best_strategy"] is best
         assert filtered2["validation_results"]["best"]["passed"] is True
 
-    def test_get_strategy_key_fallback_without_id(self):
-        """id を持たない戦略は id() ベースのキーにフォールバックする"""
+    def test_get_strategy_key_delegates_to_common_helper(self):
+        """``_get_strategy_key`` が共通ヘルパーへ委譲することの確認
+
+        キー生成ロジック自体は ``GeneticUtils.get_strategy_result_key`` のテスト
+        （test_genetic_utils.py）で検証済みのため、ここでは委譲のみを確認します。
+        """
         strategy = object()
-        key = StrategyValidationService._get_strategy_key(strategy)
-        assert key == str(id(strategy))
+
+        with patch(
+            "app.services.auto_strategy.services.strategy_validation_service.GeneticUtils.get_strategy_result_key",
+            return_value="mocked-key",
+        ) as mock_helper:
+            key = StrategyValidationService._get_strategy_key(strategy)
+            assert key == "mocked-key"
+
+        mock_helper.assert_called_once_with(strategy)
 
 
 class TestValidationConfig:

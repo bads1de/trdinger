@@ -31,8 +31,6 @@ class IndicatorCacheManager:
             maxsize: キャッシュの最大サイズ（デフォルト: 10000）
         """
         self._calculation_cache: LRUCache = LRUCache(maxsize=maxsize)
-        self._cache_hits = 0
-        self._cache_misses = 0
 
     def clear_cache(self) -> None:
         """
@@ -41,8 +39,6 @@ class IndicatorCacheManager:
         すべてのキャッシュされた計算結果を削除します。
         """
         self._calculation_cache.clear()
-        self._cache_hits = 0
-        self._cache_misses = 0
         logger.info("Indicator calculation cache cleared.")
 
     def make_cache_key(
@@ -106,12 +102,7 @@ class IndicatorCacheManager:
         """
         if cache_key is None:
             return None
-        result = self._calculation_cache.get(cache_key)
-        if result is not None:
-            self._cache_hits += 1
-        else:
-            self._cache_misses += 1
-        return result
+        return self._calculation_cache.get(cache_key)
 
     def cache_result(self, cache_key: tuple | None, result: Any) -> None:
         """
@@ -125,14 +116,3 @@ class IndicatorCacheManager:
         """
         if cache_key is not None and result is not None:
             self._calculation_cache[cache_key] = result
-
-    def get_cache_statistics(self) -> dict[str, Any]:
-        """キャッシュ統計を取得"""
-        total_requests = self._cache_hits + self._cache_misses
-        hit_rate = self._cache_hits / total_requests if total_requests > 0 else 0.0
-        return {
-            "cache_size": len(self._calculation_cache),
-            "cache_hits": self._cache_hits,
-            "cache_misses": self._cache_misses,
-            "hit_rate": hit_rate,
-        }

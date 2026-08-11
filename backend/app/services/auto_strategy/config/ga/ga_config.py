@@ -124,11 +124,9 @@ class GAConfig:
     objective_dynamic_scalars: dict[str, float] = field(default_factory=dict)
 
     # 実行時設定
-    parallel_processes: int | None = None
     random_state: int | None = None
 
     log_level: str = "ERROR"
-    save_intermediate_results: bool = True
 
     # フォールバック設定
     fallback_start_date: str = GA_FALLBACK_START_DATE

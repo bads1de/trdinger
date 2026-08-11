@@ -11,10 +11,9 @@ if TYPE_CHECKING:
     from .engine.evolution_runner import EvolutionRunner
     from .engine.ga_engine import GeneticAlgorithmEngine
     from .engine.ga_engine_factory import GeneticAlgorithmEngineFactory
-    from .engine.ga_utils import crossover_strategy_genes, mutate_strategy_gene
+    from .engine.ga_utils import crossover_strategy_genes
     from .evaluation.condition_evaluator import ConditionEvaluator
     from .evaluation.evaluation_strategies import EvaluationStrategy
-    from .evaluation.evaluator_wrapper import EvaluatorWrapper
     from .evaluation.individual_evaluator import IndividualEvaluator
     from .evaluation.parallel_evaluator import ParallelEvaluator
     from .fitness.fitness_calculator import FitnessCalculator
@@ -26,10 +25,8 @@ _ATTRIBUTE_EXPORTS = {
     "GeneticAlgorithmEngine": ".engine.ga_engine",
     "GeneticAlgorithmEngineFactory": ".engine.ga_engine_factory",
     "crossover_strategy_genes": ".engine.ga_utils",
-    "mutate_strategy_gene": ".engine.ga_utils",
     "ConditionEvaluator": ".evaluation.condition_evaluator",
     "EvaluationStrategy": ".evaluation.evaluation_strategies",
-    "EvaluatorWrapper": ".evaluation.evaluator_wrapper",
     "IndividualEvaluator": ".evaluation.individual_evaluator",
     "ParallelEvaluator": ".evaluation.parallel_evaluator",
     "FitnessCalculator": ".fitness.fitness_calculator",
@@ -43,11 +40,9 @@ __all__ = [
     "GeneticAlgorithmEngine",
     "GeneticAlgorithmEngineFactory",
     "crossover_strategy_genes",
-    "mutate_strategy_gene",
     # Evaluation
     "ConditionEvaluator",
     "EvaluationStrategy",
-    "EvaluatorWrapper",
     "IndividualEvaluator",
     "ParallelEvaluator",
     # Fitness

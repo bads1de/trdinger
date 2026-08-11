@@ -55,14 +55,6 @@ class ParameterConfig:
     # 探索プリセット: 用途に応じた探索範囲（例: short_term, mid_term, long_term）
     presets: dict[str, tuple] | None = None
 
-    def validate_value(self, value: Any) -> bool:
-        """与えられた値がこのパラメータの制約（範囲など）を満たすか検証する"""
-        if not isinstance(value, (int, float)):
-            # 数値でない場合は検証スキップ
-            return True
-
-        return self._normalize_numeric_value(value) == value
-
     def get_range_for_preset(self, preset_name: str) -> tuple:
         """
         指定されたプリセット名に対応する探索範囲を取得
@@ -408,13 +400,6 @@ class IndicatorConfigRegistry(Registry[str, IndicatorConfig]):
                 alias_key = self._normalize_key(alias)
                 if alias_key != primary_key:
                     self._aliases[alias_key] = config
-
-    def reset(self) -> None:
-        """レジストリをクリア（テスト用）"""
-        self.clear()
-        self._aliases.clear()
-        self._initialized = False
-        self._auto_initialize_on_access = False
 
     def get_indicator_config(self, indicator_name: str) -> IndicatorConfig | None:
         """設定を取得"""

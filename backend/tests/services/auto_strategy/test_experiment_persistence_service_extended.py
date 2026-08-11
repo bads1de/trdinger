@@ -678,29 +678,22 @@ class TestGetExperimentDetail:
 
 
 class TestGetStrategyResultKey:
-    """``_get_strategy_result_key`` のテスト"""
+    """``_get_strategy_result_key`` が共通ヘルパーへ委譲することのテスト
 
-    def test_uses_id_attribute_when_set(self) -> None:
+    キー生成ロジック自体は ``GeneticUtils.get_strategy_result_key`` のテスト
+    （test_genetic_utils.py）で検証済みのため、ここでは委譲のみを確認します。
+    """
+
+    def test_delegates_to_common_helper(self) -> None:
         s = Mock()
         s.id = "strategy-123"
-        assert (
-            ExperimentPersistenceService._get_strategy_result_key(s) == "strategy-123"
-        )
 
-    def test_uses_id_attribute_when_empty_string_falls_back_to_id(self) -> None:
-        """id が空文字のときは id(strategy) にフォールバック"""
-        s = Mock()
-        s.id = ""
-        key = ExperimentPersistenceService._get_strategy_result_key(s)
-        assert key == str(id(s))
+        with patch(
+            "app.services.auto_strategy.services.experiment_persistence_service.GeneticUtils.get_strategy_result_key",
+            return_value="mocked-key",
+        ) as mock_helper:
+            assert (
+                ExperimentPersistenceService._get_strategy_result_key(s) == "mocked-key"
+            )
 
-    def test_uses_id_strategy_when_id_is_none(self) -> None:
-        s = Mock()
-        s.id = None
-        key = ExperimentPersistenceService._get_strategy_result_key(s)
-        assert key == str(id(s))
-
-    def test_uses_id_strategy_when_no_id_attribute(self) -> None:
-        s = object()  # id 属性なし
-        key = ExperimentPersistenceService._get_strategy_result_key(s)
-        assert key == str(id(s))
+        mock_helper.assert_called_once_with(s)

@@ -144,20 +144,6 @@ class TestReturnColsExtractor:
         result = is_multi_column_indicator("bbands")
         assert result is True
 
-    def test_get_return_column_count(self):
-        """戻り値のカラム数を取得"""
-        from app.services.indicators.config.pandas_ta_introspection import (
-            get_return_column_count,
-        )
-
-        # MACDは3カラム（MACD, Signal, Histogram）
-        count = get_return_column_count("macd")
-        assert count == 3
-
-        # BBANDSは5カラム（BBL, BBM, BBU, BBB, BBP）
-        count = get_return_column_count("bbands")
-        assert count == 5
-
 
 class TestIndicatorCategoryExtraction:
     """インジケーターカテゴリ抽出のテスト"""

@@ -60,14 +60,6 @@ class TestAutoStrategyCoreInitExports:
 
         assert func is crossover_strategy_genes
 
-    def test_mutate_strategy_gene_lazy_load(self):
-        """mutate_strategy_geneが遅延ロードされる"""
-        from app.services.auto_strategy.core.engine.ga_utils import mutate_strategy_gene
-
-        func = core_package.mutate_strategy_gene
-
-        assert func is mutate_strategy_gene
-
     def test_condition_evaluator_lazy_load(self):
         """ConditionEvaluatorが遅延ロードされる"""
         from app.services.auto_strategy.core.evaluation.condition_evaluator import (
@@ -87,16 +79,6 @@ class TestAutoStrategyCoreInitExports:
         strategy = core_package.EvaluationStrategy
 
         assert strategy is EvaluationStrategy
-
-    def test_evaluator_wrapper_lazy_load(self):
-        """EvaluatorWrapperが遅延ロードされる"""
-        from app.services.auto_strategy.core.evaluation.evaluator_wrapper import (
-            EvaluatorWrapper,
-        )
-
-        wrapper = core_package.EvaluatorWrapper
-
-        assert wrapper is EvaluatorWrapper
 
     def test_individual_evaluator_lazy_load(self):
         """IndividualEvaluatorが遅延ロードされる"""
@@ -167,11 +149,9 @@ class TestAutoStrategyCoreInitExports:
             "GeneticAlgorithmEngine",
             "GeneticAlgorithmEngineFactory",
             "crossover_strategy_genes",
-            "mutate_strategy_gene",
             # Evaluation
             "ConditionEvaluator",
             "EvaluationStrategy",
-            "EvaluatorWrapper",
             "IndividualEvaluator",
             "ParallelEvaluator",
             # Fitness

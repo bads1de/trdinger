@@ -38,7 +38,6 @@ from .fitness_utils import (
 from .ga_utils import (
     create_deap_mutate_wrapper,
     crossover_strategy_genes,
-    mutate_strategy_gene,
 )
 from .parameter_tuning_manager import ParameterTuningManager
 from .report_selection import (
@@ -122,7 +121,6 @@ class GeneticAlgorithmEngine:
             self._create_strategy_individual,
             self.individual_evaluator.evaluate,  # type: ignore[arg-type]  # 評価関数は(individual, config, ...)シグネチャ
             crossover_strategy_genes,
-            mutate_strategy_gene,
         )
 
         # 個体クラスを取得（個体生成時に使用）

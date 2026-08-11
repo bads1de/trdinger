@@ -19,6 +19,7 @@ from ..config.ga.nested_configs import ValidationConfig
 from ..core.evaluation.evaluation_report import EvaluationReport
 from ..core.evaluation.evaluation_strategies import EvaluationStrategy
 from ..core.evaluation.individual_evaluator import IndividualEvaluator
+from ..genes.genetic_utils import GeneticUtils
 
 logger = logging.getLogger(__name__)
 
@@ -349,7 +350,4 @@ class StrategyValidationService:
     @staticmethod
     def _get_strategy_key(strategy: Any) -> str:
         """戦略を識別するキーを返す（永続化層と同じルール）。"""
-        strategy_id = getattr(strategy, "id", None)
-        if strategy_id not in (None, ""):
-            return str(strategy_id)
-        return str(id(strategy))
+        return GeneticUtils.get_strategy_result_key(strategy)

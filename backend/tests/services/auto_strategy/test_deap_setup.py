@@ -42,7 +42,6 @@ class TestDEAPSetup:
         config = Mock(spec=GAConfig)
         config.objectives = ["sharpe_ratio", "max_drawdown"]
         config.objective_weights = [1.0, -1.0]
-        config.mutation_rate = 0.2
         return config
 
     @pytest.fixture
@@ -52,7 +51,6 @@ class TestDEAPSetup:
             "create_individual": Mock(return_value=[0.1, 0.2, 0.3]),
             "evaluate": Mock(return_value=(1.5, 0.25)),
             "crossover": Mock(return_value=([0.1, 0.2], [0.3, 0.4])),
-            "mutate": Mock(return_value=[0.1, 0.2, 0.3]),
         }
 
     def test_initialization(self, deap_setup):
@@ -73,7 +71,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
 
         # FitnessMultiが作成されたことを確認
@@ -96,7 +93,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
 
         # create呼び出しの検証（Individual）
@@ -131,7 +127,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
 
         toolbox = deap_setup.get_toolbox()
@@ -140,7 +135,6 @@ class TestDEAPSetup:
         assert hasattr(toolbox, "population")
         assert hasattr(toolbox, "evaluate")
         assert hasattr(toolbox, "mate")
-        assert hasattr(toolbox, "mutate")
         assert hasattr(toolbox, "select")
 
     @patch(
@@ -166,38 +160,12 @@ class TestDEAPSetup:
                     mock_functions["create_individual"],
                     mock_functions["evaluate"],
                     mock_functions["crossover"],
-                    mock_functions["mutate"],
                 )
 
                 # register呼び出しを検証
                 args = mock_toolbox_instance.register.call_args_list
                 select_call = [call for call in args if call[0][0] == "select"][0]
                 assert select_call[0][1] == mock_tools.selNSGA2
-
-    @patch(
-        "app.services.auto_strategy.core.engine.deap_setup.creator",
-        new_callable=MockCreator,
-    )
-    def test_setup_deap_mutate_wrapper(
-        self, mock_creator, deap_setup, mock_config, mock_functions
-    ):
-        """突然変異ラッパーのテスト"""
-        deap_setup.setup_deap(
-            mock_config,
-            mock_functions["create_individual"],
-            mock_functions["evaluate"],
-            mock_functions["crossover"],
-            mock_functions["mutate"],
-        )
-
-        toolbox = deap_setup.get_toolbox()
-        individual = [0.1, 0.2, 0.3]
-        result = toolbox.mutate(individual)
-
-        assert isinstance(result, tuple)
-        assert len(result) == 1
-        assert result[0] == individual
-        mock_functions["mutate"].assert_called_once_with(individual, mutation_rate=0.2)
 
     @patch(
         "app.services.auto_strategy.core.engine.deap_setup.creator",
@@ -210,7 +178,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
         toolbox = deap_setup.get_toolbox()
         # Mock化していない場合はbase.Toolboxインスタンス
@@ -229,7 +196,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
 
         individual_class = deap_setup.get_individual_class()
@@ -252,7 +218,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
         first_fitness_name = deap_setup.fitness_class_name
         first_individual_name = deap_setup.individual_class_name
@@ -264,7 +229,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
 
         assert first_fitness_name != deap_setup.fitness_class_name
@@ -291,7 +255,6 @@ class TestDEAPSetup:
                 mock_functions["create_individual"],
                 mock_functions["evaluate"],
                 mock_functions["crossover"],
-                mock_functions["mutate"],
             )
 
     @patch(
@@ -311,7 +274,6 @@ class TestDEAPSetup:
                 mock_functions["create_individual"],
                 mock_functions["evaluate"],
                 mock_functions["crossover"],
-                mock_functions["mutate"],
             )
 
     @patch(
@@ -330,7 +292,6 @@ class TestDEAPSetup:
             mock_functions["create_individual"],
             mock_functions["evaluate"],
             mock_functions["crossover"],
-            mock_functions["mutate"],
         )
 
         mock_creator.create.assert_any_call(

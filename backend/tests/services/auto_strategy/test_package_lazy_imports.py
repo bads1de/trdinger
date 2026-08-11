@@ -69,7 +69,6 @@ class TestAutoStrategyPackageLazyImports:
         assert module.__dict__["PositionSizingService"] is exported
         # 他のモジュールはまだ読み込まれていない（個別遅延）
         assert "EntryExecutor" not in module.__dict__
-        assert "PositionSizingResult" not in module.__dict__
 
     def test_calculators_package_defers_calculator_import(self) -> None:
         """calculators パッケージは属性アクセスまで個別計算機を読み込まない。"""

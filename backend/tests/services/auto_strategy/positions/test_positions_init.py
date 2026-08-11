@@ -14,10 +14,6 @@ class TestAutoStrategyPositionsInitExports:
         """PositionSizingServiceがエクスポートされている"""
         assert hasattr(positions_package, "PositionSizingService")
 
-    def test_position_sizing_result_exported(self):
-        """PositionSizingResultがエクスポートされている"""
-        assert hasattr(positions_package, "PositionSizingResult")
-
     def test_entry_executor_exported(self):
         """EntryExecutorがエクスポートされている"""
         assert hasattr(positions_package, "EntryExecutor")
@@ -26,7 +22,6 @@ class TestAutoStrategyPositionsInitExports:
         """__all__に期待されるアイテムが含まれる"""
         expected_items = [
             "PositionSizingService",
-            "PositionSizingResult",
             "EntryExecutor",
         ]
 

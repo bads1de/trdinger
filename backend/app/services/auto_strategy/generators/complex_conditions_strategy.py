@@ -122,9 +122,6 @@ class ComplexConditionsStrategy:
         elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
             th_long = random.choice(self.PM100_LONG_THRESHOLDS)
             th_short = random.choice(self.PM100_SHORT_THRESHOLDS)
-        elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-            th_long = 0
-            th_short = 0
         elif scale_type in (
             IndicatorScaleType.PRICE_RATIO,
             IndicatorScaleType.PRICE_ABSOLUTE,
@@ -133,13 +130,8 @@ class ComplexConditionsStrategy:
             th_long = "close"
             th_short = "close"
         else:
-            # 不明な場合やその他のスケール
-            if scale_type == IndicatorScaleType.PRICE_RATIO:
-                th_long = 1.01
-                th_short = 0.99
-            else:
-                th_long = 0
-                th_short = 0
+            th_long = 0
+            th_short = 0
 
         # ロング: Close > Trend AND Momentum > High
         long_conds: list[Condition | ConditionGroup] = [
@@ -237,17 +229,3 @@ class ComplexConditionsStrategy:
             Condition(left_operand="Close", operator="<", right_operand=low_name)
         )
         return longs, shorts
-
-    # テスト互換用エイリアス
-    def _get_indicator_name(self, ind: IndicatorGene) -> str:
-        return self.gen._get_indicator_name(ind)
-
-    def _classify_indicators(
-        self, inds: list[IndicatorGene]
-    ) -> dict[IndicatorType, list[IndicatorGene]]:
-        return self.gen._classify_indicators(inds)
-
-    def _structure_conditions(
-        self, conds: list[Condition | ConditionGroup]
-    ) -> list[Condition | ConditionGroup]:
-        return self.gen._structure_conditions(conds)

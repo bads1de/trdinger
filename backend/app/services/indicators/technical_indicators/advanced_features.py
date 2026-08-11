@@ -226,28 +226,6 @@ class AdvancedFeatures:
     """
 
     @staticmethod
-    def get_weights_ffd(d: float, thres: float, lim: int) -> np.ndarray:
-        """
-        分数微分（固定ウィンドウ）の重みを計算します (ベクトル化版)。
-        """
-        if lim <= 1:
-            return np.array([1.0])
-
-        # k = 1, 2, ..., lim-1
-        k = np.arange(1, lim)
-        # 係数ベクトル: -(d - k + 1) / k
-        multipliers = -(d - k + 1) / k
-        # w_k = w_{k-1} * multipliers[k-1]
-        # w_0 = 1.0 なので、cumprodで計算可能
-        weights = np.concatenate(([1.0], np.cumprod(multipliers)))
-
-        # 閾値による切り捨て
-        mask = np.abs(weights) >= thres
-        weights = weights[mask]
-
-        return weights.reshape(-1, 1)
-
-    @staticmethod
     def z_score(series: pd.Series, window: int = 20) -> pd.Series:
         """
         Zスコアを計算 (x - mean) / std
@@ -516,74 +494,6 @@ class AdvancedFeatures:
                 window,
                 _calculate_vpin,
             ),
-        )
-
-    @staticmethod
-    @handle_pandas_ta_errors
-    def frac_diff_ffd(
-        series: pd.Series,
-        d: float = 0.4,
-        thres: float = 1e-5,
-        window: int = 200,
-    ) -> pd.Series:
-        """
-        分数微分（固定ウィンドウFFD）。
-        np.convolveを用いた高速なベクトル化実装。
-
-        Note:
-            window は重みの上限ラグ数。d=0.4 程度では重みの減衰が遅いため
-            window=2000 だと実データ長（収集は1リクエスト1000本程度）では
-            ほぼ常に全NaNになり、下流で黙って定数0に潰れていた。
-            学習・推論で一貫した変換にするため固定の window=200 を既定とし、
-            データ長が足りない場合は警告を出して全NaNを返す。
-        """
-
-        def _calculate_frac_diff_ffd() -> pd.Series:
-            """
-            分数微分 (FFD) の計算ロジック。
-            """
-            if abs(d) < 1e-9:
-                return series.copy()
-
-            # 1. 重みの計算
-            # ウィンドウサイズ(window)に基づいて一定の重みを生成
-            w = AdvancedFeatures.get_weights_ffd(d, thres, window).flatten()
-            width = len(w)
-
-            # 2. 重みの適用 (ベクトル化)
-            series_vals = series.ffill().values.astype(np.float64)
-
-            # 3. 重なり判定
-            if len(series_vals) < width:
-                # データがウィンドウサイズに満たない場合は、
-                # 過去の実装に合わせてすべてNaNを返す
-                logger.warning(
-                    "frac_diff_ffd: データ長(%d)が重み数(%d)に満たないため全NaNを返します。"
-                    "FracDiff特徴量(d=%s)が無効になります。window(%d)を小さくするか、"
-                    "データ収集量を増やしてください。",
-                    len(series_vals),
-                    width,
-                    d,
-                    window,
-                )
-                return pd.Series(np.nan, index=series.index, name=series.name)
-
-            # np.convolve(x, w, mode='valid') で
-            # y[n] = sum_{k=0}^{M-1} x[n-k] * w[k] を計算
-            # mode='valid' の場合、長さ L と M の配列から L-M+1 の結果が返る
-            # np.convolve は内部で第2引数(w)を反転させてスライドさせるため、
-            # [w0, w1, ..., wM-1] をそのまま渡せば y[t] = x[t]w0 + x[t-1]w1 + ... となる
-            diff_vals = np.convolve(series_vals, w, mode="valid")
-
-            # 結果の配列をNaNで初期化し、計算結果を埋める
-            result = np.full(len(series), np.nan)
-            result[width - 1 :] = diff_vals
-
-            return pd.Series(result, index=series.index, name=series.name)
-
-        return cast(
-            pd.Series,
-            run_series_indicator(series, window, _calculate_frac_diff_ffd),
         )
 
     @staticmethod

@@ -18,6 +18,25 @@ class GeneticUtils:
     """遺伝的アルゴリズム関連ユーティリティ"""
 
     @staticmethod
+    def get_strategy_result_key(strategy: object) -> str:
+        """
+        戦略を識別するキーを返す（result / 永続化 / 検証の共通ルール）。
+
+        ``strategy.id`` があればそれを文字列化し、
+        無い場合は ``id(strategy)`` をフォールバックとして使用します。
+
+        Args:
+            strategy: 戦略オブジェクト（StrategyGene 等）
+
+        Returns:
+            戦略を一意に識別するキー文字列
+        """
+        strategy_id = getattr(strategy, "id", None)
+        if strategy_id not in (None, ""):
+            return str(strategy_id)
+        return str(id(strategy))
+
+    @staticmethod
     def create_child_metadata(
         parent1_metadata: dict[str, SerializableValue],
         parent2_metadata: dict[str, SerializableValue],

@@ -118,10 +118,8 @@ class ConfigValidator:
         """
         errors = []
         errors.extend(ConfigValidator._validate_ga_evolution_settings(config))
-        errors.extend(ConfigValidator._validate_ga_oos_settings(config))
         errors.extend(ConfigValidator._validate_ga_fitness_settings(config))
         errors.extend(ConfigValidator._validate_ga_parameter_settings(config))
-        errors.extend(ConfigValidator._validate_ga_execution_settings(config))
         errors.extend(ConfigValidator._validate_ga_multi_fidelity_settings(config))
         errors.extend(ConfigValidator._validate_ga_early_termination_settings(config))
         errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
@@ -207,33 +205,6 @@ class ConfigValidator:
         else:
             errors.append("elite_size と population_size は数値である必要があります")
 
-        return errors
-
-    @staticmethod
-    def _validate_ga_oos_settings(config: GAConfig) -> list[str]:
-        """
-        OOS（Out-of-Sample）検証設定の検証
-
-        Args:
-            config: 検証対象のGAConfigインスタンス
-
-        Returns:
-            エラーメッセージのリスト
-        """
-        errors: list[str] = []
-        evaluation_config = config.evaluation_config
-
-        # OOSが無効な場合は検証をスキップ
-        if not getattr(evaluation_config, "enable_oos", False):
-            return errors
-
-        if (
-            not isinstance(evaluation_config.oos_split_ratio, (int, float))
-            or not 0.0 <= evaluation_config.oos_split_ratio < 1.0
-        ):
-            errors.append(
-                "evaluation_config.oos_split_ratio は0.0以上1.0未満である必要があります"
-            )
         return errors
 
     @staticmethod
@@ -376,28 +347,6 @@ class ConfigValidator:
                 "'ERROR', 'CRITICAL'}"
             )
 
-        return errors
-
-    @staticmethod
-    def _validate_ga_execution_settings(config: GAConfig) -> list[str]:
-        """
-        GA実行環境設定（並列プロセス数等）の検証
-
-        Args:
-            config: 検証対象のGAConfigインスタンス
-
-        Returns:
-            エラーメッセージのリスト
-        """
-        errors = []
-        if config.parallel_processes is not None:
-            if (
-                not isinstance(config.parallel_processes, (int, float))
-                or config.parallel_processes <= 0
-            ):
-                errors.append("並列プロセス数は正の整数である必要があります")
-            elif config.parallel_processes > 32:
-                errors.append("並列プロセス数は32以下である必要があります")
         return errors
 
     @staticmethod

@@ -545,29 +545,6 @@ class VolumeIndicators:
 
     @staticmethod
     @handle_pandas_ta_errors
-    def absorption_score(
-        high: pd.Series,
-        low: pd.Series,
-        volume: pd.Series,
-        window: int = 20,
-    ) -> pd.Series:
-        """
-        Absorption Score = RVOL / Range
-        """
-        return cast(
-            pd.Series,
-            run_multi_series_indicator(
-                {"high": high, "low": low, "volume": volume},
-                window,
-                lambda: normalize_non_finite(
-                    VolumeIndicators.rvol(volume, window=window)
-                    / (high - low).replace(0, 1e-9)
-                ),
-            ),
-        )
-
-    @staticmethod
-    @handle_pandas_ta_errors
     def aobv(
         close: pd.Series,
         volume: pd.Series,

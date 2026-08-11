@@ -9,7 +9,6 @@ from .crossover import (
     crossover_exit_genes,
     crossover_position_sizing_genes,
     crossover_strategy_genes,
-    crossover_strategy_genes_batch,
     crossover_tpsl_genes,
     single_point_crossover,
     uniform_crossover,
@@ -17,21 +16,15 @@ from .crossover import (
 from .mutation import (
     adaptive_mutate_strategy_gene,
     mutate_conditions,
-    mutate_conditions_batch,
     mutate_indicators,
-    mutate_indicators_batch,
     mutate_strategy_gene,
-    mutate_strategy_gene_batch,
 )
 
 __all__ = [
     # mutation
     "mutate_indicators",
     "mutate_conditions",
-    "mutate_indicators_batch",
-    "mutate_conditions_batch",
     "mutate_strategy_gene",
-    "mutate_strategy_gene_batch",
     "adaptive_mutate_strategy_gene",
     # crossover
     "crossover_tpsl_genes",
@@ -39,7 +32,6 @@ __all__ = [
     "crossover_entry_genes",
     "crossover_exit_genes",
     "crossover_strategy_genes",
-    "crossover_strategy_genes_batch",
     "uniform_crossover",
     "single_point_crossover",
 ]

@@ -43,7 +43,6 @@ class DEAPSetup:
         create_individual_func: Callable[[], StrategyGene],
         evaluate_func: Callable[[StrategyGene], tuple[float, ...]],
         crossover_func: Callable[..., tuple[StrategyGene, StrategyGene]],
-        mutate_func: Callable[..., StrategyGene],
     ) -> None:
         """DEAP環境のセットアップ。
 
@@ -56,7 +55,6 @@ class DEAPSetup:
             create_individual_func: 個体生成関数
             evaluate_func: 評価関数
             crossover_func: 交叉関数
-            mutate_func: 突然変異関数
 
         Returns:
             None: メソッドは副作用としてインスタンス属性を設定します。
@@ -131,18 +129,8 @@ class DEAPSetup:
         # 進化演算子の登録（戦略遺伝子レベル）
         self.toolbox.register("mate", crossover_func, config=config)
 
-        # 突然変異の登録（DEAP互換の返り値 (ind,) を保証するラッパー）
-        def _mutate_wrapper(individual: Any) -> tuple[Any, ...]:
-            """突然変異処理のラッパー。
-
-            DEAPの要件に合わせて、突然変異後の個体をタプルでラップして返す。
-            """
-            res: Any = mutate_func(individual, mutation_rate=config.mutation_rate)
-            if isinstance(res, tuple):
-                return res
-            return (res,)
-
-        self.toolbox.register("mutate", _mutate_wrapper)
+        # 突然変異は呼び出し元（GAエンジン）が個体群の状態に応じた
+        # ラッパー（create_deap_mutate_wrapper 等）を登録するため、ここでは登録しない。
 
         # 選択アルゴリズムは常に NSGA-II を使用する。
         # 目的関数が 1 つでも、同じパイプラインで扱う。

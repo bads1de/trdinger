@@ -15,6 +15,7 @@ from app.services.auto_strategy.core.evaluation.report_persistence import (
     attach_evaluation_summary,
     attach_validation_summary,
 )
+from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.utils.datetime_utils import isoformat_or_none
 from database.repositories.backtest_result_repository import (
@@ -438,7 +439,4 @@ class ExperimentPersistenceService:
     @staticmethod
     def _get_strategy_result_key(strategy: object) -> str:
         """result 内部の summary 対応付けキーを返す。"""
-        strategy_id = getattr(strategy, "id", None)
-        if strategy_id not in (None, ""):
-            return str(strategy_id)
-        return str(id(strategy))
+        return GeneticUtils.get_strategy_result_key(strategy)

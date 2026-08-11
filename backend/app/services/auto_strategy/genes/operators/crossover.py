@@ -88,37 +88,6 @@ def crossover_strategy_genes(
         return child1, child2
 
 
-def crossover_strategy_genes_batch(
-    individuals: list[Any], config: GAConfig, crossover_rate: float = 0.8
-) -> list[tuple[Any, Any]]:
-    """StrategyGene の交叉をバッチで実行する。"""
-    results: list[tuple[Any, Any]] = []
-    num_individuals = len(individuals)
-    last_pair_index = (
-        num_individuals - 1 if num_individuals % 2 == 0 else num_individuals - 2
-    )
-
-    for i in range(0, last_pair_index, 2):
-        if random.random() < crossover_rate:
-            parent1 = individuals[i]
-            parent2 = individuals[i + 1]
-            child1, child2 = crossover_strategy_genes(
-                type(parent1),
-                parent1,
-                parent2,
-                config,
-            )
-            results.append((child1, child2))
-        else:
-            results.append((individuals[i], individuals[i + 1]))
-
-    if num_individuals % 2 == 1:
-        last_individual = individuals[-1]
-        results.append((last_individual, last_individual))
-
-    return results
-
-
 def uniform_crossover(
     strategy_gene_class: type[StrategyGene],
     parent1: StrategyGene,

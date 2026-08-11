@@ -16,18 +16,6 @@ from app.services.indicators.config.indicator_config import (
 class TestParameterConfig:
     """ParameterConfig のテスト"""
 
-    def test_validate_value(self):
-        """値の検証テスト"""
-        config = ParameterConfig(
-            name="test", default_value=10, min_value=5, max_value=20
-        )
-        assert config.validate_value(10) is True
-        assert config.validate_value(5) is True
-        assert config.validate_value(20) is True
-        assert config.validate_value(4) is False
-        assert config.validate_value(21) is False
-        assert config.validate_value("not_a_number") is True  # スキップされる仕様
-
     def test_get_range_for_preset(self):
         """プリセット範囲取得テスト"""
         presets = {"short": (2, 5), "long": (20, 50)}
@@ -38,19 +26,6 @@ class TestParameterConfig:
         assert config.get_range_for_preset("short") == (2, 5)
         assert config.get_range_for_preset("long") == (20, 50)
         assert config.get_range_for_preset("unknown") == (1, 100)
-
-    def test_validate_value_even_only(self):
-        """even_only 制約が検証に反映されること"""
-        config = ParameterConfig(
-            name="test",
-            default_value=10,
-            min_value=2,
-            max_value=20,
-            even_only=True,
-        )
-
-        assert config.validate_value(10) is True
-        assert config.validate_value(11) is False
 
 
 class TestIndicatorConfig:
@@ -206,16 +181,6 @@ class TestIndicatorConfigRegistry:
         assert "rsi" not in registry.list_indicators()
         assert "RSI" in registry.get_all_indicators()
         assert "rsi" not in registry.get_all_indicators()
-
-    def test_reset(self):
-        """リセットテスト"""
-        registry = IndicatorConfigRegistry()
-        config = IndicatorConfig(indicator_name="TEST")
-        registry.register(config)
-
-        assert len(registry.list_indicators()) > 0
-        registry.reset()
-        assert len(registry.list_indicators()) == 0
 
     def test_generate_parameters_for_indicator(self):
         """レジストリからのパラメータ生成テスト"""

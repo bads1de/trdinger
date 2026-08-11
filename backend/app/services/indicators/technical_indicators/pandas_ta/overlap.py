@@ -761,4 +761,4 @@ def _compute_hilo_without_nan_propagation(
         hilo_long = cast(pd.Series, hilo_long.shift(offset))
         hilo_short = cast(pd.Series, hilo_short.shift(offset))
 
-    return cast(tuple[pd.Series, pd.Series, pd.Series], (hilo, hilo_long, hilo_short))
+    return (hilo, hilo_long, hilo_short)

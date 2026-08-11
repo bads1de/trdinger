@@ -10,6 +10,7 @@ from typing import Any, cast
 from deap import tools
 
 from app.services.auto_strategy.genes import StrategyGene
+from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
 
 from .report_selection import (
     extract_primary_fitness,
@@ -130,8 +131,7 @@ class ResultProcessor:
     def get_strategy_result_key(self, strategy: object) -> str:
         """
         result 内部で戦略 summary を対応付けるキーを返す。
+
+        ``GeneticUtils.get_strategy_result_key`` に委譲します。
         """
-        strategy_id = getattr(strategy, "id", None)
-        if strategy_id not in (None, ""):
-            return str(strategy_id)
-        return str(id(strategy))
+        return GeneticUtils.get_strategy_result_key(strategy)

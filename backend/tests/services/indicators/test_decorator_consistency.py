@@ -26,7 +26,7 @@ CLASS_MODULES = [
     (
         "advanced_features.py",
         "AdvancedFeatures",
-        {"get_weights_ffd", "z_score"},
+        {"z_score"},
     ),
 ]
 

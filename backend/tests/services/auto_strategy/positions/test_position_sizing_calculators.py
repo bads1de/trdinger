@@ -1,5 +1,4 @@
 import math
-from datetime import datetime
 
 import pytest
 
@@ -19,10 +18,6 @@ from app.services.auto_strategy.positions.calculators.half_optimal_f_calculator 
 )
 from app.services.auto_strategy.positions.calculators.volatility_based_calculator import (
     VolatilityBasedCalculator,
-)
-from app.services.auto_strategy.positions.position_sizing_service import (
-    PositionSizingResult,
-    PositionSizingService,
 )
 
 
@@ -234,63 +229,6 @@ def test_half_optimal_f_uses_trade_history_when_sufficient(
     assert "half_optimal_f" in result["details"]
 
 
-@pytest.mark.parametrize(
-    "balance,price",
-    [
-        (-1000.0, 100.0),
-        (0.0, 100.0),
-        (1000.0, 0.0),
-        (1000.0, -10.0),
-    ],
-)
-def test_position_sizing_service_invalid_inputs_returns_error_result(
-    base_gene: PositionSizingGene, balance: float, price: float
-) -> None:
-    """無効な入力時にエラー結果を返す（position_size=0.0）"""
-    gene = base_gene
-    service = PositionSizingService()
-
-    result: PositionSizingResult = service.calculate_position_size(
-        gene=gene,
-        account_balance=balance,
-        current_price=price,
-    )
-
-    assert isinstance(result, PositionSizingResult)
-    # エラー時はポジションを持たない（0.0）
-    assert result.position_size == 0.0
-    assert result.confidence_score == 0.0
-    assert len(result.warnings) > 0
-    assert "error" in result.calculation_details
-
-
-def test_position_sizing_service_integration_fixed_ratio(
-    base_gene: PositionSizingGene,
-) -> None:
-    # サービス経由で FixedRatioCalculator が正しく利用されることを確認
-    gene = PositionSizingGene(
-        **{
-            **base_gene.to_dict(),
-            "method": PositionSizingMethod.FIXED_RATIO,
-            "fixed_ratio": 0.1,
-        }
-    )
-    service = PositionSizingService()
-
-    result = service.calculate_position_size(
-        gene=gene,
-        account_balance=10000.0,
-        current_price=100.0,
-    )
-
-    assert isinstance(result, PositionSizingResult)
-    assert result.method_used == PositionSizingMethod.FIXED_RATIO.value
-    assert result.position_size == pytest.approx(10.0)
-    assert result.risk_metrics["position_value"] == pytest.approx(1000.0)
-    assert result.risk_metrics["position_ratio"] == pytest.approx(0.1)
-    assert result.timestamp <= datetime.now()
-
-
 def test_calculator_factory_creates_expected_calculators() -> None:
     factory = CalculatorFactory()
 
@@ -314,17 +252,15 @@ def test_calculator_factory_creates_expected_calculators() -> None:
     assert isinstance(factory.create_calculator("unknown_method"), FixedRatioCalculator)
 
 
-def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
+def test_calculator_defensive_behavior_on_invalid_price(
     base_gene: PositionSizingGene,
 ) -> None:
     """
-    異常入力に対する挙動をドキュメント化するためのテスト。
+    Calculator レベルの防御的挙動をドキュメント化するテスト。
 
-    - PositionSizingService 側は負残高・ゼロ価格をエラー扱いし、PositionSizingResult(0.0, confidence_score=0.0) を返す。
-    - 各 Calculator は BaseCalculator._safe_calculate_with_price_check に依存するため、
-      ここでは「min_position_size 以上の非負サイズを返す」ことのみを保証対象とする。
+    各 Calculator は BaseCalculator._safe_calculate_with_price_check に依存するため、
+    ここでは「min_position_size 以上の非負サイズを返す」ことのみを保証対象とする。
     """
-    service = PositionSizingService()
     gene = PositionSizingGene(
         **{
             **base_gene.to_dict(),
@@ -333,15 +269,6 @@ def test_calculator_raises_or_handles_invalid_inputs_behavior_documented(
         }
     )
 
-    # Service レベルの異常系
-    res = service.calculate_position_size(
-        gene=gene, account_balance=-1000.0, current_price=100.0
-    )
-    # エラー時はポジションを持たない（0.0）
-    assert res.position_size == 0.0
-    assert res.confidence_score == 0.0
-
-    # Calculator レベルの防御的挙動（仕様を固定しすぎない）
     calc = FixedRatioCalculator()
     raw = calc.calculate(gene, 10000.0, 0.0)
     assert raw["position_size"] >= gene.min_position_size

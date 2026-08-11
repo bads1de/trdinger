@@ -45,7 +45,6 @@ class TestConfigValidator:
         config.max_indicators = 5
         config.parameter_ranges = {"param1": [0, 10]}
         config.log_level = "INFO"
-        config.parallel_processes = 4
 
         # サブ設定クラス
         config.evaluation_config = MagicMock()
@@ -224,17 +223,6 @@ class TestConfigValidator:
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
         assert any("無効なログレベル" in e for e in errors)
-
-    def test_validate_ga_config_parallel_processes(self, ga_config):
-        ga_config.parallel_processes = 0
-        is_valid, errors = ConfigValidator.validate(ga_config)
-        assert is_valid is False
-        assert any("並列プロセス数は正の整数" in e for e in errors)
-
-        ga_config.parallel_processes = 40
-        is_valid, errors = ConfigValidator.validate(ga_config)
-        assert is_valid is False
-        assert any("並列プロセス数は32以下" in e for e in errors)
 
     def test_validate_ga_config_multi_fidelity(self, ga_config):
         ga_config.evaluation_config.enable_multi_fidelity_evaluation = True

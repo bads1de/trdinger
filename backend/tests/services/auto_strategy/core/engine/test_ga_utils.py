@@ -18,7 +18,6 @@ from app.services.auto_strategy.core.engine.ga_utils import (
     _set_fitness_values,
     create_deap_mutate_wrapper,
     crossover_strategy_genes,
-    mutate_strategy_gene,
 )
 from app.services.auto_strategy.genes import StrategyGene
 
@@ -82,51 +81,6 @@ class TestCrossoverStrategyGenes:
             crossover_strategy_genes(parent1, parent2, config)
             # クラスメソッドとして呼ばれている
             assert mock_co.called
-
-
-class TestMutateStrategyGene:
-    """``mutate_strategy_gene`` の挙動テスト"""
-
-    def test_uses_default_mutation_rate(self) -> None:
-        gene = _make_gene_with_methods()
-        mutated = _make_gene_with_methods()
-        gene.mutate.return_value = mutated
-        config = SimpleNamespace()
-
-        result = mutate_strategy_gene(gene, config)
-
-        assert result is mutated
-        gene.mutate.assert_called_once_with(config, 0.1)
-
-    def test_uses_custom_mutation_rate(self) -> None:
-        gene = _make_gene_with_methods()
-        mutated = _make_gene_with_methods()
-        gene.mutate.return_value = mutated
-        config = SimpleNamespace()
-
-        mutate_strategy_gene(gene, config, mutation_rate=0.25)
-
-        gene.mutate.assert_called_once_with(config, 0.25)
-
-    def test_zero_mutation_rate(self) -> None:
-        gene = _make_gene_with_methods()
-        mutated = _make_gene_with_methods()
-        gene.mutate.return_value = mutated
-        config = SimpleNamespace()
-
-        mutate_strategy_gene(gene, config, mutation_rate=0.0)
-
-        gene.mutate.assert_called_once_with(config, 0.0)
-
-    def test_high_mutation_rate(self) -> None:
-        gene = _make_gene_with_methods()
-        mutated = _make_gene_with_methods()
-        gene.mutate.return_value = mutated
-        config = SimpleNamespace()
-
-        mutate_strategy_gene(gene, config, mutation_rate=1.0)
-
-        gene.mutate.assert_called_once_with(config, 1.0)
 
 
 class TestInvalidateIndividualCache:

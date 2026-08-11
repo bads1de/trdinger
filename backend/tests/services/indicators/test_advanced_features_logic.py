@@ -1,26 +1,9 @@
-import numpy as np
 import pandas as pd
 
 from app.services.indicators.technical_indicators.advanced_features import (
     AdvancedFeatures,
 )
 from app.services.indicators.technical_indicators.pandas_ta import VolumeIndicators
-
-
-def test_frac_diff_ffd(sample_df):
-    close = sample_df["close"]
-    # Apply log as recommended
-    log_close = np.log(close)
-
-    # Test with small window for speed
-    diff_series = AdvancedFeatures.frac_diff_ffd(log_close, d=0.4, window=50)
-
-    assert isinstance(diff_series, pd.Series)
-    assert len(diff_series) == len(close)
-    # Initial values should be NaN due to window
-    # The implementation uses a rolling window, so first `width` elements are NaN
-    # but my implementation fills with NaN.
-    assert diff_series.isna().sum() > 0
 
 
 def test_liquidation_cascade_score(sample_df):
@@ -59,13 +42,6 @@ def test_rvol(sample_df):
     assert isinstance(rvol, pd.Series)
     # Should work with DatetimeIndex
     assert not rvol.isna().all()
-
-
-def test_absorption_score(sample_df):
-    score = VolumeIndicators.absorption_score(
-        sample_df["high"], sample_df["low"], sample_df["volume"]
-    )
-    assert isinstance(score, pd.Series)
 
 
 def test_sample_entropy(sample_df):

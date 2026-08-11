@@ -382,13 +382,6 @@ class TestGAConfigRuntime:
         assert is_valid is False
         assert any("無効なログレベル" in e for e in errors)
 
-    def test_validate_invalid_parallel_processes(self):
-        """無効な並列プロセス数の検証"""
-        config = GAConfigRuntime(parallel_processes=50)
-        is_valid, errors = ConfigValidator.validate(config)
-        assert is_valid is False
-        assert any("並列プロセス数は32以下である必要があります" in e for e in errors)
-
     def test_validate_two_stage_selection_constraints(self):
         """二段階選抜の制約を検証"""
         config = GAConfigRuntime(

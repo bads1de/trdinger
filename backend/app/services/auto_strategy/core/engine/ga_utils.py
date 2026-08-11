@@ -38,24 +38,6 @@ def crossover_strategy_genes(
     return type(parent1).crossover(parent1, parent2, config)
 
 
-def mutate_strategy_gene(
-    gene: StrategyGene, config: GAConfig, mutation_rate: float = 0.1
-) -> StrategyGene:
-    """戦略遺伝子の突然変異を実行する。
-
-    遺伝子の ``mutate`` メソッドを呼び出して変異後の遺伝子を生成します。
-
-    Args:
-        gene: 突然変異対象の遺伝子
-        config: GA設定オブジェクト
-        mutation_rate: 突然変異率（デフォルト: 0.1）
-
-    Returns:
-        突然変異後の遺伝子
-    """
-    return gene.mutate(config, mutation_rate)
-
-
 def _invalidate_individual_cache(  # pyright: ignore[reportUnusedFunction] - evolution_runner やテストから import して使用
     individual: Any,
 ) -> None:

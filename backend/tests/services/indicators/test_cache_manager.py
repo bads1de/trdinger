@@ -25,8 +25,6 @@ def sample_df():
 class TestIndicatorCacheManager:
     def test_initialization(self, cache_manager):
         assert cache_manager._calculation_cache.maxsize == 100
-        assert cache_manager._cache_hits == 0
-        assert cache_manager._cache_misses == 0
 
     def test_make_cache_key(self, cache_manager, sample_df):
         key = cache_manager.make_cache_key("sma", {"length": 20}, sample_df)
@@ -60,14 +58,12 @@ class TestIndicatorCacheManager:
         key = cache_manager.make_cache_key("sma", {"length": 20}, sample_df)
         result = cache_manager.get_cached_result(key)
         assert result is None
-        assert cache_manager._cache_misses == 1
-        assert cache_manager._cache_hits == 0
 
     def test_cache_hit(self, cache_manager, sample_df):
         key = cache_manager.make_cache_key("sma", {"length": 20}, sample_df)
         cache_manager.cache_result(key, "result")
-        cache_manager.get_cached_result(key)
-        assert cache_manager._cache_hits == 1
+        result = cache_manager.get_cached_result(key)
+        assert result == "result"
 
     def test_none_key_returns_none(self, cache_manager):
         assert cache_manager.get_cached_result(None) is None
@@ -83,23 +79,6 @@ class TestIndicatorCacheManager:
         cache_manager.clear_cache()
 
         assert len(cache_manager._calculation_cache) == 0
-        assert cache_manager._cache_hits == 0
-        assert cache_manager._cache_misses == 0
-
-    def test_cache_statistics(self, cache_manager, sample_df):
-        key = cache_manager.make_cache_key("sma", {"length": 20}, sample_df)
-        cache_manager.cache_result(key, "result")
-        cache_manager.get_cached_result(key)
-
-        stats = cache_manager.get_cache_statistics()
-        assert stats["cache_size"] == 1
-        assert stats["cache_hits"] == 1
-        assert stats["cache_misses"] == 0
-        assert stats["hit_rate"] == 1.0
-
-    def test_cache_statistics_empty(self, cache_manager):
-        stats = cache_manager.get_cache_statistics()
-        assert stats["hit_rate"] == 0.0
 
     def test_empty_df_key(self, cache_manager):
         empty_df = pd.DataFrame()

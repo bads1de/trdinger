@@ -52,8 +52,6 @@ def get_two_stage_elite_count(config: object, population_size: int) -> int:
     rerank_budget = configured_elite_count
     if rerank_budget <= 0:
         rerank_budget = elite_size
-    if rerank_budget <= 0:
-        rerank_budget = elite_size
 
     ceiling = elite_size if elite_size > 0 else rerank_budget
     return min(population_size, ceiling, rerank_budget)

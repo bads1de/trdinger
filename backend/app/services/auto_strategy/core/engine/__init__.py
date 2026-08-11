@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from .ga_utils import (
         create_deap_mutate_wrapper,
         crossover_strategy_genes,
-        mutate_strategy_gene,
     )
 
 _ATTRIBUTE_EXPORTS = {
@@ -25,7 +24,6 @@ _ATTRIBUTE_EXPORTS = {
     "GeneticAlgorithmEngineFactory": ".ga_engine_factory",
     "create_deap_mutate_wrapper": ".ga_utils",
     "crossover_strategy_genes": ".ga_utils",
-    "mutate_strategy_gene": ".ga_utils",
 }
 
 __all__ = [
@@ -36,7 +34,6 @@ __all__ = [
     "GeneticAlgorithmEngineFactory",
     "create_deap_mutate_wrapper",
     "crossover_strategy_genes",
-    "mutate_strategy_gene",
 ]
 
 from app.utils.lazy_import import setup_lazy_import  # noqa: E402

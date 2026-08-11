@@ -476,35 +476,6 @@ def is_multi_column_indicator(indicator_name: str) -> bool:
 
 
 @lru_cache(maxsize=256)
-def get_return_column_count(indicator_name: str) -> int:
-    """
-    指標が返すカラム数を取得します
-
-    マルチカラムインジケーターのカラム数を取得します。
-
-    Args:
-        indicator_name: インジケーター名
-
-    Returns:
-        int: カラム数
-
-    Note:
-        推測失敗時のデフォルトは2です。
-    """
-    if not is_multi_column_indicator(indicator_name):
-        return 1
-
-    # 正確なカラム名を取得してカウントを試みる
-    names = get_return_column_names(indicator_name)
-
-    if names:
-        return len(names)
-
-    # 推測失敗時のデフォルト
-    return 2
-
-
-@lru_cache(maxsize=256)
 def get_return_column_names(indicator_name: str) -> list[str] | None:
     """
     指標が返すカラム名のリストを取得します

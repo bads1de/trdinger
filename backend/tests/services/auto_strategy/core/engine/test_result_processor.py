@@ -6,7 +6,7 @@ ResultProcessorのユニットテスト
 """
 
 from types import SimpleNamespace
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
 from deap import tools
 
@@ -297,35 +297,24 @@ class TestResultProcessorSortPopulation:
 
 
 class TestResultProcessorGetStrategyResultKey:
-    """``get_strategy_result_key`` の挙動テスト"""
+    """``get_strategy_result_key`` が共通ヘルパーへ委譲することのテスト
 
-    def test_uses_id_attribute_when_present(self) -> None:
-        processor = ResultProcessor()
-        strategy = SimpleNamespace(id="my-strategy-123")
-        assert processor.get_strategy_result_key(strategy) == "my-strategy-123"
+    キー生成ロジック自体（id の有無・型変換・フォールバック）は
+    ``GeneticUtils.get_strategy_result_key`` のテスト（test_genetic_utils.py）で検証済みのため、
+    ここでは委譲が行われていることのみを確認します。
+    """
 
-    def test_falls_back_to_object_id_when_id_is_none(self) -> None:
+    def test_delegates_to_common_helper(self) -> None:
         processor = ResultProcessor()
-        strategy = SimpleNamespace(id=None)
-        key = processor.get_strategy_result_key(strategy)
-        assert key == str(id(strategy))
+        strategy = object()
 
-    def test_falls_back_to_object_id_when_id_is_empty_string(self) -> None:
-        processor = ResultProcessor()
-        strategy = SimpleNamespace(id="")
-        key = processor.get_strategy_result_key(strategy)
-        assert key == str(id(strategy))
+        with patch(
+            "app.services.auto_strategy.core.engine.result_processor.GeneticUtils.get_strategy_result_key",
+            return_value="mocked-key",
+        ) as mock_helper:
+            assert processor.get_strategy_result_key(strategy) == "mocked-key"
 
-    def test_falls_back_to_object_id_when_id_attribute_missing(self) -> None:
-        processor = ResultProcessor()
-        strategy = SimpleNamespace()
-        key = processor.get_strategy_result_key(strategy)
-        assert key == str(id(strategy))
-
-    def test_coerces_id_to_string(self) -> None:
-        processor = ResultProcessor()
-        strategy = SimpleNamespace(id=12345)
-        assert processor.get_strategy_result_key(strategy) == "12345"
+        mock_helper.assert_called_once_with(strategy)
 
 
 class TestResultProcessorConstants:
