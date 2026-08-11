@@ -93,7 +93,12 @@ class EvaluationStrategy:
         """GA の選択に使う IS 専用評価を実行する。"""
         evaluation_config = getattr(config, "evaluation_config", None)
         oos_ratio = float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0)
-        metadata = {"evaluation_scope": "ga", "holdout_reserved": oos_ratio > 0.0}
+        metadata = {
+            "evaluation_layer": "is",
+            "method": "is",
+            "evaluation_scope": "ga",
+            "holdout_reserved": oos_ratio > 0.0,
+        }
 
         if oos_ratio > 0.0:
             is_config, _, split_metadata = self._build_oos_split_configs(
@@ -139,8 +144,16 @@ class EvaluationStrategy:
         scenario_definitions = self._build_robustness_scenarios(
             base_backtest_config, config
         )
-        if len(scenario_definitions) <= 1:
-            return self.execute_ga_report(gene, base_backtest_config, config)
+        if not scenario_definitions:
+            return EvaluationReport.aggregate(
+                mode="robustness",
+                objectives=self._get_objectives(config),
+                scenarios=[],
+                metadata={
+                    "evaluation_failed": True,
+                    "failure_reason": "robustness シナリオがありません",
+                },
+            )
 
         scenario_reports = self._run_parallel_scenario_tasks(
             [
@@ -163,7 +176,16 @@ class EvaluationStrategy:
         )
 
         if not scenario_reports:
-            return self.execute_ga_report(gene, base_backtest_config, config)
+            return EvaluationReport.aggregate(
+                mode="robustness",
+                objectives=self._get_objectives(config),
+                scenarios=[],
+                metadata={
+                    "evaluation_failed": True,
+                    "failure_reason": "robustness シナリオ評価がすべて失敗しました",
+                    "failed_scenario_count": self._last_scenario_task_failures,
+                },
+            )
 
         scenario_reports.sort(
             key=lambda scenario: int(scenario.metadata.get("scenario_order", -1))
@@ -172,12 +194,19 @@ class EvaluationStrategy:
         aggregate_method = str(
             getattr(robustness_config, "aggregate_method", "robust") or "robust"
         )
+        failed_scenario_count = self._last_scenario_task_failures
         return EvaluationReport.aggregate(
             mode="robustness",
             objectives=self._get_objectives(config),
             scenarios=scenario_reports,
             aggregate_method=aggregate_method,
-            metadata={"scenario_count": len(scenario_reports)},
+            metadata={
+                "evaluation_layer": "robustness",
+                "scenario_count": len(scenario_reports),
+                "failed_scenario_count": failed_scenario_count,
+                "evaluation_incomplete": failed_scenario_count > 0,
+                "evaluation_failed": failed_scenario_count > 0,
+            },
         )
 
     def _get_objectives(self, config: GAConfig) -> list[str]:
@@ -363,22 +392,21 @@ class EvaluationStrategy:
         metadata: dict[str, Any],
     ) -> ScenarioEvaluation:
         """単一 robustness シナリオを評価し、外側用シナリオへ変換する。"""
-        scenario_report = self.execute_ga_report(gene, scenario_config, config)
-        scenario_metadata = metadata.copy()
-        scenario_metadata.update(
-            {
-                "inner_mode": scenario_report.mode,
-                "inner_pass_rate": scenario_report.pass_rate,
-                "inner_scenario_count": len(scenario_report.scenarios),
-            }
+        scenario = self._evaluate_scenario(
+            gene,
+            scenario_config,
+            config,
+            scenario_name=scenario_name,
+            metadata=metadata,
         )
-        two_stage_config = getattr(config, "two_stage_selection_config", None)
-        min_pass_rate = float(getattr(two_stage_config, "min_pass_rate", 0.0) or 0.0)
+        scenario_metadata = scenario.metadata.copy()
+        scenario_metadata["evaluation_layer"] = "robustness"
         return ScenarioEvaluation(
             name=scenario_name,
-            fitness=tuple(float(value) for value in scenario_report.aggregated_fitness),
-            passed=scenario_report.pass_rate >= min_pass_rate,
+            fitness=tuple(float(value) for value in scenario.fitness),
+            passed=scenario.passed,
             metadata=scenario_metadata,
+            performance_metrics=scenario.performance_metrics,
         )
 
     def _run_parallel_scenario_tasks(
@@ -591,7 +619,12 @@ class EvaluationStrategy:
                 scenarios=[is_scenario, oos_scenario],
                 aggregate_method="weighted",
                 weights=[1.0 - oos_weight, oos_weight],
-                metadata={"oos_weight": oos_weight, **split_metadata},
+                metadata={
+                    "evaluation_layer": "validation",
+                    "method": "oos",
+                    "oos_weight": oos_weight,
+                    **split_metadata,
+                },
             )
 
             logger.info(
@@ -716,6 +749,8 @@ class EvaluationStrategy:
                 scenarios=scenario_reports,
                 aggregate_method="robust",
                 metadata={
+                    "evaluation_layer": "validation",
+                    "method": "rolling_holdout",
                     "fold_count": completed_fold_count,
                     "expected_fold_count": expected_fold_count,
                     "completed_fold_count": completed_fold_count,

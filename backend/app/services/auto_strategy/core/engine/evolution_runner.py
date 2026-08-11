@@ -838,29 +838,6 @@ class EvolutionRunner:
             return None
 
         report: object | None = None
-        get_cached_robustness_report = getattr(
-            self.individual_evaluator,
-            "get_cached_robustness_report",
-            None,
-        )
-        evaluate_robustness_report = getattr(
-            self.individual_evaluator,
-            "evaluate_robustness_report",
-            None,
-        )
-        if callable(get_cached_robustness_report):
-            report = get_cached_robustness_report(candidate, config)
-            if not is_evaluation_report(report):
-                report = None
-
-        if report is None and callable(evaluate_robustness_report):
-            try:
-                report = evaluate_robustness_report(candidate, config)
-                if not is_evaluation_report(report):
-                    report = None
-            except Exception as exc:
-                logger.debug("二段階選抜用の robustness 評価に失敗しました: %s", exc)
-
         get_cached_report = getattr(
             self.individual_evaluator,
             "get_cached_evaluation_report",
@@ -870,23 +847,6 @@ class EvolutionRunner:
             report = get_cached_report(candidate)
             if not is_evaluation_report(report):
                 report = None
-
-        if report is None:
-            evaluate_individual = getattr(
-                self.individual_evaluator,
-                "evaluate_individual",
-                None,
-            )
-            if callable(evaluate_individual):
-                try:
-                    evaluate_individual(candidate, config)
-                except Exception as exc:
-                    logger.debug("二段階選抜用の再評価に失敗しました: %s", exc)
-
-            if callable(get_cached_report):
-                report = get_cached_report(candidate)
-                if not is_evaluation_report(report):
-                    report = None
 
         return report
 

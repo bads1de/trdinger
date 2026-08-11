@@ -32,6 +32,10 @@ class GAGenerationRequest(BaseModel):
     experiment_name: str = Field(..., description="実験名")
     base_config: dict[str, Any] = Field(..., description="基本バックテスト設定")
     ga_config: dict[str, Any] = Field(..., description="GA設定")
+    evaluation_plan: dict[str, Any] | None = Field(
+        default=None,
+        description="評価計画。未指定時はlegacyのga_configから変換します。",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -180,7 +184,14 @@ async def generate_strategy(  # type: ignore[no-untyped-def]
             experiment_id = auto_strategy_service.start_strategy_generation(
                 experiment_id=request.experiment_id,  # フロントエンドで生成されたUUID
                 experiment_name=request.experiment_name,
-                ga_config_dict=request.ga_config,
+                ga_config_dict={
+                    **request.ga_config,
+                    **(
+                        {"evaluation_plan": request.evaluation_plan}
+                        if request.evaluation_plan is not None
+                        else {}
+                    ),
+                },
                 backtest_config_dict=request.base_config,
                 task_scheduler=background_tasks,
             )

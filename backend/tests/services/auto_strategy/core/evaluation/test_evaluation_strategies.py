@@ -369,9 +369,6 @@ class TestEvaluationStrategy:
         assert report.aggregated_fitness[0] == pytest.approx(0.6525)
 
     def test_execute_robustness_report_falls_back_when_all_scenarios_fail(self):
-        self.strategy.execute_ga_report = Mock(
-            return_value=Mock(mode="in_sample", aggregated_fitness=(0.25,))
-        )
         self.strategy._evaluate_robustness_scenario_report = Mock(
             side_effect=RuntimeError("scenario failed")
         )
@@ -406,9 +403,10 @@ class TestEvaluationStrategy:
             config,
         )
 
-        assert report.mode == "in_sample"
-        assert report.aggregated_fitness == (0.25,)
-        self.strategy.execute_ga_report.assert_called_once()
+        assert report.mode == "robustness"
+        assert report.scenarios == []
+        assert report.metadata["evaluation_failed"] is True
+        assert report.metadata["failed_scenario_count"] == 2
 
     def test_walk_forward_report_falls_back_when_all_fold_evaluations_fail(self):
         self.strategy._evaluate_single_report = Mock(

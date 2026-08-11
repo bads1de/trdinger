@@ -11,7 +11,7 @@ from app.services.backtest.services.backtest_service import BacktestService
 from app.utils.error_handler import ErrorHandler
 from database.connection import SessionLocal
 
-from ..config import GAConfig
+from ..config import EvaluationPlan, GAConfig
 from ..config.constants import DEFAULT_SYMBOL
 from .experiment_application_service import (
     ExperimentApplicationService,
@@ -108,11 +108,11 @@ class AutoStrategyService:
         """
         logger.info(f"戦略生成開始: {experiment_name}")
 
-        # 1. GA設定の構築と検証
-        ga_config = self._prepare_ga_config(ga_config_dict)
-
-        # 2. バックテスト設定の準備
+        # 1. バックテスト設定の準備
         backtest_config = self._prepare_backtest_config(backtest_config_dict)
+
+        # 2. GA設定の構築と検証
+        ga_config = self._prepare_ga_config(ga_config_dict, backtest_config)
 
         # 3. 実験の作成
         if not self.experiment_application_service:
@@ -132,7 +132,11 @@ class AutoStrategyService:
 
         return experiment_id
 
-    def _prepare_ga_config(self, settings: dict[str, Any]) -> GAConfig:
+    def _prepare_ga_config(
+        self,
+        settings: dict[str, Any],
+        backtest_config: dict[str, Any] | None = None,
+    ) -> GAConfig:
         """
         GAの設定オブジェクトを準備します。
 
@@ -147,6 +151,20 @@ class AutoStrategyService:
         """
         try:
             ga_config = GAConfig.from_dict(settings)
+            evaluation_plan = ga_config.evaluation_plan
+            if isinstance(evaluation_plan, dict):
+                # 通常は from_dict で変換済みだが、防御的に正規化する
+                evaluation_plan = EvaluationPlan.from_dict(evaluation_plan)
+                object.__setattr__(ga_config, "evaluation_plan", evaluation_plan)
+            if evaluation_plan is None:
+                evaluation_plan = EvaluationPlan.from_legacy_config(
+                    ga_config,
+                    backtest_config or {},
+                )
+                object.__setattr__(ga_config, "evaluation_plan", evaluation_plan)
+            # 評価計画のrobustness設定（enabled / シナリオ）を運用設定へ反映する
+            # これにより計画駆動でも robustness gate が正しく有効化される
+            evaluation_plan.apply_to_ga_config(ga_config)
             from ..config import ConfigValidator
 
             is_valid, errors = ConfigValidator.validate(ga_config)

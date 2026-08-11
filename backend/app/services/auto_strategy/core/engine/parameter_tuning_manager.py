@@ -77,16 +77,6 @@ class ParameterTuningManager:
         if individual is None:
             return None
 
-        get_cached_robustness_report = getattr(
-            self.individual_evaluator,
-            "get_cached_robustness_report",
-            None,
-        )
-        evaluate_robustness_report = getattr(
-            self.individual_evaluator,
-            "evaluate_robustness_report",
-            None,
-        )
         get_cached_evaluation_report = getattr(
             self.individual_evaluator,
             "get_cached_evaluation_report",
@@ -94,16 +84,7 @@ class ParameterTuningManager:
         )
 
         report: object | None = None
-        if callable(get_cached_robustness_report):
-            report = get_cached_robustness_report(individual, config)
-
-        if report is None and force_robustness and callable(evaluate_robustness_report):
-            try:
-                report = evaluate_robustness_report(individual, config)
-            except Exception as exc:
-                logger.debug("summary 用 robustness 評価に失敗しました: %s", exc)
-
-        if report is None and callable(get_cached_evaluation_report):
+        if callable(get_cached_evaluation_report):
             report = get_cached_evaluation_report(individual)
 
         if report is not None and is_evaluation_report(report):

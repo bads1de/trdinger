@@ -257,3 +257,51 @@ def test_prepare_ga_config_valid(auto_strategy_service):
     ga_config = auto_strategy_service._prepare_ga_config(ga_config_dict)
     assert isinstance(ga_config, GAConfig)
     assert ga_config.population_size == 50
+
+
+def test_prepare_ga_config_syncs_robustness_from_explicit_plan(
+    auto_strategy_service,
+):
+    """明示的な評価計画から robustness gate が有効化されること"""
+    ga_config_dict = {
+        "population_size": 50,
+        "generations": 10,
+        "evaluation_plan": {
+            "robustness": {
+                "enabled": True,
+                "scenarios": [
+                    {"type": "symbol", "symbol": "ETH/USDT:USDT"},
+                    {"type": "slippage", "delta": 0.001},
+                ],
+                "policy": "gate_only",
+                "failure_policy": "fail_closed",
+            }
+        },
+    }
+
+    ga_config = auto_strategy_service._prepare_ga_config(ga_config_dict)
+
+    assert ga_config.evaluation_plan is not None
+    assert ga_config.robustness_config.enabled is True
+    assert ga_config.robustness_config.validation_symbols == ["ETH/USDT:USDT"]
+    assert ga_config.robustness_config.stress_slippage == [0.001]
+
+
+def test_prepare_ga_config_syncs_robustness_from_legacy_scenarios(
+    auto_strategy_service,
+):
+    """レガシー設定のシナリオ定義から robustness gate が有効化されること"""
+    ga_config_dict = {
+        "robustness_config": {
+            "validation_symbols": ["ETH/USDT:USDT"],
+            "stress_slippage": [0.0002],
+        },
+    }
+
+    ga_config = auto_strategy_service._prepare_ga_config(ga_config_dict)
+
+    assert ga_config.evaluation_plan is not None
+    assert ga_config.evaluation_plan.robustness.enabled is True
+    assert ga_config.robustness_config.enabled is True
+    assert ga_config.robustness_config.validation_symbols == ["ETH/USDT:USDT"]
+    assert ga_config.robustness_config.stress_slippage == [0.0002]

@@ -130,6 +130,184 @@ class TestStrategyValidationService:
         assert validation["passed"] is True
         assert filtered["best_strategy"] is best_strategy
 
+    def test_robustness_gate_keeps_wfa_passing_candidate(self, mock_evaluator):
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        config.robustness_config.enabled = True
+        config.robustness_config.min_pass_rate = 1.0
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        wfa_report = _make_report(pass_rate=1.0, primary_fitness=0.8)
+        robustness_report = EvaluationReport.aggregate(
+            mode="robustness",
+            objectives=["total_return"],
+            scenarios=[
+                ScenarioEvaluation(name="base", fitness=(0.7,), passed=True),
+                ScenarioEvaluation(name="stress", fitness=(0.6,), passed=True),
+            ],
+            metadata={"evaluation_layer": "robustness"},
+        )
+        mock_evaluator.evaluate_robustness_report.return_value = robustness_report
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=wfa_report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is True
+        assert validation["robustness"]["passed"] is True
+        assert filtered["best_strategy"] is best
+        mock_evaluator.evaluate_robustness_report.assert_called_once()
+
+    def test_robustness_gate_rejects_partial_failure(self, mock_evaluator):
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        config.robustness_config.enabled = True
+        config.robustness_config.min_pass_rate = 1.0
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        wfa_report = _make_report(pass_rate=1.0, primary_fitness=0.8)
+        robustness_report = EvaluationReport.aggregate(
+            mode="robustness",
+            objectives=["total_return"],
+            scenarios=[
+                ScenarioEvaluation(name="base", fitness=(0.7,), passed=True),
+            ],
+            metadata={
+                "evaluation_layer": "robustness",
+                "evaluation_incomplete": True,
+                "evaluation_failed": True,
+            },
+        )
+        mock_evaluator.evaluate_robustness_report.return_value = robustness_report
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=wfa_report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is False
+        assert validation["robustness"]["passed"] is False
+        assert filtered["best_strategy"] is None
+        assert any("Robustness gate" in reason for reason in validation["reasons"])
+
+    def test_robustness_gate_rejects_execution_error(self, mock_evaluator):
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        config.robustness_config.enabled = True
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        mock_evaluator.evaluate_robustness_report.side_effect = RuntimeError("boom")
+
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            return_value=_make_report(pass_rate=1.0, primary_fitness=0.8),
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is False
+        assert validation["robustness"]["passed"] is False
+        assert filtered["best_strategy"] is None
+
+    def test_robustness_gate_driven_by_evaluation_plan(self, mock_evaluator):
+        """評価計画のrobustness設定からゲートが有効化される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+            evaluation_plan={
+                "robustness": {
+                    "enabled": True,
+                    "scenarios": [
+                        {"type": "symbol", "symbol": "ETH/USDT:USDT"},
+                    ],
+                    "policy": "gate_only",
+                    "failure_policy": "fail_closed",
+                }
+            },
+        )
+        config.evaluation_plan.apply_to_ga_config(config)
+        assert config.robustness_config.enabled is True
+        assert config.robustness_config.validation_symbols == ["ETH/USDT:USDT"]
+
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        wfa_report = _make_report(pass_rate=1.0, primary_fitness=0.8)
+        robustness_report = EvaluationReport.aggregate(
+            mode="robustness",
+            objectives=["total_return"],
+            scenarios=[
+                ScenarioEvaluation(name="base", fitness=(0.7,), passed=True),
+                ScenarioEvaluation(name="symbol_eth", fitness=(0.6,), passed=True),
+            ],
+            metadata={"evaluation_layer": "robustness"},
+        )
+        mock_evaluator.evaluate_robustness_report.return_value = robustness_report
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=wfa_report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is True
+        assert validation["robustness"]["passed"] is True
+        assert filtered["best_strategy"] is best
+        mock_evaluator.evaluate_robustness_report.assert_called_once()
+
     def test_best_strategy_fails_but_candidate_passes(self, mock_evaluator):
         """最良戦略が不合格でも合格した候補があれば昇格する"""
         config = GAConfig(

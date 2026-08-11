@@ -253,8 +253,10 @@ class TwoStageSelectionConfig(NestedConfigMixin):
 
 @dataclass
 class RobustnessConfig(NestedConfigMixin):
-    """robustness 評価関連設定。"""
+    """候補戦略の robustness gate 設定。"""
 
+    enabled: bool = False
+    min_pass_rate: float = 1.0
     validation_symbols: list[str] | None = None
     regime_windows: list[dict] = field(default_factory=list)
     stress_slippage: list[float] = field(default_factory=list)

@@ -9,8 +9,10 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
+from ..evaluation_plan import EvaluationPlan
 from ..helpers import validate_robustness_regime_window
 from .ga_config import GAConfig
+from .nested_configs import RobustnessConfig
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +127,7 @@ class ConfigValidator:
         errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
         errors.extend(ConfigValidator._validate_ga_robustness_settings(config))
         errors.extend(ConfigValidator._validate_ga_validation_settings(config))
+        errors.extend(ConfigValidator._validate_evaluation_plan(config))
         errors.extend(
             ConfigValidator._validate_ga_iterative_improvement_settings(config)
         )
@@ -666,6 +669,15 @@ class ConfigValidator:
             エラーメッセージのリスト
         """
         errors = []
+        robustness_config = config.robustness_config
+        if isinstance(robustness_config, RobustnessConfig):
+            if (
+                not isinstance(robustness_config.min_pass_rate, (int, float))
+                or not 0.0 <= float(robustness_config.min_pass_rate) <= 1.0
+            ):
+                errors.append(
+                    "robustness_config.min_pass_rate は0.0-1.0の範囲である必要があります"
+                )
         errors.extend(
             ConfigValidator._validate_robustness_config_validation_symbols(config)
         )
@@ -750,6 +762,35 @@ class ConfigValidator:
                 "validation_config.max_candidates は正の整数である必要があります"
             )
 
+        return errors
+
+    @staticmethod
+    def _validate_evaluation_plan(config: GAConfig) -> list[str]:
+        """正規化済み評価計画の安全性を検証する。"""
+        plan = getattr(config, "evaluation_plan", None)
+        if not isinstance(plan, EvaluationPlan):
+            return []
+
+        errors: list[str] = []
+        if getattr(plan.selection, "method", None) != "is":
+            errors.append("evaluation_plan.selection.method は'is'である必要があります")
+        if getattr(plan.validation, "folds", 1) < 1:
+            errors.append(
+                "evaluation_plan.validation.folds は1以上である必要があります"
+            )
+        train_ratio = getattr(plan.validation, "train_ratio", 0.7)
+        if not 0.0 < float(train_ratio) < 1.0:
+            errors.append(
+                "evaluation_plan.validation.train_ratio は0より大きく1未満である必要があります"
+            )
+        if getattr(plan.robustness, "policy", None) != "gate_only":
+            errors.append(
+                "evaluation_plan.robustness.policy は'gate_only'である必要があります"
+            )
+        if getattr(plan.robustness, "failure_policy", None) != "fail_closed":
+            errors.append(
+                "evaluation_plan.robustness.failure_policy は'fail_closed'である必要があります"
+            )
         return errors
 
     @staticmethod

@@ -610,7 +610,6 @@ class GeneticAlgorithmEngine:
                 self.parameter_tuning_manager.build_individual_evaluation_summary(
                     best_gene,
                     config,
-                    force_robustness=bool(config.two_stage_selection_config.enabled),
                 )
             )
 

@@ -15,7 +15,7 @@ from typing import Any
 
 from ..config import objective_registry
 from ..config.ga import GAConfig
-from ..config.ga.nested_configs import ValidationConfig
+from ..config.ga.nested_configs import RobustnessConfig, ValidationConfig
 from ..core.evaluation.evaluation_report import EvaluationReport
 from ..core.evaluation.evaluation_strategies import EvaluationStrategy
 from ..core.evaluation.individual_evaluator import IndividualEvaluator
@@ -118,6 +118,7 @@ class StrategyValidationService:
                 backtest_config,
                 validation_ga_config,
                 validation_config,
+                ga_config.robustness_config,
             )
 
         # 3. フィルタリング
@@ -149,6 +150,7 @@ class StrategyValidationService:
         backtest_config: dict[str, Any],
         validation_ga_config: GAConfig,
         validation_config: ValidationConfig,
+        robustness_config: RobustnessConfig,
     ) -> dict[str, Any]:
         """単一戦略の WFA 評価を実行し、合格判定を返す。"""
         try:
@@ -157,7 +159,16 @@ class StrategyValidationService:
                 backtest_config,
                 validation_ga_config,
             )
-            return self._judge(report, validation_config)
+            validation = self._judge(report, validation_config)
+            if validation.get("passed") and robustness_config.enabled:
+                validation = self._apply_robustness_gate(
+                    validation,
+                    strategy,
+                    backtest_config,
+                    validation_ga_config,
+                    robustness_config,
+                )
+            return validation
         except Exception as e:
             logger.warning("戦略の自動検証に失敗しました: %s", e)
             return {
@@ -169,6 +180,72 @@ class StrategyValidationService:
                 "mode": "error",
                 "reasons": [f"検証実行エラー: {e}"],
             }
+
+    def _apply_robustness_gate(
+        self,
+        validation: dict[str, Any],
+        strategy: Any,
+        backtest_config: dict[str, Any],
+        validation_ga_config: GAConfig,
+        robustness_config: RobustnessConfig,
+    ) -> dict[str, Any]:
+        """WFA合格候補に robustness の fail-closed gate を適用する。"""
+        reasons = list(validation.get("reasons", []))
+        robustness_result: dict[str, Any]
+        try:
+            report = self._evaluator.evaluate_robustness_report(
+                strategy,
+                validation_ga_config,
+            )
+            if not isinstance(report, EvaluationReport):
+                raise TypeError("robustness評価レポートが不正です")
+
+            metadata = report.metadata if isinstance(report.metadata, dict) else {}
+            scenario_count = len(report.scenarios)
+            pass_rate = report.pass_rate
+            robustness_reasons: list[str] = []
+            if scenario_count == 0:
+                robustness_reasons.append("robustnessシナリオがありません")
+            if metadata.get("evaluation_failed"):
+                robustness_reasons.append(
+                    f"robustness評価に失敗しました: "
+                    f"{metadata.get('failure_reason', '理由不明')}"
+                )
+            if metadata.get("evaluation_incomplete"):
+                robustness_reasons.append("robustness評価が不完全です")
+            if pass_rate < robustness_config.min_pass_rate:
+                robustness_reasons.append(
+                    f"robustness合格率 {pass_rate:.2f} が閾値 "
+                    f"{robustness_config.min_pass_rate} 未満"
+                )
+
+            summary = report.to_summary_dict()
+            robustness_result = {
+                "passed": not robustness_reasons,
+                "pass_rate": pass_rate,
+                "scenario_count": scenario_count,
+                "mode": report.mode,
+                "reasons": robustness_reasons,
+                "report_summary": summary,
+            }
+            if robustness_reasons:
+                reasons.append("Robustness gate: " + "; ".join(robustness_reasons))
+        except Exception as exc:
+            robustness_result = {
+                "passed": False,
+                "pass_rate": 0.0,
+                "scenario_count": 0,
+                "mode": "error",
+                "reasons": [f"robustness実行エラー: {exc}"],
+                "report_summary": None,
+            }
+            reasons.append(f"Robustness gate: robustness実行エラー: {exc}")
+
+        updated = dict(validation)
+        updated["passed"] = not reasons
+        updated["reasons"] = reasons
+        updated["robustness"] = robustness_result
+        return updated
 
     def _judge(
         self,

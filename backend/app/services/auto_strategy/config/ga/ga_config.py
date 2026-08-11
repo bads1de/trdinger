@@ -27,6 +27,7 @@ from ..constants import (
     GA_PARAMETER_RANGES,
     GA_THRESHOLD_RANGES,
 )
+from ..evaluation_plan import EvaluationPlan
 from ..indicator_universe import normalize_indicator_universe_mode
 from .nested_configs import (
     EvaluationConfig,
@@ -186,6 +187,7 @@ class GAConfig:
         default_factory=IterativeImprovementConfig
     )
     validation_config: ValidationConfig = field(default_factory=ValidationConfig)
+    evaluation_plan: EvaluationPlan | dict[str, Any] | None = None
 
     def __init__(self, **data: dict[str, Any]) -> None:
         """canonical フィールドのみを受け付ける手動初期化器。"""
@@ -290,6 +292,12 @@ class GAConfig:
                 self,
                 "validation_config",
                 ValidationConfig.from_dict(self.validation_config),
+            )
+        if isinstance(self.evaluation_plan, dict):
+            object.__setattr__(
+                self,
+                "evaluation_plan",
+                EvaluationPlan.from_dict(self.evaluation_plan),
             )
 
         mutation_config = self.mutation_config

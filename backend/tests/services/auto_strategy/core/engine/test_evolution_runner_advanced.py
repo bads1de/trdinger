@@ -329,6 +329,7 @@ class TestEvolutionRunnerAdvanced:
 
         mock_toolbox.select.return_value = [raw_leader, filler]
         mock_evaluator = MagicMock()
+        mock_evaluator.evaluate_robustness_report = MagicMock()
         mock_evaluator.get_cached_evaluation_report.side_effect = lambda individual: {
             "raw-leader": EvaluationReport.aggregate(
                 mode="walk_forward",
@@ -379,6 +380,7 @@ class TestEvolutionRunnerAdvanced:
         assert selected[0] is robust_candidate
         assert get_two_stage_rank(robust_candidate) == 0
         assert raw_leader not in selected[:1]
+        mock_evaluator.evaluate_robustness_report.assert_not_called()
 
     def test_two_stage_selection_keeps_population_size_with_duplicate_elite(
         self, mock_toolbox, mock_stats

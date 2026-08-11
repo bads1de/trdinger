@@ -17,6 +17,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+# 目的関数レジストリ
+from .evaluation_plan import (
+    DateRange,
+    EvaluationPlan,
+    ExecutionPlan,
+    FinalTestPlan,
+    RobustnessPlan,
+    SelectionPlan,
+    ValidationPlan,
+)
+
 # サブ設定クラス
 from .ga import (
     EarlyTerminationSettings,
@@ -45,8 +56,6 @@ from .indicator_universe import (
     iter_indicator_universe_names,
     normalize_indicator_universe_mode,
 )
-
-# 目的関数レジストリ
 from .objective_registry import (
     DEFAULT_OBJECTIVE_DEFINITION,
     OBJECTIVE_REGISTRY,
@@ -72,6 +81,13 @@ __all__ = [
     "RobustnessConfig",
     "IterativeImprovementConfig",
     "ValidationConfig",
+    "DateRange",
+    "EvaluationPlan",
+    "ExecutionPlan",
+    "FinalTestPlan",
+    "RobustnessPlan",
+    "SelectionPlan",
+    "ValidationPlan",
     "RobustnessRegimeWindow",
     "normalize_robustness_regime_window",
     "normalize_robustness_regime_windows",
