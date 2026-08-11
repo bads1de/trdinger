@@ -157,10 +157,6 @@ class StrategyGene:
             metadata=metadata,
         )
 
-    def has_long_short_separation(self) -> bool:
-        """ロング・ショート条件が分離されているかチェック（常にTrue）。"""
-        return True
-
     def validate(self) -> tuple[bool, list[str]]:
         """戦略遺伝子の妥当性を検証し、(is_valid, errors) を返す。"""
         from .validator import GeneValidator
@@ -260,75 +256,3 @@ class StrategyGene:
             config,
             crossover_type=crossover_type,
         )
-
-    @staticmethod
-    def _mutate_indicators(
-        mutated: StrategyGene, mutation_rate: float, config: GAConfig
-    ) -> None:
-        """指標遺伝子の突然変異処理。"""
-        from .operators import mutate_indicators
-
-        mutate_indicators(mutated, mutation_rate, config)
-
-    @staticmethod
-    def _mutate_conditions(
-        mutated: StrategyGene, mutation_rate: float, config: GAConfig
-    ) -> None:
-        """取引条件の突然変異処理。"""
-        from .operators import mutate_conditions
-
-        mutate_conditions(mutated, mutation_rate, config)
-
-    @staticmethod
-    def _crossover_tpsl_genes(
-        parent1_tpsl: TPSLGene | None,
-        parent2_tpsl: TPSLGene | None,
-    ) -> tuple[TPSLGene | None, TPSLGene | None]:
-        """TPSL 遺伝子の交叉処理。"""
-        from .operators import crossover_tpsl_genes
-
-        return crossover_tpsl_genes(parent1_tpsl, parent2_tpsl)
-
-    @staticmethod
-    def _crossover_position_sizing_genes(
-        parent1_ps: PositionSizingGene | None,
-        parent2_ps: PositionSizingGene | None,
-    ) -> tuple[PositionSizingGene | None, PositionSizingGene | None]:
-        """ポジションサイズ遺伝子の交叉処理。"""
-        from .operators import crossover_position_sizing_genes
-
-        return crossover_position_sizing_genes(parent1_ps, parent2_ps)
-
-    @staticmethod
-    def _crossover_entry_genes(
-        parent1_entry: EntryGene | None,
-        parent2_entry: EntryGene | None,
-    ) -> tuple[EntryGene | None, EntryGene | None]:
-        """エントリー遺伝子の交叉処理。"""
-        from .operators import crossover_entry_genes
-
-        return crossover_entry_genes(parent1_entry, parent2_entry)
-
-    @classmethod
-    def _uniform_crossover(
-        cls,
-        parent1: StrategyGene,
-        parent2: StrategyGene,
-        config: GAConfig,
-    ) -> tuple[StrategyGene, StrategyGene]:
-        """ユニフォーム交叉。"""
-        from .operators import uniform_crossover
-
-        return uniform_crossover(cls, parent1, parent2, config)
-
-    @classmethod
-    def _single_point_crossover(
-        cls,
-        parent1: StrategyGene,
-        parent2: StrategyGene,
-        config: GAConfig,
-    ) -> tuple[StrategyGene, StrategyGene]:
-        """一点交叉。"""
-        from .operators import single_point_crossover
-
-        return single_point_crossover(cls, parent1, parent2, config)

@@ -19,11 +19,6 @@ if TYPE_CHECKING:
     from .evaluation.parallel_evaluator import ParallelEvaluator
     from .fitness.fitness_calculator import FitnessCalculator
     from .fitness.fitness_sharing import FitnessSharing
-    from .strategy.operand_grouping import (
-        OperandGroup,
-        OperandGroupingSystem,
-        operand_grouping_system,
-    )
 
 _ATTRIBUTE_EXPORTS = {
     "DEAPSetup": ".engine.deap_setup",
@@ -39,9 +34,6 @@ _ATTRIBUTE_EXPORTS = {
     "ParallelEvaluator": ".evaluation.parallel_evaluator",
     "FitnessCalculator": ".fitness.fitness_calculator",
     "FitnessSharing": ".fitness.fitness_sharing",
-    "OperandGroup": ".strategy.operand_grouping",
-    "OperandGroupingSystem": ".strategy.operand_grouping",
-    "operand_grouping_system": ".strategy.operand_grouping",
 }
 
 __all__ = [
@@ -61,10 +53,6 @@ __all__ = [
     # Fitness
     "FitnessCalculator",
     "FitnessSharing",
-    # Strategy
-    "OperandGroup",
-    "OperandGroupingSystem",
-    "operand_grouping_system",
 ]
 
 from app.utils.lazy_import import setup_lazy_import  # noqa: E402

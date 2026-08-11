@@ -6,8 +6,3 @@ export interface LongShortRatioData {
   timestamp: string; // ISO string
   ls_ratio?: number; // 計算値 (buy / sell)
 }
-
-export interface LongShortRatioCollectionResponse {
-  message: string;
-  symbol: string;
-}

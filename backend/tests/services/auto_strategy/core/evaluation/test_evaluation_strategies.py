@@ -39,7 +39,7 @@ class TestEvaluationStrategy:
             return_value=Mock(aggregated_fitness=(0.42,))
         )
 
-        result = self.strategy.execute(
+        report = self.strategy.execute_report(
             object(),
             {
                 "start_date": "2024-01-01 00:00:00",
@@ -48,7 +48,7 @@ class TestEvaluationStrategy:
             config,
         )
 
-        assert result == (0.42,)
+        assert report.aggregated_fitness == (0.42,)
         self.strategy._evaluate_with_purged_kfold_report.assert_called_once()
         self.evaluator._perform_single_evaluation_report.assert_not_called()
 
@@ -88,7 +88,7 @@ class TestEvaluationStrategy:
             objectives=["weighted_score"],
         )
 
-        result = self.strategy.execute(
+        report = self.strategy.execute_report(
             object(),
             {
                 "start_date": "2024-01-01 00:00:00",
@@ -98,7 +98,7 @@ class TestEvaluationStrategy:
         )
 
         # robust aggregation: median(1.0, 0.5) * 0.7 + min(1.0, 0.5) * 0.3 = 0.75 * 0.7 + 0.5 * 0.3 = 0.675
-        assert result[0] == pytest.approx(0.675)
+        assert report.aggregated_fitness[0] == pytest.approx(0.675)
 
     def test_execute_report_returns_scenarios_for_oos(self):
         self.evaluator._perform_single_evaluation_report.side_effect = [

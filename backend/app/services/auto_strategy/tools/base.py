@@ -113,18 +113,6 @@ class BaseTool(ABC):
         """
         return deepcopy(self.definition.default_params)
 
-    def validate_params(self, params: dict[str, Any]) -> bool:
-        """
-        パラメータの妥当性を検証
-
-        Args:
-            params: 検証するパラメータ
-
-        Returns:
-            True: 有効なパラメータ
-        """
-        return True
-
     def mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         パラメータを突然変異させる（GAで使用）

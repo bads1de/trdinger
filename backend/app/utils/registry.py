@@ -61,16 +61,6 @@ class Registry(Generic[K, V]):
         with self._lock:
             return list(self._items.values())
 
-    def get_names(self) -> list[K]:
-        """
-        登録済みの全キーをリストで返す
-
-        Returns:
-            List[K]: キーのリスト
-        """
-        with self._lock:
-            return list(self._items.keys())
-
     def remove(self, key: K, expected: V | None = None) -> None:
         """
         キーに対応するアイテムを削除する

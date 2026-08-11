@@ -129,7 +129,7 @@ class TestGeneticAlgorithmEngine:
         mock_get_all_seeds.return_value = seeds
 
         config = GAConfig(random_state=42)
-        shuffled = engine._get_seed_strategies_for_injection(config)
+        shuffled = engine._get_builtin_seed_strategies(config)
 
         expected = list(seeds)
         random.Random(42).shuffle(expected)
@@ -173,7 +173,7 @@ class TestGeneticAlgorithmEngine:
         mock_shuffle.side_effect = reverse_in_place
 
         config = GAConfig(random_state=None)
-        shuffled = engine._get_seed_strategies_for_injection(config)
+        shuffled = engine._get_builtin_seed_strategies(config)
 
         assert [s.metadata["seed_strategy"] for s in shuffled] == ["c", "b", "a"]
         mock_shuffle.assert_called_once()
@@ -206,7 +206,7 @@ class TestGeneticAlgorithmEngine:
             mock_get_all_seeds.return_value = seeds
 
             config = GAConfig(random_state=random_state)
-            shuffled = engine._get_seed_strategies_for_injection(config)
+            shuffled = engine._get_builtin_seed_strategies(config)
 
             expected = list(seeds)
             random.Random(42).shuffle(expected)

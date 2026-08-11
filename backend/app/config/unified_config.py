@@ -53,23 +53,6 @@ class DatabaseConfig(BaseSettings):
     user: str = Field(default="postgres", alias="DB_USER")
     password: str = Field(default="", alias="DB_PASSWORD")
 
-    @property
-    def url_complete(self) -> str:
-        """完全なデータベースURLを生成します。
-
-        DATABASE_URLが設定されている場合はそれを返し、
-        そうでない場合は個別パラメータからURLを構築します。
-
-        Returns:
-            str: 完全なデータベース接続URL。
-        """
-        if self.database_url:
-            return self.database_url
-        return (
-            f"postgresql://{self.user}:{self.password}"
-            f"@{self.host}:{self.port}/{self.name}"
-        )
-
     model_config = SettingsConfigDict(env_prefix="DB_", extra="ignore")
 
 

@@ -61,16 +61,6 @@ DEFAULT_OBJECTIVE_DEFINITION: Final[ObjectiveDefinition] = ObjectiveDefinition(
     direction="minimize",  # 安全側: 未知の目的関数は最小化として扱う
 )
 
-MINIMIZE_OBJECTIVES: Final[frozenset[str]] = frozenset(
-    name
-    for name, definition in OBJECTIVE_REGISTRY.items()
-    if definition.direction == "minimize"
-)
-
-DYNAMIC_SCALAR_OBJECTIVES: Final[frozenset[str]] = frozenset(
-    name for name, definition in OBJECTIVE_REGISTRY.items() if definition.dynamic_scalar
-)
-
 
 def get_objective_definition(objective: str) -> ObjectiveDefinition:
     """

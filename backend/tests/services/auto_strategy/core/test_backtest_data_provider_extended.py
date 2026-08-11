@@ -2,8 +2,8 @@
 BacktestDataProvider の拡張テスト
 
 既存テスト (``test_backtest_data_provider.py``, ``test_backtest_data_provider_cache.py``) が
-カバーしていない静的ヘルパー、``get_cached_minute_data``, ``get_cached_ohlcv_data`` の
-各分岐、``prefetch_data``, ``clear_cache``, ``get_cache_statistics`` を検証します。
+カバーしていない静的ヘルパー、``get_cached_minute_data`` の各分岐、
+``clear_cache``, ``get_cache_statistics`` を検証します。
 """
 
 from __future__ import annotations
@@ -21,8 +21,6 @@ from app.services.auto_strategy.core.evaluation.backtest_data_provider import (
 
 def _make_provider(
     *,
-    prefetch_enabled: bool = True,
-    max_prefetch_workers: int = 2,
     cache: dict | None = None,
 ) -> BacktestDataProvider:
     """シンプルな provider を構築するヘルパー"""
@@ -33,20 +31,16 @@ def _make_provider(
         backtest_service=service,
         data_cache=cache if cache is not None else {},
         lock=threading.RLock(),
-        prefetch_enabled=prefetch_enabled,
-        max_prefetch_workers=max_prefetch_workers,
     )
 
 
 class TestInit:
     """``__init__`` のテスト"""
 
-    def test_default_prefetch_settings(self) -> None:
+    def test_default_settings(self) -> None:
         provider = _make_provider()
-        assert provider._prefetch_enabled is True
         assert provider._cache_hits == 0
         assert provider._cache_misses == 0
-        assert provider._prefetch_cache == {}
         assert provider._cache_locks == {}
 
     def test_lock_defaults_to_rlock(self) -> None:
@@ -367,164 +361,18 @@ class TestGetCachedMinuteData:
         assert len(provider._data_cache) == 1
 
 
-class TestGetCachedOhlcvData:
-    """``get_cached_ohlcv_data`` の追加テスト"""
-
-    def test_fetches_and_caches(self) -> None:
-        provider = _make_provider()
-        df = pd.DataFrame({"close": [1, 2, 3]})
-        provider.backtest_service.data_service.get_ohlcv_data.return_value = df
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        assert result is df
-        assert provider._cache_misses == 1
-
-    def test_uses_existing_cache(self) -> None:
-        provider = _make_provider()
-        df = pd.DataFrame({"close": [1, 2, 3]})
-        cache_key = ("ohlcv", "BTC", "1h", "2024-01-01", "2024-01-02")
-        provider._data_cache[cache_key] = df
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        assert result is df
-        assert provider._cache_hits == 1
-
-    def test_returns_none_when_empty_data(self) -> None:
-        provider = _make_provider()
-        provider.backtest_service.data_service.get_ohlcv_data.return_value = (
-            pd.DataFrame()
-        )
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        assert result is None
-
-    def test_returns_none_when_invalid_data(self) -> None:
-        provider = _make_provider()
-        provider.backtest_service.data_service.get_ohlcv_data.return_value = (
-            "not a dataframe"
-        )
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        assert result is None
-
-    def test_uses_prefetch_cache(self) -> None:
-        provider = _make_provider(prefetch_enabled=True)
-        df = pd.DataFrame({"close": [1, 2, 3]})
-        cache_key = ("ohlcv", "BTC", "1h", "2024-01-01", "2024-01-02")
-        provider._prefetch_cache[cache_key] = df
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        assert result is df
-        assert provider._cache_hits == 1
-        # prefetch_cache から data_cache に移動している
-        assert cache_key not in provider._prefetch_cache
-        assert cache_key in provider._data_cache
-
-    def test_handles_exception_in_fetch(self) -> None:
-        provider = _make_provider()
-        provider.backtest_service.data_service.get_ohlcv_data.side_effect = (
-            RuntimeError("fail")
-        )
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        assert result is None
-
-    def test_returns_none_when_data_service_unavailable(self) -> None:
-        provider = _make_provider()
-        provider.backtest_service.data_service = None
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        assert result is None
-
-
-class TestPrefetchData:
-    """``prefetch_data`` のテスト"""
-
-    def test_does_nothing_when_disabled(self) -> None:
-        provider = _make_provider(prefetch_enabled=False)
-        provider.prefetch_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-        # prefetch タスクは submit されない
-        assert len(provider._data_cache) == 0
-        assert len(provider._prefetch_cache) == 0
-
-    def test_skips_when_already_cached(self) -> None:
-        provider = _make_provider()
-        df = pd.DataFrame({"close": [1, 2, 3]})
-        cache_key = ("ohlcv", "BTC", "1h", "2024-01-01", "2024-01-02")
-        provider._data_cache[cache_key] = df
-
-        provider.prefetch_data(
-            symbol="BTC",
-            timeframe="1h",
-            start_date="2024-01-01",
-            end_date="2024-01-02",
-        )
-
-        # 既にキャッシュされているので submit されない
-        assert len(provider._prefetch_cache) == 0
-
-
 class TestClearCache:
     """``clear_cache`` のテスト"""
 
     def test_clears_caches_and_resets_stats(self) -> None:
         provider = _make_provider()
         provider._data_cache["k1"] = pd.DataFrame()
-        provider._prefetch_cache["k2"] = pd.DataFrame()
         provider._cache_hits = 5
         provider._cache_misses = 3
 
         provider.clear_cache()
 
         assert len(provider._data_cache) == 0
-        assert len(provider._prefetch_cache) == 0
         assert provider._cache_hits == 0
         assert provider._cache_misses == 0
 
@@ -537,7 +385,6 @@ class TestGetCacheStatistics:
         stats = provider.get_cache_statistics()
 
         assert stats["cache_size"] == 0
-        assert stats["prefetch_size"] == 0
         assert stats["readers"] == 0
         assert stats["cache_hits"] == 0
         assert stats["cache_misses"] == 0
@@ -548,12 +395,10 @@ class TestGetCacheStatistics:
         provider._cache_hits = 3
         provider._cache_misses = 1
         provider._data_cache["k1"] = "v"
-        provider._prefetch_cache["k2"] = "v"
 
         stats = provider.get_cache_statistics()
 
         assert stats["cache_size"] == 1
-        assert stats["prefetch_size"] == 1
         assert stats["cache_hits"] == 3
         assert stats["cache_misses"] == 1
         assert stats["hit_rate"] == 0.75

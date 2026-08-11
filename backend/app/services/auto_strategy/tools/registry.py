@@ -5,12 +5,11 @@
 """
 
 import logging
-from copy import deepcopy
 from typing import Optional
 
 from app.utils.registry import Registry
 
-from .base import BaseTool, ToolDefinition
+from .base import BaseTool
 
 logger = logging.getLogger(__name__)
 
@@ -47,15 +46,6 @@ class ToolRegistry(Registry[str, BaseTool]):
                 f"ツール '{tool.name}' は既に登録されています。上書きします。"
             )
         self.set(tool.name, tool)
-
-    def get_definitions(self) -> list[ToolDefinition]:
-        """
-        すべての登録済みツール定義を取得
-
-        Returns:
-            ツール定義のリスト
-        """
-        return [deepcopy(tool.definition) for tool in self._items.values()]
 
 
 # グローバルレジストリインスタンス

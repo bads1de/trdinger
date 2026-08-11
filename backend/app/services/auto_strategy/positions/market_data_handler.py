@@ -85,28 +85,6 @@ class MarketDataHandler:
 
         return enhanced
 
-    def update_cache(
-        self,
-        atr_values: dict[str, float],
-        volatility_metrics: dict[str, float],
-        price_data: pd.DataFrame | None = None,
-    ) -> None:
-        """キャッシュの更新"""
-        self._cache = MarketDataCache(
-            atr_values=atr_values,
-            volatility_metrics=volatility_metrics,
-            price_data=price_data,
-            last_updated=datetime.now(),
-        )
-
-    def get_cache(self) -> MarketDataCache | None:
-        """キャッシュの取得"""
-        return self._cache
-
     def clear_cache(self) -> None:
         """キャッシュのクリア"""
         self._cache = None
-
-    def is_cache_valid(self) -> bool:
-        """キャッシュが有効かチェック"""
-        return self._cache is not None and not self._cache.is_expired()

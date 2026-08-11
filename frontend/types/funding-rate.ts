@@ -25,49 +25,6 @@ export interface FundingRateData {
 }
 
 /**
- * 現在のFRデータ
- *
- * リアルタイムのFR情報を表現します。
- */
-export interface CurrentFundingRateData {
-  /** 通貨ペアシンボル（例: "BTC/USDT:USDT"） */
-  symbol: string;
-  /** FR（例: -0.00015708。リアルタイムでは未確定の場合あり） */
-  funding_rate: number;
-  /** ファンディング時刻（ISO形式。未確定時は null） */
-  funding_timestamp?: string | null;
-  /** 次回ファンディング時刻（ISO形式） */
-  next_funding_timestamp?: string | null;
-  /** マーク価格（USD） */
-  mark_price?: number | null;
-  /** インデックス価格（USD） */
-  index_price?: number | null;
-  /** データ取得時刻（ISO形式） */
-  timestamp?: string | null;
-}
-
-/**
- * FRAPIレスポンス
- *
- * APIから返されるFRデータの形式を定義します。
- */
-export interface FundingRateResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: {
-    /** 通貨ペア */
-    symbol: string;
-    /** データ件数（返却した funding_rates の件数） */
-    count: number;
-    /** FRデータの配列 */
-    funding_rates: FundingRateData[];
-  };
-  /** メッセージ（警告/補足） */
-  message?: string;
-}
-
-/**
  * FR収集結果
  *
  * FRデータ収集の結果を表現します。
@@ -81,20 +38,6 @@ export interface FundingRateCollectionResult {
   saved_count: number;
   /** 成功フラグ */
   success: boolean;
-}
-
-/**
- * FR収集APIレスポンス
- *
- * FR収集APIのレスポンス形式を定義します。
- */
-export interface FundingRateCollectionResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: FundingRateCollectionResult;
-  /** メッセージ（警告/補足） */
-  message?: string;
 }
 
 /**

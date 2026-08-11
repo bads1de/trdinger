@@ -151,11 +151,11 @@ class TestWalkForwardAnalysis:
         )
 
         # WFA 評価を実行
-        result = evaluator._evaluate_with_walk_forward(
+        result = evaluator._evaluation_strategy._evaluate_with_walk_forward_report(
             mock_gene,
             evaluator._fixed_backtest_config,
             wfa_config,
-        )
+        ).aggregated_fitness
 
         # 複数のフォールドで評価が呼ばれることを確認
         assert mock_perform_eval.call_count >= 1
@@ -180,11 +180,11 @@ class TestWalkForwardAnalysis:
         ]
         mock_perform_eval.side_effect = scores
 
-        result = evaluator._evaluate_with_walk_forward(
+        result = evaluator._evaluation_strategy._evaluate_with_walk_forward_report(
             mock_gene,
             evaluator._fixed_backtest_config,
             wfa_config,
-        )
+        ).aggregated_fitness
 
         # 結果がスコアの平均に近いことを確認
         # (フォールド数が変動する可能性があるため、厳密な値ではなく範囲をチェック)
@@ -213,11 +213,11 @@ class TestWalkForwardAnalysis:
             metadata={},
         )
 
-        result = evaluator._evaluate_with_walk_forward(
+        result = evaluator._evaluation_strategy._evaluate_with_walk_forward_report(
             mock_gene,
             evaluator._fixed_backtest_config,
             config,
-        )
+        ).aggregated_fitness
 
         assert isinstance(result, tuple)
         assert mock_perform_eval.call_count >= 1
@@ -242,11 +242,11 @@ class TestWalkForwardAnalysis:
             "timeframe": "1h",
         }
 
-        result = evaluator._evaluate_with_walk_forward(
+        result = evaluator._evaluation_strategy._evaluate_with_walk_forward_report(
             mock_gene,
             config_without_dates,
             wfa_config,
-        )
+        ).aggregated_fitness
 
         # フォールバックで _perform_single_evaluation_report が呼ばれることを確認
         assert mock_perform_eval.called
@@ -300,9 +300,9 @@ class TestWFAEdgeCases:
             objectives=["weighted_score"],
         )
 
-        result = evaluator._evaluate_with_walk_forward(
+        result = evaluator._evaluation_strategy._evaluate_with_walk_forward_report(
             mock_gene, short_config, wfa_config
-        )
+        ).aggregated_fitness
 
         # 結果が返されることを確認
         assert isinstance(result, tuple)
@@ -332,7 +332,9 @@ class TestWFAEdgeCases:
             objectives=["weighted_score"],
         )
 
-        result = evaluator._evaluate_with_walk_forward(mock_gene, config, wfa_config)
+        result = evaluator._evaluation_strategy._evaluate_with_walk_forward_report(
+            mock_gene, config, wfa_config
+        ).aggregated_fitness
 
         assert isinstance(result, tuple)
 
@@ -389,11 +391,11 @@ class TestWFAMultiObjective:
             objectives=["sharpe_ratio", "total_return", "max_drawdown"],
         )
 
-        result = evaluator._evaluate_with_walk_forward(
+        result = evaluator._evaluation_strategy._evaluate_with_walk_forward_report(
             mock_gene,
             evaluator._fixed_backtest_config,
             config,
-        )
+        ).aggregated_fitness
 
         # 結果が3つの目的値を持つことを確認
         assert isinstance(result, tuple)

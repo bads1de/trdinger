@@ -49,33 +49,6 @@ class StatefulConditionsEvaluator:
                     self.strategy._current_bar_index,
                 )
 
-    def check_stateful_conditions(self) -> bool:
-        """
-        ステートフル条件を評価
-
-        いずれかのステートフル条件が成立していればTrueを返します。
-
-        Returns:
-            ステートフル条件成立ならTrue
-        """
-        if not self.strategy.gene or not hasattr(
-            self.strategy.gene, "stateful_conditions"
-        ):
-            return False
-
-        for stateful_cond in self.strategy.gene.stateful_conditions:
-            if stateful_cond.enabled:
-                result = self.strategy.condition_evaluator.evaluate_stateful_condition(
-                    stateful_cond,
-                    self.strategy,
-                    self.strategy.state_tracker,
-                    self.strategy._current_bar_index,
-                )
-                if result:
-                    return True
-
-        return False
-
     def get_stateful_entry_direction(self) -> float | None:
         """
         成立したステートフル条件からエントリー方向を取得

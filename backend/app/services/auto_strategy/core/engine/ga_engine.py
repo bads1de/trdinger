@@ -362,16 +362,6 @@ class GeneticAlgorithmEngine:
         except (AttributeError, TypeError) as e:
             logger.debug(f"コンテキスト設定スキップ: {e}")
 
-    def _get_seed_strategies_for_injection(self, config: GAConfig) -> list[Any]:
-        """初期集団へ注入する組み込み seed 戦略を、
-        固定順の偏りが出ないよう整列します。
-
-        `random_state` が指定されている場合はその値で
-        deterministic に並び替えます。
-        指定がない場合は実行時の乱数でシャッフルします。
-        """
-        return self._get_builtin_seed_strategies(config)
-
     def _get_builtin_seed_strategies(self, config: GAConfig) -> list[Any]:
         """組み込みシード戦略（SeedStrategyFactory）をシャッフルして返す。"""
         from app.services.auto_strategy.generators.seed_strategy_factory import (  # noqa: E501
@@ -716,40 +706,6 @@ class GeneticAlgorithmEngine:
             strategy_key = self.result_processor.get_strategy_result_key(individual)
             summaries[strategy_key] = summary
         return summaries
-
-    def _build_individual_evaluation_summary(
-        self,
-        individual: Any,
-        config: GAConfig,
-        *,
-        force_robustness: bool = False,
-        primary_fitness: float | None = None,
-        selection_rank_override: int | None = None,
-        selection_score_override: tuple[float, ...] | None = None,
-    ) -> dict[str, Any] | None:
-        """個体の評価 report から保存向け summary を構築する。"""
-        return self.parameter_tuning_manager.build_individual_evaluation_summary(
-            individual,
-            config,
-            force_robustness=force_robustness,
-            primary_fitness=primary_fitness,
-            selection_rank_override=selection_rank_override,
-            selection_score_override=selection_score_override,
-        )
-
-    def _evaluate_individual_with_full_fidelity(
-        self,
-        individual: Any,
-        config: GAConfig,
-    ) -> tuple[float, ...]:
-        """必要に応じて full fidelity で個体を再評価する。"""
-        return self.parameter_tuning_manager.evaluate_individual_with_full_fidelity(
-            individual, config
-        )
-
-    def _extract_primary_fitness_from_result(self, result: Any) -> float:
-        """評価結果から主 fitness を取り出す。"""
-        return self.parameter_tuning_manager.extract_primary_fitness_from_result(result)
 
     def _get_strategy_result_key(self, strategy: Any) -> str:
         """result 内部で戦略 summary を対応付けるキーを返す。"""

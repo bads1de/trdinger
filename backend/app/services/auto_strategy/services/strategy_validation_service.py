@@ -133,32 +133,6 @@ class StrategyValidationService:
         )
         return filtered
 
-    def validate_strategy(
-        self,
-        strategy: Any,
-        ga_config: GAConfig,
-        backtest_config: dict[str, Any],
-    ) -> dict[str, Any]:
-        """
-        単一戦略を WFA で検証して合格/不合格を判定します。
-
-        Args:
-            strategy: 検証対象の戦略遺伝子
-            ga_config: GA 実行設定
-            backtest_config: バックテスト実行設定
-
-        Returns:
-            検証結果辞書（passed, pass_rate, primary_fitness 等）
-        """
-        validation_config = ga_config.validation_config
-        validation_ga_config = self._build_validation_ga_config(ga_config)
-        return self._validate_strategy(
-            strategy,
-            backtest_config,
-            validation_ga_config,
-            validation_config,
-        )
-
     # ------------------------------------------------------------------
     # 内部処理
     # ------------------------------------------------------------------

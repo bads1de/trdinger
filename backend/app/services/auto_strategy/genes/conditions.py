@@ -169,29 +169,6 @@ class StateTracker:
 
         return 0 <= bars_since_trigger <= lookback_bars
 
-    def get_bars_since_event(self, event_name: str, current_bar: int) -> int | None:
-        """
-        イベント発生からの経過バー数を取得
-
-        Args:
-            event_name: イベント名
-            current_bar: 現在のバーインデックス
-
-        Returns:
-            経過バー数、イベントが未記録の場合はNone
-        """
-        if event_name not in self._events:
-            return None
-        return current_bar - self._events[event_name]
-
-    def reset(self) -> None:
-        """全イベントをクリア（新しいバックテストの開始時などに使用）"""
-        self._events.clear()
-
-    def get_all_events(self) -> dict[str, int]:
-        """全イベントのコピーを取得（デバッグや可視化用）"""
-        return self._events.copy()
-
 
 @dataclass(slots=True)
 class StatefulCondition:

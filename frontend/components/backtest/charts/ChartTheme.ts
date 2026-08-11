@@ -49,16 +49,6 @@ export const chartColors = {
 };
 
 /**
- * レスポンシブブレークポイント
- */
-export const chartBreakpoints = {
-  mobile: { width: "100%", height: 300 },
-  tablet: { width: "100%", height: 400 },
-  desktop: { width: "100%", height: 500 },
-  large: { width: "100%", height: 600 },
-};
-
-/**
  * チャート共通スタイル設定
  */
 export const chartStyles = {
@@ -111,41 +101,4 @@ export const chartStyles = {
   },
 };
 
-/**
- * チャートタイプ別のデフォルト設定
- */
-export const chartDefaults = {
-  // 線グラフ
-  line: {
-    strokeWidth: 2,
-    dot: false,
-    activeDot: { r: 4, strokeWidth: 0 },
-  },
 
-  // エリアグラフ
-  area: {
-    strokeWidth: 2,
-    fillOpacity: 0.1,
-  },
-
-  // 散布図
-  scatter: {
-    r: 4,
-    strokeWidth: 0,
-  },
-
-  // 棒グラフ
-  bar: {
-    radius: [2, 2, 0, 0],
-  },
-
-  // アニメーション
-  animation: {
-    duration: 300,
-    easing: "ease-out",
-  },
-};
-
-/**
- * カスタムツールチップスタイル
- */

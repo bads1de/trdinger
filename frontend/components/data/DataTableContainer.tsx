@@ -5,7 +5,7 @@ import {
   fundingRateColumns,
   openInterestColumns,
   longShortRatioColumns,
-} from "@/components/common";
+} from "@/components/common/TableColumns";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatFundingRate, formatPrice } from "@/utils/financialFormatters";
 import { formatNumber } from "@/utils/formatters";

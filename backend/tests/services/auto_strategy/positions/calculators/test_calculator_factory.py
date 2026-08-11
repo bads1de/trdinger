@@ -109,54 +109,6 @@ class TestCalculatorFactoryCreateCalculator:
             )
 
 
-class TestCalculatorFactoryGetAvailableMethods:
-    """get_available_methodsのテスト"""
-
-    def test_returns_all_available_methods(self):
-        """全ての利用可能なメソッドを返す"""
-        from app.services.auto_strategy.positions.calculators.calculator_factory import (
-            CalculatorFactory,
-        )
-
-        methods = CalculatorFactory.get_available_methods()
-
-        assert "half_optimal_f" in methods
-        assert "volatility_based" in methods
-        assert "fixed_ratio" in methods
-        assert "fixed_quantity" in methods
-
-    def test_returns_japanese_descriptions(self):
-        """日本語の説明を返す"""
-        from app.services.auto_strategy.positions.calculators.calculator_factory import (
-            CalculatorFactory,
-        )
-
-        methods = CalculatorFactory.get_available_methods()
-
-        assert methods["half_optimal_f"] == "ハーフオプティマルF"
-        assert methods["volatility_based"] == "ボラティリティベース"
-        assert methods["fixed_ratio"] == "固定比率"
-        assert methods["fixed_quantity"] == "固定枚数"
-
-    def test_returns_dict(self):
-        """辞書型を返す"""
-        from app.services.auto_strategy.positions.calculators.calculator_factory import (
-            CalculatorFactory,
-        )
-
-        methods = CalculatorFactory.get_available_methods()
-        assert isinstance(methods, dict)
-
-    def test_method_count(self):
-        """メソッド数を確認"""
-        from app.services.auto_strategy.positions.calculators.calculator_factory import (
-            CalculatorFactory,
-        )
-
-        methods = CalculatorFactory.get_available_methods()
-        assert len(methods) == 4
-
-
 class TestCalculatorFactoryIntegration:
     """統合テスト"""
 
@@ -166,7 +118,12 @@ class TestCalculatorFactoryIntegration:
             CalculatorFactory,
         )
 
-        methods = CalculatorFactory.get_available_methods()
+        methods = [
+            "half_optimal_f",
+            "volatility_based",
+            "fixed_ratio",
+            "fixed_quantity",
+        ]
 
         for method_key in methods:
             calculator = CalculatorFactory.create_calculator(method_key)
@@ -184,13 +141,3 @@ class TestCalculatorFactoryIntegration:
         # インスタンスなしで呼び出せることを確認
         calculator = CalculatorFactory.create_calculator("fixed_ratio")
         assert calculator is not None
-
-    def test_get_available_methods_is_static(self):
-        """get_available_methodsが静的メソッド"""
-        from app.services.auto_strategy.positions.calculators.calculator_factory import (
-            CalculatorFactory,
-        )
-
-        # インスタンスなしで呼び出せることを確認
-        methods = CalculatorFactory.get_available_methods()
-        assert methods is not None

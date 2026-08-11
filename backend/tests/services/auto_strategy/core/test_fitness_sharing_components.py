@@ -1,4 +1,3 @@
-import copy
 from types import SimpleNamespace
 from typing import Any, cast
 
@@ -9,9 +8,6 @@ from app.services.auto_strategy.core.fitness import fitness_sharing_silhouette
 from app.services.auto_strategy.core.fitness.fitness_sharing import FitnessSharing
 from app.services.auto_strategy.core.fitness.fitness_sharing_niche import (
     compute_niche_counts_vectorized,
-)
-from app.services.auto_strategy.core.fitness.fitness_sharing_similarity import (
-    calculate_similarity,
 )
 from app.services.auto_strategy.core.fitness.fitness_sharing_vectorizer import (
     BEHAVIOR_FEATURE_NAMES,
@@ -199,24 +195,6 @@ class TestFitnessSharingComponents:
         assert state_before[2] == state_after[2]
         assert state_before[3] == state_after[3]
         assert state_before[4] == state_after[4]
-
-    def test_calculate_similarity_identical_genes_returns_one(self) -> None:
-        gene = StrategyGene(
-            id="gene",
-            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
-            long_entry_conditions=[
-                Condition(left_operand="close", operator=">", right_operand="sma")
-            ],
-            short_entry_conditions=[],
-            risk_management={"position_size": 0.1},
-            tpsl_gene=TPSLGene(stop_loss_pct=0.03, take_profit_pct=0.08),
-            position_sizing_gene=PositionSizingGene(risk_per_trade=0.02),
-            metadata={},
-        )
-
-        identical_gene = copy.deepcopy(gene)
-
-        assert calculate_similarity(gene, identical_gene) == pytest.approx(1.0)
 
     def test_silhouette_based_sharing_returns_early_for_two_individuals(
         self, monkeypatch: pytest.MonkeyPatch

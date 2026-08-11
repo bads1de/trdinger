@@ -178,8 +178,3 @@ class EquityCurveTransformer:
         except Exception as e:
             logger.warning(f"エクイティカーブの変換中にエラー: {e}")
             return []
-
-    @staticmethod
-    def _safe_timestamp_conversion(value: Any) -> datetime | None:
-        """安全なtimestamp変換"""
-        return safe_timestamp_conversion(value)

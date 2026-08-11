@@ -34,22 +34,6 @@ class TestBacktestDataProvider:
         assert second is mock_df
         assert mock_service.data_service.get_data_for_backtest.call_count == 1
 
-    def test_get_cached_ohlcv_data_returns_none_when_params_missing(self):
-        mock_service = Mock()
-        cache = {}
-        provider = BacktestDataProvider(mock_service, cache, Mock())
-        provider._lock.__enter__ = Mock(return_value=None)
-        provider._lock.__exit__ = Mock(return_value=None)
-
-        result = provider.get_cached_ohlcv_data(
-            symbol="BTCUSDT",
-            timeframe="1h",
-            start_date=None,
-            end_date="2024-01-01",
-        )
-
-        assert result is None
-
     def test_get_cached_backtest_data_ignores_worker_data_for_mismatched_key(self):
         mock_service = Mock()
         mock_service.ensure_data_service_initialized = Mock()

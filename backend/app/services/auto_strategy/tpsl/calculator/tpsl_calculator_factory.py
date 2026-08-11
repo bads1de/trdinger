@@ -50,27 +50,3 @@ class TPSLCalculatorFactory:
             raise ValueError(f"未知のTPSL方式: {method_str}")
 
         return calculator_class()
-
-    @classmethod
-    def get_available_methods(cls) -> dict[str, str]:
-        """利用可能な手法を取得"""
-        return {
-            "fixed_percentage": "固定パーセンテージ",
-            "risk_reward_ratio": "リスクリワード比率",
-            "volatility_based": "ボラティリティベース",
-            "statistical": "統計的",
-            "adaptive": "アダプティブ",
-        }
-
-    @classmethod
-    def register_calculator(
-        cls, method_name: str, calculator_class: type[BaseTPSLCalculator]
-    ) -> None:
-        """
-        カスタム計算機を登録
-
-        Args:
-            method_name: 方式名
-            calculator_class: 計算機クラス
-        """
-        cls._CALCULATORS[method_name] = calculator_class

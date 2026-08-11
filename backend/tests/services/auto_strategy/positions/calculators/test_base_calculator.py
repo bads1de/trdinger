@@ -12,7 +12,7 @@ class MockCalculator(BaseCalculator):
 
     def calculate(self, gene, account_balance, current_price, **kwargs):
         # 単純に1を返すダミー実装
-        return self._create_calculation_result(1.0, {"method": "mock"}, [], gene)
+        return self._apply_size_limits_and_finalize(1.0, {"method": "mock"}, [], gene)
 
 
 class TestBaseCalculator:

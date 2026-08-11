@@ -56,13 +56,3 @@ export const SUPPORTED_TIMEFRAMES: TimeFrameInfo[] = [
     description: "日足データ",
   },
 ];
-
-/**
- * デフォルトの取引ペア
- */
-export const DEFAULT_TRADING_PAIR = "BTC/USDT:USDT";
-
-/**
- * デフォルトの時間軸
- */
-export const DEFAULT_TIMEFRAME = "1h";

@@ -7,17 +7,9 @@ Auto Strategy Utils パッケージ
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..core.strategy.operand_grouping import (
-        OperandGroup,
-        OperandGroupingSystem,
-        operand_grouping_system,
-    )
     from .normalization import NormalizationUtils, create_default_strategy_gene
 
 _ATTRIBUTE_EXPORTS = {
-    "OperandGroup": "..core.strategy.operand_grouping",
-    "OperandGroupingSystem": "..core.strategy.operand_grouping",
-    "operand_grouping_system": "..core.strategy.operand_grouping",
     "NormalizationUtils": ".normalization",
     "create_default_strategy_gene": ".normalization",
 }
@@ -25,9 +17,6 @@ _ATTRIBUTE_EXPORTS = {
 __all__ = [
     # Core Utilities
     "NormalizationUtils",
-    "OperandGroup",
-    "OperandGroupingSystem",
-    "operand_grouping_system",
     # Utility functions
     "create_default_strategy_gene",
 ]

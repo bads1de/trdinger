@@ -45,29 +45,6 @@ export interface TimeFrameInfo {
 }
 
 /**
- * OHLCVデータのAPIレスポンス
- *
- * APIから返されるOHLCVデータの形式を定義します。
- */
-export interface OHLCVResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: {
-    /** 通貨ペア */
-    symbol: string;
-    /** 時間軸 */
-    timeframe: TimeFrame;
-    /** OHLCVデータの配列 */
-    ohlcv: PriceData[];
-  };
-  /** メッセージ（警告/補足） */
-  message?: string;
-  /** タイムスタンプ（レスポンス生成時刻、ISO文字列） */
-  timestamp: string;
-}
-
-/**
  * 利用可能な通貨ペア
  *
  * システムで取引可能な通貨ペアの情報を定義します。

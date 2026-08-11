@@ -20,7 +20,6 @@ class TestBacktestDataProviderCache:
             backtest_service=mock_service,
             data_cache={},
             lock=threading.Lock(),
-            prefetch_enabled=False,
         )
 
         config = {
@@ -55,7 +54,6 @@ class TestBacktestDataProviderCache:
             backtest_service=mock_service,
             data_cache={},
             lock=threading.Lock(),
-            prefetch_enabled=False,
         )
 
         # worker_dataの最後のインデックスを取得
@@ -90,7 +88,6 @@ class TestBacktestDataProviderCache:
             backtest_service=mock_service,
             data_cache={},
             lock=threading.Lock(),
-            prefetch_enabled=False,
         )
 
         worker_df = pd.DataFrame(

@@ -109,11 +109,6 @@ class ParallelEvaluator:
         # 世代ごとの統計リセットフラグ
         self._auto_reset_per_generation = True
 
-        # 最適化: バッチ処理とキャッシュ
-        self._batch_size = 10
-        self._evaluation_cache: dict[str, tuple[float, ...]] = {}
-        self._cache_hits = 0
-        self._cache_misses = 0
         self._behavior_summary_cache: dict[object, dict[str, float]] = {}
 
     def start(self) -> None:
@@ -452,34 +447,6 @@ class ParallelEvaluator:
         self._recent_errors.append(error_info)
 
         return category
-
-    def evaluate_invalid_individuals(
-        self,
-        population: list[Any],
-        default_fitness: tuple[float, ...] | None = None,
-    ) -> list[tuple[tuple[float, ...], Any]]:
-        """
-        適応度が無効な個体のみを並列評価
-
-        Args:
-            population: 個体群
-            default_fitness: 評価失敗時のデフォルトフィットネス値
-
-        Returns:
-            (フィットネス値, 個体) のタプルリスト
-        """
-        # 無効な個体を抽出
-        invalid_individuals = [ind for ind in population if not ind.fitness.valid]
-
-        if not invalid_individuals:
-            return []
-
-        logger.debug(f"無効な個体数: {len(invalid_individuals)}/{len(population)}")
-
-        # 並列評価
-        fitnesses = self.evaluate_population(invalid_individuals, default_fitness)
-
-        return list(zip(fitnesses, invalid_individuals, strict=False))
 
     def get_statistics(self) -> dict:
         """

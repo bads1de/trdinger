@@ -40,13 +40,3 @@ class CalculatorFactory:
 
         calculator_class = method_map.get(method_str, FixedRatioCalculator)
         return calculator_class()  # type: ignore[abstract]
-
-    @staticmethod
-    def get_available_methods() -> dict[str, str]:
-        """利用可能な手法を取得"""
-        return {
-            "half_optimal_f": "ハーフオプティマルF",
-            "volatility_based": "ボラティリティベース",
-            "fixed_ratio": "固定比率",
-            "fixed_quantity": "固定枚数",
-        }

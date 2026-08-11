@@ -8,14 +8,6 @@ import { BacktestConfig } from "./backtest";
  * GA戦略生成の設定
  */
 
-export interface WaveletConfig {
-  enabled: boolean;
-  base_wavelet?: string;
-  scales?: number[];
-  target_columns?: string[];
-  [key: string]: unknown;
-}
-
 export interface EarlyTerminationSettingsConfig {
   enabled?: boolean;
   max_drawdown?: number | null;
@@ -193,112 +185,6 @@ export interface GAConfig {
   };
 }
 
-// TP/SL戦略の種類
-export type TPSLStrategy =
-  | "fixed_percentage"
-  | "risk_reward_ratio"
-  | "volatility_based"
-  | "statistical"
-  | "adaptive";
-
-// ボラティリティ感度
-export type VolatilitySensitivity = "low" | "medium" | "high";
-
-// TP/SL自動決定結果
-export interface TPSLResult {
-  /** 損切り幅（割合。例: 0.02 = 2%） */
-  stop_loss_pct: number;
-  /** 利確幅（割合。例: 0.04 = 4%） */
-  take_profit_pct: number;
-  /** リスクリワード比（TP/SL 比） */
-  risk_reward_ratio: number;
-  /** 使用された推定戦略名 */
-  strategy_used: string;
-  /** 推定の信頼度（0-1） */
-  confidence_score: number;
-  /** 参考情報（根拠となる統計など） */
-  metadata?: Record<string, any>;
-}
-
-// TP/SL設定プリセット
-export interface TPSLPreset {
-  /** プリセット名 */
-  name: string;
-  /** 説明文 */
-  description: string;
-  /** 戦略種別 */
-  strategy: TPSLStrategy;
-  /** 1トレード当たりの最大リスク（資金比率） */
-  max_risk_per_trade: number;
-  /** 好ましいリスクリワード比 */
-  preferred_risk_reward_ratio: number;
-  /** ボラティリティ感度 */
-  volatility_sensitivity: VolatilitySensitivity;
-}
-
-// 多目的最適化結果
-export interface MultiObjectiveGAResult {
-  /** API 成否 */
-  success: boolean;
-  /** 結果本体 */
-  result: {
-    /** 最良戦略（総合評価の最上位） */
-    best_strategy: {
-      /** 遺伝子表現（指標/ルール/リスク管理の内部表現） */
-      gene_data: Record<string, any>;
-      /** 総合フィットネススコア（単目的 or 重み付け合成） */
-      fitness_score: number;
-      /** 各目的のスコア（objectives と同順） */
-      fitness_values: number[];
-    };
-    /** パレート前線（非劣解の集合） */
-    pareto_front: Array<{
-      strategy: Record<string, any>;
-      fitness_values: number[];
-    }>;
-    /** 目的関数名の配列（fitness_values と対応） */
-    objectives: string[];
-    /** 評価した総戦略数 */
-    total_strategies: number;
-    /** 実行時間（秒） */
-    execution_time: number;
-  };
-  /** メッセージ（補足/警告） */
-  message: string;
-}
-/**
- * マルチ目的最適化の設定
- */
-export interface MultiObjectiveConfig {
-  /** バックテスト基礎設定 */
-  base_config: BacktestConfig;
-  /** 最適化パラメータ */
-  optimization_params: {
-    /** 目的関数名の配列（例: ["total_return","max_drawdown"]） */
-    objectives: string[];
-    /** 目的関数の重み（objectives と同順） */
-    weights: number[];
-    /** 最適化方式（grid: 全探索 / sambo: サンプリングベース） */
-    method: "grid" | "sambo";
-    /** 最大試行回数（任意） */
-    max_tries?: number;
-    /** チューニング対象パラメータの探索範囲（[min, max, step]） */
-    parameters: {
-      [key: string]: [number, number, number];
-    };
-  };
-}
-
-// パレート最適解
-export interface ParetoSolution {
-  /** 戦略の内部表現（エンコード済み設定） */
-  strategy: Record<string, any>;
-  /** 各目的のスコア（objectives と同順） */
-  fitness_values: number[];
-  /** 目的関数名配列（スコア配列と対応） */
-  objectives: string[];
-}
-
 // 多目的最適化の目的関数定義
 export interface ObjectiveDefinition {
   /** 論理名（内部キー） */
@@ -311,34 +197,4 @@ export interface ObjectiveDefinition {
   type: "maximize" | "minimize";
   /** 重み（加重合成に用いる係数） */
   weight: number;
-}
-
-// 簡素化されたGA設定（新しいUI用）
-export interface SimplifiedGAConfig {
-  /** 実験名 */
-  experiment_name: string;
-  /** バックテスト基礎設定（最小限構成） */
-  base_config: {
-    /** 戦略名 */
-    strategy_name: string;
-    /** シンボル */
-    symbol: string;
-    /** 時間軸 */
-    timeframe: string;
-    /** 期間開始 */
-    start_date: string;
-    /** 期間終了 */
-    end_date: string;
-    /** 初期資金 */
-    initial_capital: number;
-    /** 片道手数料率（0-1） */
-    commission_rate: number;
-    /** 戦略設定（型+パラメータ） */
-    strategy_config: {
-      /** 戦略タイプ */
-      strategy_type: string;
-      /** パラメータ辞書 */
-      parameters: Record<string, any>;
-    };
-  };
 }

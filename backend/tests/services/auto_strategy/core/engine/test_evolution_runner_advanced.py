@@ -222,36 +222,6 @@ class TestEvolutionRunnerAdvanced:
         runner.clear_caches()
         assert True
 
-    def test_get_crossover_cache_key(self, mock_toolbox, mock_stats):
-        """交叉キャッシュキーテスト"""
-        runner = EvolutionRunner(
-            toolbox=mock_toolbox,
-            stats=mock_stats,
-        )
-
-        parent1 = MagicMock()
-        parent1.id = "parent1"
-        parent2 = MagicMock()
-        parent2.id = "parent2"
-
-        key = runner._get_crossover_cache_key(parent1, parent2)
-
-        assert key == "parent1:parent2"
-
-    def test_get_mutation_cache_key(self, mock_toolbox, mock_stats):
-        """突然変異キャッシュキーテスト"""
-        runner = EvolutionRunner(
-            toolbox=mock_toolbox,
-            stats=mock_stats,
-        )
-
-        individual = MagicMock()
-        individual.id = "ind_1"
-
-        key = runner._get_mutation_cache_key(individual)
-
-        assert key == "ind_1"
-
     def test_crossover_recomputes_for_same_parent_ids(self, mock_toolbox, mock_stats):
         """同一IDの親でも交叉結果を使い回さないこと"""
         runner = EvolutionRunner(

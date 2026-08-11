@@ -1,17 +1,6 @@
 from app.services.auto_strategy.config import objective_registry
 
 
-def test_minimize_objectives_are_centralized():
-    assert (
-        frozenset({"max_drawdown", "ulcer_index", "trade_frequency_penalty"})
-        == objective_registry.MINIMIZE_OBJECTIVES
-    )
-    assert (
-        frozenset({"max_drawdown", "ulcer_index", "trade_frequency_penalty"})
-        == objective_registry.DYNAMIC_SCALAR_OBJECTIVES
-    )
-
-
 def test_is_minimize_objective_defaults_to_minimize_for_unknown():
     """未知の目的関数は安全側に倒してminimizeとして扱われる"""
     assert objective_registry.is_minimize_objective("max_drawdown") is True

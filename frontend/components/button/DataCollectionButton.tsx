@@ -94,23 +94,6 @@ export const openInterestCollectionConfig: DataCollectionConfig = {
 };
 
 /**
- * 単一シンボル Open Interest収集ボタンの設定を生成
- */
-export const createSingleOpenInterestConfig = (
-  symbol: string
-): DataCollectionConfig => ({
-  endpoint: "/api/open-interest/collect",
-  buttonText: `OI収集 (${symbol})`,
-  variant: "warning",
-  queryParams: {
-    symbol: symbol,
-    fetch_all: "true",
-  },
-  successMessage: `Open Interestデータ (${symbol}) の収集を開始しました`,
-  loadingText: "収集中...",
-});
-
-/**
  * データ収集ボタンのプロパティ
  */
 interface DataCollectionButtonProps {

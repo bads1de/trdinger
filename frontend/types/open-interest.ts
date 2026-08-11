@@ -19,27 +19,6 @@ export interface OpenInterestData {
 }
 
 /**
- * OIAPIレスポンス
- *
- * APIから返されるOIデータの形式を定義します。
- */
-export interface OpenInterestResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: {
-    /** 通貨ペア */
-    symbol: string;
-    /** データ件数（返却した open_interest の件数） */
-    count: number;
-    /** OIデータの配列 */
-    open_interest: OpenInterestData[];
-  };
-  /** メッセージ（警告/補足） */
-  message?: string;
-}
-
-/**
  * OI収集結果
  *
  * OIデータ収集の結果を表現します。
@@ -53,20 +32,6 @@ export interface OpenInterestCollectionResult {
   saved_count: number;
   /** 成功フラグ */
   success: boolean;
-}
-
-/**
- * OI収集APIレスポンス
- *
- * OI収集APIのレスポンス形式を定義します。
- */
-export interface OpenInterestCollectionResponse {
-  /** 成功フラグ */
-  success: boolean;
-  /** データ */
-  data: OpenInterestCollectionResult;
-  /** メッセージ（警告/補足） */
-  message?: string;
 }
 
 /**

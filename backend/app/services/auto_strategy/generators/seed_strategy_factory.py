@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, cast
+from typing import Any
 
 from app.types import SerializableValue
 
 from ..config.constants import TPSLMethod
-from ..genes.conditions import Condition, ConditionGroup, EntryDirection
+from ..genes.conditions import Condition, ConditionGroup
 from ..genes.indicator import IndicatorGene
 from ..genes.strategy import StrategyGene
 from ..genes.tpsl import TPSLGene
@@ -174,30 +174,6 @@ class SeedStrategyFactory:
         )
 
     @classmethod
-    def _create_simple_condition(
-        cls,
-        left_operand: dict[str, str] | str,
-        operator: str,
-        right_operand: float | dict[str, str],
-        direction: EntryDirection,
-    ) -> Condition:
-        """単一条件を生成"""
-        return Condition(
-            left_operand=left_operand,
-            operator=operator,
-            right_operand=right_operand,
-            direction=direction,
-        )
-
-    @classmethod
-    def _create_and_condition_group(
-        cls,
-        conditions: list[Condition | ConditionGroup],
-    ) -> ConditionGroup:
-        """AND条件グループを生成"""
-        return ConditionGroup(operator="AND", conditions=conditions)
-
-    @classmethod
     def get_all_seeds(cls) -> list[StrategyGene]:
         """
         すべてのシード戦略を取得
@@ -210,22 +186,6 @@ class SeedStrategyFactory:
         ]
         logger.info(f"シード戦略を {len(seeds)} 個生成しました")
         return seeds
-
-    @classmethod
-    def get_seed_by_name(cls, name: str) -> StrategyGene | None:
-        """
-        名前でシード戦略を取得
-
-        Args:
-            name: 戦略名 (例: "dmi_extreme", "rsi_momentum")
-
-        Returns:
-            対応するシード戦略、見つからない場合はNone
-        """
-        method_name = cls._SEED_MAPPING.get(name.lower())
-        if method_name:
-            return cast(StrategyGene, getattr(cls, method_name)())
-        return None
 
     # =========================================================================
     # Strategy A: DMI Extreme Trend

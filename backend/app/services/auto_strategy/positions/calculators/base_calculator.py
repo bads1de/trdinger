@@ -104,15 +104,3 @@ class BaseCalculator(ABC):
             if warnings_list is not None:
                 warnings_list.append(warning_msg)
             return fallback_value
-
-    def _create_calculation_result(
-        self,
-        position_size: float,
-        details: dict[str, Any],
-        warnings: list[str],
-        gene: Any,
-    ) -> dict[str, Any]:
-        """計算結果の統一作成"""
-        return self._apply_size_limits_and_finalize(
-            position_size, details, warnings, gene
-        )

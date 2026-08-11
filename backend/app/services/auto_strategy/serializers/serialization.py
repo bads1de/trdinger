@@ -7,7 +7,6 @@ DictConverterとGeneSerializerを統合し、JSON/Dict形式の相互変換を�
 
 from __future__ import annotations
 
-import json
 import logging
 import math
 from collections.abc import Mapping
@@ -20,12 +19,8 @@ from app.types import SerializablePrimitive, SerializableValue
 from ..genes import (
     Condition,
     ConditionGroup,
-    EntryGene,
-    ExitGene,
     IndicatorGene,
-    PositionSizingGene,
     StrategyGene,
-    TPSLGene,
 )
 from ..genes.conditions import StatefulCondition
 from .strategy_gene_dict_codec import StrategyGeneDictCodec
@@ -270,100 +265,6 @@ class DictConverter:
             logger.error("条件/グループ辞書変換エラー: %s", e)
             raise ValueError(f"条件/グループ辞書変換に失敗: {e}") from e
 
-    def tpsl_gene_to_dict(self, tpsl_gene: TPSLGene | None) -> dict[str, Any] | None:
-        """TP/SL遺伝子を辞書形式に変換"""
-        try:
-            if tpsl_gene is None:
-                return None
-            return cast(dict[str, Any], tpsl_gene.to_dict())
-        except Exception as e:
-            logger.error("TP/SL遺伝子辞書変換エラー: %s", e)
-            raise ValueError(f"TP/SL遺伝子辞書変換に失敗: {e}") from e
-
-    def dict_to_tpsl_gene(self, data: dict[str, Any] | None) -> TPSLGene | None:
-        """辞書形式からTP/SL遺伝子を復元"""
-        try:
-            if data is None:
-                return None
-            from ..genes import TPSLGene
-
-            return TPSLGene.from_dict(data)
-        except Exception as e:
-            logger.error("TP/SL遺伝子復元エラー: %s", e)
-            raise ValueError(f"TP/SL遺伝子の復元に失敗: {e}") from e
-
-    def position_sizing_gene_to_dict(
-        self, position_sizing_gene: PositionSizingGene | None
-    ) -> dict[str, Any] | None:
-        """ポジションサイジング遺伝子を辞書形式に変換"""
-        try:
-            if position_sizing_gene is None:
-                return None
-            return cast(dict[str, Any], position_sizing_gene.to_dict())
-        except Exception as e:
-            logger.error("ポジションサイジング遺伝子辞書変換エラー: %s", e)
-            raise ValueError(f"ポジションサイジング遺伝子辞書変換に失敗: {e}") from e
-
-    def dict_to_position_sizing_gene(
-        self, data: dict[str, Any] | None
-    ) -> PositionSizingGene | None:
-        """辞書形式からポジションサイジング遺伝子を復元"""
-        try:
-            if data is None:
-                return None
-            from ..genes import PositionSizingGene
-
-            return PositionSizingGene.from_dict(data)
-        except Exception as e:
-            logger.error("ポジションサイジング遺伝子復元エラー: %s", e)
-            raise ValueError(f"ポジションサイジング遺伝子の復元に失敗: {e}") from e
-
-    def entry_gene_to_dict(self, entry_gene: EntryGene | None) -> dict[str, Any] | None:
-        """エントリー遺伝子を辞書形式に変換"""
-        try:
-            if entry_gene is None:
-                return None
-            return cast(dict[str, Any], entry_gene.to_dict())
-        except Exception as e:
-            logger.error("エントリー遺伝子辞書変換エラー: %s", e)
-            raise ValueError(f"エントリー遺伝子辞書変換に失敗: {e}") from e
-
-    def dict_to_entry_gene(self, data: dict[str, Any] | None) -> EntryGene | None:
-        """辞書形式からエントリー遺伝子を復元"""
-        try:
-            if data is None:
-                return None
-            from ..genes import EntryGene
-
-            return EntryGene.from_dict(data)
-        except Exception as e:
-            logger.error("エントリー遺伝子復元エラー: %s", e)
-            raise ValueError(f"エントリー遺伝子の復元に失敗: {e}") from e
-
-    def exit_gene_to_dict(self, exit_gene: ExitGene | None) -> dict[str, Any] | None:
-        """イグジット遺伝子を辞書形式に変換"""
-        try:
-            if exit_gene is None:
-                return None
-            return cast(dict[str, Any], exit_gene.to_dict())
-        except Exception as e:
-            logger.error("イグジット遺伝子辞書変換エラー: %s", e)
-            raise ValueError(f"イグジット遺伝子辞書変換に失敗: {e}") from e
-
-    def dict_to_exit_gene(self, data: dict[str, Any] | None) -> ExitGene | None:
-        """辞書形式からイグジット遺伝子を復元"""
-        try:
-            if data is None:
-                return None
-            return ExitGene.from_dict(data)
-        except Exception as e:
-            logger.error("イグジット遺伝子復元エラー: %s", e)
-            raise ValueError(f"イグジット遺伝子の復元に失敗: {e}") from e
-
-    def _clean_risk_management(self, risk_management: dict[str, Any]) -> dict[str, Any]:
-        """risk_managementからTP/SL関連の設定を除外"""
-        return self._strategy_gene_codec._clean_risk_management(risk_management)
-
     def dict_to_strategy_gene(
         self, data: dict[str, Any], strategy_gene_class: type | None = None
     ) -> StrategyGene:
@@ -511,40 +412,3 @@ class GeneSerializer(DictConverter):
             return cast(StrategyGene, individual_list)
 
         return None
-
-    def strategy_gene_to_json(self, strategy_gene: StrategyGene) -> str:
-        """
-        戦略遺伝子をJSON文字列に変換
-
-        Args:
-            strategy_gene: 戦略遺伝子オブジェクト
-
-        Returns:
-            JSON文字列
-        """
-        try:
-            data = self.strategy_gene_to_dict(strategy_gene)
-            return json.dumps(data, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"戦略遺伝子JSON変換エラー: {e}")
-            raise ValueError(f"戦略遺伝子のJSON変換に失敗: {e}")
-
-    def json_to_strategy_gene(
-        self, json_str: str, strategy_gene_class: type
-    ) -> StrategyGene:
-        """
-        JSON文字列から戦略遺伝子を復元
-
-        Args:
-            json_str: JSON文字列
-            strategy_gene_class: StrategyGeneクラス
-
-        Returns:
-            戦略遺伝子オブジェクト
-        """
-        try:
-            data = json.loads(json_str)
-            return self.dict_to_strategy_gene(data, strategy_gene_class)
-        except Exception as e:
-            logger.error(f"戦略遺伝子JSON復元エラー: {e}")
-            raise ValueError(f"戦略遺伝子のJSON復元に失敗: {e}")

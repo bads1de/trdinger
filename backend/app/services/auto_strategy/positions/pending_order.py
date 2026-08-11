@@ -67,21 +67,6 @@ class PendingOrder:
         return bars_elapsed >= self.validity_bars
 
     @property
-    def is_limit_order(self) -> bool:
-        """指値注文かどうか"""
-        return self.order_type in (EntryType.LIMIT, EntryType.STOP_LIMIT)
-
-    @property
-    def is_stop_order(self) -> bool:
-        """逆指値注文かどうか"""
-        return self.order_type in (EntryType.STOP, EntryType.STOP_LIMIT)
-
-    @property
     def is_long(self) -> bool:
         """ロング注文かどうか"""
         return self.direction > 0
-
-    @property
-    def is_short(self) -> bool:
-        """ショート注文かどうか"""
-        return self.direction < 0

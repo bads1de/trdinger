@@ -144,12 +144,6 @@ class TestTrendFilter:
             filter_tool.mutate_params(params)
             assert params == {"enabled": True, "min_adx": 25.0, "adx_period": 14}
 
-    def test_validate_params_default_returns_true(
-        self, filter_tool: TrendFilter
-    ) -> None:
-        """デフォルト実装の validate_params は True"""
-        assert filter_tool.validate_params({"enabled": True, "min_adx": 25.0}) is True
-
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

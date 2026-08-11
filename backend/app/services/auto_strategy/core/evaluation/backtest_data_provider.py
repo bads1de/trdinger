@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 
 import pandas as pd
@@ -25,15 +24,10 @@ class BacktestDataProvider:
         backtest_service: Any,
         data_cache: Any,
         lock: Any,
-        prefetch_enabled: bool = True,
-        max_prefetch_workers: int = 2,
     ) -> None:
         self.backtest_service = backtest_service
         self._data_cache = data_cache
         self._lock = lock or threading.RLock()
-        self._prefetch_enabled = prefetch_enabled
-        self._prefetch_executor = ThreadPoolExecutor(max_workers=max_prefetch_workers)
-        self._prefetch_cache: dict[tuple, Any] = {}
         # ロックの粒度を細かくするための個別ロック
         self._cache_locks: dict[str, threading.Lock] = {}
         # キャッシュ統計
@@ -229,137 +223,10 @@ class BacktestDataProvider:
             logger.warning(f"1分足データ取得エラー: {e}")
             return None
 
-    def get_cached_ohlcv_data(
-        self,
-        symbol: str,
-        timeframe: str,
-        start_date: object,
-        end_date: object,
-        cache_prefix: str = "ohlcv",
-    ) -> pd.DataFrame | None:
-        """OHLCV データを汎用キャッシュ経由で取得する。"""
-        if not all([symbol, timeframe, start_date, end_date]):
-            logger.warning(
-                "OHLCVデータ取得: 必須パラメータが不足しています "
-                f"(symbol={symbol}, timeframe={timeframe}, "
-                f"start_date={start_date}, end_date={end_date})"
-            )
-            return None
-
-        cache_key = (
-            cache_prefix,
-            symbol,
-            timeframe,
-            str(start_date),
-            str(end_date),
-        )
-
-        with self._lock:
-            if cache_key in self._data_cache:
-                cached_data = self._data_cache[cache_key]
-                if hasattr(cached_data, "empty") and not cached_data.empty:
-                    self._cache_hits += 1
-                    logger.debug(f"OHLCVデータ: キャッシュヒット (key={cache_key})")
-                    return cached_data
-
-        if self._prefetch_enabled:
-            with self._lock:
-                prefetch_data = self._prefetch_cache.get(cache_key)
-                if (
-                    prefetch_data is not None
-                    and hasattr(prefetch_data, "empty")
-                    and not prefetch_data.empty
-                ):
-                    self._data_cache[cache_key] = prefetch_data
-                    self._prefetch_cache.pop(cache_key, None)
-                    self._cache_hits += 1
-                    logger.debug(f"OHLCVデータ: プリフェッチヒット (key={cache_key})")
-                    return prefetch_data
-
-        data_service = getattr(self.backtest_service, "data_service", None)
-        if data_service is None:
-            logger.warning("data_service が利用できません。")
-            return None
-
-        try:
-            if hasattr(self.backtest_service, "ensure_data_service_initialized"):
-                self.backtest_service.ensure_data_service_initialized()
-
-            ohlcv_data = data_service.get_ohlcv_data(
-                symbol, timeframe, start_date, end_date
-            )
-
-            if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
-                with self._lock:
-                    if cache_key not in self._data_cache:
-                        self._data_cache[cache_key] = ohlcv_data
-                        self._cache_misses += 1
-                    else:
-                        self._cache_hits += 1
-                logger.debug(
-                    f"OHLCVデータ: DBから取得・キャッシュ保存 (key={cache_key})"
-                )
-                return ohlcv_data
-
-            logger.warning(
-                f"OHLCVデータが空または無効です: symbol={symbol}, timeframe={timeframe}"
-            )
-            return None
-        except Exception as exc:
-            logger.warning(f"OHLCVデータ取得エラー: {exc}")
-            return None
-
-    def prefetch_data(
-        self,
-        symbol: str,
-        timeframe: str,
-        start_date: object,
-        end_date: object,
-        cache_prefix: str = "ohlcv",
-    ) -> None:
-        """データをプリフェッチする。"""
-        if not self._prefetch_enabled:
-            return
-
-        cache_key = (
-            cache_prefix,
-            symbol,
-            timeframe,
-            str(start_date),
-            str(end_date),
-        )
-
-        with self._lock:
-            if cache_key in self._data_cache:
-                return
-
-        def _prefetch_task() -> None:
-            try:
-                data_service = getattr(self.backtest_service, "data_service", None)
-                if data_service is None:
-                    return
-
-                if hasattr(self.backtest_service, "ensure_data_service_initialized"):
-                    self.backtest_service.ensure_data_service_initialized()
-
-                ohlcv_data = data_service.get_ohlcv_data(
-                    symbol, timeframe, start_date, end_date
-                )
-
-                if isinstance(ohlcv_data, pd.DataFrame) and not ohlcv_data.empty:
-                    with self._lock:
-                        self._prefetch_cache[cache_key] = ohlcv_data
-                    logger.debug(f"プリフェッチ完了: {cache_key}")
-            except Exception as e:
-                logger.debug(f"プリフェッチエラー: {e}")
-
-        self._prefetch_executor.submit(_prefetch_task)
-
     def clear_cache(self) -> None:
         """キャッシュをクリアする。"""
         with self._lock:
             self._data_cache.clear()
-            self._prefetch_cache.clear()
             self._cache_hits = 0
             self._cache_misses = 0
 
@@ -370,7 +237,6 @@ class BacktestDataProvider:
             hit_rate = self._cache_hits / total_requests if total_requests > 0 else 0.0
             return {
                 "cache_size": len(self._data_cache),
-                "prefetch_size": len(self._prefetch_cache),
                 "readers": 0,
                 "cache_hits": self._cache_hits,
                 "cache_misses": self._cache_misses,

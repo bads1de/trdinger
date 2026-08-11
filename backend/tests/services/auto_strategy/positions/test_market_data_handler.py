@@ -6,10 +6,7 @@ MarketDataHandlerのテスト
 
 from datetime import datetime, timedelta
 
-import pandas as pd
 import pytest
-
-# unittest.mockは現在未使用だが、将来のテスト拡張用に残す
 
 
 class TestMarketDataCache:
@@ -221,79 +218,6 @@ class TestPrepareMarketData:
         assert result["volatility"] == 0.025
 
 
-class TestUpdateCache:
-    """update_cacheのテスト"""
-
-    def test_updates_cache_with_new_values(self):
-        """新しい値でキャッシュを更新"""
-        from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
-        )
-
-        handler = MarketDataHandler()
-        df = pd.DataFrame({"close": [100, 101, 102]})
-
-        handler.update_cache(
-            atr_values={"atr": 500.0},
-            volatility_metrics={"volatility": 0.02},
-            price_data=df,
-        )
-
-        assert handler._cache is not None
-        assert handler._cache.atr_values == {"atr": 500.0}
-        assert handler._cache.volatility_metrics == {"volatility": 0.02}
-        pd.testing.assert_frame_equal(handler._cache.price_data, df)
-
-    def test_updates_last_updated_timestamp(self):
-        """last_updatedタイムスタンプを更新"""
-        from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
-        )
-
-        handler = MarketDataHandler()
-        before_update = datetime.now()
-
-        handler.update_cache(
-            atr_values={},
-            volatility_metrics={},
-        )
-
-        after_update = datetime.now()
-        assert before_update <= handler._cache.last_updated <= after_update
-
-
-class TestGetCache:
-    """get_cacheのテスト"""
-
-    def test_returns_none_when_no_cache(self):
-        """キャッシュがない場合はNoneを返す"""
-        from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
-        )
-
-        handler = MarketDataHandler()
-        assert handler.get_cache() is None
-
-    def test_returns_cache_when_exists(self):
-        """キャッシュが存在する場合はキャッシュを返す"""
-        from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataCache,
-            MarketDataHandler,
-        )
-
-        handler = MarketDataHandler()
-        handler._cache = MarketDataCache(
-            atr_values={"atr": 100.0},
-            volatility_metrics={},
-            price_data=None,
-            last_updated=datetime.now(),
-        )
-
-        cache = handler.get_cache()
-        assert cache is not None
-        assert cache.atr_values == {"atr": 100.0}
-
-
 class TestClearCache:
     """clear_cacheのテスト"""
 
@@ -325,51 +249,3 @@ class TestClearCache:
         handler.clear_cache()
         handler.clear_cache()  # 2回呼び出してもエラーにならない
         assert handler._cache is None
-
-
-class TestIsCacheValid:
-    """is_cache_validのテスト"""
-
-    def test_returns_false_when_no_cache(self):
-        """キャッシュがない場合はFalse"""
-        from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataHandler,
-        )
-
-        handler = MarketDataHandler()
-        assert handler.is_cache_valid() is False
-
-    def test_returns_true_for_fresh_cache(self):
-        """新鮮なキャッシュの場合はTrue"""
-        from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataCache,
-            MarketDataHandler,
-        )
-
-        handler = MarketDataHandler()
-        handler._cache = MarketDataCache(
-            atr_values={},
-            volatility_metrics={},
-            price_data=None,
-            last_updated=datetime.now(),
-        )
-
-        assert handler.is_cache_valid() is True
-
-    def test_returns_false_for_expired_cache(self):
-        """期限切れのキャッシュの場合はFalse"""
-        from app.services.auto_strategy.positions.market_data_handler import (
-            MarketDataCache,
-            MarketDataHandler,
-        )
-
-        handler = MarketDataHandler()
-        old_time = datetime.now() - timedelta(minutes=10)
-        handler._cache = MarketDataCache(
-            atr_values={},
-            volatility_metrics={},
-            price_data=None,
-            last_updated=old_time,
-        )
-
-        assert handler.is_cache_valid() is False

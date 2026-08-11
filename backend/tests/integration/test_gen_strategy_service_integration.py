@@ -400,27 +400,6 @@ class TestGeneratedStrategyService:
             assert call_kwargs["experiment_id"] == 100
             assert call_kwargs["min_fitness"] == 1.0
 
-    def test_get_strategies_with_response(
-        self, integration_service: GeneratedStrategyService
-    ) -> None:
-        """APIレスポンス形式での戦略取得
-
-        Args:
-            integration_service: 統合サービス
-        """
-        with patch.object(integration_service, "get_strategies") as mock_get_strategies:
-            mock_get_strategies.return_value = {
-                "strategies": [],
-                "total_count": 0,
-                "has_more": False,
-            }
-
-            result = integration_service.get_strategies_with_response(limit=20)
-
-            assert "success" in result
-            assert "data" in result
-            assert result["success"] is True
-
 
 class TestDataConversion:
     """データ変換のテスト"""

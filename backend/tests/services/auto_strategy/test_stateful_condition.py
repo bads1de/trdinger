@@ -78,21 +78,6 @@ class TestStateTracker:
             "trigger_a", lookback_bars=5, current_bar=18
         )
 
-    def test_reset_clears_all_events(self):
-        """リセットで全イベントがクリアされる"""
-        tracker = StateTracker()
-
-        tracker.record_event("event_a", bar_index=5)
-        tracker.record_event("event_b", bar_index=10)
-        tracker.reset()
-
-        assert not tracker.was_triggered_within(
-            "event_a", lookback_bars=100, current_bar=5
-        )
-        assert not tracker.was_triggered_within(
-            "event_b", lookback_bars=100, current_bar=10
-        )
-
 
 class TestStatefulCondition:
     """StatefulCondition のテスト"""

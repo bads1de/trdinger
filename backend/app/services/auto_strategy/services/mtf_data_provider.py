@@ -209,8 +209,3 @@ class MultiTimeframeDataProvider:
         """キャッシュをクリア"""
         self._cache = {self.base_timeframe: self.base_df}
         logger.debug("MTFデータキャッシュをクリアしました")
-
-    @property
-    def cached_timeframes(self) -> list[str]:
-        """キャッシュされているタイムフレームのリスト"""
-        return list(self._cache.keys())

@@ -54,30 +54,6 @@ class TestSeedStrategyFactory:
 
         assert actual_names == expected_names
 
-    @pytest.mark.parametrize(
-        "name",
-        [
-            "dmi_extreme",
-            "rsi_momentum",
-            "bollinger_breakout",
-            "kama_adx",
-            "wae",
-            "trendilo",
-        ],
-    )
-    def test_get_seed_by_name(self, name: str):
-        """get_seed_by_name が正しい戦略を返すこと"""
-        seed = SeedStrategyFactory.get_seed_by_name(name)
-
-        assert seed is not None
-        assert isinstance(seed, StrategyGene)
-
-    def test_get_seed_by_name_returns_none_for_unknown(self):
-        """get_seed_by_name が未知の名前に対してNoneを返すこと"""
-        seed = SeedStrategyFactory.get_seed_by_name("unknown_strategy")
-
-        assert seed is None
-
 
 class TestDMIExtremeTrend:
     """DMI Extreme Trend 戦略のテスト"""
@@ -390,42 +366,6 @@ class TestHelperMethods:
         assert tpsl.take_profit_pct == 0.06
         assert tpsl.risk_reward_ratio == 2.0
         assert tpsl.enabled is True
-
-    def test_create_simple_condition(self):
-        """単一条件生成ヘルパーのテスト"""
-        condition = SeedStrategyFactory._create_simple_condition(
-            left_operand="close",
-            operator=">",
-            right_operand=100.0,
-            direction="long",
-        )
-
-        assert isinstance(condition, Condition)
-        assert condition.left_operand == "close"
-        assert condition.operator == ">"
-        assert condition.right_operand == 100.0
-        assert condition.direction == "long"
-
-    def test_create_and_condition_group(self):
-        """AND条件グループ生成ヘルパーのテスト"""
-        cond1 = SeedStrategyFactory._create_simple_condition(
-            left_operand="close",
-            operator=">",
-            right_operand=100.0,
-            direction="long",
-        )
-        cond2 = SeedStrategyFactory._create_simple_condition(
-            left_operand="close",
-            operator="<",
-            right_operand=200.0,
-            direction="long",
-        )
-
-        group = SeedStrategyFactory._create_and_condition_group([cond1, cond2])
-
-        assert isinstance(group, ConditionGroup)
-        assert group.operator == "AND"
-        assert len(group.conditions) == 2
 
 
 class TestParameterConstants:

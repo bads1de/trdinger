@@ -148,35 +148,10 @@ class TestAutoStrategyCoreInitExports:
         with pytest.raises(AttributeError):
             _ = core_package.HybridPredictor
 
-    def test_operand_group_lazy_load(self):
-        """OperandGroupが遅延ロードされる"""
-        from app.services.auto_strategy.core.strategy.operand_grouping import (
-            OperandGroup,
-        )
-
-        group = core_package.OperandGroup
-
-        assert group is OperandGroup
-
-    def test_operand_grouping_system_lazy_load(self):
-        """OperandGroupingSystemが遅延ロードされる"""
-        from app.services.auto_strategy.core.strategy.operand_grouping import (
-            OperandGroupingSystem,
-        )
-
-        system = core_package.OperandGroupingSystem
-
-        assert system is OperandGroupingSystem
-
-    def test_operand_grouping_system_instance_lazy_load(self):
-        """operand_grouping_systemインスタンスが遅延ロードされる"""
-        from app.services.auto_strategy.core.strategy.operand_grouping import (
-            operand_grouping_system,
-        )
-
-        system = core_package.operand_grouping_system
-
-        assert system is operand_grouping_system
+    def test_operand_grouping_not_exported(self):
+        """OperandGroupingSystemはエクスポートされない(デッドコード削除)"""
+        with pytest.raises(AttributeError):
+            _ = core_package.OperandGroupingSystem
 
     def test_getattr_raises_for_non_existent(self):
         """存在しない属性でAttributeErrorが発生する"""
@@ -202,10 +177,6 @@ class TestAutoStrategyCoreInitExports:
             # Fitness
             "FitnessCalculator",
             "FitnessSharing",
-            # Strategy
-            "OperandGroup",
-            "OperandGroupingSystem",
-            "operand_grouping_system",
         ]
 
         for item in expected_items:

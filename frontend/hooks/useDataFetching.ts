@@ -241,34 +241,6 @@ export const useDataFetching = <TData = any, TParams = Record<string, any>>(
 };
 
 /**
- * 簡単なデータ取得フック（基本的なGETリクエスト用）
- *
- * エンドポイントとオプションを指定するだけで、簡単にデータ取得ができるフックです。
- * 基本的なGETリクエストに特化しており、最小限の設定で利用できます。
- *
- * @example
- * ```tsx
- * const { data, loading, error } = useSimpleDataFetching<User>("/api/users", {
- *   errorMessage: "ユーザーデータの取得に失敗しました"
- * });
- * ```
- *
- * @typeParam TData - 取得するデータの型
- * @param {string} endpoint - APIエンドポイント
- * @param {Partial<DataFetchingOptions<TData>>} options - データ取得オプション
- * @returns {DataFetchingResult<TData>} データ取得関連の状態と操作関数
- */
-export const useSimpleDataFetching = <TData = any>(
-  endpoint: string,
-  options?: Partial<DataFetchingOptions<TData>>
-) => {
-  return useDataFetching<TData>({
-    endpoint,
-    ...options,
-  });
-};
-
-/**
  * パラメータ付きデータ取得フック
  *
  * 初期パラメータを指定してデータ取得を行うフックです。

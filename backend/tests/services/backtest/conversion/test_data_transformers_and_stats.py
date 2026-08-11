@@ -16,6 +16,7 @@ from app.services.backtest.conversion.data_transformers import (
 from app.services.backtest.conversion.statistics_calculator import (
     BacktestStatisticsCalculator,
 )
+from app.services.backtest.shared import safe_timestamp_conversion
 
 # ---------------------------------------------------------------------------
 # TradeHistoryTransformer
@@ -146,15 +147,15 @@ class TestEquityCurveTransformer:
 
     def test_safe_timestamp_conversion_pd_timestamp(self, transformer):
         ts = pd.Timestamp("2024-06-15 12:00:00")
-        result = EquityCurveTransformer._safe_timestamp_conversion(ts)
+        result = safe_timestamp_conversion(ts)
         assert isinstance(result, datetime)
 
     def test_safe_timestamp_conversion_none(self, transformer):
-        assert EquityCurveTransformer._safe_timestamp_conversion(None) is None
+        assert safe_timestamp_conversion(None) is None
 
     def test_safe_timestamp_conversion_datetime(self, transformer):
         dt = datetime(2024, 6, 15, 12, 0)
-        result = EquityCurveTransformer._safe_timestamp_conversion(dt)
+        result = safe_timestamp_conversion(dt)
         assert result == dt
 
 

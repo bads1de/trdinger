@@ -138,20 +138,6 @@ class TestSeedStrategyRestoration:
         second = serializer.dict_to_strategy_gene(data, StrategyGene)
         assert second.metadata["validation"]["passed"] is True
 
-    def test_clean_risk_management_delegates_to_codec(self, serializer):
-        """_clean_risk_management は TP/SL キーを除外する"""
-        cleaned = serializer._clean_risk_management(
-            {
-                "position_size": 0.1,
-                "max_risk": 0.05,
-                "stop_loss": 0.02,
-                "take_profit": 0.05,
-            }
-        )
-        assert cleaned == {"position_size": 0.1, "max_risk": 0.05}
-        assert "stop_loss" not in cleaned
-        assert "take_profit" not in cleaned
-
     def test_clear_caches(self, serializer):
         """clear_caches で両キャッシュが空になる"""
         data = _seed_gene_data()
@@ -198,62 +184,6 @@ class TestStatefulConditionEdgeCases:
                     "follow_condition": {},
                 }
             )
-
-
-class TestSubGeneConverters:
-    """サブ遺伝子コンバーターの None / エラー分岐"""
-
-    def test_tpsl_none_and_error(self, serializer):
-        assert serializer.tpsl_gene_to_dict(None) is None
-        assert serializer.dict_to_tpsl_gene(None) is None
-        with pytest.raises(ValueError, match="TP/SL遺伝子辞書変換に失敗"):
-            serializer.tpsl_gene_to_dict(object())  # type: ignore[arg-type]
-        with patch(
-            "app.services.auto_strategy.genes.TPSLGene.from_dict",
-            side_effect=ValueError("bad tpsl"),
-        ):
-            with pytest.raises(ValueError, match="TP/SL遺伝子の復元に失敗"):
-                serializer.dict_to_tpsl_gene({"enabled": True})
-
-    def test_position_sizing_none_and_error(self, serializer):
-        assert serializer.position_sizing_gene_to_dict(None) is None
-        assert serializer.dict_to_position_sizing_gene(None) is None
-        with pytest.raises(
-            ValueError, match="ポジションサイジング遺伝子辞書変換に失敗"
-        ):
-            serializer.position_sizing_gene_to_dict(object())  # type: ignore[arg-type]
-        with patch(
-            "app.services.auto_strategy.genes.PositionSizingGene.from_dict",
-            side_effect=ValueError("bad sizing"),
-        ):
-            with pytest.raises(
-                ValueError, match="ポジションサイジング遺伝子の復元に失敗"
-            ):
-                serializer.dict_to_position_sizing_gene({"enabled": True})
-
-    def test_entry_gene_none_and_error(self, serializer):
-        assert serializer.entry_gene_to_dict(None) is None
-        assert serializer.dict_to_entry_gene(None) is None
-        with pytest.raises(ValueError, match="エントリー遺伝子辞書変換に失敗"):
-            serializer.entry_gene_to_dict(object())  # type: ignore[arg-type]
-        with patch(
-            "app.services.auto_strategy.genes.EntryGene.from_dict",
-            side_effect=ValueError("bad entry"),
-        ):
-            with pytest.raises(ValueError, match="エントリー遺伝子の復元に失敗"):
-                serializer.dict_to_entry_gene({"enabled": True})
-
-    def test_exit_gene_none_and_error(self, serializer):
-        assert serializer.exit_gene_to_dict(None) is None
-        assert serializer.dict_to_exit_gene(None) is None
-        with pytest.raises(ValueError, match="イグジット遺伝子辞書変換に失敗"):
-            serializer.exit_gene_to_dict(object())  # type: ignore[arg-type]
-        with patch(
-            "app.services.auto_strategy.genes.ExitGene.from_dict",
-            side_effect=ValueError("bad exit"),
-        ):
-            with pytest.raises(ValueError, match="イグジット遺伝子の復元に失敗"):
-                serializer.dict_to_exit_gene({"enabled": True})
 
 
 class _TestEnum(Enum):
@@ -370,25 +300,6 @@ class TestFromListEdgeCases:
 
     def test_from_list_unrecognized_returns_none(self, serializer):
         assert serializer.from_list([1, 2, 3], StrategyGene) is None
-
-
-class TestJsonErrorPaths:
-    """JSON 変換のエラーパス"""
-
-    def test_strategy_gene_to_json_error(self, serializer):
-        with patch.object(
-            serializer,
-            "strategy_gene_to_dict",
-            side_effect=ValueError("dict failed"),
-        ):
-            with pytest.raises(ValueError, match="戦略遺伝子のJSON変換に失敗"):
-                serializer.strategy_gene_to_json(
-                    StrategyGene(id="x", indicators=[], metadata={})
-                )
-
-    def test_json_to_strategy_gene_invalid_json(self, serializer):
-        with pytest.raises(ValueError, match="戦略遺伝子のJSON復元に失敗"):
-            serializer.json_to_strategy_gene("{invalid json", StrategyGene)
 
 
 class TestConditionConverterBranches:

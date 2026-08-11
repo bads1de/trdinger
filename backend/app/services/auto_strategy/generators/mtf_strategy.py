@@ -134,7 +134,3 @@ class MTFStrategy:
             new_ind.timeframe = timeframe
             res.append(new_ind)
         return res
-
-    # テスト互換用エイリアス
-    def _determine_higher_timeframe(self, tf: str) -> str:
-        return self._determine_higher_tf(tf)

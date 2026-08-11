@@ -8,6 +8,10 @@ from app.services.auto_strategy.genes.exit import ExitGene
 from app.services.auto_strategy.genes.indicator import IndicatorGene
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.genes.strategy import StrategyGene
+from app.services.auto_strategy.genes.strategy_operators import (
+    mutate_conditions,
+    mutate_indicators,
+)
 from app.services.auto_strategy.genes.tool import ToolGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 
@@ -63,7 +67,7 @@ class TestStrategyGene:
         sample_gene.indicators = [IndicatorGene(type="SMA", parameters={"period": 20})]
 
         with patch("random.random", return_value=0.0):  # 常に変異・追加
-            StrategyGene._mutate_indicators(sample_gene, 1.0, mock_config)
+            mutate_indicators(sample_gene, 1.0, mock_config)
 
         # パラメータが変化しているはず（シードや乱数によるが）
         # また追加・削除ロジックも通る
@@ -74,7 +78,7 @@ class TestStrategyGene:
 
         # 演算子の切り替えテスト
         with patch("random.random", return_value=0.0):
-            StrategyGene._mutate_conditions(sample_gene, 1.0, mock_config)
+            mutate_conditions(sample_gene, 1.0, mock_config)
 
         assert cond.operator in mock_config.mutation_config.valid_condition_operators
 
@@ -121,9 +125,6 @@ class TestStrategyGene:
             population, mock_config, base_mutation_rate=0.1
         )
         assert mutated.metadata["adaptive_mutation_rate"] > 0.1
-
-    def test_properties(self, sample_gene):
-        assert sample_gene.has_long_short_separation() is True
 
     def test_validate(self, sample_gene):
         # 実際に GeneValidator を呼び出す

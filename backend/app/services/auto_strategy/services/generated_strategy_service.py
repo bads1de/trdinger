@@ -16,7 +16,6 @@ from app.services.auto_strategy.core.evaluation.report_persistence import (
     extract_validation_summary,
 )
 from app.services.auto_strategy.genes import StrategyGene
-from app.utils import response as response_utils
 from app.utils.datetime_utils import isoformat_or_none
 from database.models import BacktestResult, GeneratedStrategy
 from database.repositories.generated_strategy_repository import (
@@ -103,33 +102,6 @@ class GeneratedStrategyService:
                 exc_info=True,
             )
             raise
-
-    def get_strategies_with_response(
-        self,
-        limit: int = 50,
-        offset: int = 0,
-        risk_level: str | None = None,
-        experiment_id: int | None = None,
-        min_fitness: float | None = None,
-        sort_by: str = "fitness_score",
-        sort_order: str = "desc",
-    ) -> dict[str, Any]:
-        """
-        生成済み戦略を API レスポンス形式で返す互換メソッド。
-
-        旧呼び出し元が `api_response` 前提で残っているため、`get_strategies`
-        の結果をそのまま包んで返します。
-        """
-        result = self.get_strategies(
-            limit=limit,
-            offset=offset,
-            risk_level=risk_level,
-            experiment_id=experiment_id,
-            min_fitness=min_fitness,
-            sort_by=sort_by,
-            sort_order=sort_order,
-        )
-        return response_utils.api_response(success=True, data=result)
 
     def _convert_generated_strategy_to_display_format(
         self, strategy: GeneratedStrategy

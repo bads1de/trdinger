@@ -50,42 +50,10 @@ class TestPendingOrder:
         assert order.is_expired(7) is False
         assert order.is_expired(8) is True
 
-    def test_is_limit_order(self):
-        order = PendingOrder(order_type=EntryType.LIMIT, direction=1.0)
-        assert order.is_limit_order is True
-
-    def test_is_limit_order_stop_limit(self):
-        order = PendingOrder(order_type=EntryType.STOP_LIMIT, direction=1.0)
-        assert order.is_limit_order is True
-
-    def test_is_not_limit_order_market(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=1.0)
-        assert order.is_limit_order is False
-
-    def test_is_stop_order(self):
-        order = PendingOrder(order_type=EntryType.STOP, direction=1.0)
-        assert order.is_stop_order is True
-
-    def test_is_stop_order_stop_limit(self):
-        order = PendingOrder(order_type=EntryType.STOP_LIMIT, direction=1.0)
-        assert order.is_stop_order is True
-
-    def test_is_not_stop_order_market(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=1.0)
-        assert order.is_stop_order is False
-
     def test_is_long(self):
         order = PendingOrder(order_type=EntryType.MARKET, direction=1.0)
         assert order.is_long is True
 
-    def test_is_short(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=-1.0)
-        assert order.is_short is True
-
     def test_is_not_long_when_short(self):
         order = PendingOrder(order_type=EntryType.MARKET, direction=-1.0)
         assert order.is_long is False
-
-    def test_is_not_short_when_long(self):
-        order = PendingOrder(order_type=EntryType.MARKET, direction=1.0)
-        assert order.is_short is False

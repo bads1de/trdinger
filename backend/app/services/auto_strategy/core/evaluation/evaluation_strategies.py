@@ -44,24 +44,6 @@ class EvaluationStrategy:
         self._max_workers = max_workers
         self._date_cache: dict[str, tuple[str, str, str]] = {}
 
-    def execute(
-        self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
-    ) -> tuple[float, ...]:
-        """
-        設定に応じた評価戦略を実行します。
-
-        Args:
-            gene: 評価対象の遺伝子
-            base_backtest_config: 固定的なバックテスト設定
-            config: GA 実行設定
-
-        Returns:
-            算出された適応度（タプル）
-        """
-        return self.execute_report(
-            gene, base_backtest_config, config
-        ).aggregated_fitness
-
     def execute_report(
         self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
     ) -> EvaluationReport:

@@ -2,9 +2,6 @@
 GeneSerializerのテスト
 """
 
-import json
-from unittest.mock import Mock, patch
-
 import pytest
 
 from app.services.auto_strategy.genes import Condition, IndicatorGene, StrategyGene
@@ -17,31 +14,6 @@ class TestDelegation:
     @pytest.fixture
     def serializer(self):
         return GeneSerializer()
-
-    def test_json_conversion(self, serializer):
-        """JSON変換と復元が継承メソッド経由で動くこと"""
-        gene = Mock()
-        expected_dict = {"id": "test"}
-        restored_gene = Mock()
-
-        with patch.object(
-            serializer,
-            "strategy_gene_to_dict",
-            return_value=expected_dict,
-        ) as mock_to_dict:
-            json_str = serializer.strategy_gene_to_json(gene)
-            assert json.loads(json_str) == expected_dict
-            mock_to_dict.assert_called_once_with(gene)
-
-        cls = Mock()
-        with patch.object(
-            serializer,
-            "dict_to_strategy_gene",
-            return_value=restored_gene,
-        ) as mock_from_dict:
-            result = serializer.json_to_strategy_gene(json_str, cls)
-            assert result is restored_gene
-            mock_from_dict.assert_called_once_with(expected_dict, cls)
 
     def test_from_list_returns_strategy_gene_for_list_like_individual(self, serializer):
         """DEAP個体風のlistからStrategyGeneを復元できること"""

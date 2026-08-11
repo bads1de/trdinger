@@ -238,31 +238,6 @@ class TestParallelEvaluator:
 
         assert evaluator.get_cached_behavior_profile(individual) is None
 
-    def test_evaluate_invalid_individuals(self):
-        """適応度が無効な個体のみを評価できること"""
-
-        def mock_evaluate(ind):
-            return (1.0,)
-
-        evaluator = ParallelEvaluator(
-            evaluate_func=mock_evaluate,
-            max_workers=1,
-            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
-        )
-
-        # フィットネスが無効な個体を作成
-        individuals = []
-        for i in range(3):
-            ind = MagicMock()
-            ind.fitness = MagicMock()
-            ind.fitness.valid = i != 1  # ind_1 のみ無効
-            individuals.append(ind)
-
-        result = evaluator.evaluate_invalid_individuals(individuals)
-        assert len(result) == 1  # 無効な個体は1つだけ
-        assert result[0][0] == (1.0,)  # フィットネス値
-        assert result[0][1] == individuals[1]  # 無効だった個体
-
     def test_evaluate_with_process_pool_initializer(self):
         """プロセスプールでカスタム初期化子が実行されること"""
         # Note: This test mocks ProcessPoolExecutor to verify initialization logic

@@ -1,4 +1,3 @@
-import json
 from typing import Any
 
 import pytest
@@ -129,46 +128,6 @@ def test_strategy_gene_round_trip_dict(
     assert restored.metadata == base_strategy_gene.metadata
 
 
-def test_strategy_gene_round_trip_json(
-    serializer: GeneSerializer, base_strategy_gene: StrategyGene
-) -> None:
-    """JsonConverter経由のラウンドトリップ."""
-    json_str = serializer.strategy_gene_to_json(base_strategy_gene)
-    loaded: dict[str, Any] = json.loads(json_str)
-    assert loaded["id"] == base_strategy_gene.id
-
-    restored = serializer.json_to_strategy_gene(json_str, StrategyGene)
-    assert isinstance(restored, StrategyGene)
-    assert restored.id == base_strategy_gene.id
-    assert len(restored.indicators) == len(base_strategy_gene.indicators)
-    assert restored.metadata == base_strategy_gene.metadata
-
-
-def test_tpsl_gene_round_trip_via_dict(serializer: GeneSerializer) -> None:
-    """TPSLGene.to_dict / from_dict を DictConverter 経由で固定."""
-    gene = TPSLGene(
-        enabled=True,
-        method=TPSLMethod.RISK_REWARD_RATIO,
-        stop_loss_pct=0.01,
-        take_profit_pct=0.03,
-        risk_reward_ratio=3.0,
-        atr_multiplier_sl=1.2,
-        atr_multiplier_tp=2.4,
-        atr_period=20,
-        lookback_period=200,
-    )
-
-    data = serializer.tpsl_gene_to_dict(gene)
-    assert data is not None
-    restored = serializer.dict_to_tpsl_gene(data)
-    assert isinstance(restored, TPSLGene)
-    assert restored.enabled is True
-    assert restored.method == gene.method
-    assert restored.stop_loss_pct == pytest.approx(gene.stop_loss_pct)
-    assert restored.take_profit_pct == pytest.approx(gene.take_profit_pct)
-    assert restored.risk_reward_ratio == pytest.approx(gene.risk_reward_ratio)
-
-
 def test_tpsl_split_round_trip_via_dict(serializer: GeneSerializer) -> None:
     """ロング・ショート別TP/SL設定のラウンドトリップ."""
     long_tpsl = TPSLGene(
@@ -217,31 +176,6 @@ def test_tpsl_split_round_trip_via_dict(serializer: GeneSerializer) -> None:
     assert restored.short_tpsl_gene.take_profit_pct == pytest.approx(0.06)
 
 
-def test_position_sizing_gene_round_trip_via_dict(serializer: GeneSerializer) -> None:
-    """PositionSizingGene.to_dict / from_dict を DictConverter 経由で固定."""
-    gene = PositionSizingGene(
-        enabled=True,
-        method=PositionSizingMethod.VOLATILITY_BASED,
-        risk_per_trade=0.03,
-        fixed_ratio=0.2,
-        fixed_quantity=0.0,
-        atr_multiplier=1.8,
-        optimal_f_multiplier=0.7,
-        lookback_period=40,
-        min_position_size=0.002,
-    )
-
-    data = serializer.position_sizing_gene_to_dict(gene)
-    assert data is not None
-
-    restored = serializer.dict_to_position_sizing_gene(data)
-    assert isinstance(restored, PositionSizingGene)
-    assert restored.enabled is True
-    assert restored.method == gene.method
-    assert restored.risk_per_trade == pytest.approx(gene.risk_per_trade)
-    assert restored.min_position_size == pytest.approx(gene.min_position_size)
-
-
 # b. 部分的/古いスキーマへの耐性
 
 
@@ -283,44 +217,6 @@ def test_decoder_uses_default_when_data_empty(serializer: GeneSerializer) -> Non
 
 
 # c. エラー・バリデーション系
-
-
-def test_invalid_tpsl_dict_raises_or_falls_back(serializer: GeneSerializer) -> None:
-    """
-    TPSL dict が明らかに不正な場合の挙動を固定.
-
-    現行実装では TPSLGene.from_dict 内部仕様に依存するため、
-    ValueError またはフォールバック(None)のいずれかを許容しつつ、
-    例外が握りつぶされないことを確認する。
-    """
-    invalid_data = {"enabled": True, "method": "UNKNOWN"}  # 想定外
-    try:
-        result = serializer.dict_to_tpsl_gene(invalid_data)
-    except ValueError:
-        # 明示的なバリデーション例外が投げられる実装も許容
-        return
-
-    # 例外を投げない実装の場合、None やデフォルトTPSLGeneにフォールバックしていることを許容
-    # TODO: clarify expected behavior
-    assert result is None or isinstance(result, TPSLGene)
-
-
-def test_invalid_position_sizing_dict_raises_or_falls_back(
-    serializer: GeneSerializer,
-) -> None:
-    """
-    PositionSizing dict が不正な場合の挙動.
-
-    仕様が曖昧なため、ValueError または None / デフォルトへのフォールバックを許容。
-    """
-    invalid_data = {"enabled": True, "method": "UNKNOWN"}
-    try:
-        result = serializer.dict_to_position_sizing_gene(invalid_data)
-    except ValueError:
-        return
-
-    # TODO: clarify expected behavior
-    assert result is None or isinstance(result, PositionSizingGene)
 
 
 def test_invalid_condition_payload_raises_value_error(

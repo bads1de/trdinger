@@ -133,35 +133,6 @@ class TestDatabaseConfig:
         assert config.name == "trdinger"
         assert config.user == "postgres"
 
-    def test_url_complete_with_individual_params(self):
-        """個別パラメータからのURL生成テスト"""
-        # 環境変数をクリアしてから設定
-        with patch.dict(
-            os.environ,
-            {
-                "DATABASE_URL": "",  # DATABASE_URLを明示的に空にする
-                "DB_HOST": "dbhost",
-                "DB_PORT": "5432",
-                "DB_NAME": "testdb",
-                "DB_USER": "testuser",
-                "DB_PASSWORD": "testpass",
-            },
-            clear=False,
-        ):
-            config = DatabaseConfig()
-            expected_url = "postgresql://testuser:testpass@dbhost:5432/testdb"
-            assert config.url_complete == expected_url
-
-    @patch.dict(
-        os.environ,
-        {"DATABASE_URL": "postgresql://custom:pass@custom:5432/custom"},
-    )
-    def test_url_complete_with_database_url(self):
-        """DATABASE_URL優先テスト"""
-        custom_url = "postgresql://custom:pass@custom:5432/custom"
-        config = DatabaseConfig()
-        assert config.url_complete == custom_url
-
 
 class TestMarketConfig:
     """MarketConfigクラスのテスト"""
@@ -261,24 +232,6 @@ class TestConfigValidation:
         # Pydanticが自動的に検証するため、正常に動作することを確認
         config = AppConfig(port=8000)
         assert config.port == 8000
-
-    def test_database_url_generation_without_password(self):
-        """パスワードなしのデータベースURL生成テスト"""
-        with patch.dict(
-            os.environ,
-            {
-                "DATABASE_URL": "",  # DATABASE_URLを明示的に空にする
-                "DB_USER": "testuser",
-                "DB_PASSWORD": "",
-                "DB_HOST": "localhost",
-                "DB_PORT": "5432",
-                "DB_NAME": "trdinger",
-            },
-            clear=False,
-        ):
-            config = DatabaseConfig()
-            url = config.url_complete
-            assert "testuser:@localhost" in url
 
 
 class TestEnvironmentVariableSupport:

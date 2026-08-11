@@ -59,8 +59,6 @@ class TestBaseTool:
 
         random.seed(42)  # Ensure deterministic behavior for mutate_params
         tool = MockTool()
-        # デフォルト実装の確認
-        assert tool.validate_params({}) is True
 
         params = {"key": "value"}
         mutated = tool.mutate_params(params)

@@ -78,14 +78,6 @@ class ConditionEvaluator:
             return value.ndim > 0
         return False
 
-    def _get_accessor(self, attr_name: str) -> Callable[[Any], Any]:
-        """属性アクセサを取得または作成"""
-        if attr_name not in self._accessor_cache:
-            import operator
-
-            self._accessor_cache[attr_name] = operator.attrgetter(attr_name)
-        return self._accessor_cache[attr_name]
-
     def _extract_operand_str(self, operand: object) -> str:
         """オペランドから文字列識別子を抽出"""
         if isinstance(operand, str):

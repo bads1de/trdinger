@@ -172,62 +172,6 @@ class AutoStrategyService:
         backtest_config["symbol"] = backtest_config.get("symbol", DEFAULT_SYMBOL)
         return backtest_config
 
-    def _create_experiment(
-        self,
-        experiment_id: str,
-        experiment_name: str,
-        ga_config: GAConfig,
-        backtest_config: dict[str, Any],
-    ) -> None:
-        """
-        データベースに実験レコードを作成
-
-        Args:
-            experiment_id: 実験の一意識別子
-            experiment_name: 実験の表示名
-            ga_config: GA設定
-            backtest_config: バックテスト設定
-        """
-        # フロントエンドから送信されたexperiment_idを使用
-        self._get_experiment_application_service().create_experiment(
-            experiment_id, experiment_name, ga_config, backtest_config
-        )
-
-    def _initialize_ga_engine(self, experiment_id: str, ga_config: GAConfig) -> None:
-        """
-        GAエンジンを初期化
-
-        Args:
-            experiment_id: 実験ID
-            ga_config: 実験で使用するGA設定
-        """
-        self._get_experiment_application_service().initialize_ga_engine(
-            experiment_id, ga_config
-        )
-
-    def _start_experiment_in_background(
-        self,
-        experiment_id: str,
-        ga_config: GAConfig,
-        backtest_config: dict[str, Any],
-        task_scheduler: TaskScheduler,
-    ) -> None:
-        """実験をバックグラウンドタスクで開始する"""
-        self._get_experiment_application_service().schedule_experiment(
-            experiment_id,
-            ga_config,
-            backtest_config,
-            task_scheduler,
-        )
-
-    def _get_experiment_application_service(
-        self,
-    ) -> ExperimentApplicationService:
-        """初期化済みの ExperimentApplicationService を返す。"""
-        if not self.experiment_application_service:
-            raise RuntimeError("実験 application service が初期化されていません。")
-        return self.experiment_application_service
-
     def list_experiments(self) -> list[dict[str, Any]]:
         """
         実験一覧を取得

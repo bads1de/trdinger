@@ -215,34 +215,6 @@ class TestGeneratedStrategyService:
         assert service._calculate_risk_level({"max_drawdown": 12.0}) == "medium"
         assert service._calculate_risk_level({"max_drawdown": 47.98}) == "high"
 
-    def test_get_strategies_with_response_success(self, service, sample_strategy):
-        # Arrange
-        service.generated_strategy_repo.get_filtered_and_sorted_strategies.return_value = (
-            1,
-            [sample_strategy],
-        )
-
-        # Act
-        # api_responseの依存関係をモックする代わりに、戻り値の構造を確認する
-        # ただし、関数内で import しているので、sys.modulesへのパッチが必要かもしれない
-        # あるいは、統合テストとして動作させる
-
-        # ここでは単純にメソッドを実行し、例外が出ないことと戻り値を確認する
-        # api_responseはFastAPIのJSONResponseなどを返す可能性があるが、
-        # コードを見ると app.utils.response.api_response を呼んでいる。
-        # 実際にどうなるか試す。
-        with patch("app.utils.response.api_response") as mock_api_response:
-            mock_api_response.return_value = {"status": "mocked"}
-
-            response = service.get_strategies_with_response(limit=5)
-
-            assert response == {"status": "mocked"}
-            mock_api_response.assert_called_once()
-            _, kwargs = mock_api_response.call_args
-            assert kwargs["success"] is True
-            assert kwargs["data"]["total_count"] == 1
-            assert len(kwargs["data"]["strategies"]) == 1
-
     def test_get_strategies_exception(self, service):
         # リポジトリが例外を投げた場合
         service.generated_strategy_repo.get_filtered_and_sorted_strategies.side_effect = Exception(

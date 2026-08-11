@@ -47,7 +47,7 @@ class TestMultiTimeframeDataProvider:
 
         assert provider.base_timeframe == "1h"
         assert len(provider.base_df) == 168
-        assert "1h" in provider.cached_timeframes
+        assert "1h" in provider._cache
 
     def test_get_base_timeframe_data(self, sample_ohlcv_data: pd.DataFrame) -> None:
         """ベースタイムフレームのデータを取得できること"""
@@ -84,7 +84,7 @@ class TestMultiTimeframeDataProvider:
         assert len(data) == 42
 
         # キャッシュされていることを確認
-        assert "4h" in provider.cached_timeframes
+        assert "4h" in provider._cache
 
     def test_resample_to_1d(self, sample_ohlcv_data: pd.DataFrame) -> None:
         """1h -> 1d へのリサンプリングができること"""
@@ -152,13 +152,13 @@ class TestMultiTimeframeDataProvider:
 
         # 4h データを取得してキャッシュ
         provider.get_data("4h")
-        assert "4h" in provider.cached_timeframes
+        assert "4h" in provider._cache
 
         # キャッシュをクリア
         provider.clear_cache()
 
         # ベースタイムフレームだけが残る
-        assert provider.cached_timeframes == ["1h"]
+        assert list(provider._cache.keys()) == ["1h"]
 
     def test_caching_performance(self, sample_ohlcv_data: pd.DataFrame) -> None:
         """同じタイムフレームへの2回目のアクセスはキャッシュから取得"""

@@ -542,32 +542,6 @@ class TestStrategyValidationService:
         assert mock_execute.call_count == 2
         assert set(filtered["validation_results"].keys()) == {"best", "dup"}
 
-    def test_validate_strategy_public_api(self, mock_evaluator):
-        """公開 API validate_strategy が単一戦略を検証して判定を返す"""
-        config = GAConfig(
-            validation_config=ValidationConfig(
-                enabled=True,
-                min_pass_rate=0.6,
-            ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
-            objectives=["total_return"],
-        )
-        service = StrategyValidationService(mock_evaluator)
-
-        strategy = MagicMock()
-        strategy.id = "single"
-
-        with patch.object(
-            service._evaluation_strategy,
-            "execute_report",
-            return_value=_make_report(pass_rate=0.8, primary_fitness=0.7),
-        ):
-            validation = service.validate_strategy(strategy, config, {})
-
-        assert validation["passed"] is True
-        assert validation["pass_rate"] == 0.8
-        assert validation["mode"] == "walk_forward"
-
     def test_min_primary_fitness_maximize_direction(self, mock_evaluator):
         """最大化目的（total_return）では min_primary_fitness 未満は不合格になる"""
         config = GAConfig(

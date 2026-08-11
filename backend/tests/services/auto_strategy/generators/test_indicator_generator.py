@@ -90,7 +90,7 @@ class TestIndicatorGenerationBasic:
         indicators = generate_random_indicators(config)
 
         assert len(indicators) >= 2
-        # IndicatorCompositionServiceによって増える可能性があるため上限チェックは緩和
+        # 指標数の下限のみ検証（上限は生成ロジック依存のため）
         assert len(indicators) >= config.min_indicators
 
     def test_all_indicators_are_enabled(self) -> None:

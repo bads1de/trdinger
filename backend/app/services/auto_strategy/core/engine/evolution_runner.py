@@ -342,46 +342,6 @@ class EvolutionRunner:
 
         return offspring
 
-    def _get_crossover_cache_key(self, parent1: Any, parent2: Any) -> str:
-        """
-        交叉キャッシュキーを生成する
-
-        親個体のIDに基づいて交叉キャッシュキーを生成します。
-
-        Args:
-            parent1: 親個体1
-            parent2: 親個体2
-
-        Returns:
-            str: キャッシュキー（"id1:id2"形式）
-        """
-        try:
-            p1_id = getattr(parent1, "id", "") or str(id(parent1))
-            p2_id = getattr(parent2, "id", "") or str(id(parent2))
-            return f"{p1_id}:{p2_id}"
-        except Exception as e:
-            logger.debug("交叉キャッシュキー生成に失敗しました: %s", e)
-            return str(id(parent1)) + ":" + str(id(parent2))
-
-    def _get_mutation_cache_key(self, individual: Any) -> str:
-        """
-        突然変異キャッシュキーを生成する
-
-        個体のIDに基づいて突然変異キャッシュキーを生成します。
-
-        Args:
-            individual: 個体
-
-        Returns:
-            str: キャッシュキー（個体ID）
-        """
-        try:
-            ind_id = getattr(individual, "id", "") or str(id(individual))
-            return ind_id
-        except Exception as e:
-            logger.debug("突然変異キャッシュキー生成に失敗しました: %s", e)
-            return str(id(individual))
-
     def clear_caches(self) -> None:
         """
         バッチ互換のキャッシュ領域をクリアする

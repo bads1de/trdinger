@@ -45,26 +45,6 @@ class TestToolRegistry:
 
         assert registry.get("registry_test_tool") == tool
         assert tool in registry.get_all()
-        assert any(
-            definition.name == "registry_test_tool"
-            for definition in registry.get_definitions()
-        )
-
-    def test_get_definitions_returns_independent_copies(self):
-        registry = ToolRegistry()
-        tool = build_tool("registry_copy_tool")
-
-        registry.register(tool)
-
-        copied_definition = next(
-            definition
-            for definition in registry.get_definitions()
-            if definition.name == "registry_copy_tool"
-        )
-        copied_definition.default_params["tags"].append("x")
-
-        assert tool.definition.default_params["tags"] == []
-        assert tool.get_default_params()["tags"] == []
 
     def test_get_not_found(self):
         registry = ToolRegistry()

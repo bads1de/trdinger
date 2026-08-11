@@ -543,38 +543,6 @@ class IndividualEvaluator(EvaluationWindowService):
         """
         return self._data_provider.get_cached_minute_data(backtest_config)
 
-    def _get_cached_ohlcv_data(
-        self,
-        symbol: str,
-        timeframe: str,
-        start_date: object,
-        end_date: object,
-        cache_prefix: str = "ohlcv",
-    ) -> pd.DataFrame | None:
-        """
-        OHLCVデータをキャッシュから汎用的に取得
-
-        サブクラスからの利用を想定した
-        汎用的なデータ取得メソッドです。
-
-        Args:
-            symbol: 通貨ペア
-            timeframe: 時間軸
-            start_date: 開始日時
-            end_date: 終了日時
-            cache_prefix: キャッシュキーのプレフィックス
-
-        Returns:
-            OHLCVのDataFrame、またはデータが存在しない場合はNone
-        """
-        return self._data_provider.get_cached_ohlcv_data(
-            symbol=symbol,
-            timeframe=timeframe,
-            start_date=start_date,
-            end_date=end_date,
-            cache_prefix=cache_prefix,
-        )
-
     def _perform_single_evaluation(
         self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
     ) -> tuple[float, ...]:
@@ -754,38 +722,6 @@ class IndividualEvaluator(EvaluationWindowService):
     ) -> dict[str, Any]:
         """評価計算に必要な追加コンテキストを取得（サブクラスでオーバーライド）"""
         return {}
-
-    # --- EvaluationStrategy への委譲メソッド（バックワード互換性・テスト用） ---
-
-    def _execute_evaluation_logic(
-        self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
-    ) -> tuple[float, ...]:
-        """具体的な評価プロセスを振り分け（EvaluationStrategyに委譲）"""
-        return self._evaluation_strategy.execute(gene, base_backtest_config, config)
-
-    def _evaluate_with_oos(
-        self,
-        gene: Any,
-        base_backtest_config: dict[str, Any],
-        config: GAConfig,
-        oos_ratio: float,
-        oos_weight: float,
-    ) -> tuple[float, ...]:
-        """OOS検証を含む評価（EvaluationStrategyに委譲）"""
-        return self._evaluation_strategy._evaluate_with_oos_report(
-            gene, base_backtest_config, config, oos_ratio, oos_weight
-        ).aggregated_fitness
-
-    def _evaluate_with_walk_forward(
-        self,
-        gene: Any,
-        base_backtest_config: dict[str, Any],
-        config: GAConfig,
-    ) -> tuple[float, ...]:
-        """Walk-Forward Analysis による評価（EvaluationStrategyに委譲）"""
-        return self._evaluation_strategy._evaluate_with_walk_forward_report(
-            gene, base_backtest_config, config
-        ).aggregated_fitness
 
     # --- FitnessCalculator への委譲メソッド（バックワード互換性・サブクラス用） ---
 
