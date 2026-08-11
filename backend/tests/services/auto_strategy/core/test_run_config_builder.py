@@ -14,8 +14,6 @@ class TestRunConfigBuilder:
         gene.id = "gene-123456789"
 
         ga_config = SimpleNamespace(
-            volatility_gate_enabled=True,
-            volatility_model_path="/tmp/model.pkl",
             evaluation_config=SimpleNamespace(
                 early_termination_settings=EarlyTerminationSettings()
             ),
@@ -32,38 +30,6 @@ class TestRunConfigBuilder:
         assert result["_skip_validation"] is True
         assert result["strategy_name"] == "GA_Individual_gene-123"
         assert result["strategy_config"]["parameters"]["strategy_gene"] is gene
-        assert (
-            result["strategy_config"]["parameters"]["volatility_gate_enabled"] is True
-        )
-        assert (
-            result["strategy_config"]["parameters"]["volatility_model_path"]
-            == "/tmp/model.pkl"
-        )
-
-    def test_build_run_config_applies_volatility_gate(self):
-        builder = RunConfigBuilder()
-        gene = Mock()
-        gene.id = "gene-123456789"
-
-        ga_config = SimpleNamespace(
-            volatility_gate_enabled=True,
-            volatility_model_path="/tmp/vol-model.pkl",
-            evaluation_config=SimpleNamespace(
-                early_termination_settings=EarlyTerminationSettings()
-            ),
-        )
-
-        backtest_config = {
-            "symbol": "BTC/USDT:USDT",
-            "timeframe": "1h",
-        }
-
-        result = builder.build_run_config(gene, backtest_config, ga_config)
-
-        assert result is not None
-        params = result["strategy_config"]["parameters"]
-        assert params["volatility_gate_enabled"] is True
-        assert params["volatility_model_path"] == "/tmp/vol-model.pkl"
 
     def test_build_run_config_applies_defaults(self):
         builder = RunConfigBuilder()
@@ -71,8 +37,6 @@ class TestRunConfigBuilder:
         gene.id = "gene-123456789"
 
         ga_config = SimpleNamespace(
-            volatility_gate_enabled=False,
-            volatility_model_path=None,
             evaluation_config=SimpleNamespace(
                 early_termination_settings=EarlyTerminationSettings()
             ),
@@ -120,8 +84,6 @@ class TestRunConfigBuilder:
         gene.id = "gene-123456789"
 
         ga_config = SimpleNamespace(
-            volatility_gate_enabled=False,
-            volatility_model_path=None,
             evaluation_config=SimpleNamespace(
                 early_termination_settings=EarlyTerminationSettings()
             ),
@@ -147,10 +109,6 @@ class TestRunConfigBuilder:
         gene.id = "gene-early-stop"
 
         ga_config = SimpleNamespace(
-            volatility_gate_enabled=False,
-            volatility_model_path=None,
-            ml_filter_enabled=False,
-            ml_model_path=None,
             evaluation_config=SimpleNamespace(
                 early_termination_settings=EarlyTerminationSettings(
                     enabled=True,

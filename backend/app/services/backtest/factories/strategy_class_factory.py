@@ -97,6 +97,4 @@ class StrategyClassFactory:
                 return {}
         else:
             # 通常の戦略の場合、parametersを返す
-            return cast(
-                dict[str, Any], strategy_config.get("parameters", {})
-            )
+            return cast(dict[str, Any], strategy_config.get("parameters", {}))

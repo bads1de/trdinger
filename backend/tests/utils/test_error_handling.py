@@ -13,11 +13,9 @@ from fastapi import HTTPException
 from app.utils.error_handler import (
     DataError,
     ErrorHandler,
-    ModelError,
     TimeoutError,
     ValidationError,
     operation_context,
-    safe_ml_operation,
     safe_operation,
     timeout_decorator,
 )
@@ -176,24 +174,6 @@ class TestErrorHandler:
         with pytest.raises(TimeoutError):
             ErrorHandler.handle_timeout(test_func, 5)
 
-    def test_validate_predictions_valid(self):
-        """有効な予測値バリデーションテスト"""
-        predictions = {"up": 0.3, "down": 0.4, "range": 0.3}
-        result = ErrorHandler.validate_predictions(predictions)
-        assert result is True
-
-    def test_validate_predictions_invalid_nan(self):
-        """NaNを含む予測値バリデーションテスト"""
-        predictions = {"up": 0.3, "down": float("nan"), "range": 0.3}
-        result = ErrorHandler.validate_predictions(predictions)
-        assert result is False
-
-    def test_validate_predictions_invalid_inf(self):
-        """Infを含む予測値バリデーションテスト"""
-        predictions = {"up": 0.3, "down": float("inf"), "range": 0.3}
-        result = ErrorHandler.validate_predictions(predictions)
-        assert result is False
-
     def test_validate_dataframe_valid(self):
         """有効なデータフレームバリデーションテスト"""
         df = pd.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
@@ -264,16 +244,6 @@ class TestDecoratorsAndContexts:
         with pytest.raises(ValueError):
             test_func()
 
-    def test_safe_ml_operation_alias(self):
-        """safe_ml_operationエイリアステスト"""
-
-        @safe_ml_operation(default_return="default")
-        def test_func():
-            raise ValueError("test error")
-
-        result = test_func()
-        assert result == "default"
-
     def test_operation_context_success(self):
         """操作コンテキスト成功テスト"""
         with patch("app.utils.error_handler.logger") as mock_logger:
@@ -313,10 +283,4 @@ class TestCustomExceptions:
         """DataErrorテスト"""
         error = DataError("データエラー")
         assert str(error) == "データエラー"
-        assert isinstance(error, Exception)
-
-    def test_model_error(self):
-        """ModelErrorテスト"""
-        error = ModelError("モデルエラー")
-        assert str(error) == "モデルエラー"
         assert isinstance(error, Exception)

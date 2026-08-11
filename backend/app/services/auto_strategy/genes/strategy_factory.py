@@ -19,7 +19,9 @@ from .tool import ToolGene
 from .tpsl import TPSLGene
 
 
-def create_default_strategy_gene(strategy_gene_class: type[StrategyGene]) -> StrategyGene:
+def create_default_strategy_gene(
+    strategy_gene_class: type[StrategyGene],
+) -> StrategyGene:
     """デフォルトの StrategyGene を構築する。"""
     indicators = [IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)]
 

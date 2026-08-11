@@ -467,9 +467,7 @@ class RandomGeneGenerator:
             long_exit_conditions=long_exit_conditions,
             short_exit_conditions=short_exit_conditions,
             tool_genes=tool_genes,
-            risk_management=cast(
-                dict[str, SerializableValue], risk_management
-            ),
+            risk_management=cast(dict[str, SerializableValue], risk_management),
             metadata={"generated_by": "RandomGeneGenerator"},
         )
 

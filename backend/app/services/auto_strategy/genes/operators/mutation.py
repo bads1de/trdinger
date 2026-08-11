@@ -146,7 +146,9 @@ def _iter_mutable_sub_gene_specs(
     return specs
 
 
-def mutate_indicators(mutated: StrategyGene, mutation_rate: float, config: GAConfig) -> None:
+def mutate_indicators(
+    mutated: StrategyGene, mutation_rate: float, config: GAConfig
+) -> None:
     """指標遺伝子の突然変異処理。"""
     min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
@@ -245,7 +247,9 @@ def mutate_indicators(mutated: StrategyGene, mutation_rate: float, config: GACon
             mutated.indicators.pop(random.randint(0, len(mutated.indicators) - 1))
 
 
-def mutate_conditions(mutated: StrategyGene, mutation_rate: float, config: GAConfig) -> None:
+def mutate_conditions(
+    mutated: StrategyGene, mutation_rate: float, config: GAConfig
+) -> None:
     """条件の突然変異処理。"""
 
     def mutate_item(condition: Condition | ConditionGroup) -> None:

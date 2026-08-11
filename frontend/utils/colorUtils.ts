@@ -118,29 +118,6 @@ export const getBarColor = (index: number, total: number) => {
   return `hsl(${hue}, 70%, ${50 + intensity * 20}%)`;
 };
 
-/**
- * MLトレーニングステータスに基づいて色を決定する関数
- * @param status トレーニングステータス
- * @returns Tailwind CSSのカラークラス
- */
-export const getStatusColor = (status: string) => {
-  switch (status) {
-    case "completed":
-      return "text-green-600";
-
-    case "error":
-      return "text-red-600";
-
-    case "training":
-    case "loading_data":
-    case "initializing":
-      return "text-blue-600";
-
-    default:
-      return "text-gray-600";
-  }
-};
-
 export const getSemanticColor = <T extends string = "green" | "red" | "gray">(
   value: number | null | undefined,
   options: {

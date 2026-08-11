@@ -1,7 +1,6 @@
 """
 統一エラーハンドリング
 
-APIErrorHandler と MLErrorHandler の重複機能を統合し、
 一貫性のあるエラー処理とログ出力を提供します。
 """
 
@@ -9,7 +8,6 @@ import concurrent.futures
 import functools
 import inspect
 import logging
-import math
 import platform
 import signal
 import time
@@ -49,19 +47,10 @@ class DataError(Exception):
     """
 
 
-class ModelError(Exception):
-    """統一モデルエラー
-
-    機械学習モデルのトレーニング、保存、読み込み、推論中に
-    問題が発生した場合に送出されます。
-    """
-
-
 class ErrorHandler:
     """統一エラーハンドリングクラス
 
-    API と ML 両方のコンテキストに対応した統一エラーハンドリング機能を提供します。
-    APIErrorHandler と MLErrorHandler の重複機能を統合しています。
+    アプリケーション全体のエラーハンドリング機能を提供します。
 
     主な機能:
     - 統一エラーレスポンスの生成
@@ -132,14 +121,14 @@ class ErrorHandler:
             ),
         )
 
-    # --- ML エラーハンドリング ---
+    # --- モデルエラーハンドリング ---
 
     @staticmethod
     def handle_model_error(
         error: Exception, context: str, operation: str = "unknown"
     ) -> dict[str, Any]:
-        """モデルエラーの統一処理"""
-        logger.error(f"モデルエラー in {context} during {operation}: {error}")
+        """汎用エラーの統一処理（データ収集などのフォールバック処理用）"""
+        logger.error(f"処理エラー in {context} during {operation}: {error}")
         return ErrorHandler.create_error_response(
             message=str(error),
             error_code="MODEL_ERROR",
@@ -190,8 +179,8 @@ class ErrorHandler:
                 )
                 raise e
             else:
-                # MLコンテキストでHTTPExceptionが発生した場合の処理
-                logger.error(f"ML処理中にAPI例外が発生: {e.detail}")
+                # 非APIコンテキストでHTTPExceptionが発生した場合の処理
+                logger.error(f"処理中にAPI例外が発生: {e.detail}")
                 return default_return  # type: ignore[return-value]
         except Exception as e:
             if is_api_call:
@@ -203,7 +192,7 @@ class ErrorHandler:
                     error_code=api_error_code,
                 )
             else:
-                # ML関連のエラーとして処理
+                # 一般エラーとして処理
                 log_func = getattr(logger, log_level, logger.error)
                 log_func(f"{error_message}: {e}")
                 return default_return  # type: ignore[return-value]
@@ -339,53 +328,6 @@ class ErrorHandler:
             finally:
                 signal.alarm(0)  # type: ignore[attr-defined]
                 signal.signal(signal.SIGALRM, old_handler)  # type: ignore[attr-defined]
-
-    @staticmethod
-    def validate_predictions(predictions: Any) -> bool:
-        """
-        ML予測値をバリデーションする
-
-        Args:
-            predictions: 予測値（辞書形式、"up", "down", "range" キーが必要）
-
-        Returns:
-            バリデーション結果（True/False）
-        """
-        if predictions is None:
-            logger.warning("予測値がNoneです")
-            return False
-
-        if not isinstance(predictions, dict):
-            logger.warning(f"予測値は辞書形式である必要があります: {type(predictions)}")
-            return False
-
-        required_keys = {"up", "down", "range"}
-        if not required_keys.issubset(predictions.keys()):
-            missing = required_keys - set(predictions.keys())
-            logger.warning(f"予測値に必須キーが不足しています: {missing}")
-            return False
-
-        for key, value in predictions.items():
-            if value is None:
-                logger.warning(f"予測値 '{key}' がNoneです")
-                return False
-            if isinstance(value, float):
-                if math.isnan(value):
-                    logger.warning(f"予測値 '{key}' にNaNが含まれています")
-                    return False
-                if math.isinf(value):
-                    logger.warning(f"予測値 '{key}' にInfが含まれています")
-                    return False
-                if value < 0.0 or value > 1.0:
-                    logger.warning(f"予測値 '{key}' が範囲外です: {value}")
-                    return False
-
-        total = sum(predictions[k] for k in required_keys)
-        if total < 0.8 or total > 1.2:
-            logger.warning(f"予測値の合計が範囲外です: {total}")
-            return False
-
-        return True
 
     @staticmethod
     def validate_dataframe(
@@ -553,8 +495,6 @@ def get_memory_usage_mb() -> float:
 # 標準的なエイリアス
 safe_execute = ErrorHandler.safe_execute
 api_safe_execute = ErrorHandler.api_safe_execute
-safe_ml_operation = safe_operation
-ml_operation_context = operation_context
 
 # API用 DB初期化確認ヘルパー
 DEFAULT_DB_INIT_ERROR_MESSAGE = "データベースの初期化に失敗しました"

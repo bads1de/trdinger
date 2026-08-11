@@ -340,9 +340,7 @@ class TestConfigValidator:
         ga_config.iterative_improvement_config.min_fitness = "invalid"
         is_valid, errors = ConfigValidator.validate(ga_config)
         assert is_valid is False
-        assert any(
-            "iterative_improvement_config.min_fitness" in e for e in errors
-        )
+        assert any("iterative_improvement_config.min_fitness" in e for e in errors)
 
     def test_validate_robustness_window_supports_z_suffix(self):
         errors = ConfigValidator._validate_robustness_window(

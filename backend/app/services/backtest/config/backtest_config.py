@@ -22,7 +22,7 @@ from app.services.backtest.shared import (
     normalize_datetimes_for_comparison,
     parse_datetime_value,
 )
-from app.types import DatetimeLike, MLModelProtocol
+from app.types import DatetimeLike
 
 VALID_TIMEFRAMES = SUPPORTED_TIMEFRAMES
 
@@ -39,9 +39,6 @@ class GeneratedGAParameters(BaseModel):
     """GA生成戦略のパラメータ"""
 
     strategy_gene: dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
-    volatility_gate_enabled: bool = False
-    volatility_model_path: str | None = None
-    ml_predictor: MLModelProtocol | None = None  # MLモデルインスタンス
     evaluation_start: Any | None = None
     minute_data: Any | None = None  # DataFrameなどはPydanticで検証しにくいためAny
     enable_early_termination: bool = False

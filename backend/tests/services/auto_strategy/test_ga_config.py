@@ -222,23 +222,6 @@ class TestGAConfig:
                     "wfa_train_ratio": 0.8,
                     "wfa_anchored": True,
                 },
-                "hybrid_config": {
-                    "mode": True,
-                    "model_type": "xgboost",
-                    "model_types": ["xgboost", "lightgbm"],
-                    "volatility_gate_enabled": True,
-                    "volatility_model_path": "vol.pkl",
-                    "ml_filter_enabled": True,
-                    "ml_model_path": "ml.pkl",
-                    "preprocess_features": False,
-                },
-                "tuning_config": {
-                    "enabled": False,
-                    "n_trials": 11,
-                    "elite_count": 2,
-                    "use_wfa": False,
-                    "include_thresholds": True,
-                },
             }
         )
 
@@ -276,38 +259,27 @@ class TestGAConfig:
         assert restored.evaluation_config.wfa_train_ratio == 0.8
         assert restored.evaluation_config.wfa_anchored is True
 
-        assert restored.hybrid_config.mode is True
-        assert restored.hybrid_config.model_type == "xgboost"
-        assert restored.hybrid_config.model_types == ["xgboost", "lightgbm"]
-        assert restored.hybrid_config.volatility_gate_enabled is True
-        assert restored.hybrid_config.volatility_model_path == "vol.pkl"
-        assert restored.hybrid_config.ml_filter_enabled is True
-        assert restored.hybrid_config.ml_model_path == "ml.pkl"
-        assert restored.hybrid_config.preprocess_features is False
-
-        assert restored.tuning_config.enabled is False
-        assert restored.tuning_config.n_trials == 11
-        assert restored.tuning_config.elite_count == 2
-        assert restored.tuning_config.use_wfa is False
-        assert restored.tuning_config.include_thresholds is True
-
-    def test_from_dict_ignores_legacy_tuning_flags(self):
-        """削除済みの tuning flags は警告付きで無視されることを確認"""
-        restored = GAConfig.from_dict(
-            {
-                "tuning_config": {
-                    "n_trials": 9,
-                    "use_wfa": False,
-                    "include_indicators": False,
-                    "include_tpsl": False,
-                    "include_thresholds": True,
+    def test_from_dict_rejects_legacy_tuning_config(self):
+        """削除済みの tuning_config / hybrid_config は拒否されることを確認"""
+        with pytest.raises(ValueError, match="未対応の設定キー"):
+            GAConfig.from_dict(
+                {
+                    "tuning_config": {
+                        "n_trials": 9,
+                        "use_wfa": False,
+                    }
                 }
-            }
-        )
+            )
 
-        assert restored.tuning_config.n_trials == 9
-        assert restored.tuning_config.use_wfa is False
-        assert restored.tuning_config.include_thresholds is True
+        with pytest.raises(ValueError, match="未対応の設定キー"):
+            GAConfig.from_dict(
+                {
+                    "hybrid_config": {
+                        "mode": True,
+                        "model_type": "xgboost",
+                    }
+                }
+            )
 
     def test_from_dict_rejects_legacy_flat_payload(self):
         """旧フラット形式の GA 設定は受け付けないことを確認"""

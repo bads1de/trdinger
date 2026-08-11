@@ -15,7 +15,7 @@ class TestConfigInitExports:
     def test_constants_exported(self):
         """共通定数がエクスポートされている"""
         assert hasattr(config_package, "SUPPORTED_TIMEFRAMES")
-        assert hasattr(config_package, "DEFAULT_ENSEMBLE_ALGORITHMS")
+        assert hasattr(config_package, "DEFAULT_ENSEMBLE_ALGORITHMS") is False
         assert hasattr(config_package, "DEFAULT_MARKET_EXCHANGE")
         assert hasattr(config_package, "DEFAULT_MARKET_SYMBOL")
         assert hasattr(config_package, "DEFAULT_MARKET_TIMEFRAME")
@@ -128,7 +128,6 @@ class TestConfigInitAll:
         """__all__に期待されるアイテムが含まれる"""
         expected_items = [
             "SUPPORTED_TIMEFRAMES",
-            "DEFAULT_ENSEMBLE_ALGORITHMS",
             "DEFAULT_MARKET_EXCHANGE",
             "DEFAULT_MARKET_SYMBOL",
             "DEFAULT_MARKET_TIMEFRAME",

@@ -134,9 +134,7 @@ class EntryGene:
             entry_type=entry_type,
             limit_offset_pct=cast(float, data.get("limit_offset_pct", 0.005)),
             stop_offset_pct=cast(float, data.get("stop_offset_pct", 0.005)),
-            order_validity_bars=cast(
-                int, data.get("order_validity_bars", 5)
-            ),
+            order_validity_bars=cast(int, data.get("order_validity_bars", 5)),
             enabled=cast(bool, data.get("enabled", True)),
             priority=cast(float, data.get("priority", 1.0)),
         )

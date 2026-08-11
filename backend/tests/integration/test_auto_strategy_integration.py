@@ -279,51 +279,6 @@ class TestAutoStrategyE2E:
         assert "momentum" in sample_strategy.metadata["tags"]
 
 
-class TestHybridMode:
-    """GA+MLハイブリッドモードのテスト"""
-
-    @pytest.fixture
-    def mock_ml_model(self) -> Mock:
-        """モックMLモデル
-
-        Returns:
-            予測結果を返すモック
-        """
-        model = Mock()
-        model.predict.return_value = np.array([0.7, 0.2, 0.1])
-        model.is_trained = True
-        return model
-
-    @pytest.fixture
-    def mock_feature_adapter(self) -> Mock:
-        """モック特徴量アダプタ
-
-        Returns:
-            特徴量を返すモック
-        """
-        adapter = Mock()
-        adapter.adapt_features.return_value = pd.DataFrame(
-            {"feature1": [1.0, 2.0, 3.0], "feature2": [4.0, 5.0, 6.0]}
-        )
-        return adapter
-
-    def test_ga_with_ml_prediction(
-        self, mock_ml_model: Mock, mock_feature_adapter: Mock
-    ) -> None:
-        """正常系: MLモデルを使用したGA最適化
-
-        Args:
-            mock_ml_model: モックMLモデル
-            mock_feature_adapter: モック特徴量アダプタ
-        """
-        # ML予測の取得
-        predictions = mock_ml_model.predict(np.array([[1.0, 2.0]]))
-
-        assert predictions is not None
-        assert len(predictions) == 3  # 上昇、下降、レンジの確率
-        assert np.sum(predictions) <= 1.01  # 合計が1に近い
-
-
 class TestExperimentManagement:
     """実験管理の統合テスト"""
 

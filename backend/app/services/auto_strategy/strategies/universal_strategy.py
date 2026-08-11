@@ -13,7 +13,6 @@ import pandas as pd
 from backtesting import Strategy
 
 from ..config.ga.nested_configs import EarlyTerminationSettings
-from ..config.helpers import normalize_ml_gate_fields
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import ExitGene, IndicatorGene, TPSLGene
 from ..genes.conditions import StateTracker
@@ -30,7 +29,6 @@ from .early_termination import (
 from .entry_decision_engine import EntryDecisionEngine
 from .execution_cycle import StrategyExecutionCycle
 from .exit_decision_engine import ExitDecisionEngine
-from .ml_filter import MLFilter
 from .order_manager import OrderManager
 from .position_manager import PositionManager
 from .runtime_state import StrategyRuntimeState
@@ -55,9 +53,6 @@ class UniversalStrategy(Strategy):
     minute_data = None
     timeframe = "1h"
     evaluation_start = None
-    ml_predictor = None  # MLフィルター用予測器
-    volatility_gate_enabled = False
-    volatility_model_path = None
     early_termination_settings = None
 
     # backtesting.py のパラメータ要件を満たすためのクラス変数
@@ -149,7 +144,6 @@ class UniversalStrategy(Strategy):
         self.position_manager = PositionManager(self)
         self.stateful_conditions_evaluator = StatefulConditionsEvaluator(self)
         self.early_termination_controller = StrategyEarlyTerminationController(self)
-        self.ml_filter = MLFilter(self)
         self.entry_decision_engine = EntryDecisionEngine(self)
         self.exit_decision_engine = ExitDecisionEngine(self)
         self.strategy_initializer = StrategyInitializer(self)
@@ -218,13 +212,6 @@ class UniversalStrategy(Strategy):
         )
 
         self.indicators: dict[str, Any] = {}
-
-        # === ML フィルター設定 ===
-        # HybridPredictor インスタンス（オプション）
-        self.ml_predictor = params.get("ml_predictor")
-        ml_gate_fields = normalize_ml_gate_fields(params)
-        self.volatility_gate_enabled = bool(ml_gate_fields["volatility_gate_enabled"])
-        self.volatility_model_path = ml_gate_fields["volatility_model_path"]
 
         # ベクトル化評価結果のキャッシュ
         self._precomputed_signals: dict[float, Any] = {}
@@ -355,7 +342,7 @@ class UniversalStrategy(Strategy):
         1. `StrategyGene` に定義されたテクニカル指標の計算とキャッシュ。
         2. エントリー条件、決済条件、およびステートフルトリガーのセットアップ。
         3. ポジション管理（利確・損切り）および注文管理コンポーネントの初期化。
-        4. MLフィルター（存在する場合）のモデル読み込みと特徴量パイプラインの準備。
+        4. ボラティリティゲート等の最終チェック準備。
 
         Note:
             `backtesting.py` では `init()` 内で全てのインジケータ（`I()`関数を使用）を
@@ -400,7 +387,7 @@ class UniversalStrategy(Strategy):
         2. 保有中ポジションの状態確認とトレールストップ等の更新。
         3. 決済条件（Exit Conditions）の評価と、合致する場合の成行決済。
         4. 新規エントリー条件（Entry Conditions）の評価。
-        5. エントリー許可時、MLフィルターやボラティリティゲートによる最終チェック。
+        5. エントリー許可時、ボラティリティゲートによる最終チェック。
         6. 全てのフィルターを通過した場合、適切なロットサイズでの注文執行。
         7. 早期終了条件（Early Termination）のチェック。
 
@@ -423,28 +410,7 @@ class UniversalStrategy(Strategy):
             # エラー発生時は安全な状態にリセットし、次のバーで継続できるようにする
             self.position_manager.reset_position_state()
 
-    # ===== ML フィルターメソッド =====
-
-    def _ml_allows_entry(self, direction: float) -> bool:
-        """
-        MLフィルターがエントリーを許可するかチェック
-
-        Args:
-            direction: 1.0 (Long) or -1.0 (Short)
-
-        Returns:
-            True: エントリー許可, False: エントリーブロック
-        """
-        return self.ml_filter.ml_allows_entry(direction)
-
-    def _prepare_current_features(self) -> pd.DataFrame | None:
-        """
-        MLフィルター用の現在の特徴量を準備
-
-        Returns:
-            特徴量DataFrame、準備できない場合はNone
-        """
-        return self.ml_filter.prepare_current_features()
+    # ===== ステートフルトリガー =====
 
     def _process_stateful_triggers(self) -> None:
         """ステートフルトリガーを処理"""

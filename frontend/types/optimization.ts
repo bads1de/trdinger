@@ -87,17 +87,6 @@ export interface GAIterativeImprovementConfig {
   validation_passed_only?: boolean;
 }
 
-export interface GAHybridConfig {
-  mode?: boolean;
-  model_type?: string;
-  model_types?: string[];
-  volatility_gate_enabled?: boolean;
-  volatility_model_path?: string;
-  ml_filter_enabled?: boolean;
-  ml_model_path?: string;
-  preprocess_features?: boolean;
-}
-
 export interface GAConfig {
   /** 実験名（UI表示/識別用） */
   experiment_name: string;
@@ -201,10 +190,6 @@ export interface GAConfig {
     // パラメータ範囲プリセット
     /** パラメータ範囲プリセット名 */
     parameter_range_preset?: string;
-
-    // ハイブリッドGA+ML設定
-    /** ハイブリッド設定 */
-    hybrid_config?: GAHybridConfig;
   };
 }
 

@@ -534,9 +534,7 @@ class TestIndicatorCalculation:
         )
 
         prices = pd.Series([100.0 + i + np.random.randn() * 2 for i in range(50)])
-        macd_line, _, _ = MomentumIndicators.macd(
-            prices, fast=12, slow=26, signal=9
-        )
+        macd_line, _, _ = MomentumIndicators.macd(prices, fast=12, slow=26, signal=9)
 
         # MACDラインがEMA12-EMA26と一致するか
         ema12 = OverlapIndicators.ema(prices, length=12)

@@ -296,9 +296,7 @@ class StrategyValidationService:
         passing_pareto: list[Any] = []
         for solution in result.get("pareto_front", []):
             strategy = (
-                solution.get("strategy")
-                if isinstance(solution, Mapping)
-                else solution
+                solution.get("strategy") if isinstance(solution, Mapping) else solution
             )
             key = self._get_strategy_key(strategy)
             validation = validation_results.get(key)
@@ -317,8 +315,10 @@ class StrategyValidationService:
             validation_results.get(best_key) if best_key is not None else None
         )
 
-        if best_strategy is not None and best_validation is not None and best_validation.get(
-            "passed", False
+        if (
+            best_strategy is not None
+            and best_validation is not None
+            and best_validation.get("passed", False)
         ):
             filtered["best_strategy"] = best_strategy
         elif passing_all:
@@ -334,9 +334,7 @@ class StrategyValidationService:
             summaries = result.get("evaluation_summaries", {})
             # スタール値回避: 見つからない場合は明示的に None にする
             filtered["best_evaluation_summary"] = summaries.get(promoted_key)
-            logger.info(
-                "最良戦略が不合格のため、合格した上位候補を昇格させました"
-            )
+            logger.info("最良戦略が不合格のため、合格した上位候補を昇格させました")
         elif passing_pareto:
             # all_strategies が空でも、合格したパレート戦略があれば昇格
             promoted = (
@@ -349,9 +347,7 @@ class StrategyValidationService:
             filtered["best_fitness"] = None
             summaries = result.get("evaluation_summaries", {})
             filtered["best_evaluation_summary"] = summaries.get(promoted_key)
-            logger.info(
-                "合格したパレート戦略を最良戦略として昇格させました"
-            )
+            logger.info("合格したパレート戦略を最良戦略として昇格させました")
         else:
             filtered["best_strategy"] = None
             filtered["best_fitness"] = None

@@ -114,7 +114,9 @@ class StrategyGeneDictCodec:
             logger.error(f"戦略遺伝子辞書変換エラー: {e}")
             raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
 
-    def dict_to_strategy_gene(self, data: dict[str, Any], strategy_gene_class: type) -> Any:
+    def dict_to_strategy_gene(
+        self, data: dict[str, Any], strategy_gene_class: type
+    ) -> Any:
         """辞書形式のデータから戦略遺伝子オブジェクトを復元。"""
         try:
             if isinstance(data, strategy_gene_class):

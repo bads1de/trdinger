@@ -86,10 +86,10 @@ def create_service_factory(
     遅延インポートとエラーハンドリングを自動的に行います。
 
     使用例:
-        get_ml_training_service = create_service_factory(
-            "app.services.ml.orchestration.ml_training_orchestration_service",
-            "MLTrainingService",
-            "MLTrainingService"
+        get_backtest_orchestration_service = create_service_factory(
+            "app.services.backtest.orchestration.backtest_orchestration_service",
+            "BacktestOrchestrationService",
+            "BacktestOrchestrationService"
         )
 
     Args:
@@ -238,12 +238,6 @@ get_open_interest_orchestration_service = create_service_factory_with_deps(
     dep_factory=get_bybit_open_interest_service,
 )
 
-get_ml_training_service = create_service_factory(
-    ("app.services.ml.orchestration.ml_training_orchestration_service"),
-    "MLTrainingService",
-    "MLTrainingService",
-)
-
 get_backtest_orchestration_service = create_service_factory(
     ("app.services.backtest.orchestration.backtest_orchestration_service"),
     "BacktestOrchestrationService",
@@ -255,12 +249,6 @@ get_funding_rate_orchestration_service = create_service_factory_with_deps(
     "FundingRateOrchestrationService",
     "FundingRateOrchestrationService",
     dep_factory=get_bybit_funding_rate_service,
-)
-
-get_ml_management_orchestration_service = create_service_factory(
-    "app.services.ml.orchestration.ml_management_orchestration_service",
-    "MLManagementOrchestrationService",
-    "MLManagementOrchestrationService",
 )
 
 

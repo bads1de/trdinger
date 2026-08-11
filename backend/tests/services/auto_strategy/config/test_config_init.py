@@ -34,13 +34,13 @@ class TestAutoStrategyConfigInitExports:
         """EvaluationConfigがエクスポートされている"""
         assert hasattr(config_package, "EvaluationConfig")
 
-    def test_hybrid_config_exported(self):
-        """HybridConfigがエクスポートされている"""
-        assert hasattr(config_package, "HybridConfig")
+    def test_hybrid_config_not_exported(self):
+        """HybridConfigは削除済みで公開しない"""
+        assert hasattr(config_package, "HybridConfig") is False
 
-    def test_tuning_config_exported(self):
-        """TuningConfigがエクスポートされている"""
-        assert hasattr(config_package, "TuningConfig")
+    def test_tuning_config_not_exported(self):
+        """TuningConfigは削除済みで公開しない"""
+        assert hasattr(config_package, "TuningConfig") is False
 
     def test_two_stage_selection_config_exported(self):
         """TwoStageSelectionConfigがエクスポートされている"""
@@ -107,8 +107,6 @@ class TestAutoStrategyConfigInitExports:
             "EarlyTerminationSettings",
             "MutationConfig",
             "EvaluationConfig",
-            "HybridConfig",
-            "TuningConfig",
             "TwoStageSelectionConfig",
             "RobustnessConfig",
         ]
@@ -140,7 +138,6 @@ class TestAutoStrategyConfigInitExports:
 
         assert nested_configs.MutationConfig is config_package.MutationConfig
         assert nested_configs.EvaluationConfig is config_package.EvaluationConfig
-        assert nested_configs.HybridConfig is config_package.HybridConfig
         assert (
             nested_configs.TwoStageSelectionConfig
             is config_package.TwoStageSelectionConfig

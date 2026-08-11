@@ -173,9 +173,7 @@ class StrategyGene:
     def clone_field_names(cls) -> tuple[str, ...]:
         """clone 対象となるフィールド名を返す。"""
         return tuple(
-            field_info.name
-            for field_info in fields(cls)
-            if field_info.name != "id"
+            field_info.name for field_info in fields(cls) if field_info.name != "id"
         )
 
     @classmethod

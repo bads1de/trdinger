@@ -26,7 +26,6 @@ from app.services.auto_strategy.config.constants import (
 )
 from app.services.auto_strategy.config.ga import GAConfig as GAConfigRuntime
 from app.services.backtest.config import BacktestConfig
-from app.services.ml.common.ml_config import MLConfig, MLPredictionConfig
 
 
 class TestUnifiedConfig:
@@ -217,58 +216,6 @@ class TestAutoStrategyDefaults:
         assert GA_FALLBACK_END_DATE == "2024-04-09"
 
 
-class TestMLConfig:
-    """MLConfigクラスのテスト"""
-
-    def test_initialization_with_defaults(self):
-        """デフォルト値での初期化テスト"""
-        config = MLConfig()
-        assert config.data_processing is not None
-        assert config.model is not None
-        assert config.prediction is not None
-        assert config.training is not None
-
-    def test_data_processing_config(self):
-        """データ処理設定のテスト"""
-        config = MLConfig()
-        print(
-            f"DEBUG: config.data_processing.max_ohlcv_rows = {config.data_processing.max_ohlcv_rows}"
-        )
-        assert config.data_processing.max_ohlcv_rows == 1000000
-        assert config.data_processing.feature_calculation_timeout == 3600
-
-    def test_model_config(self):
-        """モデル設定のテスト"""
-        config = MLConfig()
-        assert config.model.model_save_path == "models/"
-        assert config.model.model_file_extension == ".pkl"
-        assert config.model.max_model_versions == 10
-
-    def test_prediction_config(self):
-        """予測設定のテスト"""
-        config = MLConfig()
-        assert config.prediction.default_forecast_log_rv == 0.0
-        assert config.prediction.fallback_forecast_log_rv == 0.0
-
-    def test_prediction_methods(self):
-        """予測設定のメソッドテスト"""
-        config = MLConfig()
-        default_preds = config.prediction.get_default_predictions()
-        assert default_preds["forecast_log_rv"] == 0.0
-        assert default_preds["gate_open"] is True
-
-        fallback_preds = config.prediction.get_fallback_predictions()
-        assert fallback_preds["forecast_log_rv"] == 0.0
-        assert fallback_preds["gate_open"] is True
-
-    def test_training_config(self):
-        """学習設定のテスト"""
-        config = MLConfig()
-        assert config.training.lgb_n_estimators == 100
-        assert config.training.xgb_learning_rate == 0.1
-        assert config.training.cv_folds == 5
-
-
 class TestConfigIntegration:
     """設定クラス間の統合テスト"""
 
@@ -296,7 +243,6 @@ class TestConfigIntegration:
         assert config.market.default_exchange == "bybit"
         assert BacktestConfig().default_initial_capital > 0
         assert DEFAULT_STRATEGIES_LIMIT <= MAX_STRATEGIES_LIMIT
-        assert MLConfig().training is not None
 
 
 class TestConfigValidation:
@@ -333,12 +279,6 @@ class TestConfigValidation:
             config = DatabaseConfig()
             url = config.url_complete
             assert "testuser:@localhost" in url
-
-    def test_ml_prediction_probability_range(self):
-        """ML予測確率の範囲テスト"""
-        config = MLPredictionConfig()
-        assert isinstance(config.default_gate_open, bool)
-        assert isinstance(config.fallback_gate_open, bool)
 
 
 class TestEnvironmentVariableSupport:

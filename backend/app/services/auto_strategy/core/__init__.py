@@ -19,12 +19,6 @@ if TYPE_CHECKING:
     from .evaluation.parallel_evaluator import ParallelEvaluator
     from .fitness.fitness_calculator import FitnessCalculator
     from .fitness.fitness_sharing import FitnessSharing
-    from .hybrid.hybrid_feature_adapter import (
-        HybridFeatureAdapter,
-        WaveletFeatureTransformer,
-    )
-    from .hybrid.hybrid_individual_evaluator import HybridIndividualEvaluator
-    from .hybrid.hybrid_predictor import HybridPredictor
     from .strategy.operand_grouping import (
         OperandGroup,
         OperandGroupingSystem,
@@ -45,10 +39,6 @@ _ATTRIBUTE_EXPORTS = {
     "ParallelEvaluator": ".evaluation.parallel_evaluator",
     "FitnessCalculator": ".fitness.fitness_calculator",
     "FitnessSharing": ".fitness.fitness_sharing",
-    "HybridFeatureAdapter": ".hybrid.hybrid_feature_adapter",
-    "WaveletFeatureTransformer": ".hybrid.hybrid_feature_adapter",
-    "HybridIndividualEvaluator": ".hybrid.hybrid_individual_evaluator",
-    "HybridPredictor": ".hybrid.hybrid_predictor",
     "OperandGroup": ".strategy.operand_grouping",
     "OperandGroupingSystem": ".strategy.operand_grouping",
     "operand_grouping_system": ".strategy.operand_grouping",
@@ -71,11 +61,6 @@ __all__ = [
     # Fitness
     "FitnessCalculator",
     "FitnessSharing",
-    # Hybrid
-    "HybridFeatureAdapter",
-    "HybridIndividualEvaluator",
-    "HybridPredictor",
-    "WaveletFeatureTransformer",
     # Strategy
     "OperandGroup",
     "OperandGroupingSystem",

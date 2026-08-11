@@ -554,7 +554,7 @@ class IndividualEvaluator(EvaluationWindowService):
         """
         OHLCVデータをキャッシュから汎用的に取得
 
-        HybridIndividualEvaluatorなどサブクラスからの利用を想定した
+        サブクラスからの利用を想定した
         汎用的なデータ取得メソッドです。
 
         Args:
@@ -661,7 +661,7 @@ class IndividualEvaluator(EvaluationWindowService):
                     backtest_config.get("end_date"),
                 )
 
-            # 4. 追加のコンテキスト情報（ML予測シグナルなど）を取得
+            # 4. 追加のコンテキスト情報を取得
             evaluation_context = self._get_evaluation_context(
                 gene,
                 fidelity_backtest_config,

@@ -513,5 +513,3 @@ class TrendIndicators:
                 lambda: ta.short_run(fast=fast, slow=slow, length=length),
             ),
         )
-
-

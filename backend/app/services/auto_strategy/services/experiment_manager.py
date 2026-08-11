@@ -118,9 +118,7 @@ class ExperimentManager:
                     )
                     validation_results = result.get("validation_results", {})
                     passed_count = sum(
-                        1
-                        for v in validation_results.values()
-                        if v.get("passed", False)
+                        1 for v in validation_results.values() if v.get("passed", False)
                     )
                     logger.info(
                         f"自動検証結果: 検証 {len(validation_results)} 件 / "
@@ -226,7 +224,9 @@ class ExperimentManager:
             seed_strategy_provider = PreviousStrategySeedProvider(
                 self.persistence_service.db_session_factory
             )
-            logger.info("反復改善ループを有効化: 過去の合格戦略をシードとして再利用します")
+            logger.info(
+                "反復改善ループを有効化: 過去の合格戦略をシードとして再利用します"
+            )
 
         engine = GeneticAlgorithmEngineFactory.create_engine(
             self.backtest_service,

@@ -8,7 +8,7 @@ Auto Strategy Config モジュール
 - constants/: 共通定数・Enum・GA固有定数を統合
 - ga/: GAConfig ランタイム設定（dataclass）、GAPresetsプリセット、ConfigValidatorバリデーション
 - ga/nested_configs.py: GAConfig ネスト設定（MutationConfig, EvaluationConfig 等）
-- helpers/: 設定ヘルパー関数（ML filter/volatility gate、robustness regime window）
+- helpers/: 設定ヘルパー関数（volatility gate、robustness regime window）
 - indicator_universe.py: インジケーターユニバース定義と正規化
 - objective_registry.py: 目的関数メタデータレジストリ
 """
@@ -21,23 +21,18 @@ from typing import TYPE_CHECKING
 from .ga import (
     EarlyTerminationSettings,
     EvaluationConfig,
-    HybridConfig,
     IterativeImprovementConfig,
     MutationConfig,
     RobustnessConfig,
-    TuningConfig,
     TwoStageSelectionConfig,
     ValidationConfig,
 )
 
 # ヘルパー関数（軽量、依存なし）
 from .helpers import (
-    MLGateSettings,
     RobustnessRegimeWindow,
-    normalize_ml_gate_fields,
     normalize_robustness_regime_window,
     normalize_robustness_regime_windows,
-    resolve_ml_gate_settings,
     validate_robustness_regime_window,
 )
 
@@ -73,16 +68,11 @@ __all__ = [
     "EarlyTerminationSettings",
     "MutationConfig",
     "EvaluationConfig",
-    "HybridConfig",
-    "TuningConfig",
     "TwoStageSelectionConfig",
     "RobustnessConfig",
     "IterativeImprovementConfig",
     "ValidationConfig",
-    "MLGateSettings",
     "RobustnessRegimeWindow",
-    "resolve_ml_gate_settings",
-    "normalize_ml_gate_fields",
     "normalize_robustness_regime_window",
     "normalize_robustness_regime_windows",
     "validate_robustness_regime_window",

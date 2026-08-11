@@ -7,15 +7,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Protocol, Union
-
-import numpy as np
-import pandas as pd
-
-if TYPE_CHECKING:
-    from catboost import CatBoost as CatBoostModel
-    from lightgbm import Booster as LGBMBooster
-    from xgboost import Booster as XGBBooster
+from typing import Union
 
 # ─────────────────────────────────────────────
 # シリアライズ可能なプリミティブ型
@@ -27,32 +19,6 @@ SerializableValue = Union[
     dict[str, "SerializableValue"],
 ]
 
-
-# ─────────────────────────────────────────────
-# MLモデル関連
-# ─────────────────────────────────────────────
-class MLModelProtocol(Protocol):
-    """MLモデルの共通インターフェースを定義するProtocol"""
-
-    is_trained: bool
-    feature_columns: list[str] | None
-
-    def predict(self, X: pd.DataFrame) -> np.ndarray: ...
-
-    def predict_proba(self, X: pd.DataFrame) -> np.ndarray: ...
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, source: Any, handler: Any) -> Any:
-        from pydantic_core import core_schema
-
-        return core_schema.no_info_plain_validator_function(
-            lambda v: v,
-        )
-
-
-# 学習済みモデル（具体的な型）
-# MLModelProtocol を実装するモデルまたは生のBoosterモデル
-TrainedModel = Union[MLModelProtocol, "LGBMBooster", "XGBBooster", "CatBoostModel"]
 
 # ─────────────────────────────────────────────
 # バックテスト・戦略関連

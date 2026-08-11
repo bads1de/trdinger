@@ -31,22 +31,6 @@ jest.mock("@/components/common/InputField", () => ({
   ),
 }));
 
-jest.mock("@/components/common/SelectField", () => ({
-  SelectField: ({ label, value, onChange }: any) => (
-    <div data-testid="select-field">
-      <label>{label}</label>
-      <select
-        data-testid={`select-${label}`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="lightgbm">LightGBM</option>
-        <option value="xgboost">XGBoost</option>
-      </select>
-    </div>
-  ),
-}));
-
 jest.mock("@/components/backtest/optimization/ObjectiveSelection", () => ({
   ObjectiveSelection: () => (
     <div data-testid="objective-selection">Objective Selection</div>
@@ -143,24 +127,6 @@ describe("GAConfigForm", () => {
         }),
       }),
     );
-  });
-
-  it("ハイブリッドモードを有効にすると、ML設定が表示されること", () => {
-    render(<GAConfigForm onSubmit={mockOnSubmit} onClose={mockOnClose} />);
-
-    // ハイブリッドモードのチェックボックスを探す（ラベルまたはaria-labelで）
-    const hybridCheckbox =
-      screen.getByLabelText("ハイブリッドGA+MLモードを有効化");
-
-    // 初期状態はオフ
-    expect(hybridCheckbox).not.toBeChecked();
-
-    // オンにする
-    fireEvent.click(hybridCheckbox);
-    expect(hybridCheckbox).toBeChecked();
-
-    // MLモデル選択などが表示されることを確認
-    expect(screen.getByTestId("select-MLモデル")).toBeInTheDocument();
   });
 
   it("並列評価設定の切り替えが機能すること", () => {

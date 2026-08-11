@@ -72,40 +72,6 @@ class TestBacktestDataService:
         assert pd.api.types.is_numeric_dtype(result["open"])
         assert "timestamp" not in result.columns  # dropされていること
 
-    def test_get_ml_training_data(self, service):
-        mock_df = pd.DataFrame({"close": [100]})
-        with patch.object(
-            service._integration_service,
-            "create_ml_training_dataframe",
-            return_value=mock_df,
-        ) as _:
-            result = service.get_ml_training_data(
-                "BTC", "1h", datetime.now(), datetime.now()
-            )
-            assert result is mock_df
-
-    def test_get_event_labeled_training_data(self, service):
-        market_df = pd.DataFrame(
-            {"close": [100, 101]}, index=pd.to_datetime(["2023-01-01", "2023-01-02"])
-        )
-        labels_df = pd.DataFrame({"label": [1, 0]}, index=market_df.index)
-        profile = {"info": "test"}
-
-        service._integration_service.create_ml_training_dataframe = MagicMock(
-            return_value=market_df
-        )
-        service._event_label_generator.generate_hrhp_lrlp_labels = MagicMock(
-            return_value=(labels_df, profile)
-        )
-
-        df, info = service.get_event_labeled_training_data(
-            "BTC", "1h", datetime.now(), datetime.now()
-        )
-
-        assert "label" in df.columns
-        assert info == profile
-        service._event_label_generator.generate_hrhp_lrlp_labels.assert_called_once()
-
     def test_get_data_summary(self, service):
         mock_df = pd.DataFrame()
         service._integration_service.get_data_summary = MagicMock(

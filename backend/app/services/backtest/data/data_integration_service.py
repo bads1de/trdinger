@@ -31,7 +31,7 @@ class DataIntegrationService:
     を、指定された期間とシンボルに基づいて取得・結合します。
     インデックス（時間軸）の整合性確認、欠損値補完、および
     メモリ最適化（ダウンキャスト等）を一括で行い、シミュレーターや
-    ML モデルが直接利用可能な DataFrame を生成します。
+    バックテスト用の統合されたDataFrameを生成します。
     """
 
     def __init__(
@@ -110,39 +110,6 @@ class DataIntegrationService:
         df = self._clean_and_optimize_dataframe(df)
 
         return df
-
-    @safe_operation(
-        context="ML訓練用DataFrame作成",
-        is_api_call=False,
-        default_return=pd.DataFrame(),
-    )
-    def create_ml_training_dataframe(
-        self,
-        symbol: str,
-        timeframe: str,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> pd.DataFrame:
-        """
-        ML訓練用のDataFrameを作成（すべてのデータを含む）
-
-        Args:
-            symbol: 取引ペア
-            timeframe: 時間軸
-            start_date: 開始日時
-            end_date: 終了日時
-
-        Returns:
-            ML訓練用の統合されたDataFrame
-        """
-        return self.create_backtest_dataframe(
-            symbol=symbol,
-            timeframe=timeframe,
-            start_date=start_date,
-            end_date=end_date,
-            include_oi=True,
-            include_fr=True,
-        )
 
     @safe_operation(context="ベースOHLCVデータ取得", is_api_call=False)
     def _get_base_ohlcv_dataframe(
@@ -288,7 +255,9 @@ class DataIntegrationService:
                 ),
             },
             "volume_stats": {
-                "total": float(cast(Any, df[volume_col].sum())) if not df.empty else 0.0,
+                "total": float(cast(Any, df[volume_col].sum()))
+                if not df.empty
+                else 0.0,
                 "average": (
                     float(cast(Any, df[volume_col].mean())) if not df.empty else 0.0
                 ),

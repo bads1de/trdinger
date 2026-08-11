@@ -23,7 +23,6 @@ from .data_conversion import (
 from .error_handler import (
     DataError,
     ErrorHandler,
-    ModelError,
     TimeoutError,
     ValidationError,
     get_memory_usage_mb,
@@ -56,7 +55,6 @@ __all__ = [
     "TimeoutError",
     "ValidationError",
     "DataError",
-    "ModelError",
     # データ変換
     "OHLCVDataConverter",
     "FundingRateDataConverter",

@@ -138,45 +138,15 @@ class TestAutoStrategyCoreInitExports:
 
         assert sharing is FitnessSharing
 
-    def test_hybrid_feature_adapter_lazy_load(self):
-        """HybridFeatureAdapterが遅延ロードされる"""
-        from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
-            HybridFeatureAdapter,
-        )
+    def test_hybrid_feature_adapter_not_exported(self):
+        """HybridFeatureAdapterはエクスポートされない"""
+        with pytest.raises(AttributeError):
+            _ = core_package.HybridFeatureAdapter
 
-        adapter = core_package.HybridFeatureAdapter
-
-        assert adapter is HybridFeatureAdapter
-
-    def test_wavelet_feature_transformer_lazy_load(self):
-        """WaveletFeatureTransformerが遅延ロードされる"""
-        from app.services.auto_strategy.core.hybrid.hybrid_feature_adapter import (
-            WaveletFeatureTransformer,
-        )
-
-        transformer = core_package.WaveletFeatureTransformer
-
-        assert transformer is WaveletFeatureTransformer
-
-    def test_hybrid_individual_evaluator_lazy_load(self):
-        """HybridIndividualEvaluatorが遅延ロードされる"""
-        from app.services.auto_strategy.core.hybrid.hybrid_individual_evaluator import (
-            HybridIndividualEvaluator,
-        )
-
-        evaluator = core_package.HybridIndividualEvaluator
-
-        assert evaluator is HybridIndividualEvaluator
-
-    def test_hybrid_predictor_lazy_load(self):
-        """HybridPredictorが遅延ロードされる"""
-        from app.services.auto_strategy.core.hybrid.hybrid_predictor import (
-            HybridPredictor,
-        )
-
-        predictor = core_package.HybridPredictor
-
-        assert predictor is HybridPredictor
+    def test_hybrid_predictor_not_exported(self):
+        """HybridPredictorはエクスポートされない"""
+        with pytest.raises(AttributeError):
+            _ = core_package.HybridPredictor
 
     def test_operand_group_lazy_load(self):
         """OperandGroupが遅延ロードされる"""
@@ -232,11 +202,6 @@ class TestAutoStrategyCoreInitExports:
             # Fitness
             "FitnessCalculator",
             "FitnessSharing",
-            # Hybrid
-            "HybridFeatureAdapter",
-            "HybridIndividualEvaluator",
-            "HybridPredictor",
-            "WaveletFeatureTransformer",
             # Strategy
             "OperandGroup",
             "OperandGroupingSystem",

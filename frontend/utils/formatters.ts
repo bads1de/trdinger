@@ -143,26 +143,6 @@ const toDurationParts = (seconds: number) => {
 };
 
 /**
- * トレーニング時間をフォーマットする
- * @param seconds - 秒数
- * @returns フォーマットされた時間文字列 (例: '2時間30分15秒')
- * @example
- * // returns '1時間2分3秒'
- * formatTrainingTime(3723)
- */
-export const formatTrainingTime = (seconds?: number) => {
-  if (seconds === undefined || seconds === null) return "不明";
-
-  const duration = toDurationParts(seconds);
-  const parts = [];
-  if (duration.hours) parts.push(`${duration.hours}時間`);
-  if (duration.minutes) parts.push(`${duration.minutes}分`);
-  if (duration.seconds) parts.push(`${duration.seconds}秒`);
-
-  return parts.length > 0 ? parts.join("") : "0秒";
-};
-
-/**
  * 大きな数値を適切な単位付きでフォーマットする
  * @param num - フォーマットする数値
  * @param digits - 小数点以下の桁数 (デフォルト: 2)

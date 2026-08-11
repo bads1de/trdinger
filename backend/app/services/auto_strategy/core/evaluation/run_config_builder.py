@@ -11,9 +11,6 @@ from typing import Any
 from app.services.auto_strategy.config.ga.nested_configs import (
     EarlyTerminationSettings,
 )
-from app.services.auto_strategy.config.helpers import (
-    normalize_ml_gate_fields,
-)
 from app.services.backtest.config.builders import build_execution_config
 from app.utils.serialization import dataclass_to_dict
 
@@ -38,7 +35,6 @@ class RunConfigBuilder:
             strategy_parameters = {
                 "strategy_gene": gene,
             }
-            strategy_parameters.update(normalize_ml_gate_fields(config))
             if not isinstance(early_termination_settings, EarlyTerminationSettings):
                 early_termination_settings = EarlyTerminationSettings.from_source(
                     early_termination_settings

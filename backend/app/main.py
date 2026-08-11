@@ -18,8 +18,6 @@ from app.api.data_reset import router as data_reset_router
 from app.api.funding_rates import router as funding_rates_router
 from app.api.long_short_ratio import router as long_short_ratio_router
 from app.api.market_data import router as market_data_router
-from app.api.ml_management import router as ml_management_router
-from app.api.ml_training import router as ml_training_router
 from app.api.open_interest import router as open_interest_router
 from app.api.strategies import router as strategies_router
 from app.config.unified_config import unified_config
@@ -98,8 +96,6 @@ def create_app() -> FastAPI:
     app.include_router(backtest_router)
     app.include_router(auto_strategy_router)
     app.include_router(strategies_router)
-    app.include_router(ml_training_router)
-    app.include_router(ml_management_router)
 
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)

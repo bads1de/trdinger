@@ -18,7 +18,6 @@ class TestEntryDecisionEngine:
     def strategy(self):
         strategy = MagicMock()
         strategy.runtime_state = StrategyRuntimeState()
-        strategy.ml_predictor = None
         strategy._current_bar_index = 7
         strategy.data.Close = [100.0]
         strategy.stateful_conditions_evaluator = MagicMock()
@@ -43,7 +42,6 @@ class TestEntryDecisionEngine:
         strategy._calculate_position_size.return_value = 0.25
         strategy._calculate_effective_tpsl_prices.return_value = (95.0, 110.0)
         strategy._get_effective_entry_gene.return_value = None
-        strategy._ml_allows_entry.return_value = True
         strategy._get_effective_tpsl_gene.return_value = None
         return strategy
 
@@ -108,16 +106,6 @@ class TestEntryDecisionEngine:
             entry_gene=entry_gene,
             current_bar_index=7,
         )
-
-    def test_execute_entry_stops_when_ml_rejects(self, engine, strategy):
-        strategy.ml_predictor = MagicMock()
-        strategy._ml_allows_entry.return_value = False
-
-        executed = engine.execute_entry(1.0)
-
-        assert executed is False
-        strategy.buy.assert_not_called()
-        strategy.order_manager.create_pending_order.assert_not_called()
 
     def test_check_entry_conditions_uses_precomputed_signal(self, engine, strategy):
         strategy._precomputed_signals = {1.0: np.array([False, True])}

@@ -28,7 +28,6 @@ class TestUtilsInitExports:
         assert hasattr(utils_package, "TimeoutError")
         assert hasattr(utils_package, "ValidationError")
         assert hasattr(utils_package, "DataError")
-        assert hasattr(utils_package, "ModelError")
 
     def test_data_converters_exported(self):
         """データコンバーターがエクスポートされている"""
@@ -61,7 +60,6 @@ class TestUtilsInitExports:
             "TimeoutError",
             "ValidationError",
             "DataError",
-            "ModelError",
             # データ変換
             "OHLCVDataConverter",
             "FundingRateDataConverter",

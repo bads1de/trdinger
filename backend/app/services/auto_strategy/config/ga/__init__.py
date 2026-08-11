@@ -9,11 +9,9 @@ from .ga_validator import ConfigValidator
 from .nested_configs import (
     EarlyTerminationSettings,
     EvaluationConfig,
-    HybridConfig,
     IterativeImprovementConfig,
     MutationConfig,
     RobustnessConfig,
-    TuningConfig,
     TwoStageSelectionConfig,
     ValidationConfig,
 )
@@ -23,11 +21,9 @@ __all__ = [
     "ConfigValidator",
     "EarlyTerminationSettings",
     "EvaluationConfig",
-    "HybridConfig",
     "IterativeImprovementConfig",
     "MutationConfig",
     "RobustnessConfig",
-    "TuningConfig",
     "TwoStageSelectionConfig",
     "ValidationConfig",
 ]

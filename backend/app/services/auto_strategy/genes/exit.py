@@ -116,9 +116,7 @@ class ExitGene:
         return cls(
             exit_type=exit_type,
             partial_exit_pct=cast(float, data.get("partial_exit_pct", 0.5)),
-            partial_exit_enabled=cast(
-                bool, data.get("partial_exit_enabled", False)
-            ),
+            partial_exit_enabled=cast(bool, data.get("partial_exit_enabled", False)),
             trailing_stop_activation=cast(
                 bool, data.get("trailing_stop_activation", False)
             ),

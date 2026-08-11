@@ -79,14 +79,11 @@ def _make_strategy(
         indicator_calculator=SimpleNamespace(
             init_indicator=MagicMock(), calculate_indicator=MagicMock()
         ),
-        ml_filter=SimpleNamespace(precompute_ml_features=MagicMock()),
         condition_evaluator=SimpleNamespace(
             calculate_conditions_vectorized=MagicMock(
                 side_effect=calc_vectorized_side_effect or [np.array([True])]
             )
         ),
-        volatility_gate_enabled=False,
-        ml_predictor=None,
         _precomputed_signals={},
         _precomputed_exit_signals={},
         _precomputed_atr=None,
@@ -288,9 +285,7 @@ class TestPrecomputePositionSizingAtr:
         )
         strategy = _make_strategy(position_sizing_gene=gene)
 
-        strategy.indicator_calculator.calculate_indicator = MagicMock(
-            return_value=None
-        )
+        strategy.indicator_calculator.calculate_indicator = MagicMock(return_value=None)
 
         initializer = StrategyInitializer(strategy)
         initializer._precompute_position_sizing_atr()
@@ -419,9 +414,7 @@ class TestPrecomputeTpslAtr:
         gene = TPSLGene(method=TPSLMethod.VOLATILITY_BASED, atr_period=14)
         strategy = _make_strategy(tpsl_gene_long=gene)
 
-        strategy.indicator_calculator.calculate_indicator = MagicMock(
-            return_value=None
-        )
+        strategy.indicator_calculator.calculate_indicator = MagicMock(return_value=None)
 
         initializer = StrategyInitializer(strategy)
         initializer._precompute_tpsl_atr()

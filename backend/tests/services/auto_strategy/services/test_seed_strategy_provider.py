@@ -73,9 +73,7 @@ class TestPreviousStrategySeedProvider:
         """無効な場合は空リストを返す"""
         provider = PreviousStrategySeedProvider(mock_db_session_factory)
         config = MagicMock()
-        config.iterative_improvement_config = IterativeImprovementConfig(
-            enabled=False
-        )
+        config.iterative_improvement_config = IterativeImprovementConfig(enabled=False)
 
         seeds = provider.get_seed_strategies(config)
 
@@ -92,9 +90,7 @@ class TestPreviousStrategySeedProvider:
         ]
         session = mock_db_session_factory.return_value.__enter__.return_value
         # min_fitness=None のため .filter() は1回のみ
-        repo = (
-            session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
-        )
+        repo = session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
         repo.return_value = records
 
         provider = PreviousStrategySeedProvider(mock_db_session_factory)
@@ -118,9 +114,7 @@ class TestPreviousStrategySeedProvider:
             _make_record(2, 0.8, passed=True),
         ]
         session = mock_db_session_factory.return_value.__enter__.return_value
-        repo = (
-            session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
-        )
+        repo = session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
         repo.return_value = passing_records
 
         provider = PreviousStrategySeedProvider(mock_db_session_factory)
@@ -131,18 +125,14 @@ class TestPreviousStrategySeedProvider:
 
         assert len(seeds) == 2
 
-    def test_validation_passed_only_false_includes_all(
-        self, mock_db_session_factory
-    ):
+    def test_validation_passed_only_false_includes_all(self, mock_db_session_factory):
         """validation_passed_only=False では全戦略が対象になる"""
         records = [
             _make_record(1, 0.9, passed=True),
             _make_record(2, 0.8, passed=False),
         ]
         session = mock_db_session_factory.return_value.__enter__.return_value
-        repo = (
-            session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
-        )
+        repo = session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
         repo.return_value = records
 
         provider = PreviousStrategySeedProvider(mock_db_session_factory)
@@ -173,9 +163,7 @@ class TestPreviousStrategySeedProvider:
         """復元に失敗したレコードはスキップされる"""
         good_record = _make_record(1, 0.9, passed=True)
         session = mock_db_session_factory.return_value.__enter__.return_value
-        repo = (
-            session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
-        )
+        repo = session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all
         repo.return_value = [good_record]
 
         provider = PreviousStrategySeedProvider(mock_db_session_factory)
@@ -196,9 +184,7 @@ class TestPreviousStrategySeedProvider:
         """min_fitness 指定時は .filter() が2回呼ばれる"""
         records = [_make_record(1, 0.9, passed=True)]
         session = mock_db_session_factory.return_value.__enter__.return_value
-        repo = (
-            session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.limit.return_value.all
-        )
+        repo = session.query.return_value.filter.return_value.filter.return_value.order_by.return_value.limit.return_value.all
         repo.return_value = records
 
         provider = PreviousStrategySeedProvider(mock_db_session_factory)
@@ -328,9 +314,7 @@ class TestEngineSeedInjection:
         provider = MagicMock()
         provider.get_seed_strategies.return_value = [prev_seed]
 
-        engine = self._make_engine(
-            mock_backtest_service, mock_gene_generator, provider
-        )
+        engine = self._make_engine(mock_backtest_service, mock_gene_generator, provider)
         config = GAConfig(
             iterative_improvement_config=IterativeImprovementConfig(enabled=True),
             random_state=None,
@@ -349,9 +333,7 @@ class TestEngineSeedInjection:
 
         provider = MagicMock()
 
-        engine = self._make_engine(
-            mock_backtest_service, mock_gene_generator, provider
-        )
+        engine = self._make_engine(mock_backtest_service, mock_gene_generator, provider)
         config = GAConfig()  # デフォルトでは無効
 
         seeds = engine._get_previous_seed_strategies(config)
@@ -368,9 +350,7 @@ class TestEngineSeedInjection:
         provider = MagicMock()
         provider.get_seed_strategies.side_effect = RuntimeError("boom")
 
-        engine = self._make_engine(
-            mock_backtest_service, mock_gene_generator, provider
-        )
+        engine = self._make_engine(mock_backtest_service, mock_gene_generator, provider)
         config = GAConfig(
             iterative_improvement_config=IterativeImprovementConfig(enabled=True)
         )
@@ -398,9 +378,7 @@ class TestEngineSeedInjection:
         mock_get_all_seeds.return_value = seeds
 
         provider = MagicMock()
-        engine = self._make_engine(
-            mock_backtest_service, mock_gene_generator, provider
-        )
+        engine = self._make_engine(mock_backtest_service, mock_gene_generator, provider)
         config = GAConfig(random_state=42)
 
         builtin = engine._get_builtin_seed_strategies(config)
@@ -535,4 +513,3 @@ class TestEngineSeedInjection:
 
         init_kwargs = mock_init.call_args.kwargs
         assert init_kwargs["seed_strategy_provider"] is provider
-

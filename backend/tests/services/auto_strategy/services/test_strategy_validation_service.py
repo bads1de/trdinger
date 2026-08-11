@@ -123,9 +123,7 @@ class TestStrategyValidationService:
                 "evaluation_summaries": {},
             }
 
-            filtered = service.validate_and_filter_result(
-                result, validation_config, {}
-            )
+            filtered = service.validate_and_filter_result(result, validation_config, {})
 
         assert "validation_results" in filtered
         validation = filtered["validation_results"]["strategy-1"]
@@ -173,9 +171,7 @@ class TestStrategyValidationService:
                     "candidate": {"pass_rate": 0.9},
                 },
             }
-            filtered = service.validate_and_filter_result(
-                result, config, {}
-            )
+            filtered = service.validate_and_filter_result(result, config, {})
 
         # 最良戦略は候補に昇格する
         assert filtered["best_strategy"] is candidate

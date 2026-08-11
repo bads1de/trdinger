@@ -9,7 +9,6 @@
 - entry_decision_engine.py: エントリー判断エンジン
 - position_manager.py: ポジション管理
 - order_manager.py: 注文管理
-- ml_filter.py: MLモデルによるフィルター
 - stateful_conditions.py: 状態依存条件評価
 - runtime_state.py: ランタイム状態管理
 """

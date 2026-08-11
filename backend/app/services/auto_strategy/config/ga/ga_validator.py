@@ -758,10 +758,7 @@ class ConfigValidator:
             )
 
         wfa_n_folds: Any = validation_config.wfa_n_folds
-        if (
-            not isinstance(wfa_n_folds, (int, float))
-            or int(wfa_n_folds) <= 0
-        ):
+        if not isinstance(wfa_n_folds, (int, float)) or int(wfa_n_folds) <= 0:
             errors.append(
                 "validation_config.wfa_n_folds は正の整数である必要があります"
             )
@@ -779,9 +776,7 @@ class ConfigValidator:
         if min_trades is not None and (
             not isinstance(min_trades, (int, float)) or int(min_trades) <= 0
         ):
-            errors.append(
-                "validation_config.min_trades は正の整数である必要があります"
-            )
+            errors.append("validation_config.min_trades は正の整数である必要があります")
 
         max_drawdown: Any = validation_config.max_drawdown
         if max_drawdown is not None and (

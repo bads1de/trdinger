@@ -118,23 +118,6 @@ class TestUtilsExtra:
         with pytest.raises(HTTPException):
             await ErrorHandler.safe_execute_async(fail)
 
-    def test_validate_predictions(self):
-        # 正常系
-        valid = {"up": 0.4, "down": 0.4, "range": 0.2}  # 合計 1.0
-        assert ErrorHandler.validate_predictions(valid) is True
-        # 異常系: キー不足
-        assert ErrorHandler.validate_predictions({"up": 0.5}) is False
-        # 異常系: 値が範囲外
-        assert (
-            ErrorHandler.validate_predictions({"up": 1.5, "down": -0.1, "range": 0.1})
-            is False
-        )
-        # 異常系: 合計が範囲外 (0.8 - 1.2 外)
-        assert (
-            ErrorHandler.validate_predictions({"up": 0.1, "down": 0.1, "range": 0.1})
-            is False
-        )
-
     def test_validate_dataframe(self):
         df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
         # 正常

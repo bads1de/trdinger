@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
-  Brain,
   Database,
   ShieldCheck,
   Sparkles,
@@ -16,7 +15,7 @@ import {
  *
  * 目的:
  * - プラットフォームの価値提案を明確に伝えるHero
- * - 主要機能（バックテスト/ML/データ）のわかりやすい導線
+ * - 主要機能（バックテスト/データ）のわかりやすい導線
  * - 信頼性・特徴のハイライト
  * - 既存レイアウト(Navbar/MainContent)と一貫したダークUI
  */
@@ -39,7 +38,7 @@ export default function Home() {
               科学的に検証・最適化
             </h1>
             <p className="max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
-              高度なバックテスト基盤、機械学習によるモデル管理、マーケットデータ統合をワンストップで。
+              高度なバックテスト基盤とマーケットデータ統合をワンストップで。
               再現性と操作性を両立したワークフローで、研究から実運用までを加速します。
             </p>
             <div className="flex flex-wrap gap-3">
@@ -50,12 +49,6 @@ export default function Home() {
                 バックテストを開始
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                href="/backtest?tab=ml"
-                className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground hover:bg-accent/10 transition-colors"
-              >
-                ML管理を見る
-              </Link>
             </div>
           </div>
         </div>
@@ -63,20 +56,13 @@ export default function Home() {
 
       {/* 機能カード */}
       <section className="mx-auto max-w-7xl px-6 py-8 md:py-12">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <FeatureCard
             href="/backtest"
             icon={<BarChart3 className="h-5 w-5 text-purple-400" />}
             title="バックテスト"
             desc="取引履歴レベルの統計、ドローダウン、分布/散布チャートで戦略を精査。"
             cta="結果を見る"
-          />
-          <FeatureCard
-            href="/backtest?tab=ml"
-            icon={<Brain className="h-5 w-5 text-green-400" />}
-            title="ML管理"
-            desc="特徴量重要度、単一/アンサンブル、学習/評価を統合管理。"
-            cta="モデルを管理"
           />
           <FeatureCard
             href="/data"
@@ -124,12 +110,6 @@ export default function Home() {
               className="hover:text-foreground transition-colors"
             >
               Backtest
-            </Link>
-            <Link
-              href="/backtest?tab=ml"
-              className="hover:text-foreground transition-colors"
-            >
-              ML
             </Link>
             <Link
               href="/data"

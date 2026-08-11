@@ -218,13 +218,17 @@ class TestSubGeneConverters:
     def test_position_sizing_none_and_error(self, serializer):
         assert serializer.position_sizing_gene_to_dict(None) is None
         assert serializer.dict_to_position_sizing_gene(None) is None
-        with pytest.raises(ValueError, match="ポジションサイジング遺伝子辞書変換に失敗"):
+        with pytest.raises(
+            ValueError, match="ポジションサイジング遺伝子辞書変換に失敗"
+        ):
             serializer.position_sizing_gene_to_dict(object())  # type: ignore[arg-type]
         with patch(
             "app.services.auto_strategy.genes.PositionSizingGene.from_dict",
             side_effect=ValueError("bad sizing"),
         ):
-            with pytest.raises(ValueError, match="ポジションサイジング遺伝子の復元に失敗"):
+            with pytest.raises(
+                ValueError, match="ポジションサイジング遺伝子の復元に失敗"
+            ):
                 serializer.dict_to_position_sizing_gene({"enabled": True})
 
     def test_entry_gene_none_and_error(self, serializer):

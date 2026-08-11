@@ -149,9 +149,7 @@ def quantum_flow(
     )
 
     signal = pd.Series(
-        pd.Series(flow_values, index=close.index)
-        .rolling(window=flow_length)
-        .mean(),
+        pd.Series(flow_values, index=close.index).rolling(window=flow_length).mean(),
         index=close.index,
     )
     signal.name = "QUANTUM_FLOW_SIGNAL"

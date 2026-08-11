@@ -312,7 +312,10 @@ class TestGetStrategiesByFitness:
                 "indicators": [],
                 "risk_management": {},
                 "metadata": {
-                    "validation": {"passed": passed, "pass_rate": 0.8 if passed else 0.2}
+                    "validation": {
+                        "passed": passed,
+                        "pass_rate": 0.8 if passed else 0.2,
+                    }
                 },
             },
             generation=10,
@@ -375,9 +378,7 @@ class TestGetStrategiesByFitness:
         mock_query.all.return_value = [strategy]
         repository.db.query.return_value = mock_query
 
-        results = repository.get_strategies_by_fitness(
-            limit=5, min_fitness=0.5
-        )
+        results = repository.get_strategies_by_fitness(limit=5, min_fitness=0.5)
 
         assert results == [strategy]
         # fitness_score.isnot(None) + fitness_score >= min_fitness の2回
@@ -388,7 +389,9 @@ class TestGetStrategiesByFitness:
         repository: GeneratedStrategyRepository,
     ) -> None:
         """limit を超えず、候補は limit*10 件取得する"""
-        strategies = [self._strategy(i, 0.9 - i * 0.01, passed=True) for i in range(1, 4)]
+        strategies = [
+            self._strategy(i, 0.9 - i * 0.01, passed=True) for i in range(1, 4)
+        ]
 
         mock_query = MagicMock()
         mock_query.filter.return_value = mock_query

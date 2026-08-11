@@ -103,7 +103,6 @@ describe("GAConfigForm", () => {
     expect(collapsibleTrigger).toHaveAttribute("aria-expanded", "false");
 
     // 説明コンテンツが表示されていないことを確認
-    expect(screen.queryByText(/TA: 従来のテクニカル指標のみを使用/)).not.toBeInTheDocument();
     expect(screen.queryByText("TP/SLとポジションサイズはGAが自動最適化します。")).not.toBeInTheDocument();
   });
 
@@ -126,7 +125,6 @@ describe("GAConfigForm", () => {
     expect(collapsibleTrigger).toHaveAttribute("aria-expanded", "true");
 
     // 説明コンテンツが表示されることを確認
-    expect(screen.getByText(/指標モード選択/)).toBeInTheDocument();
     expect(screen.getByText("TP/SLとポジションサイズはGAが自動最適化します。")).toBeInTheDocument();
   });
 

@@ -30,12 +30,9 @@ class TestStrategyInitializer:
             data=data,
             gene=StrategyGene(indicators=[]),
             indicator_calculator=SimpleNamespace(init_indicator=MagicMock()),
-            ml_filter=SimpleNamespace(precompute_ml_features=MagicMock()),
             condition_evaluator=SimpleNamespace(
                 calculate_conditions_vectorized=MagicMock(return_value=np.array([True]))
             ),
-            volatility_gate_enabled=False,
-            ml_predictor=None,
             _precomputed_signals={},
             _precomputed_exit_signals={},
             _precomputed_atr="sentinel",
@@ -59,10 +56,8 @@ class TestStrategyInitializer:
         called_gene = strategy.indicator_calculator.init_indicator.call_args.args[0]
         assert called_gene.type == "SMA"
 
-    def test_initialize_precomputes_ml_and_condition_signals(self):
+    def test_initialize_precomputes_condition_signals(self):
         strategy = self._build_strategy()
-        strategy.volatility_gate_enabled = True
-        strategy.ml_predictor = object()
         strategy.gene = StrategyGene(
             indicators=[],
             long_entry_conditions=[
@@ -76,7 +71,6 @@ class TestStrategyInitializer:
         initializer = StrategyInitializer(strategy)
         initializer.initialize()
 
-        strategy.ml_filter.precompute_ml_features.assert_called_once()
         assert 1.0 in strategy._precomputed_signals
         assert -1.0 in strategy._precomputed_signals
         assert (

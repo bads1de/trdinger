@@ -44,14 +44,6 @@ const getPageInfo = (pathname: string) => {
     };
   }
 
-  if (pathname.startsWith("/ml")) {
-    return {
-      title: "ML Management",
-      description: "機械学習モデル管理",
-      icon: Activity,
-    };
-  }
-
   if (pathname.startsWith("/data")) {
     return {
       title: "Data Management",

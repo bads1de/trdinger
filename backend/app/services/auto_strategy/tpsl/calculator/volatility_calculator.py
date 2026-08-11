@@ -9,8 +9,6 @@ from typing import Any, cast
 
 import pandas as pd
 
-from app.services.ml.common.utils import calculate_true_range
-
 from ...genes import TPSLGene
 from .base_calculator import BaseTPSLCalculator
 
@@ -113,15 +111,21 @@ class VolatilityCalculator(BaseTPSLCalculator):
             if len(ohlc_data) < atr_period:
                 return None
 
-            # True Range 計算は共通ユーティリティに委譲（手書きループを排除）
-            # 先頭バーは前回Closeが無いため除外（元実装のループ開始位置 i=1 と同じ）
+            # True Range を自前で計算（前回Closeを利用、先頭バーは前回Closeが無いため除外）
             df = pd.DataFrame(ohlc_data)
-            # ohlc_data が未型付けのため pandas-stubs が列型を推論できず、Series に明示キャストする
-            true_ranges = calculate_true_range(
-                cast(pd.Series, df["high"]),
-                cast(pd.Series, df["low"]),
-                cast(pd.Series, df["close"]),
-            ).iloc[1:]
+            high = pd.to_numeric(df["high"])
+            low = pd.to_numeric(df["low"])
+            close = pd.to_numeric(df["close"])
+            prev_close = close.shift(1)
+            true_ranges = pd.concat(
+                [
+                    high - low,
+                    (high - prev_close).abs(),
+                    (low - prev_close).abs(),
+                ],
+                axis=1,
+            ).max(axis=1)
+            true_ranges = true_ranges.iloc[1:]
 
             # ATR = 直近 atr_period 個の True Range の平均（元実装の除算仕様を維持）
             last_trs = true_ranges.iloc[-(atr_period):]

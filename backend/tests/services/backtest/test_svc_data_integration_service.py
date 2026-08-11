@@ -295,60 +295,6 @@ class TestBacktestDataframeCreation:
             assert (result["funding_rate"] == 0.0).all()
 
 
-class TestMLTrainingDataframeCreation:
-    """MLトレーニング用DataFrame作成テスト"""
-
-    def test_create_ml_training_dataframe(
-        self,
-        integration_service,
-        mock_retrieval_service,
-        mock_conversion_service,
-        sample_ohlcv_data,
-    ):
-        """MLトレーニング用DataFrameを作成できること"""
-        mock_retrieval_service.get_ohlcv_data.return_value = []
-        mock_conversion_service.convert_ohlcv_to_dataframe.return_value = (
-            sample_ohlcv_data
-        )
-
-        with patch.object(
-            integration_service,
-            "create_backtest_dataframe",
-            return_value=sample_ohlcv_data,
-        ):
-            result = integration_service.create_ml_training_dataframe(
-                symbol="BTC/USDT:USDT",
-                timeframe="1h",
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 1, 5),
-            )
-
-            assert not result.empty
-            assert len(result) == 100
-
-    def test_create_ml_training_dataframe_includes_all_data(self, integration_service):
-        """MLトレーニング用DataFrameに全データが含まれること"""
-        with patch.object(
-            integration_service, "create_backtest_dataframe"
-        ) as mock_create:
-            integration_service.create_ml_training_dataframe(
-                symbol="BTC/USDT:USDT",
-                timeframe="1h",
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 1, 5),
-            )
-
-            # OIとFRの両方がTrueで呼ばれることを確認
-            mock_create.assert_called_once_with(
-                symbol="BTC/USDT:USDT",
-                timeframe="1h",
-                start_date=datetime(2024, 1, 1),
-                end_date=datetime(2024, 1, 5),
-                include_oi=True,
-                include_fr=True,
-            )
-
-
 class TestOHLCVDataRetrieval:
     """OHLCVデータ取得テスト"""
 

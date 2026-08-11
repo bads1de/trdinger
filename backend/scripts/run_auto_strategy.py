@@ -105,7 +105,7 @@ def parse_args() -> argparse.Namespace:
   # ファイル保存をスキップ（標準出力のみ）
   python -m scripts.run_auto_strategy --no-save
 
-  # Optunaを無効化した高速なバグ確認モード
+  # 小さな世代数・個体数で高速に回すバグ確認モード
   python -m scripts.run_auto_strategy --smoke --start-date 2024-01-01 --end-date 2024-01-31
         """,
     )
@@ -206,7 +206,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--smoke",
         action="store_true",
-        help="Optuna・シード注入・並列評価・詳細保存を無効化した高速なバグ確認モード",
+        help="並列評価・詳細保存を無効化し、小さな世代数・個体数で高速に回すバグ確認モード",
     )
     parser.add_argument(
         "--min-trades",
@@ -279,15 +279,6 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         config_kwargs["max_conditions"] = 2
         config_kwargs["use_seed_strategies"] = False
         config_kwargs["seed_injection_rate"] = 0.0
-        # TuningConfig は現在、閾値の最適化可否だけを受け付ける。
-        # 指標/TPSL は常に最適化対象なので、古いフラグは渡さない。
-        config_kwargs["tuning_config"] = {
-            "enabled": False,
-            "n_trials": 1,
-            "elite_count": 1,
-            "use_wfa": False,
-            "include_thresholds": False,
-        }
         config_kwargs["two_stage_selection_config"] = {"enabled": False}
     if fitness_constraints is not None:
         config_kwargs["fitness_constraints"] = fitness_constraints
@@ -463,7 +454,7 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
     logger.info("=" * 60)
     if getattr(args, "smoke", False):
         logger.info(
-            "smokeモード: Optuna・シード注入・並列評価・詳細保存を無効化しています"
+            "smokeモード: 並列評価・詳細保存を無効化し、小さな世代数・個体数で実行しています"
         )
 
     # 設定の作成
@@ -490,7 +481,6 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
     ga_engine = GeneticAlgorithmEngine(
         backtest_service=backtest_service,
         gene_generator=gene_generator,
-        hybrid_mode=False,
     )
 
     # 進化の実行

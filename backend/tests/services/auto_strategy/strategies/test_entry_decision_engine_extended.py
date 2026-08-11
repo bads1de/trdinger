@@ -63,8 +63,6 @@ def _make_strategy(
     data_length: int = 30,
     tpsl_gene: TPSLGene | None = None,
     entry_gene=None,
-    volatility_gate_enabled: bool = False,
-    ml_predictor=None,
     tool_genes: list | None = None,
 ) -> SimpleNamespace:
     """テスト用 strategy モックを構築するヘルパー"""
@@ -101,8 +99,6 @@ def _make_strategy(
         data=data,
         gene=gene,
         runtime_state=StrategyRuntimeState(),
-        ml_predictor=ml_predictor,
-        volatility_gate_enabled=volatility_gate_enabled,
         _precomputed_signals=precomputed_signals or {},
         _precomputed_atr=precomputed_atr,
         _precomputed_tpsl_atr=precomputed_tpsl_atr or {},
@@ -122,7 +118,6 @@ def _make_strategy(
             calculate_position_size_fast=MagicMock(return_value=0.05)
         ),
         equity=100000.0,
-        _ml_allows_entry=MagicMock(return_value=True),
         _get_effective_entry_gene=MagicMock(return_value=entry_gene),
         _get_effective_tpsl_gene=MagicMock(return_value=tpsl_gene),
     )
@@ -294,16 +289,6 @@ class TestExecuteEntry:
 
         assert result is True
         strategy.buy.assert_called_once_with(size=0.5)
-
-    def test_returns_false_when_ml_blocks_long(self):
-        ml = MagicMock()
-        strategy = _make_strategy(volatility_gate_enabled=True, ml_predictor=ml)
-        strategy._ml_allows_entry = MagicMock(return_value=False)
-        engine = EntryDecisionEngine(strategy)
-        result = engine.execute_entry(1.0)
-        assert result is False
-        strategy.buy.assert_not_called()
-        strategy.order_manager.create_pending_order.assert_not_called()
 
 
 class TestCalculatePositionSize:

@@ -162,7 +162,7 @@ export interface BacktestConfig {
   commission_rate: number;
   /** 戦略の型とパラメータ（型に応じて parameters のキーが変化） */
   strategy_config: {
-    /** 戦略タイプ（例: "rule_based", "ml_based" など） */
+    /** 戦略タイプ（例: "GENERATED_GA", "MANUAL" など） */
     strategy_type: string;
     /** パラメータ辞書 */
     parameters: Record<string, any>;

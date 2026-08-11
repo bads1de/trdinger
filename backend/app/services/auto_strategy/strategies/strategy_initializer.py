@@ -30,7 +30,6 @@ class StrategyInitializer:
                 return
 
             self._initialize_indicators()
-            self._precompute_ml_features()
             self._precompute_condition_signals()
             self._precompute_position_sizing_atr()
             self._precompute_tpsl_atr()
@@ -59,10 +58,6 @@ class StrategyInitializer:
         ]
         for indicator_gene in enabled_indicators:
             self.init_indicator(indicator_gene)
-
-    def _precompute_ml_features(self) -> None:
-        if self.strategy.volatility_gate_enabled and self.strategy.ml_predictor:
-            self.strategy.ml_filter.precompute_ml_features()
 
     def _precompute_condition_signals(self) -> None:
         try:
@@ -226,8 +221,8 @@ class StrategyInitializer:
                             )
                             atr_values = self._extract_atr_values(atr_result)
                             if atr_values is not None:
-                                self.strategy._precomputed_tpsl_atr[
-                                    atr_period
-                                ] = atr_values
+                                self.strategy._precomputed_tpsl_atr[atr_period] = (
+                                    atr_values
+                                )
                 except Exception as e:
                     logger.debug("TP/SL ATR事前計算失敗: %s", e)

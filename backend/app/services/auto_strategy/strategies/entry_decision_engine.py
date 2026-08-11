@@ -54,13 +54,6 @@ class EntryDecisionEngine:
         if direction == 0.0:
             return False
 
-        if (
-            getattr(self.strategy, "volatility_gate_enabled", False)
-            and self.strategy.ml_predictor
-            and not self.strategy._ml_allows_entry(direction)
-        ):
-            return False
-
         current_price = self.strategy.data.Close[-1]
         sl_price, tp_price = self.calculate_effective_tpsl_prices(
             direction, current_price

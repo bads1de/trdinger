@@ -242,35 +242,6 @@ class EvaluationConfig(NestedConfigMixin):
 
 
 @dataclass
-class HybridConfig(NestedConfigMixin):
-    """ハイブリッドGA+ML関連設定。"""
-
-    mode: bool = False
-    model_type: str = "lightgbm"
-    model_types: list[str] | None = None
-    volatility_gate_enabled: bool = False
-    volatility_model_path: str | None = None
-    ml_filter_enabled: bool = False
-    ml_model_path: str | None = None
-    preprocess_features: bool = True
-
-
-@dataclass
-class TuningConfig(NestedConfigMixin):
-    """パラメータチューニング（Optuna）関連設定。
-
-    インジケータと TPSL は常時最適化対象として扱い、
-    ここでは試行回数と閾値最適化の切り替えだけを管理する。
-    """
-
-    enabled: bool = False  # Optunaチューニングを一時的に無効化
-    n_trials: int = 30
-    elite_count: int = 3
-    use_wfa: bool = True
-    include_thresholds: bool = False
-
-
-@dataclass
 class TwoStageSelectionConfig(NestedConfigMixin):
     """二段階選抜関連設定。"""
 
@@ -346,8 +317,6 @@ __all__ = [
     "EarlyTerminationSettings",
     "MutationConfig",
     "EvaluationConfig",
-    "HybridConfig",
-    "TuningConfig",
     "TwoStageSelectionConfig",
     "RobustnessConfig",
     "IterativeImprovementConfig",

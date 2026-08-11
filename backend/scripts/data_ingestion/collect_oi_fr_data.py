@@ -107,7 +107,6 @@ def main():
             print("\n[SUCCESS] データ収集完了")
             print("\n次のステップ:")
             print("  - データ確認: python tests/scripts/check_oi_data.py")
-            print("  - ML評価実行: python -m scripts.ml_optimization.run_ml_pipeline")
             return 0
         else:
             print("\n[FAILED] データ収集失敗")

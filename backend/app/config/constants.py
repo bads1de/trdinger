@@ -9,7 +9,6 @@
 主な定数カテゴリ:
 - 時間軸（SUPPORTED_TIMEFRAMES）: サポートされるOHLCVデータの間隔
 - 取引所・シンボル（DEFAULT_MARKET_*）: デフォルトの市場データ設定
-- アンサンブル（DEFAULT_ENSEMBLE_*）: デフォルトのMLアルゴリズム
 
 設計方針:
 - 環境変数で上書き可能な値は `unified_config.py` の設定クラスで定義
@@ -29,9 +28,6 @@ SUPPORTED_TIMEFRAMES = [
     "1d",  # 日足
 ]
 
-# デフォルトのアンサンブル学習アルゴリズム
-# アンサンブル学習で使用するベースモデルの種類
-DEFAULT_ENSEMBLE_ALGORITHMS = ("lightgbm", "xgboost", "catboost")
 # デフォルトの取引所
 # 市場データの取得に使用するデフォルトの取引所名
 DEFAULT_MARKET_EXCHANGE = "bybit"

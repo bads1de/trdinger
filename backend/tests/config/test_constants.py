@@ -34,28 +34,6 @@ class TestSupportedTimeframes:
             assert isinstance(tf, str)
 
 
-class TestDefaultEnsembleAlgorithms:
-    """DEFAULT_ENSEMBLE_ALGORITHMS定数のテスト"""
-
-    def test_exists(self):
-        """DEFAULT_ENSEMBLE_ALGORITHMSが定義されている"""
-        assert hasattr(constants, "DEFAULT_ENSEMBLE_ALGORITHMS")
-
-    def test_is_tuple(self):
-        """DEFAULT_ENSEMBLE_ALGORITHMSはタプル型"""
-        assert isinstance(constants.DEFAULT_ENSEMBLE_ALGORITHMS, tuple)
-
-    def test_contains_expected_algorithms(self):
-        """予想されるアルゴリズムが含まれている"""
-        expected = ("lightgbm", "xgboost", "catboost")
-        assert expected == constants.DEFAULT_ENSEMBLE_ALGORITHMS
-
-    def test_all_elements_are_strings(self):
-        """すべての要素は文字列"""
-        for alg in constants.DEFAULT_ENSEMBLE_ALGORITHMS:
-            assert isinstance(alg, str)
-
-
 class TestDefaultMarketExchange:
     """DEFAULT_MARKET_EXCHANGE定数のテスト"""
 
@@ -172,7 +150,6 @@ class TestConstantExports:
         """予想されるすべての定数が存在する"""
         expected_constants = [
             "SUPPORTED_TIMEFRAMES",
-            "DEFAULT_ENSEMBLE_ALGORITHMS",
             "DEFAULT_MARKET_EXCHANGE",
             "DEFAULT_MARKET_SYMBOL",
             "DEFAULT_MARKET_TIMEFRAME",

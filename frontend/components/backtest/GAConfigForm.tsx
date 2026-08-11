@@ -8,14 +8,12 @@
 
 import React, { useState, useEffect } from "react";
 import { InputField } from "@/components/common/InputField";
-import { SelectField } from "@/components/common/SelectField";
 import ActionButton from "@/components/common/ActionButton";
 import ApiButton from "@/components/button/ApiButton";
 import {
   EarlyTerminationSettingsConfig,
   GAConfig as GAConfigType,
   GAEvaluationConfig,
-  GAHybridConfig,
   GAIterativeImprovementConfig,
   GAValidationConfig,
   FitnessSharingConfig,
@@ -72,22 +70,16 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
       {}) as EarlyTerminationSettingsConfig;
     const initialFitnessSharing = (initialGAConfig.fitness_sharing ??
       {}) as FitnessSharingConfig;
-    const initialHybridConfig = (initialGAConfig.hybrid_config ??
-      {}) as GAHybridConfig;
     const initialValidationConfig = (initialGAConfig.validation_config ??
       {}) as GAValidationConfig;
     const initialIterativeImprovementConfig = (initialGAConfig.iterative_improvement_config ??
       {}) as GAIterativeImprovementConfig;
-    const initialFitnessWeights = {
-      ...(initialGAConfig.fitness_weights || {}),
-    };
-    delete initialFitnessWeights.prediction_score;
     const defaultFitnessWeights = {
       total_return: 0.3,
       sharpe_ratio: 0.4,
       max_drawdown: 0.2,
       win_rate: 0.1,
-      ...initialFitnessWeights,
+      ...(initialGAConfig.fitness_weights || {}),
     };
     const defaultFitnessConstraints = {
       min_trades: 10,
@@ -123,18 +115,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         objective_weights: initialGAConfig.objective_weights ?? [1.0],
         dynamic_objective_reweighting:
           initialGAConfig.dynamic_objective_reweighting ?? false,
-        hybrid_config: {
-          ...initialHybridConfig,
-          mode: initialHybridConfig.mode ?? false,
-          model_type: initialHybridConfig.model_type ?? "lightgbm",
-          model_types: initialHybridConfig.model_types,
-          volatility_gate_enabled:
-            initialHybridConfig.volatility_gate_enabled ?? false,
-          volatility_model_path: initialHybridConfig.volatility_model_path,
-          ml_filter_enabled: initialHybridConfig.ml_filter_enabled ?? false,
-          ml_model_path: initialHybridConfig.ml_model_path,
-          preprocess_features: initialHybridConfig.preprocess_features ?? true,
-        },
         evaluation_config: {
           ...initialEvaluationConfig,
           enable_parallel: initialEvaluationConfig.enable_parallel ?? true,
@@ -329,19 +309,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     }));
   };
 
-  const handleHybridConfigChange = (updates: Partial<GAHybridConfig>) => {
-    setConfig((prev) => ({
-      ...prev,
-      ga_config: {
-        ...prev.ga_config,
-        hybrid_config: {
-          ...(prev.ga_config.hybrid_config ?? {}),
-          ...updates,
-        },
-      },
-    }));
-  };
-
   const handleValidationConfigChange = (
     updates: Partial<GAValidationConfig>,
   ) => {
@@ -378,7 +345,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     evaluationConfig.early_termination_settings ?? {};
   const fitnessSharingConfig: FitnessSharingConfig =
     config.ga_config.fitness_sharing ?? {};
-  const hybridConfig: GAHybridConfig = config.ga_config.hybrid_config ?? {};
   const validationConfig: GAValidationConfig =
     config.ga_config.validation_config ?? {};
   const iterativeImprovementConfig: GAIterativeImprovementConfig =
@@ -483,27 +449,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           </CollapsibleTrigger>
 
           <CollapsibleContent className="space-y-4 mt-4">
-            {/* 指標モードの説明 */}
-            <div className="p-3 bg-purple-900/30 border border-purple-500/30 rounded-md">
-              <h4 className="font-medium text-purple-300 mb-2">
-                📊 指標モード選択
-              </h4>
-              <div className="text-sm text-purple-200 space-y-1">
-                <div>
-                  <strong className="text-purple-100">TA:</strong>{" "}
-                  従来のテクニカル指標のみを使用
-                </div>
-                <div>
-                  <strong className="text-purple-100">ML:</strong>{" "}
-                  ML予測指標のみを使用
-                </div>
-                <div>
-                  <strong className="text-purple-100">混合:</strong>{" "}
-                  テクニカル指標とML予測指標を組み合わせ
-                </div>
-              </div>
-            </div>
-
             {/* リスク管理自動最適化 */}
             <div className="p-3 bg-blue-900/30 border border-blue-500/30 rounded-md">
               <h4 className="font-medium text-blue-300 mb-2">
@@ -845,44 +790,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               <p className="text-xs text-amber-300">
                 ※ オフの場合は検証結果に関わらずフィットネス上位の戦略を
                 シードとして使用します。
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* ハイブリッドGA+MLモード設定 */}
-        <div className="p-4 bg-indigo-900/30 border border-indigo-500/30 rounded-lg space-y-3">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-indigo-200">
-              🔬 ハイブリッドGA+MLモード
-            </label>
-            <input
-              type="checkbox"
-              checked={hybridConfig.mode ?? false}
-              onChange={(e) =>
-                handleHybridConfigChange({ mode: e.target.checked })
-              }
-              className="w-5 h-5 rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-              aria-label="ハイブリッドGA+MLモードを有効化"
-            />
-          </div>
-
-          {hybridConfig.mode && (
-            <>
-              <SelectField
-                label="MLモデル"
-                value={hybridConfig.model_type || "lightgbm"}
-                onChange={(value) =>
-                  handleHybridConfigChange({ model_type: value })
-                }
-                options={[
-                  { value: "lightgbm", label: "LightGBM" },
-                  { value: "xgboost", label: "XGBoost" },
-                ]}
-              />
-              <p className="text-xs text-indigo-300">
-                💡
-                事前にMLモデルを学習しておく必要があります。未学習の場合はデフォルト予測を使用します。
               </p>
             </>
           )}

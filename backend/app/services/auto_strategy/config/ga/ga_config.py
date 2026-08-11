@@ -30,11 +30,9 @@ from ..constants import (
 from ..indicator_universe import normalize_indicator_universe_mode
 from .nested_configs import (
     EvaluationConfig,
-    HybridConfig,
     IterativeImprovementConfig,
     MutationConfig,
     RobustnessConfig,
-    TuningConfig,
     TwoStageSelectionConfig,
     ValidationConfig,
 )
@@ -167,9 +165,6 @@ class GAConfig:
     use_seed_strategies: bool = True  # シード戦略を使用するか
     seed_injection_rate: float = 0.3  # 初期集団のうちシードで置き換える割合（0.0-1.0）
 
-    # パラメータチューニング設定（GA×Optunaハイブリッド）
-    # サブ設定: tuning_config
-
     # 二段階選抜設定
     # サブ設定: two_stage_selection_config
 
@@ -185,8 +180,6 @@ class GAConfig:
     # サブ設定（ネスト辞書からの復元用）
     mutation_config: MutationConfig = field(default_factory=MutationConfig)
     evaluation_config: EvaluationConfig = field(default_factory=EvaluationConfig)
-    hybrid_config: HybridConfig = field(default_factory=HybridConfig)
-    tuning_config: TuningConfig = field(default_factory=TuningConfig)
     two_stage_selection_config: TwoStageSelectionConfig = field(
         default_factory=TwoStageSelectionConfig
     )
@@ -276,18 +269,6 @@ class GAConfig:
                 "evaluation_config",
                 EvaluationConfig.from_dict(self.evaluation_config),
             )
-        if isinstance(self.hybrid_config, dict):
-            object.__setattr__(
-                self,
-                "hybrid_config",
-                HybridConfig.from_dict(self.hybrid_config),
-            )
-        if isinstance(self.tuning_config, dict):
-            object.__setattr__(
-                self,
-                "tuning_config",
-                TuningConfig.from_dict(self.tuning_config),
-            )
         if isinstance(self.two_stage_selection_config, dict):
             object.__setattr__(
                 self,
@@ -304,9 +285,7 @@ class GAConfig:
             object.__setattr__(
                 self,
                 "iterative_improvement_config",
-                IterativeImprovementConfig.from_dict(
-                    self.iterative_improvement_config
-                ),
+                IterativeImprovementConfig.from_dict(self.iterative_improvement_config),
             )
         if isinstance(self.validation_config, dict):
             object.__setattr__(

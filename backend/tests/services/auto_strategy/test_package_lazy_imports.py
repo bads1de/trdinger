@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib
 import sys
 
+import pytest
+
 
 class TestAutoStrategyPackageLazyImports:
     """循環依存を避けるための lazy import を検証する。"""
@@ -48,22 +50,10 @@ class TestAutoStrategyPackageLazyImports:
         assert exported.__name__ == "EvolutionRunner"
         assert module.__dict__["EvolutionRunner"] is exported
 
-    def test_hybrid_package_defers_hybrid_module_import(self) -> None:
-        """hybrid パッケージは属性アクセスまで個別モジュールを読み込まない。"""
-        sys.modules.pop("app.services.auto_strategy.core.hybrid", None)
-
-        module = importlib.import_module("app.services.auto_strategy.core.hybrid")
-
-        assert "HybridPredictor" not in module.__dict__
-
-        exported = module.HybridPredictor
-
-        assert exported.__name__ == "HybridPredictor"
-        assert module.__dict__["HybridPredictor"] is exported
-        # 他のハイブリッドモジュールはまだ読み込まれていない（個別遅延）
-        assert "HybridFeatureAdapter" not in module.__dict__
-        assert "HybridIndividualEvaluator" not in module.__dict__
-        assert "WaveletFeatureTransformer" not in module.__dict__
+    def test_hybrid_package_is_removed(self) -> None:
+        """hybrid パッケージは ML 機能削除に伴い削除済み。"""
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module("app.services.auto_strategy.core.hybrid")
 
     def test_positions_package_defers_position_sizing_import(self) -> None:
         """positions パッケージは属性アクセスまで個別モジュールを読み込まない。"""
@@ -99,20 +89,10 @@ class TestAutoStrategyPackageLazyImports:
         assert "BaseCalculator" not in module.__dict__
         assert "HalfOptimalFCalculator" not in module.__dict__
 
-    def test_optimization_package_defers_parameter_tuner_import(self) -> None:
-        """optimization パッケージは属性アクセスまで個別モジュールを読み込まない。"""
-        sys.modules.pop("app.services.auto_strategy.optimization", None)
-
-        module = importlib.import_module("app.services.auto_strategy.optimization")
-
-        assert "StrategyParameterTuner" not in module.__dict__
-
-        exported = module.StrategyParameterTuner
-
-        assert exported.__name__ == "StrategyParameterTuner"
-        assert module.__dict__["StrategyParameterTuner"] is exported
-        # 他のモジュールはまだ読み込まれていない（個別遅延）
-        assert "StrategyParameterSpace" not in module.__dict__
+    def test_optimization_package_is_removed(self) -> None:
+        """optimization パッケージはチューニング機能削除に伴い削除済み。"""
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module("app.services.auto_strategy.optimization")
 
     def test_generators_package_defers_random_gene_generator_import(self) -> None:
         """generators パッケージは属性アクセスまで個別モジュールを読み込まない。"""

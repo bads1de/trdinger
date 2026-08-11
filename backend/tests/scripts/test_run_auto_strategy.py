@@ -105,13 +105,8 @@ class TestCreateGaConfig:
         assert config.evaluation_config.enable_parallel is False
         assert config.use_seed_strategies is False
         assert config.seed_injection_rate == 0.0
-        assert config.tuning_config.enabled is False
-        assert config.tuning_config.n_trials == 1
         assert config.two_stage_selection_config.enabled is False
         assert config.fitness_constraints["min_trades"] == 0
-        assert not any(
-            "TuningConfig の未対応キー" in record.message for record in caplog.records
-        )
 
     def test_invalid_population_raises_error(self):
         """無効な個体数でエラーが発生する"""
@@ -472,12 +467,9 @@ class TestRunAutoStrategyExecution:
                 self.config = config
 
         class DummyEngine:
-            def __init__(
-                self, backtest_service, gene_generator, hybrid_mode=False, **_
-            ):
+            def __init__(self, backtest_service, gene_generator, **_):
                 self.backtest_service = backtest_service
                 self.gene_generator = gene_generator
-                self.hybrid_mode = hybrid_mode
 
             def run_evolution(self, config, backtest_config, progress_callback=None):
                 return {

@@ -5,7 +5,6 @@ import {
   formatPercentValue,
   formatNumber,
   formatFileSize,
-  formatTrainingTime,
   formatLargeNumber,
   formatPercent,
   formatProbability,
@@ -130,20 +129,6 @@ describe("formatFileSize", () => {
 
   it("undefinedの場合は不明を返す", () => {
     expect(formatFileSize(undefined)).toBe("不明");
-  });
-});
-
-describe("formatTrainingTime", () => {
-  it("秒数を時間形式でフォーマットする", () => {
-    expect(formatTrainingTime(3723)).toBe("1時間2分3秒");
-  });
-
-  it("秒のみの場合", () => {
-    expect(formatTrainingTime(45)).toBe("45秒");
-  });
-
-  it("undefinedの場合は不明を返す", () => {
-    expect(formatTrainingTime(undefined)).toBe("不明");
   });
 });
 

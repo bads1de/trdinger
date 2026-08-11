@@ -64,9 +64,6 @@ class GeneticAlgorithmEngine:
         self,
         backtest_service: BacktestService,
         gene_generator: RandomGeneGenerator,
-        hybrid_mode: bool = False,
-        hybrid_predictor: Any | None = None,
-        hybrid_feature_adapter: Any | None = None,
         seed_strategy_provider: Any | None = None,
     ):
         """初期化します。
@@ -74,17 +71,11 @@ class GeneticAlgorithmEngine:
         Args:
             backtest_service (BacktestService): バックテストサービス。
             gene_generator (RandomGeneGenerator): 遺伝子生成器。
-            hybrid_mode (bool): ハイブリッドGA+MLモードを有効化。デフォルトはFalse。
-            hybrid_predictor (Optional[Any]): ハイブリッド予測器
-                （hybrid_mode=Trueの場合）。
-            hybrid_feature_adapter (Optional[Any]): 特徴量アダプタ
-                （hybrid_mode=Trueの場合）。
             seed_strategy_provider (Optional[Any]): 反復改善ループ用の
                 シード戦略プロバイダ（get_seed_strategies(config) を実装）。
         """
         self.backtest_service = backtest_service
         self.gene_generator = gene_generator
-        self.hybrid_mode = hybrid_mode
         self.seed_strategy_provider = seed_strategy_provider
 
         # 実行状態
@@ -95,21 +86,9 @@ class GeneticAlgorithmEngine:
         self.deap_setup = DEAPSetup()
         self.result_processor = ResultProcessor()
 
-        # ハイブリッドモードに応じてEvaluatorを選択
-        if hybrid_mode:
-            logger.info("[Hybrid] ハイブリッドGA+MLモードで起動")
-            from ..hybrid.hybrid_individual_evaluator import (
-                HybridIndividualEvaluator,
-            )
-
-            self.individual_evaluator = HybridIndividualEvaluator(
-                backtest_service=backtest_service,
-                predictor=hybrid_predictor,
-                feature_adapter=hybrid_feature_adapter,
-            )
-        else:
-            logger.info("[Standard] 標準GAモードで起動")
-            self.individual_evaluator = IndividualEvaluator(backtest_service)  # type: ignore[assignment]
+        # 個体評価器（標準GAモード）
+        logger.info("[Standard] 標準GAモードで起動")
+        self.individual_evaluator = IndividualEvaluator(backtest_service)
 
         self.individual_class: Any = None  # setup_deap時に設定
         self.fitness_sharing: Any = None  # setup_deap時に初期化
@@ -638,20 +617,7 @@ class GeneticAlgorithmEngine:
             )
         )
 
-        # パラメータチューニング（有効な場合）
-        if config.tuning_config.enabled:
-            (
-                best_gene,
-                best_fitness_value,
-                best_evaluation_summary,
-            ) = self.parameter_tuning_manager.tune_and_select_best_gene(
-                population=population,
-                current_best_gene=best_gene,
-                config=config,
-                fallback_fitness=best_fitness_value,
-                fallback_summary=best_evaluation_summary,
-            )
-        elif best_evaluation_summary is None:
+        if best_evaluation_summary is None:
             best_evaluation_summary = (
                 self.parameter_tuning_manager.build_individual_evaluation_summary(
                     best_gene,

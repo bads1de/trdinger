@@ -45,9 +45,7 @@ class ConditionValidator:
 
         left_valid: bool
         left_error: str
-        left_valid, left_error = self._is_valid_operand_detailed(
-            condition.left_operand
-        )
+        left_valid, left_error = self._is_valid_operand_detailed(condition.left_operand)
         if not left_valid:
             return False, f"無効な左オペランド: {left_error}"
 

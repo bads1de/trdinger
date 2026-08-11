@@ -15,7 +15,6 @@ from fastapi import HTTPException
 from app.utils.error_handler import (
     DataError,
     ErrorHandler,
-    ModelError,
     TimeoutError,
     ValidationError,
     operation_context,
@@ -257,21 +256,6 @@ class TestErrorHandler:
         assert "Test API error" in str(http_exc.detail)
         assert "API エラー" in caplog.text
 
-    def test_handle_model_error(self, caplog):
-        """モデルエラーハンドリングのテスト"""
-        caplog.set_level(logging.ERROR)
-
-        error = RuntimeError("Model failure")
-        response = ErrorHandler.handle_model_error(
-            error, context="Model test", operation="predict"
-        )
-
-        assert response["success"] is False
-        assert response["error_code"] == "MODEL_ERROR"
-        assert response["details"]["operation"] == "predict"
-        assert "Model failure" in response["message"]
-        assert "Model test" in caplog.text
-
     def test_safe_execute_success(self):
         """safe_execute正常系のテスト"""
 
@@ -321,19 +305,19 @@ class TestErrorHandler:
         assert exc_info.value.status_code == 404
         assert "API例外処理" in caplog.text
 
-    def test_safe_execute_with_http_exception_ml_mode(self, caplog):
-        """MLモードでHTTPExceptionが発生した場合"""
+    def test_safe_execute_with_http_exception_non_api_mode(self, caplog):
+        """非APIモードでHTTPExceptionが発生した場合"""
         caplog.set_level(logging.ERROR)
 
-        def ml_func() -> None:
+        def non_api_func() -> None:
             raise HTTPException(status_code=404, detail="Not found")
 
         result = ErrorHandler.safe_execute(
-            ml_func, is_api_call=False, default_return="default"
+            non_api_func, is_api_call=False, default_return="default"
         )
 
         assert result == "default"
-        assert "ML処理中にAPI例外が発生" in caplog.text
+        assert "処理中にAPI例外が発生" in caplog.text
 
     @pytest.mark.asyncio
     async def test_safe_execute_async_success(self):
@@ -378,44 +362,6 @@ class TestErrorHandler:
 
 class TestValidationFunctions:
     """バリデーション機能のテスト"""
-
-    def test_validate_predictions_success(self):
-        """予測値バリデーション正常系"""
-        # MLConfigValidatorのvalidate_predictionsは辞書の型をチェックするため
-        # 実装に合わせたテストに修正
-        predictions = {"long": 0.5, "short": 0.3, "neutral": 0.2}
-        result = ErrorHandler.validate_predictions(predictions)
-        # バリデーション結果を確認（実装依存）
-        assert result is not None
-
-    def test_validate_predictions_with_nan(self, caplog):
-        """予測値にNaNが含まれる場合"""
-        caplog.set_level(logging.WARNING)
-
-        predictions = {"long": float("nan"), "short": 0.3, "neutral": 0.2}
-        result = ErrorHandler.validate_predictions(predictions)
-
-        assert result is False
-        # ログに警告が含まれることを確認
-        assert len(caplog.records) > 0
-
-    def test_validate_predictions_with_inf(self, caplog):
-        """予測値にInfが含まれる場合"""
-        caplog.set_level(logging.WARNING)
-
-        predictions = {"long": float("inf"), "short": 0.3, "neutral": 0.2}
-        result = ErrorHandler.validate_predictions(predictions)
-
-        assert result is False
-        # ログに警告が含まれることを確認
-        assert len(caplog.records) > 0
-
-    def test_validate_predictions_invalid_input(self, caplog):
-        """無効な入力のバリデーション"""
-        caplog.set_level(logging.WARNING)
-
-        result = ErrorHandler.validate_predictions(None)
-        assert result is False
 
     def test_validate_dataframe_success(self):
         """データフレームバリデーション正常系"""
@@ -489,12 +435,6 @@ class TestCustomExceptions:
         with pytest.raises(DataError) as exc_info:
             raise DataError("Data error")
         assert "Data error" in str(exc_info.value)
-
-    def test_model_error(self):
-        """ModelErrorの動作確認"""
-        with pytest.raises(ModelError) as exc_info:
-            raise ModelError("Model error")
-        assert "Model error" in str(exc_info.value)
 
 
 class TestIntegration:

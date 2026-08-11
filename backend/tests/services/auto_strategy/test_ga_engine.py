@@ -11,7 +11,6 @@ import pytest
 
 from app.services.auto_strategy.config.ga.nested_configs import (
     EvaluationConfig,
-    HybridConfig,
 )
 from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.core.engine.ga_engine_factory import (
@@ -81,35 +80,11 @@ class TestGeneticAlgorithmEngine:
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
             gene_generator=mock_gene_generator,
-            hybrid_mode=False,
         )
 
         # 標準モードであることを確認
-        assert engine.hybrid_mode is False
         assert isinstance(engine.individual_evaluator, IndividualEvaluator)
         assert engine.gene_generator == mock_gene_generator
-
-    def test_hybrid_mode_initialization(
-        self,
-        mock_backtest_service,
-        mock_gene_generator,
-    ):
-        """ハイブリッドGA+MLモードでの初期化を確認"""
-        mock_predictor = Mock()
-        mock_feature_adapter = Mock()
-
-        engine = GeneticAlgorithmEngine(
-            backtest_service=mock_backtest_service,
-            gene_generator=mock_gene_generator,
-            hybrid_mode=True,
-            hybrid_predictor=mock_predictor,
-            hybrid_feature_adapter=mock_feature_adapter,
-        )
-
-        # ハイブリッドモードであることを確認
-        assert engine.hybrid_mode is True
-        # 標準名のハイブリッド評価器が使用され、内部最適化は実装側に吸収される
-        assert type(engine.individual_evaluator).__name__ == "HybridIndividualEvaluator"
 
     def test_engine_components_are_set(
         self,
@@ -322,172 +297,21 @@ class TestGeneticAlgorithmEngine:
     @patch(
         "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
     )
-    @patch(
-        "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
-    )
-    @patch("app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor")
-    def test_factory_loads_latest_hybrid_model_when_available(
+    def test_factory_creates_standard_engine_with_real_config(
         self,
-        mock_predictor_cls,
-        mock_adapter_cls,
         mock_gene_generator_cls,
         mock_backtest_service,
     ):
-        """hybrid_mode では起動時に最新モデルのロードを試みる"""
-        predictor = Mock()
-        predictor.load_latest_models.return_value = True
-        mock_predictor_cls.return_value = predictor
-        mock_adapter_cls.return_value = Mock()
-        mock_gene_generator_cls.return_value = Mock()
-
-        config = Mock()
-        config.log_level = "INFO"
-        config.hybrid_config = HybridConfig(
-            mode=True,
-            model_types=None,
-            model_type="lightgbm",
-        )
+        """GAConfig を使った標準エンジンの生成を確認"""
+        from app.services.auto_strategy.config.ga import GAConfig
 
         engine = GeneticAlgorithmEngineFactory.create_engine(
             mock_backtest_service,
-            config,
+            GAConfig(log_level="INFO"),
         )
 
-        predictor.load_latest_models.assert_called_once_with()
-        assert engine.hybrid_mode is True
-
-    @patch(
-        "app.services.auto_strategy.core.engine.ga_engine_factory.RandomGeneGenerator"
-    )
-    @patch(
-        "app.services.auto_strategy.core.hybrid.hybrid_feature_adapter.HybridFeatureAdapter"
-    )
-    @patch("app.services.auto_strategy.core.hybrid.hybrid_predictor.HybridPredictor")
-    def test_factory_keeps_hybrid_engine_when_no_latest_model_exists(
-        self,
-        mock_predictor_cls,
-        mock_adapter_cls,
-        mock_gene_generator_cls,
-        mock_backtest_service,
-    ):
-        """最新モデルがなくても hybrid エンジン初期化は継続する"""
-        predictor = Mock()
-        predictor.load_latest_models.return_value = False
-        mock_predictor_cls.return_value = predictor
-        mock_adapter_cls.return_value = Mock()
-        mock_gene_generator_cls.return_value = Mock()
-
-        config = Mock()
-        config.log_level = "INFO"
-        config.hybrid_config = HybridConfig(
-            mode=True,
-            model_types=None,
-            model_type="lightgbm",
-        )
-
-        engine = GeneticAlgorithmEngineFactory.create_engine(
-            mock_backtest_service,
-            config,
-        )
-
-        predictor.load_latest_models.assert_called_once_with()
-        assert engine.hybrid_mode is True
-
-    def test_tuning_reselection_respects_disabled_two_stage_selection(
-        self,
-        mock_backtest_service,
-        mock_gene_generator,
-    ):
-        """二段階選抜が無効なら tuning 後の再選抜も raw fitness を使う"""
-        engine = GeneticAlgorithmEngine(
-            backtest_service=mock_backtest_service,
-            gene_generator=mock_gene_generator,
-        )
-
-        current_best = object()
-        config = Mock()
-        config.two_stage_selection_config = Mock()
-        config.two_stage_selection_config.enabled = False
-
-        engine.parameter_tuning_manager.select_tuning_candidates = Mock(
-            return_value=["candidate"]
-        )
-        engine.parameter_tuning_manager.tune_candidate_genes = Mock(
-            return_value=["tuned"]
-        )
-        engine.parameter_tuning_manager.select_best_tuned_candidate = Mock(
-            return_value=("wrong", -1.0, None)
-        )
-        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness = Mock(
-            return_value=("tuned", 1.23, {"mode": "single"})
-        )
-
-        result = engine.parameter_tuning_manager.tune_and_select_best_gene(
-            population=[],
-            current_best_gene=current_best,
-            config=config,
-            fallback_fitness=0.5,
-            fallback_summary={"mode": "single"},
-        )
-
-        assert result == ("tuned", 1.23, {"mode": "single"})
-        engine.parameter_tuning_manager.select_best_tuned_candidate.assert_not_called()
-        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness.assert_called_once_with(
-            ["tuned"],
-            config,
-        )
-
-    def test_tuning_skips_single_objective_reselection_for_multi_objective(
-        self,
-        mock_backtest_service,
-        mock_gene_generator,
-    ):
-        """多目的では tuning 後に単一スコアで候補比較しない"""
-        engine = GeneticAlgorithmEngine(
-            backtest_service=mock_backtest_service,
-            gene_generator=mock_gene_generator,
-        )
-
-        current_best = object()
-        config = Mock()
-        config.objectives = ["weighted_score", "max_drawdown"]
-        config.two_stage_selection_config = Mock()
-        config.two_stage_selection_config.enabled = True
-
-        engine.parameter_tuning_manager.tune_elite_parameters = Mock(
-            return_value="tuned-multi"
-        )
-        engine.parameter_tuning_manager.refresh_best_gene_reporting = Mock(
-            return_value=((1.0, -0.2), {"mode": "multi"})
-        )
-        engine.parameter_tuning_manager.select_tuning_candidates = Mock()
-        engine.parameter_tuning_manager.tune_candidate_genes = Mock()
-        engine.parameter_tuning_manager.select_best_tuned_candidate = Mock()
-        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness = Mock()
-
-        result = engine.parameter_tuning_manager.tune_and_select_best_gene(
-            population=[],
-            current_best_gene=current_best,
-            config=config,
-            fallback_fitness=(0.5, -0.1),
-            fallback_summary={"mode": "multi"},
-        )
-
-        assert result == ("tuned-multi", (1.0, -0.2), {"mode": "multi"})
-        engine.parameter_tuning_manager.tune_elite_parameters.assert_called_once_with(
-            current_best,
-            config,
-        )
-        engine.parameter_tuning_manager.refresh_best_gene_reporting.assert_called_once_with(
-            best_gene="tuned-multi",
-            config=config,
-            fallback_fitness=(0.5, -0.1),
-            fallback_summary={"mode": "multi"},
-        )
-        engine.parameter_tuning_manager.select_tuning_candidates.assert_not_called()
-        engine.parameter_tuning_manager.tune_candidate_genes.assert_not_called()
-        engine.parameter_tuning_manager.select_best_tuned_candidate.assert_not_called()
-        engine.parameter_tuning_manager.select_best_tuned_candidate_by_fitness.assert_not_called()
+        assert isinstance(engine, GeneticAlgorithmEngine)
+        assert engine.individual_evaluator.__class__.__name__ == "IndividualEvaluator"
 
     @patch("app.services.auto_strategy.core.engine.ga_engine.EvolutionRunner")
     def test_run_evolution_flow(

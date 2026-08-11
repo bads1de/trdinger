@@ -7,7 +7,6 @@ import {
   getFundingRateColor,
   getScoreColorClass,
   getBarColor,
-  getStatusColor,
   getSemanticColor,
 } from "@/utils/colorUtils";
 
@@ -149,32 +148,6 @@ describe("getBarColor", () => {
     const color0 = getBarColor(0, 10);
     const color9 = getBarColor(9, 10);
     expect(color0).not.toBe(color9);
-  });
-});
-
-describe("getStatusColor", () => {
-  it("completedは緑色を返す", () => {
-    expect(getStatusColor("completed")).toBe("text-green-600");
-  });
-
-  it("errorは赤色を返す", () => {
-    expect(getStatusColor("error")).toBe("text-red-600");
-  });
-
-  it("trainingは青色を返す", () => {
-    expect(getStatusColor("training")).toBe("text-blue-600");
-  });
-
-  it("loading_dataは青色を返す", () => {
-    expect(getStatusColor("loading_data")).toBe("text-blue-600");
-  });
-
-  it("初期化中は青色を返す", () => {
-    expect(getStatusColor("initializing")).toBe("text-blue-600");
-  });
-
-  it("デフォルトは灰色を返す", () => {
-    expect(getStatusColor("unknown")).toBe("text-gray-600");
   });
 });
 

@@ -5,11 +5,9 @@
 
 import logging
 from datetime import datetime
-from typing import Any
 
 import pandas as pd
 
-from app.services.ml.label_generation import EventDrivenLabelGenerator
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
@@ -28,11 +26,11 @@ logger = logging.getLogger(__name__)
 
 class BacktestDataService:
     """
-    バックテストおよび ML 学習用データの供給を一元管理するファサードサービス
+    バックテスト用データの供給を一元管理するファサードサービス
 
     `DataRetrieval`（取得）、`DataConversion`（変換）、`DataIntegration`（統合）
     といった低層サービスを組み合わせ、シミュレーション実行に必要な
-    価格データや、イベントラベル（HRHP/LRLP 等）付きの学習データを生成します。
+    価格データを生成します。
     """
 
     def __init__(
@@ -40,7 +38,6 @@ class BacktestDataService:
         ohlcv_repo: OHLCVRepository | None = None,
         oi_repo: OpenInterestRepository | None = None,
         fr_repo: FundingRateRepository | None = None,
-        event_label_generator: EventDrivenLabelGenerator | None = None,
     ):
         """
         初期化
@@ -49,7 +46,6 @@ class BacktestDataService:
             ohlcv_repo: OHLCVデータリポジトリ
             oi_repo: Open Interestデータリポジトリ
             fr_repo: Funding Rateデータリポジトリ
-            event_label_generator: イベントドリブンラベル生成器
         """
         # 専門サービスを初期化
         self._retrieval_service = DataRetrievalService(
@@ -61,9 +57,6 @@ class BacktestDataService:
         self._integration_service = DataIntegrationService(
             retrieval_service=self._retrieval_service,
             conversion_service=self._conversion_service,
-        )
-        self._event_label_generator = (
-            event_label_generator or EventDrivenLabelGenerator()
         )
 
     def get_data_for_backtest(
@@ -147,87 +140,6 @@ class BacktestDataService:
             )
 
         return df
-
-    def get_ml_training_data(
-        self,
-        symbol: str,
-        timeframe: str,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> pd.DataFrame:
-        """
-        ML モデル学習用に、正規化済みの市場統合データを取得
-
-        価格データに加えて OI (建玉) や FR (金利) をインデックスで整列させ、
-        欠損値を補完した状態で返します。特徴量エンジニアリングの入力として使用されます。
-
-        Args:
-            symbol: 通貨ペア
-            timeframe: 時間足
-            start_date: 開始日
-            end_date: 終了日
-
-        Returns:
-            ML 学習のベースとして利用可能な統合済み DataFrame
-        """
-        try:
-            return self._integration_service.create_ml_training_dataframe(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_date=start_date,
-                end_date=end_date,
-            )
-        except DataIntegrationError as e:
-            logger.error(f"MLトレーニング用データ作成エラー: {e}")
-            raise ValueError(f"MLトレーニング用データの作成に失敗しました: {e}")
-
-    def get_event_labeled_training_data(
-        self,
-        symbol: str,
-        timeframe: str,
-        start_date: datetime,
-        end_date: datetime,
-    ) -> tuple[pd.DataFrame, dict[str, Any]]:
-        """
-        ボラティリティ等の特定イベントに基づきラベリングされた学習データを取得
-
-        `EventDrivenLabelGenerator` と連携し、価格変動リスクに応じた
-        HRHP (High Reward High Probability) 等のラベルを付与します。
-        これにより、単なる価格予測ではなく「収益機会の有無」を学習させることが可能になります。
-
-        Args:
-            symbol: 通貨ペア
-            timeframe: 時間足
-            start_date: 開始開始日
-            end_date: 終了日
-
-        Returns:
-            (ラベル付き DataFrame, プロファイル情報等のメタデータ辞書)
-        """
-        try:
-            market_df = self._integration_service.create_ml_training_dataframe(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_date=start_date,
-                end_date=end_date,
-            )
-        except DataIntegrationError as exc:
-            logger.error(f"イベントラベル用データ作成エラー: {exc}")
-            raise ValueError(f"イベントラベル付きデータの作成に失敗しました: {exc}")
-
-        if market_df.empty:
-            logger.warning("取得データが空のためイベントラベリングをスキップします")
-            return market_df, {"regime_profiles": {}, "label_distribution": {}}
-
-        labels_df, profile_info = self._event_label_generator.generate_hrhp_lrlp_labels(
-            market_df,
-            regime_labels=None,
-        )
-
-        aligned_market = market_df.loc[labels_df.index].copy()
-        labeled_df = aligned_market.join(labels_df)
-
-        return labeled_df, profile_info
 
     def get_data_summary(self, df: pd.DataFrame) -> dict:
         """

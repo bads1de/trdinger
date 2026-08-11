@@ -102,7 +102,6 @@ class TestBacktestSystemComprehensive:
         """バックテストデータサービス初期化のテスト"""
         assert backtest_data_service is not None
         assert hasattr(backtest_data_service, "get_data_for_backtest")
-        assert hasattr(backtest_data_service, "get_ml_training_data")
 
     def test_backtest_service_initialization(self, backtest_service):
         """バックテストサービス初期化のテスト"""

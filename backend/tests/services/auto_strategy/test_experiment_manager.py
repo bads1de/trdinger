@@ -289,7 +289,9 @@ class TestExperimentManager:
                 "experiment_id": "test_exp_001",
             },
         )
-        saved = self.manager.persistence_service.save_experiment_result.call_args.args[1]
+        saved = self.manager.persistence_service.save_experiment_result.call_args.args[
+            1
+        ]
         assert saved["validation_results"]["abcdef123456"]["passed"] is True
         self.manager.persistence_service.complete_experiment.assert_called_once_with(
             "test_exp_001"
