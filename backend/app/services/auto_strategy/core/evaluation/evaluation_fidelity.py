@@ -77,11 +77,10 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
     coarse = deepcopy(config)
     coarse.evaluation_config.enable_walk_forward = False
     coarse.enable_purged_kfold = False
-    oos_split_ratio = _coerce_float(
-        getattr(coarse.evaluation_config, "oos_split_ratio", 0.0),
-        0.0,
-    )
-    if oos_split_ratio <= 0.0:
+    # multi-fidelity 有効時は coarse 評価専用の OOS 比率（multi_fidelity_oos_ratio）を
+    # 常に優先する。通常の oos_split_ratio がデフォルト有効（0.25）でも、
+    # 粗評価の軽量・高速という意図を維持するため。
+    if is_multi_fidelity_enabled(config):
         coarse.evaluation_config.oos_split_ratio = _coerce_float(
             getattr(coarse.evaluation_config, "multi_fidelity_oos_ratio", 0.2),
             0.2,

@@ -9,7 +9,10 @@ import pytest
 from fastapi import BackgroundTasks
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+from app.services.auto_strategy.config.ga.nested_configs import (
+    EvaluationConfig,
+    ValidationConfig,
+)
 from app.services.auto_strategy.services.auto_strategy_service import (
     AutoStrategyService,
 )
@@ -102,6 +105,8 @@ class TestE2EFlow:
             elite_size=1,
             fitness_sharing={"enable_fitness_sharing": False},
             evaluation_config=EvaluationConfig(enable_parallel=False),
+            # このテストは基本フロー検証のため自動検証パイプラインを無効化
+            validation_config=ValidationConfig(enabled=False),
         )
         backtest_config = {
             "symbol": "BTC/USDT:USDT",

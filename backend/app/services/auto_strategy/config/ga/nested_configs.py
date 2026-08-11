@@ -212,7 +212,7 @@ class EvaluationConfig(NestedConfigMixin):
     early_termination_settings: EarlyTerminationSettings = field(
         default_factory=EarlyTerminationSettings
     )
-    oos_split_ratio: float = 0.0
+    oos_split_ratio: float = 0.25
     oos_fitness_weight: float = 0.5
     enable_walk_forward: bool = False
     wfa_n_folds: int = 5
@@ -290,7 +290,8 @@ class ValidationConfig(NestedConfigMixin):
     """
 
     # 自動検証パイプラインを有効化するか
-    enabled: bool = False
+    # 過学習対策のためデフォルト有効（合格戦略のみDB保存）
+    enabled: bool = True
 
     # 合格判定基準
     # WFA のフォールド合格率（0.0-1.0）。この値以上の戦略のみ合格。

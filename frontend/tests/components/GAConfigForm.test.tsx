@@ -223,7 +223,7 @@ describe("GAConfigForm", () => {
   // 自動検証パイプライン
   // ------------------------------------------------------------------
 
-  test("自動検証パイプラインがデフォルトで無効であること", () => {
+  test("自動検証パイプラインがデフォルトで有効であること", () => {
     renderWithTooltipProvider(
       <GAConfigForm
         onSubmit={mockOnSubmit}
@@ -233,12 +233,12 @@ describe("GAConfigForm", () => {
     );
 
     const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
-    expect(validationToggle).not.toBeChecked();
-    // 無効時は詳細設定が表示されない
-    expect(screen.queryByText("合格率下限 (min_pass_rate)")).not.toBeInTheDocument();
+    expect(validationToggle).toBeChecked();
+    // 有効時は詳細設定が表示される
+    expect(screen.getByText("合格率下限 (min_pass_rate)")).toBeInTheDocument();
   });
 
-  test("自動検証パイプラインを有効化すると詳細設定が表示され設定が送信されること", () => {
+  test("自動検証パイプラインを無効化できること", () => {
     renderWithTooltipProvider(
       <GAConfigForm
         onSubmit={mockOnSubmit}
@@ -247,10 +247,32 @@ describe("GAConfigForm", () => {
       />
     );
 
+    // デフォルト有効 → 無効化
     const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
     fireEvent.click(validationToggle);
 
-    // 詳細設定が表示される（InputFieldはlabelがinputと関連付かないためテキストで確認）
+    // 無効化すると詳細設定が非表示になる
+    expect(validationToggle).not.toBeChecked();
+    expect(screen.queryByText("合格率下限 (min_pass_rate)")).not.toBeInTheDocument();
+
+    // フォームを送信
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.validation_config.enabled).toBe(false);
+  });
+
+  test("自動検証パイプラインが有効なら詳細設定が表示され設定が送信されること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    // デフォルト有効のため詳細設定が表示されている
     expect(screen.getByText("合格率下限 (min_pass_rate)")).toBeInTheDocument();
     expect(screen.getByText("検証用WFAフォールド数")).toBeInTheDocument();
 
@@ -274,9 +296,6 @@ describe("GAConfigForm", () => {
         initialConfig={initialConfig}
       />
     );
-
-    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
-    fireEvent.click(validationToggle);
 
     // 合格率下限を変更（InputFieldのinputは表示値で特定）
     const minPassRateInput = screen.getByDisplayValue("0.5");
@@ -302,9 +321,6 @@ describe("GAConfigForm", () => {
         initialConfig={initialConfig}
       />
     );
-
-    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
-    fireEvent.click(validationToggle);
 
     // 最少取引回数（空欄の allowEmptyNumber input）をラベルから特定して変更
     const minTradesInput = getInputFieldByLabel("最少取引回数");

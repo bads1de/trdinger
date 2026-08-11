@@ -154,7 +154,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             expectancy_progress:
               initialEarlyTerminationSettings.expectancy_progress ?? 0.6,
           },
-          oos_split_ratio: initialEvaluationConfig.oos_split_ratio ?? 0.0,
+          oos_split_ratio: initialEvaluationConfig.oos_split_ratio ?? 0.25,
           oos_fitness_weight: initialEvaluationConfig.oos_fitness_weight ?? 0.5,
           enable_walk_forward:
             initialEvaluationConfig.enable_walk_forward ?? false,
@@ -166,7 +166,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         // 自動検証パイプライン設定
         validation_config: {
           ...initialValidationConfig,
-          enabled: initialValidationConfig.enabled ?? false,
+          enabled: initialValidationConfig.enabled ?? true,
           min_pass_rate: initialValidationConfig.min_pass_rate ?? 0.5,
           min_primary_fitness:
             initialValidationConfig.min_primary_fitness === undefined
@@ -547,7 +547,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             <InputField
               label="Out-of-Sample 分割比率"
               type="number"
-              value={evaluationConfig.oos_split_ratio ?? 0.0}
+              value={evaluationConfig.oos_split_ratio ?? 0.25}
               onChange={(val) =>
                 handleEvaluationConfigChange({ oos_split_ratio: val })
               }
@@ -609,7 +609,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             </label>
             <input
               type="checkbox"
-              checked={validationConfig.enabled ?? false}
+              checked={validationConfig.enabled ?? true}
               onChange={(e) =>
                 handleValidationConfigChange({ enabled: e.target.checked })
               }

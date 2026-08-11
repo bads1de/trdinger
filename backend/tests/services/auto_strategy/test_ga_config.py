@@ -64,11 +64,14 @@ class TestGAConfig:
         assert config.robustness_config.aggregate_method == "robust"
         assert config.evaluation_config.enable_multi_fidelity_evaluation is False
         assert config.evaluation_config.multi_fidelity_window_ratio == 0.3
+        assert config.evaluation_config.oos_split_ratio == 0.25
         assert config.evaluation_config.early_termination_settings.enabled is True
         assert (
             config.evaluation_config.early_termination_settings.expectancy_min_trades
             == 10
         )
+        assert config.validation_config.enabled is True
+        assert config.validation_config.min_pass_rate == 0.5
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
         """二段階選抜/robustness 設定がシリアライズされることを確認"""

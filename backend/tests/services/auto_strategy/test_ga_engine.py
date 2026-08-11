@@ -478,6 +478,8 @@ class TestGeneticAlgorithmEngine:
                 enable_parallel=True,
                 enable_multi_fidelity_evaluation=True,
                 enable_walk_forward=True,
+                # 通常 OOS がデフォルト有効（0.25）でも coarse 評価では
+                # multi_fidelity_oos_ratio が優先されることを確認する
                 multi_fidelity_oos_ratio=0.2,
             ),
             enable_purged_kfold=True,
