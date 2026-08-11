@@ -315,6 +315,170 @@ class TestStrategyValidationService:
         assert validation["passed"] is False
         assert any("ドローダウン" in reason for reason in validation["reasons"])
 
+    def test_missing_required_metrics_fail_closed(self, mock_evaluator):
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                min_trades=1,
+                max_drawdown=0.5,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        report = EvaluationReport(
+            mode="walk_forward",
+            objectives=("total_return",),
+            aggregated_fitness=(0.8,),
+            scenarios=[
+                ScenarioEvaluation(
+                    name="fold_0",
+                    fitness=(0.8,),
+                    passed=True,
+                    performance_metrics={"total_trades": 10},
+                ),
+                ScenarioEvaluation(
+                    name="fold_1",
+                    fitness=(0.8,),
+                    passed=True,
+                    performance_metrics={"max_drawdown": 0.1},
+                ),
+            ],
+        )
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is False
+        assert any("total_trades" in reason for reason in validation["reasons"])
+        assert any("max_drawdown" in reason for reason in validation["reasons"])
+        assert filtered["best_strategy"] is None
+
+    def test_empty_report_fails_even_with_zero_pass_rate_threshold(
+        self, mock_evaluator
+    ):
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        report = EvaluationReport(
+            mode="walk_forward",
+            objectives=("total_return",),
+            aggregated_fitness=(),
+            scenarios=[],
+        )
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is False
+        assert any("シナリオがありません" in reason for reason in validation["reasons"])
+
+    def test_incomplete_evaluation_fails_closed(self, mock_evaluator):
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        report = _make_report(pass_rate=1.0, primary_fitness=0.8)
+        report.metadata.update(
+            {
+                "evaluation_incomplete": True,
+                "expected_fold_count": 5,
+                "completed_fold_count": 4,
+            }
+        )
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is False
+        assert any("不完全" in reason for reason in validation["reasons"])
+        assert (
+            filtered["validation_report_summaries"]["best"]["metadata"][
+                "evaluation_incomplete"
+            ]
+            is True
+        )
+
+    def test_evaluation_fallback_fails_closed(self, mock_evaluator):
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        report = _make_report(pass_rate=1.0, primary_fitness=0.8)
+        report.metadata.update(
+            {"evaluation_fallback": True, "fallback_reason": "test failure"}
+        )
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is False
+        assert any("フォールバック" in reason for reason in validation["reasons"])
+
     def test_min_primary_fitness_minimize_direction(self, mock_evaluator):
         """最小化目的（max_drawdown）では min_primary_fitness は上限として判定される"""
         config = GAConfig(

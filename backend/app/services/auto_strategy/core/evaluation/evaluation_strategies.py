@@ -43,6 +43,7 @@ class EvaluationStrategy:
         self._evaluator = evaluator
         self._max_workers = max_workers
         self._date_cache: dict[str, tuple[str, str, str]] = {}
+        self._last_scenario_task_failures = 0
 
     def execute_report(
         self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
@@ -86,6 +87,51 @@ class EvaluationStrategy:
         else:
             return self._evaluate_single_report(gene, base_backtest_config, config)
 
+    def execute_ga_report(
+        self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
+    ) -> EvaluationReport:
+        """GA の選択に使う IS 専用評価を実行する。"""
+        evaluation_config = getattr(config, "evaluation_config", None)
+        oos_ratio = float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0)
+        metadata = {"evaluation_scope": "ga", "holdout_reserved": oos_ratio > 0.0}
+
+        if oos_ratio > 0.0:
+            is_config, _, split_metadata = self._build_oos_split_configs(
+                base_backtest_config,
+                oos_ratio,
+            )
+            scenario = self._evaluate_scenario(
+                gene,
+                is_config,
+                config,
+                scenario_name="is",
+                metadata={"segment": "is", "evaluation_scope": "ga"},
+            )
+            metadata.update(split_metadata)
+            metadata["oos_fitness_weight_ignored"] = float(
+                getattr(evaluation_config, "oos_fitness_weight", 0.5) or 0.5
+            )
+            return EvaluationReport.single(
+                mode="in_sample",
+                objectives=self._get_objectives(config),
+                scenario=scenario,
+                metadata=metadata,
+            )
+
+        scenario = self._evaluate_scenario(
+            gene,
+            base_backtest_config,
+            config,
+            scenario_name="single",
+            metadata={"evaluation_scope": "ga"},
+        )
+        return EvaluationReport.single(
+            mode="in_sample",
+            objectives=self._get_objectives(config),
+            scenario=scenario,
+            metadata=metadata,
+        )
+
     def execute_robustness_report(
         self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
     ) -> EvaluationReport:
@@ -94,7 +140,7 @@ class EvaluationStrategy:
             base_backtest_config, config
         )
         if len(scenario_definitions) <= 1:
-            return self.execute_report(gene, base_backtest_config, config)
+            return self.execute_ga_report(gene, base_backtest_config, config)
 
         scenario_reports = self._run_parallel_scenario_tasks(
             [
@@ -117,7 +163,7 @@ class EvaluationStrategy:
         )
 
         if not scenario_reports:
-            return self.execute_report(gene, base_backtest_config, config)
+            return self.execute_ga_report(gene, base_backtest_config, config)
 
         scenario_reports.sort(
             key=lambda scenario: int(scenario.metadata.get("scenario_order", -1))
@@ -317,7 +363,7 @@ class EvaluationStrategy:
         metadata: dict[str, Any],
     ) -> ScenarioEvaluation:
         """単一 robustness シナリオを評価し、外側用シナリオへ変換する。"""
-        scenario_report = self.execute_report(gene, scenario_config, config)
+        scenario_report = self.execute_ga_report(gene, scenario_config, config)
         scenario_metadata = metadata.copy()
         scenario_metadata.update(
             {
@@ -343,10 +389,12 @@ class EvaluationStrategy:
         order_metadata_key: str | None = None,
     ) -> list[ScenarioEvaluation]:
         """ScenarioEvaluation を返すタスク群を並列実行し、完了順に依らず回収する。"""
+        self._last_scenario_task_failures = 0
         if not tasks:
             return []
 
         scenario_reports: list[ScenarioEvaluation] = []
+        failed_count = 0
         with ThreadPoolExecutor(
             max_workers=min(self._max_workers, len(tasks))
         ) as executor:
@@ -360,6 +408,7 @@ class EvaluationStrategy:
                         scenario.metadata.setdefault(order_metadata_key, order)
                     scenario_reports.append(scenario)
                 except Exception as scenario_error:
+                    failed_count += 1
                     logger.warning(
                         "%s %s 評価エラー: %s",
                         error_context,
@@ -367,10 +416,16 @@ class EvaluationStrategy:
                         scenario_error,
                     )
 
+        self._last_scenario_task_failures = failed_count
         return scenario_reports
 
     def _evaluate_single_report(
-        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
+        self,
+        gene: Any,
+        backtest_config: dict[str, Any],
+        config: GAConfig,
+        *,
+        metadata: dict[str, Any] | None = None,
     ) -> EvaluationReport:
         scenario = self._evaluate_scenario(
             gene,
@@ -382,6 +437,7 @@ class EvaluationStrategy:
             mode="single",
             objectives=self._get_objectives(config),
             scenario=scenario,
+            metadata=metadata,
         )
 
     def _evaluate_scenario(
@@ -437,6 +493,62 @@ class EvaluationStrategy:
             f"Evaluator {type(self._evaluator)} lacks necessary evaluation methods."
         )
 
+    def _build_oos_split_configs(
+        self,
+        base_backtest_config: dict[str, Any],
+        oos_ratio: float,
+    ) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        """IS/OOS のバックテスト設定と境界メタデータを構築する。"""
+        if not 0.0 < oos_ratio < 1.0:
+            raise ValueError(
+                f"oos_split_ratio は0より大きく1未満である必要があります: {oos_ratio}"
+            )
+
+        date_range = self._resolve_backtest_date_range(base_backtest_config)
+        if date_range is None:
+            raise ValueError("OOS 分割に必要なバックテスト期間がありません")
+        start_date, end_date = date_range
+
+        cache_key = f"{start_date}_{end_date}_{oos_ratio}"
+        if cache_key in self._date_cache:
+            start_str, split_str, end_str = self._date_cache[cache_key]
+        else:
+            total_duration = end_date - start_date
+            train_duration = total_duration * (1.0 - oos_ratio)
+            split_date = start_date + train_duration
+
+            start_str = start_date.strftime(_DATETIME_FORMAT)
+            split_str = split_date.strftime(_DATETIME_FORMAT)
+            end_str = end_date.strftime(_DATETIME_FORMAT)
+            self._date_cache[cache_key] = (start_str, split_str, end_str)
+
+        is_config = base_backtest_config.copy()
+        is_config["start_date"] = start_str
+        is_config["end_date"] = split_str
+
+        timeframe = base_backtest_config.get("timeframe", "1h")
+        try:
+            bar_offset = pd.Timedelta(timeframe)
+        except Exception as e:
+            logger.debug(
+                "タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s",
+                e,
+            )
+            bar_offset = pd.Timedelta(hours=1)
+        oos_start = cast(pd.Timestamp, pd.Timestamp(split_str) + bar_offset)
+        oos_config = base_backtest_config.copy()
+        oos_config["start_date"] = oos_start.strftime(_DATETIME_FORMAT)
+        oos_config["end_date"] = end_str
+
+        metadata = {
+            "oos_split_ratio": float(oos_ratio),
+            "is_start_date": start_str,
+            "is_end_date": split_str,
+            "oos_start_date": oos_config["start_date"],
+            "oos_end_date": end_str,
+        }
+        return is_config, oos_config, metadata
+
     def _evaluate_with_oos_report(
         self,
         gene: Any,
@@ -447,42 +559,10 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """Out-of-Sample (OOS) 検証を含む評価を実行する。"""
         try:
-            date_range = self._resolve_backtest_date_range(base_backtest_config)
-            if date_range is None:
-                return self._evaluate_single_report(gene, base_backtest_config, config)
-            start_date, end_date = date_range
-
-            cache_key = f"{start_date}_{end_date}_{oos_ratio}"
-            if cache_key in self._date_cache:
-                start_str, split_str, end_str = self._date_cache[cache_key]
-            else:
-                total_duration = end_date - start_date
-                train_duration = total_duration * (1.0 - oos_ratio)
-                split_date = start_date + train_duration
-
-                start_str = start_date.strftime(_DATETIME_FORMAT)
-                split_str = split_date.strftime(_DATETIME_FORMAT)
-                end_str = end_date.strftime(_DATETIME_FORMAT)
-                self._date_cache[cache_key] = (start_str, split_str, end_str)
-
-            is_config = base_backtest_config.copy()
-            is_config["start_date"] = start_str
-            is_config["end_date"] = split_str
-
-            oos_config = base_backtest_config.copy()
-            # IS期間の直後のバーからOOS期間を開始し、境界でのデータリークを防ぐ
-            timeframe = base_backtest_config.get("timeframe", "1h")
-            try:
-                bar_offset = pd.Timedelta(timeframe)
-            except Exception as e:
-                logger.debug(
-                    "タイムフレームのパーズに失敗しました、デフォルト値を使用します: %s",
-                    e,
-                )
-                bar_offset = pd.Timedelta(hours=1)
-            oos_start = cast(pd.Timestamp, pd.Timestamp(split_str) + bar_offset)
-            oos_config["start_date"] = oos_start.strftime(_DATETIME_FORMAT)
-            oos_config["end_date"] = end_str
+            is_config, oos_config, split_metadata = self._build_oos_split_configs(
+                base_backtest_config,
+                oos_ratio,
+            )
 
             with ThreadPoolExecutor(max_workers=2) as executor:
                 is_future = executor.submit(
@@ -511,7 +591,7 @@ class EvaluationStrategy:
                 scenarios=[is_scenario, oos_scenario],
                 aggregate_method="weighted",
                 weights=[1.0 - oos_weight, oos_weight],
-                metadata={"oos_weight": oos_weight},
+                metadata={"oos_weight": oos_weight, **split_metadata},
             )
 
             logger.info(
@@ -523,7 +603,15 @@ class EvaluationStrategy:
 
         except Exception as e:
             logger.error(f"OOS評価中エラー: {e}")
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+            return self._evaluate_single_report(
+                gene,
+                base_backtest_config,
+                config,
+                metadata={
+                    "evaluation_fallback": True,
+                    "fallback_reason": f"OOS評価エラー: {e}",
+                },
+            )
 
     def _evaluate_with_walk_forward_report(
         self,
@@ -538,7 +626,15 @@ class EvaluationStrategy:
                 logger.warning(
                     "WFA: 期間が不明または無効なため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene,
+                    base_backtest_config,
+                    config,
+                    metadata={
+                        "evaluation_fallback": True,
+                        "fallback_reason": "WFAのバックテスト期間が不正です",
+                    },
+                )
             start_date, end_date = date_range
 
             evaluation_config = getattr(config, "evaluation_config", None)
@@ -559,7 +655,18 @@ class EvaluationStrategy:
                 logger.warning(
                     "WFA: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene,
+                    base_backtest_config,
+                    config,
+                    metadata={
+                        "evaluation_fallback": True,
+                        "fallback_reason": "WFAの有効なフォールドがありません",
+                        "expected_fold_count": int(n_folds),
+                        "completed_fold_count": 0,
+                        "evaluation_incomplete": True,
+                    },
+                )
 
             scenario_reports = self._run_parallel_scenario_tasks(
                 [
@@ -580,11 +687,25 @@ class EvaluationStrategy:
                 error_context="WFA Fold",
             )
 
+            completed_fold_count = len(scenario_reports)
+            expected_fold_count = int(n_folds)
             if not scenario_reports:
                 logger.warning(
                     "WFA: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene,
+                    base_backtest_config,
+                    config,
+                    metadata={
+                        "evaluation_fallback": True,
+                        "fallback_reason": "WFAのフォールド評価がすべて失敗しました",
+                        "expected_fold_count": expected_fold_count,
+                        "completed_fold_count": 0,
+                        "failed_fold_count": self._last_scenario_task_failures,
+                        "evaluation_incomplete": True,
+                    },
+                )
 
             scenario_reports.sort(
                 key=lambda scenario: int(scenario.metadata.get("fold_index", -1))
@@ -594,7 +715,14 @@ class EvaluationStrategy:
                 objectives=self._get_objectives(config),
                 scenarios=scenario_reports,
                 aggregate_method="robust",
-                metadata={"fold_count": len(scenario_reports)},
+                metadata={
+                    "fold_count": completed_fold_count,
+                    "expected_fold_count": expected_fold_count,
+                    "completed_fold_count": completed_fold_count,
+                    "failed_fold_count": self._last_scenario_task_failures,
+                    "evaluation_incomplete": completed_fold_count
+                    != expected_fold_count,
+                },
             )
 
             logger.info(
@@ -608,7 +736,16 @@ class EvaluationStrategy:
 
         except Exception as e:
             logger.error(f"WFA評価中エラー: {e}")
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+            return self._evaluate_single_report(
+                gene,
+                base_backtest_config,
+                config,
+                metadata={
+                    "evaluation_fallback": True,
+                    "fallback_reason": f"WFA評価エラー: {e}",
+                    "evaluation_incomplete": True,
+                },
+            )
 
     def _precompute_fold_configs(
         self,
@@ -689,7 +826,18 @@ class EvaluationStrategy:
                 logger.warning(
                     "PurgedKFold: 期間が不明または無効なため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene,
+                    base_backtest_config,
+                    config,
+                    metadata={
+                        "evaluation_fallback": True,
+                        "fallback_reason": "PurgedKFoldのバックテスト期間が不正です",
+                        "expected_fold_count": int(n_splits),
+                        "completed_fold_count": 0,
+                        "evaluation_incomplete": True,
+                    },
+                )
             start_date, end_date = date_range
 
             fold_configs = self._precompute_purged_kfold_configs(
@@ -704,7 +852,18 @@ class EvaluationStrategy:
                 logger.warning(
                     "PurgedKFold: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene,
+                    base_backtest_config,
+                    config,
+                    metadata={
+                        "evaluation_fallback": True,
+                        "fallback_reason": "PurgedKFoldの有効なフォールドがありません",
+                        "expected_fold_count": int(n_splits),
+                        "completed_fold_count": 0,
+                        "evaluation_incomplete": True,
+                    },
+                )
 
             scenario_reports = self._run_parallel_scenario_tasks(
                 [
@@ -725,11 +884,25 @@ class EvaluationStrategy:
                 error_context="PurgedKFold Fold",
             )
 
+            completed_fold_count = len(scenario_reports)
+            expected_fold_count = int(n_splits)
             if not scenario_reports:
                 logger.warning(
                     "PurgedKFold: 有効なフォールドがないため通常評価にフォールバック"
                 )
-                return self._evaluate_single_report(gene, base_backtest_config, config)
+                return self._evaluate_single_report(
+                    gene,
+                    base_backtest_config,
+                    config,
+                    metadata={
+                        "evaluation_fallback": True,
+                        "fallback_reason": "PurgedKFoldのフォールド評価がすべて失敗しました",
+                        "expected_fold_count": expected_fold_count,
+                        "completed_fold_count": 0,
+                        "failed_fold_count": self._last_scenario_task_failures,
+                        "evaluation_incomplete": True,
+                    },
+                )
 
             scenario_reports.sort(
                 key=lambda scenario: int(scenario.metadata.get("fold_index", -1))
@@ -739,7 +912,14 @@ class EvaluationStrategy:
                 objectives=self._get_objectives(config),
                 scenarios=scenario_reports,
                 aggregate_method="robust",
-                metadata={"fold_count": len(scenario_reports)},
+                metadata={
+                    "fold_count": completed_fold_count,
+                    "expected_fold_count": expected_fold_count,
+                    "completed_fold_count": completed_fold_count,
+                    "failed_fold_count": self._last_scenario_task_failures,
+                    "evaluation_incomplete": completed_fold_count
+                    != expected_fold_count,
+                },
             )
 
             logger.info(
@@ -753,7 +933,16 @@ class EvaluationStrategy:
 
         except Exception as e:
             logger.error(f"PurgedKFold評価中エラー: {e}")
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+            return self._evaluate_single_report(
+                gene,
+                base_backtest_config,
+                config,
+                metadata={
+                    "evaluation_fallback": True,
+                    "fallback_reason": f"PurgedKFold評価エラー: {e}",
+                    "evaluation_incomplete": True,
+                },
+            )
 
     def _precompute_purged_kfold_configs(
         self,

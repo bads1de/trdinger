@@ -163,7 +163,7 @@ class TestIndividualEvaluator:
         full_report.aggregated_fitness = (0.9,)
         full_report.metadata = {"evaluation_fidelity": "full"}
 
-        self.evaluator._evaluation_strategy.execute_report = Mock(
+        self.evaluator._evaluation_strategy.execute_ga_report = Mock(
             side_effect=[coarse_report, full_report]
         )
 
@@ -178,7 +178,7 @@ class TestIndividualEvaluator:
 
         assert first == (0.1,)
         assert refreshed == (0.9,)
-        assert self.evaluator._evaluation_strategy.execute_report.call_count == 2
+        assert self.evaluator._evaluation_strategy.execute_ga_report.call_count == 2
         assert (
             self.evaluator.get_cached_evaluation_report(gene).metadata[
                 "evaluation_fidelity"
@@ -563,6 +563,7 @@ class TestIndividualEvaluator:
         self.mock_backtest_service.run_backtest.side_effect = Exception("Test error")
 
         ga_config = GAConfig()
+        ga_config.evaluation_config.oos_split_ratio = 0.0
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
@@ -575,6 +576,7 @@ class TestIndividualEvaluator:
         self.mock_backtest_service.run_backtest.side_effect = Exception("Test error")
 
         ga_config = GAConfig()
+        ga_config.evaluation_config.oos_split_ratio = 0.0
         ga_config.objectives = ["total_return", "sharpe_ratio"]
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
@@ -861,9 +863,6 @@ class TestIndividualEvaluator:
         }
         self.evaluator.set_backtest_config(base_config)
 
-        # ISとOOSの結果をモック
-        # run_backtestは2回呼ばれる。1回目がIS、2回目がOOSと仮定
-
         # IS結果: Total Return 0.1
         mock_result_is = {
             "performance_metrics": {
@@ -878,25 +877,7 @@ class TestIndividualEvaluator:
             "start_date": "2024-01-01 00:00:00",
             "end_date": "2024-01-09 00:00:00",
         }
-        # OOS結果: Total Return 0.05
-        mock_result_oos = {
-            "performance_metrics": {
-                "total_return": 0.05,
-                "sharpe_ratio": 0.5,
-                "max_drawdown": 0.2,
-                "win_rate": 0.4,
-                "total_trades": 5,
-            },
-            "equity_curve": [],
-            "trade_history": [{"size": 1, "pnl": 5}],
-            "start_date": "2024-01-09 00:00:00",
-            "end_date": "2024-01-11 00:00:00",
-        }
-
-        self.mock_backtest_service.run_backtest.side_effect = [
-            mock_result_is,
-            mock_result_oos,
-        ]
+        self.mock_backtest_service.run_backtest.return_value = mock_result_is
 
         # GA設定: OOS有効化
         ga_config = GAConfig()
@@ -925,33 +906,20 @@ class TestIndividualEvaluator:
         # 実行
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
-        # 検証
-        assert self.mock_backtest_service.run_backtest.call_count == 2
+        assert self.mock_backtest_service.run_backtest.call_count == 1
 
-        # 1回目の呼び出し（IS）の引数確認
-        # warmup調整（SMA period=20 → 21 bars × 1h = 21時間前倒し）を反映
         call_args_is = self.mock_backtest_service.run_backtest.call_args_list[0].kwargs[
             "config"
         ]
         assert str(call_args_is["start_date"]) == "2023-12-31 03:00:00"
         assert str(call_args_is["end_date"]) == "2024-01-09 00:00:00"
 
-        # 2回目の呼び出し（OOS）の引数確認
-        call_args_oos = self.mock_backtest_service.run_backtest.call_args_list[
-            1
-        ].kwargs["config"]
-        # OOS開始日はwarmup期間（21時間）を前倒しした値
-        # テストの期待値は実装の詳細に依存するため、範囲チェックで代替
-        oos_start = pd.Timestamp(call_args_oos["start_date"])
-        assert oos_start >= pd.Timestamp("2024-01-08 00:00:00")
-        assert oos_start <= pd.Timestamp("2024-01-08 06:00:00")
-        assert str(call_args_oos["end_date"]) == "2024-01-11 00:00:00"
-
-        # フィットネス計算の検証
-        # 期待値を計算 (Evaluatorの内部計算が正しければこれになるはず)
-        # total_return だけを見ているので、0.1 * 0.5 + 0.05 * 0.5 = 0.075
-        expected_fitness = 0.1 * 0.5 + 0.05 * 0.5
-        assert abs(result[0] - expected_fitness) < 1e-6
+        assert abs(result[0] - 0.1) < 1e-6
+        report = self.evaluator.get_cached_evaluation_report(mock_individual)
+        assert report is not None
+        assert report.mode == "in_sample"
+        assert report.metadata["evaluation_scope"] == "ga"
+        assert report.metadata["holdout_reserved"] is True
 
     def test_evaluate_individual_caching(self):
         """データのキャッシング動作テスト"""
@@ -1106,21 +1074,14 @@ class TestIndividualEvaluator:
         # 1. 初回実行（キャッシュなし）
         self.evaluator.evaluate(mock_individual, ga_config)
 
-        # 検証1: データ取得が行われた（IS用+OOS用。1分足も必要に応じて）
-        # ISとOOSの2回 + 1分足データ取得の可能性
         initial_call_count = (
             self.mock_backtest_service.data_service.get_data_for_backtest.call_count
         )
-        assert initial_call_count >= 2  # 最低2回（ISとOOS用）
+        assert initial_call_count >= 1
 
-        # 検証2: run_backtestがIS用とOOS用のデータで呼ばれたか確認
-        # call_args_listの各呼び出しで、preloaded_dataが適切に渡されているか
         calls = self.mock_backtest_service.run_backtest.call_args_list
-        # call_args_list[0]はIS, call_args_list[1]はOOS (実装順序に依存してチェック)
-        kwargs_is = calls[0].kwargs
-        kwargs_oos = calls[1].kwargs
-        assert kwargs_is.get("preloaded_data") == mock_data_is
-        assert kwargs_oos.get("preloaded_data") == mock_data_oos
+        assert len(calls) == 1
+        assert calls[0].kwargs.get("preloaded_data") == mock_data_is
 
         # 2. 2回目実行（キャッシュあり）
         call_count_before_2nd = (
@@ -1136,10 +1097,7 @@ class TestIndividualEvaluator:
 
         # 検証4: 2回目ではrun_backtestのcall_countが変わらない（キャッシュ効果）
         call_count_run_backtest_2nd = self.mock_backtest_service.run_backtest.call_count
-        # 1回目: IS + OOS = 2回実行
-        # 2回目: キャッシュ使用 = 実行回数変わらず
-        # 2回目実行後のrun_backtest.call_countは1回目と同じ
-        assert call_count_run_backtest_2nd == 2
+        assert call_count_run_backtest_2nd == 1
 
 
 class TestUnifiedEvaluationLogic:

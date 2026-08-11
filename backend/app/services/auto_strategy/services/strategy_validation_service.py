@@ -123,6 +123,11 @@ class StrategyValidationService:
         # 3. フィルタリング
         filtered = self._filter_result(result, validation_results, validation_config)
         filtered["validation_results"] = validation_results
+        filtered["validation_report_summaries"] = {
+            key: value.get("report_summary")
+            for key, value in validation_results.items()
+            if value.get("report_summary") is not None
+        }
 
         passed_count = sum(
             1 for v in validation_results.values() if v.get("passed", False)
@@ -172,63 +177,104 @@ class StrategyValidationService:
     ) -> dict[str, Any]:
         """評価レポートを合格基準に照らして判定する。"""
         reasons: list[str] = []
+        scenario_count = len(report.scenarios)
+        metadata = report.metadata if isinstance(report.metadata, dict) else {}
 
         pass_rate = report.pass_rate
-        if pass_rate < validation_config.min_pass_rate:
+        if scenario_count == 0:
+            reasons.append("検証シナリオがありません")
+        elif pass_rate < validation_config.min_pass_rate:
             reasons.append(
                 f"WFA合格率 {pass_rate:.2f} が閾値 "
                 f"{validation_config.min_pass_rate} 未満"
             )
 
+        if metadata.get("evaluation_fallback"):
+            reasons.append(
+                "検証評価が通常評価へフォールバックしました: "
+                f"{metadata.get('fallback_reason', '理由不明')}"
+            )
+        if metadata.get("evaluation_incomplete"):
+            expected = metadata.get("expected_fold_count")
+            completed = metadata.get("completed_fold_count")
+            reasons.append(
+                "検証評価が不完全です"
+                + (
+                    f"（期待 {expected} / 完了 {completed} フォールド）"
+                    if expected is not None
+                    else ""
+                )
+            )
+
         primary_fitness = report.primary_aggregated_fitness
-        if (
-            validation_config.min_primary_fitness is not None
-            and primary_fitness is not None
-        ):
-            # 最小化目的（例: max_drawdown）の場合は方向が逆になる
-            primary_objective = report.primary_objective or ""
-            is_minimize = objective_registry.is_minimize_objective(primary_objective)
-            if is_minimize:
-                below_threshold = (
-                    primary_fitness > validation_config.min_primary_fitness
+        if validation_config.min_primary_fitness is not None:
+            if primary_fitness is None:
+                reasons.append("集約フィットネスを取得できません")
+            else:
+                primary_objective = report.primary_objective or ""
+                is_minimize = objective_registry.is_minimize_objective(
+                    primary_objective
+                )
+                if is_minimize:
+                    below_threshold = (
+                        primary_fitness > validation_config.min_primary_fitness
+                    )
+                else:
+                    below_threshold = (
+                        primary_fitness < validation_config.min_primary_fitness
+                    )
+                if below_threshold:
+                    reasons.append(
+                        f"集約フィットネス {primary_fitness:.4f} が閾値 "
+                        f"{validation_config.min_primary_fitness} を満たしません"
+                    )
+
+        trades_list = self._collect_scenario_metric(report, "total_trades")
+        if validation_config.min_trades is not None:
+            if len(trades_list) != scenario_count:
+                reasons.append(
+                    f"total_trades メトリクスが全シナリオで取得できません"
+                    f"（{len(trades_list)}/{scenario_count}）"
                 )
             else:
-                below_threshold = (
-                    primary_fitness < validation_config.min_primary_fitness
-                )
-            if below_threshold:
-                reasons.append(
-                    f"集約フィットネス {primary_fitness:.4f} が閾値 "
-                    f"{validation_config.min_primary_fitness} を満たしません"
-                )
-
-        # 全フォールドの最悪値で取引数 / ドローダウンをチェック
-        trades_list = self._collect_scenario_metric(report, "total_trades")
-        if validation_config.min_trades is not None and trades_list:
-            min_trades = min(trades_list)
-            if min_trades < validation_config.min_trades:
-                reasons.append(
-                    f"最少取引数 {min_trades} が閾値 "
-                    f"{validation_config.min_trades} 未満"
-                )
+                min_trades = min(trades_list)
+                if min_trades < validation_config.min_trades:
+                    reasons.append(
+                        f"最少取引数 {min_trades} が閾値 "
+                        f"{validation_config.min_trades} 未満"
+                    )
 
         dd_list = self._collect_scenario_metric(report, "max_drawdown")
-        if validation_config.max_drawdown is not None and dd_list:
-            max_dd = max(abs(v) for v in dd_list)
-            if max_dd > validation_config.max_drawdown:
+        if validation_config.max_drawdown is not None:
+            if len(dd_list) != scenario_count:
                 reasons.append(
-                    f"最大ドローダウン {max_dd:.2%} が上限 "
-                    f"{validation_config.max_drawdown:.2%} 超過"
+                    f"max_drawdown メトリクスが全シナリオで取得できません"
+                    f"（{len(dd_list)}/{scenario_count}）"
                 )
+            else:
+                max_dd = max(abs(v) for v in dd_list)
+                if max_dd > validation_config.max_drawdown:
+                    reasons.append(
+                        f"最大ドローダウン {max_dd:.2%} が上限 "
+                        f"{validation_config.max_drawdown:.2%} 超過"
+                    )
+
+        report_summary = None
+        to_summary_dict = getattr(report, "to_summary_dict", None)
+        if callable(to_summary_dict):
+            summary = to_summary_dict()
+            if isinstance(summary, dict):
+                report_summary = summary
 
         return {
             "passed": len(reasons) == 0,
             "pass_rate": pass_rate,
             "primary_fitness": primary_fitness,
             "worst_case_fitness": report.primary_worst_case_fitness,
-            "scenario_count": len(report.scenarios),
+            "scenario_count": scenario_count,
             "mode": report.mode,
             "reasons": reasons,
+            "report_summary": report_summary,
         }
 
     @staticmethod

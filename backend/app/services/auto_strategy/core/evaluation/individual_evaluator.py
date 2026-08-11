@@ -381,7 +381,7 @@ class IndividualEvaluator(EvaluationWindowService):
             )
 
             # 評価実行（戦略ルーティングに委譲）
-            report = self._evaluation_strategy.execute_report(
+            report = self._evaluation_strategy.execute_ga_report(
                 gene, base_backtest_config, config
             )
             report.metadata.setdefault(

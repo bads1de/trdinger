@@ -131,6 +131,48 @@ class TestEvaluationStrategy:
         assert [scenario.name for scenario in report.scenarios] == ["is", "oos"]
         assert report.aggregated_fitness == (0.55,)
 
+    def test_execute_ga_report_uses_is_only_regardless_of_oos_weight(self):
+        def side_effect(
+            _gene,
+            _backtest_config,
+            _config,
+            *,
+            scenario_name="single",
+            metadata=None,
+        ):
+            return ScenarioEvaluation(
+                name=scenario_name,
+                fitness=(0.8,),
+                passed=True,
+                metadata=(metadata or {}).copy(),
+            )
+
+        self.evaluator._perform_single_evaluation_report.side_effect = side_effect
+        base_config = {
+            "start_date": "2024-01-01 00:00:00",
+            "end_date": "2024-01-11 00:00:00",
+            "timeframe": "1h",
+        }
+
+        config = SimpleNamespace(
+            evaluation_config=SimpleNamespace(
+                oos_split_ratio=0.2,
+                oos_fitness_weight=0.1,
+            ),
+            objectives=["weighted_score"],
+        )
+        first = self.strategy.execute_ga_report(object(), base_config, config)
+        config.evaluation_config.oos_fitness_weight = 0.9
+        second = self.strategy.execute_ga_report(object(), base_config, config)
+
+        assert first.mode == "in_sample"
+        assert second.mode == "in_sample"
+        assert first.aggregated_fitness == (0.8,)
+        assert second.aggregated_fitness == (0.8,)
+        assert [scenario.name for scenario in first.scenarios] == ["is"]
+        assert first.metadata["holdout_reserved"] is True
+        assert self.evaluator._perform_single_evaluation_report.call_count == 2
+
     def test_execute_report_falls_back_to_legacy_single_evaluation_method(self):
         evaluator = Mock()
         evaluator._perform_single_evaluation = Mock(return_value=(0.33,))
@@ -327,8 +369,8 @@ class TestEvaluationStrategy:
         assert report.aggregated_fitness[0] == pytest.approx(0.6525)
 
     def test_execute_robustness_report_falls_back_when_all_scenarios_fail(self):
-        self.strategy.execute_report = Mock(
-            return_value=Mock(mode="single", aggregated_fitness=(0.25,))
+        self.strategy.execute_ga_report = Mock(
+            return_value=Mock(mode="in_sample", aggregated_fitness=(0.25,))
         )
         self.strategy._evaluate_robustness_scenario_report = Mock(
             side_effect=RuntimeError("scenario failed")
@@ -364,9 +406,9 @@ class TestEvaluationStrategy:
             config,
         )
 
-        assert report.mode == "single"
+        assert report.mode == "in_sample"
         assert report.aggregated_fitness == (0.25,)
-        self.strategy.execute_report.assert_called_once()
+        self.strategy.execute_ga_report.assert_called_once()
 
     def test_walk_forward_report_falls_back_when_all_fold_evaluations_fail(self):
         self.strategy._evaluate_single_report = Mock(
