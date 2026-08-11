@@ -3,7 +3,7 @@ BacktestDataProvider の拡張テスト
 
 既存テスト (``test_backtest_data_provider.py``, ``test_backtest_data_provider_cache.py``) が
 カバーしていない静的ヘルパー、``get_cached_minute_data`` の各分岐、
-``clear_cache``, ``get_cache_statistics`` を検証します。
+``clear_cache`` を検証します。
 """
 
 from __future__ import annotations
@@ -375,30 +375,3 @@ class TestClearCache:
         assert len(provider._data_cache) == 0
         assert provider._cache_hits == 0
         assert provider._cache_misses == 0
-
-
-class TestGetCacheStatistics:
-    """``get_cache_statistics`` のテスト"""
-
-    def test_returns_zero_stats_when_empty(self) -> None:
-        provider = _make_provider()
-        stats = provider.get_cache_statistics()
-
-        assert stats["cache_size"] == 0
-        assert stats["readers"] == 0
-        assert stats["cache_hits"] == 0
-        assert stats["cache_misses"] == 0
-        assert stats["hit_rate"] == 0.0
-
-    def test_computes_hit_rate(self) -> None:
-        provider = _make_provider()
-        provider._cache_hits = 3
-        provider._cache_misses = 1
-        provider._data_cache["k1"] = "v"
-
-        stats = provider.get_cache_statistics()
-
-        assert stats["cache_size"] == 1
-        assert stats["cache_hits"] == 3
-        assert stats["cache_misses"] == 1
-        assert stats["hit_rate"] == 0.75

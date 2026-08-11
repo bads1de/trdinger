@@ -13,7 +13,6 @@ import pytest
 
 from app.services.auto_strategy.genes import (
     Condition,
-    IndicatorGene,
     PositionSizingGene,
     StatefulCondition,
     StrategyGene,
@@ -137,26 +136,6 @@ class TestSeedStrategyRestoration:
 
         second = serializer.dict_to_strategy_gene(data, StrategyGene)
         assert second.metadata["validation"]["passed"] is True
-
-    def test_clear_caches(self, serializer):
-        """clear_caches で両キャッシュが空になる"""
-        data = _seed_gene_data()
-        serializer.dict_to_strategy_gene(data, StrategyGene)
-        serializer.strategy_gene_to_dict(
-            StrategyGene(
-                id="x",
-                indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
-                metadata={},
-            )
-        )
-        stats = serializer.get_cache_statistics()
-        assert stats["serialize_cache_size"] == 1
-        assert stats["deserialize_cache_size"] == 1
-
-        serializer.clear_caches()
-        stats = serializer.get_cache_statistics()
-        assert stats["serialize_cache_size"] == 0
-        assert stats["deserialize_cache_size"] == 0
 
 
 class TestStatefulConditionEdgeCases:

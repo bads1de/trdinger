@@ -3,11 +3,10 @@ Bybitファンディングレートサービスのテスト
 
 BybitFundingRateServiceクラスの全機能をテストします:
 - サービス初期化
-- 現在のファンディングレート取得
 - ファンディングレート履歴取得
 - 全期間データ取得
 - 差分更新
-- データベース保存
+- データ取得・保存
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -23,7 +22,6 @@ from app.services.data_collection.bybit.funding_rate_service import (
 def mock_exchange():
     """モックCCXT取引所"""
     exchange = MagicMock()
-    exchange.fetch_funding_rate = AsyncMock()
     exchange.fetch_funding_rate_history = AsyncMock()
     return exchange
 
@@ -37,7 +35,6 @@ def mock_config():
     config.data_converter_class = MagicMock()
     config.converter_method_name = "ccxt_to_db_format"
     config.fetch_history_method_name = "fetch_funding_rate_history"
-    config.fetch_current_method_name = "fetch_funding_rate"
     config.pagination_strategy = "until"
     config.default_limit = 100
     config.page_limit = 200
@@ -126,41 +123,6 @@ class TestParameterValidation:
         """無効なlimitがValueErrorを発生させることを確認"""
         with pytest.raises(ValueError):
             service._validate_parameters("BTC/USDT:USDT", 0)
-
-
-@pytest.mark.asyncio
-class TestFetchCurrentFundingRate:
-    """現在のファンディングレート取得テスト"""
-
-    async def test_fetch_current_funding_rate_success(self, service, mock_exchange):
-        """現在のファンディングレートが正常に取得できることを確認"""
-        expected_data = {
-            "symbol": "BTC/USDT:USDT",
-            "fundingRate": 0.0001,
-            "timestamp": 1609459200000,
-        }
-
-        mock_exchange.fetch_funding_rate.return_value = expected_data
-
-        result = await service.fetch_current_funding_rate("BTC/USDT:USDT")
-
-        assert result == expected_data
-
-    async def test_fetch_current_funding_rate_with_normalized_symbol(
-        self, service, mock_exchange
-    ):
-        """正規化されたシンボルで現在のファンディングレートが取得できることを確認"""
-        expected_data = {
-            "symbol": "BTC/USDT:USDT",
-            "fundingRate": 0.0001,
-            "timestamp": 1609459200000,
-        }
-
-        mock_exchange.fetch_funding_rate.return_value = expected_data
-
-        result = await service.fetch_current_funding_rate("BTC/USDT:USDT")
-
-        assert result == expected_data
 
 
 @pytest.mark.asyncio
@@ -496,32 +458,3 @@ class TestFetchAndSaveData:
 
                     assert result["success"] is True
                     assert result["saved_count"] == 2
-
-
-@pytest.mark.asyncio
-class TestDatabaseSave:
-    """データベース保存テスト"""
-
-    async def test_save_funding_rate_to_database(
-        self, service, mock_repository, mock_config
-    ):
-        """ファンディングレートデータのDB保存を確認"""
-        funding_history = [
-            {"timestamp": 1609459200000, "fundingRate": 0.0001},
-            {"timestamp": 1609459300000, "fundingRate": 0.0002},
-        ]
-
-        mock_config.data_converter_class.ccxt_to_db_format = MagicMock(
-            return_value=[{"id": 1}, {"id": 2}]
-        )
-        mock_repository.insert_funding_rate_data = MagicMock(return_value=2)
-
-        result = await service._save_funding_rate_to_database(
-            funding_history, "BTC/USDT:USDT", mock_repository
-        )
-
-        assert result == 2
-        mock_config.data_converter_class.ccxt_to_db_format.assert_called_once_with(
-            funding_history, "BTC/USDT:USDT"
-        )
-        mock_repository.insert_funding_rate_data.assert_called_once()

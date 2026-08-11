@@ -10,16 +10,13 @@ from app.services.data_collection.orchestration.data_collection_orchestration_se
 from app.services.data_collection.orchestration.funding_rate_orchestration_service import (
     FundingRateOrchestrationService,
 )
-from app.services.data_collection.orchestration.long_short_ratio_orchestration_service import (
-    LongShortRatioOrchestrationService,
-)
 from app.services.data_collection.orchestration.open_interest_orchestration_service import (
     OpenInterestOrchestrationService,
 )
 
 
 class TestDataOrchestrationComprehensive:
-    """データ収集オーケストレーションの包括的なテスト (FR, OI, LSR, OHLCV)"""
+    """データ収集オーケストレーションの包括的なテスト (FR, OI, OHLCV)"""
 
     @pytest.fixture
     def mock_db(self):
@@ -71,25 +68,6 @@ class TestDataOrchestrationComprehensive:
 
         assert result["success"] is True
         assert result["data"]["saved_count"] == 10
-
-    # ---------------------------------------------------------------------------
-    # Long/Short Ratio Orchestration
-    # ---------------------------------------------------------------------------
-
-    @pytest.mark.asyncio
-    async def test_long_short_ratio_orchestration(self, mock_db):
-        mock_service = MagicMock()
-        mock_service.collect_historical_long_short_ratio_data = AsyncMock(
-            return_value=50
-        )
-
-        service = LongShortRatioOrchestrationService(bybit_service=mock_service)
-        result = await service.collect_long_short_ratio_data(
-            "BTCUSDT", period="1h", fetch_all=True, db_session=mock_db
-        )
-
-        assert result["success"] is True
-        assert result["data"]["count"] == 50
 
     # ---------------------------------------------------------------------------
     # Data Collection (OHLCV) Orchestration Unit

@@ -356,19 +356,6 @@ class DictConverter:
             logger.error(f"StatefulCondition復元エラー: {e}")
             raise ValueError(f"StatefulConditionの復元に失敗: {e}")
 
-    def clear_caches(self) -> None:
-        """最適化されたキャッシュをクリアする。"""
-        self._serialize_cache.clear()
-        self._deserialize_cache.clear()
-
-    def get_cache_statistics(self) -> dict[str, Any]:
-        """最適化されたキャッシュ統計を返す。"""
-        return {
-            "serialize_cache_size": len(self._serialize_cache),
-            "deserialize_cache_size": len(self._deserialize_cache),
-            "cache_limit": self._cache_size,
-        }
-
 
 class GeneSerializer(DictConverter):
     """

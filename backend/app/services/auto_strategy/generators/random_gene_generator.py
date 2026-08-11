@@ -123,20 +123,6 @@ class RandomGeneGenerator:
         self._position_sizing_cache: list[PositionSizingGene] = []
         self._tool_genes_template: list[ToolGene] | None = None
 
-    @staticmethod
-    def _create_enabled_tpsl_gene() -> TPSLGene:
-        """
-        ランダム生成したTP/SL遺伝子を有効化して返す
-
-        ランダムに生成されたTP/SL遺伝子のenabledフラグをTrueに設定して返します。
-
-        Returns:
-            TPSLGene: 有効化されたTP/SL遺伝子
-        """
-        gene = create_random_tpsl_gene()
-        gene.enabled = True
-        return gene
-
     def _initialize_caches(self) -> None:
         """
         生成用キャッシュを初期化する
@@ -470,38 +456,3 @@ class RandomGeneGenerator:
             risk_management=cast(dict[str, SerializableValue], risk_management),
             metadata={"generated_by": "RandomGeneGenerator"},
         )
-
-    def _clear_caches(self) -> None:
-        """
-        生成キャッシュをクリアする
-
-        すべてのキャッシュ（インジケーター、TP/SL、ポジションサイジング、ツール）を
-        クリアして、メモリを解放します。
-        """
-        self._indicator_cache.clear()
-        self._tpsl_cache.clear()
-        self._exit_gene_cache.clear()
-        self._position_sizing_cache.clear()
-        self._tool_genes_template = None
-
-    def get_cache_statistics(self) -> dict[str, Any]:
-        """
-        キャッシュ統計を返す
-
-        各キャッシュのサイズを返します。
-
-        Returns:
-            Dict[str, Any]: キャッシュ統計辞書
-                - indicator_cache_size: インジケーターキャッシュサイズ
-                - tpsl_cache_size: TP/SLキャッシュサイズ
-                - exit_gene_cache_size: ExitGeneキャッシュサイズ
-                - position_sizing_cache_size: ポジションサイジングキャッシュサイズ
-                - tool_genes_template_size: ツール遺伝子テンプレートサイズ
-        """
-        return {
-            "indicator_cache_size": len(self._indicator_cache),
-            "tpsl_cache_size": len(self._tpsl_cache),
-            "exit_gene_cache_size": len(self._exit_gene_cache),
-            "position_sizing_cache_size": len(self._position_sizing_cache),
-            "tool_genes_template_size": len(self._tool_genes_template or []),
-        }

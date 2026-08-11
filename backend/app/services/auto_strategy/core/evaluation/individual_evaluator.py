@@ -180,22 +180,6 @@ class IndividualEvaluator(EvaluationWindowService):
             self._cache_misses = 0
             logger.info("データキャッシュと評価結果キャッシュをクリアしました")
 
-    def get_cache_info(self) -> dict[str, Any]:
-        """キャッシュの状態情報を取得"""
-        with self._lock:
-            return {
-                "data_cache_size": len(self._data_cache),
-                "data_cache_max": self._max_cache_size,
-                "result_cache_size": len(self._result_cache),
-                "result_cache_max": self._result_cache.maxsize,
-                "report_cache_size": len(self._report_cache),
-                "report_cache_max": self._report_cache.maxsize,
-                "robustness_report_cache_size": len(self._robustness_report_cache),
-                "robustness_report_cache_max": self._robustness_report_cache.maxsize,
-                "cache_hits": self._cache_hits,
-                "cache_misses": self._cache_misses,
-            }
-
     def get_last_evaluation_report(self) -> EvaluationReport | None:
         """直近の評価レポートを取得する。"""
         return self._last_evaluation_report
@@ -730,18 +714,6 @@ class IndividualEvaluator(EvaluationWindowService):
     ) -> dict[str, Any]:
         """バックテスト結果からパフォーマンスメトリクスを抽出（FitnessCalculatorに委譲）"""
         return self._fitness_calculator.extract_performance_metrics(backtest_result)
-
-    def _calculate_fitness(
-        self, backtest_result: dict[str, Any], config: GAConfig, **kwargs: Any
-    ) -> float:
-        """フィットネス計算（FitnessCalculatorに委譲）"""
-        return self._fitness_calculator.calculate_fitness(
-            backtest_result, config, **kwargs
-        )
-
-    def _calculate_long_short_balance(self, backtest_result: dict[str, Any]) -> float:
-        """ロング・ショートバランススコア計算（FitnessCalculatorに委譲）"""
-        return self._fitness_calculator.calculate_long_short_balance(backtest_result)
 
     def _calculate_multi_objective_fitness(
         self, backtest_result: dict[str, Any], config: GAConfig, **kwargs: Any

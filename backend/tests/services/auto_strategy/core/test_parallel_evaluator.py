@@ -149,10 +149,6 @@ class TestParallelEvaluator:
         assert result[0] == (-1.0,)
         assert result[1:] == [(1.0,), (2.0,), (3.0,), (4.0,)]
 
-        stats = evaluator.get_statistics()
-        assert stats["timeout_evaluations"] == 1
-        assert stats["successful_evaluations"] == 4
-
     def test_evaluate_parallel_faster_than_sequential(self):
         """並列評価がシーケンシャル評価より速いこと"""
         individuals = [MagicMock() for _ in range(4)]
@@ -179,43 +175,6 @@ class TestParallelEvaluator:
 
         # 並列評価は少なくとも2倍速いはず
         assert parallel_time < sequential_time * 0.75
-
-    def test_get_statistics(self):
-        """統計情報が正しく取得できること"""
-        evaluator = ParallelEvaluator(
-            evaluate_func=lambda x: (1.0,),
-            max_workers=1,
-            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
-        )
-
-        # 初期状態
-        stats = evaluator.get_statistics()
-        assert stats["total_evaluations"] == 0
-        assert stats["successful_evaluations"] == 0
-
-        # 評価後
-        individuals = [MagicMock() for _ in range(3)]
-        evaluator.evaluate_population(individuals, default_fitness=(0.0,))
-
-        stats = evaluator.get_statistics()
-        assert stats["total_evaluations"] == 3
-        assert stats["successful_evaluations"] == 3
-        assert stats["success_rate"] == 1.0
-
-    def test_reset_statistics(self):
-        """統計情報がリセットできること"""
-        evaluator = ParallelEvaluator(
-            evaluate_func=lambda x: (1.0,),
-            max_workers=1,
-            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
-        )
-
-        individuals = [MagicMock() for _ in range(3)]
-        evaluator.evaluate_population(individuals, default_fitness=(0.0,))
-
-        evaluator.reset_statistics()
-        stats = evaluator.get_statistics()
-        assert stats["total_evaluations"] == 0
 
     def test_reset_generation_stats_clears_behavior_summary_cache(self):
         """世代リセット時に behavior summary cache も破棄すること"""

@@ -64,13 +64,8 @@ class TestGeneSerializerCacheIntegration:
         first = serializer.strategy_gene_to_dict(gene)
         first["metadata"]["nested"]["flag"] = False
 
-        stats_after_first = serializer.get_cache_statistics()
-        assert stats_after_first["serialize_cache_size"] == 1
-
         second = serializer.strategy_gene_to_dict(gene)
-        stats_after_second = serializer.get_cache_statistics()
 
-        assert stats_after_second["serialize_cache_size"] == 1
         assert first is not second
         assert first["metadata"] is not second["metadata"]
         assert second["metadata"]["nested"]["flag"] is True
@@ -84,13 +79,8 @@ class TestGeneSerializerCacheIntegration:
         restored_first = serializer.dict_to_strategy_gene(data, StrategyGene)
         restored_first.metadata["nested"]["flag"] = False
 
-        stats_after_first = serializer.get_cache_statistics()
-        assert stats_after_first["deserialize_cache_size"] == 1
-
         restored_second = serializer.dict_to_strategy_gene(data, StrategyGene)
-        stats_after_second = serializer.get_cache_statistics()
 
-        assert stats_after_second["deserialize_cache_size"] == 1
         assert restored_first is not restored_second
         assert restored_second.metadata["nested"]["flag"] is True
 
@@ -126,7 +116,6 @@ class TestGeneSerializerCacheIntegration:
 
         assert first["metadata"]["tag"] == "first"
         assert second["metadata"]["tag"] == "second"
-        assert serializer.get_cache_statistics()["serialize_cache_size"] == 2
 
     def test_strategy_gene_to_dict_recomputes_cache_key_after_in_place_mutation(
         self,
@@ -138,9 +127,7 @@ class TestGeneSerializerCacheIntegration:
         gene.metadata["nested"]["flag"] = False
 
         second = serializer.strategy_gene_to_dict(gene)
-        stats = serializer.get_cache_statistics()
 
-        assert stats["serialize_cache_size"] == 2
         assert first["metadata"]["nested"]["flag"] is True
         assert second["metadata"]["nested"]["flag"] is False
 
@@ -155,9 +142,7 @@ class TestGeneSerializerCacheIntegration:
         data["metadata"]["nested"]["flag"] = False
 
         restored_second = serializer.dict_to_strategy_gene(data, StrategyGene)
-        stats = serializer.get_cache_statistics()
 
-        assert stats["deserialize_cache_size"] == 2
         assert restored_first.metadata["nested"]["flag"] is True
         assert restored_second.metadata["nested"]["flag"] is False
 

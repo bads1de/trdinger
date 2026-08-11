@@ -10,16 +10,12 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from database.connection import get_db
-from database.repositories.backtest_result_repository import (
-    BacktestResultRepository,
-)
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
     OpenInterestRepository,
 )
 
-from ..config.builders import build_execution_config
 from ..execution.backtest_executor import BacktestExecutionError
 from ..execution.backtest_orchestrator import BacktestOrchestrator
 from .backtest_data_service import BacktestDataService
@@ -166,55 +162,3 @@ class BacktestService:
 
         self.data_service = None
         self._orchestrator = None
-
-    def _build_execution_config(self, request: Any) -> dict[str, Any]:
-        """dict / Pydantic モデルどちらからでもバックテスト設定を組み立てる。"""
-        return build_execution_config(request)
-
-    def execute_and_save_backtest(
-        self, request: Any, db_session: Session
-    ) -> dict[str, Any]:
-        """
-        バックテストを実行し、その結果をデータベースに永続化します（Web API向け）。
-
-        このメソッドは、APIからのリクエストを受け取り、以下の手順を実行します：
-        1. リクエストオブジェクト（Pydanticモデル等）から実行用設定を構築。
-        2. `run_backtest` を呼び出してシミュレーションを実行。
-        3. 実行成功時、`BacktestResultRepository` を使用して結果を `backtest_results` テーブルに保存。
-        4. 保存されたレコードのIDを含む最終的なレスポンスを生成。
-
-        Args:
-            request (Any): APIリクエストオブジェクト（`BacktestRequest` 等）、または設定辞書。
-            db_session (Session): データベースセッション。結果の保存に使用されます。
-
-        Returns:
-            Dict[str, Any]: APIレスポンス形式の辞書。
-                保存された `backtest_id` や、計算されたパフォーマンス要約を含みます。
-
-        Note:
-            - トランザクション: 提供された `db_session` を使用して、データの読み込みと結果の保存を同一セッション内で行います。
-            - エラーハンドリング: 実行失敗時はエラーメッセージを含む辞書を返し、ステータスコード 500 を示唆します。
-        """
-        try:
-            # 外部セッションを内部にも設定してトランザクションを統一
-            self._db_session = db_session
-
-            config = self._build_execution_config(request)
-
-            # バックテストを実行
-            result = self.run_backtest(config)
-
-            # 結果をデータベースに保存（同じセッションを使用）
-            backtest_repo = BacktestResultRepository(db_session)
-            saved_result = backtest_repo.save_backtest_result(result)
-
-            return {"success": True, "result": saved_result}
-
-        except Exception as e:
-            logger.error(f"バックテスト実行・保存エラー: {e}", exc_info=True)
-            return {"success": False, "error": str(e), "status_code": 500}
-        finally:
-            # 内部状態のみリセット（外部セッションのライフサイクルは呼び出し側が管理）
-            self._db_session = None
-            self.data_service = None
-            self._orchestrator = None

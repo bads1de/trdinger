@@ -448,41 +448,6 @@ class ParallelEvaluator:
 
         return category
 
-    def get_statistics(self) -> dict:
-        """
-        評価統計を取得
-
-        Returns:
-            統計情報の辞書
-        """
-        return {
-            "total_evaluations": self._total_evaluations,
-            "successful_evaluations": self._successful_evaluations,
-            "failed_evaluations": self._failed_evaluations,
-            "timeout_evaluations": self._timeout_evaluations,
-            "success_rate": (
-                self._successful_evaluations / self._total_evaluations
-                if self._total_evaluations > 0
-                else 0.0
-            ),
-            # エラー種別の詳細
-            "error_categories": self._error_categories.copy(),
-            # 最近のエラー履歴
-            "recent_errors": self._recent_errors.copy(),
-        }
-
-    def reset_statistics(self) -> None:
-        """評価統計をリセット"""
-        self._total_evaluations = 0
-        self._successful_evaluations = 0
-        self._failed_evaluations = 0
-        self._timeout_evaluations = 0
-        self._behavior_summary_cache.clear()
-        # エラー種別もリセット
-        for key in self._error_categories:
-            self._error_categories[key] = 0
-        self._recent_errors.clear()
-
     def _reset_generation_stats(self) -> None:
         """
         世代ごとの評価統計（成功・失敗・タイムアウト数）をリセットします。

@@ -342,14 +342,6 @@ class EvolutionRunner:
 
         return offspring
 
-    def clear_caches(self) -> None:
-        """
-        バッチ互換のキャッシュ領域をクリアする
-
-        現在はこのメソッドは外部インターフェース互換のために残されています。
-        """
-        pass
-
     def _evaluate_population(
         self,
         population: list[Any],

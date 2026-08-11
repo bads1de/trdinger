@@ -82,24 +82,6 @@ class TestLRUCacheEviction:
 
         assert len(evaluator._data_cache) == 0
 
-    def test_get_cache_info(self, mock_backtest_service):
-        """キャッシュ情報が正しく取得できること"""
-        evaluator = IndividualEvaluator(mock_backtest_service, max_cache_size=50)
-
-        # キャッシュにデータを追加
-        evaluator._data_cache[("BTC", "1h", "2024-01-01", "2024-02-01")] = {"data": 1}
-
-        info = evaluator.get_cache_info()
-
-        assert info["data_cache_size"] == 1
-        assert info["data_cache_max"] == 50
-        assert info["result_cache_size"] == 0
-        assert info["result_cache_max"] == 5000  # max_cache_size * 100
-
-    # NOTE: from_listメソッドが廃止されたため、以下のテストは削除
-    # test_result_cache_hit
-    # test_result_cache_clear_on_config_change
-
     def test_pickle_state_excludes_caches(self, mock_backtest_service):
         """Pickle化時にキャッシュが除外されること"""
         evaluator = IndividualEvaluator(mock_backtest_service)
@@ -164,25 +146,6 @@ class TestParallelEvaluatorImprovements:
         )
 
         assert evaluator.use_process_pool is True
-
-    def test_statistics_reset_per_generation(self, mock_evaluate_func):
-        """世代ごとに統計がリセットされること"""
-        evaluator = ParallelEvaluator(
-            evaluate_func=mock_evaluate_func,
-            max_workers=2,
-            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
-        )
-
-        # 1回目の評価
-        evaluator.evaluate_population([1, 2], default_fitness=(0.0,))
-        stats1 = evaluator.get_statistics()
-        assert stats1["successful_evaluations"] == 2
-
-        # 2回目の評価（auto_reset_per_generationがTrueなので統計はリセット）
-        evaluator.evaluate_population([3, 4, 5], default_fitness=(0.0,))
-        stats2 = evaluator.get_statistics()
-        # 成功数は前回から累積されていないことを確認
-        assert stats2["successful_evaluations"] == 3
 
     def test_timeout_handling(self):
         """タイムアウトが正しく処理されること"""

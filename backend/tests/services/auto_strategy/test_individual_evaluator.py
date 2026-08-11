@@ -14,6 +14,9 @@ from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
 from app.services.auto_strategy.core.evaluation.individual_evaluator import (
     IndividualEvaluator,
 )
+from app.services.auto_strategy.core.fitness.fitness_calculator import (
+    FitnessCalculator,
+)
 from app.services.auto_strategy.genes import Condition, IndicatorGene, StrategyGene
 from app.services.backtest.execution.backtest_executor import (
     BacktestEarlyTerminationError,
@@ -654,7 +657,8 @@ class TestIndividualEvaluator:
         # カスタムペナルティを設定
         ga_config.zero_trades_penalty = 0.05
 
-        fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
+        fitness_calculator = FitnessCalculator()
+        fitness = fitness_calculator.calculate_fitness(backtest_result, ga_config)
         assert fitness == 0.05  # 設定したペナルティ値が返ることを確認
 
     def test_calculate_fitness_custom_penalties(self):
@@ -677,13 +681,17 @@ class TestIndividualEvaluator:
             "min_sharpe_ratio": 0.5,  # 0.2 < 0.5 で違反
         }
 
+        fitness_calculator = FitnessCalculator()
+
         # デフォルト（0.0）
-        fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
+        fitness = fitness_calculator.calculate_fitness(backtest_result, ga_config)
         assert fitness == 0.0
 
         # カスタムペナルティ設定
         ga_config.constraint_violation_penalty = -1.0
-        fitness_custom = self.evaluator._calculate_fitness(backtest_result, ga_config)
+        fitness_custom = fitness_calculator.calculate_fitness(
+            backtest_result, ga_config
+        )
         assert fitness_custom == -1.0
 
     def test_calculate_fitness_constraints(self):
@@ -713,7 +721,8 @@ class TestIndividualEvaluator:
             "win_rate": 0.1,
         }
 
-        fitness = self.evaluator._calculate_fitness(backtest_result, ga_config)
+        fitness_calculator = FitnessCalculator()
+        fitness = fitness_calculator.calculate_fitness(backtest_result, ga_config)
         assert fitness == 0.0  # シャープレシオが最低要件を満たしていない
 
     def test_is_backtest_result_passing_delegates_to_shared_constraint_checker(self):
@@ -763,13 +772,15 @@ class TestIndividualEvaluator:
 
         backtest_result = {"trade_history": trade_history}
 
-        balance = self.evaluator._calculate_long_short_balance(backtest_result)
+        fitness_calculator = FitnessCalculator()
+        balance = fitness_calculator.calculate_long_short_balance(backtest_result)
         assert 0.0 <= balance <= 1.0
 
     def test_calculate_long_short_balance_no_trades(self):
         """取引なしのバランス計算テスト"""
         backtest_result = {"trade_history": []}
-        balance = self.evaluator._calculate_long_short_balance(backtest_result)
+        fitness_calculator = FitnessCalculator()
+        balance = fitness_calculator.calculate_long_short_balance(backtest_result)
         assert balance == 0.5  # デフォルトの中立スコア
 
     def test_calculate_multi_objective_fitness(self):

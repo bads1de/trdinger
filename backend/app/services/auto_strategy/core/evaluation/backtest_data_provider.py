@@ -229,16 +229,3 @@ class BacktestDataProvider:
             self._data_cache.clear()
             self._cache_hits = 0
             self._cache_misses = 0
-
-    def get_cache_statistics(self) -> dict[str, Any]:
-        """キャッシュ統計を取得する。"""
-        with self._lock:
-            total_requests = self._cache_hits + self._cache_misses
-            hit_rate = self._cache_hits / total_requests if total_requests > 0 else 0.0
-            return {
-                "cache_size": len(self._data_cache),
-                "readers": 0,
-                "cache_hits": self._cache_hits,
-                "cache_misses": self._cache_misses,
-                "hit_rate": hit_rate,
-            }

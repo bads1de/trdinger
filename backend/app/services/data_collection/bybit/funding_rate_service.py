@@ -48,26 +48,6 @@ class BybitFundingRateService(BybitService):
         """
         super()._validate_parameters(symbol, limit)
 
-    async def fetch_current_funding_rate(self, symbol: str) -> dict[str, Any]:
-        """
-        現在のファンディングレートを取得
-
-        Args:
-            symbol: 取引ペアシンボル（例: 'BTC/USDT:USDT'）
-
-        Returns:
-            現在のファンディングレートデータ
-        """
-        normalized_symbol = normalize_market_symbol(symbol)
-        return cast(
-            dict[str, Any],
-            await self._handle_ccxt_errors(
-                f"現在のファンディングレート取得: {normalized_symbol}",
-                self.exchange.fetch_funding_rate,
-                normalized_symbol,
-            ),
-        )
-
     async def fetch_funding_rate_history(
         self, symbol: str, limit: int = 100, since: int | None = None
     ) -> list[dict[str, Any]]:
@@ -181,34 +161,4 @@ class BybitFundingRateService(BybitService):
             limit=limit,
             repository=repository,
             fetch_all=fetch_all,
-        )
-
-    async def _save_funding_rate_to_database(
-        self,
-        funding_history: list[dict[str, Any]],
-        symbol: str,
-        repository: FundingRateRepository,
-    ) -> int:
-        """
-        旧テスト/呼び出し元向けの後方互換保存メソッド
-
-        既存の汎用保存処理へ委譲しつつ、従来のメソッド名を維持します。
-        テストコードや旧バージョンの呼び出し元との互換性を保つために使用されます。
-
-        Args:
-            funding_history: ファンディングレート履歴データのリスト
-            symbol: 取引ペアシンボル
-            repository: FundingRateRepositoryインスタンス
-
-        Returns:
-            int: 保存されたレコード数
-
-        Note:
-            内部的には親クラスの_save_data_to_databaseメソッドを呼び出します。
-        """
-        return await self._save_data_to_database(
-            funding_history,
-            symbol,
-            repository,
-            self.config,
         )

@@ -211,17 +211,6 @@ class TestEvolutionRunnerAdvanced:
         # 評価が呼ばれたことを確認
         assert mock_toolbox.evaluate.called
 
-    def test_clear_caches(self, mock_toolbox, mock_stats):
-        """キャッシュクリアテスト（現在は互換性のため空操作）"""
-        runner = EvolutionRunner(
-            toolbox=mock_toolbox,
-            stats=mock_stats,
-        )
-
-        # clear_cachesは現在は空操作（外部インターフェース互換のため残されている）
-        runner.clear_caches()
-        assert True
-
     def test_crossover_recomputes_for_same_parent_ids(self, mock_toolbox, mock_stats):
         """同一IDの親でも交叉結果を使い回さないこと"""
         runner = EvolutionRunner(
