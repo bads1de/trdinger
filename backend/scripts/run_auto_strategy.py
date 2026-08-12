@@ -41,12 +41,18 @@ from app.services.auto_strategy.config.ga.nested_configs import (  # noqa: E402
     EvaluationConfig,
 )
 from app.services.auto_strategy.core import GeneticAlgorithmEngine  # noqa: E402
+from app.services.auto_strategy.core.evaluation.individual_evaluator import (  # noqa: E402
+    IndividualEvaluator,
+)
 from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402
     RandomGeneGenerator,
 )
 from app.services.auto_strategy.genes.strategy import StrategyGene  # noqa: E402
 from app.services.auto_strategy.serializers.serialization import (
     GeneSerializer,  # noqa: E402
+)
+from app.services.auto_strategy.services.strategy_validation_service import (  # noqa: E402
+    StrategyValidationService,
 )
 from app.services.backtest.services.backtest_service import (
     BacktestService,  # noqa: E402
@@ -214,6 +220,52 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="最小取引回数制約 (デフォルト: 設定ファイル依存, 0で無効化)",
     )
+    parser.add_argument(
+        "--no-validation",
+        action="store_true",
+        help="GA後のWFA自動検証を無効化（高速実行用）",
+    )
+
+    # 探索空間の拡張設定
+    parser.add_argument(
+        "--mtf",
+        action="store_true",
+        help="マルチタイムフレーム（MTF）指標の生成を有効化",
+    )
+    parser.add_argument(
+        "--mtf-timeframes",
+        type=str,
+        default="1d",
+        help="MTFで使用するタイムフレーム（カンマ区切り, 例: 1d,4h）。"
+        "ベースタイムフレームより大きい整数倍の足のみ有効（例: 4h基準なら 1d のみ）",
+    )
+    parser.add_argument(
+        "--mtf-probability",
+        type=float,
+        default=0.3,
+        help="MTF指標が生成される確率 (0.0-1.0, デフォルト: 0.3)",
+    )
+    parser.add_argument(
+        "--indicator-universe",
+        type=str,
+        choices=["curated", "experimental_all"],
+        default="curated",
+        help="インジケーターユニバース (デフォルト: curated, "
+        "experimental_all は実装済み全220種を使用)。注意: experimental_all "
+        "は検証済みカタログ外の指標を含むため、NaNや条件生成に不向きな指標が混入しやすい",
+    )
+    parser.add_argument(
+        "--max-indicators",
+        type=int,
+        default=10,
+        help="1戦略あたりの最大インジケーター数 (デフォルト: 10)",
+    )
+    parser.add_argument(
+        "--max-conditions",
+        type=int,
+        default=3,
+        help="エントリー条件の最大数 (デフォルト: 3)",
+    )
 
     return parser.parse_args()
 
@@ -280,6 +332,43 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         config_kwargs["use_seed_strategies"] = False
         config_kwargs["seed_injection_rate"] = 0.0
         config_kwargs["two_stage_selection_config"] = {"enabled": False}
+    else:
+        # 探索空間の拡張設定（通常モードのみ適用）
+        config_kwargs["max_indicators"] = getattr(args, "max_indicators", 10)
+        config_kwargs["max_conditions"] = getattr(args, "max_conditions", 3)
+
+        mtf_enabled = getattr(args, "mtf", False)
+        if mtf_enabled:
+            mtf_timeframes = [
+                tf.strip()
+                for tf in getattr(args, "mtf_timeframes", "1d").split(",")
+                if tf.strip()
+            ]
+            mtf_probability = getattr(args, "mtf_probability", 0.3)
+            if not 0.0 <= mtf_probability <= 1.0:
+                raise ValueError("--mtf-probability は0から1の範囲である必要があります")
+            # サポート外タイムフレームは早期に弾く（無効なMTF指標の生成を防ぐ）
+            from app.config.constants import SUPPORTED_TIMEFRAMES
+
+            invalid_tfs = [
+                tf for tf in mtf_timeframes if tf not in SUPPORTED_TIMEFRAMES
+            ]
+            if invalid_tfs:
+                raise ValueError(
+                    "サポートされていないタイムフレーム: "
+                    f"{', '.join(invalid_tfs)}. 有効: {SUPPORTED_TIMEFRAMES}"
+                )
+            config_kwargs["enable_multi_timeframe"] = True
+            config_kwargs["available_timeframes"] = mtf_timeframes
+            config_kwargs["mtf_indicator_probability"] = mtf_probability
+
+        universe = getattr(args, "indicator_universe", "curated")
+        if universe != "curated":
+            config_kwargs["indicator_universe_mode"] = universe
+
+    if smoke_mode or getattr(args, "no_validation", False):
+        # 高速実行時はWFA自動検証を無効化
+        config_kwargs["validation_config"] = {"enabled": False}
     if fitness_constraints is not None:
         config_kwargs["fitness_constraints"] = fitness_constraints
 
@@ -498,6 +587,30 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
         logger.info("進化が完了しました!")
         logger.info("-" * 60)
 
+        # 自動検証パイプライン（WFA + 合格判定）
+        # 実験マネージャーと同じ品質基準をCLI実行にも適用する。
+        # 合格した戦略だけが詳細バックテスト・出力の対象となる。
+        if ga_config.validation_config.enabled:
+            logger.info("自動検証パイプラインを開始します（WFA）")
+            evaluator = getattr(ga_engine, "individual_evaluator", None)
+            if evaluator is None:
+                evaluator = IndividualEvaluator(backtest_service)
+            validation_service = StrategyValidationService(evaluator)
+            result = validation_service.validate_and_filter_result(
+                result=result,
+                ga_config=ga_config,
+                backtest_config=backtest_config,
+            )
+            validation_results = result.get("validation_results", {})
+            passed_count = sum(
+                1 for v in validation_results.values() if v.get("passed", False)
+            )
+            logger.info(
+                "自動検証結果: 検証 %d 件 / 合格 %d 件",
+                len(validation_results),
+                passed_count,
+            )
+
         # 結果の整形
         best_gene = result.get("best_strategy")
         best_fitness = result.get("best_fitness")
@@ -512,7 +625,13 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
         saved_backtest_path = None
 
         # 可読形式の戦略辞書を作成
-        if isinstance(best_gene, StrategyGene):
+        if best_gene is None:
+            # 自動検証で全戦略が不合格の場合
+            logger.warning(
+                "合格した戦略が無いため、詳細バックテストと戦略出力をスキップします"
+            )
+            strategy_dict = None
+        elif isinstance(best_gene, StrategyGene):
             strategy_dict = strategy_gene_to_readable_dict(best_gene, serializer)
             if not args.no_save:
                 # === 最良戦略の詳細バックテスト結果を別途保存 ===
@@ -529,7 +648,13 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
                         "initial_capital": backtest_config["initial_capital"],
                         "strategy_config": {
                             "strategy_type": "GENERATED_GA",
-                            "parameters": {"strategy_gene": gene_dict},
+                            "parameters": {
+                                "strategy_gene": gene_dict,
+                                # 最終レポート用の詳細バックテストは早期終了を無効化する
+                                # （trade_pace 早期終了が発動すると BacktestEarlyTerminationError
+                                #  で結果が保存されず、実験サービスと挙動が異なるため）
+                                "early_termination_settings": {"enabled": False},
+                            },
                         },
                         "commission_rate": 0.0004,
                         "slippage": 0.0001,
@@ -581,6 +706,14 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
 
         if saved_backtest_path:
             output["backtest_result_file"] = saved_backtest_path
+
+        # 自動検証結果を出力に含める（実行された場合）
+        if "validation_results" in result:
+            output["validation_results"] = result["validation_results"]
+        if "validation_report_summaries" in result:
+            output["validation_report_summaries"] = result[
+                "validation_report_summaries"
+            ]
 
         # パレート最適解がある場合
         if "pareto_front" in result:

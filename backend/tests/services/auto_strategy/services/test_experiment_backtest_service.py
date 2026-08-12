@@ -53,6 +53,10 @@ class TestExperimentBacktestService:
         assert run_config["strategy_config"]["parameters"]["strategy_gene"]["id"] == (
             "abcdef123456"
         )
+        # 最終レポート用の詳細バックテストは早期終了が無効化されていること
+        assert run_config["strategy_config"]["parameters"][
+            "early_termination_settings"
+        ]["enabled"] is False
         assert detailed_result["strategy_name"] == "AS_GA_240102_abcdef"
         assert detailed_result["config_json"]["experiment_id"] == "exp_001"
         assert detailed_result["config_json"]["db_experiment_id"] == 42

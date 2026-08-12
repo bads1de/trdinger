@@ -15,7 +15,11 @@ from typing import Any
 
 from ..config import objective_registry
 from ..config.ga import GAConfig
-from ..config.ga.nested_configs import RobustnessConfig, ValidationConfig
+from ..config.ga.nested_configs import (
+    EarlyTerminationSettings,
+    RobustnessConfig,
+    ValidationConfig,
+)
 from ..core.evaluation.evaluation_report import EvaluationReport
 from ..core.evaluation.evaluation_strategies import EvaluationStrategy
 from ..core.evaluation.individual_evaluator import IndividualEvaluator
@@ -467,6 +471,13 @@ class StrategyValidationService:
         # OOS / PurgedKFold が WFA と競合しないように無効化
         evaluation_config.oos_split_ratio = 0.0
         validation_ga_config.enable_purged_kfold = False
+
+        # 検証は最終的な品質ゲートのため、完全評価で行う。
+        # 早期終了（trade_pace など）が発動するとフォールドが -Infinity で
+        # 不合格になり、本来評価可能な戦略まで弾いてしまうため無効化する。
+        evaluation_config.early_termination_settings = EarlyTerminationSettings(
+            enabled=False
+        )
 
         return validation_ga_config
 

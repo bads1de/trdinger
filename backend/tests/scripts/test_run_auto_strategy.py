@@ -106,6 +106,7 @@ class TestCreateGaConfig:
         assert config.use_seed_strategies is False
         assert config.seed_injection_rate == 0.0
         assert config.two_stage_selection_config.enabled is False
+        assert config.validation_config.enabled is False
         assert config.fitness_constraints["min_trades"] == 0
 
     def test_invalid_population_raises_error(self):
@@ -438,6 +439,39 @@ class TestParseArgs:
 
         assert args.smoke is True
 
+    def test_mtf_flags_parsed(self):
+        """MTF関連フラグが正しくパースされる"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        with patch(
+            "sys.argv",
+            [
+                "run_auto_strategy.py",
+                "--mtf",
+                "--mtf-timeframes",
+                "4h,1d",
+                "--mtf-probability",
+                "0.5",
+            ],
+        ):
+            args = run_auto_strategy.parse_args()
+
+        assert args.mtf is True
+        assert args.mtf_timeframes == "4h,1d"
+        assert args.mtf_probability == 0.5
+
+    def test_indicator_universe_flag_parsed(self):
+        """--indicator-universe フラグが正しくパースされる"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        with patch(
+            "sys.argv",
+            ["run_auto_strategy.py", "--indicator-universe", "experimental_all"],
+        ):
+            args = run_auto_strategy.parse_args()
+
+        assert args.indicator_universe == "experimental_all"
+
 
 class TestRunAutoStrategyExecution:
     """run_auto_strategy実行経路のテスト"""
@@ -506,6 +540,7 @@ class TestRunAutoStrategyExecution:
             initial_capital=100000.0,
             output=None,
             no_save=True,
+            no_validation=True,
         )
 
         with (
@@ -520,3 +555,363 @@ class TestRunAutoStrategyExecution:
 
         assert result["success"] is True
         assert DummyBacktestService.instances[0].run_backtest_calls == []
+
+
+class TestValidationIntegration:
+    """WFA自動検証パイプラインの組み込みテスト"""
+
+    def _make_engine(self, run_result):
+        """検証呼び出しを記録できるダミーエンジンを生成する"""
+
+        class DummyEngine:
+            def __init__(self, backtest_service, gene_generator, **_):
+                self.backtest_service = backtest_service
+                self.gene_generator = gene_generator
+                self.individual_evaluator = MagicMock()
+
+            def run_evolution(self, config, backtest_config, progress_callback=None):
+                return dict(run_result)
+
+        return DummyEngine
+
+    def test_validation_called_and_results_included_when_enabled(self):
+        """検証有効時に StrategyValidationService が呼ばれ、結果が出力に含まれる"""
+        import scripts.run_auto_strategy as run_auto_strategy
+        from app.services.auto_strategy.genes.strategy import StrategyGene
+
+        class DummyBacktestService:
+            def __init__(self):
+                self.run_backtest_calls = []
+
+            def run_backtest(self, config):
+                self.run_backtest_calls.append(config)
+                return {"success": True, "trade_history": [], "equity_curve": []}
+
+            def cleanup(self):
+                pass
+
+        class DummyGeneGenerator:
+            def __init__(self, config):
+                self.config = config
+
+        class DummySerializer:
+            def strategy_gene_to_dict(self, gene):
+                return {
+                    "name": "Dummy",
+                    "indicators": [],
+                    "long_entry_conditions": [],
+                    "short_entry_conditions": [],
+                    "risk_management": {},
+                }
+
+        class DummyValidationService:
+            instances = []
+
+            def __init__(self, evaluator):
+                self.evaluator = evaluator
+                DummyValidationService.instances.append(self)
+
+            def validate_and_filter_result(self, result, ga_config, backtest_config):
+                filtered = dict(result)
+                filtered["validation_results"] = {
+                    "key1": {"passed": True, "pass_rate": 1.0, "reasons": []}
+                }
+                filtered["validation_report_summaries"] = {"key1": {"mode": "wfa"}}
+                return filtered
+
+        args = Namespace(
+            population=2,
+            generations=1,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=1,
+            no_parallel=True,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            min_trades=0,
+            symbol="BTC/USDT:USDT",
+            timeframe="4h",
+            initial_capital=100000.0,
+            output=None,
+            no_save=True,
+            no_validation=False,
+        )
+
+        engine_cls = self._make_engine(
+            {
+                "best_strategy": StrategyGene(),
+                "best_fitness": 1.23,
+                "execution_time": 0.01,
+                "generations_completed": 1,
+                "final_population_size": 2,
+                "pareto_front": [],
+            }
+        )
+
+        with (
+            patch.object(run_auto_strategy, "BacktestService", DummyBacktestService),
+            patch.object(run_auto_strategy, "RandomGeneGenerator", DummyGeneGenerator),
+            patch.object(run_auto_strategy, "GeneticAlgorithmEngine", engine_cls),
+            patch.object(run_auto_strategy, "GeneSerializer", DummySerializer),
+            patch.object(
+                run_auto_strategy, "StrategyValidationService", DummyValidationService
+            ),
+            patch("builtins.open", create=True),
+            patch.object(run_auto_strategy.Path, "mkdir", return_value=None),
+        ):
+            result = run_auto_strategy.run_auto_strategy(args)
+
+        assert DummyValidationService.instances, "検証サービスが呼ばれていない"
+        assert result["validation_results"]["key1"]["passed"] is True
+        assert result["validation_report_summaries"]["key1"]["mode"] == "wfa"
+        assert result["success"] is True
+        assert result["best_strategy"]["strategy_name"] == "Dummy"
+
+    def test_all_strategies_rejected_skips_output(self):
+        """全戦略が不合格（best_strategy=None）の場合、出力・詳細バックテストをスキップする"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        class DummyBacktestService:
+            instances = []
+
+            def __init__(self):
+                self.run_backtest_calls = []
+                DummyBacktestService.instances.append(self)
+
+            def run_backtest(self, config):
+                self.run_backtest_calls.append(config)
+                return {"success": True, "trade_history": [], "equity_curve": []}
+
+            def cleanup(self):
+                pass
+
+        class DummyGeneGenerator:
+            def __init__(self, config):
+                self.config = config
+
+        class DummyValidationService:
+            def __init__(self, evaluator):
+                self.evaluator = evaluator
+
+            def validate_and_filter_result(self, result, ga_config, backtest_config):
+                filtered = dict(result)
+                filtered["best_strategy"] = None
+                filtered["best_fitness"] = None
+                filtered["validation_results"] = {
+                    "key1": {"passed": False, "pass_rate": 0.0, "reasons": ["x"]}
+                }
+                return filtered
+
+        args = Namespace(
+            population=2,
+            generations=1,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=1,
+            no_parallel=True,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            min_trades=0,
+            symbol="BTC/USDT:USDT",
+            timeframe="4h",
+            initial_capital=100000.0,
+            output=None,
+            no_save=False,
+            no_validation=False,
+        )
+
+        engine_cls = self._make_engine(
+            {
+                "best_strategy": MagicMock(),
+                "best_fitness": 1.23,
+                "execution_time": 0.01,
+                "generations_completed": 1,
+                "final_population_size": 2,
+                "pareto_front": [],
+            }
+        )
+
+        with (
+            patch.object(run_auto_strategy, "BacktestService", DummyBacktestService),
+            patch.object(run_auto_strategy, "RandomGeneGenerator", DummyGeneGenerator),
+            patch.object(run_auto_strategy, "GeneticAlgorithmEngine", engine_cls),
+            patch.object(
+                run_auto_strategy, "StrategyValidationService", DummyValidationService
+            ),
+            patch("builtins.open", create=True),
+            patch.object(run_auto_strategy.Path, "mkdir", return_value=None),
+        ):
+            result = run_auto_strategy.run_auto_strategy(args)
+
+        assert result["success"] is True
+        assert result["best_strategy"] is None
+        assert result["validation_results"]["key1"]["passed"] is False
+        # 全戦略不合格時は詳細バックテストを実行しない
+        assert DummyBacktestService.instances[0].run_backtest_calls == []
+
+    def test_no_validation_flag_disables_validation(self):
+        """--no-validation フラグで検証が無効化される"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            no_parallel=False,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            min_trades=None,
+            no_validation=True,
+        )
+
+        config = run_auto_strategy.create_ga_config(args)
+
+        assert config.validation_config.enabled is False
+
+    def test_mtf_flags_enable_multi_timeframe(self):
+        """--mtf フラグでMTF設定が有効化される"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            no_parallel=False,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            min_trades=None,
+            no_validation=False,
+            mtf=True,
+            mtf_timeframes="4h,1d",
+            mtf_probability=0.5,
+            indicator_universe="curated",
+            max_indicators=12,
+            max_conditions=4,
+        )
+
+        config = run_auto_strategy.create_ga_config(args)
+
+        assert config.enable_multi_timeframe is True
+        assert config.available_timeframes == ["4h", "1d"]
+        assert config.mtf_indicator_probability == 0.5
+        assert config.max_indicators == 12
+        assert config.max_conditions == 4
+
+    def test_mtf_disabled_by_default(self):
+        """MTFはデフォルトで無効"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            no_parallel=False,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            min_trades=None,
+            no_validation=False,
+            mtf=False,
+            mtf_timeframes="1d",
+            mtf_probability=0.3,
+            indicator_universe="curated",
+            max_indicators=10,
+            max_conditions=3,
+        )
+
+        config = run_auto_strategy.create_ga_config(args)
+
+        assert config.enable_multi_timeframe is False
+        assert config.indicator_universe_mode == "curated"
+
+    def test_experimental_all_universe(self):
+        """--indicator-universe experimental_all が反映される"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            no_parallel=False,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            min_trades=None,
+            no_validation=False,
+            mtf=False,
+            mtf_timeframes="1d",
+            mtf_probability=0.3,
+            indicator_universe="experimental_all",
+            max_indicators=10,
+            max_conditions=3,
+        )
+
+        config = run_auto_strategy.create_ga_config(args)
+
+        assert config.indicator_universe_mode == "experimental_all"
+
+    def test_invalid_mtf_probability_raises_error(self):
+        """不正なMTF確率でエラーが発生する"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            no_parallel=False,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            min_trades=None,
+            no_validation=False,
+            mtf=True,
+            mtf_timeframes="1d",
+            mtf_probability=1.5,  # 無効（1を超える）
+            indicator_universe="curated",
+            max_indicators=10,
+            max_conditions=3,
+        )
+
+        with pytest.raises(ValueError, match="--mtf-probability は0から1"):
+            run_auto_strategy.create_ga_config(args)
+
+    def test_invalid_mtf_timeframe_raises_error(self):
+        """サポート外タイムフレームでエラーが発生する"""
+        import scripts.run_auto_strategy as run_auto_strategy
+
+        args = Namespace(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            no_parallel=False,
+            verbose=False,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            min_trades=None,
+            no_validation=False,
+            mtf=True,
+            mtf_timeframes="2h",  # サポート外
+            mtf_probability=0.3,
+            indicator_universe="curated",
+            max_indicators=10,
+            max_conditions=3,
+        )
+
+        with pytest.raises(ValueError, match="サポートされていないタイムフレーム"):
+            run_auto_strategy.create_ga_config(args)

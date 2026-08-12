@@ -134,6 +134,148 @@ def test_extract_performance_metrics(fitness_calculator, sample_backtest_result)
     assert "total_trades" in metrics
 
 
+def test_extract_performance_metrics_includes_excess_return(
+    fitness_calculator,
+):
+    """buy_hold_return から excess_return（買い持ち超過）が計算されること."""
+    backtest_result = {
+        "performance_metrics": {
+            "total_return": 20.0,
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -10.0,
+            "win_rate": 55.0,
+            "total_trades": 50,
+            "buy_hold_return": 43.09,
+        },
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(backtest_result)
+
+    # 割合単位に正規化されていること
+    assert metrics["total_return"] == pytest.approx(0.2, abs=1e-9)
+    assert metrics["buy_hold_return"] == pytest.approx(0.4309, abs=1e-9)
+    # 買い持ちを下回るため超過リターンは負になる
+    assert metrics["excess_return"] == pytest.approx(-0.2309, abs=1e-9)
+
+
+def test_extract_performance_metrics_excess_return_positive(
+    fitness_calculator,
+):
+    """買い持ちを上回る場合、超過リターンが正になること."""
+    backtest_result = {
+        "performance_metrics": {
+            "total_return": 60.0,
+            "sharpe_ratio": 2.0,
+            "max_drawdown": -15.0,
+            "win_rate": 60.0,
+            "total_trades": 100,
+            "buy_hold_return": 43.09,
+        },
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(backtest_result)
+
+    assert metrics["excess_return"] == pytest.approx(0.1691, abs=1e-9)
+
+
+def test_extract_performance_metrics_no_buy_hold_return(fitness_calculator):
+    """buy_hold_return が無い場合は excess_return が total_return と等価になること."""
+    backtest_result = {
+        "performance_metrics": {
+            "total_return": 15.0,
+            "sharpe_ratio": 1.2,
+            "max_drawdown": -5.0,
+            "win_rate": 50.0,
+            "total_trades": 30,
+        },
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(backtest_result)
+
+    assert metrics["buy_hold_return"] == pytest.approx(0.0, abs=1e-9)
+    assert metrics["excess_return"] == pytest.approx(0.15, abs=1e-9)
+
+
+def test_calculate_fitness_rewards_excess_return(
+    fitness_calculator,
+):
+    """excess_return の重みが設定されている場合、買い持ち超過がフィットネスを引き上げること."""
+    config = GAConfig(
+        zero_trades_penalty=0.0,
+        constraint_violation_penalty=0.0,
+        fitness_weights={
+            "total_return": 0.2,
+            "sharpe_ratio": 0.25,
+            "max_drawdown": 0.15,
+            "win_rate": 0.1,
+            "balance_score": 0.1,
+            "excess_return": 0.1,
+            "ulcer_index_penalty": 0.1,
+            "trade_frequency_penalty": 0.05,
+        },
+    )
+    base_result = {
+        "performance_metrics": {
+            "total_return": 20.0,
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -10.0,
+            "win_rate": 55.0,
+            "total_trades": 50,
+            "buy_hold_return": 43.09,
+        },
+        "trade_history": [],
+    }
+
+    # 買い持ち超過なし
+    fitness_no_excess = fitness_calculator.calculate_fitness(base_result, config)
+
+    # 同じリターンだが買い持ちを大きく上回る場合
+    base_result["performance_metrics"]["buy_hold_return"] = 5.0
+    fitness_with_excess = fitness_calculator.calculate_fitness(base_result, config)
+
+    assert fitness_with_excess > fitness_no_excess
+
+
+def test_calculate_fitness_excess_return_penalizes_below_benchmark(
+    fitness_calculator,
+):
+    """買い持ちを下回る戦略は excess_return でペナルティを受けること."""
+    config = GAConfig(
+        zero_trades_penalty=0.0,
+        constraint_violation_penalty=0.0,
+        fitness_weights={
+            "total_return": 0.2,
+            "sharpe_ratio": 0.25,
+            "max_drawdown": 0.15,
+            "win_rate": 0.1,
+            "balance_score": 0.1,
+            "excess_return": 0.1,
+            "ulcer_index_penalty": 0.1,
+            "trade_frequency_penalty": 0.05,
+        },
+    )
+    base_result = {
+        "performance_metrics": {
+            "total_return": 20.0,
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -10.0,
+            "win_rate": 55.0,
+            "total_trades": 50,
+            "buy_hold_return": 5.0,
+        },
+        "trade_history": [],
+    }
+
+    # 買い持ちを上回るケース
+    fitness_above = fitness_calculator.calculate_fitness(base_result, config)
+
+    # 買い持ちを下回るケース（同リターンでも excess_return が負）
+    base_result["performance_metrics"]["buy_hold_return"] = 60.0
+    fitness_below = fitness_calculator.calculate_fitness(base_result, config)
+
+    assert fitness_below < fitness_above
+
+
 def test_extract_performance_metrics_normalizes_percentage_drawdown(
     fitness_calculator,
 ):

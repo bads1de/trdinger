@@ -17,6 +17,9 @@ from app.services.auto_strategy.genes import (
 from app.services.auto_strategy.serializers.serialization import (
     GeneSerializer,
 )
+from app.services.auto_strategy.utils.indicator_references import (
+    build_indicator_reference_name,
+)
 
 
 @pytest.fixture
@@ -253,6 +256,111 @@ def test_indicator_gene_single_round_trip(serializer: GeneSerializer) -> None:
     assert restored.type == "RSI"
     assert restored.parameters == {"period": 14}
     assert restored.enabled is False
+
+
+def test_indicator_gene_id_round_trip(serializer: GeneSerializer) -> None:
+    """インジケーターの id がシリアライズ/デシリアライズで保持されること.
+
+    条件のオペランドは build_indicator_reference_name が生成する
+    「TYPE_ID[:8]_OUTPUT_INDEX」形式の参照名でインジケーターを参照する。
+    id が失われると復元後の参照名が崩れ、生成戦略が0トレードになるため、
+    ラウンドトリップで id が保持されることが必須。
+    """
+    indicator = IndicatorGene(
+        type="MACD",
+        parameters={"fast": 11, "slow": 26, "signal": 9},
+        enabled=True,
+        id="62a25146-1234-4abc-9def-0123456789ab",
+    )
+
+    data = serializer.indicator_gene_to_dict(indicator)
+
+    assert data["id"] == "62a25146-1234-4abc-9def-0123456789ab"
+
+    restored = serializer.dict_to_indicator_gene(data)
+
+    assert restored.id == "62a25146-1234-4abc-9def-0123456789ab"
+    # 参照名がラウンドトリップ前後で一致する（実行時のインジケーター解決に必須）
+    assert build_indicator_reference_name(
+        restored, 0
+    ) == build_indicator_reference_name(indicator, 0)
+
+
+def test_indicator_gene_without_id_round_trip(serializer: GeneSerializer) -> None:
+    """id を持たない（古いスキーマ由来の）インジケーターも復元できること."""
+    indicator = IndicatorGene(type="RSI", parameters={"period": 14}, enabled=True)
+    data = serializer.indicator_gene_to_dict(indicator)
+
+    # id が None の場合はシリアライズに含めない（後方互換性）
+    assert "id" not in data
+
+    restored = serializer.dict_to_indicator_gene(data)
+
+    assert restored.id is None
+
+
+def test_strategy_gene_indicator_id_reference_round_trip(
+    serializer: GeneSerializer,
+) -> None:
+    """戦略遺伝子全体のラウンドトリップで、条件の参照名が解決可能なこと.
+
+    条件のオペランド（MACD_62a25146_0 形式）が、復元後のインジケーターの
+    参照名と一致することを確認する。これが壊れると保存→復元した戦略が
+    一切エントリーしなくなる。
+    """
+    indicators = [
+        IndicatorGene(
+            type="MACD",
+            parameters={"fast": 11, "slow": 26, "signal": 9},
+            enabled=True,
+            id="62a25146-1234-4abc-9def-0123456789ab",
+        ),
+        IndicatorGene(
+            type="BBANDS",
+            parameters={"length": 20, "std": 2.0},
+            enabled=True,
+            id="bbands-0001-4abc-9def-0123456789ab",
+        ),
+    ]
+    # 参照名は build_indicator_reference_name と同じ規則で生成される
+    macd_ref = build_indicator_reference_name(indicators[0], 0)
+    macd_sig_ref = build_indicator_reference_name(indicators[0], 1)
+    long_entry_conditions = [
+        ConditionGroup(
+            operator="AND",
+            conditions=[
+                Condition(
+                    left_operand={"type": "indicator", "name": macd_ref},
+                    operator=">",
+                    right_operand={"type": "indicator", "name": macd_sig_ref},
+                    direction="long",
+                ),
+            ],
+        ),
+    ]
+
+    strategy_gene = StrategyGene(
+        id="id-ref-test-strategy",
+        indicators=indicators,
+        long_entry_conditions=long_entry_conditions,
+        risk_management={"position_size": 0.1},
+    )
+
+    data = serializer.strategy_gene_to_dict(strategy_gene)
+    restored = serializer.dict_to_strategy_gene(data, StrategyGene)
+
+    # 復元後のインジケーターの参照名と、条件オペランドの参照名が一致すること
+    restored_refs = {
+        build_indicator_reference_name(ind, i)
+        for ind in restored.indicators
+        for i in range(3)
+    }
+    assert macd_ref in restored_refs
+    assert macd_sig_ref in restored_refs
+
+    cond = restored.long_entry_conditions[0].conditions[0]
+    assert cond.left_operand["name"] == macd_ref
+    assert cond.right_operand["name"] == macd_sig_ref
 
 
 def test_condition_round_trip(serializer: GeneSerializer) -> None:

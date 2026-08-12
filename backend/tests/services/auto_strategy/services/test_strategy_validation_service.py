@@ -962,6 +962,59 @@ class TestStrategyValidationService:
         mock_helper.assert_called_once_with(strategy)
 
 
+class TestValidationGaConfigBuilding:
+    """_build_validation_ga_config の設定テスト"""
+
+    def test_build_validation_ga_config_disables_early_termination(
+        self, mock_evaluator
+    ):
+        """WFA検証用設定では早期終了が無効化される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                wfa_n_folds=3,
+                wfa_train_ratio=0.7,
+            ),
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=False,
+                oos_split_ratio=0.25,
+            ),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        validation_config = service._build_validation_ga_config(config)
+
+        eval_cfg = validation_config.evaluation_config
+        # WFAが有効化され、OOS/PurgedKFold は無効化される
+        assert eval_cfg.enable_walk_forward is True
+        assert eval_cfg.wfa_n_folds == 3
+        assert eval_cfg.oos_split_ratio == 0.0
+        assert validation_config.enable_purged_kfold is False
+        # 最終品質ゲートは完全評価で行う（早期終了を無効化）
+        assert eval_cfg.early_termination_settings.enabled is False
+
+    def test_build_validation_ga_config_preserves_other_settings(self, mock_evaluator):
+        """検証用設定で他の評価設定は維持される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, wfa_n_folds=5),
+            evaluation_config=EvaluationConfig(
+                enable_walk_forward=False,
+                early_termination_settings={
+                    "enabled": True,
+                    "min_trades": 30,
+                },
+            ),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        validation_config = service._build_validation_ga_config(config)
+
+        assert validation_config.objectives == ["total_return"]
+        assert validation_config.evaluation_config.wfa_n_folds == 5
+
+
 class TestValidationConfig:
     """ValidationConfig の設定テスト"""
 

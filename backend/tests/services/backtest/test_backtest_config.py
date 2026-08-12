@@ -128,3 +128,33 @@ def test_serialization(valid_backtest_config_dict):
     assert data["slippage"] == 0.0
     # 日付はdatetimeオブジェクトのまま（json化する際は別途対応が必要だがdumpでは維持）
     assert isinstance(data["start_date"], datetime)
+
+
+def test_early_termination_settings_round_trip(valid_backtest_config_dict):
+    """early_termination_settings が Pydantic 検証後も保持されること
+
+    GA評価パスの _skip_validation 経由では保持されるが、CLI/実験サービスの
+    通常経路（Pydantic検証あり）では以前は黙って破棄されていた。
+    GeneratedGAParameters に明示フィールドを追加することで解決する。
+    """
+    valid_backtest_config_dict["strategy_config"]["parameters"][
+        "early_termination_settings"
+    ] = {"enabled": False}
+
+    config = BacktestRunConfig(**valid_backtest_config_dict)
+    params = config.strategy_config.parameters
+
+    assert isinstance(params, GeneratedGAParameters)
+    assert params.early_termination_settings == {"enabled": False}
+
+    # model_dump 後も保持される（strategy_class_factory が dict で受け取るため）
+    dumped = config.strategy_config.model_dump()
+    assert dumped["parameters"]["early_termination_settings"] == {"enabled": False}
+
+
+def test_early_termination_settings_none_by_default(valid_backtest_config_dict):
+    """early_termination_settings 未指定時は None になる（後方互換）"""
+    config = BacktestRunConfig(**valid_backtest_config_dict)
+    params = config.strategy_config.parameters
+
+    assert params.early_termination_settings is None

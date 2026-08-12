@@ -209,6 +209,12 @@ class DictConverter:
             }
             if indicator_gene.timeframe is not None:
                 result["timeframe"] = indicator_gene.timeframe
+            # 条件のオペランドは build_indicator_reference_name で生成される
+            # 「TYPE_ID[:8]_OUTPUT_INDEX」形式の参照名を使うため、
+            # シリアライズ時に id を保持しないと復元後の参照名が崩れ、
+            # エントリー条件が評価不能になる（生成戦略が0トレードになる原因）。
+            if indicator_gene.id is not None:
+                result["id"] = indicator_gene.id
             return result
         except Exception as e:
             logger.error("指標遺伝子辞書変換エラー: %s", e)
@@ -226,6 +232,8 @@ class DictConverter:
                 parameters=data["parameters"],
                 enabled=data.get("enabled", True),
                 timeframe=data.get("timeframe"),
+                # 参照名を復元するために id も保持する（古いデータには無い場合は None）
+                id=data.get("id"),
             )
         except Exception as e:
             logger.error("指標遺伝子復元エラー: %s", e)

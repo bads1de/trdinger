@@ -458,6 +458,26 @@ class TestDataNormalization:
         assert "performance_metrics" in normalized
         assert normalized["performance_metrics"]["total_return"] == 0.15
 
+    def test_normalize_result_data_keeps_datetime_objects(
+        self, repository: BacktestResultRepository
+    ) -> None:
+        """日付は DB ドライバが受け付ける datetime オブジェクトのまま返す"""
+        legacy_data = {
+            "strategy_name": "legacy_strategy",
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01T00:00:00+00:00",
+            "end_date": "2024-01-31T00:00:00+00:00",
+            "initial_capital": 10000.0,
+        }
+
+        normalized = repository._normalize_result_data(legacy_data)
+
+        assert isinstance(normalized["start_date"], datetime)
+        assert isinstance(normalized["end_date"], datetime)
+        assert normalized["start_date"].isoformat().startswith("2024-01-01")
+        assert normalized["end_date"].isoformat().startswith("2024-01-31")
+
 
 class TestErrorHandling:
     """エラーハンドリングのテスト"""

@@ -20,7 +20,8 @@ GA_DEFAULT_CONFIG = {
 # === フィットネス重み設定 ===
 FITNESS_WEIGHT_PROFILES = {
     "balanced": {
-        "total_return": 0.2,
+        "total_return": 0.1,
+        "excess_return": 0.1,
         "sharpe_ratio": 0.25,
         "max_drawdown": 0.15,
         "win_rate": 0.1,

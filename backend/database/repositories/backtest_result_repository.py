@@ -144,12 +144,10 @@ class BacktestResultRepository(BaseRepository):
             "strategy_name": result_data["strategy_name"],
             "symbol": result_data["symbol"],
             "timeframe": result_data["timeframe"],
-            "start_date": start_date.isoformat()
-            if isinstance(start_date, (datetime, date))
-            else start_date,
-            "end_date": end_date.isoformat()
-            if isinstance(end_date, (datetime, date))
-            else end_date,
+            # DateTime カラムへは datetime オブジェクトのまま渡す
+            # （文字列化すると DB ドライバで DateTime 型エラーになる）
+            "start_date": cast(SerializableValue, start_date),
+            "end_date": cast(SerializableValue, end_date),
             "initial_capital": result_data["initial_capital"],
             "commission_rate": result_data.get("commission_rate", 0.001),
             "config_json": config_json,

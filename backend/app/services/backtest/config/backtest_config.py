@@ -41,6 +41,9 @@ class GeneratedGAParameters(BaseModel):
     strategy_gene: dict[str, Any]  # 将来的にはStrategyGeneモデルそのものに置き換える
     evaluation_start: Any | None = None
     minute_data: Any | None = None  # DataFrameなどはPydanticで検証しにくいためAny
+    # 早期終了設定（ネスト辞書。universal_strategy が EarlyTerminationSettings.from_source で解釈する）。
+    # このフィールドが無いと Pydantic 検証時に黙って破棄され、早期終了が常に有効になってしまう。
+    early_termination_settings: dict[str, Any] | None = None
     enable_early_termination: bool = False
     early_termination_max_drawdown: float | None = None
     early_termination_min_trades: int | None = None

@@ -40,6 +40,10 @@ class FitnessCalculator:
     DEFAULT_WEIGHT_MAX_DRAWDOWN = 0.2
     DEFAULT_WEIGHT_WIN_RATE = 0.1
     DEFAULT_WEIGHT_BALANCE_SCORE = 0.1
+    # フォールバックは0（旧設定・旧テストでは excess_return が黙って効かない）。
+    # デフォルトプロファイル（ga_constants.FITNESS_WEIGHT_PROFILES["balanced"]）では
+    # 明示的に excess_return: 0.1 を設定しており、新規実行では買い持ち超過が評価される。
+    DEFAULT_WEIGHT_EXCESS_RETURN = 0.0
     TRADE_BALANCE_WEIGHT = 0.6
     PROFIT_BALANCE_WEIGHT = 0.4
     PROFIT_BALANCE_BOTH_POSITIVE = 1.0
@@ -167,6 +171,7 @@ class FitnessCalculator:
             "sortino_ratio",
             "calmar_ratio",
             "total_trades",
+            "buy_hold_return",
         )
 
         return (
@@ -270,6 +275,7 @@ class FitnessCalculator:
         sortino_ratio = perf_metrics.get("sortino_ratio", 0.0)
         calmar_ratio = perf_metrics.get("calmar_ratio", 0.0)
         total_trades = perf_metrics.get("total_trades", 0)
+        buy_hold_return = perf_metrics.get("buy_hold_return", 0.0)
 
         def _sanitize_float(value: object, default: float) -> float:
             if value is None or not isinstance(value, (int, float)):
@@ -287,6 +293,7 @@ class FitnessCalculator:
         sortino_ratio = _sanitize_float(sortino_ratio, 0.0)
         calmar_ratio = _sanitize_float(calmar_ratio, 0.0)
         total_trades = int(_sanitize_float(total_trades, 0.0))
+        buy_hold_return = _sanitize_float(buy_hold_return, 0.0)
 
         if max_drawdown < 0:
             max_drawdown = abs(max_drawdown)
@@ -297,6 +304,13 @@ class FitnessCalculator:
             total_return = total_return / 100.0
         if win_rate > 1.0:
             win_rate = win_rate / 100.0
+        if abs(buy_hold_return) > 1.0:
+            buy_hold_return = buy_hold_return / 100.0
+
+        # 買い持ちベンチマークを上回る超過リターン（割合単位）。
+        # 負値（買い持ちに負けている）はペナルティとしてそのまま効かせる。
+        # buy_hold_return が不明（0）の場合は total_return をそのまま超過とみなす。
+        excess_return = total_return - buy_hold_return
 
         equity_curve = backtest_result.get("equity_curve")
         equity_curve_list = (
@@ -334,6 +348,8 @@ class FitnessCalculator:
             "sortino_ratio": sortino_ratio,
             "calmar_ratio": calmar_ratio,
             "total_trades": total_trades,
+            "buy_hold_return": buy_hold_return,
+            "excess_return": excess_return,
             "ulcer_index": ulcer_index,
             "trade_frequency_penalty": trade_penalty,
         }
@@ -402,6 +418,7 @@ class FitnessCalculator:
             max_drawdown = metrics["max_drawdown"]
             win_rate = metrics["win_rate"]
             total_trades = int(metrics["total_trades"])
+            excess_return = metrics.get("excess_return", 0.0)
             ulcer_index = metrics.get("ulcer_index", 0.0)
             trade_penalty = metrics.get("trade_frequency_penalty", 0.0)
 
@@ -443,6 +460,12 @@ class FitnessCalculator:
                     )
                 )
                 * balance_score
+                + float(
+                    fitness_weights.get(
+                        "excess_return", self.DEFAULT_WEIGHT_EXCESS_RETURN
+                    )
+                )
+                * excess_return
             )
 
             # ulcer_indexとtrade_frequency_penaltyを常に考慮
@@ -666,6 +689,8 @@ class FitnessCalculator:
                     value = metrics["calmar_ratio"]
                 elif objective == "balance_score":
                     value = self.calculate_long_short_balance(backtest_result)
+                elif objective == "excess_return":
+                    value = metrics.get("excess_return", 0.0)
                 elif objective == "ulcer_index":
                     value = metrics.get("ulcer_index", 0.0)
                 elif objective == "trade_frequency_penalty":

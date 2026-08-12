@@ -44,6 +44,7 @@ OBJECTIVE_REGISTRY: Final[dict[str, ObjectiveDefinition]] = {
     "sortino_ratio": ObjectiveDefinition(name="sortino_ratio"),
     "calmar_ratio": ObjectiveDefinition(name="calmar_ratio"),
     "balance_score": ObjectiveDefinition(name="balance_score"),
+    "excess_return": ObjectiveDefinition(name="excess_return"),
     "ulcer_index": ObjectiveDefinition(
         name="ulcer_index",
         direction="minimize",

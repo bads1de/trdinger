@@ -16,8 +16,10 @@ from app.services.auto_strategy.core.evaluation.report_persistence import (
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 from app.services.backtest.config.builders import build_execution_config
 from app.services.backtest.services.backtest_service import BacktestService
+from app.utils.serialization import dataclass_to_dict
 
 from ..config import GAConfig
+from ..config.ga.nested_configs import EarlyTerminationSettings
 from ..genes import StrategyGene
 
 logger = logging.getLogger(__name__)
@@ -126,16 +128,20 @@ class ExperimentBacktestService:
         cleaned_name = cleaned_name.rstrip("_")
 
         strategy_id = str(getattr(best_strategy, "id", ""))[:6] or "unknown"
+        # 最終レポート用の詳細バックテストは早期終了を無効化する
+        # （早期終了が発動すると BacktestEarlyTerminationError で実験全体が失敗するため）
+        strategy_parameters = {
+            "strategy_gene": self.serializer.strategy_gene_to_dict(best_strategy),
+            "early_termination_settings": dataclass_to_dict(
+                EarlyTerminationSettings(enabled=False)
+            ),
+        }
         return build_execution_config(
             config,
             strategy_name=f"AS_{cleaned_name}_{strategy_id}",
             strategy_config={
                 "strategy_type": "GENERATED_GA",
-                "parameters": {
-                    "strategy_gene": self.serializer.strategy_gene_to_dict(
-                        best_strategy
-                    )
-                },
+                "parameters": strategy_parameters,
             },
         )
 
