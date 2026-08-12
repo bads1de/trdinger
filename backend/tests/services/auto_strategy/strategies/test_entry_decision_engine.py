@@ -11,6 +11,7 @@ from app.services.auto_strategy.strategies.entry_decision_engine import (
     EntryDecisionEngine,
 )
 from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
+from app.services.backtest.shared import FRACTIONAL_UNIT
 
 
 class TestEntryDecisionEngine:
@@ -145,7 +146,9 @@ class TestEntryDecisionEngine:
             0.05,
             0.08,
         ]
-        strategy.data.Close = [50000.0, 51000.0]
+        # FractionalBacktest のフレーム単位（実価格 × FRACTIONAL_UNIT）
+        # 50000 -> 5e-4, 51000 -> 5.1e-4
+        strategy.data.Close = [5e-4, 5.1e-4]
         strategy.data.High = np.array([50500.0, 51500.0])
         strategy.data.Low = np.array([49500.0, 50500.0])
         strategy.data.__len__ = MagicMock(return_value=2)
@@ -167,12 +170,17 @@ class TestEntryDecisionEngine:
         strategy.position_sizing_service.calculate_position_size_fast.return_value = (
             250.0
         )
-        strategy.data.Close = [50000.0, 51000.0]
+        # FractionalBacktest のフレーム単位（実価格 × FRACTIONAL_UNIT）
+        # 50000 -> 5e-4, 51000 -> 5.1e-4
+        strategy.data.Close = [5e-4, 5.1e-4]
         strategy.data.High = np.array([50500.0, 51500.0])
         strategy.data.Low = np.array([49500.0, 50500.0])
         strategy.data.__len__ = MagicMock(return_value=2)
 
-        assert engine.calculate_position_size() == pytest.approx(250.0)
+        # 実ユニット数 250 はフレーム単位（×1/FRACTIONAL_UNIT）へ変換されて返る
+        assert engine.calculate_position_size() == pytest.approx(
+            250.0 / FRACTIONAL_UNIT
+        )
 
     def test_calculate_effective_tpsl_prices_uses_precomputed_atr(
         self, engine, strategy

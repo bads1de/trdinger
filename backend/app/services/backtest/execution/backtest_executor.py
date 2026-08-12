@@ -19,7 +19,7 @@ from app.services.auto_strategy.strategies.universal_strategy import (
 
 from ..config.constants import SUPPORTED_STRATEGIES
 from ..services.backtest_data_service import BacktestDataService
-from ..shared import normalize_ohlcv_columns
+from ..shared import FRACTIONAL_UNIT, normalize_ohlcv_columns
 
 logger = logging.getLogger(__name__)
 
@@ -199,6 +199,7 @@ class BacktestExecutor:
                 trade_on_close=False,  # 現在価格で取引（制約緩和）
                 hedging=True,  # ヘッジング有効化（制約緩和）
                 margin=margin,
+                fractional_unit=FRACTIONAL_UNIT,
             )
 
             return bt

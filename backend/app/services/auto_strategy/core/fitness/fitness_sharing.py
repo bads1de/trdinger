@@ -42,6 +42,20 @@ _FrozenKey = tuple | bytes | SerializablePrimitive
 logger = logging.getLogger(__name__)
 
 
+def _safe_ratio(current: float, original: float) -> float:
+    if np.isinf(original) or np.isinf(current):
+        return 1.0
+    return float(
+        np.divide(current, original, out=np.zeros_like(current), where=original != 0)
+    )
+
+
+def _restore_value(original: float, ratio: float) -> float:
+    if np.isinf(original):
+        return original
+    return original * ratio
+
+
 class FitnessSharing:
     """
     フィットネス共有クラス
@@ -191,7 +205,7 @@ class FitnessSharing:
                 if i in original_fitness and hasattr(individual, "fitness"):
                     silhouette_ratio = (
                         tuple(
-                            float(np.divide(s, o, out=np.zeros_like(s), where=o != 0))
+                            _safe_ratio(s, o)
                             for s, o in zip(
                                 individual.fitness.values,
                                 original_fitness[i],
@@ -202,7 +216,7 @@ class FitnessSharing:
                         else original_fitness[i]
                     )
                     individual.fitness.values = tuple(
-                        o * r
+                        _restore_value(o, r)
                         for o, r in zip(
                             original_fitness[i], silhouette_ratio, strict=False
                         )

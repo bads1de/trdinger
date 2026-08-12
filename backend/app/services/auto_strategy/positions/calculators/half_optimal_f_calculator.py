@@ -67,9 +67,24 @@ class HalfOptimalFCalculator(BaseCalculator):
             )
 
         # 統一された最終処理（重複コード除去）
-        return self._apply_size_limits_and_finalize(
+        result = self._apply_size_limits_and_finalize(
             result["position_size"], details, warnings, gene
         )
+
+        # 証拠金超過対策: 残高で賄えないサイズはブローカ側で注文がキャンセルされ
+        # トレードが一切成立しなくなるため、現在価格で購入可能な上限にクランプする
+        position_size = float(result["position_size"])
+        if current_price > 0 and position_size > account_balance / current_price:
+            position_size = account_balance / current_price
+            details["margin_limited"] = True
+            details["max_affordable_size"] = position_size
+            warnings.append("ポジションサイズが残高上限で制限されました")
+
+        return {
+            "position_size": position_size,
+            "details": details,
+            "warnings": warnings,
+        }
 
     def _calculate_simplified_optimal_f(
         self,

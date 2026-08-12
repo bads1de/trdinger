@@ -143,6 +143,17 @@ class TestFitnessSharing:
         result = fitness_sharing.apply_fitness_sharing(population)
         assert len(result) == 1
 
+    def test_apply_fitness_sharing_preserves_infinite_fitness(
+        self, fitness_sharing, sample_population
+    ):
+        """ペナルティ値(-inf)がNaNに化けないこと"""
+        for individual in sample_population:
+            individual.fitness.values = (-float("inf"),)
+        result = fitness_sharing.apply_fitness_sharing(sample_population)
+        for individual in result:
+            assert individual.fitness.values == (-float("inf"),)
+            assert not any(np.isnan(v) for v in individual.fitness.values)
+
     # ---------------------------------------------------------------------------
     # ベクトル化テスト
     # ---------------------------------------------------------------------------

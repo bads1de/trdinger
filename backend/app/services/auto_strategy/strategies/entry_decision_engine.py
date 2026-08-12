@@ -10,6 +10,8 @@ import logging
 import math
 from typing import Any, cast
 
+from app.services.backtest.shared import FRACTIONAL_UNIT
+
 from ..config.constants import EntryType
 from ..genes import Condition, ConditionGroup, TPSLGene, TPSLMethod
 
@@ -163,8 +165,12 @@ class EntryDecisionEngine:
                     self.strategy.data.Close[-1]
                     if hasattr(self.strategy, "data")
                     and len(self.strategy.data.Close) > 0
-                    else 50000.0
+                    else 50000.0 * FRACTIONAL_UNIT
                 )
+                # FractionalBacktest により戦略データの価格は FRACTIONAL_UNIT 倍に
+                # スケーリングされている。ポジションサイズ計算（数量ベース）は
+                # 実価格（USDT）で行う必要があるため、フレーム価格を実価格へ戻す。
+                real_price = current_price / FRACTIONAL_UNIT
                 account_balance = getattr(self.strategy, "equity", 100000.0)
                 # モックの場合はfloatにキャスト
                 try:
@@ -215,7 +221,7 @@ class EntryDecisionEngine:
                     self.strategy.position_sizing_service.calculate_position_size_fast(
                         gene=self.strategy.gene.position_sizing_gene,
                         account_balance=account_balance,
-                        current_price=current_price,
+                        current_price=real_price,
                         market_data=market_data,
                     )
                 )
@@ -246,15 +252,16 @@ class EntryDecisionEngine:
                 except (TypeError, ValueError):
                     equity = 100000.0
                 if equity > 0:
-                    fraction = (final_units * current_price) / equity
+                    fraction = (final_units * real_price) / equity
                     if fraction < 1.0:
-                        # 1未満なら比率として返す
+                        # 1未満なら比率（証拠金比率）として返す
                         # 0.001 などの小さな値でも OK
                         return fraction
                     else:
                         # 1以上（100%以上の証拠金を使用）なら、整数ユニット数として返す
-                        # backtesting.py は 1.0 以上の float を整数でない場合に拒否する
-                        return float(math.floor(final_units))
+                        # FractionalBacktest のフレーム単位へ変換する
+                        # （backtesting.py は 1.0 以上の float をユニット数として扱う）
+                        return float(math.floor(final_units)) / FRACTIONAL_UNIT
 
                 return 0.001
             return 0.01

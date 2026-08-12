@@ -33,6 +33,7 @@ from app.services.auto_strategy.strategies.entry_decision_engine import (
     EntryDecisionEngine,
 )
 from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
+from app.services.backtest.shared import FRACTIONAL_UNIT
 
 
 def _make_position_sizing_gene(
@@ -66,9 +67,10 @@ def _make_strategy(
     tool_genes: list | None = None,
 ) -> SimpleNamespace:
     """テスト用 strategy モックを構築するヘルパー"""
-    high = np.array([105.0 + i * 0.1 for i in range(data_length)])
-    low = np.array([95.0 - i * 0.1 for i in range(data_length)])
-    close = np.array([100.0 + i * 0.05 for i in range(data_length)])
+    # FractionalBacktest のフレーム単位（実価格 × FRACTIONAL_UNIT）を使用する
+    high = np.array([105.0 + i * 0.1 for i in range(data_length)]) * FRACTIONAL_UNIT
+    low = np.array([95.0 - i * 0.1 for i in range(data_length)]) * FRACTIONAL_UNIT
+    close = np.array([100.0 + i * 0.05 for i in range(data_length)]) * FRACTIONAL_UNIT
     volume = np.array([1000.0 + i for i in range(data_length)])
 
     class _FakeData:
@@ -363,8 +365,9 @@ class TestCalculatePositionSize:
         # 別の設定で fraction >= 1 にする
         strategy.equity = 1000.0
         # fraction = 50 * 100 / 1000 = 5.0 (1 以上) → floor(50) = 50
+        # 返り値は FractionalBacktest のフレーム単位（実ユニット数 × 1/FRACTIONAL_UNIT）
         engine = EntryDecisionEngine(strategy)
-        assert engine.calculate_position_size() == 50.0
+        assert engine.calculate_position_size() == 50.0 / FRACTIONAL_UNIT
 
     def test_handles_invalid_equity(self):
         gene = _make_position_sizing_gene()

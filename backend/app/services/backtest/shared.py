@@ -27,6 +27,12 @@ from app.utils.datetime_utils import (
 
 TRADE_PNL_COLUMNS: tuple[str, ...] = ("PnL", "Pnl", "Profit", "ProfitLoss")
 
+# backtesting.lib.FractionalBacktest のデフォルト fractional_unit（= 1 satoshi 相当）
+# バックテスト実行中、戦略に渡される価格データはこの係数でスケーリングされる
+# （例: 42,735 USDT → 0.00042735）。ポジションサイズ計算は実価格（USDT）で行い、
+# 注文発注時にこの係数でフレーム単位へ変換する必要がある。
+FRACTIONAL_UNIT: float = 1e-8
+
 logger = logging.getLogger(__name__)
 
 

@@ -356,6 +356,9 @@ class TestUniversalStrategyAll:
             strategy = UniversalStrategy(
                 mock_broker, mock_data, {"strategy_gene": valid_gene}
             )
+            # FractionalBacktest のフレーム単位（実価格 × FRACTIONAL_UNIT）
+            # Close[-1] = 102 がフレームでは 102e-8 になる
+            strategy.data.Close = [100e-8, 101e-8, 102e-8]
 
             # 既存のインスタンスのメソッドを直接パッチする
             # calculate_position_size_fastはユニット数を返すので、(0.05 * 100000)/102 で逆算する

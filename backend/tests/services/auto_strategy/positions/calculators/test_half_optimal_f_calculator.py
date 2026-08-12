@@ -63,7 +63,51 @@ class TestHalfOptimalFCalculator:
         expected_position_size = expected_risk_amount / (
             current_price * expected_stop_loss_pct
         )
+        # 残高で賄えないサイズは残高上限（account_balance / current_price）にクランプされる
+        expected_position_size = min(
+            expected_position_size, account_balance / current_price
+        )
         assert pytest.approx(result["position_size"]) == expected_position_size
+        assert details["margin_limited"] is True
+        assert pytest.approx(details["max_affordable_size"]) == (
+            account_balance / current_price
+        )
+
+    def test_calculate_clamp_to_affordable_balance(self, calculator, sample_gene):
+        """残高で賄えない過大サイズが残高上限にクランプされるテスト"""
+        account_balance = 100000.0
+        current_price = 50000.0
+        trade_history = [{"pnl": 200}] * 5 + [{"pnl": -100}] * 5
+
+        result = calculator.calculate(
+            gene=sample_gene,
+            account_balance=account_balance,
+            current_price=current_price,
+            trade_history=trade_history,
+        )
+
+        # クランプ前: 12500 / (50000 * 0.04) = 6.25 BTC → 残高上限 2.0 BTC
+        assert pytest.approx(result["position_size"]) == account_balance / current_price
+        assert result["details"]["margin_limited"] is True
+        assert "制限" in result["warnings"][0]
+
+    def test_calculate_no_clamp_when_affordable(self, calculator, sample_gene):
+        """残高で賄えるサイズの場合はクランプされないテスト"""
+        account_balance = 100000.0
+        current_price = 50000.0
+        trade_history = [{"pnl": 200}] * 5 + [{"pnl": -100}] * 5
+        sample_gene.optimal_f_multiplier = 0.05
+
+        result = calculator.calculate(
+            gene=sample_gene,
+            account_balance=account_balance,
+            current_price=current_price,
+            trade_history=trade_history,
+        )
+
+        # クランプ前: 1250 / (50000 * 0.04) = 0.625 BTC < 残高上限 2.0 BTC
+        assert pytest.approx(result["position_size"]) == 0.625
+        assert "margin_limited" not in result["details"]
 
     def test_calculate_insufficient_history(self, calculator, sample_gene):
         """取引履歴が不足している場合（簡易計算フォールバック）のテスト"""
