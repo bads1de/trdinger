@@ -417,9 +417,6 @@ class TestGAConfig:
         assert config.mutation_config.adaptive_decrease_multiplier == 0.8
         assert config.mutation_config.adaptive_increase_multiplier == 1.2
         assert ">=" in config.mutation_config.valid_condition_operators
-        assert config.numeric_threshold_probability == 0.8
-        assert config.min_compatibility_score == 0.8
-        assert config.strict_compatibility_score == 0.9
         assert config.enable_multi_timeframe is False
         assert config.mtf_indicator_probability == 0.3
         assert config.available_timeframes is None
@@ -447,9 +444,6 @@ class TestGAConfig:
                 adaptive_increase_multiplier=1.5,
                 valid_condition_operators=["==", "!="],
             ),
-            numeric_threshold_probability=0.5,
-            min_compatibility_score=0.6,
-            strict_compatibility_score=0.8,
             enable_multi_timeframe=True,
             mtf_indicator_probability=0.5,
             available_timeframes=["1h", "4h"],

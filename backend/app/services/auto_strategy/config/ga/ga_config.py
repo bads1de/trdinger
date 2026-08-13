@@ -25,7 +25,6 @@ from ..constants import (
     GA_FALLBACK_END_DATE,
     GA_FALLBACK_START_DATE,
     GA_PARAMETER_RANGES,
-    GA_THRESHOLD_RANGES,
 )
 from ..evaluation_plan import EvaluationPlan
 from ..indicator_universe import normalize_indicator_universe_mode
@@ -108,11 +107,6 @@ class GAConfig:
             dict[str, list], copy.deepcopy(GA_PARAMETER_RANGES)
         )
     )
-    threshold_ranges: dict[str, list[float]] = field(
-        default_factory=lambda: cast(
-            dict[str, list[float]], copy.deepcopy(GA_THRESHOLD_RANGES)
-        )
-    )
 
     # フィットネス設定
     fitness_weights: dict[str, float] = field(
@@ -150,12 +144,6 @@ class GAConfig:
     purged_kfold_embargo: float = 0.01  # エンバーゴ率
 
     # 遺伝子生成設定拡張
-    price_data_weight: int = 3
-    volume_data_weight: int = 1
-    oi_fr_data_weight: int = 1
-    numeric_threshold_probability: float = 0.8
-    min_compatibility_score: float = 0.8
-    strict_compatibility_score: float = 0.9
     indicator_universe_mode: str = "curated"
 
     # マルチタイムフレーム（MTF）設定

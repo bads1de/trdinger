@@ -18,20 +18,16 @@ GA_DEFAULT_CONFIG = {
 }
 
 # === フィットネス重み設定 ===
-FITNESS_WEIGHT_PROFILES = {
-    "balanced": {
-        "total_return": 0.1,
-        "excess_return": 0.1,
-        "sharpe_ratio": 0.25,
-        "max_drawdown": 0.15,
-        "win_rate": 0.1,
-        "balance_score": 0.1,
-        "ulcer_index_penalty": 0.15,
-        "trade_frequency_penalty": 0.05,
-    },
+DEFAULT_FITNESS_WEIGHTS = {
+    "total_return": 0.1,
+    "excess_return": 0.1,
+    "sharpe_ratio": 0.25,
+    "max_drawdown": 0.15,
+    "win_rate": 0.1,
+    "balance_score": 0.1,
+    "ulcer_index_penalty": 0.15,
+    "trade_frequency_penalty": 0.05,
 }
-
-DEFAULT_FITNESS_WEIGHTS = FITNESS_WEIGHT_PROFILES["balanced"]
 
 # === フィットネス制約設定 ===
 DEFAULT_FITNESS_CONSTRAINTS = {
@@ -71,14 +67,8 @@ GA_PARAMETER_RANGES = {
 }
 
 # === GA閾値範囲定義 ===
-GA_THRESHOLD_RANGES = {
-    "oscillator_0_100": [20, 80],
-    "oscillator_plus_minus_100": [-100, 100],
-    "momentum_zero_centered": [-0.5, 0.5],
-    "funding_rate": [0.0001, 0.0005, 0.001, -0.0001, -0.0005, -0.001],
-    "open_interest": [1000000, 5000000, 10000000, 50000000],
-    "price_ratio": [0.95, 1.05],
-}
+# 閾値の生成はインジケーター設定（IndicatorConfig.thresholds）から
+# スケール型に応じて解決されるため、ここでの範囲テーブルは持たない。
 
 # === GA突然変異設定 ===
 GA_MUTATION_SETTINGS = {
@@ -97,86 +87,8 @@ GA_MUTATION_SETTINGS = {
     "adaptive_mutation_variance_threshold": 0.001,
     "adaptive_mutation_rate_decrease_multiplier": 0.8,
     "adaptive_mutation_rate_increase_multiplier": 1.2,
-    "valid_condition_operators": [
-        ">",
-        "<",
-        ">=",
-        "<=",
-        "==",
-        "!=",
-        "CROSS_UP",
-        "CROSS_DOWN",
-    ],
-    "numeric_threshold_probability": 0.8,
-    "min_compatibility_score": 0.8,
-    "strict_compatibility_score": 0.9,
 }
 
 # === GA TPSL関連定数 ===
-GA_DEFAULT_TPSL_METHOD_CONSTRAINTS = [
-    "fixed_percentage",
-    "risk_reward_ratio",
-    "volatility_based",
-    "statistical",
-    "adaptive",
-]
-
-GA_TPSL_SL_RANGE = [0.01, 0.08]  # SL範囲（1%-8%）
-GA_TPSL_TP_RANGE = [0.02, 0.20]  # TP範囲（2%-20%）
-GA_TPSL_RR_RANGE = [1.2, 4.0]  # リスクリワード比範囲
-GA_TPSL_ATR_MULTIPLIER_RANGE = [1.0, 4.0]  # ATR倍率範囲
-
-# === GA ポジションサイジング関連定数 ===
-GA_DEFAULT_POSITION_SIZING_METHOD_CONSTRAINTS = [
-    "half_optimal_f",
-    "volatility_based",
-    "fixed_ratio",
-    "fixed_quantity",
-]
-
-GA_POSITION_SIZING_LOOKBACK_RANGE = [
-    50,
-    200,
-]  # ハーフオプティマルF用ルックバック期間
-GA_POSITION_SIZING_OPTIMAL_F_MULTIPLIER_RANGE = [
-    0.25,
-    0.75,
-]  # オプティマルF倍率範囲
-GA_POSITION_SIZING_ATR_PERIOD_RANGE = [10, 30]  # ATR計算期間範囲
-GA_POSITION_SIZING_ATR_MULTIPLIER_RANGE = [
-    1.0,
-    4.0,
-]  # ポジションサイジング用ATR倍率範囲
-GA_POSITION_SIZING_RISK_PER_TRADE_RANGE = [
-    0.01,
-    0.05,
-]  # 1取引あたりのリスク範囲（1%-5%）
-GA_POSITION_SIZING_FIXED_RATIO_RANGE = [0.05, 0.3]  # 固定比率範囲（5%-30%）
-GA_POSITION_SIZING_FIXED_QUANTITY_RANGE = [0.1, 10.0]  # 固定枚数範囲
-GA_POSITION_SIZING_MIN_SIZE_RANGE = [0.01, 0.1]  # 最小ポジションサイズ範囲
-GA_POSITION_SIZING_MAX_SIZE_RANGE = [
-    5.0,
-    50.0,
-]  # 最大ポジションサイズ範囲（GA探索用の絶対数量上限）
-GA_POSITION_SIZING_PRIORITY_RANGE = [0.5, 1.5]  # 優先度範囲
-GA_POSITION_SIZING_VAR_CONFIDENCE_RANGE = [0.8, 0.99]  # VaR信頼水準
-GA_POSITION_SIZING_MAX_VAR_RATIO_RANGE = [0.005, 0.05]  # VaR許容比率
-GA_POSITION_SIZING_MAX_ES_RATIO_RANGE = [0.01, 0.1]  # ES許容比率
-GA_POSITION_SIZING_VAR_LOOKBACK_RANGE = [50, 500]  # VaR計算のルックバック期間
-
-# ポジションサイジング制限設定
-POSITION_SIZING_LIMITS = {
-    "lookback_period": (10, 500),
-    "optimal_f_multiplier": (0.1, 1.0),
-    "atr_period": (5, 50),
-    "atr_multiplier": (0.5, 10.0),
-    "risk_per_trade": (0.001, 0.1),
-    "fixed_ratio": (0.01, 10.0),
-    "fixed_quantity": (0.01, 1000.0),
-    "min_position_size": (0.001, 1.0),
-    "max_position_size": (0.001, 1000000000.0),
-    "var_confidence": (0.8, 0.999),
-    "max_var_ratio": (0.001, 0.1),
-    "max_expected_shortfall_ratio": (0.001, 0.2),
-    "var_lookback": (20, 1000),
-}
+# TPSLの生成範囲・検証範囲は genes/gene_ranges.py の
+# TPSL_GENERATION_RANGES / TPSL_VALIDATION_RANGES を単一ソースとする。

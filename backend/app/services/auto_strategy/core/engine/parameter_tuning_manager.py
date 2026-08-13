@@ -66,7 +66,6 @@ class ParameterTuningManager:
         individual: object,
         config: "GAConfig",
         *,
-        force_robustness: bool = False,
         primary_fitness: float | None = None,
         selection_rank_override: int | None = None,
         selection_score_override: tuple[float, ...] | None = None,

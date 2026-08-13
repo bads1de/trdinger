@@ -19,7 +19,7 @@ from app.services.auto_strategy.genes import (
     StrategyGene,
     TPSLGene,
 )
-from app.services.auto_strategy.genes.strategy_operators import mutate_conditions
+from app.services.auto_strategy.genes.operators.mutation import mutate_conditions
 
 
 class TestGeneticOperators:
@@ -70,7 +70,7 @@ class TestGeneticOperators:
         self, ga_config
     ):
         """突然変異対象のサブ遺伝子列挙が StrategyGene 定義に追従することを確認"""
-        from app.services.auto_strategy.genes.strategy_operators import (
+        from app.services.auto_strategy.genes.operators.mutation import (
             _iter_mutable_sub_gene_specs,
         )
 

@@ -1025,7 +1025,3 @@ class EvaluationStrategy:
             current_start = effective_test_end + embargo_duration
 
         return fold_configs
-
-    def clear_cache(self) -> None:
-        """キャッシュをクリアする。"""
-        self._date_cache.clear()

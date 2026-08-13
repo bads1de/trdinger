@@ -274,7 +274,10 @@ class TestUniversalStrategyAll:
         strategy.data.index = full_index[:81]
         strategy._current_bar_index = 81
 
-        assert strategy._get_progress_ratio() == pytest.approx(1 / 20)
+        assert (
+            strategy.early_termination_controller.get_progress_ratio()
+            == pytest.approx(1 / 20)
+        )
 
     def test_check_early_termination_raises_exception(
         self, mock_broker, mock_data, valid_gene
@@ -372,8 +375,14 @@ class TestUniversalStrategyAll:
                 "calculate_position_size_fast",
                 side_effect=[target_unit1, target_unit2],
             ):
-                assert abs(strategy._calculate_position_size() - 0.05) < 1e-9
-                assert abs(strategy._calculate_position_size() - 0.08) < 1e-9
+                assert (
+                    abs(strategy.entry_decision_engine.calculate_position_size() - 0.05)
+                    < 1e-9
+                )
+                assert (
+                    abs(strategy.entry_decision_engine.calculate_position_size() - 0.08)
+                    < 1e-9
+                )
                 assert not hasattr(strategy, "_cached_position_size")
 
     # ---------------------------------------------------------------------------
@@ -399,4 +408,7 @@ class TestUniversalStrategyAll:
             "evaluate_stateful_condition",
             return_value=True,
         ):
-            assert strategy._get_stateful_entry_direction() == -1.0
+            assert (
+                strategy.stateful_conditions_evaluator.get_stateful_entry_direction()
+                == -1.0
+            )

@@ -180,8 +180,8 @@ class TestTPSLGene:
         """検証時のエラー処理テスト"""
         gene = TPSLGene()
 
-        # TPSL_LIMITSのインポートエラーをシミュレート
-        with patch("app.services.auto_strategy.config.constants.TPSL_LIMITS", {}):
+        # 検証範囲の異常をシミュレート
+        with patch("app.services.auto_strategy.genes.tpsl.TPSL_VALIDATION_RANGES", {}):
             with patch("app.services.auto_strategy.genes.tpsl.logger"):
                 is_valid, errors = gene.validate()
                 # 基本検証が適用される

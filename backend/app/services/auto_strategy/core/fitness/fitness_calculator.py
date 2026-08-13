@@ -58,13 +58,6 @@ class FitnessCalculator:
         self._recent_metrics_signature: object = None
         self._recent_metrics_value: dict[str, float] | None = None
 
-    def clear_cache(self) -> None:
-        """メトリクスキャッシュをクリアする。"""
-        self._metrics_cache.clear()
-        self._recent_metrics_result = None
-        self._recent_metrics_signature = None
-        self._recent_metrics_value = None
-
     @staticmethod
     def _json_default(value: object) -> SerializableValue:
         """JSONキー生成時の非標準値を文字列または素値に落とす。

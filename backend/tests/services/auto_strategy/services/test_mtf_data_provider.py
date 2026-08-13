@@ -143,23 +143,6 @@ class TestMultiTimeframeDataProvider:
         # ベースタイムフレームのデータが返される
         assert len(data) == 168
 
-    def test_cache_clear(self, sample_ohlcv_data: pd.DataFrame) -> None:
-        """キャッシュをクリアできること"""
-        provider = MultiTimeframeDataProvider(
-            base_data=sample_ohlcv_data,
-            base_timeframe="1h",
-        )
-
-        # 4h データを取得してキャッシュ
-        provider.get_data("4h")
-        assert "4h" in provider._cache
-
-        # キャッシュをクリア
-        provider.clear_cache()
-
-        # ベースタイムフレームだけが残る
-        assert list(provider._cache.keys()) == ["1h"]
-
     def test_caching_performance(self, sample_ohlcv_data: pd.DataFrame) -> None:
         """同じタイムフレームへの2回目のアクセスはキャッシュから取得"""
         provider = MultiTimeframeDataProvider(

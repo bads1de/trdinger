@@ -34,10 +34,12 @@ class TestBacktestDataService:
 
             assert result is mock_df
             mock_method.assert_called_once()
-            # include_oi/fr が False で呼ばれていることを確認
+            # include_oi/fr/lsr が True で呼ばれていることを確認
+            # （Long/Short Ratio統合以降、バックテストデータはOI/FR/LSRを常に含む）
             _, kwargs = mock_method.call_args
-            assert kwargs["include_oi"] is False
-            assert kwargs["include_fr"] is False
+            assert kwargs["include_oi"] is True
+            assert kwargs["include_fr"] is True
+            assert kwargs["include_lsr"] is True
 
     def test_get_ohlcv_data(self, service):
         mock_raw = [

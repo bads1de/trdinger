@@ -157,10 +157,7 @@ class AutoStrategyService:
                 evaluation_plan = EvaluationPlan.from_dict(evaluation_plan)
                 object.__setattr__(ga_config, "evaluation_plan", evaluation_plan)
             if evaluation_plan is None:
-                evaluation_plan = EvaluationPlan.from_legacy_config(
-                    ga_config,
-                    backtest_config or {},
-                )
+                evaluation_plan = EvaluationPlan.from_legacy_config(ga_config)
                 object.__setattr__(ga_config, "evaluation_plan", evaluation_plan)
             # 評価計画のrobustness設定（enabled / シナリオ）を運用設定へ反映する
             # これにより計画駆動でも robustness gate が正しく有効化される

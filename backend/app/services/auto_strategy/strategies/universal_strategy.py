@@ -55,16 +55,6 @@ class UniversalStrategy(Strategy):
     evaluation_start = None
     early_termination_settings = None
 
-    # backtesting.py のパラメータ要件を満たすためのクラス変数
-    enable_early_termination = False
-    early_termination_max_drawdown = None
-    early_termination_min_trades = None
-    early_termination_min_trade_check_progress = 0.5
-    early_termination_trade_pace_tolerance = 0.5
-    early_termination_min_expectancy = None
-    early_termination_expectancy_min_trades = 5
-    early_termination_expectancy_progress = 0.6
-
     @property
     def _sl_price(self) -> float | None:
         """ストップロス価格を取得する。"""
@@ -292,28 +282,9 @@ class UniversalStrategy(Strategy):
             data
         )
 
-    @staticmethod
-    def _align_timestamp_to_index_tz(
-        value: pd.Timestamp,
-        index: pd.DatetimeIndex,
-    ) -> pd.Timestamp:
-        """DatetimeIndex に合わせて Timestamp の timezone をそろえる。"""
-        return StrategyEarlyTerminationController.align_timestamp_to_index_tz(
-            value,
-            index,
-        )
-
     def _get_current_equity(self, default: float = 0.0) -> float:
         """現在資産を安全に取得する。"""
         return self.early_termination_controller.get_current_equity(default)
-
-    def _get_progress_ratio(self) -> float:
-        """現在までの評価進捗を返す。"""
-        return self.early_termination_controller.get_progress_ratio()
-
-    def _calculate_closed_trade_expectancy(self) -> float | None:
-        """クローズ済みトレードの平均期待値を返す。"""
-        return self.early_termination_controller.calculate_closed_trade_expectancy()
 
     def _should_terminate_early(self) -> str | None:
         """早期打ち切りすべき理由を返す。"""
@@ -324,14 +295,6 @@ class UniversalStrategy(Strategy):
         reason = self._should_terminate_early()
         if reason:
             raise StrategyEarlyTermination(reason)
-
-    def _check_entry_conditions(self, direction: float) -> bool:
-        """指定された方向のエントリー条件をチェック"""
-        return self.entry_decision_engine.check_entry_conditions(direction)
-
-    def _calculate_position_size(self) -> float:
-        """ポジションサイズを計算"""
-        return self.entry_decision_engine.calculate_position_size()
 
     def init(self) -> None:
         """
@@ -358,25 +321,6 @@ class UniversalStrategy(Strategy):
             indicator_gene (IndicatorGene): 指標の定義情報（タイプ、パラメータ、時間軸等）。
         """
         self.strategy_initializer.init_indicator(indicator_gene)
-
-    def _calculate_effective_tpsl_prices(
-        self, direction: float, current_price: float
-    ) -> tuple[float | None, float | None]:
-        """
-        現在の価格と方向に基づいて、実効的な利確（TP）および損切り（SL）価格を計算します。
-
-        Args:
-            direction (float): ポジション方向（1.0: Long, -1.0: Short）。
-            current_price (float): 計算の基準となる現在価格。
-
-        Returns:
-            Tuple[Optional[float], Optional[float]]: (TP価格, SL価格) のタプル。
-                設定されていない場合は `None` が返ります。
-        """
-        return self.entry_decision_engine.calculate_effective_tpsl_prices(
-            direction,
-            current_price,
-        )
 
     def next(self) -> None:
         """
@@ -409,33 +353,3 @@ class UniversalStrategy(Strategy):
             )
             # エラー発生時は安全な状態にリセットし、次のバーで継続できるようにする
             self.position_manager.reset_position_state()
-
-    # ===== ステートフルトリガー =====
-
-    def _process_stateful_triggers(self) -> None:
-        """ステートフルトリガーを処理"""
-        self.stateful_conditions_evaluator.process_stateful_triggers()
-
-    def _get_stateful_entry_direction(self) -> float | None:
-        """
-        ステートフルエントリーの方向を取得
-
-        Returns:
-            1.0 (Long), -1.0 (Short), または None
-        """
-        return self.stateful_conditions_evaluator.get_stateful_entry_direction()
-
-    # ===== ツールフィルターメソッド =====
-
-    def _tools_block_entry(self) -> bool:
-        """
-        ツールがエントリーをブロックするかチェック
-
-        tool_genes に設定されたすべてのツールを評価し、
-        いずれかがエントリーをスキップすべきと判断した場合 True を返します。
-
-        Returns:
-            True: エントリーをブロック（スキップすべき）
-            False: エントリーを許可
-        """
-        return self.entry_decision_engine.tools_block_entry()

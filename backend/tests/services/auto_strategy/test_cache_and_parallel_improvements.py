@@ -67,21 +67,6 @@ class TestLRUCacheEviction:
         assert ("BTC", "1h", "2024-01-01", "2024-02-01") not in evaluator._data_cache
         assert ("SOL", "1h", "2024-01-01", "2024-02-01") in evaluator._data_cache
 
-    def test_clear_cache(self, mock_backtest_service):
-        """キャッシュクリアが正しく動作すること"""
-        evaluator = IndividualEvaluator(mock_backtest_service, max_cache_size=10)
-
-        # キャッシュにデータを追加
-        evaluator._data_cache[("BTC", "1h", "2024-01-01", "2024-02-01")] = {"data": 1}
-        evaluator._data_cache[("ETH", "1h", "2024-01-01", "2024-02-01")] = {"data": 2}
-
-        assert len(evaluator._data_cache) == 2
-
-        # キャッシュをクリア
-        evaluator.clear_cache()
-
-        assert len(evaluator._data_cache) == 0
-
     def test_pickle_state_excludes_caches(self, mock_backtest_service):
         """Pickle化時にキャッシュが除外されること"""
         evaluator = IndividualEvaluator(mock_backtest_service)

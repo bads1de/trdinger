@@ -5,7 +5,6 @@ import pytest
 
 from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
 from app.services.auto_strategy.strategies.early_termination import (
-    StrategyEarlyTermination,
     StrategyEarlyTerminationController,
 )
 
@@ -85,7 +84,7 @@ class TestStrategyEarlyTerminationController:
 
         assert controller.should_terminate_early() == "expectancy"
 
-    def test_check_early_termination_raises_strategy_exception(self):
+    def test_should_terminate_early_returns_max_drawdown_reason(self):
         strategy = self._build_strategy()
         controller = StrategyEarlyTerminationController(strategy)
         strategy.early_termination_settings = EarlyTerminationSettings(
@@ -94,5 +93,4 @@ class TestStrategyEarlyTerminationController:
         )
         strategy.equity = 8800.0
 
-        with pytest.raises(StrategyEarlyTermination, match="max_drawdown"):
-            controller.check_early_termination()
+        assert controller.should_terminate_early() == "max_drawdown"

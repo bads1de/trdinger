@@ -222,10 +222,3 @@ class BacktestDataProvider:
         except Exception as e:
             logger.warning(f"1分足データ取得エラー: {e}")
             return None
-
-    def clear_cache(self) -> None:
-        """キャッシュをクリアする。"""
-        with self._lock:
-            self._data_cache.clear()
-            self._cache_hits = 0
-            self._cache_misses = 0

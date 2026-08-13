@@ -7,18 +7,15 @@ Auto Strategy Utils パッケージ
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .normalization import NormalizationUtils, create_default_strategy_gene
+    from .normalization import NormalizationUtils
 
 _ATTRIBUTE_EXPORTS = {
     "NormalizationUtils": ".normalization",
-    "create_default_strategy_gene": ".normalization",
 }
 
 __all__ = [
     # Core Utilities
     "NormalizationUtils",
-    # Utility functions
-    "create_default_strategy_gene",
 ]
 
 from app.utils.lazy_import import setup_lazy_import  # noqa: E402

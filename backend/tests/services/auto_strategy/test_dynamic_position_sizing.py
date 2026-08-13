@@ -5,8 +5,10 @@ from __future__ import annotations
 import math
 
 from app.services.auto_strategy.config.constants import (
-    POSITION_SIZING_LIMITS,
     PositionSizingMethod,
+)
+from app.services.auto_strategy.genes.gene_ranges import (
+    POSITION_SIZING_VALIDATION_RANGES,
 )
 from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
 from app.services.auto_strategy.positions.calculators.volatility_based_calculator import (
@@ -127,7 +129,7 @@ class TestDynamicPositionSizing:
     def test_position_sizing_gene_accepts_public_lookback_limit(self):
         """公開された lookback_period の下限内の値が検証で弾かれないこと"""
 
-        lower, upper = POSITION_SIZING_LIMITS["lookback_period"]
+        lower, upper = POSITION_SIZING_VALIDATION_RANGES["lookback_period"]
         assert lower <= 20 <= upper
 
         gene = self._create_gene(lookback_period=20)

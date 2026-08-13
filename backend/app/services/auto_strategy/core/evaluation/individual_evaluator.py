@@ -100,10 +100,6 @@ class IndividualEvaluator(EvaluationWindowService):
         self._lock = threading.Lock()
         self._last_evaluation_report: EvaluationReport | None = None
 
-        # 統計情報
-        self._cache_hits = 0
-        self._cache_misses = 0
-
         self._initialize_components()
 
     def _initialize_components(self) -> None:
@@ -169,17 +165,6 @@ class IndividualEvaluator(EvaluationWindowService):
             self._report_cache.clear()
             self._robustness_report_cache.clear()
 
-    def clear_cache(self) -> None:
-        """データキャッシュをクリア"""
-        with self._lock:
-            self._data_cache.clear()
-            self._result_cache.clear()
-            self._report_cache.clear()
-            self._robustness_report_cache.clear()
-            self._cache_hits = 0
-            self._cache_misses = 0
-            logger.info("データキャッシュと評価結果キャッシュをクリアしました")
-
     def get_last_evaluation_report(self) -> EvaluationReport | None:
         """直近の評価レポートを取得する。"""
         return self._last_evaluation_report
@@ -194,19 +179,6 @@ class IndividualEvaluator(EvaluationWindowService):
             return None
 
         return self._report_cache.get(cache_key)
-
-    def get_cached_robustness_report(
-        self, individual: Any, config: GAConfig
-    ) -> EvaluationReport | None:
-        """キャッシュ済みの robustness 評価レポートを取得する。"""
-        try:
-            gene = self._resolve_gene(individual)
-            cache_key = self._build_robustness_cache_key(gene, config)
-        except Exception as e:
-            logger.debug("robustness レポートキャッシュキー生成に失敗しました: %s", e)
-            return None
-
-        return self._robustness_report_cache.get(cache_key)
 
     def build_parallel_worker_initargs(
         self, config: GAConfig
@@ -368,10 +340,8 @@ class IndividualEvaluator(EvaluationWindowService):
                     None if force_refresh else self._result_cache.get(cache_key)
                 )
                 if cached is not None:
-                    self._cache_hits += 1
                     self._last_evaluation_report = self._report_cache.get(cache_key)
                     return cached
-                self._cache_misses += 1
 
             # バックテスト設定のベースを取得
             base_backtest_config: dict[str, Any] = (

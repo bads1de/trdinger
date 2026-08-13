@@ -2,8 +2,7 @@
 BacktestDataProvider の拡張テスト
 
 既存テスト (``test_backtest_data_provider.py``, ``test_backtest_data_provider_cache.py``) が
-カバーしていない静的ヘルパー、``get_cached_minute_data`` の各分岐、
-``clear_cache`` を検証します。
+カバーしていない静的ヘルパー、``get_cached_minute_data`` の各分岐を検証します。
 """
 
 from __future__ import annotations
@@ -359,19 +358,3 @@ class TestGetCachedMinuteData:
         assert provider._cache_misses == 1
         # キャッシュに保存されている
         assert len(provider._data_cache) == 1
-
-
-class TestClearCache:
-    """``clear_cache`` のテスト"""
-
-    def test_clears_caches_and_resets_stats(self) -> None:
-        provider = _make_provider()
-        provider._data_cache["k1"] = pd.DataFrame()
-        provider._cache_hits = 5
-        provider._cache_misses = 3
-
-        provider.clear_cache()
-
-        assert len(provider._data_cache) == 0
-        assert provider._cache_hits == 0
-        assert provider._cache_misses == 0

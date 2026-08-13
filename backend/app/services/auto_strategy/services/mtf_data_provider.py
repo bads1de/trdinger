@@ -204,8 +204,3 @@ class MultiTimeframeDataProvider:
                 .dropna()
             ),
         )
-
-    def clear_cache(self) -> None:
-        """キャッシュをクリア"""
-        self._cache = {self.base_timeframe: self.base_df}
-        logger.debug("MTFデータキャッシュをクリアしました")

@@ -341,17 +341,3 @@ class StrategyEarlyTerminationController:
                     return "expectancy"
 
         return None
-
-    def check_early_termination(self) -> None:
-        """早期打ち切り条件を満たした場合に例外を送出する。
-
-        should_terminate_early() を呼び出して早期終了理由をチェックし、
-        条件が満たされている場合はStrategyEarlyTermination例外を
-        送出して評価を中断します。
-
-        Raises:
-            StrategyEarlyTermination: 早期終了条件が満たされた場合。
-        """
-        reason = self.should_terminate_early()
-        if reason:
-            raise StrategyEarlyTermination(reason)

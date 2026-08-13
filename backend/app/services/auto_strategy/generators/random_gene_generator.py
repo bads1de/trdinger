@@ -114,7 +114,6 @@ class RandomGeneGenerator:
         self.min_indicators = config.min_indicators
         self.max_conditions = config.max_conditions
         self.min_conditions = config.min_conditions
-        self.threshold_ranges = config.threshold_ranges
 
         # 最適化: キャッシュ
         self._indicator_cache: list[IndicatorGene] = []
@@ -233,12 +232,10 @@ class RandomGeneGenerator:
         enabled_filters.sort(key=get_cost, reverse=True)
 
         # 制限を超える場合、コストの高いフィルターから無効化
-        disabled_count = 0
         while len(enabled_filters) > max_filters:
             tool_to_disable = enabled_filters.pop(0)
             tool_to_disable.enabled = False
             disabled_filters.append(tool_to_disable)
-            disabled_count += 1
 
         return tool_genes
 

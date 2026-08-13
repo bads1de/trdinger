@@ -78,7 +78,6 @@ class GeneticAlgorithmEngine:
         self.seed_strategy_provider = seed_strategy_provider
 
         # 実行状態
-        self.is_running = False
         self._stop_event = threading.Event()
 
         # 分離されたコンポーネント
@@ -196,7 +195,6 @@ class GeneticAlgorithmEngine:
             - キャッシュ: `IndividualEvaluator` 内のキャッシュにより、同一世代や世代間での重複評価を最小限に抑えます。
         """
         try:
-            self.is_running = True
             start_time = time.time()
 
             logger.info(
@@ -345,8 +343,6 @@ class GeneticAlgorithmEngine:
         except Exception as e:
             logger.error(f"進化実行エラー: {e}")
             raise
-        finally:
-            self.is_running = False
 
     def _set_generator_context(self, backtest_config: dict[str, Any]) -> None:
         """ジェネレーターにコンテキストを設定します。
@@ -664,7 +660,6 @@ class GeneticAlgorithmEngine:
     def stop_evolution(self) -> None:
         """進化を停止します。"""
         self._stop_event.set()
-        self.is_running = False
 
     def is_stop_requested(self) -> bool:
         """停止要求が出ているかを返します。"""

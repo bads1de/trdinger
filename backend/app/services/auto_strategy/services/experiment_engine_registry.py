@@ -2,7 +2,6 @@
 実行中 GA エンジンのレジストリ。
 """
 
-import threading
 
 from app.utils.registry import Registry
 
@@ -11,14 +10,6 @@ from ..core.engine.ga_engine import GeneticAlgorithmEngine
 
 class ExperimentEngineRegistry(Registry[str, GeneticAlgorithmEngine]):
     """実行中の GA エンジンをスレッドセーフに保持する。"""
-
-    @property
-    def active_engines(self) -> dict[str, GeneticAlgorithmEngine]:
-        return self._items
-
-    @property
-    def lock(self) -> threading.RLock:
-        return self._lock
 
     def register(self, experiment_id: str, engine: GeneticAlgorithmEngine) -> None:
         self.set(experiment_id, engine)

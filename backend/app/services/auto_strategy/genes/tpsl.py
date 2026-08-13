@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from typing import Any, cast
 
 from app.types import StrategyGeneDict
-from app.utils.serialization import dataclass_to_dict
 
 from ..config.constants import TPSLMethod
 from .base_gene import BaseGene
@@ -251,10 +250,6 @@ class TPSLResult:
             self.expected_performance = {}
         if self.metadata is None:
             self.metadata = {}
-
-    def to_dict(self) -> dict[str, Any]:
-        """辞書形式に変換"""
-        return dataclass_to_dict(self)
 
 
 def create_random_tpsl_gene() -> TPSLGene:

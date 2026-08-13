@@ -6,12 +6,12 @@ from app.services.auto_strategy.genes.conditions import Condition, StatefulCondi
 from app.services.auto_strategy.genes.entry import EntryGene
 from app.services.auto_strategy.genes.exit import ExitGene
 from app.services.auto_strategy.genes.indicator import IndicatorGene
-from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
-from app.services.auto_strategy.genes.strategy import StrategyGene
-from app.services.auto_strategy.genes.strategy_operators import (
+from app.services.auto_strategy.genes.operators.mutation import (
     mutate_conditions,
     mutate_indicators,
 )
+from app.services.auto_strategy.genes.position_sizing import PositionSizingGene
+from app.services.auto_strategy.genes.strategy import StrategyGene
 from app.services.auto_strategy.genes.tool import ToolGene
 from app.services.auto_strategy.genes.tpsl import TPSLGene
 

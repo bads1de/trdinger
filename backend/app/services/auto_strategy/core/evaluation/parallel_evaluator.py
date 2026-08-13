@@ -88,7 +88,6 @@ class ParallelEvaluator:
         self._executor: ProcessPoolExecutor | ThreadPoolExecutor | None = None
 
         # 評価統計
-        self._total_evaluations = 0
         self._successful_evaluations = 0
         self._failed_evaluations = 0
         self._timeout_evaluations = 0
@@ -257,7 +256,6 @@ class ParallelEvaluator:
             for future in done:
                 pending.discard(future)
                 index = future_to_index[future]
-                self._total_evaluations += 1
 
                 try:
                     evaluation_result = future.result()
@@ -289,7 +287,6 @@ class ParallelEvaluator:
             for future in expired_futures:
                 pending.discard(future)
                 index = future_to_index[future]
-                self._total_evaluations += 1
                 results[index] = default_fitness
                 self._record_timeout(index)
                 self._clear_behavior_summary(population[index])
@@ -386,7 +383,6 @@ class ParallelEvaluator:
     def _record_timeout(self, index: int) -> None:
         """タイムアウト統計と履歴を更新する。"""
         logger.warning(f"個体評価タイムアウト: index={index}")
-        # _total_evaluations は呼び出し元で既にインクリメント済み
         self._timeout_evaluations += 1
         self._error_categories["timeout"] += 1
 

@@ -31,39 +31,25 @@ def test_legacy_config_maps_validation_and_robustness_layers():
         },
     )
 
-    plan = EvaluationPlan.from_legacy_config(
-        config,
-        {
-            "dataset_id": "market-v1",
-            "data_version": "2026-01",
-            "start_date": "2024-01-01",
-            "end_date": "2024-12-31",
-        },
-    )
+    plan = EvaluationPlan.from_legacy_config(config)
 
     assert plan.selection.method == "is"
     assert plan.selection.holdout_ratio == 0.25
     assert plan.validation.method == "rolling_holdout"
     assert plan.validation.folds == 4
     assert plan.validation.train_ratio == 0.75
-    assert plan.validation.candidate_limit == 7
     assert plan.robustness.enabled is True
     assert {scenario["type"] for scenario in plan.robustness.scenarios} == {
         "symbol",
         "slippage",
         "commission",
     }
-    assert plan.is_period.start_date == "2024-01-01"
-    assert plan.validation_period.end_date == "2024-12-31"
-    assert plan.dataset_id == "market-v1"
-    assert plan.data_version == "2026-01"
-    assert plan.plan_hash
     assert any("複数の評価方式" in warning for warning in plan.warnings)
     assert any("PurgedKFold" in warning for warning in plan.warnings)
     assert any("oos_fitness_weight" in warning for warning in plan.warnings)
 
 
-def test_evaluation_plan_round_trip_has_stable_hash():
+def test_evaluation_plan_round_trip_is_stable():
     plan = EvaluationPlan.from_dict(
         {
             "schema_version": "1",
@@ -87,7 +73,6 @@ def test_evaluation_plan_round_trip_has_stable_hash():
     restored = EvaluationPlan.from_dict(plan.to_dict())
 
     assert restored.to_dict() == plan.to_dict()
-    assert restored.plan_hash == plan.plan_hash
 
 
 @pytest.mark.parametrize(

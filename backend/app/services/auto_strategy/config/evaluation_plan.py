@@ -2,37 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, cast
-
-
-@dataclass
-class DateRange:
-    start_date: str | None = None
-    end_date: str | None = None
-
-    @classmethod
-    def from_backtest_config(cls, config: object) -> DateRange:
-        if isinstance(config, dict):
-            return cls(
-                start_date=_optional_string(config.get("start_date")),
-                end_date=_optional_string(config.get("end_date")),
-            )
-        return cls(
-            start_date=_optional_string(getattr(config, "start_date", None)),
-            end_date=_optional_string(getattr(config, "end_date", None)),
-        )
-
-    @classmethod
-    def from_dict(cls, data: object) -> DateRange:
-        if not isinstance(data, dict):
-            return cls()
-        return cls(
-            start_date=_optional_string(data.get("start_date")),
-            end_date=_optional_string(data.get("end_date")),
-        )
 
 
 @dataclass
@@ -47,9 +18,6 @@ class ValidationPlan:
     method: str = "rolling_holdout"
     folds: int = 5
     train_ratio: float = 0.7
-    anchored: bool = False
-    aggregation: str = "robust"
-    candidate_limit: int = 5
 
 
 @dataclass
@@ -58,38 +26,13 @@ class RobustnessPlan:
     scenarios: list[dict[str, Any]] = field(default_factory=list)
     policy: str = "gate_only"
     failure_policy: str = "fail_closed"
-    aggregation: str = "robust"
-
-
-@dataclass
-class FinalTestPlan:
-    enabled: bool = False
-    one_shot: bool = True
-    require_freeze: bool = True
-    explicit_authorization: bool = True
-
-
-@dataclass
-class ExecutionPlan:
-    parallel: bool = True
-    max_workers: int | None = None
-    timeout: float = 300.0
-    multi_fidelity: bool = False
 
 
 @dataclass
 class EvaluationPlan:
-    schema_version: str = "1"
-    dataset_id: str | None = None
-    data_version: str | None = None
-    is_period: DateRange = field(default_factory=DateRange)
-    validation_period: DateRange = field(default_factory=DateRange)
-    final_test_period: DateRange = field(default_factory=DateRange)
     selection: SelectionPlan = field(default_factory=SelectionPlan)
     validation: ValidationPlan = field(default_factory=ValidationPlan)
     robustness: RobustnessPlan = field(default_factory=RobustnessPlan)
-    final_test: FinalTestPlan = field(default_factory=FinalTestPlan)
-    execution: ExecutionPlan = field(default_factory=ExecutionPlan)
     warnings: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -100,17 +43,9 @@ class EvaluationPlan:
         if not isinstance(data, dict):
             raise ValueError("evaluation_plan は辞書である必要があります")
         return cls(
-            schema_version=str(data.get("schema_version", "1")),
-            dataset_id=_optional_string(data.get("dataset_id")),
-            data_version=_optional_string(data.get("data_version")),
-            is_period=DateRange.from_dict(data.get("is_period")),
-            validation_period=DateRange.from_dict(data.get("validation_period")),
-            final_test_period=DateRange.from_dict(data.get("final_test_period")),
             selection=_build_dataclass(SelectionPlan, data.get("selection")),
             validation=_build_dataclass(ValidationPlan, data.get("validation")),
             robustness=_build_dataclass(RobustnessPlan, data.get("robustness")),
-            final_test=_build_dataclass(FinalTestPlan, data.get("final_test")),
-            execution=_build_dataclass(ExecutionPlan, data.get("execution")),
             warnings=[str(value) for value in data.get("warnings", []) or []],
         )
 
@@ -118,7 +53,6 @@ class EvaluationPlan:
     def from_legacy_config(
         cls,
         config: object,
-        backtest_config: object | None = None,
     ) -> EvaluationPlan:
         evaluation_config = getattr(config, "evaluation_config", None)
         validation_config = getattr(config, "validation_config", None)
@@ -175,23 +109,7 @@ class EvaluationPlan:
         validation_train_ratio = _float_value(
             getattr(validation_config, "wfa_train_ratio", 0.7), 0.7
         )
-        validation_anchored = _bool_value(
-            getattr(validation_config, "wfa_anchored", False)
-        )
-        validation_period = DateRange.from_backtest_config(backtest_config)
         return cls(
-            dataset_id=_optional_string(
-                backtest_config.get("dataset_id")
-                if isinstance(backtest_config, dict)
-                else None
-            ),
-            data_version=_optional_string(
-                backtest_config.get("data_version")
-                if isinstance(backtest_config, dict)
-                else None
-            ),
-            is_period=DateRange.from_backtest_config(backtest_config),
-            validation_period=validation_period,
             selection=SelectionPlan(
                 method="is",
                 holdout_ratio=oos_ratio if oos_ratio > 0.0 else None,
@@ -201,33 +119,10 @@ class EvaluationPlan:
                 method=validation_method,
                 folds=validation_folds,
                 train_ratio=validation_train_ratio,
-                anchored=validation_anchored,
-                candidate_limit=_int_value(
-                    getattr(validation_config, "max_candidates", 5), 5
-                ),
             ),
             robustness=RobustnessPlan(
                 enabled=bool(scenarios) or explicit_robustness_enabled,
                 scenarios=scenarios,
-                aggregation=str(
-                    getattr(robustness_config, "aggregate_method", "robust") or "robust"
-                ),
-            ),
-            execution=ExecutionPlan(
-                parallel=_bool_value(
-                    getattr(evaluation_config, "enable_parallel", True)
-                ),
-                max_workers=getattr(evaluation_config, "max_workers", None),
-                timeout=_float_value(
-                    getattr(evaluation_config, "timeout", 300.0), 300.0
-                ),
-                multi_fidelity=_bool_value(
-                    getattr(
-                        evaluation_config,
-                        "enable_multi_fidelity_evaluation",
-                        False,
-                    )
-                ),
             ),
             warnings=warnings,
         )
@@ -278,18 +173,6 @@ class EvaluationPlan:
 
     def to_dict(self) -> dict[str, Any]:
         return cast(dict[str, Any], _json_safe(asdict(self)))
-
-    @property
-    def plan_hash(self) -> str:
-        payload = self.to_dict()
-        payload.pop("warnings", None)
-        canonical = json.dumps(
-            payload,
-            sort_keys=True,
-            separators=(",", ":"),
-            ensure_ascii=False,
-        )
-        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def _validate(self) -> None:
         if self.selection.method != "is":
@@ -350,13 +233,6 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_json_safe(item) for item in value]
     return value
-
-
-def _optional_string(value: object) -> str | None:
-    if value is None:
-        return None
-    text = str(value).strip()
-    return text or None
 
 
 def _bool_value(value: object) -> bool:

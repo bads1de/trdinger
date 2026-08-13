@@ -40,8 +40,6 @@ class ExperimentManager:
         self.persistence_service = persistence_service
         self.experiment_backtest_service = ExperimentBacktestService(backtest_service)
         self._engine_registry = engine_registry or _DEFAULT_ENGINE_REGISTRY
-        self._active_engines = self._engine_registry.active_engines
-        self._registry_lock = self._engine_registry.lock
 
     def run_experiment(
         self,

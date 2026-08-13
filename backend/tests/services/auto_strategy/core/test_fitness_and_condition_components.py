@@ -186,13 +186,10 @@ class TestFitnessCalculator:
         # 初回計算
         fitness1 = self.calculator.calculate_fitness(mock_backtest_result, ga_config)
 
-        # キャッシュをクリア
-        self.calculator.clear_cache()
-
-        # 再計算
+        # 再計算（キャッシュ経由）
         fitness2 = self.calculator.calculate_fitness(mock_backtest_result, ga_config)
 
-        assert fitness1 == fitness2, "キャッシュクリア後も同じ結果を返すべき"
+        assert fitness1 == fitness2, "キャッシュ経由でも同じ結果を返すべき"
 
     def test_extract_performance_metrics_uses_content_based_cache_key(
         self, mock_backtest_result
