@@ -225,6 +225,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="GA後のWFA自動検証を無効化（高速実行用）",
     )
+    parser.add_argument(
+        "--no-seeds",
+        action="store_true",
+        help="組み込みシード戦略の注入を無効化し、全個体をランダム生成で開始（多様性重視）",
+    )
 
     # 探索空間の拡張設定
     parser.add_argument(
@@ -353,6 +358,10 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         min_non_price = getattr(args, "min_non_price", 0)
         if min_non_price:
             config_kwargs["min_non_price_indicators"] = min_non_price
+        if getattr(args, "no_seeds", False):
+            # シード戦略を注入せず、全個体をランダム生成で開始する
+            config_kwargs["use_seed_strategies"] = False
+            config_kwargs["seed_injection_rate"] = 0.0
         non_price_probability = getattr(args, "non_price_probability", 0.3)
         config_kwargs["non_price_indicator_probability"] = non_price_probability
 

@@ -58,6 +58,11 @@ CURATED_INDICATOR_CATALOG: tuple[str, ...] = (
     "WHALE_DIVERGENCE",
     "OI_PRICE_CONFIRMATION",
     "LONG_SHORT_RATIO_ZSCORE",
+    # OI / FR / LSR raw（生データをそのまま条件に使う）
+    "OI_ROC",
+    "FUNDING_RATE_LEVEL",
+    "LONG_SHORT_RATIO_LEVEL",
+    "LSR_ROC",
 )
 
 STANDARD_BACKTEST_REQUIRED_DATA = frozenset(

@@ -745,6 +745,88 @@ class AdvancedFeatures:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def oi_roc(open_interest: pd.Series, period: int = 20) -> pd.Series:
+        """
+        Open Interest 変化率（Rate of Change）
+
+        建玉の増減率をそのまま扱う。価格と独立した資金流入・流出シグナル。
+        正: 建玉増加（ポジション積み上がり）
+        負: 建玉減少（決済・巻き戻し）
+        """
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                open_interest,
+                period,
+                lambda: normalize_non_finite(
+                    open_interest.pct_change(period).astype(float), fill_value=0.0
+                ),
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def funding_rate_level(funding_rate: pd.Series) -> pd.Series:
+        """
+        Funding Rate 水準（そのまま）
+
+        ファンディングレートの生の値を返す。
+        正: ロングがショートに支払い（ロング過熱・弱気の逆張り候補）
+        負: ショートがロングに支払い（ショート過熱・強気の逆張り候補）
+        """
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                funding_rate,
+                None,
+                lambda: normalize_non_finite(
+                    funding_rate.astype(float), fill_value=0.0
+                ),
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def long_short_ratio_level(long_short_ratio: pd.Series) -> pd.Series:
+        """
+        Long/Short Ratio 水準（そのまま）
+
+        ロング/ショート比率の生の値を返す。
+        1.0 超: ロング優勢、1.0 未満: ショート優勢
+        """
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                long_short_ratio,
+                None,
+                lambda: normalize_non_finite(
+                    long_short_ratio.astype(float), fill_value=1.0
+                ),
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
+    def lsr_roc(long_short_ratio: pd.Series, period: int = 20) -> pd.Series:
+        """
+        Long/Short Ratio 変化率（Rate of Change）
+
+        センチメントの急変を捉える。
+        正: ロング方向への急傾き、負: ショート方向への急傾き
+        """
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                long_short_ratio,
+                period,
+                lambda: normalize_non_finite(
+                    long_short_ratio.pct_change(period).astype(float), fill_value=0.0
+                ),
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def liquidity_efficiency(open_interest: pd.Series, volume: pd.Series) -> pd.Series:
         """
         流動性効率（Open Interest / Volume）

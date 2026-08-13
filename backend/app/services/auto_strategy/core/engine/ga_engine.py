@@ -206,6 +206,10 @@ class GeneticAlgorithmEngine:
 
             self._raise_if_stop_requested("開始前")
 
+            # グローバル乱数源をシードし、進化全体を再現可能にする
+            # （初期集団生成・交叉・突然変異が `random` / `numpy.random` に依存）。
+            self._seed_global_random(config)
+
             # バックテスト設定にデフォルトの日付を設定（存在しない場合）
             if "start_date" not in backtest_config:
                 backtest_config["start_date"] = config.fallback_start_date
@@ -359,6 +363,21 @@ class GeneticAlgorithmEngine:
                     smart_gen.set_context(timeframe=tf, symbol=sym)
         except (AttributeError, TypeError) as e:
             logger.debug(f"コンテキスト設定スキップ: {e}")
+
+    def _seed_global_random(self, config: GAConfig) -> None:
+        """config.random_state に基づいてグローバル乱数源をシードする。
+
+        遺伝子生成器・条件生成器・進化ループは `random` / `numpy.random` の
+        グローバル状態に依存しているため、実行開始時に明示的にシードして
+        再現可能な進化を保証する。None の場合は何もしない（従来動作）。
+        """
+        seed = getattr(config, "random_state", None)
+        if seed is None:
+            return
+        seed_int = int(seed)
+        random.seed(seed_int)
+        np.random.seed(seed_int)
+        logger.info("GA乱数シードを設定しました: %d", seed_int)
 
     def _get_builtin_seed_strategies(self, config: GAConfig) -> list[Any]:
         """組み込みシード戦略（SeedStrategyFactory）をシャッフルして返す。"""

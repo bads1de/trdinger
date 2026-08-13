@@ -221,6 +221,49 @@ class TestGeneticAlgorithmEngine:
                 "d",
             ]
 
+    def test_seed_global_random_sets_both_sources(
+        self,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """random_state 設定時に random / numpy.random の両方がシードされること"""
+        from app.services.auto_strategy.config.ga import GAConfig
+
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        # グローバル乱数状態を退避し、テスト後に復元する
+        py_state = random.getstate()
+        np_state = np.random.get_state()
+        try:
+            engine._seed_global_random(GAConfig(random_state=42))
+
+            assert random.random() == random.Random(42).random()
+            assert np.random.rand() == pytest.approx(
+                np.random.RandomState(42).rand(), abs=1e-12
+            )
+        finally:
+            random.setstate(py_state)
+            np.random.set_state(np_state)
+
+    def test_seed_global_random_noop_when_missing(
+        self,
+        mock_backtest_service,
+        mock_gene_generator,
+    ):
+        """random_state が None の場合は乱数状態を変更しないこと"""
+        from app.services.auto_strategy.config.ga import GAConfig
+
+        engine = GeneticAlgorithmEngine(
+            backtest_service=mock_backtest_service,
+            gene_generator=mock_gene_generator,
+        )
+
+        engine._seed_global_random(GAConfig(random_state=None))
+        # シードされないので値は非決定的（エラーが起きないことのみ確認）
+
     @patch("app.services.auto_strategy.core.engine.ga_engine.FitnessSharing")
     def test_setup_deap_uses_default_sampling_ratio_when_missing(
         self,

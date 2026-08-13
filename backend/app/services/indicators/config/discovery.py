@@ -398,6 +398,38 @@ class DynamicIndicatorDiscovery:
             "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
             "use_default_thresholds": True,
         },
+        "OI_ROC": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "thresholds": {
+                "aggressive": {"long_gt": 0.005, "short_lt": -0.005},
+                "normal": {"long_gt": 0.01, "short_lt": -0.01},
+                "conservative": {"long_gt": 0.02, "short_lt": -0.02},
+            },
+        },
+        "FUNDING_RATE_LEVEL": {
+            "scale_type": IndicatorScaleType.FUNDING_RATE,
+            "thresholds": {
+                "aggressive": {"long_gt": 0.0, "short_lt": 0.001},
+                "normal": {"long_gt": 0.0, "short_lt": 0.01},
+                "conservative": {"long_gt": 0.0, "short_lt": 0.05},
+            },
+        },
+        "LONG_SHORT_RATIO_LEVEL": {
+            "scale_type": IndicatorScaleType.PRICE_RATIO,
+            "thresholds": {
+                "aggressive": {"long_gt": 1.02, "short_lt": 0.98},
+                "normal": {"long_gt": 1.05, "short_lt": 0.95},
+                "conservative": {"long_gt": 1.1, "short_lt": 0.9},
+            },
+        },
+        "LSR_ROC": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "thresholds": {
+                "aggressive": {"long_gt": 0.005, "short_lt": -0.005},
+                "normal": {"long_gt": 0.01, "short_lt": -0.01},
+                "conservative": {"long_gt": 0.02, "short_lt": -0.02},
+            },
+        },
     }
 
     @classmethod

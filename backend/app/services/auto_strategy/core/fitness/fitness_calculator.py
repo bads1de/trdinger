@@ -15,6 +15,9 @@ from typing import Any, cast
 import numpy as np
 
 from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.config.constants.ga_constants import (
+    DEFAULT_FITNESS_WEIGHTS,
+)
 from app.services.auto_strategy.config.ga import GAConfig
 from app.types import SerializableValue
 
@@ -35,15 +38,9 @@ class FitnessCalculator:
     """
 
     # 定数
-    DEFAULT_WEIGHT_TOTAL_RETURN = 0.3
-    DEFAULT_WEIGHT_SHARPE_RATIO = 0.4
-    DEFAULT_WEIGHT_MAX_DRAWDOWN = 0.2
-    DEFAULT_WEIGHT_WIN_RATE = 0.1
-    DEFAULT_WEIGHT_BALANCE_SCORE = 0.1
-    # フォールバックは0（旧設定・旧テストでは excess_return が黙って効かない）。
-    # デフォルトプロファイル（ga_constants.FITNESS_WEIGHT_PROFILES["balanced"]）では
-    # 明示的に excess_return: 0.1 を設定しており、新規実行では買い持ち超過が評価される。
-    DEFAULT_WEIGHT_EXCESS_RETURN = 0.0
+    # フィットネス重みのデフォルトは ga_constants.DEFAULT_FITNESS_WEIGHTS を唯一の
+    # ソースとして使い、個別のフォールバック定数を持たない。
+    # config.fitness_weights が欠けているキーは DEFAULT_FITNESS_WEIGHTS から補完する。
     TRADE_BALANCE_WEIGHT = 0.6
     PROFIT_BALANCE_WEIGHT = 0.4
     PROFIT_BALANCE_BOTH_POSITIVE = 1.0
@@ -309,8 +306,11 @@ class FitnessCalculator:
 
         # 買い持ちベンチマークを上回る超過リターン（割合単位）。
         # 負値（買い持ちに負けている）はペナルティとしてそのまま効かせる。
-        # buy_hold_return が不明（0）の場合は total_return をそのまま超過とみなす。
-        excess_return = total_return - buy_hold_return
+        # ベンチマークが不明（キー欠落 or None）の場合は中立値 0 とし、
+        # 総リターンと超過リターンの二重計上を避ける。
+        buy_hold_raw = perf_metrics.get("buy_hold_return")
+        buy_hold_known = buy_hold_raw is not None
+        excess_return = total_return - buy_hold_return if buy_hold_known else 0.0
 
         equity_curve = backtest_result.get("equity_curve")
         equity_curve_list = (
@@ -431,41 +431,18 @@ class FitnessCalculator:
 
             balance_score = self.calculate_long_short_balance(backtest_result)
 
-            fitness_weights = config.fitness_weights.copy()
+            # 重みは config の値を優先し、欠けているキーのみ
+            # ga_constants.DEFAULT_FITNESS_WEIGHTS から補完する（単一ソース）。
+            weights = DEFAULT_FITNESS_WEIGHTS.copy()
+            weights.update(config.fitness_weights)
 
             fitness = (
-                float(
-                    fitness_weights.get(
-                        "total_return", self.DEFAULT_WEIGHT_TOTAL_RETURN
-                    )
-                )
-                * total_return
-                + float(
-                    fitness_weights.get(
-                        "sharpe_ratio", self.DEFAULT_WEIGHT_SHARPE_RATIO
-                    )
-                )
-                * sharpe_ratio
-                + float(
-                    fitness_weights.get(
-                        "max_drawdown", self.DEFAULT_WEIGHT_MAX_DRAWDOWN
-                    )
-                )
-                * (1 - max_drawdown)
-                + float(fitness_weights.get("win_rate", self.DEFAULT_WEIGHT_WIN_RATE))
-                * win_rate
-                + float(
-                    fitness_weights.get(
-                        "balance_score", self.DEFAULT_WEIGHT_BALANCE_SCORE
-                    )
-                )
-                * balance_score
-                + float(
-                    fitness_weights.get(
-                        "excess_return", self.DEFAULT_WEIGHT_EXCESS_RETURN
-                    )
-                )
-                * excess_return
+                float(weights.get("total_return", 0.0)) * total_return
+                + float(weights.get("sharpe_ratio", 0.0)) * sharpe_ratio
+                + float(weights.get("max_drawdown", 0.0)) * (1 - max_drawdown)
+                + float(weights.get("win_rate", 0.0)) * win_rate
+                + float(weights.get("balance_score", 0.0)) * balance_score
+                + float(weights.get("excess_return", 0.0)) * excess_return
             )
 
             # ulcer_indexとtrade_frequency_penaltyを常に考慮
@@ -478,18 +455,20 @@ class FitnessCalculator:
 
             # ulcer_indexペナルティ（デフォルトで有効）
             fitness -= (
-                float(fitness_weights.get("ulcer_index_penalty", 0.1))
+                float(weights.get("ulcer_index_penalty", 0.0))
                 * ulcer_scale
                 * ulcer_index
             )
             # trade_frequency_penaltyペナルティ（デフォルトで有効）
             fitness -= (
-                float(fitness_weights.get("trade_frequency_penalty", 0.05))
+                float(weights.get("trade_frequency_penalty", 0.0))
                 * trade_scale
                 * trade_penalty
             )
 
-            return max(0.0, fitness)
+            # 0 クリップは行わない。負値も順位情報として残すことで
+            # 劣後個体同士の選択圧・勾配を維持する。
+            return fitness
 
         except (KeyError, TypeError, ValueError) as e:
             logger.error(f"フィットネス計算エラー: {e}", exc_info=True)

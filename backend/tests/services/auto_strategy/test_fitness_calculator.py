@@ -179,7 +179,11 @@ def test_extract_performance_metrics_excess_return_positive(
 
 
 def test_extract_performance_metrics_no_buy_hold_return(fitness_calculator):
-    """buy_hold_return が無い場合は excess_return が total_return と等価になること."""
+    """buy_hold_return が無い場合は excess_return が中立値 0.0 になること.
+
+    ベンチマーク不明時に total_return と同値にすると、フィットネス計算で
+    総リターンが二重計上されるため、中立値（0.0）を採用する。
+    """
     backtest_result = {
         "performance_metrics": {
             "total_return": 15.0,
@@ -193,7 +197,7 @@ def test_extract_performance_metrics_no_buy_hold_return(fitness_calculator):
     metrics = fitness_calculator.extract_performance_metrics(backtest_result)
 
     assert metrics["buy_hold_return"] == pytest.approx(0.0, abs=1e-9)
-    assert metrics["excess_return"] == pytest.approx(0.15, abs=1e-9)
+    assert metrics["excess_return"] == pytest.approx(0.0, abs=1e-9)
 
 
 def test_calculate_fitness_rewards_excess_return(
@@ -274,6 +278,93 @@ def test_calculate_fitness_excess_return_penalizes_below_benchmark(
     fitness_below = fitness_calculator.calculate_fitness(base_result, config)
 
     assert fitness_below < fitness_above
+
+
+def test_calculate_fitness_preserves_negative_values(fitness_calculator):
+    """負のフィットネスが0にクリップされず、順位情報が保持されること."""
+    config = GAConfig(
+        zero_trades_penalty=0.0,
+        constraint_violation_penalty=0.0,
+        fitness_constraints={
+            "min_trades": 10,
+            "max_drawdown_limit": 0.5,
+            "min_sharpe_ratio": -10.0,
+        },
+        fitness_weights={
+            "total_return": 0.2,
+            "sharpe_ratio": 0.25,
+            "max_drawdown": 0.15,
+            "win_rate": 0.1,
+            "balance_score": 0.1,
+            "excess_return": 0.1,
+            "ulcer_index_penalty": 0.1,
+            "trade_frequency_penalty": 0.05,
+        },
+    )
+    # 総リターンは非負制約を満たしつつ、他の項（超過リターンやシャープなど）が
+    # 大きく負になるケースを構築し、合計が負になることを確認する。
+    result = {
+        "performance_metrics": {
+            "total_return": 1.0,  # 0.01 (非負制約を満たす)
+            "sharpe_ratio": -3.0,
+            "max_drawdown": 10.0,  # 0.1 に正規化され (1-0.1)=0.9 が寄与
+            "win_rate": 10.0,  # 0.1
+            "total_trades": 50,
+            "buy_hold_return": 40.0,  # excess_return = 0.01 - 0.4 = -0.39
+        },
+        "trade_history": [],
+    }
+
+    fitness = fitness_calculator.calculate_fitness(result, config)
+
+    # 加重和は負になるため、クリップされず負値のまま返る
+    assert fitness < 0.0
+
+
+def test_calculate_fitness_uses_default_weights_for_missing_keys(
+    fitness_calculator,
+):
+    """config に無い重みキーは ga_constants のデフォルトで補完されること."""
+    config = GAConfig(
+        zero_trades_penalty=0.0,
+        constraint_violation_penalty=0.0,
+        # excess_return と balance_score を意図的に省略
+        fitness_weights={
+            "total_return": 0.2,
+            "sharpe_ratio": 0.25,
+            "max_drawdown": 0.15,
+            "win_rate": 0.1,
+            "ulcer_index_penalty": 0.1,
+            "trade_frequency_penalty": 0.05,
+        },
+    )
+    result = {
+        "performance_metrics": {
+            "total_return": 20.0,
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -10.0,
+            "win_rate": 55.0,
+            "total_trades": 50,
+            "buy_hold_return": 5.0,  # excess_return = 0.2 - 0.05 = 0.15
+        },
+        "trade_history": [],
+    }
+
+    fitness = fitness_calculator.calculate_fitness(result, config)
+
+    # デフォルトの excess_return (0.1) と balance_score (0.1) が反映された値になる
+    metrics = fitness_calculator.extract_performance_metrics(result)
+    expected = (
+        0.2 * metrics["total_return"]
+        + 0.25 * metrics["sharpe_ratio"]
+        + 0.15 * (1 - metrics["max_drawdown"])
+        + 0.1 * metrics["win_rate"]
+        + 0.1 * metrics["excess_return"]
+        + 0.1 * fitness_calculator.calculate_long_short_balance(result)
+        - 0.1 * metrics["ulcer_index"]
+        - 0.05 * metrics["trade_frequency_penalty"]
+    )
+    assert fitness == pytest.approx(expected, abs=1e-9)
 
 
 def test_extract_performance_metrics_normalizes_percentage_drawdown(

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from app.services.indicators.technical_indicators.advanced_features import (
     AdvancedFeatures,
@@ -120,3 +121,43 @@ def test_long_short_ratio_zscore_detects_deviation():
     z = AdvancedFeatures.long_short_ratio_zscore(series, window=20)
     assert isinstance(z, pd.Series)
     assert z.iloc[-1] > 0
+
+
+def test_oi_roc_returns_rate_of_change():
+    """OIの変化率が期間差分で正しく算出されること"""
+    values = [100.0] * 10 + [110.0] * 10
+    series = pd.Series(values, dtype=float)
+    roc = AdvancedFeatures.oi_roc(series, period=10)
+    assert isinstance(roc, pd.Series)
+    assert len(roc) == len(series)
+    # 10バー後の増加率は+10%
+    assert roc.iloc[10] == pytest.approx(0.10, abs=1e-6)
+
+
+def test_funding_rate_level_returns_raw_value():
+    """FRの水準がそのまま返ること"""
+    series = pd.Series([0.0001, -0.0002, 0.0], dtype=float)
+    level = AdvancedFeatures.funding_rate_level(series)
+    assert isinstance(level, pd.Series)
+    assert level.iloc[0] == pytest.approx(0.0001, abs=1e-9)
+    assert level.iloc[1] == pytest.approx(-0.0002, abs=1e-9)
+
+
+def test_long_short_ratio_level_returns_raw_value():
+    """LSRの水準がそのまま返ること（欠損は1.0で埋める）"""
+    series = pd.Series([1.1, float("nan"), 0.9], dtype=float)
+    level = AdvancedFeatures.long_short_ratio_level(series)
+    assert isinstance(level, pd.Series)
+    assert level.iloc[0] == pytest.approx(1.1, abs=1e-6)
+    assert level.iloc[2] == pytest.approx(0.9, abs=1e-6)
+
+
+def test_lsr_roc_returns_rate_of_change():
+    """LSRの変化率が期間差分で正しく算出されること"""
+    values = [1.0] * 10 + [1.2] * 10
+    series = pd.Series(values, dtype=float)
+    roc = AdvancedFeatures.lsr_roc(series, period=10)
+    assert isinstance(roc, pd.Series)
+    assert len(roc) == len(series)
+    # 10バー後の増加率は+20%
+    assert roc.iloc[10] == pytest.approx(0.20, abs=1e-6)
