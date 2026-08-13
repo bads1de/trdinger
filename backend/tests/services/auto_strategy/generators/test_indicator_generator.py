@@ -24,6 +24,8 @@ class MockGAConfig:
     available_timeframes: list[str] | None = None
     mtf_indicator_probability: float = 0.3
     parameter_range_preset: str | None = None
+    min_non_price_indicators: int = 0
+    non_price_indicator_probability: float = 0.3
 
 
 class TestIndicatorGenerationMTF:
@@ -79,6 +81,47 @@ class TestIndicatorGenerationMTF:
         assert indicator.type == "SMA"
         assert indicator.timeframe == "4h"
         assert indicator.enabled is True
+
+
+class TestMinNonPriceIndicators:
+    """非価格指標（OI/FR/LSR由来）の最低数保証のテスト"""
+
+    def _non_price_types(self, indicators: list[IndicatorGene]) -> set[str]:
+        from app.services.auto_strategy.config.indicator_universe import (
+            get_non_price_indicator_names,
+        )
+
+        return set(get_non_price_indicator_names()) & {ind.type for ind in indicators}
+
+    def test_default_does_not_force_non_price_indicators(self) -> None:
+        """min_non_price_indicators=0（デフォルト）では強制されないこと"""
+        config = MockGAConfig(min_non_price_indicators=0)
+        indicators = generate_random_indicators(config)
+
+        # 非価格指標が0でもエラーにならない（従来挙動）
+        assert isinstance(indicators, list)
+
+    def test_min_non_price_one_always_included(self) -> None:
+        """min_non_price_indicators=1 なら全個体に非価格指標が含まれること"""
+        config = MockGAConfig(min_non_price_indicators=1)
+        for _ in range(50):
+            indicators = generate_random_indicators(config)
+            assert self._non_price_types(indicators), (
+                f"非価格指標が含まれていません: {[i.type for i in indicators]}"
+            )
+
+    def test_min_non_price_respects_max_indicators(self) -> None:
+        """最大指標数内で最低数が保証されること（件数ベース）"""
+        config = MockGAConfig(min_non_price_indicators=2, max_indicators=4)
+        for _ in range(50):
+            indicators = generate_random_indicators(config)
+            non_price_count = sum(
+                1
+                for ind in indicators
+                if ind.type in self._non_price_types(indicators)
+            )
+            assert non_price_count >= 2
+            assert len(indicators) <= 4
 
 
 class TestIndicatorGenerationBasic:

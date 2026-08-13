@@ -197,6 +197,33 @@ def get_indicator_universe_names(
     return curated_names
 
 
+NON_PRICE_DATA_COLUMNS = frozenset(
+    {
+        "open_interest",
+        "funding_rate",
+        "long_short_ratio",
+    }
+)
+
+
+def get_non_price_indicator_names(
+    config_or_mode: Any = None,
+) -> list[str]:
+    """ユニバース内で非価格データ（OI/FR/LSR）を要求する指標名を返す。"""
+    names = get_indicator_universe_names(config_or_mode)
+    from app.services.indicators.config import indicator_registry
+
+    non_price: list[str] = []
+    for indicator_name in names:
+        config = indicator_registry.get_indicator_config(indicator_name)
+        if config is None:
+            continue
+        required_data = {source.lower() for source in (config.required_data or [])}
+        if required_data & NON_PRICE_DATA_COLUMNS:
+            non_price.append(indicator_name)
+    return non_price
+
+
 def is_indicator_in_universe(
     indicator_name: str,
     config_or_mode: str | IndicatorUniverseMode | Mapping[str, Any] | None = None,

@@ -81,6 +81,17 @@ class GAConfig:
     min_conditions: int = 1
     max_conditions: int = 3
 
+    # 非価格指標（OI/FR/LSR由来）の最低数保証
+    # 0 の場合は強制しない（従来挙動）。1 以上にすると各戦略が
+    # 必ず指定数以上の非価格指標を含むよう生成・進化する。
+    min_non_price_indicators: int = 0
+
+    # 非価格指標の選択確率（公平な自由探索用）
+    # トレンド70%優先バイアスで非価格指標が埋もれるのを防ぐ。
+    # 0.0 で無効化（従来挙動）、デフォルト 0.3 で非価格指標にも
+    # 専用の選択機会を与える。
+    non_price_indicator_probability: float = 0.3
+
     # ペナルティ設定
     zero_trades_penalty: float = GA_DEFAULT_CONFIG["zero_trades_penalty"]
     constraint_violation_penalty: float = GA_DEFAULT_CONFIG[

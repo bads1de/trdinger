@@ -216,11 +216,39 @@ class StrategyGene:
         cloned_fields["id"] = self.id if keep_id else str(uuid.uuid4())
         return type(self)(**cast(dict[str, SerializableValue], cloned_fields))  # type: ignore[arg-type]
 
+    def repair_non_price_indicators(self, config: GAConfig) -> StrategyGene:
+        """
+        非価格指標（OI/FR/LSR由来）の最低数を確保する。
+
+        突然変異・交叉で非価格指標が失われた場合、設定された
+        ``min_non_price_indicators`` を満たすよう不足分を補充する。
+        """
+        min_non_price = getattr(config, "min_non_price_indicators", 0) or 0
+        if min_non_price <= 0:
+            return self
+
+        from ..config.indicator_universe import get_non_price_indicator_names
+        from .indicator import _ensure_min_non_price_indicators
+
+        non_price_names = set(get_non_price_indicator_names(config))
+        if not non_price_names:
+            return self
+
+        if (
+            sum(1 for ind in self.indicators if ind.type in non_price_names)
+            >= min_non_price
+        ):
+            return self
+
+        self.indicators = _ensure_min_non_price_indicators(self.indicators, config)
+        return self
+
     def mutate(self, config: GAConfig, mutation_rate: float = 0.1) -> StrategyGene:
         """戦略遺伝子の突然変異を実行する。"""
         from .operators import mutate_strategy_gene
 
-        return mutate_strategy_gene(self, config, mutation_rate=mutation_rate)
+        mutated = mutate_strategy_gene(self, config, mutation_rate=mutation_rate)
+        return mutated.repair_non_price_indicators(config)
 
     def adaptive_mutate(
         self,
@@ -249,10 +277,13 @@ class StrategyGene:
         """2つの親個体から交叉により新しい子個体を生成する。"""
         from .operators import crossover_strategy_genes
 
-        return crossover_strategy_genes(
+        child1, child2 = crossover_strategy_genes(
             cls,
             parent1,
             parent2,
             config,
             crossover_type=crossover_type,
         )
+        child1.repair_non_price_indicators(config)
+        child2.repair_non_price_indicators(config)
+        return child1, child2

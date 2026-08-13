@@ -261,6 +261,20 @@ def parse_args() -> argparse.Namespace:
         help="1戦略あたりの最大インジケーター数 (デフォルト: 10)",
     )
     parser.add_argument(
+        "--min-non-price",
+        type=int,
+        default=0,
+        help="1戦略あたりに含める非価格指標（OI/FR/LSR由来）の最低数 "
+        "(デフォルト: 0 = 強制なし, 1以上で保証)",
+    )
+    parser.add_argument(
+        "--non-price-probability",
+        type=float,
+        default=0.3,
+        help="非価格指標の選択確率（公平な自由探索用, 0.0-1.0, デフォルト: 0.3）。"
+        "トレンド70%優先バイアスで非価格指標が埋もれるのを防ぐ",
+    )
+    parser.add_argument(
         "--max-conditions",
         type=int,
         default=3,
@@ -336,6 +350,11 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         # 探索空間の拡張設定（通常モードのみ適用）
         config_kwargs["max_indicators"] = getattr(args, "max_indicators", 10)
         config_kwargs["max_conditions"] = getattr(args, "max_conditions", 3)
+        min_non_price = getattr(args, "min_non_price", 0)
+        if min_non_price:
+            config_kwargs["min_non_price_indicators"] = min_non_price
+        non_price_probability = getattr(args, "non_price_probability", 0.3)
+        config_kwargs["non_price_indicator_probability"] = non_price_probability
 
         mtf_enabled = getattr(args, "mtf", False)
         if mtf_enabled:

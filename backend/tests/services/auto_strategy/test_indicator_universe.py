@@ -2,6 +2,7 @@ from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.config.indicator_universe import (
     IndicatorUniverseMode,
     get_indicator_universe_names,
+    get_non_price_indicator_names,
 )
 from app.services.auto_strategy.genes import generate_random_indicators
 
@@ -44,3 +45,31 @@ class TestIndicatorUniverse:
 
         assert indicators
         assert all(indicator.type in curated for indicator in indicators)
+
+    def test_non_price_indicator_names_returns_oifrlsr_derived(self):
+        non_price = get_non_price_indicator_names()
+
+        assert "OI_WEIGHTED_FUNDING_RATE" in non_price
+        assert "LONG_SHORT_RATIO_ZSCORE" in non_price
+        assert "OI_PRICE_CONFIRMATION" in non_price
+        # 価格ベースの指標は含まれない
+        assert "SMA" not in non_price
+        assert "RSI" not in non_price
+
+    def test_min_non_price_indicators_config_field(self):
+        config = GAConfig(min_non_price_indicators=2)
+
+        assert config.min_non_price_indicators == 2
+        assert "min_non_price_indicators" in config.to_dict()
+
+    def test_min_non_price_guaranteed_in_generation(self):
+        config = GAConfig(
+            min_indicators=1,
+            max_indicators=5,
+            min_non_price_indicators=1,
+        )
+        non_price = set(get_non_price_indicator_names())
+
+        for _ in range(30):
+            indicators = generate_random_indicators(config)
+            assert any(indicator.type in non_price for indicator in indicators)

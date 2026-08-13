@@ -21,6 +21,7 @@ from .gene_constants import (
     INDICATOR_GENERATION_MAX_ATTEMPTS_MULTIPLIER,
     MA_CROSS_ENHANCEMENT_PROBABILITY,
     MA_PERIOD_CANDIDATES,
+    NON_PRICE_INDICATOR_SELECTION_PROBABILITY,
     PREFERRED_TREND_INDICATORS,
     TREND_INDICATOR_SELECTION_PROBABILITY,
 )
@@ -151,10 +152,15 @@ def generate_random_indicators(config: Any) -> list[IndicatorGene]:
     # 指標の個数を決定
     num_indicators = random.randint(config.min_indicators, config.max_indicators)
 
-    # トレンド系指標を優先するためのリスト作成
+    # トレンド系指標・非価格指標を優先するためのリスト作成
     indicators: list[Any] = []
     trend_indicators = []
+    non_price_indicators = []
     preferred_trend_names = PREFERRED_TREND_INDICATORS
+
+    from ..config.indicator_universe import get_non_price_indicator_names
+
+    non_price_name_set = set(get_non_price_indicator_names(config))
 
     for name in available_indicators:
         cfg = indicator_registry.get_indicator_config(name)
@@ -164,6 +170,9 @@ def generate_random_indicators(config: Any) -> list[IndicatorGene]:
             or (name in preferred_trend_names)
         ) and name not in trend_indicators:
             trend_indicators.append(name)
+        # 非価格指標（OI/FR/LSR由来）は専用プールに集める
+        if name in non_price_name_set and name not in non_price_indicators:
+            non_price_indicators.append(name)
 
     # MTF設定の準備
     from app.config.constants import SUPPORTED_TIMEFRAMES
@@ -188,9 +197,27 @@ def generate_random_indicators(config: Any) -> list[IndicatorGene]:
     max_attempts = max(
         10, num_indicators * INDICATOR_GENERATION_MAX_ATTEMPTS_MULTIPLIER
     )
+    # 非価格指標の選択確率（公平な自由探索用、0.0 で無効化）
+    non_price_probability = getattr(
+        config,
+        "non_price_indicator_probability",
+        NON_PRICE_INDICATOR_SELECTION_PROBABILITY,
+    )
+    if not isinstance(non_price_probability, (int, float)):
+        non_price_probability = NON_PRICE_INDICATOR_SELECTION_PROBABILITY
+
     while len(indicators) < num_indicators and attempts < max_attempts:
+        # 非価格指標を選択する確率（専用プール）
+        if (
+            non_price_indicators
+            and non_price_probability > 0
+            and random.random() < non_price_probability
+        ):
+            indicator_type = random.choice(non_price_indicators)
         # トレンド系指標を選択する確率
-        if trend_indicators and random.random() < TREND_INDICATOR_SELECTION_PROBABILITY:
+        elif (
+            trend_indicators and random.random() < TREND_INDICATOR_SELECTION_PROBABILITY
+        ):
             indicator_type = random.choice(trend_indicators)
         else:
             indicator_type = random.choice(available_indicators)
@@ -212,6 +239,64 @@ def generate_random_indicators(config: Any) -> list[IndicatorGene]:
 
     # 指標構成の底上げ（MAクロス戦略など）
     indicators = _enhance_with_ma_cross(indicators, available_indicators, config)
+
+    # 非価格指標（OI/FR/LSR由来）の最低数保証
+    indicators = _ensure_min_non_price_indicators(indicators, config)
+
+    return indicators
+
+
+def _ensure_min_non_price_indicators(
+    indicators: list[IndicatorGene],
+    config: object = None,
+) -> list[IndicatorGene]:
+    """
+    非価格指標（OI/FR/LSR由来）が指定数以上含まれるよう保証する。
+
+    ``config.min_non_price_indicators``（デフォルト 0 = 強制なし）が 1 以上のとき、
+    不足分の非価格指標を追加する。最大指標数に達している場合は、
+    非価格指標以外を置き換えてでも最低数を満たす。
+    """
+    min_non_price = getattr(config, "min_non_price_indicators", 0)
+    if not isinstance(min_non_price, int) or min_non_price <= 0:
+        return indicators
+
+    from ..config.indicator_universe import get_non_price_indicator_names
+
+    non_price_names = get_non_price_indicator_names(config)
+    if not non_price_names:
+        return indicators
+    non_price_set = set(non_price_names)
+
+    existing_non_price = sum(1 for ind in indicators if ind.type in non_price_set)
+    needed = min_non_price - existing_non_price
+    if needed <= 0:
+        return indicators
+
+    max_indicators = getattr(config, "max_indicators", 10)
+    if not isinstance(max_indicators, int):
+        max_indicators = 10
+    for _ in range(needed):
+        # 最大指標数に達している場合は非価格指標以外を置き換える
+        if len(indicators) >= max_indicators:
+            replaceable_indices = [
+                i for i, ind in enumerate(indicators) if ind.type not in non_price_set
+            ]
+            if not replaceable_indices:
+                break
+            replace_idx = random.choice(replaceable_indices)
+            indicators.pop(replace_idx)
+
+        # 重複を避けるため未採用の非価格指標を選ぶ
+        available_new = [
+            name
+            for name in non_price_names
+            if name not in {ind.type for ind in indicators}
+        ]
+        if not available_new:
+            break
+        chosen = random.choice(available_new)
+        indicators.append(create_random_indicator_gene(chosen, config))
 
     return indicators
 

@@ -375,6 +375,9 @@ def mutate_strategy_gene(
         mutated.metadata["mutation_rate"] = mutation_rate
         mutated.id = str(uuid.uuid4())
 
+        # 非価格指標（OI/FR/LSR由来）の最低数を確保
+        mutated.repair_non_price_indicators(config)
+
         return mutated
 
     except Exception as e:

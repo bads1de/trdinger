@@ -58,6 +58,11 @@ PREFERRED_TREND_INDICATORS = [
 # トレンド系指標を選択する確率
 TREND_INDICATOR_SELECTION_PROBABILITY = 0.7
 
+# 非価格指標（OI/FR/LSR由来）を選択する確率
+# トレンド70%バイアスで非価格指標が埋もれるのを防ぎ、公平な自由探索を実現する。
+# 0.0 で無効化（従来挙動）。
+NON_PRICE_INDICATOR_SELECTION_PROBABILITY = 0.3
+
 # MAクロス補完の確率
 MA_CROSS_ENHANCEMENT_PROBABILITY = 0.25
 
