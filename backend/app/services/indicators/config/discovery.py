@@ -6,6 +6,7 @@ pandas-ta および独自実装のテクニカル指標を動的にスキャン�
 これにより、手動でのマニフェスト管理を不要にします。
 """
 
+import hashlib
 import importlib
 import inspect
 import logging
@@ -48,11 +49,38 @@ _VERSION_FILE = os.path.join(_CACHE_DIR, "indicator_discovery_version.txt")
 
 
 def _get_cache_version() -> str:
-    """キャッシュバージョンを取得（pandas-taのバージョンに基づく）"""
+    """キャッシュバージョンを取得（pandas-taのバージョンと独自実装のハッシュに基づく）
+
+    独自インジケーター（technical_indicators 配下のクラス）は pandas-ta の
+    バージョンに紐づかないため、ソースファイルのハッシュもバージョンに含める。
+    これにより独自実装を変更した際に古いキャッシュが自動的に無効化される。
+    """
+    version_parts = ["pandas_ta"]
     try:
-        return cast(str, ta.version)
+        version_parts.append(str(ta.version))
     except Exception:
-        return "unknown"
+        version_parts.append("unknown")
+
+    # 独自インジケーター実装ファイルのハッシュをバージョンに含める
+    for rel_path in (
+        "app/services/indicators/technical_indicators/advanced_features.py",
+        "app/services/indicators/technical_indicators/original/vortex_rsi.py",
+        "app/services/indicators/technical_indicators/original/trend_trigger_factor.py",
+        "app/services/indicators/technical_indicators/original/trend_intensity_index.py",
+        "app/services/indicators/technical_indicators/pandas_ta/overlap.py",
+        "app/services/indicators/technical_indicators/pandas_ta/momentum.py",
+        "app/services/indicators/technical_indicators/pandas_ta/trend.py",
+        "app/services/indicators/technical_indicators/pandas_ta/volume.py",
+        "app/services/indicators/technical_indicators/pandas_ta/volatility.py",
+    ):
+        source_path = os.path.join(_BACKEND_ROOT, rel_path)
+        try:
+            with open(source_path, "rb") as f:
+                version_parts.append(hashlib.sha256(f.read()).hexdigest()[:12])
+        except OSError:
+            version_parts.append("missing")
+
+    return "-".join(version_parts)
 
 
 def _ensure_cache_dir() -> None:
@@ -365,6 +393,10 @@ class DynamicIndicatorDiscovery:
                 "normal": {"long_gt": 1.05, "short_lt": 0.95},
                 "conservative": {"long_gt": 1.1, "short_lt": 0.9},
             },
+        },
+        "LONG_SHORT_RATIO_ZSCORE": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+            "use_default_thresholds": True,
         },
     }
 

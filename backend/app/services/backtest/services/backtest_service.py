@@ -11,6 +11,9 @@ from sqlalchemy.orm import Session
 
 from database.connection import get_db
 from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.long_short_ratio_repository import (
+    LongShortRatioRepository,
+)
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
     OpenInterestRepository,
@@ -107,8 +110,12 @@ class BacktestService:
                 ohlcv_repo = OHLCVRepository(self._db_session)
                 oi_repo = OpenInterestRepository(self._db_session)
                 fr_repo = FundingRateRepository(self._db_session)
+                lsr_repo = LongShortRatioRepository(self._db_session)
                 self.data_service = BacktestDataService(
-                    ohlcv_repo=ohlcv_repo, oi_repo=oi_repo, fr_repo=fr_repo
+                    ohlcv_repo=ohlcv_repo,
+                    oi_repo=oi_repo,
+                    fr_repo=fr_repo,
+                    lsr_repo=lsr_repo,
                 )
                 logger.debug("バックテストデータサービスを初期化しました")
             except Exception as e:

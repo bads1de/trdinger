@@ -48,7 +48,7 @@ CURATED_INDICATOR_CATALOG: tuple[str, ...] = (
     # Volatility / band
     "BBANDS",
     "ATR",
-    # OI / FR derived
+    # OI / FR / LSR derived
     "CRYPTO_LEVERAGE_INDEX",
     "LIQUIDATION_CASCADE_SCORE",
     "SQUEEZE_PROBABILITY",
@@ -57,10 +57,20 @@ CURATED_INDICATOR_CATALOG: tuple[str, ...] = (
     "REGIME_QUADRANT",
     "WHALE_DIVERGENCE",
     "OI_PRICE_CONFIRMATION",
+    "LONG_SHORT_RATIO_ZSCORE",
 )
 
 STANDARD_BACKTEST_REQUIRED_DATA = frozenset(
-    {"open", "high", "low", "close", "volume", "open_interest", "funding_rate"}
+    {
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "open_interest",
+        "funding_rate",
+        "long_short_ratio",
+    }
 )
 
 _CONDITION_INCOMPATIBLE_CURATED_INDICATORS = frozenset(

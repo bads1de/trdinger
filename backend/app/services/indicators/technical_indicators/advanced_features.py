@@ -720,6 +720,31 @@ class AdvancedFeatures:
 
     @staticmethod
     @handle_pandas_ta_errors
+    def long_short_ratio_zscore(
+        long_short_ratio: pd.Series,
+        window: int = 20,
+    ) -> pd.Series:
+        """
+        Long/Short Ratio Z-Score
+
+        ロング/ショート比率の正規化された乖離度を算出します。
+        比率が1.0（均衡）からどの程度乖離しているかを、
+        直近window期間の平均・標準偏差で標準化します。
+
+        正の大きな値: ロングが過熱（買い戻しの反転リスク）
+        負の大きな値: ショートが過熱（ショートカバーの反転リスク）
+        """
+        return cast(
+            pd.Series,
+            run_series_indicator(
+                long_short_ratio,
+                window,
+                lambda: AdvancedFeatures.z_score(long_short_ratio, window),
+            ),
+        )
+
+    @staticmethod
+    @handle_pandas_ta_errors
     def liquidity_efficiency(open_interest: pd.Series, volume: pd.Series) -> pd.Series:
         """
         流動性効率（Open Interest / Volume）

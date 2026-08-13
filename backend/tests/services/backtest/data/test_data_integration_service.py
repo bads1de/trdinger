@@ -13,6 +13,7 @@ class TestDataIntegrationService:
         service = MagicMock()
         service.oi_repo = MagicMock()
         service.fr_repo = MagicMock()
+        service.lsr_repo = MagicMock()
         return service
 
     @pytest.fixture
@@ -41,14 +42,17 @@ class TestDataIntegrationService:
         service = DataIntegrationService(retrieval_service)
         assert service.oi_merger is not None
         assert service.fr_merger is not None
+        assert service.lsr_merger is not None
 
     def test_init_without_repos(self):
         retrieval = MagicMock()
         retrieval.oi_repo = None
         retrieval.fr_repo = None
+        retrieval.lsr_repo = None
         service = DataIntegrationService(retrieval)
         assert service.oi_merger is None
         assert service.fr_merger is None
+        assert service.lsr_merger is None
 
     def test_create_backtest_dataframe_full(self, integration_service, sample_ohlcv_df):
         # Arrange
@@ -93,6 +97,58 @@ class TestDataIntegrationService:
 
         assert df["open_interest"].iloc[0] == 0.0
         assert df["funding_rate"].iloc[0] == 0.0
+
+    def test_create_backtest_dataframe_with_lsr(
+        self, integration_service, sample_ohlcv_df
+    ):
+        # Arrange
+        integration_service.retrieval_service.get_ohlcv_data.return_value = []
+        integration_service.conversion_service.convert_ohlcv_to_dataframe.return_value = sample_ohlcv_df
+
+        integration_service.oi_merger = MagicMock()
+        integration_service.oi_merger.merge_oi_data.side_effect = lambda df, *args: (
+            df.assign(open_interest=[1000, 1100])
+        )
+        integration_service.fr_merger = MagicMock()
+        integration_service.fr_merger.merge_fr_data.side_effect = lambda df, *args: (
+            df.assign(funding_rate=[0.0001, 0.0002])
+        )
+        integration_service.lsr_merger = MagicMock()
+        integration_service.lsr_merger.merge_lsr_data.side_effect = lambda df, *args: (
+            df.assign(long_short_ratio=[1.1, 0.9])
+        )
+
+        # Act
+        df = integration_service.create_backtest_dataframe(
+            "BTC/USDT", "1h", datetime(2023, 1, 1), datetime(2023, 1, 2)
+        )
+
+        # Assert
+        assert "long_short_ratio" in df.columns
+        assert df["long_short_ratio"].iloc[0] == 1.1
+        integration_service.lsr_merger.merge_lsr_data.assert_called_once()
+
+    def test_create_backtest_dataframe_lsr_disabled(
+        self, integration_service, sample_ohlcv_df
+    ):
+        # Arrange
+        integration_service.retrieval_service.get_ohlcv_data.return_value = []
+        integration_service.conversion_service.convert_ohlcv_to_dataframe.return_value = sample_ohlcv_df
+        integration_service.lsr_merger = MagicMock()
+
+        # Act
+        df = integration_service.create_backtest_dataframe(
+            "BTC/USDT",
+            "1h",
+            datetime(2023, 1, 1),
+            datetime(2023, 1, 2),
+            include_lsr=False,
+        )
+
+        # Assert
+        assert "long_short_ratio" in df.columns
+        assert df["long_short_ratio"].iloc[0] == 1.0
+        integration_service.lsr_merger.merge_lsr_data.assert_not_called()
 
     def test_clean_and_optimize_dataframe(self, integration_service, sample_ohlcv_df):
         df_in = sample_ohlcv_df.assign(open_interest=0, funding_rate=0)

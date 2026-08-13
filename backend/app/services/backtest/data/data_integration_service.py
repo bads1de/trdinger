@@ -12,7 +12,7 @@ import pandas as pd
 from app.utils.data_processing import data_processor
 from app.utils.error_handler import safe_operation
 
-from ...data_collection.mergers import FRMerger, OIMerger
+from ...data_collection.mergers import FRMerger, LSROMerger, OIMerger
 from .data_conversion_service import DataConversionService
 from .data_retrieval_service import DataRetrievalService
 
@@ -52,6 +52,7 @@ class DataIntegrationService:
         # データマージャーを初期化（リポジトリが利用可能な場合のみ）
         self.oi_merger = None
         self.fr_merger = None
+        self.lsr_merger = None
 
         # リポジトリが利用可能な場合はマージャーを初期化
         if hasattr(retrieval_service, "oi_repo") and retrieval_service.oi_repo:
@@ -59,6 +60,9 @@ class DataIntegrationService:
 
         if hasattr(retrieval_service, "fr_repo") and retrieval_service.fr_repo:
             self.fr_merger = FRMerger(retrieval_service.fr_repo)
+
+        if hasattr(retrieval_service, "lsr_repo") and retrieval_service.lsr_repo:
+            self.lsr_merger = LSROMerger(retrieval_service.lsr_repo)
 
     @safe_operation(
         context="バックテスト用DataFrame作成",
@@ -73,12 +77,13 @@ class DataIntegrationService:
         end_date: datetime,
         include_oi: bool = True,
         include_fr: bool = True,
+        include_lsr: bool = True,
     ) -> pd.DataFrame:
         """
         全マーケットデータを統合したバックテスト用 DataFrame を構築
 
         1. OHLCV データの取得と DatetimeIndex への変換
-        2. OI / FR データの結合（マージャーを使用）
+        2. OI / FR / LSR データの結合（マージャーを使用）
         3. 重複削除、欠損値補間、およびデータ型の最適化
 
         Args:
@@ -88,6 +93,7 @@ class DataIntegrationService:
             end_date: 期間終了日
             include_oi: 建玉残高データを含めるか
             include_fr: ファンディングレートデータを含めるか
+            include_lsr: ロング/ショート比率データを含めるか
 
         Returns:
             統合・清浄化済みのマーケットデータを含む DataFrame
@@ -105,6 +111,14 @@ class DataIntegrationService:
             df = self._integrate_funding_rate_data(df, symbol, start_date, end_date)
         else:
             df["funding_rate"] = 0.0
+
+        if include_lsr:
+            df = self._integrate_long_short_ratio_data(
+                df, symbol, timeframe, start_date, end_date
+            )
+        else:
+            # ロング/ショート比率の中立値は 1.0（L/S比）
+            df["long_short_ratio"] = 1.0
 
         # 3. データクリーニングと最適化
         df = self._clean_and_optimize_dataframe(df)
@@ -162,6 +176,28 @@ class DataIntegrationService:
 
         return df
 
+    def _integrate_long_short_ratio_data(
+        self,
+        df: pd.DataFrame,
+        symbol: str,
+        timeframe: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> pd.DataFrame:
+        """Long/Short Ratioデータを統合"""
+        try:
+            if self.lsr_merger:
+                df = self.lsr_merger.merge_lsr_data(
+                    df, symbol, timeframe, start_date, end_date
+                )
+            else:
+                df["long_short_ratio"] = 1.0
+        except Exception as e:
+            logger.error(f"Long/Short Ratioデータ統合エラー: {e}")
+            df["long_short_ratio"] = 1.0
+
+        return df
+
     @safe_operation(
         context="データクリーニングと最適化",
         is_api_call=False,
@@ -191,6 +227,7 @@ class DataIntegrationService:
                 "volume",
                 "open_interest",
                 "funding_rate",
+                "long_short_ratio",
             ]
 
             # 0. データのソート（重要：インジケーター計算のために時系列順にする）

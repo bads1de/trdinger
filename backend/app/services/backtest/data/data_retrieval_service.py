@@ -8,8 +8,16 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, cast
 
-from database.models import FundingRateData, OHLCVData, OpenInterestData
+from database.models import (
+    FundingRateData,
+    LongShortRatioData,
+    OHLCVData,
+    OpenInterestData,
+)
 from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.long_short_ratio_repository import (
+    LongShortRatioRepository,
+)
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
     OpenInterestRepository,
@@ -34,6 +42,7 @@ class DataRetrievalService:
         ohlcv_repo: OHLCVRepository | None = None,
         oi_repo: OpenInterestRepository | None = None,
         fr_repo: FundingRateRepository | None = None,
+        lsr_repo: LongShortRatioRepository | None = None,
     ):
         """
         初期化
@@ -42,10 +51,12 @@ class DataRetrievalService:
             ohlcv_repo: OHLCVデータリポジトリ
             oi_repo: Open Interestデータリポジトリ
             fr_repo: Funding Rateデータリポジトリ
+            lsr_repo: Long/Short Ratioデータリポジトリ
         """
         self.ohlcv_repo = ohlcv_repo
         self.oi_repo = oi_repo
         self.fr_repo = fr_repo
+        self.lsr_repo = lsr_repo
 
     def _fetch_with_safe_operation(
         self,
@@ -202,4 +213,44 @@ class DataRetrievalService:
             query=query,
         )
         logger.debug(f"Funding Rateデータ取得完了: {len(data)}件")
+        return data
+
+    def get_long_short_ratio_data(
+        self,
+        symbol: str,
+        period: str,
+        start_date: datetime,
+        end_date: datetime,
+    ) -> list[LongShortRatioData]:
+        """
+        Long/Short Ratioデータを取得
+
+        Args:
+            symbol: 取引ペア
+            period: 期間（例: '1h', '4h'）
+            start_date: 開始日時
+            end_date: 終了日時
+
+        Returns:
+            Long/Short Ratioデータのリスト
+        """
+        if self.lsr_repo is None:
+            logger.warning("LongShortRatioRepositoryが初期化されていません")
+            return []
+
+        def query() -> list[LongShortRatioData]:
+            lsr_repo = cast(LongShortRatioRepository, self.lsr_repo)
+            return lsr_repo.get_long_short_ratio_data(
+                symbol=symbol,
+                period=period,
+                start_time=start_date,
+                end_time=end_date,
+            )
+
+        data = self._fetch_with_safe_operation(
+            context="Long/Short Ratioデータ取得",
+            default_return=[],
+            query=query,
+        )
+        logger.debug(f"Long/Short Ratioデータ取得完了: {len(data)}件")
         return data

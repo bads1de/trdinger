@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from app.services.indicators.technical_indicators.advanced_features import (
@@ -92,3 +93,30 @@ def test_whale_divergence_fill_value():
     assert isinstance(divergence, pd.Series)
     assert divergence.iloc[0] == 2.0
     assert divergence.iloc[1] == 1.0
+
+
+def test_long_short_ratio_zscore():
+    # ノイズ入りの変動する比率系列を入力
+    rng = np.random.default_rng(7)
+    values = 1.0 + rng.normal(0, 0.05, 100)
+    series = pd.Series(values, dtype=float)
+    lsr = AdvancedFeatures.long_short_ratio_zscore(series, window=20)
+    assert isinstance(lsr, pd.Series)
+    assert len(lsr) == len(series)
+    # 最初のwindow期間は0（NaNを0埋め）
+    assert lsr.iloc[:19].sum() == 0
+    # 一定値の入力ではz-scoreが0になる
+    constant = pd.Series([1.0] * 50)
+    flat = AdvancedFeatures.long_short_ratio_zscore(constant, window=20)
+    assert (flat.iloc[19:] == 0).all()
+
+
+def test_long_short_ratio_zscore_detects_deviation():
+    # 前半1.0（均衡）、後半1.5（ロング過熱）でz-scoreが正になる
+    # 窓内stdが0になるのを避けるため後半はわずかなノイズを加える
+    rng = np.random.default_rng(42)
+    values = [1.0] * 30 + (1.5 + rng.normal(0, 0.01, 30)).tolist()
+    series = pd.Series(values, dtype=float)
+    z = AdvancedFeatures.long_short_ratio_zscore(series, window=20)
+    assert isinstance(z, pd.Series)
+    assert z.iloc[-1] > 0

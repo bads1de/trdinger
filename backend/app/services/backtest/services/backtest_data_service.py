@@ -9,6 +9,9 @@ from datetime import datetime
 import pandas as pd
 
 from database.repositories.funding_rate_repository import FundingRateRepository
+from database.repositories.long_short_ratio_repository import (
+    LongShortRatioRepository,
+)
 from database.repositories.ohlcv_repository import OHLCVRepository
 from database.repositories.open_interest_repository import (
     OpenInterestRepository,
@@ -38,6 +41,7 @@ class BacktestDataService:
         ohlcv_repo: OHLCVRepository | None = None,
         oi_repo: OpenInterestRepository | None = None,
         fr_repo: FundingRateRepository | None = None,
+        lsr_repo: LongShortRatioRepository | None = None,
     ):
         """
         初期化
@@ -46,12 +50,14 @@ class BacktestDataService:
             ohlcv_repo: OHLCVデータリポジトリ
             oi_repo: Open Interestデータリポジトリ
             fr_repo: Funding Rateデータリポジトリ
+            lsr_repo: Long/Short Ratioデータリポジトリ
         """
         # 専門サービスを初期化
         self._retrieval_service = DataRetrievalService(
             ohlcv_repo=ohlcv_repo,
             oi_repo=oi_repo,
             fr_repo=fr_repo,
+            lsr_repo=lsr_repo,
         )
         self._conversion_service = DataConversionService()
         self._integration_service = DataIntegrationService(
@@ -87,8 +93,9 @@ class BacktestDataService:
                 timeframe=timeframe,
                 start_date=start_date,
                 end_date=end_date,
-                include_oi=False,
-                include_fr=False,
+                include_oi=True,
+                include_fr=True,
+                include_lsr=True,
             )
             return result
         except DataIntegrationError as e:

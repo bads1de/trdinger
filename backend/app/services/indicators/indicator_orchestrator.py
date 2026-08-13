@@ -46,8 +46,10 @@ class TechnicalIndicatorService:
     _EXTENDED_MARKET_DATA = {
         "open_interest",
         "funding_rate",
+        "long_short_ratio",
         "openinterest",
         "fundingrate",
+        "longshortratio",
     }
 
     def __init__(self) -> None:

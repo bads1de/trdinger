@@ -273,6 +273,10 @@ class AdapterHandler:
                 "market_cap",
                 "funding_rate",
                 "open_interest",
+                "long_short_ratio",
+                "ls_ratio_positions",
+                "ls_ratio_accounts",
+                "ls_ratio_divergence",
             ]:
                 target_key = param_lower.rstrip("_")
                 val = series_data.get(target_key)
