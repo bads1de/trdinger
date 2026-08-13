@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
 
-from ..config.ga import GAConfig
+from ..config.ga_config import GAConfig
 from ..core.engine.evolution_runner import EvolutionStoppedError
 from ..core.engine.ga_engine import GeneticAlgorithmEngine
 from .experiment_backtest_service import ExperimentBacktestService

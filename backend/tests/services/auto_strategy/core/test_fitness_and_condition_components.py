@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.config import objective_registry
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.evaluation.condition_evaluator import (
     ConditionEvaluator,
 )

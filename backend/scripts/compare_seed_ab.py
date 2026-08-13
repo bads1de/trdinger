@@ -28,9 +28,9 @@ from typing import Any
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from app.services.auto_strategy.config.ga import GAConfig  # noqa: E402
-from app.services.auto_strategy.config.ga.nested_configs import (  # noqa: E402
+from app.services.auto_strategy.config.ga_config import (  # noqa: E402
     EvaluationConfig,
+    GAConfig,  # noqa: E402
 )
 from app.services.auto_strategy.core import GeneticAlgorithmEngine  # noqa: E402
 from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402

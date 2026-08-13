@@ -12,7 +12,7 @@ from typing import Any, cast
 
 import pandas as pd
 
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.utils.datetime_utils import parse_datetime_range_optional
 
 from .evaluation_report import _DATETIME_FORMAT

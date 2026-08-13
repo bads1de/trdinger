@@ -4,7 +4,7 @@
 
 import pytest
 
-from app.services.auto_strategy.config.ga.ga_config import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.fitness.fitness_calculator import (
     FitnessCalculator,
 )

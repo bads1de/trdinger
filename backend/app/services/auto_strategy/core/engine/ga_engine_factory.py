@@ -7,7 +7,7 @@ GAエンジンの構築とコンポーネントの初期化を担当します。
 import logging
 from typing import TYPE_CHECKING
 
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )

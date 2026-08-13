@@ -24,7 +24,7 @@ from app.services.auto_strategy.config.constants import (
     GA_FALLBACK_START_DATE,
     MAX_STRATEGIES_LIMIT,
 )
-from app.services.auto_strategy.config.ga import GAConfig as GAConfigRuntime
+from app.services.auto_strategy.config.ga_config import GAConfig as GAConfigRuntime
 from app.services.backtest.config import BacktestConfig
 
 

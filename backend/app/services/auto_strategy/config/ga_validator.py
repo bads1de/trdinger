@@ -9,10 +9,9 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from ..evaluation_plan import EvaluationPlan
-from ..helpers import validate_robustness_regime_window
-from .ga_config import GAConfig
-from .nested_configs import RobustnessConfig
+from .evaluation_plan import EvaluationPlan
+from .ga_config import GAConfig, RobustnessConfig
+from .helpers import validate_robustness_regime_window
 
 logger = logging.getLogger(__name__)
 
@@ -766,23 +765,12 @@ class ConfigValidator:
 
     @staticmethod
     def _validate_evaluation_plan(config: GAConfig) -> list[str]:
-        """正規化済み評価計画の安全性を検証する。"""
+        """評価計画の robustness 設定の安全性を検証する。"""
         plan = getattr(config, "evaluation_plan", None)
         if not isinstance(plan, EvaluationPlan):
             return []
 
         errors: list[str] = []
-        if getattr(plan.selection, "method", None) != "is":
-            errors.append("evaluation_plan.selection.method は'is'である必要があります")
-        if getattr(plan.validation, "folds", 1) < 1:
-            errors.append(
-                "evaluation_plan.validation.folds は1以上である必要があります"
-            )
-        train_ratio = getattr(plan.validation, "train_ratio", 0.7)
-        if not 0.0 < float(train_ratio) < 1.0:
-            errors.append(
-                "evaluation_plan.validation.train_ratio は0より大きく1未満である必要があります"
-            )
         if getattr(plan.robustness, "policy", None) != "gate_only":
             errors.append(
                 "evaluation_plan.robustness.policy は'gate_only'である必要があります"

@@ -6,7 +6,7 @@ import logging
 from collections.abc import Callable
 from typing import Any, Protocol, cast
 
-from ..config.ga import GAConfig
+from ..config.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 

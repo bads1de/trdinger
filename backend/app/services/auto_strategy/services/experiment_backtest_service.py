@@ -19,7 +19,7 @@ from app.services.backtest.services.backtest_service import BacktestService
 from app.utils.serialization import dataclass_to_dict
 
 from ..config import GAConfig
-from ..config.ga.nested_configs import EarlyTerminationSettings
+from ..config.ga_config import EarlyTerminationSettings
 from ..genes import StrategyGene
 
 logger = logging.getLogger(__name__)

@@ -10,7 +10,7 @@ from collections.abc import Collection
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..config.ga.ga_config import GAConfig
+    from ..config.ga_config import GAConfig
     from .conditions import Condition, ConditionGroup
     from .indicator import IndicatorGene
 

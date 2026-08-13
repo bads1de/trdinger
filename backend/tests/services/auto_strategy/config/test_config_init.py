@@ -56,7 +56,7 @@ class TestAutoStrategyConfigInitExports:
 
     def test_ga_config_lazy_load(self):
         """GAConfigが遅延ロードされる"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
 
         config = config_package.GAConfig
 
@@ -133,7 +133,7 @@ class TestAutoStrategyConfigInitExports:
     def test_ga_nested_configs_module_exports_runtime_configs(self):
         """意味が明確な新モジュール名から runtime config 群を読める"""
         nested_configs = importlib.import_module(
-            "app.services.auto_strategy.config.ga.nested_configs"
+            "app.services.auto_strategy.config.ga_config"
         )
 
         assert nested_configs.MutationConfig is config_package.MutationConfig

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.config.ga.nested_configs import (
+from app.services.auto_strategy.config.ga_config import (
     EvaluationConfig,
 )
 from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
@@ -112,7 +112,7 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """random_state があれば seed の注入順が deterministic に並び替わる"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
         from app.services.auto_strategy.genes import StrategyGene
 
         engine = GeneticAlgorithmEngine(
@@ -152,7 +152,7 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """random_state がない場合は実行時の shuffle を使う"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
         from app.services.auto_strategy.genes import StrategyGene
 
         engine = GeneticAlgorithmEngine(
@@ -186,7 +186,7 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """NumPy スカラーの random_state でも seed の並び替えができる"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
         from app.services.auto_strategy.genes import StrategyGene
 
         engine = GeneticAlgorithmEngine(
@@ -227,7 +227,7 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """random_state 設定時に random / numpy.random の両方がシードされること"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
 
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
@@ -254,7 +254,7 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """random_state が None の場合は乱数状態を変更しないこと"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
 
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
@@ -346,7 +346,7 @@ class TestGeneticAlgorithmEngine:
         mock_backtest_service,
     ):
         """GAConfig を使った標準エンジンの生成を確認"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
 
         engine = GeneticAlgorithmEngineFactory.create_engine(
             mock_backtest_service,
@@ -391,7 +391,7 @@ class TestGeneticAlgorithmEngine:
         mock_runner_instance.run_evolution.return_value = ([mock_ind], Mock())
 
         # Config mock - use real GAConfig for complete attribute coverage
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
 
         mock_config = GAConfig()
         mock_config.population_size = 10
@@ -454,7 +454,7 @@ class TestGeneticAlgorithmEngine:
         mock_runner_instance.run_evolution.return_value = ([mock_ind], Mock())
 
         # Config - use real GAConfig for complete attribute coverage
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
 
         mock_config = GAConfig()
         mock_config.evaluation_config.enable_parallel = True
@@ -510,7 +510,7 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """multi-fidelity 有効時は並列ワーカーへ coarse 設定を渡す。"""
-        from app.services.auto_strategy.config.ga import GAConfig
+        from app.services.auto_strategy.config.ga_config import GAConfig
 
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,

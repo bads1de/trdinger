@@ -19,7 +19,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from ..config.ga.ga_config import GAConfig
+    from ..config.ga_config import GAConfig
 
 from app.types import SerializableValue
 from app.utils.error_handler import safe_operation

@@ -8,7 +8,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
-from app.services.auto_strategy.config.ga.nested_configs import (
+from app.services.auto_strategy.config.ga_config import (
     EarlyTerminationSettings,
 )
 from app.services.backtest.config.builders import build_execution_config

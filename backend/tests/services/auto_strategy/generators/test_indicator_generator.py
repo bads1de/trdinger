@@ -116,9 +116,7 @@ class TestMinNonPriceIndicators:
         for _ in range(50):
             indicators = generate_random_indicators(config)
             non_price_count = sum(
-                1
-                for ind in indicators
-                if ind.type in self._non_price_types(indicators)
+                1 for ind in indicators if ind.type in self._non_price_types(indicators)
             )
             assert non_price_count >= 2
             assert len(indicators) <= 4

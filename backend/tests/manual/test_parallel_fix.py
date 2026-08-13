@@ -7,8 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 
 from deap import base, creator
 
-from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+from app.services.auto_strategy.config.ga_config import EvaluationConfig, GAConfig
 from app.services.auto_strategy.core.evaluation.evaluation_worker import (
     initialize_worker_process,
     worker_evaluate_individual,

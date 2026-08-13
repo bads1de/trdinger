@@ -4,8 +4,7 @@ multi-fidelity 評価ヘルパーのユニットテスト
 
 from datetime import datetime
 
-from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+from app.services.auto_strategy.config.ga_config import EvaluationConfig, GAConfig
 from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
     adjust_backtest_config_for_fidelity,
     build_coarse_ga_config,

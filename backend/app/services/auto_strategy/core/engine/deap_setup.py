@@ -12,7 +12,7 @@ from typing import Any, cast
 from deap import base, creator, tools
 
 from app.services.auto_strategy.config import objective_registry
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.genes import StrategyGene
 
 logger = logging.getLogger(__name__)

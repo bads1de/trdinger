@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+from app.services.auto_strategy.config.ga_config import EvaluationConfig
 from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
 )

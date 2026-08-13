@@ -156,12 +156,22 @@ class AutoStrategyService:
                 # 通常は from_dict で変換済みだが、防御的に正規化する
                 evaluation_plan = EvaluationPlan.from_dict(evaluation_plan)
                 object.__setattr__(ga_config, "evaluation_plan", evaluation_plan)
-            if evaluation_plan is None:
-                evaluation_plan = EvaluationPlan.from_legacy_config(ga_config)
-                object.__setattr__(ga_config, "evaluation_plan", evaluation_plan)
-            # 評価計画のrobustness設定（enabled / シナリオ）を運用設定へ反映する
-            # これにより計画駆動でも robustness gate が正しく有効化される
-            evaluation_plan.apply_to_ga_config(ga_config)
+            if evaluation_plan is not None:
+                # 評価計画のrobustness設定（enabled / シナリオ）を運用設定へ反映する
+                # これにより計画駆動でも robustness gate が正しく有効化される
+                evaluation_plan.apply_to_ga_config(ga_config)
+            else:
+                # レガシー互換: シナリオ定義がある場合は暗黙にゲートを有効化する
+                robustness_config = ga_config.robustness_config
+                if robustness_config is not None and not robustness_config.enabled:
+                    has_scenarios = bool(
+                        robustness_config.validation_symbols
+                        or robustness_config.regime_windows
+                        or robustness_config.stress_slippage
+                        or robustness_config.stress_commission_multipliers
+                    )
+                    if has_scenarios:
+                        robustness_config.enabled = True
             from ..config import ConfigValidator
 
             is_valid, errors = ConfigValidator.validate(ga_config)

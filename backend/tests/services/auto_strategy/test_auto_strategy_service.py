@@ -300,8 +300,7 @@ def test_prepare_ga_config_syncs_robustness_from_legacy_scenarios(
 
     ga_config = auto_strategy_service._prepare_ga_config(ga_config_dict)
 
-    assert ga_config.evaluation_plan is not None
-    assert ga_config.evaluation_plan.robustness.enabled is True
+    assert ga_config.evaluation_plan is None
     assert ga_config.robustness_config.enabled is True
     assert ga_config.robustness_config.validation_symbols == ["ETH/USDT:USDT"]
     assert ga_config.robustness_config.stress_slippage == [0.0002]

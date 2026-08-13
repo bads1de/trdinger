@@ -2,7 +2,6 @@
 実行中 GA エンジンのレジストリ。
 """
 
-
 from app.utils.registry import Registry
 
 from ..core.engine.ga_engine import GeneticAlgorithmEngine

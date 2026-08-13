@@ -24,7 +24,7 @@ from .tool import ToolGene
 from .tpsl import TPSLGene
 
 if TYPE_CHECKING:
-    from ..config.ga.ga_config import GAConfig
+    from ..config.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
 

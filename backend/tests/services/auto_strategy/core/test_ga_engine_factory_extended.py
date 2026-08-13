@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from unittest.mock import Mock, patch
 
-from app.services.auto_strategy.config.ga.ga_config import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
 from app.services.auto_strategy.core.engine.ga_engine_factory import (
     GeneticAlgorithmEngineFactory,

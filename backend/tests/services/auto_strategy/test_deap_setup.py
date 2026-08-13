@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 from deap import base
 
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.engine.deap_setup import DEAPSetup
 from app.services.auto_strategy.genes import StrategyGene
 

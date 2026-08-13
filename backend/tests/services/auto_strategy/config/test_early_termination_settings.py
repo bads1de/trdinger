@@ -1,8 +1,8 @@
 from app.services.auto_strategy.config import ConfigValidator
-from app.services.auto_strategy.config.ga import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import (
+from app.services.auto_strategy.config.ga_config import (
     EarlyTerminationSettings,
     EvaluationConfig,
+    GAConfig,
 )
 
 

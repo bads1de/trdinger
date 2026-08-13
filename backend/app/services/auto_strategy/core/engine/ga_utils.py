@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
 
 if TYPE_CHECKING:
-    from app.services.auto_strategy.config.ga.ga_config import GAConfig
+    from app.services.auto_strategy.config.ga_config import GAConfig
     from app.services.auto_strategy.genes.strategy import StrategyGene
 
 logger = logging.getLogger(__name__)

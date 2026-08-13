@@ -16,7 +16,7 @@ from typing import Any, cast
 import numpy as np
 from deap import tools
 
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
     RandomGeneGenerator,
 )

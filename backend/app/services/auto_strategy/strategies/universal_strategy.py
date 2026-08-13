@@ -12,7 +12,7 @@ from typing import Any, cast
 import pandas as pd
 from backtesting import Strategy
 
-from ..config.ga.nested_configs import EarlyTerminationSettings
+from ..config.ga_config import EarlyTerminationSettings
 from ..core.evaluation.condition_evaluator import ConditionEvaluator
 from ..genes import ExitGene, IndicatorGene, TPSLGene
 from ..genes.conditions import StateTracker

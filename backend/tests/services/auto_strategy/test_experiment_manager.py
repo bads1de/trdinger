@@ -5,7 +5,7 @@ ExperimentManagerのテスト
 from unittest.mock import MagicMock, Mock, patch
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import (
+from app.services.auto_strategy.config.ga_config import (
     IterativeImprovementConfig,
     ValidationConfig,
 )

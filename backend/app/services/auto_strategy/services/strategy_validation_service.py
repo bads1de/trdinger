@@ -14,9 +14,9 @@ from collections.abc import Mapping
 from typing import Any
 
 from ..config import objective_registry
-from ..config.ga import GAConfig
-from ..config.ga.nested_configs import (
+from ..config.ga_config import (
     EarlyTerminationSettings,
+    GAConfig,
     RobustnessConfig,
     ValidationConfig,
 )

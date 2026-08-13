@@ -3,7 +3,7 @@ import copy
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import (
+from app.services.auto_strategy.config.ga_config import (
     EarlyTerminationSettings,
     EvaluationConfig,
 )
@@ -75,7 +75,7 @@ class TestGAConfig:
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
         """二段階選抜/robustness 設定がシリアライズされることを確認"""
-        from app.services.auto_strategy.config.ga.nested_configs import (
+        from app.services.auto_strategy.config.ga_config import (
             RobustnessConfig,
             TwoStageSelectionConfig,
         )
@@ -109,7 +109,7 @@ class TestGAConfig:
 
     def test_multi_fidelity_and_early_termination_serialize_deserialize(self):
         """高速化設定がシリアライズされることを確認"""
-        from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+        from app.services.auto_strategy.config.ga_config import EvaluationConfig
 
         original = GAConfig(
             evaluation_config=EvaluationConfig(
@@ -194,7 +194,6 @@ class TestGAConfig:
         restored = GAConfig.from_dict(
             {
                 "mutation_config": {
-                    "rate": 0.25,
                     "indicator_param_range": [0.7, 1.4],
                     "risk_param_range": [0.8, 1.2],
                     "indicator_add_delete_probability": 0.45,
@@ -228,7 +227,6 @@ class TestGAConfig:
             }
         )
 
-        assert restored.mutation_config.rate == 0.25
         assert restored.mutation_config.indicator_param_range == [0.7, 1.4]
         assert restored.mutation_config.risk_param_range == [0.8, 1.2]
         assert restored.mutation_config.indicator_add_delete_probability == 0.45
@@ -423,7 +421,7 @@ class TestGAConfig:
 
     def test_mutation_settings_custom_values(self):
         """突然変異関連のカスタム設定が正しく適用されることを確認"""
-        from app.services.auto_strategy.config.ga.nested_configs import MutationConfig
+        from app.services.auto_strategy.config.ga_config import MutationConfig
 
         custom_range = [0.9, 1.1]
         custom_prob = 0.4
@@ -460,41 +458,24 @@ class TestGAConfig:
         assert config.mutation_config.adaptive_increase_multiplier == 1.5
         assert config.mutation_config.valid_condition_operators == ["==", "!="]
 
-    def test_mutation_rate_assignment_syncs_nested_config(self):
-        """mutation_rate を後から更新しても nested config と一致することを確認"""
+    def test_mutation_rate_is_top_level_only(self):
+        """mutation_rate は GAConfig 単独の設定であり nested config と同期しない"""
         config = GAConfig()
 
         config.mutation_rate = 0.2
 
         assert config.mutation_rate == 0.2
-        assert config.mutation_config.rate == 0.2
+        assert not hasattr(config.mutation_config, "rate")
 
         restored = GAConfig.from_dict(config.to_dict())
         assert restored.mutation_rate == 0.2
-        assert restored.mutation_config.rate == 0.2
 
-    def test_nested_mutation_rate_assignment_syncs_top_level(self):
-        """mutation_config.rate を直接更新しても top-level と一致することを確認"""
-        config = GAConfig()
-
-        config.mutation_config.rate = 0.25
-
-        assert config.mutation_rate == 0.25
-        assert config.mutation_config.rate == 0.25
-
-        restored = GAConfig.from_dict(config.to_dict())
-        assert restored.mutation_rate == 0.25
-        assert restored.mutation_config.rate == 0.25
-
-    def test_deepcopy_preserves_mutation_rate_sync(self):
-        """deepcopy 後も mutation_rate と nested config が同期されることを確認"""
-        config = GAConfig()
+    def test_deepcopy_preserves_mutation_rate(self):
+        """deepcopy 後も mutation_rate が保持されることを確認"""
+        config = GAConfig(mutation_rate=0.25)
         copied = copy.deepcopy(config)
 
-        copied.mutation_config.rate = 0.33
-
-        assert copied.mutation_rate == 0.33
-        assert copied.mutation_config.rate == 0.33
+        assert copied.mutation_rate == 0.25
 
     def test_parameter_range_defaults_are_isolated(self):
         """parameter_ranges のネスト値がインスタンス間で共有されないことを確認"""

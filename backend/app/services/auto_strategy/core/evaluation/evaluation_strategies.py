@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pandas as pd
 
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.config.helpers import (
     normalize_robustness_regime_windows,
 )

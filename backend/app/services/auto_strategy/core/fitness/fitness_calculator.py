@@ -15,10 +15,10 @@ from typing import Any, cast
 import numpy as np
 
 from app.services.auto_strategy.config import objective_registry
-from app.services.auto_strategy.config.constants.ga_constants import (
+from app.services.auto_strategy.config.constants import (
     DEFAULT_FITNESS_WEIGHTS,
 )
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.types import SerializableValue
 
 from ..evaluation.evaluation_metrics import (

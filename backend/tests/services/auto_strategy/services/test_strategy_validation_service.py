@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import (
+from app.services.auto_strategy.config.ga_config import (
     EvaluationConfig,
     ValidationConfig,
 )

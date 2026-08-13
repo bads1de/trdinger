@@ -15,7 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.services.auto_strategy.config.constants import TPSLMethod
-from app.services.auto_strategy.config.ga import GAConfig
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.evaluation.condition_evaluator import (
     ConditionEvaluator,
 )

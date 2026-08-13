@@ -29,8 +29,7 @@ warnings.filterwarnings("ignore")
 
 def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> dict[str, Any]:
     """単一のGA実行"""
-    from app.services.auto_strategy.config.ga import GAConfig
-    from app.services.auto_strategy.config.ga.nested_configs import EvaluationConfig
+    from app.services.auto_strategy.config.ga_config import EvaluationConfig, GAConfig
     from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
     from app.services.auto_strategy.generators.random_gene_generator import (
         RandomGeneGenerator,

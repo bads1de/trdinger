@@ -13,7 +13,7 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
-from ...config.ga.ga_config import GAConfig
+from ...config.ga_config import GAConfig
 from ..conditions import Condition, ConditionGroup
 from ..entry import EntryGene, create_random_entry_gene
 from ..exit import ExitGene, create_random_exit_gene

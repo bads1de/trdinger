@@ -15,7 +15,7 @@ from database.repositories.generated_strategy_repository import (
     GeneratedStrategyRepository,
 )
 
-from ..config.ga import GAConfig
+from ..config.ga_config import GAConfig
 from ..genes.strategy import StrategyGene
 from ..serializers.serialization import GeneSerializer
 

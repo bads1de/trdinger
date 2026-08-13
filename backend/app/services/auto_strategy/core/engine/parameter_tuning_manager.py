@@ -8,7 +8,7 @@ import logging
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
-    from ...config.ga.ga_config import GAConfig
+    from ...config.ga_config import GAConfig
 
 from ..evaluation.evaluation_fidelity import is_multi_fidelity_enabled
 from .report_selection import is_evaluation_report

@@ -9,7 +9,7 @@ import pytest
 from fastapi import BackgroundTasks
 
 from app.services.auto_strategy.config import GAConfig
-from app.services.auto_strategy.config.ga.nested_configs import (
+from app.services.auto_strategy.config.ga_config import (
     EvaluationConfig,
     ValidationConfig,
 )

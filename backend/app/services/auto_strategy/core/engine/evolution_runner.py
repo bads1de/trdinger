@@ -13,7 +13,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Optional, cast
 
 if TYPE_CHECKING:
-    from ...config.ga.ga_config import GAConfig
+    from ...config.ga_config import GAConfig
     from ..evaluation.evaluation_report import EvaluationReport
 
 import numpy as np

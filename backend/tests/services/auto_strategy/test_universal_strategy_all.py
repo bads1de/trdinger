@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.config.constants import PositionSizingMethod
-from app.services.auto_strategy.config.ga.nested_configs import EarlyTerminationSettings
+from app.services.auto_strategy.config.ga_config import EarlyTerminationSettings
 from app.services.auto_strategy.genes import (
     IndicatorGene,
     PositionSizingGene,
