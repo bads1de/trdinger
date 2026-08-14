@@ -5,7 +5,7 @@ GAエンジンの構築とコンポーネントの初期化を担当します。
 """
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.generators.random_gene_generator import (
@@ -17,6 +17,22 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .ga_engine import GeneticAlgorithmEngine
+
+
+class _BuiltinSeedProvider:
+    """SeedStrategyFactory をエンジンが要求するインターフェースに適合させる。
+
+    エンジン（core）から generators（上位層）への直接 import を避けるため、
+    ファクトリ側で生成して注入する。
+    """
+
+    @staticmethod
+    def get_seed_strategies() -> list[Any]:
+        from app.services.auto_strategy.generators.seed_strategy_factory import (
+            SeedStrategyFactory,
+        )
+
+        return list(SeedStrategyFactory.get_all_seeds())
 
 
 class GeneticAlgorithmEngineFactory:
@@ -63,6 +79,7 @@ class GeneticAlgorithmEngineFactory:
             backtest_service=backtest_service,
             gene_generator=gene_generator,
             seed_strategy_provider=seed_strategy_provider,
+            builtin_seed_provider=_BuiltinSeedProvider(),
         )
 
         logger.debug("GAエンジンを初期化しました (Mode: Standard)")

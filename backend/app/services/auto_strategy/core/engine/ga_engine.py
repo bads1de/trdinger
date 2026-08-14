@@ -17,9 +17,6 @@ import numpy as np
 from deap import tools
 
 from app.services.auto_strategy.config.ga_config import GAConfig
-from app.services.auto_strategy.generators.random_gene_generator import (
-    RandomGeneGenerator,
-)
 from app.services.auto_strategy.genes.genetic_utils import GeneticUtils
 from app.services.backtest.services.backtest_service import BacktestService
 
@@ -62,20 +59,25 @@ class GeneticAlgorithmEngine:
     def __init__(
         self,
         backtest_service: BacktestService,
-        gene_generator: RandomGeneGenerator,
+        gene_generator: Any,
         seed_strategy_provider: Any | None = None,
+        builtin_seed_provider: Any | None = None,
     ):
         """初期化します。
 
         Args:
             backtest_service (BacktestService): バックテストサービス。
-            gene_generator (RandomGeneGenerator): 遺伝子生成器。
+            gene_generator: 遺伝子生成器。
             seed_strategy_provider (Optional[Any]): 反復改善ループ用の
                 シード戦略プロバイダ（get_seed_strategies(config) を実装）。
+            builtin_seed_provider (Optional[Any]): 組み込みシード戦略プロバイダ
+                （get_seed_strategies() を実装）。省略時は SeedStrategyFactory を
+                使用する従来動作。
         """
         self.backtest_service = backtest_service
         self.gene_generator = gene_generator
         self.seed_strategy_provider = seed_strategy_provider
+        self._builtin_seed_provider = builtin_seed_provider
 
         # 実行状態
         self._stop_event = threading.Event()
@@ -364,12 +366,18 @@ class GeneticAlgorithmEngine:
         logger.info("GA乱数シードを設定しました: %d", seed_int)
 
     def _get_builtin_seed_strategies(self, config: GAConfig) -> list[Any]:
-        """組み込みシード戦略（SeedStrategyFactory）をシャッフルして返す。"""
-        from app.services.auto_strategy.generators.seed_strategy_factory import (  # noqa: E501
-            SeedStrategyFactory,
-        )
+        """組み込みシード戦略をシャッフルして返す。"""
+        if self._builtin_seed_provider is not None:
+            seeds = list(self._builtin_seed_provider.get_seed_strategies())
+        else:
+            # レイヤリング逆転を避けるため、generators への依存は factory 経由の
+            # 注入が推奨。省略時は従来動作（遅延 import）を維持する。
+            from app.services.auto_strategy.generators.seed_strategy_factory import (  # noqa: E501
+                SeedStrategyFactory,
+            )
 
-        seeds = list(SeedStrategyFactory.get_all_seeds())
+            seeds = list(SeedStrategyFactory.get_all_seeds())
+
         if len(seeds) <= 1:
             return seeds
 
