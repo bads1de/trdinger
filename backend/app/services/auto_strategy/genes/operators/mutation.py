@@ -13,6 +13,8 @@ import uuid
 from collections.abc import Callable
 from typing import Any
 
+import numpy as np
+
 from ...config.ga_config import GAConfig
 from ..conditions import Condition, ConditionGroup
 from ..entry import EntryGene, create_random_entry_gene
@@ -30,50 +32,21 @@ logger = logging.getLogger(__name__)
 _SUB_GENE_MUTATION_RULES = {
     TPSLGene: (
         create_random_tpsl_gene,
-        "tpsl_gene_creation_probability_multiplier",
+        "tpsl_gene_creation_multiplier",
     ),
     PositionSizingGene: (
         create_random_position_sizing_gene,
-        "position_sizing_gene_creation_probability_multiplier",
+        "position_sizing_gene_creation_multiplier",
     ),
     EntryGene: (
         create_random_entry_gene,
-        "entry_gene_creation_probability_multiplier",
+        "entry_gene_creation_multiplier",
     ),
     ExitGene: (
         create_random_exit_gene,
-        "exit_gene_creation_probability_multiplier",
+        "exit_gene_creation_multiplier",
     ),
 }
-
-_MUTATION_CONFIG_CREATION_ATTR_MAP = {
-    "tpsl_gene_creation_probability_multiplier": "tpsl_gene_creation_multiplier",
-    "position_sizing_gene_creation_probability_multiplier": (
-        "position_sizing_gene_creation_multiplier"
-    ),
-    "entry_gene_creation_probability_multiplier": "entry_gene_creation_multiplier",
-    "exit_gene_creation_probability_multiplier": "exit_gene_creation_multiplier",
-}
-
-
-def _get_creation_probability_multiplier(config: GAConfig, attr_name: str) -> float:
-    """突然変異で使用する生成確率倍率を安全に取得する。"""
-    nested_attr_name = _MUTATION_CONFIG_CREATION_ATTR_MAP.get(attr_name)
-    mutation_config = getattr(config, "mutation_config", None)
-
-    try:
-        return float(getattr(config, attr_name) or 0.0)
-    except (AttributeError, TypeError, ValueError):
-        pass
-
-    if nested_attr_name is not None and mutation_config is not None:
-        try:
-            value = getattr(mutation_config, nested_attr_name)
-            return float(value or 0.0)
-        except (AttributeError, TypeError, ValueError):
-            pass
-
-    return 0.0
 
 
 def _create_sub_gene(creator_func: Callable[..., object], config: object) -> object:
@@ -103,13 +76,14 @@ def _iter_mutable_sub_gene_specs(
             continue
 
         creator_func, creation_prob_attr = rule
-        specs.append(
-            (
-                field_name,
-                creator_func,
-                _get_creation_probability_multiplier(config, creation_prob_attr),
+        try:
+            creation_prob_mult = float(
+                getattr(config.mutation_config, creation_prob_attr) or 0.0
             )
-        )
+        except (AttributeError, TypeError, ValueError):
+            creation_prob_mult = 0.0
+
+        specs.append((field_name, creator_func, creation_prob_mult))
 
     return specs
 
@@ -378,12 +352,14 @@ def adaptive_mutate_strategy_gene(
             except AttributeError:
                 pass
 
-        if not fitnesses:
+        # ±inf（制約違反ペナルティ）の fitness は分散計算の対象外とする。
+        # そのまま np.var に渡すと RuntimeWarning（invalid value encountered
+        # in subtract）を引き起こすため除外する。
+        finite_fitnesses = [f for f in fitnesses if np.isfinite(f)]
+        if not finite_fitnesses:
             adaptive_rate = base_mutation_rate
         else:
-            import numpy as np
-
-            variance = np.var(fitnesses)
+            variance = float(np.var(finite_fitnesses))
             variance_threshold = config.mutation_config.adaptive_variance_threshold
 
             if variance > variance_threshold:
