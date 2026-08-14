@@ -31,15 +31,15 @@ from app.services.backtest.execution.backtest_executor import (
 from app.services.backtest.services.backtest_service import BacktestService
 from app.types import SerializableValue
 
+from ..fitness.evaluation_metrics import (
+    calculate_trade_frequency_penalty,
+    calculate_ulcer_index,
+)
 from ..fitness.fitness_calculator import FitnessCalculator
 from .backtest_data_provider import BacktestDataProvider
 from .evaluation_fidelity import (
     adjust_backtest_config_for_fidelity,
     is_coarse_fidelity,
-)
-from .evaluation_metrics import (
-    calculate_trade_frequency_penalty,
-    calculate_ulcer_index,
 )
 from .evaluation_report import (
     EvaluationReport,
@@ -53,7 +53,7 @@ from .run_config_builder import RunConfigBuilder
 logger = logging.getLogger(__name__)
 
 
-class IndividualEvaluator(EvaluationWindowService):
+class IndividualEvaluator:
     """
     遺伝的アルゴリズムの個体評価を管理するエンジン
 
@@ -106,6 +106,8 @@ class IndividualEvaluator(EvaluationWindowService):
         """委譲先コンポーネントを初期化する。"""
         # 最適化されたフィットネス計算を使用
         self._fitness_calculator = FitnessCalculator()
+        # 評価窓の warmup / トリミング処理（継承から委譲へ）
+        self._window_service = EvaluationWindowService()
         self._evaluation_strategy = EvaluationStrategy(self)
         self._run_config_builder = RunConfigBuilder()
         self._gene_serializer = GeneSerializer()
@@ -113,6 +115,50 @@ class IndividualEvaluator(EvaluationWindowService):
             backtest_service=self.backtest_service,
             data_cache=self._data_cache,
             lock=self._lock,
+        )
+
+    # --- EvaluationWindowService への委譲（継承からコンポジションへ） ---
+    # 評価窓の warmup / トリミング処理は専用サービスが担当する。
+    def prepare_backtest_config_for_evaluation(
+        self, gene: Any, backtest_config: dict[str, Any]
+    ) -> dict[str, Any]:
+        """指標 warmup 用の実行設定へ変換する（EvaluationWindowService に委譲）。"""
+        return self._window_service.prepare_backtest_config_for_evaluation(
+            gene, backtest_config
+        )
+
+    def apply_evaluation_window_to_result(
+        self,
+        backtest_result: dict[str, Any],
+        raw_stats: object,
+        market_data: pd.DataFrame,
+        evaluation_start: object,
+        evaluation_end: object,
+    ) -> dict[str, Any]:
+        """warmup を除外した評価窓で結果を再計算する（EvaluationWindowService に委譲）。"""
+        return self._window_service.apply_evaluation_window_to_result(
+            backtest_result,
+            raw_stats,
+            market_data,
+            evaluation_start,
+            evaluation_end,
+        )
+
+    def slice_equity_curve_for_window(
+        self,
+        raw_equity_curve: pd.DataFrame,
+        target_index: pd.Index,
+        start_pos: int,
+        end_pos: int,
+        initial_capital: float,
+    ) -> pd.DataFrame:
+        """評価窓のエクイティカーブを切り出す（EvaluationWindowService に委譲）。"""
+        return self._window_service.slice_equity_curve_for_window(
+            raw_equity_curve,
+            target_index,
+            start_pos,
+            end_pos,
+            initial_capital,
         )
 
     def _build_cache_key(self, gene: Any) -> str:
@@ -497,16 +543,6 @@ class IndividualEvaluator(EvaluationWindowService):
         """
         return self._data_provider.get_cached_minute_data(backtest_config)
 
-    def _perform_single_evaluation(
-        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
-    ) -> tuple[float, ...]:
-        """単一期間評価を実行し、適応度タプルのみ返す。"""
-        return self._perform_single_evaluation_report(
-            gene,
-            backtest_config,
-            config,
-        ).fitness
-
     def _perform_single_evaluation_report(
         self,
         gene: Any,
@@ -532,7 +568,7 @@ class IndividualEvaluator(EvaluationWindowService):
                 backtest_config,
                 config,
             )
-            prepared_backtest_config = self._prepare_backtest_config_for_evaluation(
+            prepared_backtest_config = self.prepare_backtest_config_for_evaluation(
                 gene, fidelity_backtest_config
             )
 
@@ -575,7 +611,7 @@ class IndividualEvaluator(EvaluationWindowService):
                 and isinstance(result, dict)
                 and isinstance(data, pd.DataFrame)
             ):
-                result = self._apply_evaluation_window_to_result(
+                result = self.apply_evaluation_window_to_result(
                     result,
                     result.get("_raw_stats"),
                     data,
@@ -583,17 +619,8 @@ class IndividualEvaluator(EvaluationWindowService):
                     backtest_config.get("end_date"),
                 )
 
-            # 4. 追加のコンテキスト情報を取得
-            evaluation_context = self._get_evaluation_context(
-                gene,
-                fidelity_backtest_config,
-                config,
-            )
-
-            # 5. フィットネス計算（フィットネス計算機に委譲）
-            fitness = self._calculate_multi_objective_fitness(
-                result, config, **evaluation_context
-            )
+            # 4. フィットネス計算（フィットネス計算機に委譲）
+            fitness = self._calculate_multi_objective_fitness(result, config)
             performance_metrics = self._extract_performance_metrics(result)
             scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata.update(
@@ -671,13 +698,7 @@ class IndividualEvaluator(EvaluationWindowService):
             minute_data=minute_data,
         )
 
-    def _get_evaluation_context(
-        self, gene: Any, backtest_config: dict[str, Any], config: GAConfig
-    ) -> dict[str, Any]:
-        """評価計算に必要な追加コンテキストを取得（サブクラスでオーバーライド）"""
-        return {}
-
-    # --- FitnessCalculator への委譲メソッド（バックワード互換性・サブクラス用） ---
+    # --- FitnessCalculator への委譲メソッド ---
 
     def _extract_performance_metrics(
         self, backtest_result: dict[str, Any]

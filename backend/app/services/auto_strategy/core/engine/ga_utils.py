@@ -20,12 +20,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def crossover_strategy_genes(
+def deap_crossover_strategy_genes(
     parent1: StrategyGene, parent2: StrategyGene, config: GAConfig
 ) -> tuple[StrategyGene, StrategyGene]:
-    """戦略遺伝子の交叉を実行する。
+    """DEAP用の戦略遺伝子交叉アダプタ。
 
     親個体のクラスメソッド ``crossover`` を呼び出して子個体を生成します。
+    実装本体は ``genes.operators.crossover.crossover_strategy_genes`` にあり、
+    ここでは DEAP の ``mate(ind1, ind2)`` 呼び出しを
+    ``StrategyGene.crossover`` のシグネチャへ適合させる薄いラッパーのみ担います。
 
     Args:
         parent1: 親個体1

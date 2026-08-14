@@ -27,8 +27,3 @@ def get_all_indicators(include_composite: bool = True) -> list[str]:
         return all_types
     else:
         return [t for t in all_types if t not in COMPOSITE_INDICATORS]
-
-
-def get_valid_indicator_types() -> list[str]:
-    """有効な指標タイプを取得"""
-    return get_all_indicators(include_composite=True)

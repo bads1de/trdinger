@@ -58,7 +58,7 @@ def mock_config():
     config.objectives = ["total_return"]
     config.crossover_rate = 0.8
     config.mutation_rate = 0.1
-    config.fitness_sharing = {"enable_fitness_sharing": False}
+    config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=False)
     config.dynamic_objective_reweighting = False
     return config
 

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from .engine.evolution_runner import EvolutionRunner
     from .engine.ga_engine import GeneticAlgorithmEngine
     from .engine.ga_engine_factory import GeneticAlgorithmEngineFactory
-    from .engine.ga_utils import crossover_strategy_genes
+    from .engine.ga_utils import deap_crossover_strategy_genes
     from .evaluation.condition_evaluator import ConditionEvaluator
     from .evaluation.evaluation_strategies import EvaluationStrategy
     from .evaluation.individual_evaluator import IndividualEvaluator
@@ -24,7 +24,7 @@ _ATTRIBUTE_EXPORTS = {
     "EvolutionRunner": ".engine.evolution_runner",
     "GeneticAlgorithmEngine": ".engine.ga_engine",
     "GeneticAlgorithmEngineFactory": ".engine.ga_engine_factory",
-    "crossover_strategy_genes": ".engine.ga_utils",
+    "deap_crossover_strategy_genes": ".engine.ga_utils",
     "ConditionEvaluator": ".evaluation.condition_evaluator",
     "EvaluationStrategy": ".evaluation.evaluation_strategies",
     "IndividualEvaluator": ".evaluation.individual_evaluator",
@@ -39,7 +39,7 @@ __all__ = [
     "EvolutionRunner",
     "GeneticAlgorithmEngine",
     "GeneticAlgorithmEngineFactory",
-    "crossover_strategy_genes",
+    "deap_crossover_strategy_genes",
     # Evaluation
     "ConditionEvaluator",
     "EvaluationStrategy",

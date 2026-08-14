@@ -17,7 +17,7 @@ from app.services.auto_strategy.core.engine.ga_utils import (
     _invalidate_individual_cache,
     _set_fitness_values,
     create_deap_mutate_wrapper,
-    crossover_strategy_genes,
+    deap_crossover_strategy_genes,
 )
 from app.services.auto_strategy.genes import StrategyGene
 
@@ -40,8 +40,8 @@ def _make_gene_with_methods() -> MagicMock:
     return gene
 
 
-class TestCrossoverStrategyGenes:
-    """``crossover_strategy_genes`` の挙動テスト"""
+class TestDeapCrossoverStrategyGenes:
+    """``deap_crossover_strategy_genes`` の挙動テスト"""
 
     def test_delegates_to_type_crossover_classmethod(self) -> None:
         # 実際のクラスを使い、crossover を patch
@@ -52,7 +52,7 @@ class TestCrossoverStrategyGenes:
         with patch.object(
             _CrossableGene, "crossover", return_value=(parent1, parent2)
         ) as mock_co:
-            result = crossover_strategy_genes(parent1, parent2, config)
+            result = deap_crossover_strategy_genes(parent1, parent2, config)
 
         assert result == (parent1, parent2)
         mock_co.assert_called_once_with(parent1, parent2, config)
@@ -65,7 +65,7 @@ class TestCrossoverStrategyGenes:
         with patch.object(
             _CrossableGene, "crossover", return_value=(parent1, parent2)
         ) as mock_co:
-            crossover_strategy_genes(parent1, parent2, config)
+            deap_crossover_strategy_genes(parent1, parent2, config)
             args, _ = mock_co.call_args
             assert args[2] is config
 
@@ -78,7 +78,7 @@ class TestCrossoverStrategyGenes:
         with patch.object(
             _CrossableGene, "crossover", return_value=(parent1, parent2)
         ) as mock_co:
-            crossover_strategy_genes(parent1, parent2, config)
+            deap_crossover_strategy_genes(parent1, parent2, config)
             # クラスメソッドとして呼ばれている
             assert mock_co.called
 

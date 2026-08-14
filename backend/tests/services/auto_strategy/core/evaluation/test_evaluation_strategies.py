@@ -173,38 +173,6 @@ class TestEvaluationStrategy:
         assert first.metadata["holdout_reserved"] is True
         assert self.evaluator._perform_single_evaluation_report.call_count == 2
 
-    def test_execute_report_falls_back_to_legacy_single_evaluation_method(self):
-        evaluator = Mock()
-        evaluator._perform_single_evaluation = Mock(return_value=(0.33,))
-        strategy = EvaluationStrategy(evaluator)
-        gene = object()
-
-        config = SimpleNamespace(
-            enable_purged_kfold=False,
-            evaluation_config=SimpleNamespace(
-                enable_walk_forward=False,
-                oos_split_ratio=0.0,
-            ),
-            objectives=["weighted_score"],
-            fitness_constraints={},
-        )
-
-        backtest_config = {
-            "start_date": "2024-01-01 00:00:00",
-            "end_date": "2024-01-11 00:00:00",
-        }
-
-        report = strategy.execute_report(gene, backtest_config, config)
-
-        assert report.mode == "single"
-        assert report.aggregated_fitness == (0.33,)
-        evaluator._perform_single_evaluation.assert_called_once_with(
-            gene,
-            backtest_config,
-            config,
-        )
-        assert [scenario.name for scenario in report.scenarios] == ["single"]
-
     def test_resolve_backtest_date_range_rejects_missing_or_invalid_ranges(self):
         assert self.strategy._resolve_backtest_date_range({}) is None
         assert (

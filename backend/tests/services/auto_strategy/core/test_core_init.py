@@ -50,15 +50,15 @@ class TestAutoStrategyCoreInitExports:
 
         assert factory is GeneticAlgorithmEngineFactory
 
-    def test_crossover_strategy_genes_lazy_load(self):
-        """crossover_strategy_genesが遅延ロードされる"""
+    def test_deap_crossover_strategy_genes_lazy_load(self):
+        """deap_crossover_strategy_genesが遅延ロードされる"""
         from app.services.auto_strategy.core.engine.ga_utils import (
-            crossover_strategy_genes,
+            deap_crossover_strategy_genes,
         )
 
-        func = core_package.crossover_strategy_genes
+        func = core_package.deap_crossover_strategy_genes
 
-        assert func is crossover_strategy_genes
+        assert func is deap_crossover_strategy_genes
 
     def test_condition_evaluator_lazy_load(self):
         """ConditionEvaluatorが遅延ロードされる"""
@@ -148,7 +148,7 @@ class TestAutoStrategyCoreInitExports:
             "EvolutionRunner",
             "GeneticAlgorithmEngine",
             "GeneticAlgorithmEngineFactory",
-            "crossover_strategy_genes",
+            "deap_crossover_strategy_genes",
             # Evaluation
             "ConditionEvaluator",
             "EvaluationStrategy",

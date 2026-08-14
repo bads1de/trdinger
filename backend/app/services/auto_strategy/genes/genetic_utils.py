@@ -2,6 +2,11 @@
 遺伝的アルゴリズム関連ユーティリティ
 
 遺伝子操作（交叉・変異）のための汎用機能を提供します。
+
+このモジュールは「遺伝子種別に依存しない」汎用ヘルパー層です。
+StrategyGene 全体の演算は ``genes/operators/`` にあり、
+サブ遺伝子単位の演算は各 Gene クラスが実装します（責務レイヤー詳細は
+``genes/operators/__init__.py`` の docstring を参照）。
 """
 
 from __future__ import annotations

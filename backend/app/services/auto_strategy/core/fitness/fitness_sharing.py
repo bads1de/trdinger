@@ -14,9 +14,7 @@ import numpy as np
 from app.services.auto_strategy.config.constants import OPERATORS
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
-from app.services.auto_strategy.utils.indicators import (
-    get_valid_indicator_types,
-)
+from app.services.auto_strategy.utils.indicators import get_all_indicators
 from app.types import SerializablePrimitive
 
 from .fitness_sharing_niche import (
@@ -35,7 +33,7 @@ from .fitness_sharing_silhouette import (
 )
 from .fitness_sharing_vectorizer import build_behavior_profile
 from .fitness_sharing_vectorizer import vectorize_gene as _vectorize_gene
-from .fitness_utils import has_valid_fitness
+from .fitness_validation import has_valid_fitness
 
 _FrozenKey = tuple | bytes | SerializablePrimitive
 
@@ -108,7 +106,7 @@ class FitnessSharing:
 
         # 指標タイプマップの初期化（ベクトル化用）
         try:
-            self.indicator_types = get_valid_indicator_types()
+            self.indicator_types = get_all_indicators()
             self.indicator_types.sort()
             self.indicator_map = {
                 name: i for i, name in enumerate(self.indicator_types)

@@ -4,6 +4,7 @@
 EvolutionRunnerの多目的最適化機能をテストする。
 """
 
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
@@ -17,8 +18,6 @@ class TestEvolutionRunnerMultiObjective:
     @pytest.fixture
     def mock_toolbox(self):
         """Mock DEAPツールボックス"""
-        from types import SimpleNamespace
-
         toolbox = Mock()
 
         # カスタムFitnessクラスを定義（delattrが動作するように）
@@ -86,7 +85,7 @@ class TestEvolutionRunnerMultiObjective:
         config.generations = 2
         config.crossover_rate = 0.8
         config.mutation_rate = 0.2
-        config.fitness_sharing = {"enable_fitness_sharing": False}
+        config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=False)
         config.dynamic_objective_reweighting = False
         config.objectives = ["sharpe_ratio", "total_return", "max_drawdown"]
         return config
@@ -139,7 +138,7 @@ class TestEvolutionRunnerMultiObjective:
         self, mock_toolbox, mock_stats, mock_config, mock_population
     ):
         """適応度共有ありの多目的最適化テスト"""
-        mock_config.fitness_sharing = {"enable_fitness_sharing": True}
+        mock_config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
         mock_fitness_sharing = Mock()
         mock_fitness_sharing.apply_fitness_sharing.return_value = mock_population
 

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from .ga_engine_factory import GeneticAlgorithmEngineFactory
     from .ga_utils import (
         create_deap_mutate_wrapper,
-        crossover_strategy_genes,
+        deap_crossover_strategy_genes,
     )
 
 _ATTRIBUTE_EXPORTS = {
@@ -23,7 +23,7 @@ _ATTRIBUTE_EXPORTS = {
     "GeneticAlgorithmEngine": ".ga_engine",
     "GeneticAlgorithmEngineFactory": ".ga_engine_factory",
     "create_deap_mutate_wrapper": ".ga_utils",
-    "crossover_strategy_genes": ".ga_utils",
+    "deap_crossover_strategy_genes": ".ga_utils",
 }
 
 __all__ = [
@@ -33,7 +33,7 @@ __all__ = [
     "GeneticAlgorithmEngine",
     "GeneticAlgorithmEngineFactory",
     "create_deap_mutate_wrapper",
-    "crossover_strategy_genes",
+    "deap_crossover_strategy_genes",
 ]
 
 from app.utils.lazy_import import setup_lazy_import  # noqa: E402

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import pytest
 
-from app.services.auto_strategy.services.mtf_data_provider import (
+from app.services.auto_strategy.strategies.mtf_data_provider import (
     TIMEFRAME_TO_MINUTES,
     MultiTimeframeDataProvider,
 )

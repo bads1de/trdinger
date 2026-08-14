@@ -20,7 +20,6 @@ from ..genes.entry import EntryGene
 from ..positions.entry_executor import EntryExecutor
 from ..positions.lower_tf_simulator import LowerTimeframeSimulator
 from ..positions.position_sizing_service import PositionSizingService
-from ..services.indicator_service import IndicatorCalculator
 from ..tpsl.tpsl_service import TPSLService
 from .early_termination import (
     StrategyEarlyTermination,
@@ -29,6 +28,7 @@ from .early_termination import (
 from .entry_decision_engine import EntryDecisionEngine
 from .execution_cycle import StrategyExecutionCycle
 from .exit_decision_engine import ExitDecisionEngine
+from .indicator_calculator import IndicatorCalculator
 from .order_manager import OrderManager
 from .position_manager import PositionManager
 from .runtime_state import StrategyRuntimeState
@@ -186,7 +186,7 @@ class UniversalStrategy(Strategy):
         # MTFデータプロバイダーの初期化（MTF指標が存在する場合のみ）
         self.mtf_data_provider = None
         if self._has_mtf_indicators():
-            from ..services.mtf_data_provider import MultiTimeframeDataProvider
+            from .mtf_data_provider import MultiTimeframeDataProvider
 
             self.mtf_data_provider = MultiTimeframeDataProvider(
                 base_data=data,

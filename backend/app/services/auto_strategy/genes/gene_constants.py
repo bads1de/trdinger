@@ -4,7 +4,11 @@
 create_random_* 関数で使用する確率、重み、デフォルト値などの定数を定義します。
 """
 
-from ..config.constants import EntryType, ExitType
+from ..config.constants import (
+    DEFAULT_NON_PRICE_INDICATOR_PROBABILITY,
+    EntryType,
+    ExitType,
+)
 
 # ==================== EntryGene ====================
 
@@ -60,8 +64,8 @@ TREND_INDICATOR_SELECTION_PROBABILITY = 0.7
 
 # 非価格指標（OI/FR/LSR由来）を選択する確率
 # トレンド70%バイアスで非価格指標が埋もれるのを防ぎ、公平な自由探索を実現する。
-# 0.0 で無効化（従来挙動）。
-NON_PRICE_INDICATOR_SELECTION_PROBABILITY = 0.3
+# 0.0 で無効化（従来挙動）。値の単一ソースは config.constants にある。
+NON_PRICE_INDICATOR_SELECTION_PROBABILITY = DEFAULT_NON_PRICE_INDICATOR_PROBABILITY
 
 # MAクロス補完の確率
 MA_CROSS_ENHANCEMENT_PROBABILITY = 0.25

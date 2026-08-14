@@ -38,9 +38,7 @@ class TestInit:
 
     def test_default_settings(self) -> None:
         provider = _make_provider()
-        assert provider._cache_hits == 0
-        assert provider._cache_misses == 0
-        assert provider._cache_locks == {}
+        assert isinstance(provider._data_cache, dict)
 
     def test_lock_defaults_to_rlock(self) -> None:
         provider = BacktestDataProvider(Mock(), {}, lock=None)
@@ -219,7 +217,6 @@ class TestGetCachedBacktestData:
             result = provider.get_cached_backtest_data(config)
 
         assert result is df
-        assert provider._cache_hits == 1
 
     def test_handles_import_error_for_parallel_evaluator(self) -> None:
         """ImportError 時は worker data を使わず通常パスへ"""
@@ -242,7 +239,6 @@ class TestGetCachedBacktestData:
             result = provider.get_cached_backtest_data(config)
 
         assert result is df
-        assert provider._cache_misses == 1
 
     def test_tz_localize_conversion(self) -> None:
         """tzinfo なしの日付は UTC に localize される"""
@@ -295,7 +291,6 @@ class TestGetCachedMinuteData:
         )
 
         assert result is df
-        assert provider._cache_hits == 1
 
     def test_returns_none_when_data_empty(self) -> None:
         provider = _make_provider()
@@ -355,6 +350,5 @@ class TestGetCachedMinuteData:
             )
 
         assert result is df
-        assert provider._cache_misses == 1
         # キャッシュに保存されている
         assert len(provider._data_cache) == 1

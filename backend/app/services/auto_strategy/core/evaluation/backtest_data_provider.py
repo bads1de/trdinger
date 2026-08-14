@@ -28,11 +28,6 @@ class BacktestDataProvider:
         self.backtest_service = backtest_service
         self._data_cache = data_cache
         self._lock = lock or threading.RLock()
-        # ロックの粒度を細かくするための個別ロック
-        self._cache_locks: dict[str, threading.Lock] = {}
-        # キャッシュ統計
-        self._cache_hits = 0
-        self._cache_misses = 0
 
     @staticmethod
     def _normalize_cache_key(key: tuple[Any, ...]) -> tuple[Any, ...]:
@@ -136,14 +131,12 @@ class BacktestDataProvider:
             if worker_data is not None:
                 with self._lock:
                     self._data_cache[key] = worker_data
-                    self._cache_hits += 1
                 return worker_data
         except ImportError:
             pass
 
         with self._lock:
             if key in self._data_cache:
-                self._cache_hits += 1
                 return self._data_cache[key]
 
         self.backtest_service.ensure_data_service_initialized()
@@ -165,10 +158,8 @@ class BacktestDataProvider:
         )
         with self._lock:
             if key in self._data_cache:
-                self._cache_hits += 1
                 return self._data_cache[key]
             self._data_cache[key] = data
-            self._cache_misses += 1
         logger.debug(f"バックテストデータをキャッシュしました: {key}")
         return data
 
@@ -190,14 +181,12 @@ class BacktestDataProvider:
             if worker_data is not None:
                 with self._lock:
                     self._data_cache[key] = worker_data
-                    self._cache_hits += 1
                 return worker_data
         except ImportError:
             pass
 
         with self._lock:
             if key in self._data_cache:
-                self._cache_hits += 1
                 return self._data_cache[key]
 
         try:
@@ -211,10 +200,8 @@ class BacktestDataProvider:
             if not data.empty:
                 with self._lock:
                     if key in self._data_cache:
-                        self._cache_hits += 1
                         return self._data_cache[key]
                     self._data_cache[key] = data
-                    self._cache_misses += 1
                 logger.debug(f"1分足データをキャッシュしました: {key}")
                 return data
             logger.debug(f"1分足データが空です: {key}")

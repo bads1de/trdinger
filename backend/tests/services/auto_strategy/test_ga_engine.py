@@ -272,6 +272,8 @@ class TestGeneticAlgorithmEngine:
         mock_gene_generator,
     ):
         """fitness_sharing に sampling_ratio がない場合は既定値を使う"""
+        from types import SimpleNamespace
+
         engine = GeneticAlgorithmEngine(
             backtest_service=mock_backtest_service,
             gene_generator=mock_gene_generator,
@@ -280,12 +282,12 @@ class TestGeneticAlgorithmEngine:
         engine.deap_setup.get_individual_class = Mock(return_value=None)
 
         config = Mock()
-        config.fitness_sharing = {
-            "enable_fitness_sharing": True,
-            "sharing_radius": 0.2,
-            "sharing_alpha": 1.5,
-            "sampling_threshold": 50,
-        }
+        config.fitness_sharing = SimpleNamespace(
+            enable_fitness_sharing=True,
+            sharing_radius=0.2,
+            sharing_alpha=1.5,
+            sampling_threshold=50,
+        )
         mock_fitness_sharing_cls.SAMPLING_RATIO = 0.3
 
         engine.setup_deap(config)
@@ -397,7 +399,7 @@ class TestGeneticAlgorithmEngine:
         mock_config.population_size = 10
         mock_config.generations = 5
         mock_config.evaluation_config.enable_parallel = False
-        mock_config.fitness_sharing["enable_fitness_sharing"] = False
+        mock_config.fitness_sharing.enable_fitness_sharing = False
         mock_config.mutation_rate = 0.1
         mock_config.use_seed_strategies = False
         mock_config.seed_injection_rate = 0.1
@@ -461,7 +463,7 @@ class TestGeneticAlgorithmEngine:
         mock_config.evaluation_config.max_workers = 4
         mock_config.evaluation_config.timeout = 60.0
         mock_config.population_size = 10
-        mock_config.fitness_sharing["enable_fitness_sharing"] = False
+        mock_config.fitness_sharing.enable_fitness_sharing = False
         mock_config.mutation_rate = 0.1
         mock_config.use_seed_strategies = False
         mock_config.seed_injection_rate = 0.1

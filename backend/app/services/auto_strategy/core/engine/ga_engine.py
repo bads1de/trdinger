@@ -37,7 +37,7 @@ from .fitness_utils import (
 )
 from .ga_utils import (
     create_deap_mutate_wrapper,
-    crossover_strategy_genes,
+    deap_crossover_strategy_genes,
 )
 from .parameter_tuning_manager import ParameterTuningManager
 from .report_selection import (
@@ -119,7 +119,7 @@ class GeneticAlgorithmEngine:
             config,
             self._create_strategy_individual,
             self.individual_evaluator.evaluate,  # type: ignore[arg-type]  # 評価関数は(individual, config, ...)シグネチャ
-            crossover_strategy_genes,
+            deap_crossover_strategy_genes,
         )
 
         # 個体クラスを取得（個体生成時に使用）
@@ -127,29 +127,17 @@ class GeneticAlgorithmEngine:
 
         # フィットネス共有の初期化
         fitness_sharing_config = config.fitness_sharing
-        if fitness_sharing_config.get("enable_fitness_sharing", False):
+        if fitness_sharing_config.enable_fitness_sharing:
             self.fitness_sharing = FitnessSharing(
-                sharing_radius=fitness_sharing_config.get("sharing_radius", 0.1),
-                alpha=fitness_sharing_config.get("sharing_alpha", 1.0),
-                sampling_threshold=fitness_sharing_config.get(
-                    "sampling_threshold", 200
+                sharing_radius=fitness_sharing_config.sharing_radius,
+                alpha=fitness_sharing_config.sharing_alpha,
+                sampling_threshold=fitness_sharing_config.sampling_threshold,
+                sampling_ratio=getattr(
+                    fitness_sharing_config,
+                    "sampling_ratio",
+                    FitnessSharing.SAMPLING_RATIO,
                 ),
-                sampling_ratio=fitness_sharing_config.get(
-                    "sampling_ratio", FitnessSharing.SAMPLING_RATIO
-                ),
             )
-            set_report_provider = getattr(
-                self.fitness_sharing,
-                "set_evaluation_report_provider",
-                None,
-            )
-            get_cached_report = getattr(
-                self.individual_evaluator,
-                "get_cached_evaluation_report",
-                None,
-            )
-            if callable(set_report_provider) and callable(get_cached_report):
-                set_report_provider(get_cached_report)
         else:
             self.fitness_sharing = None
 

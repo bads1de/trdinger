@@ -245,10 +245,10 @@ class TestCacheHelperBranches:
         assert result == repr(value)
 
     def test_strategy_gene_to_dict_error_wrap(self, serializer):
-        """codec のエラーは ValueError にラップされる"""
+        """内部実装のエラーは ValueError にラップされる"""
         with patch.object(
-            serializer._strategy_gene_codec,
-            "strategy_gene_to_dict",
+            serializer,
+            "_encode_strategy_gene",
             side_effect=RuntimeError("boom"),
         ):
             with pytest.raises(ValueError, match="戦略遺伝子の辞書変換に失敗"):

@@ -5,7 +5,6 @@ OOS (Out-of-Sample) 検証、Walk-Forward 分析などの
 評価戦略ルーティングを担当します。
 """
 
-import inspect
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING, Any, cast
@@ -22,7 +21,6 @@ from .evaluation_report import (
     _DATETIME_FORMAT,
     EvaluationReport,
     ScenarioEvaluation,
-    _safe_copy_metadata,
 )
 
 if TYPE_CHECKING:
@@ -477,48 +475,12 @@ class EvaluationStrategy:
         scenario_name: str,
         metadata: dict[str, Any] | None = None,
     ) -> ScenarioEvaluation:
-        # 1. まず新しいレポート API を探す。
-        # inspect.getattr_static を使って、Mock の自動生成された属性を
-        # 誤って有効扱いしないようにする。
-        report_attr = inspect.getattr_static(
-            self._evaluator, "_perform_single_evaluation_report", None
-        )
-        if callable(report_attr):
-            report_method = self._evaluator._perform_single_evaluation_report
-            return report_method(
-                gene,
-                backtest_config,
-                config,
-                scenario_name=scenario_name,
-                metadata=metadata,
-            )
-
-        legacy_attr = inspect.getattr_static(
-            self._evaluator, "_perform_single_evaluation", None
-        )
-        if callable(legacy_attr):
-            legacy_method = self._evaluator._perform_single_evaluation
-            fitness = legacy_method(gene, backtest_config, config)
-            if isinstance(fitness, ScenarioEvaluation):
-                merged_metadata = fitness.metadata.copy()
-                if metadata:
-                    merged_metadata.update(metadata)
-                return ScenarioEvaluation(
-                    name=scenario_name,
-                    fitness=fitness.fitness,
-                    passed=fitness.passed,
-                    metadata=merged_metadata,
-                    performance_metrics=fitness.performance_metrics,
-                )
-            return ScenarioEvaluation(
-                name=scenario_name,
-                fitness=tuple(float(value) for value in fitness),
-                passed=True,
-                metadata=_safe_copy_metadata(metadata),
-            )
-
-        raise AttributeError(
-            f"Evaluator {type(self._evaluator)} lacks necessary evaluation methods."
+        return self._evaluator._perform_single_evaluation_report(
+            gene,
+            backtest_config,
+            config,
+            scenario_name=scenario_name,
+            metadata=metadata,
         )
 
     def _build_oos_split_configs(

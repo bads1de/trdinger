@@ -201,7 +201,7 @@ class TestIndividualEvaluator:
             "end_date": "2024-01-12 00:00:00",
         }
 
-        prepared = self.evaluator._prepare_backtest_config_for_evaluation(
+        prepared = self.evaluator.prepare_backtest_config_for_evaluation(
             gene, backtest_config
         )
 
@@ -239,7 +239,7 @@ class TestIndividualEvaluator:
         self.evaluator._get_cached_data = Mock(return_value=market_data)
         self.evaluator._get_cached_minute_data = Mock(return_value=None)
         self.evaluator._calculate_multi_objective_fitness = Mock(return_value=(0.42,))
-        self.evaluator._apply_evaluation_window_to_result = Mock(
+        self.evaluator.apply_evaluation_window_to_result = Mock(
             return_value=mock_result
         )
         self.mock_backtest_service.run_backtest.return_value = mock_result
@@ -247,7 +247,7 @@ class TestIndividualEvaluator:
         ga_config = GAConfig()
         ga_config.objectives = ["weighted_score"]
 
-        fitness = self.evaluator._perform_single_evaluation(
+        scenario = self.evaluator._perform_single_evaluation_report(
             mock_individual,
             {
                 "symbol": "BTC/USDT:USDT",
@@ -268,7 +268,7 @@ class TestIndividualEvaluator:
             run_config["strategy_config"]["parameters"]["evaluation_start"]
             == "2024-01-10 00:00:00"
         )
-        assert fitness == (0.42,)
+        assert scenario.fitness == (0.42,)
 
     def test_perform_single_evaluation_uses_recent_tail_window_for_coarse_fidelity(
         self,
@@ -308,7 +308,7 @@ class TestIndividualEvaluator:
         full_config.objectives = ["weighted_score"]
         coarse_config = build_coarse_ga_config(full_config)
 
-        self.evaluator._perform_single_evaluation(
+        self.evaluator._perform_single_evaluation_report(
             mock_individual,
             {
                 "symbol": "BTC/USDT:USDT",
@@ -409,7 +409,7 @@ class TestIndividualEvaluator:
 
         with (
             patch.object(
-                self.evaluator,
+                self.evaluator._window_service,
                 "_compute_window_stats",
                 return_value="window_stats",
             ) as mock_compute_window_stats,
@@ -429,7 +429,7 @@ class TestIndividualEvaluator:
                 },
             ),
         ):
-            adjusted = self.evaluator._apply_evaluation_window_to_result(
+            adjusted = self.evaluator.apply_evaluation_window_to_result(
                 converted_result,
                 raw_stats,
                 market_data,
@@ -453,7 +453,7 @@ class TestIndividualEvaluator:
             index=target_index[1:],
         )
 
-        trimmed = self.evaluator._slice_equity_curve_for_window(
+        trimmed = self.evaluator.slice_equity_curve_for_window(
             raw_equity_curve,
             target_index,
             0,

@@ -159,6 +159,12 @@ GA_DEFAULT_FITNESS_SHARING = {
     "sampling_ratio": 0.3,
 }
 
+# === 非価格指標選択確率 ===
+# 非価格指標（OI/FR/LSR由来）に専用の選択機会を与える確率。
+# GAConfig.non_price_indicator_probability と genes/gene_constants.py の
+# NON_PRICE_INDICATOR_SELECTION_PROBABILITY の単一ソース。
+DEFAULT_NON_PRICE_INDICATOR_PROBABILITY = 0.3
+
 # === GAパラメータ範囲定義 ===
 GA_PARAMETER_RANGES = {
     # 基本パラメータ
@@ -211,6 +217,7 @@ __all__ = [
     "DEFAULT_GA_OBJECTIVES",
     "DEFAULT_GA_OBJECTIVE_WEIGHTS",
     "GA_DEFAULT_FITNESS_SHARING",
+    "DEFAULT_NON_PRICE_INDICATOR_PROBABILITY",
     "GA_PARAMETER_RANGES",
     "GA_MUTATION_SETTINGS",
     # Enum

@@ -21,6 +21,7 @@ from .constants import (
     DEFAULT_FITNESS_WEIGHTS,
     DEFAULT_GA_OBJECTIVE_WEIGHTS,
     DEFAULT_GA_OBJECTIVES,
+    DEFAULT_NON_PRICE_INDICATOR_PROBABILITY,
     GA_DEFAULT_CONFIG,
     GA_DEFAULT_FITNESS_SHARING,
     GA_FALLBACK_END_DATE,
@@ -296,6 +297,21 @@ class ValidationConfig(NestedConfigMixin):
     max_candidates: int = 5
 
 
+@dataclass
+class FitnessSharingConfig(NestedConfigMixin):
+    """フィットネス共有関連設定。"""
+
+    enable_fitness_sharing: bool = cast(
+        bool, GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
+    )
+    sharing_radius: float = GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
+    sharing_alpha: float = GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
+    sampling_threshold: int = cast(
+        int, GA_DEFAULT_FITNESS_SHARING["sampling_threshold"]
+    )
+    sampling_ratio: float = GA_DEFAULT_FITNESS_SHARING["sampling_ratio"]
+
+
 def _get_default_values_from_fields(cls: type[Any]) -> dict[str, Any]:
     """dataclass フィールド定義からデフォルト値辞書を組み立てる。"""
     defaults: dict[str, Any] = {}
@@ -345,7 +361,7 @@ class GAConfig:
     # トレンド70%優先バイアスで非価格指標が埋もれるのを防ぐ。
     # 0.0 で無効化（従来挙動）、デフォルト 0.3 で非価格指標にも
     # 専用の選択機会を与える。
-    non_price_indicator_probability: float = 0.3
+    non_price_indicator_probability: float = DEFAULT_NON_PRICE_INDICATOR_PROBABILITY
 
     # ペナルティ設定
     zero_trades_penalty: float = GA_DEFAULT_CONFIG["zero_trades_penalty"]
@@ -373,9 +389,7 @@ class GAConfig:
     )
 
     # フィットネス共有設定
-    fitness_sharing: dict[str, Any] = field(
-        default_factory=lambda: GA_DEFAULT_FITNESS_SHARING.copy()
-    )
+    fitness_sharing: FitnessSharingConfig = field(default_factory=FitnessSharingConfig)
 
     # 目的関数設定
     objectives: list[str] = field(default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy())
@@ -475,6 +489,8 @@ class GAConfig:
 
         if name == "mutation_config" and isinstance(value, dict):
             value = MutationConfig.from_dict(value)
+        if name == "fitness_sharing" and isinstance(value, dict):
+            value = FitnessSharingConfig.from_dict(value)
 
         object.__setattr__(self, name, value)
 
@@ -487,16 +503,12 @@ class GAConfig:
         )
 
         fitness_sharing: Any = self.fitness_sharing
-        if not isinstance(fitness_sharing, dict):
+        if not isinstance(fitness_sharing, FitnessSharingConfig):
             object.__setattr__(
                 self,
                 "fitness_sharing",
-                copy.deepcopy(GA_DEFAULT_FITNESS_SHARING),
+                FitnessSharingConfig.from_dict(fitness_sharing),
             )
-        else:
-            merged_fitness_sharing = copy.deepcopy(GA_DEFAULT_FITNESS_SHARING)
-            merged_fitness_sharing.update(fitness_sharing)
-            object.__setattr__(self, "fitness_sharing", merged_fitness_sharing)
 
         if isinstance(self.mutation_config, dict):
             object.__setattr__(
@@ -571,5 +583,6 @@ __all__ = [
     "RobustnessConfig",
     "IterativeImprovementConfig",
     "ValidationConfig",
+    "FitnessSharingConfig",
     "GAConfig",
 ]

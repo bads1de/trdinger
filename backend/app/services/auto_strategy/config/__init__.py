@@ -27,6 +27,7 @@ from .evaluation_plan import (
 from .ga_config import (
     EarlyTerminationSettings,
     EvaluationConfig,
+    FitnessSharingConfig,
     IterativeImprovementConfig,
     MutationConfig,
     RobustnessConfig,
@@ -77,6 +78,7 @@ __all__ = [
     "RobustnessConfig",
     "IterativeImprovementConfig",
     "ValidationConfig",
+    "FitnessSharingConfig",
     "EvaluationPlan",
     "RobustnessPlan",
     "RobustnessRegimeWindow",

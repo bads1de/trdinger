@@ -3,9 +3,11 @@ import copy
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.constants import GA_DEFAULT_FITNESS_SHARING
 from app.services.auto_strategy.config.ga_config import (
     EarlyTerminationSettings,
     EvaluationConfig,
+    FitnessSharingConfig,
 )
 
 
@@ -485,3 +487,87 @@ class TestGAConfig:
         first.parameter_ranges["period"][0] = 999
 
         assert second.parameter_ranges["period"] == [5, 200]
+
+    def test_fitness_sharing_defaults_match_single_source(self):
+        """fitness_sharing のデフォルトが GA_DEFAULT_FITNESS_SHARING と一致する"""
+        config = GAConfig()
+
+        assert isinstance(config.fitness_sharing, FitnessSharingConfig)
+        assert (
+            config.fitness_sharing.enable_fitness_sharing
+            == GA_DEFAULT_FITNESS_SHARING["enable_fitness_sharing"]
+        )
+        assert (
+            config.fitness_sharing.sharing_radius
+            == GA_DEFAULT_FITNESS_SHARING["sharing_radius"]
+        )
+        assert (
+            config.fitness_sharing.sharing_alpha
+            == GA_DEFAULT_FITNESS_SHARING["sharing_alpha"]
+        )
+        assert (
+            config.fitness_sharing.sampling_threshold
+            == GA_DEFAULT_FITNESS_SHARING["sampling_threshold"]
+        )
+        assert (
+            config.fitness_sharing.sampling_ratio
+            == GA_DEFAULT_FITNESS_SHARING["sampling_ratio"]
+        )
+
+    def test_fitness_sharing_normalizes_dict_constructor_input(self):
+        """コンストラクタの dict 入力が FitnessSharingConfig に正規化される"""
+        config = GAConfig(fitness_sharing={"enable_fitness_sharing": False})
+
+        assert isinstance(config.fitness_sharing, FitnessSharingConfig)
+        assert config.fitness_sharing.enable_fitness_sharing is False
+        # 未指定キーはデフォルトで補完される
+        assert config.fitness_sharing.sharing_radius == 0.1
+
+    def test_fitness_sharing_normalizes_dict_assignment(self):
+        """dict 代入が FitnessSharingConfig に正規化される"""
+        config = GAConfig()
+        config.fitness_sharing = {"enable_fitness_sharing": False}
+
+        assert isinstance(config.fitness_sharing, FitnessSharingConfig)
+        assert config.fitness_sharing.enable_fitness_sharing is False
+
+    def test_fitness_sharing_roundtrip_keeps_dict_shape(self):
+        """to_dict → from_dict で fitness_sharing が dict 形状のまま復元される"""
+        original = GAConfig(fitness_sharing={"enable_fitness_sharing": False})
+
+        data = original.to_dict()
+        assert isinstance(data["fitness_sharing"], dict)
+        assert data["fitness_sharing"]["enable_fitness_sharing"] is False
+
+        restored = GAConfig.from_dict(data)
+        assert isinstance(restored.fitness_sharing, FitnessSharingConfig)
+        assert restored.fitness_sharing.enable_fitness_sharing is False
+
+    def test_fitness_sharing_instances_are_isolated(self):
+        """インスタンス間で fitness_sharing が共有されないことを確認"""
+        first = GAConfig()
+        second = GAConfig()
+
+        first.fitness_sharing.sharing_radius = 0.9
+
+        assert second.fitness_sharing.sharing_radius == 0.1
+
+    def test_non_price_probability_uses_single_source_constant(self):
+        """non_price_indicator_probability のデフォルトが単一ソース定数と一致する"""
+        from app.services.auto_strategy.config.constants import (
+            DEFAULT_NON_PRICE_INDICATOR_PROBABILITY,
+        )
+        from app.services.auto_strategy.genes.gene_constants import (
+            NON_PRICE_INDICATOR_SELECTION_PROBABILITY,
+        )
+
+        config = GAConfig()
+
+        assert (
+            config.non_price_indicator_probability
+            == DEFAULT_NON_PRICE_INDICATOR_PROBABILITY
+        )
+        assert (
+            NON_PRICE_INDICATOR_SELECTION_PROBABILITY
+            == DEFAULT_NON_PRICE_INDICATOR_PROBABILITY
+        )

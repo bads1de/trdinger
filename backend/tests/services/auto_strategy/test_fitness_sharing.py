@@ -162,7 +162,7 @@ class TestFitnessSharing:
         """拡張ベクトル化のテスト (指標、オペレータ、期間など)"""
         with pytest.MonkeyPatch.context() as m:
             m.setattr(
-                "app.services.auto_strategy.core.fitness.fitness_sharing.get_valid_indicator_types",
+                "app.services.auto_strategy.core.fitness.fitness_sharing.get_all_indicators",
                 lambda: ["SMA", "EMA", "RSI", "MACD"],
             )
             fitness_sharing.__init__(sharing_radius=0.1)

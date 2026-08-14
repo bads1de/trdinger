@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import logging
 import math
-from collections.abc import Mapping
+import uuid
+from collections.abc import Iterable, Mapping
 from dataclasses import fields, is_dataclass
 from enum import Enum
 from typing import Any, cast
@@ -23,7 +24,6 @@ from ..genes import (
     StrategyGene,
 )
 from ..genes.conditions import StatefulCondition
-from .strategy_gene_dict_codec import StrategyGeneDictCodec
 
 # キャッシュキー用にハッシュ可能な構造
 _FrozenKey = tuple | bytes | SerializablePrimitive
@@ -42,7 +42,6 @@ class DictConverter:
     """
 
     def __init__(self, cache_size: int = 1000) -> None:
-        self._strategy_gene_codec = StrategyGeneDictCodec(self)
         self._cache_size = cache_size
         self._serialize_cache: dict[
             tuple | bytes | SerializablePrimitive,
@@ -189,7 +188,7 @@ class DictConverter:
             if cache_key in self._serialize_cache:
                 result = self._serialize_cache[cache_key]
             else:
-                result = self._strategy_gene_codec.strategy_gene_to_dict(strategy_gene)
+                result = self._encode_strategy_gene(strategy_gene)
                 if len(self._serialize_cache) < self._cache_size:
                     self._serialize_cache[cache_key] = result
             return cast(dict[str, Any], self._copy_cached_value(result))
@@ -285,9 +284,7 @@ class DictConverter:
             if cache_key in self._deserialize_cache:
                 result = self._deserialize_cache[cache_key]
             else:
-                result = self._strategy_gene_codec.dict_to_strategy_gene(
-                    data, strategy_gene_class
-                )
+                result = self._decode_strategy_gene(data, strategy_gene_class)
                 if len(self._deserialize_cache) < self._cache_size:
                     self._deserialize_cache[cache_key] = result
             return cast(StrategyGene, self._copy_cached_value(result))
@@ -297,7 +294,19 @@ class DictConverter:
 
     def dict_to_condition(self, data: dict[str, Any]) -> Condition:
         """辞書形式から条件を復元"""
-        return cast(Condition, self._strategy_gene_codec.dict_to_condition(data))
+        try:
+            from ..genes import Condition
+
+            return Condition(
+                left_operand=data["left_operand"],
+                operator=data["operator"],
+                right_operand=data["right_operand"],
+                direction=data.get("direction"),
+            )
+
+        except Exception as e:
+            logger.error(f"条件辞書復元エラー: {e}")
+            raise ValueError(f"条件の復元に失敗: {e}")
 
     def stateful_condition_to_dict(
         self, stateful_condition: StatefulCondition | None
@@ -363,6 +372,232 @@ class DictConverter:
         except Exception as e:
             logger.error(f"StatefulCondition復元エラー: {e}")
             raise ValueError(f"StatefulConditionの復元に失敗: {e}")
+
+    def _encode_strategy_gene(self, strategy_gene: StrategyGene) -> dict[str, Any]:
+        """StrategyGene をシリアライズ可能な辞書へ変換する内部実装。"""
+        try:
+            clean_risk_management = self._clean_risk_management(
+                strategy_gene.risk_management
+            )
+
+            result: dict[str, Any] = {
+                "id": strategy_gene.id,
+                "indicators": [
+                    self.indicator_gene_to_dict(ind) for ind in strategy_gene.indicators
+                ],
+                "long_entry_conditions": [
+                    self.condition_or_group_to_dict(cond)
+                    for cond in strategy_gene.long_entry_conditions
+                ],
+                "short_entry_conditions": [
+                    self.condition_or_group_to_dict(cond)
+                    for cond in strategy_gene.short_entry_conditions
+                ],
+                "long_exit_conditions": [
+                    self.condition_or_group_to_dict(cond)
+                    for cond in getattr(strategy_gene, "long_exit_conditions", [])
+                ],
+                "short_exit_conditions": [
+                    self.condition_or_group_to_dict(cond)
+                    for cond in getattr(strategy_gene, "short_exit_conditions", [])
+                ],
+                "risk_management": clean_risk_management,
+                "stateful_conditions": [
+                    self.stateful_condition_to_dict(sc)
+                    for sc in getattr(strategy_gene, "stateful_conditions", [])
+                ],
+                "tool_genes": [
+                    tg.to_dict() for tg in getattr(strategy_gene, "tool_genes", [])
+                ],
+                "metadata": strategy_gene.metadata,
+            }
+
+            sub_gene_fields = self._get_sub_gene_field_names(type(strategy_gene))
+            for field in sub_gene_fields:
+                gene_obj = getattr(strategy_gene, field, None)
+                result[field] = gene_obj.to_dict() if gene_obj else None
+
+            return result
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子辞書変換エラー: {e}")
+            raise ValueError(f"戦略遺伝子の辞書変換に失敗: {e}")
+
+    def _decode_strategy_gene(
+        self, data: dict[str, Any], strategy_gene_class: type
+    ) -> Any:
+        """辞書から StrategyGene を復元する内部実装。"""
+        try:
+            if isinstance(data, strategy_gene_class):
+                return data
+
+            if hasattr(data, "indicators") and hasattr(data, "long_entry_conditions"):
+                return data
+
+            if not isinstance(data, dict):
+                raise TypeError(
+                    "dict_to_strategy_gene に渡されたデータの型が不正です: "
+                    f"{type(data).__name__}"
+                )
+
+            if not data:
+                logger.warning(
+                    "戦略遺伝子データが空です。デフォルト戦略遺伝子を返します。"
+                )
+                return strategy_gene_class.create_default()  # type: ignore[attr-defined]
+
+            indicators = [
+                self.dict_to_indicator_gene(ind_data)
+                for ind_data in data.get("indicators", [])
+            ]
+
+            from ..genes import ConditionGroup
+
+            def parse_condition_or_group(cond_data: Any) -> Any:
+                if not isinstance(cond_data, dict):
+                    raise TypeError(
+                        "条件データはdictである必要があります: "
+                        f"{type(cond_data).__name__}"
+                    )
+                if cond_data.get("type") in ("GROUP", "OR_GROUP"):
+                    conditions = [
+                        parse_condition_or_group(c)
+                        for c in cond_data.get("conditions", [])
+                    ]
+                    operator = (
+                        "OR"
+                        if cond_data.get("type") == "OR_GROUP"
+                        else cond_data.get("operator", "OR")
+                    )
+                    return ConditionGroup(operator=operator, conditions=conditions)
+                return self.dict_to_condition(cond_data)
+
+            long_entry_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get("long_entry_conditions", [])
+            ]
+            short_entry_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get("short_entry_conditions", [])
+            ]
+
+            long_exit_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get("long_exit_conditions", [])
+            ]
+            short_exit_conditions = [
+                parse_condition_or_group(c)
+                for c in data.get("short_exit_conditions", [])
+            ]
+
+            from ..genes.tool import ToolGene
+
+            sub_genes = {}
+            mapping = self._get_sub_gene_class_map(strategy_gene_class)
+            for field in self._get_sub_gene_field_names(strategy_gene_class):
+                cls = mapping.get(field)
+                if cls is None:
+                    continue
+                gene_data = data.get(field)
+                sub_genes[field] = cls.from_dict(gene_data) if gene_data else None
+
+            stateful_conditions = [
+                self.dict_to_stateful_condition(sc_data)
+                for sc_data in data.get("stateful_conditions", [])
+                if sc_data
+            ]
+
+            tool_genes = [
+                ToolGene.from_dict(tg) for tg in data.get("tool_genes", []) if tg
+            ]
+
+            return strategy_gene_class(
+                id=data.get("id", str(uuid.uuid4())),
+                indicators=indicators,
+                long_entry_conditions=long_entry_conditions,
+                short_entry_conditions=short_entry_conditions,
+                long_exit_conditions=long_exit_conditions,
+                short_exit_conditions=short_exit_conditions,
+                stateful_conditions=stateful_conditions,
+                tool_genes=tool_genes,
+                risk_management=data.get("risk_management", {"position_size": 0.1}),
+                metadata=data.get("metadata", {}),
+                **sub_genes,
+            )
+
+        except Exception as e:
+            logger.error(f"戦略遺伝子辞書復元エラー: {e}")
+            raise ValueError(f"戦略遺伝子の復元に失敗: {e}") from e
+
+    @staticmethod
+    def _get_sub_gene_field_names(strategy_gene_class: type) -> tuple[str, ...]:
+        """StrategyGene 系クラスのサブ遺伝子フィールド名を取得する。"""
+        getter = getattr(strategy_gene_class, "sub_gene_field_names", None)
+        if callable(getter):
+            raw_field_names = getter()
+            if isinstance(raw_field_names, (str, bytes)) or not isinstance(
+                raw_field_names, Iterable
+            ):
+                raise TypeError(
+                    "sub_gene_field_names は str/bytes ではない反復可能な文字列コレクションを返す必要があります。"
+                )
+
+            field_names = tuple(raw_field_names)
+            if not all(isinstance(name, str) for name in field_names):
+                raise TypeError(
+                    "sub_gene_field_names は str のみで構成されたコレクションを返す必要があります。"
+                )
+
+            return cast(tuple[str, ...], field_names)
+
+        return StrategyGene.sub_gene_field_names()
+
+    @staticmethod
+    def _get_sub_gene_class_map(strategy_gene_class: type) -> dict[str, Any]:
+        """StrategyGene 系クラスのサブ遺伝子クラス対応表を取得する。"""
+        getter = getattr(strategy_gene_class, "sub_gene_class_map", None)
+        if callable(getter):
+            raw_class_map = getter()
+            if not isinstance(raw_class_map, Mapping):
+                raise TypeError(
+                    "sub_gene_class_map は Mapping[str, Any] を返す必要があります。"
+                )
+
+            if not all(isinstance(field_name, str) for field_name in raw_class_map):
+                raise TypeError(
+                    "sub_gene_class_map のキーはすべて str である必要があります。"
+                )
+
+            return dict(cast(Mapping[str, Any], raw_class_map))
+
+        return StrategyGene.sub_gene_class_map()
+
+    def _clean_risk_management(self, risk_management: dict[str, Any]) -> dict[str, Any]:
+        """risk_management から TP/SL 関連の設定を除外。"""
+        tpsl_keys = {
+            "stop_loss",
+            "take_profit",
+            "stop_loss_pct",
+            "take_profit_pct",
+            "risk_reward_ratio",
+            "atr_multiplier_sl",
+            "atr_multiplier_tp",
+            "_tpsl_strategy",
+            "_tpsl_method",
+        }
+
+        clean_risk_management = {}
+        for key, value in risk_management.items():
+            if key not in tpsl_keys:
+                if isinstance(value, float):
+                    if key == "position_size":
+                        clean_risk_management[key] = round(value, 6)
+                    else:
+                        clean_risk_management[key] = round(value, 4)
+                else:
+                    clean_risk_management[key] = value
+
+        return clean_risk_management
 
 
 class GeneSerializer(DictConverter):

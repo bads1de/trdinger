@@ -1,5 +1,5 @@
 """
-IndicatorServiceのユニットテスト
+IndicatorCalculator のユニットテスト
 """
 
 from datetime import datetime, timedelta
@@ -9,8 +9,10 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.genes.indicator import IndicatorGene
-from app.services.auto_strategy.services.indicator_service import IndicatorCalculator
-from app.services.auto_strategy.services.mtf_data_provider import (
+from app.services.auto_strategy.strategies.indicator_calculator import (
+    IndicatorCalculator,
+)
+from app.services.auto_strategy.strategies.mtf_data_provider import (
     MultiTimeframeDataProvider,
 )
 
