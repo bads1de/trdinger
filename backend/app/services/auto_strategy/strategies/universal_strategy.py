@@ -192,9 +192,6 @@ class UniversalStrategy(Strategy):
                 base_data=data,
                 base_timeframe=self.base_timeframe,
             )
-            # logger.debug(
-            #     f"MTFデータプロバイダー初期化: base_timeframe={self.base_timeframe}"
-            # )
 
         # IndicatorCalculatorの初期化（MTFデータプロバイダー付き）
         self.indicator_calculator = IndicatorCalculator(

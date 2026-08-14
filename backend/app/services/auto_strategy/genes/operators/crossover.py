@@ -24,38 +24,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def crossover_tpsl_genes(
-    parent1_tpsl: TPSLGene | None,
-    parent2_tpsl: TPSLGene | None,
-) -> tuple[TPSLGene | None, TPSLGene | None]:
-    """TPSL遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(parent1_tpsl, parent2_tpsl, TPSLGene)
-
-
-def crossover_position_sizing_genes(
-    parent1_ps: PositionSizingGene | None,
-    parent2_ps: PositionSizingGene | None,
-) -> tuple[PositionSizingGene | None, PositionSizingGene | None]:
-    """ポジションサイジング遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(
-        parent1_ps, parent2_ps, PositionSizingGene
-    )
-
-
-def crossover_entry_genes(
-    parent1_entry: EntryGene | None,
-    parent2_entry: EntryGene | None,
-) -> tuple[EntryGene | None, EntryGene | None]:
-    """エントリー遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(parent1_entry, parent2_entry, EntryGene)
-
-
-def crossover_exit_genes(
-    parent1_exit: ExitGene | None,
-    parent2_exit: ExitGene | None,
-) -> tuple[ExitGene | None, ExitGene | None]:
-    """イグジット遺伝子の交叉を実行する。"""
-    return GeneticUtils.crossover_optional_gene(parent1_exit, parent2_exit, ExitGene)
+def _crossover_optional(
+    gene_class: type[Any],
+    parent1_gene: Any | None,
+    parent2_gene: Any | None,
+) -> tuple[Any | None, Any | None]:
+    """サブ遺伝子の交叉を実行する（None 許容）。"""
+    return GeneticUtils.crossover_optional_gene(parent1_gene, parent2_gene, gene_class)
 
 
 def crossover_strategy_genes(
@@ -169,29 +144,40 @@ def single_point_crossover(
             c1_risk[key] = val1 if random.random() < 0.5 else val2
             c2_risk[key] = val2 if random.random() < 0.5 else val1
 
-    c1_tpsl, c2_tpsl = crossover_tpsl_genes(parent1.tpsl_gene, parent2.tpsl_gene)
-    c1_long_tpsl, c2_long_tpsl = crossover_tpsl_genes(
+    c1_tpsl, c2_tpsl = _crossover_optional(
+        TPSLGene, parent1.tpsl_gene, parent2.tpsl_gene
+    )
+    c1_long_tpsl, c2_long_tpsl = _crossover_optional(
+        TPSLGene,
         parent1.long_tpsl_gene,
         parent2.long_tpsl_gene,
     )
-    c1_short_tpsl, c2_short_tpsl = crossover_tpsl_genes(
+    c1_short_tpsl, c2_short_tpsl = _crossover_optional(
+        TPSLGene,
         parent1.short_tpsl_gene,
         parent2.short_tpsl_gene,
     )
-    c1_ps, c2_ps = crossover_position_sizing_genes(
+    c1_ps, c2_ps = _crossover_optional(
+        PositionSizingGene,
         parent1.position_sizing_gene,
         parent2.position_sizing_gene,
     )
-    c1_entry, c2_entry = crossover_entry_genes(parent1.entry_gene, parent2.entry_gene)
-    c1_long_entry, c2_long_entry = crossover_entry_genes(
+    c1_entry, c2_entry = _crossover_optional(
+        EntryGene, parent1.entry_gene, parent2.entry_gene
+    )
+    c1_long_entry, c2_long_entry = _crossover_optional(
+        EntryGene,
         parent1.long_entry_gene,
         parent2.long_entry_gene,
     )
-    c1_short_entry, c2_short_entry = crossover_entry_genes(
+    c1_short_entry, c2_short_entry = _crossover_optional(
+        EntryGene,
         parent1.short_entry_gene,
         parent2.short_entry_gene,
     )
-    c1_exit, c2_exit = crossover_exit_genes(parent1.exit_gene, parent2.exit_gene)
+    c1_exit, c2_exit = _crossover_optional(
+        ExitGene, parent1.exit_gene, parent2.exit_gene
+    )
 
     c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
 
@@ -226,9 +212,8 @@ def single_point_crossover(
     # フィルター数制限を強制
     from ...generators.random_gene_generator import RandomGeneGenerator
 
-    generator = RandomGeneGenerator(config)
-    c1_tool = generator._enforce_filter_limit(c1_tool)
-    c2_tool = generator._enforce_filter_limit(c2_tool)
+    c1_tool = RandomGeneGenerator.enforce_filter_limit(config, c1_tool)
+    c2_tool = RandomGeneGenerator.enforce_filter_limit(config, c2_tool)
 
     if random.random() < 0.5:
         c1_long_exit_cond = GeneticUtils.copy_conditions(parent1.long_exit_conditions)

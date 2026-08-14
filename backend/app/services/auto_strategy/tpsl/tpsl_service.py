@@ -289,12 +289,7 @@ class TPSLService:
             )
 
             # 戦略固有の調整
-            if strategy_used == "volatility_adaptive":
-                # ボラティリティベースの場合、追加の調整を適用
-                sl_price, tp_price = self._apply_volatility_adjustments(
-                    current_price, sl_price, tp_price, risk_management
-                )
-            elif strategy_used == "risk_reward":
+            if strategy_used == "risk_reward":
                 # リスクリワード比ベースの場合、比率の整合性をチェック
                 sl_price, tp_price = self._apply_risk_reward_adjustments(
                     current_price, sl_price, tp_price, risk_management
@@ -328,17 +323,6 @@ class TPSLService:
             take_profit_pct,
             position_direction,
         )
-
-    def _apply_volatility_adjustments(
-        self,
-        current_price: float,
-        sl_price: float | None,
-        tp_price: float | None,
-        risk_management: dict[str, Any],
-    ) -> tuple[float | None, float | None]:
-        """ボラティリティベース調整を適用"""
-        # 現在は基本実装のみ（将来的にATRベース調整を追加）
-        return sl_price, tp_price
 
     def _apply_risk_reward_adjustments(
         self,

@@ -355,7 +355,7 @@ class ConditionGenerator:
         longs: list[Condition | ConditionGroup] = []
         shorts: list[Condition | ConditionGroup] = []
 
-        classified = self._classify_indicators(indicators)
+        classified = self._dynamic_classify(indicators)
         trend_candidates = classified[IndicatorType.TREND]
         momentum_candidates = classified[IndicatorType.MOMENTUM]
 
@@ -734,9 +734,3 @@ class ConditionGenerator:
                 categorized[IndicatorType.TREND].append(ind)
 
         return categorized
-
-    def _classify_indicators(
-        self, indicators: list[IndicatorGene]
-    ) -> dict[IndicatorType, list[IndicatorGene]]:
-        """_dynamic_classify のエイリアス（ComplexConditionsStrategy互換用）"""
-        return self._dynamic_classify(indicators)

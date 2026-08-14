@@ -380,7 +380,6 @@ class ConditionEvaluator:
             elif op == "CROSS_DOWN":
                 return (left_val < right_val) and (prev_left >= prev_right)
 
-        # logger.warning(f"未対応の演算子: {op}")
         return False
 
     def _get_previous_value(self, operand: object, strategy_instance: Any) -> float:
@@ -546,8 +545,6 @@ class ConditionEvaluator:
         except (ValueError, TypeError):
             return 0.0
 
-    # StatefulCondition関連は変更なしのため省略（old_stringでマッチさせるため、既存コードを維持する形で記述）
-
     def evaluate_stateful_condition(
         self,
         stateful_condition: StatefulCondition,
@@ -599,6 +596,5 @@ class ConditionEvaluator:
         if trigger_result:
             event_name = stateful_condition.get_trigger_event_name()
             state_tracker.record_event(event_name, bar_index=current_bar)
-            # logger.debug(f"トリガー記録: {event_name} at bar {current_bar}")
 
         return trigger_result

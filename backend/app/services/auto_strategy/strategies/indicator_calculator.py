@@ -98,7 +98,21 @@ class IndicatorCalculator:
         | tuple[pd.Series, ...]
         | None
     ):
-        """DataFrameを受けてインジケータを計算する共通処理"""
+        """
+        OHLCVのDataFrameを直接指定して指標を計算
+
+        デフォルトデータ（strategy_instance.data）およびMTFデータプロバイダーから
+        取得した、異なるタイムフレームのDataFrameの両方に対して
+        指標計算を行う際に使用されます。
+
+        Args:
+            df: OHLCVデータ（Open, High, Low, Close, Volume）を含むDataFrame
+            indicator_type: 指標の名称
+            parameters: 指標の計算パラメータ
+
+        Returns:
+            計算された指標値（単一または複数のSeries/NDArray）
+        """
         if df is None:
             raise ValueError(f"データフレームがNoneです: {indicator_type}")
 
@@ -109,39 +123,6 @@ class IndicatorCalculator:
         return self.technical_indicator_service.calculate_indicator(
             df, indicator_type, parameters.copy()
         )
-
-    def _calculate_indicator_from_df(
-        self, df: pd.DataFrame, indicator_type: str, parameters: dict[str, Any]
-    ) -> (
-        np.ndarray
-        | pd.Series
-        | pd.DataFrame
-        | tuple[np.ndarray, ...]
-        | tuple[pd.Series, ...]
-        | None
-    ):
-        """
-        OHLCVのDataFrameを直接指定して指標を計算
-
-        MTFデータプロバイダーから取得した、異なるタイムフレームの
-        DataFrameに対して指標計算を行う際に使用されます。
-
-        Args:
-            df: OHLCVデータ（Open, High, Low, Close, Volume）を含むDataFrame
-            indicator_type: 指標の名称
-            parameters: 指標の計算パラメータ
-
-        Returns:
-            計算された指標値（単一または複数のSeries/NDArray）
-        """
-        try:
-            return self._calculate_indicator_from_dataframe(
-                df, indicator_type, parameters
-            )
-
-        except Exception as e:
-            logger.error(f"MTF指標計算エラー ({indicator_type}): {e}", exc_info=True)
-            return None
 
     def init_indicator(
         self, indicator_gene: IndicatorGene, strategy_instance: Any
@@ -166,12 +147,6 @@ class IndicatorCalculator:
         def _init_indicator() -> None:
             indicator_timeframe = getattr(indicator_gene, "timeframe", None)
 
-            # logger.warning(
-            #     f"指標初期化開始: {indicator_gene.type}, "
-            #     f"パラメータ: {indicator_gene.parameters}, "
-            #     f"タイムフレーム: {indicator_timeframe or 'デフォルト'}"
-            # )
-
             if strategy_instance is None:
                 raise ValueError(f"戦略インスタンスがNoneです: {indicator_gene.type}")
 
@@ -179,13 +154,17 @@ class IndicatorCalculator:
             if indicator_timeframe and self.mtf_data_provider:
                 # MTFデータプロバイダーからタイムフレームに応じたデータを取得
                 mtf_df = self.mtf_data_provider.get_data(indicator_timeframe)
-                # logger.debug(
-                #     f"MTFデータ取得: {indicator_timeframe}, rows={len(mtf_df)}"
-                # )
                 # DataFrameを使用して指標計算
-                raw_result = self._calculate_indicator_from_df(
-                    mtf_df, indicator_gene.type, indicator_gene.parameters
-                )
+                try:
+                    raw_result = self._calculate_indicator_from_dataframe(
+                        mtf_df, indicator_gene.type, indicator_gene.parameters
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"MTF指標計算エラー ({indicator_gene.type}): {e}",
+                        exc_info=True,
+                    )
+                    raw_result = None
 
                 # ベースデータのインデックスに合わせてリインデックス（ffill）
                 # 1つ前の（確定済みの）足を参考にするため、上位足の時点で1つシフトする
@@ -281,7 +260,6 @@ class IndicatorCalculator:
                     # 単一出力の指標
                     _register(build_indicator_reference_name(indicator_gene), result)
 
-                # logger.debug(f"指標登録完了: {base_indicator_name}")
             else:
                 logger.error(f"指標計算結果がNullです: {indicator_gene.type}")
                 raise ValueError(f"指標計算に失敗しました: {indicator_gene.type}")

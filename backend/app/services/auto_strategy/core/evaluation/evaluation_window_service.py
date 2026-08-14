@@ -52,8 +52,6 @@ class EvaluationWindowService:
         )
         return prepared_config
 
-    _prepare_backtest_config_for_evaluation = prepare_backtest_config_for_evaluation
-
     def estimate_required_warmup_bars(self, gene: object, base_timeframe: str) -> int:
         """戦略実行前に必要な warmup バー数を推定する。"""
         base_minutes = self.timeframe_to_minutes(base_timeframe)
@@ -105,8 +103,6 @@ class EvaluationWindowService:
 
         return int(max_bars)
 
-    _estimate_required_warmup_bars = estimate_required_warmup_bars
-
     @staticmethod
     def extract_lookback_from_parameters(parameters: dict[str, Any]) -> int:
         """インディケーターパラメータから lookback 長を推定する。"""
@@ -129,8 +125,6 @@ class EvaluationWindowService:
 
         return lookback
 
-    _extract_lookback_from_parameters = extract_lookback_from_parameters
-
     @staticmethod
     def timeframe_to_minutes(timeframe: str) -> int:
         """timeframe 文字列を分単位へ変換する。"""
@@ -145,8 +139,6 @@ class EvaluationWindowService:
         }
         return timeframe_map.get(str(timeframe), 60)
 
-    _timeframe_to_minutes = timeframe_to_minutes
-
     @staticmethod
     def format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
         """元の入力型に合わせて Timestamp を整形する。"""
@@ -157,8 +149,6 @@ class EvaluationWindowService:
         if isinstance(original_value, str):
             return str(timestamp)
         return timestamp
-
-    _format_datetime_like = format_datetime_like
 
     def apply_evaluation_window_to_result(
         self,
@@ -248,14 +238,10 @@ class EvaluationWindowService:
         adjusted_result["_raw_stats"] = window_stats
         return adjusted_result
 
-    _apply_evaluation_window_to_result = apply_evaluation_window_to_result
-
     @staticmethod
     def normalize_timestamp_to_index(value: object, index: pd.Index) -> pd.Timestamp:
         """インデックスのタイムゾーンに合わせて Timestamp を正規化する。"""
         return align_timestamp_to_index(value, index)
-
-    _normalize_timestamp_to_index = normalize_timestamp_to_index
 
     @staticmethod
     def normalize_ohlc_data_for_stats(
@@ -263,8 +249,6 @@ class EvaluationWindowService:
     ) -> pd.DataFrame:
         """backtesting.py が期待する大文字 OHLCV カラムへ正規化する。"""
         return normalize_ohlcv_columns(market_data, ensure_volume=True)
-
-    _normalize_ohlc_data_for_stats = normalize_ohlc_data_for_stats
 
     @staticmethod
     def slice_equity_curve_for_window(
@@ -301,8 +285,6 @@ class EvaluationWindowService:
         else:
             trimmed["DrawdownPct"] = 0.0
         return trimmed
-
-    _slice_equity_curve_for_window = slice_equity_curve_for_window
 
     @staticmethod
     def slice_trades_for_window(
@@ -350,8 +332,6 @@ class EvaluationWindowService:
                 - start_pos
             )
         return trades_df
-
-    _slice_trades_for_window = slice_trades_for_window
 
     def _compute_window_stats(
         self,

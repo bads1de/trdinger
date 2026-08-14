@@ -199,21 +199,23 @@ class RandomGeneGenerator:
                 )
             )
         # フィルター数制限を強制
-        return self._enforce_filter_limit(tool_genes)
+        return self.enforce_filter_limit(self.config, tool_genes)
 
-    def _enforce_filter_limit(self, tool_genes: list[Any]) -> list[Any]:
+    @staticmethod
+    def enforce_filter_limit(config: Any, tool_genes: list[Any]) -> list[Any]:
         """
         フィルター数制限を強制する
 
         max_enabled_filtersを超える場合、コストの高いフィルターからランダムに無効化します。
 
         Args:
+            config: 設定オブジェクト（max_enabled_filters を持つ）
             tool_genes: ツール遺伝子リスト
 
         Returns:
             制限を適用したツール遺伝子リスト
         """
-        max_filters = getattr(self.config, "max_enabled_filters", 3)
+        max_filters = getattr(config, "max_enabled_filters", 3)
 
         # 有効なフィルターをコスト順にソート（コストが高い＝優先度低い）
         enabled_filters = [t for t in tool_genes if hasattr(t, "enabled") and t.enabled]
@@ -226,7 +228,7 @@ class RandomGeneGenerator:
             tool = tool_registry.get(tool_gene.tool_name)
             if tool:
                 priority = tool.definition.priority
-                return self.TOOL_COSTS.get(priority, 1)
+                return RandomGeneGenerator.TOOL_COSTS.get(priority, 1)
             return 1
 
         enabled_filters.sort(key=get_cost, reverse=True)
@@ -349,7 +351,6 @@ class RandomGeneGenerator:
         """
         cloned = tool.clone()
         # enabledフラグをランダムに再設定しない（テンプレートの状態を維持）
-        # cloned.enabled = random.random() < self.TOOL_ENABLE_PROBABILITY
         return cloned
 
     @safe_operation(

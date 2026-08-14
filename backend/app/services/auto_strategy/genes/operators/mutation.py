@@ -46,34 +46,6 @@ _SUB_GENE_MUTATION_RULES = {
     ),
 }
 
-_LONG_SHORT_SUB_GENE_RULES = {
-    "long_tpsl_gene": (
-        TPSLGene,
-        create_random_tpsl_gene,
-        "tpsl_gene_creation_probability_multiplier",
-    ),
-    "short_tpsl_gene": (
-        TPSLGene,
-        create_random_tpsl_gene,
-        "tpsl_gene_creation_probability_multiplier",
-    ),
-    "long_entry_gene": (
-        EntryGene,
-        create_random_entry_gene,
-        "entry_gene_creation_probability_multiplier",
-    ),
-    "short_entry_gene": (
-        EntryGene,
-        create_random_entry_gene,
-        "entry_gene_creation_probability_multiplier",
-    ),
-    "exit_gene": (
-        ExitGene,
-        create_random_exit_gene,
-        "exit_gene_creation_probability_multiplier",
-    ),
-}
-
 _MUTATION_CONFIG_CREATION_ATTR_MAP = {
     "tpsl_gene_creation_probability_multiplier": "tpsl_gene_creation_multiplier",
     "position_sizing_gene_creation_probability_multiplier": (
@@ -126,10 +98,6 @@ def _iter_mutable_sub_gene_specs(
     for field_name in StrategyGene.sub_gene_field_names():
         gene_class = class_map.get(field_name)
         rule = _SUB_GENE_MUTATION_RULES.get(gene_class)  # type: ignore[arg-type]
-
-        if rule is None and field_name in _LONG_SHORT_SUB_GENE_RULES:
-            _, creator_func, creation_prob_attr = _LONG_SHORT_SUB_GENE_RULES[field_name]
-            rule = (creator_func, creation_prob_attr)
 
         if rule is None:
             continue
@@ -366,8 +334,9 @@ def mutate_strategy_gene(
                 # フィルター数制限を強制
                 from ...generators.random_gene_generator import RandomGeneGenerator
 
-                generator = RandomGeneGenerator(config)
-                mutated.tool_genes = generator._enforce_filter_limit(mutated.tool_genes)
+                mutated.tool_genes = RandomGeneGenerator.enforce_filter_limit(
+                    config, mutated.tool_genes
+                )
         except Exception:
             pass
 

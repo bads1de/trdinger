@@ -61,7 +61,7 @@ class MTFStrategy:
         higher_tf = self._determine_higher_tf(current_tf)
 
         # 指標を分類
-        classified = self.gen._classify_indicators(indicators)
+        classified = self.gen._dynamic_classify(indicators)
         trends, triggers = (
             classified[IndicatorType.TREND],
             classified[IndicatorType.MOMENTUM],

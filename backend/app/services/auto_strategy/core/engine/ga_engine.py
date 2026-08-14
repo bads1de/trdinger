@@ -713,7 +713,3 @@ class GeneticAlgorithmEngine:
             strategy_key = self.result_processor.get_strategy_result_key(individual)
             summaries[strategy_key] = summary
         return summaries
-
-    def _get_strategy_result_key(self, strategy: Any) -> str:
-        """result 内部で戦略 summary を対応付けるキーを返す。"""
-        return self.result_processor.get_strategy_result_key(strategy)

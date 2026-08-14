@@ -63,7 +63,7 @@ class ComplexConditionsStrategy:
         long_conds, short_conds = [], []
 
         # 1. トレンドフォローパターン (Trend + Momentum 順張り)
-        classified = self.gen._classify_indicators(indicators)
+        classified = self.gen._dynamic_classify(indicators)
         tp_long, tp_short = self._create_trend_follow(classified)
         long_conds.extend(tp_long)
         short_conds.extend(tp_short)

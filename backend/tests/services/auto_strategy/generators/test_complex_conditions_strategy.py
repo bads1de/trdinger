@@ -14,7 +14,7 @@ class MockConditionGenerator:
     def _get_indicator_name(self, indicator):
         return indicator.type
 
-    def _classify_indicators(self, indicators):
+    def _dynamic_classify(self, indicators):
         # 簡易分類
         from app.services.auto_strategy.config.constants import IndicatorType
 

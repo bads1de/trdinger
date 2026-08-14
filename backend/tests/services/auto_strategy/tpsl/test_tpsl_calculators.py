@@ -530,7 +530,7 @@ class TestTPSLService:
         # sl 距離 3 -> tp 距離 3 * 3 = 9
         assert tp == pytest.approx(109.0)
 
-    def test_calculate_advanced_tpsl_prices_volatility_adjustment_noop(self) -> None:
+    def test_calculate_advanced_tpsl_prices_volatility_adaptive(self) -> None:
         service = TPSLService()
         current_price = 100.0
 
@@ -542,7 +542,6 @@ class TestTPSLService:
             position_direction=1.0,
         )
 
-        # 現状 _apply_volatility_adjustments は透過的（No-op）実装
         assert sl == pytest.approx(97.0)
         assert tp == pytest.approx(106.0)
 

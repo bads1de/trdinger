@@ -31,7 +31,7 @@ class TestMTFStrategy:
                     res[IndicatorType.MOMENTUM].append(ind)
             return res
 
-        generator._classify_indicators.side_effect = _classify
+        generator._dynamic_classify.side_effect = _classify
 
         # 名称解決モック
         generator._get_indicator_name.side_effect = lambda i: i.type

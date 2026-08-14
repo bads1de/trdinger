@@ -60,8 +60,6 @@ def initialize_worker_process(
         _WORKER_EVALUATOR = evaluator
         _WORKER_CONFIG = ga_config
 
-        # logger.info(f"Worker process initialized. PID: {os.getpid()}")
-
     except Exception as e:
         logger.error(f"Worker initialization failed: {e}")
         raise

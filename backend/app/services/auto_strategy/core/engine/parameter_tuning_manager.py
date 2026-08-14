@@ -52,15 +52,6 @@ class ParameterTuningManager:
             self.individual_evaluator.evaluate(individual, config),
         )
 
-    @staticmethod
-    def extract_primary_fitness_from_result(result: object) -> float:
-        """
-        評価結果から主 fitness を取り出す。
-        """
-        from .fitness_utils import extract_primary_fitness_from_result
-
-        return extract_primary_fitness_from_result(result)
-
     def build_individual_evaluation_summary(
         self,
         individual: object,
