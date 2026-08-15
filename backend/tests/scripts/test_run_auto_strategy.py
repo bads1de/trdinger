@@ -886,7 +886,7 @@ class TestValidationIntegration:
             max_conditions=3,
         )
 
-        with pytest.raises(ValueError, match="--mtf-probability は0から1"):
+        with pytest.raises(ValueError, match="MTF指標確率は0から1"):
             run_auto_strategy.create_ga_config(args)
 
     def test_invalid_mtf_timeframe_raises_error(self):

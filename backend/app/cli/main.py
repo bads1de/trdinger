@@ -26,6 +26,10 @@ from app.cli._services import (
     build_services,
     build_task_scheduler,
 )
+from app.cli.config_builder import (
+    build_backtest_config_dict,
+    build_ga_config_dict,
+)
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.services.experiment_application_service import (
     TaskScheduler,
@@ -57,66 +61,6 @@ def _setup_logging(verbose: bool) -> None:
 
 def _new_experiment_id() -> str:
     return str(uuid.uuid4())
-
-
-def _build_ga_config_dict(
-    population: int,
-    generations: int,
-    crossover_rate: float,
-    mutation_rate: float,
-    elite_size: int,
-    symbol: str,
-    timeframe: str,
-    start_date: str,
-    end_date: str,
-    initial_capital: float,
-    no_validation: bool,
-) -> dict[str, Any]:
-    """CLI 引数から GA 設定辞書を作る。"""
-    if population < 2:
-        raise typer.BadParameter("個体数は2以上である必要があります")
-    if generations < 1:
-        raise typer.BadParameter("世代数は1以上である必要があります")
-    if elite_size < 0 or elite_size >= population:
-        raise typer.BadParameter(
-            "エリート保存数は0以上かつ個体数未満である必要があります"
-        )
-    if not 0 <= crossover_rate <= 1:
-        raise typer.BadParameter("交叉率は0から1の範囲である必要があります")
-    if not 0 <= mutation_rate <= 1:
-        raise typer.BadParameter("突然変異率は0から1の範囲である必要があります")
-
-    return {
-        "population_size": population,
-        "generations": generations,
-        "crossover_rate": crossover_rate,
-        "mutation_rate": mutation_rate,
-        "elite_size": elite_size,
-        "evaluation_config": {"enable_parallel": True},
-        "fallback_start_date": start_date,
-        "fallback_end_date": end_date,
-        **({"validation_config": {"enabled": False}} if no_validation else {}),
-    }
-
-
-def _build_backtest_config_dict(
-    symbol: str,
-    timeframe: str,
-    start_date: str,
-    end_date: str,
-    initial_capital: float,
-) -> dict[str, Any]:
-    if initial_capital <= 0:
-        raise typer.BadParameter("初期資本は0より大きい必要があります")
-    return {
-        "symbol": symbol,
-        "timeframe": timeframe,
-        "start_date": start_date,
-        "end_date": end_date,
-        "initial_capital": initial_capital,
-        "commission_rate": 0.0004,
-        "slippage": 0.0001,
-    }
 
 
 def _print_json(data: Any) -> None:
@@ -158,9 +102,50 @@ def exp_run(
     initial_capital: Annotated[
         float, typer.Option("--initial-capital", help="初期資本")
     ] = 100000.0,
+    no_parallel: Annotated[
+        bool, typer.Option("--no-parallel", help="並列評価を無効化")
+    ] = False,
     no_validation: Annotated[
         bool, typer.Option("--no-validation", help="WFA自動検証を無効化")
     ] = False,
+    no_seeds: Annotated[
+        bool, typer.Option("--no-seeds", help="シード戦略注入を無効化")
+    ] = False,
+    min_trades: Annotated[
+        int | None,
+        typer.Option("--min-trades", help="最小取引回数制約（0で無効化）"),
+    ] = None,
+    smoke: Annotated[
+        bool, typer.Option("--smoke", help="高速スモークモード")
+    ] = False,
+    mtf: Annotated[
+        bool, typer.Option("--mtf", help="マルチタイムフレーム指標を有効化")
+    ] = False,
+    mtf_timeframes: Annotated[
+        str, typer.Option("--mtf-timeframes", help="MTFタイムフレーム（カンマ区切り）")
+    ] = "1d",
+    mtf_probability: Annotated[
+        float, typer.Option("--mtf-probability", help="MTF指標生成確率")
+    ] = 0.3,
+    indicator_universe: Annotated[
+        str,
+        typer.Option(
+            "--indicator-universe",
+            help="インジケーターユニバース（curated | experimental_all）",
+        ),
+    ] = "curated",
+    max_indicators: Annotated[
+        int, typer.Option("--max-indicators", help="1戦略あたりの最大インジケーター数")
+    ] = 10,
+    min_non_price: Annotated[
+        int, typer.Option("--min-non-price", help="非価格指標の最低数")
+    ] = 0,
+    non_price_probability: Annotated[
+        float, typer.Option("--non-price-probability", help="非価格指標の選択確率")
+    ] = 0.3,
+    max_conditions: Annotated[
+        int, typer.Option("--max-conditions", help="エントリー条件の最大数")
+    ] = 3,
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="詳細ログ")
     ] = False,
@@ -171,22 +156,40 @@ def exp_run(
     """GA実験を実行する（サーバー不要・DB保存あり）。"""
     _setup_logging(verbose)
 
-    ga_config_dict = _build_ga_config_dict(
-        population,
-        generations,
-        crossover_rate,
-        mutation_rate,
-        elite_size,
-        symbol,
-        timeframe,
-        start_date,
-        end_date,
-        initial_capital,
-        no_validation,
-    )
-    backtest_config_dict = _build_backtest_config_dict(
-        symbol, timeframe, start_date, end_date, initial_capital
-    )
+    try:
+        ga_config_dict = build_ga_config_dict(
+            population=population,
+            generations=generations,
+            crossover_rate=crossover_rate,
+            mutation_rate=mutation_rate,
+            elite_size=elite_size,
+            start_date=start_date,
+            end_date=end_date,
+            no_parallel=no_parallel,
+            verbose=verbose,
+            smoke=smoke,
+            min_trades=min_trades,
+            no_validation=no_validation,
+            no_seeds=no_seeds,
+            mtf=mtf,
+            mtf_timeframes=mtf_timeframes,
+            mtf_probability=mtf_probability,
+            indicator_universe=indicator_universe,
+            max_indicators=max_indicators,
+            min_non_price=min_non_price,
+            non_price_probability=non_price_probability,
+            max_conditions=max_conditions,
+        )
+        backtest_config_dict = build_backtest_config_dict(
+            symbol=symbol,
+            timeframe=timeframe,
+            start_date=start_date,
+            end_date=end_date,
+            initial_capital=initial_capital,
+        )
+    except ValueError as e:
+        raise typer.BadParameter(str(e)) from e
+
     ga_config = GAConfig.from_dict(ga_config_dict)
     experiment_id = _new_experiment_id()
 

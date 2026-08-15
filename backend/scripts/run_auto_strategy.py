@@ -37,7 +37,6 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from app.services.auto_strategy.config.ga_config import (  # noqa: E402
-    EvaluationConfig,
     GAConfig,  # noqa: E402
 )
 from app.services.auto_strategy.core import GeneticAlgorithmEngine  # noqa: E402
@@ -292,6 +291,10 @@ def parse_args() -> argparse.Namespace:
 def create_ga_config(args: argparse.Namespace) -> GAConfig:
     """引数からGAConfigを作成します。
 
+    設定構築ロジックは `app.cli.config_builder` に一本化されており、
+    この関数は Namespace を共有ビルダーのキーワード引数へ変換するだけの
+    薄い委譲レイヤーです。
+
     Args:
         args: コマンドライン引数
 
@@ -301,110 +304,42 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
     Raises:
         ValueError: 引数が不正な場合
     """
+    from app.cli.config_builder import build_ga_config_dict
+
     smoke_mode = getattr(args, "smoke", False)
 
-    population = 2 if smoke_mode else args.population
-    generations = 1 if smoke_mode else args.generations
-    elite_size = 1 if smoke_mode else args.elite_size
+    config_dict = build_ga_config_dict(
+        population=getattr(args, "population", 20),
+        generations=getattr(args, "generations", 10),
+        crossover_rate=args.crossover_rate,
+        mutation_rate=args.mutation_rate,
+        elite_size=getattr(args, "elite_size", 2),
+        start_date=args.start_date,
+        end_date=args.end_date,
+        no_parallel=getattr(args, "no_parallel", False),
+        verbose=getattr(args, "verbose", False),
+        smoke=smoke_mode,
+        min_trades=getattr(args, "min_trades", None),
+        no_validation=getattr(args, "no_validation", False),
+        no_seeds=getattr(args, "no_seeds", False),
+        mtf=getattr(args, "mtf", False),
+        mtf_timeframes=getattr(args, "mtf_timeframes", "1d"),
+        mtf_probability=getattr(args, "mtf_probability", 0.3),
+        indicator_universe=getattr(args, "indicator_universe", "curated"),
+        max_indicators=getattr(args, "max_indicators", 10),
+        min_non_price=getattr(args, "min_non_price", 0),
+        non_price_probability=getattr(args, "non_price_probability", 0.3),
+        max_conditions=getattr(args, "max_conditions", 3),
+    )
 
-    # 入力検証
-    if population < 2:
-        raise ValueError("個体数は2以上である必要があります")
-    if generations < 1:
-        raise ValueError("世代数は1以上である必要があります")
-    if elite_size < 0:
-        raise ValueError("エリート保存数は0以上である必要があります")
-    if elite_size >= population:
-        raise ValueError("エリート保存数は個体数未満である必要があります")
-    if not 0 <= args.crossover_rate <= 1:
-        raise ValueError("交叉率は0から1の範囲である必要があります")
-    if not 0 <= args.mutation_rate <= 1:
-        raise ValueError("突然変異率は0から1の範囲である必要があります")
-
-    # fitness_constraints の上書き
-    fitness_constraints = None
-    min_trades = getattr(args, "min_trades", None)
-    if min_trades is not None or smoke_mode:
-        from app.services.auto_strategy.config.constants import (
-            DEFAULT_FITNESS_CONSTRAINTS,
-        )
-
-        fitness_constraints = DEFAULT_FITNESS_CONSTRAINTS.copy()
-        fitness_constraints["min_trades"] = min_trades if min_trades is not None else 0
-
-    config_kwargs = {
-        "population_size": population,
-        "generations": generations,
-        "crossover_rate": args.crossover_rate,
-        "mutation_rate": args.mutation_rate,
-        "elite_size": elite_size,
-        "evaluation_config": EvaluationConfig(
-            enable_parallel=not args.no_parallel and not smoke_mode
-        ),
-        "log_level": "DEBUG" if args.verbose else "INFO",
-        "fallback_start_date": args.start_date,
-        "fallback_end_date": args.end_date,
-    }
-    if smoke_mode:
-        config_kwargs["max_indicators"] = 3
-        config_kwargs["max_conditions"] = 2
-        config_kwargs["use_seed_strategies"] = False
-        config_kwargs["seed_injection_rate"] = 0.0
-        config_kwargs["two_stage_selection_config"] = {"enabled": False}
-    else:
-        # 探索空間の拡張設定（通常モードのみ適用）
-        config_kwargs["max_indicators"] = getattr(args, "max_indicators", 10)
-        config_kwargs["max_conditions"] = getattr(args, "max_conditions", 3)
-        min_non_price = getattr(args, "min_non_price", 0)
-        if min_non_price:
-            config_kwargs["min_non_price_indicators"] = min_non_price
-        if getattr(args, "no_seeds", False):
-            # シード戦略を注入せず、全個体をランダム生成で開始する
-            config_kwargs["use_seed_strategies"] = False
-            config_kwargs["seed_injection_rate"] = 0.0
-        non_price_probability = getattr(args, "non_price_probability", 0.3)
-        config_kwargs["non_price_indicator_probability"] = non_price_probability
-
-        mtf_enabled = getattr(args, "mtf", False)
-        if mtf_enabled:
-            mtf_timeframes = [
-                tf.strip()
-                for tf in getattr(args, "mtf_timeframes", "1d").split(",")
-                if tf.strip()
-            ]
-            mtf_probability = getattr(args, "mtf_probability", 0.3)
-            if not 0.0 <= mtf_probability <= 1.0:
-                raise ValueError("--mtf-probability は0から1の範囲である必要があります")
-            # サポート外タイムフレームは早期に弾く（無効なMTF指標の生成を防ぐ）
-            from app.config.constants import SUPPORTED_TIMEFRAMES
-
-            invalid_tfs = [
-                tf for tf in mtf_timeframes if tf not in SUPPORTED_TIMEFRAMES
-            ]
-            if invalid_tfs:
-                raise ValueError(
-                    "サポートされていないタイムフレーム: "
-                    f"{', '.join(invalid_tfs)}. 有効: {SUPPORTED_TIMEFRAMES}"
-                )
-            config_kwargs["enable_multi_timeframe"] = True
-            config_kwargs["available_timeframes"] = mtf_timeframes
-            config_kwargs["mtf_indicator_probability"] = mtf_probability
-
-        universe = getattr(args, "indicator_universe", "curated")
-        if universe != "curated":
-            config_kwargs["indicator_universe_mode"] = universe
-
-    if smoke_mode or getattr(args, "no_validation", False):
-        # 高速実行時はWFA自動検証を無効化
-        config_kwargs["validation_config"] = {"enabled": False}
-    if fitness_constraints is not None:
-        config_kwargs["fitness_constraints"] = fitness_constraints
-
-    return GAConfig(**config_kwargs)
+    return GAConfig.from_dict(config_dict)
 
 
 def create_backtest_config(args: argparse.Namespace) -> dict[str, Any]:
     """引数からバックテスト設定を作成します。
+
+    設定構築ロジックは `app.cli.config_builder` に一本化されており、
+    この関数は Namespace を共有ビルダーへ委譲するだけの薄いレイヤーです。
 
     Args:
         args: コマンドライン引数
@@ -415,19 +350,15 @@ def create_backtest_config(args: argparse.Namespace) -> dict[str, Any]:
     Raises:
         ValueError: 引数が不正な場合
     """
-    # 入力検証
-    if args.initial_capital <= 0:
-        raise ValueError("初期資本は0より大きい必要があります")
+    from app.cli.config_builder import build_backtest_config_dict
 
-    return {
-        "symbol": args.symbol,
-        "timeframe": args.timeframe,
-        "start_date": args.start_date,
-        "end_date": args.end_date,
-        "initial_capital": args.initial_capital,
-        "commission_rate": 0.0004,  # 0.04%手数料
-        "slippage": 0.0001,  # 0.01%スリッページ
-    }
+    return build_backtest_config_dict(
+        symbol=args.symbol,
+        timeframe=args.timeframe,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        initial_capital=args.initial_capital,
+    )
 
 
 def strategy_gene_to_readable_dict(
