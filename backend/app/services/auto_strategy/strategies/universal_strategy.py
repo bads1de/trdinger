@@ -54,6 +54,17 @@ class UniversalStrategy(Strategy):
     timeframe = "1h"
     evaluation_start = None
     early_termination_settings = None
+    # GeneratedGAParameters のレガシーフィールド。
+    # Pydantic 検証でデフォルト値が展開されて bt.run(**params) へ渡されるため、
+    # backtesting.py のクラス変数チェックを通過させるために宣言が必要。
+    enable_early_termination = False
+    early_termination_max_drawdown = None
+    early_termination_min_trades = None
+    early_termination_min_trade_check_progress = 0.5
+    early_termination_trade_pace_tolerance = 0.5
+    early_termination_min_expectancy = None
+    early_termination_expectancy_min_trades = 5
+    early_termination_expectancy_progress = 0.6
 
     @property
     def _sl_price(self) -> float | None:

@@ -55,6 +55,13 @@ const navItems: NavItem[] = [
     color: "text-purple-500",
   },
   {
+    href: "/strategies",
+    label: "Strategies",
+    icon: TrendingUp,
+    description: "GAが生成した戦略を閲覧",
+    color: "text-green-500",
+  },
+  {
     href: "/data",
     label: "Data Management",
     icon: Database,

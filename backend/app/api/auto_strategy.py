@@ -97,6 +97,7 @@ class ExperimentDetailResponse(BaseModel):
     current_generation: int | None = None
     total_generations: int | None = None
     best_fitness: float | None = None
+    error_message: str | None = None
     created_at: str | None = None
     completed_at: str | None = None
 
@@ -276,3 +277,33 @@ async def stop_experiment(  # type: ignore[no-untyped-def]
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         )
+
+
+@router.delete(
+    "/experiments/{experiment_id}",
+    response_model=StopExperimentResponse,
+    status_code=status.HTTP_200_OK,
+)
+@ErrorHandler.api_endpoint("実験の削除に失敗しました")
+async def delete_experiment(  # type: ignore[no-untyped-def]
+    experiment_id: str,
+    auto_strategy_service: AutoStrategyService = Depends(get_auto_strategy_service),
+):
+    """
+    実験を削除
+
+    実験とそれに紐づく戦略（および戦略が参照するバックテスト結果）を削除します。
+    実行中の実験は削除できません（先に停止してください）。
+
+    Args:
+        experiment_id: 削除対象の実験ID
+        auto_strategy_service: 自動戦略生成サービス（依存性注入）
+
+    Returns:
+        StopExperimentResponse: 削除処理結果
+    """
+    result = auto_strategy_service.delete_experiment(experiment_id)
+    return StopExperimentResponse(
+        success=result.get("success", False),
+        message=result.get("message", "実験を削除しました"),
+    )

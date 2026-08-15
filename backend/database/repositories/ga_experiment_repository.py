@@ -83,7 +83,11 @@ class GAExperimentRepository(BaseRepository):
         return _create_experiment()
 
     def update_experiment_status(
-        self, experiment_id: int, status: str, completed_at: datetime | None = None
+        self,
+        experiment_id: int,
+        status: str,
+        completed_at: datetime | None = None,
+        error_message: str | None = None,
     ) -> bool:
         """
         実験のステータスを更新
@@ -92,6 +96,7 @@ class GAExperimentRepository(BaseRepository):
             experiment_id: 実験ID
             status: 新しいステータス
             completed_at: 完了時刻
+            error_message: 失敗理由（status=failed 時に保存）
 
         Returns:
             更新成功フラグ
@@ -114,6 +119,9 @@ class GAExperimentRepository(BaseRepository):
 
             experiment = experiments[0]
             experiment.status = status
+
+            if error_message is not None:
+                experiment.error_message = error_message
 
             if completed_at:
                 experiment.completed_at = cast(datetime, completed_at)  # type: ignore
@@ -154,6 +162,30 @@ class GAExperimentRepository(BaseRepository):
             )
 
         return _get_experiments_by_status()
+
+    def count_by_status(self, status: str) -> int:
+        """
+        ステータス別の実験数を取得
+
+        Args:
+            status: ステータス
+
+        Returns:
+            該当ステータスの実験数
+        """
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="ステータス別実験数取得", is_api_call=False, default_return=0
+        )
+        def _count_by_status() -> int:
+            return (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.status == status)
+                .count()
+            )
+
+        return _count_by_status()
 
     def get_recent_experiments(self, limit: int = 10) -> list[GAExperiment]:
         """
@@ -267,6 +299,41 @@ class GAExperimentRepository(BaseRepository):
 
         return _update_progress()
 
+    def reconcile_stale_running_experiments(self) -> int:
+        """
+        サーバー再起動後に残った running 状態の実験を停止状態へ巻き戻す
+
+        Returns:
+            巻き戻した実験数
+        """
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(
+            context="孤児実験リコンサイル", is_api_call=False, default_return=0
+        )
+        def _reconcile() -> int:
+            stale = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.status == "running")
+                .all()
+            )
+            for experiment in stale:
+                experiment.status = "stopped"
+                experiment.error_message = (
+                    "サーバー再起動により実行コンテキストが失われたため停止しました"
+                )
+                experiment.completed_at = cast(
+                    datetime, datetime.now(timezone.utc)
+                )  # type: ignore
+            if stale:
+                self.db.commit()
+                logger.info(
+                    f"孤児実験を停止状態へ巻き戻しました: {len(stale)} 件"
+                )
+            return len(stale)
+
+        return _reconcile()
+
     def delete_all_experiments(self) -> int:
         """
         すべてのGA実験を削除
@@ -283,3 +350,80 @@ class GAExperimentRepository(BaseRepository):
             return deleted_count
 
         return _delete_all_experiments()
+
+    def delete_experiment(self, experiment_db_id: int) -> tuple[int, int] | None:
+        """
+        実験と関連データ（戦略・BT結果）を削除
+
+        FK制約のため、先に戦略（と戦略が参照するBT結果）を削除してから
+        実験本体を削除します。
+
+        Args:
+            experiment_db_id: 実験のDB ID（integer PK）
+
+        Returns:
+            (削除した実験数, 削除した戦略数) のタプル。
+            実験が見つからない場合は None。
+        """
+        from app.utils.error_handler import safe_operation
+        from database.models import BacktestResult, GeneratedStrategy
+
+        @safe_operation(context="GA実験削除", is_api_call=False)
+        def _delete_experiment() -> tuple[int, int] | None:
+            experiment = (
+                self.db.query(GAExperiment)
+                .filter(GAExperiment.id == experiment_db_id)
+                .first()
+            )
+            if not experiment:
+                return None
+
+            if experiment.status == "running":
+                raise ValueError("実行中の実験は削除できません。先に停止してください。")
+
+            # 1. 実験に紐づく戦略を取得
+            strategies = (
+                self.db.query(GeneratedStrategy)
+                .filter(GeneratedStrategy.experiment_id == experiment_db_id)
+                .all()
+            )
+
+            # 2. 戦略が参照するBT結果IDを収集（他戦略から参照されていないもののみ）
+            bt_result_ids = {
+                s.backtest_result_id
+                for s in strategies
+                if s.backtest_result_id is not None
+            }
+            strategies_count = len(strategies)
+
+            # 3. 戦略を削除
+            if strategies:
+                for strategy in strategies:
+                    self.db.delete(strategy)
+                self.db.flush()
+
+            # 4. どの戦略からも参照されなくなったBT結果を削除
+            if bt_result_ids:
+                for bt_id in bt_result_ids:
+                    referenced = (
+                        self.db.query(GeneratedStrategy)
+                        .filter(GeneratedStrategy.backtest_result_id == bt_id)
+                        .first()
+                        is not None
+                    )
+                    if not referenced:
+                        self.db.query(BacktestResult).filter(
+                            BacktestResult.id == bt_id
+                        ).delete()
+
+            # 5. 実験本体を削除
+            self.db.delete(experiment)
+            self.db.commit()
+
+            logger.info(
+                f"実験を削除しました: DB ID={experiment_db_id} "
+                f"(戦略 {strategies_count} 件も削除)"
+            )
+            return (1, strategies_count)
+
+        return _delete_experiment()

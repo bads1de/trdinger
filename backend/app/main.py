@@ -97,6 +97,22 @@ def create_app() -> FastAPI:
     app.include_router(auto_strategy_router)
     app.include_router(strategies_router)
 
+    @app.on_event("startup")
+    async def reconcile_stale_experiments() -> None:
+        """サーバー再起動後に残った running 状態の実験を停止状態へ巻き戻す。"""
+        try:
+            from app.services.auto_strategy.services.experiment_persistence_service import (
+                ExperimentPersistenceService,
+            )
+            from database.connection import SessionLocal
+
+            service = ExperimentPersistenceService(SessionLocal)
+            count = service.reconcile_stale_running_experiments()
+            if count:
+                logger.info(f"起動時リコンサイル: 孤児実験 {count} 件を停止しました")
+        except Exception as e:
+            logger.warning(f"起動時リコンサイルに失敗しました（無視して続行）: {e}")
+
     # グローバル例外ハンドラ
     @app.exception_handler(Exception)
     async def global_exception_handler(  # pyright: ignore[reportUnusedFunction] - FastAPI がデコレータ経由で動的登録する

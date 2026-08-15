@@ -352,6 +352,9 @@ class GAExperiment(Base):
     # 現在の世代数
     current_generation = Column(Integer, nullable=False, default=0)
 
+    # 失敗理由（status=failed の場合のエラーメッセージ）
+    error_message = Column(Text, nullable=True)
+
     # メタデータ
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)

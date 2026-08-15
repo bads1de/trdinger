@@ -120,7 +120,7 @@ class TestExperimentPersistenceService:
                 self.persistence_service.complete_experiment(experiment_id)
 
                 mock_repo.update_experiment_status.assert_called_once_with(
-                    123, "completed"
+                    123, "completed", error_message=None
                 )
 
     def test_fail_experiment(self):
@@ -140,7 +140,29 @@ class TestExperimentPersistenceService:
                 self.persistence_service.fail_experiment(experiment_id)
 
                 mock_repo.update_experiment_status.assert_called_once_with(
-                    123, "failed"
+                    123, "failed", error_message=None
+                )
+
+    def test_fail_experiment_with_error_message(self):
+        """エラーメッセージ付きで実験を失敗状態にする"""
+        experiment_id = "exp_001"
+
+        with patch.object(
+            self.persistence_service, "get_experiment_info"
+        ) as mock_get_info:
+            mock_get_info.return_value = {"db_id": 123}
+
+            with patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GAExperimentRepository"
+            ) as mock_repo_cls:
+                mock_repo = mock_repo_cls.return_value
+
+                self.persistence_service.fail_experiment(
+                    experiment_id, error_message="DB connection failed"
+                )
+
+                mock_repo.update_experiment_status.assert_called_once_with(
+                    123, "failed", error_message="DB connection failed"
                 )
 
     def test_stop_experiment(self):
@@ -160,7 +182,7 @@ class TestExperimentPersistenceService:
                 self.persistence_service.stop_experiment(experiment_id)
 
                 mock_repo.update_experiment_status.assert_called_once_with(
-                    123, "stopped"
+                    123, "stopped", error_message=None
                 )
 
     def test_save_experiment_result(self):
@@ -210,11 +232,59 @@ class TestExperimentPersistenceService:
                 ga_config,
                 backtest_config,
                 experiment_info=experiment_info,
+                backtest_result_id=777,
             )
 
             # 最良戦略が保存されたか確認
             mock_strat_repo.save_strategy.assert_called()
             assert mock_strategy_to_dict.call_count == 1
+            # BT結果IDが戦略保存へ伝搬されること
+            save_kwargs = mock_strat_repo.save_strategy.call_args.kwargs
+            assert save_kwargs["backtest_result_id"] == 777
+
+    def test_save_experiment_result_without_backtest_result_id(self):
+        """BT結果IDなしで保存した場合も None が明示的に渡される"""
+        experiment_id = "exp_001"
+        ga_config = GAConfig()
+        backtest_config = {"symbol": "BTC/USDT:USDT"}
+
+        mock_strategy = Mock(spec=StrategyGene)
+        mock_strategy.id = "strat_123"
+        result = {
+            "best_strategy": mock_strategy,
+            "best_fitness": 1.5,
+            "all_strategies": [mock_strategy],
+            "fitness_scores": [1.5],
+        }
+        experiment_info = {
+            "db_id": 100,
+            "name": "AUTO_STRATEGY_GA_TEST",
+            "config": {"experiment_id": experiment_id},
+        }
+
+        with (
+            patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
+            ) as mock_strat_repo_cls,
+            patch.object(
+                self.persistence_service.serializer,
+                "strategy_gene_to_dict",
+                return_value={"serialized": True},
+            ),
+        ):
+            mock_strat_repo = mock_strat_repo_cls.return_value
+            mock_strat_repo.save_strategy.return_value = Mock(id=555)
+
+            self.persistence_service.save_experiment_result(
+                experiment_id,
+                result,
+                ga_config,
+                backtest_config,
+                experiment_info=experiment_info,
+            )
+
+            save_kwargs = mock_strat_repo.save_strategy.call_args.kwargs
+            assert save_kwargs["backtest_result_id"] is None
 
     def test_save_backtest_result(self):
         """詳細バックテスト結果保存のテスト"""
@@ -243,7 +313,17 @@ class TestExperimentPersistenceService:
             "app.services.auto_strategy.services.experiment_persistence_service.BacktestResultRepository"
         ) as mock_bt_repo_cls:
             mock_bt_repo = mock_bt_repo_cls.return_value
+            mock_bt_repo.save_backtest_result.return_value = {
+                "id": 42,
+                "strategy_name": "AS_TEST_123456",
+            }
 
-            self.persistence_service.save_backtest_result(result_data)
+            saved = self.persistence_service.save_backtest_result(result_data)
 
             mock_bt_repo.save_backtest_result.assert_called_once_with(result_data)
+            assert saved == {"id": 42, "strategy_name": "AS_TEST_123456"}
+
+    def test_save_backtest_result_empty(self):
+        """空データの場合は None を返す"""
+        saved = self.persistence_service.save_backtest_result({})
+        assert saved is None

@@ -12,7 +12,7 @@ from app.utils.error_handler import ErrorHandler
 from database.connection import SessionLocal
 
 from ..config import EvaluationPlan, GAConfig
-from ..config.constants import DEFAULT_SYMBOL
+from ..config.constants import DEFAULT_SYMBOL, MAX_CONCURRENT_EXPERIMENTS
 from .experiment_application_service import (
     ExperimentApplicationService,
     TaskScheduler,
@@ -114,7 +114,17 @@ class AutoStrategyService:
         # 2. GA設定の構築と検証
         ga_config = self._prepare_ga_config(ga_config_dict, backtest_config)
 
-        # 3. 実験の作成
+        # 3. 同時実行数のチェック（過負荷防止）
+        if not self.persistence_service:
+            raise RuntimeError("永続化サービスが初期化されていません。")
+        running_count = self.persistence_service.count_running_experiments()
+        if running_count >= MAX_CONCURRENT_EXPERIMENTS:
+            raise RuntimeError(
+                f"同時実行できるGA実験の上限（{MAX_CONCURRENT_EXPERIMENTS}件）に"
+                f"達しています。現在 {running_count} 件が実行中です。"
+            )
+
+        # 4. 実験の作成
         if not self.experiment_application_service:
             raise RuntimeError("実験 application service が初期化されていません。")
 
@@ -260,4 +270,30 @@ class AutoStrategyService:
             return {
                 "success": False,
                 "message": "実験停止でエラーが発生しました",
+            }
+
+    def delete_experiment(self, experiment_id: str) -> dict[str, Any]:
+        """
+        実験を削除
+
+        Args:
+            experiment_id: 実験ID
+
+        Returns:
+            削除結果
+        """
+        try:
+            if not self.experiment_application_service:
+                return {
+                    "success": False,
+                    "message": "実験 application service が初期化されていません",
+                }
+            return self.experiment_application_service.delete_experiment(
+                experiment_id
+            )
+        except Exception as e:
+            logger.error("エラー in 実験削除: %s", e)
+            return {
+                "success": False,
+                "message": "実験削除でエラーが発生しました",
             }

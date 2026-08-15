@@ -70,7 +70,9 @@ def test_start_experiment_cleans_up_on_schedule_error(app_service):
         )
 
     app_service.experiment_manager.release_experiment.assert_called_once_with("exp-001")
-    app_service.persistence_service.fail_experiment.assert_called_once_with("exp-001")
+    app_service.persistence_service.fail_experiment.assert_called_once_with(
+        "exp-001", error_message="boom"
+    )
 
 
 def test_stop_experiment_maps_manager_result(app_service):

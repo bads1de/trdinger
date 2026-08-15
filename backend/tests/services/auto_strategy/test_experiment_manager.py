@@ -113,6 +113,10 @@ class TestExperimentManager:
             "trade_history": [],
             "execution_time": 0.25,
         }
+        self.manager.persistence_service.save_backtest_result.return_value = {
+            "id": 42,
+            "strategy_name": "AS_GA_240102_abcdef",
+        }
 
         self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
 
@@ -125,6 +129,8 @@ class TestExperimentManager:
         assert call_args[0][0] == ga_config
         assert call_args[0][1] == expected_backtest_config
         assert "progress_callback" in call_args[1]
+        # BT結果が先に保存され、返り値のIDが最良戦略へリンクされる
+        self.manager.persistence_service.save_backtest_result.assert_called_once()
         self.manager.persistence_service.save_experiment_result.assert_called_once_with(
             "test_exp_001",
             {
@@ -136,8 +142,8 @@ class TestExperimentManager:
             ga_config,
             expected_backtest_config,
             experiment_info=experiment_info,
+            backtest_result_id=42,
         )
-        self.manager.persistence_service.save_backtest_result.assert_called_once()
         saved_backtest_result = (
             self.manager.persistence_service.save_backtest_result.call_args.args[0]
         )
@@ -163,9 +169,9 @@ class TestExperimentManager:
 
         self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
 
-        # エラーハンドリングの検証
+        # エラーハンドリングの検証（エラーメッセージ付きで失敗状態へ）
         self.manager.persistence_service.fail_experiment.assert_called_once_with(
-            "test_exp_001"
+            "test_exp_001", error_message="Test exception"
         )
         assert self.manager._get_active_engine("test_exp_001") is None
 
@@ -461,9 +467,10 @@ class TestExperimentManager:
 
         self.manager.run_experiment("missing_exp", ga_config, backtest_config)
 
-        self.manager.persistence_service.fail_experiment.assert_called_once_with(
-            "missing_exp"
-        )
+        fail_call = self.manager.persistence_service.fail_experiment.call_args
+        assert fail_call is not None
+        assert fail_call.args[0] == "missing_exp"
+        assert "初期化" in fail_call.kwargs.get("error_message", "")
 
     def test_get_validation_service_reuses_engine_evaluator(self):
         """エンジンの評価器を再利用して検証サービスを生成する"""

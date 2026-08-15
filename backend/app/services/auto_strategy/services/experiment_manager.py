@@ -143,17 +143,24 @@ class ExperimentManager:
                     experiment_info=experiment_info,
                 )
 
-                # 結果の永続化
+                # 詳細BT結果を先に保存し、返り値のIDを最良戦略へ紐付ける
+                saved_backtest_result = self.persistence_service.save_backtest_result(
+                    detailed_backtest_result_data
+                )
+                backtest_result_id = (
+                    saved_backtest_result.get("id")
+                    if isinstance(saved_backtest_result, dict)
+                    else None
+                )
+
+                # 結果の永続化（BT結果IDを最良戦略にリンク）
                 self.persistence_service.save_experiment_result(
                     experiment_id,
                     result,
                     ga_config,
                     run_backtest_config,
                     experiment_info=experiment_info,
-                )
-
-                self.persistence_service.save_backtest_result(
-                    detailed_backtest_result_data
+                    backtest_result_id=backtest_result_id,
                 )
 
                 if engine.is_stop_requested() is True:
@@ -177,7 +184,9 @@ class ExperimentManager:
             _execute()
         except Exception as e:
             logger.error(f"実験実行エラー ({experiment_id}): {e}")
-            self.persistence_service.fail_experiment(experiment_id)
+            self.persistence_service.fail_experiment(
+                experiment_id, error_message=str(e)
+            )
             self.release_experiment(experiment_id)
 
     def _get_validation_service(

@@ -87,7 +87,9 @@ class ExperimentApplicationService:
             )
             if self.experiment_manager:
                 self.experiment_manager.release_experiment(experiment_id)
-            self.persistence_service.fail_experiment(experiment_id)
+            self.persistence_service.fail_experiment(
+                experiment_id, error_message=str(e)
+            )
             raise
 
         return experiment_id
@@ -117,4 +119,25 @@ class ExperimentApplicationService:
         return {
             "success": False,
             "message": "実行中の実験が見つかりませんでした",
+        }
+
+    def delete_experiment(self, experiment_id: str) -> dict[str, Any]:
+        """実験削除結果を API 向け形式で返す。"""
+        try:
+            result = self.persistence_service.delete_experiment(experiment_id)
+        except ValueError as e:
+            return {"success": False, "message": str(e)}
+
+        if result is None:
+            return {
+                "success": False,
+                "message": f"実験が見つかりません: {experiment_id}",
+            }
+
+        _, strategies_count = result
+        return {
+            "success": True,
+            "message": (
+                f"実験を削除しました（戦略 {strategies_count} 件を含む）"
+            ),
         }

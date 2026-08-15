@@ -114,6 +114,10 @@ MAX_STRATEGIES_LIMIT = 100
 GA_FALLBACK_START_DATE = "2024-01-01"
 GA_FALLBACK_END_DATE = "2024-04-09"
 
+# === 実験実行制御 ===
+# 同時に実行できるGA実験の上限（過負荷防止）
+MAX_CONCURRENT_EXPERIMENTS = 2
+
 # === GA基本設定 ===
 GA_DEFAULT_CONFIG = {
     "population_size": 100,

@@ -20,6 +20,7 @@ export interface ExperimentProgress {
   current_generation: number | null;
   total_generations: number | null;
   best_fitness: number | null;
+  error_message: string | null;
   created_at: string | null;
   completed_at: string | null;
 }
@@ -90,14 +91,21 @@ export const useAutoStrategy = (loadResults: () => void) => {
           next.set(experimentId, data);
           return next;
         });
-        // 完了または失敗したらポーリング停止
-        if (data.status === "completed" || data.status === "failed") {
+        // 完了・失敗・停止したらポーリング停止
+        if (
+          data.status === "completed" ||
+          data.status === "failed" ||
+          data.status === "stopped"
+        ) {
           setRunningExperiments((prev) => {
             const next = new Map(prev);
             next.delete(experimentId);
             return next;
           });
-          loadResults();
+          // 完了時のみ結果一覧を更新（失敗・停止では結果は増えない）
+          if (data.status === "completed") {
+            loadResults();
+          }
         }
       } catch (error) {
         console.error("進捗取得エラー:", error);
@@ -146,6 +154,7 @@ export const useAutoStrategy = (loadResults: () => void) => {
           current_generation: 0,
           total_generations: null,
           best_fitness: null,
+          error_message: null,
           created_at: new Date().toISOString(),
           completed_at: null,
         });
@@ -153,6 +162,32 @@ export const useAutoStrategy = (loadResults: () => void) => {
       });
     },
     [],
+  );
+
+  /**
+   * 実行中の実験を停止する
+   */
+  const stopExperiment = useCallback(
+    async (experimentId: string) => {
+      try {
+        const response = await fetch(
+          `${BACKEND_API_URL}/api/auto-strategy/experiments/${experimentId}/stop`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+        if (!response.ok) {
+          throw new Error(`停止に失敗しました (HTTP ${response.status})`);
+        }
+        // 停止後も一度ポーリングして最終状態を反映する
+        fetchExperimentProgress(experimentId);
+      } catch (error) {
+        console.error("実験停止エラー:", error);
+        alert(`実験の停止に失敗しました: ${error}`);
+      }
+    },
+    [fetchExperimentProgress],
   );
 
   /**
@@ -261,5 +296,7 @@ export const useAutoStrategy = (loadResults: () => void) => {
     runningExperiments,
     /** 実験の進捗ポーリングを開始する関数 */
     pollExperimentProgress,
+    /** 実行中の実験を停止する関数 */
+    stopExperiment,
   };
 };

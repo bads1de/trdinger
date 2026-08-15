@@ -56,6 +56,7 @@ class TestE2EFlow:
         ):
             mock_persistence = MockPersistence.return_value
             mock_manager = MockManager.return_value
+            mock_persistence.count_running_experiments.return_value = 0
 
             # サービス初期化
             service = AutoStrategyService()

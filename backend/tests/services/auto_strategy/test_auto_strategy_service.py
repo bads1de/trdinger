@@ -98,6 +98,8 @@ def test_start_strategy_generation_success(
     backtest_config_dict = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
     background_tasks = BackgroundTasks()
 
+    mock_persistence_service.count_running_experiments.return_value = 0
+
     # 実行
     result_exp_id = auto_strategy_service.start_strategy_generation(
         experiment_id,
@@ -117,6 +119,80 @@ def test_start_strategy_generation_success(
     assert len(background_tasks.tasks) == 1
 
 
+def test_start_strategy_generation_rejects_when_concurrent_limit_reached(
+    auto_strategy_service, mock_persistence_service, mock_experiment_manager
+):
+    """異常系: 同時実行上限に達している場合は開始を拒否する"""
+    experiment_id = "test-exp-id"
+    experiment_name = "Test Experiment"
+    ga_config_dict = {
+        "population_size": 10,
+        "generations": 5,
+        "crossover_rate": 0.8,
+        "mutation_rate": 0.1,
+        "elite_size": 2,
+    }
+    backtest_config_dict = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
+    background_tasks = BackgroundTasks()
+
+    from app.services.auto_strategy.config.constants import (
+        MAX_CONCURRENT_EXPERIMENTS,
+    )
+
+    mock_persistence_service.count_running_experiments.return_value = (
+        MAX_CONCURRENT_EXPERIMENTS
+    )
+
+    with pytest.raises(RuntimeError, match="上限"):
+        auto_strategy_service.start_strategy_generation(
+            experiment_id,
+            experiment_name,
+            ga_config_dict,
+            backtest_config_dict,
+            background_tasks,
+        )
+
+    mock_persistence_service.create_experiment.assert_not_called()
+    mock_experiment_manager.initialize_ga_engine.assert_not_called()
+    assert len(background_tasks.tasks) == 0
+
+
+def test_start_strategy_generation_allows_under_limit(
+    auto_strategy_service, mock_persistence_service, mock_experiment_manager
+):
+    """境界: 上限未満なら開始できる"""
+    from app.services.auto_strategy.config.constants import (
+        MAX_CONCURRENT_EXPERIMENTS,
+    )
+
+    experiment_id = "test-exp-id"
+    experiment_name = "Test Experiment"
+    ga_config_dict = {
+        "population_size": 10,
+        "generations": 5,
+        "crossover_rate": 0.8,
+        "mutation_rate": 0.1,
+        "elite_size": 2,
+    }
+    backtest_config_dict = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
+    background_tasks = BackgroundTasks()
+
+    mock_persistence_service.count_running_experiments.return_value = (
+        MAX_CONCURRENT_EXPERIMENTS - 1
+    )
+
+    result_exp_id = auto_strategy_service.start_strategy_generation(
+        experiment_id,
+        experiment_name,
+        ga_config_dict,
+        backtest_config_dict,
+        background_tasks,
+    )
+
+    assert result_exp_id == experiment_id
+    mock_persistence_service.create_experiment.assert_called_once()
+
+
 def test_start_strategy_generation_cleans_up_on_failure(
     auto_strategy_service, mock_persistence_service, mock_experiment_manager
 ):
@@ -132,6 +208,8 @@ def test_start_strategy_generation_cleans_up_on_failure(
     }
     backtest_config_dict = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
     background_tasks = BackgroundTasks()
+
+    mock_persistence_service.count_running_experiments.return_value = 0
 
     with (
         patch.object(
@@ -150,7 +228,9 @@ def test_start_strategy_generation_cleans_up_on_failure(
         )
 
     mock_experiment_manager.release_experiment.assert_called_once_with(experiment_id)
-    mock_persistence_service.fail_experiment.assert_called_once_with(experiment_id)
+    mock_persistence_service.fail_experiment.assert_called_once_with(
+        experiment_id, error_message="boom"
+    )
 
 
 def test_start_strategy_generation_invalid_ga_config(auto_strategy_service):

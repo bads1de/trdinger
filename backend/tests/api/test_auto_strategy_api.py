@@ -48,6 +48,7 @@ def mock_auto_strategy_service() -> AsyncMock:
     mock_service.start_strategy_generation = Mock()
     mock_service.list_experiments = Mock()
     mock_service.stop_experiment = Mock()
+    mock_service.delete_experiment = Mock()
     return mock_service
 
 
@@ -541,6 +542,67 @@ class TestStopExperiment:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is False
+
+
+class TestDeleteExperiment:
+    """実験削除のテストクラス"""
+
+    def test_delete_experiment_success(
+        self,
+        test_client: TestClient,
+        mock_auto_strategy_service: AsyncMock,
+    ) -> None:
+        """正常系: 実験が削除される"""
+        mock_auto_strategy_service.delete_experiment.return_value = {
+            "success": True,
+            "message": "実験を削除しました（戦略 3 件を含む）",
+        }
+
+        response = test_client.delete(
+            "/api/auto-strategy/experiments/test-exp-001"
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "削除" in data["message"]
+
+    def test_delete_experiment_not_found(
+        self,
+        test_client: TestClient,
+        mock_auto_strategy_service: AsyncMock,
+    ) -> None:
+        """異常系: 存在しない実験は削除失敗として返る"""
+        mock_auto_strategy_service.delete_experiment.return_value = {
+            "success": False,
+            "message": "実験が見つかりません: nonexistent",
+        }
+
+        response = test_client.delete(
+            "/api/auto-strategy/experiments/nonexistent"
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+
+    def test_delete_experiment_running_rejected(
+        self,
+        test_client: TestClient,
+        mock_auto_strategy_service: AsyncMock,
+    ) -> None:
+        """異常系: 実行中の実験は削除できない"""
+        mock_auto_strategy_service.delete_experiment.return_value = {
+            "success": False,
+            "message": "実行中の実験は削除できません。先に停止してください。",
+        }
+
+        response = test_client.delete("/api/auto-strategy/experiments/test-exp-001")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is False
+        assert "実行中" in data["message"]
 
 
 class TestErrorHandling:

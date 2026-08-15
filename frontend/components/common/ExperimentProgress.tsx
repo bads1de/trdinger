@@ -77,6 +77,14 @@ export const ExperimentProgressCard: React.FC<ExperimentProgressCardProps> = ({
           </span>
         </div>
       )}
+
+      {/* 失敗理由 */}
+      {progress.status === "failed" && progress.error_message && (
+        <div className="mt-2 rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-400">
+          <span className="font-medium">失敗理由: </span>
+          {progress.error_message}
+        </div>
+      )}
     </div>
   );
 };

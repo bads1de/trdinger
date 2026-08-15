@@ -42,6 +42,7 @@ function BacktestPageContent() {
     openAutoStrategyModal,
     setShowAutoStrategyModal,
     runningExperiments,
+    stopExperiment,
   } = useAutoStrategy(loadResults);
 
   const [isExplanationModalOpen, setIsExplanationModalOpen] = useState(false);
@@ -87,7 +88,10 @@ function BacktestPageContent() {
 
           {/* 実行中の実験進捗 */}
           {runningExperiments.size > 0 && (
-            <ExperimentProgressList experiments={runningExperiments} />
+            <ExperimentProgressList
+              experiments={runningExperiments}
+              onStop={stopExperiment}
+            />
           )}
         </div>
 

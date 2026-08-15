@@ -124,6 +124,7 @@ class ExperimentPersistenceService:
         ga_config: GAConfig,
         backtest_config: dict[str, Any],
         experiment_info: dict[str, Any] | None = None,
+        backtest_result_id: int | None = None,
     ) -> None:
         """実験結果をデータベースに保存"""
         if not isinstance(experiment_info, dict):
@@ -146,6 +147,7 @@ class ExperimentPersistenceService:
                 result,
                 ga_config,
                 validation_results=validation_results,
+                backtest_result_id=backtest_result_id,
             )
             self._save_other_strategies(
                 db,
@@ -166,16 +168,22 @@ class ExperimentPersistenceService:
 
         logger.info(f"実験結果保存完了: {experiment_id}")
 
-    def save_backtest_result(self, result_data: dict[str, Any]) -> None:
-        """詳細バックテスト結果をデータベースに保存"""
+    def save_backtest_result(self, result_data: dict[str, Any]) -> dict[str, Any] | None:
+        """詳細バックテスト結果をデータベースに保存
+
+        Returns:
+            保存されたバックテスト結果の辞書（id を含む）。
+            保存対象が無い場合は None。
+        """
         if not result_data:
             logger.warning("保存対象のバックテスト結果がありません")
-            return
+            return None
 
         with self.db_session_factory() as db:
             backtest_result_repo = BacktestResultRepository(db)
-            backtest_result_repo.save_backtest_result(result_data)
+            saved = backtest_result_repo.save_backtest_result(result_data)
             logger.info("最良戦略のバックテスト結果を保存しました。")
+            return saved
 
     def _save_best_strategy(
         self,
@@ -186,6 +194,7 @@ class ExperimentPersistenceService:
         ga_config: GAConfig,
         *,
         validation_results: dict[str, Any] | None = None,
+        backtest_result_id: int | None = None,
     ) -> None:
         """最良戦略を保存する"""
         generated_strategy_repo = GeneratedStrategyRepository(db)
@@ -222,6 +231,7 @@ class ExperimentPersistenceService:
             generation=ga_config.generations,
             fitness_score=fitness_score,
             fitness_values=fitness_values,
+            backtest_result_id=backtest_result_id,
         )
 
         logger.info(f"最良戦略を保存しました (ID: {best_strategy_record.id})")
@@ -329,21 +339,32 @@ class ExperimentPersistenceService:
         """実験を完了状態にする"""
         self._update_experiment_status(experiment_id, "completed")
 
-    def fail_experiment(self, experiment_id: str) -> None:
+    def fail_experiment(
+        self, experiment_id: str, error_message: str | None = None
+    ) -> None:
         """実験を失敗状態にする"""
-        self._update_experiment_status(experiment_id, "failed")
+        self._update_experiment_status(
+            experiment_id, "failed", error_message=error_message
+        )
 
     def stop_experiment(self, experiment_id: str) -> None:
         """実験を停止状態にする"""
         self._update_experiment_status(experiment_id, "stopped")
 
-    def _update_experiment_status(self, experiment_id: str, status: str) -> None:
+    def _update_experiment_status(
+        self,
+        experiment_id: str,
+        status: str,
+        error_message: str | None = None,
+    ) -> None:
         """実験ステータス更新の共通処理。"""
         experiment_info = self.get_experiment_info(experiment_id)
         if experiment_info:
             with self._get_db_session() as db:
                 repo = GAExperimentRepository(db)
-                repo.update_experiment_status(experiment_info["db_id"], status)
+                repo.update_experiment_status(
+                    experiment_info["db_id"], status, error_message=error_message
+                )
             self._close_active_session()
 
     def update_experiment_progress(
@@ -380,6 +401,7 @@ class ExperimentPersistenceService:
                     "current_generation": exp.current_generation,
                     "total_generations": exp.total_generations,
                     "best_fitness": exp.best_fitness,
+                    "error_message": exp.error_message,
                     "created_at": isoformat_or_none(
                         cast(datetime | None, exp.created_at)
                     ),
@@ -389,6 +411,39 @@ class ExperimentPersistenceService:
                 }
                 for exp in experiments
             ]
+
+    def count_running_experiments(self) -> int:
+        """実行中の実験数を取得"""
+        with self.db_session_factory() as db:
+            repo = GAExperimentRepository(db)
+            return repo.count_by_status("running")
+
+    def reconcile_stale_running_experiments(self) -> int:
+        """サーバー再起動後の孤児実験（running のまま）を停止状態へ巻き戻す"""
+        with self.db_session_factory() as db:
+            repo = GAExperimentRepository(db)
+            return repo.reconcile_stale_running_experiments()
+
+    def delete_experiment(self, experiment_id: str) -> tuple[int, int] | None:
+        """
+        実験を削除する
+
+        Args:
+            experiment_id: フロントエンド由来の実験UUID
+
+        Returns:
+            (削除した実験数, 削除した戦略数) のタプル。
+            実験が見つからない場合は None。
+
+        Raises:
+            ValueError: 実行中の実験は削除不可
+        """
+        experiment_info = self.get_experiment_info(experiment_id)
+        if experiment_info is None:
+            return None
+        with self.db_session_factory() as db:
+            repo = GAExperimentRepository(db)
+            return repo.delete_experiment(experiment_info["db_id"])
 
     def get_experiment_detail(self, experiment_id: str) -> dict[str, Any] | None:
         """実験詳細を取得（進捗情報を含む）"""
@@ -406,6 +461,7 @@ class ExperimentPersistenceService:
                 "current_generation": exp.current_generation,
                 "total_generations": exp.total_generations,
                 "best_fitness": exp.best_fitness,
+                "error_message": exp.error_message,
                 "created_at": isoformat_or_none(cast(datetime | None, exp.created_at)),
                 "completed_at": isoformat_or_none(
                     cast(datetime | None, exp.completed_at)
