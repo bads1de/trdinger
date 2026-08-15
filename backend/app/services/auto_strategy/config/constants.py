@@ -118,6 +118,10 @@ GA_FALLBACK_END_DATE = "2024-04-09"
 # 同時に実行できるGA実験の上限（過負荷防止）
 MAX_CONCURRENT_EXPERIMENTS = 2
 
+# 進捗更新がこの回数連続で失敗した場合、実験を失敗扱いにする
+# （DB断絶等で進捗が永続更新できない状態での実験継続を防ぐ）
+MAX_CONSECUTIVE_PROGRESS_UPDATE_FAILURES = 3
+
 # === GA基本設定 ===
 GA_DEFAULT_CONFIG = {
     "population_size": 100,

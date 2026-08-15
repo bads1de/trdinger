@@ -74,7 +74,7 @@ class TestE2EFlow:
             assert returned_id == experiment_id
 
             # 実験作成が呼ばれたか
-            mock_persistence.create_experiment.assert_called_once()
+            mock_persistence.create_experiment_within_limit.assert_called_once()
 
             # GAエンジン初期化が呼ばれたか
             mock_manager.initialize_ga_engine.assert_called_once()

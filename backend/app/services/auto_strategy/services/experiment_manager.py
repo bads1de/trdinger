@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 from app.services.backtest.services.backtest_service import BacktestService
 
+from ..config.constants import MAX_CONSECUTIVE_PROGRESS_UPDATE_FAILURES
 from ..config.ga_config import GAConfig
 from ..core.engine.evolution_runner import EvolutionStoppedError
 from ..core.engine.ga_engine import GeneticAlgorithmEngine
@@ -60,6 +61,9 @@ class ExperimentManager:
         """
         from app.utils.error_handler import safe_operation
 
+        # 進捗更新の連続失敗数（DB断絶時に実験を盲目的に継続させないため）
+        consecutive_progress_failures = 0
+
         # 進捗コールバックを定義
         def progress_callback(
             current_generation: int,
@@ -67,17 +71,37 @@ class ExperimentManager:
             best_fitness: float | None,
         ) -> None:
             """各世代終了時に進捗をDBに更新する。"""
+            nonlocal consecutive_progress_failures
             try:
-                self.persistence_service.update_experiment_progress(
+                updated = self.persistence_service.update_experiment_progress(
                     experiment_id,
                     current_generation,
                     total_generations,
                     best_fitness,
                 )
+                if not updated:
+                    # update_progress は対象喪失時やリポジトリ内エラーで
+                    # 例外ではなく False を返すため、失敗扱いにする
+                    raise RuntimeError(
+                        f"進捗更新対象の実験が見つかりません: {experiment_id}"
+                    )
+                consecutive_progress_failures = 0
             except Exception as e:
-                logger.debug(
-                    f"進捗更新に失敗しました（世代 {current_generation}）: {e}"
+                consecutive_progress_failures += 1
+                logger.warning(
+                    "進捗更新に失敗しました（世代 %d、連続 %d 回目）: %s",
+                    current_generation,
+                    consecutive_progress_failures,
+                    e,
                 )
+                if (
+                    consecutive_progress_failures
+                    >= MAX_CONSECUTIVE_PROGRESS_UPDATE_FAILURES
+                ):
+                    raise RuntimeError(
+                        f"進捗更新が {consecutive_progress_failures} 回連続で失敗したため"
+                        f"実験を中断します: {experiment_id}"
+                    ) from e
 
         @safe_operation(context=f"GA実験実行 ({experiment_id})", is_api_call=False)
         def _execute() -> None:

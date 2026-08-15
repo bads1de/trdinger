@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.constants import MAX_CONCURRENT_EXPERIMENTS
 from app.services.auto_strategy.services.experiment_application_service import (
     ExperimentApplicationService,
 )
@@ -37,11 +38,12 @@ def test_start_experiment_schedules_background_run(app_service):
     )
 
     assert result == "exp-001"
-    app_service.persistence_service.create_experiment.assert_called_once_with(
+    app_service.persistence_service.create_experiment_within_limit.assert_called_once_with(
         "exp-001",
         "Experiment",
         ga_config,
         backtest_config,
+        max_running=MAX_CONCURRENT_EXPERIMENTS,
     )
     app_service.experiment_manager.initialize_ga_engine.assert_called_once_with(
         ga_config, "exp-001"
@@ -51,6 +53,25 @@ def test_start_experiment_schedules_background_run(app_service):
     assert func == app_service.experiment_manager.run_experiment
     assert args == ("exp-001", ga_config, backtest_config)
     assert kwargs == {}
+
+
+def test_start_experiment_rejects_when_atomic_limit_reached(app_service):
+    """アトミックな上限チェックで拒否された場合はエンジンを初期化しない"""
+    scheduler = RecordingTaskScheduler()
+    ga_config = GAConfig.from_dict({})
+    app_service.persistence_service.create_experiment_within_limit.return_value = False
+
+    with pytest.raises(RuntimeError, match="上限"):
+        app_service.start_experiment(
+            "exp-001",
+            "Experiment",
+            ga_config,
+            {"symbol": "BTC/USDT:USDT"},
+            scheduler,
+        )
+
+    app_service.experiment_manager.initialize_ga_engine.assert_not_called()
+    assert len(scheduler.tasks) == 0
 
 
 def test_start_experiment_cleans_up_on_schedule_error(app_service):

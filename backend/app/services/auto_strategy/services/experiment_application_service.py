@@ -6,6 +6,7 @@ import logging
 from collections.abc import Callable
 from typing import Any, Protocol, cast
 
+from ..config.constants import MAX_CONCURRENT_EXPERIMENTS
 from ..config.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,31 @@ class ExperimentApplicationService:
         self.persistence_service.create_experiment(
             experiment_id, experiment_name, ga_config, backtest_config
         )
+
+    def create_experiment_within_limit(
+        self,
+        experiment_id: str,
+        experiment_name: str,
+        ga_config: GAConfig,
+        backtest_config: dict[str, Any],
+    ) -> None:
+        """同時実行上限チェック付きで実験レコードを作成する（アトミック）。
+
+        Raises:
+            RuntimeError: 同時実行上限に達している場合。
+        """
+        created = self.persistence_service.create_experiment_within_limit(
+            experiment_id,
+            experiment_name,
+            ga_config,
+            backtest_config,
+            max_running=MAX_CONCURRENT_EXPERIMENTS,
+        )
+        if not created:
+            raise RuntimeError(
+                f"同時実行できるGA実験の上限（{MAX_CONCURRENT_EXPERIMENTS}件）に"
+                "達しているため実験を開始できません。"
+            )
 
     def initialize_ga_engine(self, experiment_id: str, ga_config: GAConfig) -> None:
         """GA エンジンを初期化する。"""
@@ -69,7 +95,9 @@ class ExperimentApplicationService:
         task_scheduler: TaskScheduler,
     ) -> str:
         """実験作成から非同期実行登録までを行う。"""
-        self.create_experiment(
+        # チェックと作成を単一トランザクションで行い、並列リクエストによる
+        # 同時実行上限の突破（check-then-act レース）を防ぐ
+        self.create_experiment_within_limit(
             experiment_id, experiment_name, ga_config, backtest_config
         )
 
@@ -137,7 +165,5 @@ class ExperimentApplicationService:
         _, strategies_count = result
         return {
             "success": True,
-            "message": (
-                f"実験を削除しました（戦略 {strategies_count} 件を含む）"
-            ),
+            "message": (f"実験を削除しました（戦略 {strategies_count} 件を含む）"),
         }

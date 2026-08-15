@@ -175,6 +175,66 @@ class TestExperimentManager:
         )
         assert self.manager._get_active_engine("test_exp_001") is None
 
+    def test_run_experiment_fails_after_consecutive_progress_failures(self):
+        """進捗更新が連続失敗した場合は実験を失敗扱いにする"""
+        ga_config = GAConfig()
+        ga_config.validation_config = ValidationConfig(enabled=False)
+        backtest_config = {}
+
+        def _run_evolution(config, bt_config, progress_callback=None):
+            # 世代の進捗通知を模倣し、しきい値回数連続で失敗させる
+            for gen in range(3):
+                progress_callback(gen, 3, 0.5)
+            return {"best_strategy": None}
+
+        mock_ga_engine = MagicMock()
+        mock_ga_engine.run_evolution.side_effect = _run_evolution
+        mock_ga_engine.is_stop_requested.return_value = False
+        self.manager._register_active_engine("test_exp_001", mock_ga_engine)
+        self.manager.persistence_service.update_experiment_progress.return_value = False
+
+        self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
+
+        # 3回連続失敗で中断し、失敗状態として記録される
+        self.manager.persistence_service.fail_experiment.assert_called_once()
+        error_message = (
+            self.manager.persistence_service.fail_experiment.call_args.kwargs.get(
+                "error_message", ""
+            )
+        )
+        assert "進捗更新" in error_message
+        assert self.manager._get_active_engine("test_exp_001") is None
+
+    def test_progress_callback_resets_failure_count_on_success(self):
+        """進捗更新の失敗は成功時にリセットされる"""
+        ga_config = GAConfig()
+        ga_config.validation_config = ValidationConfig(enabled=False)
+        backtest_config = {}
+
+        update_results = iter([False, False, True, False, False, True])
+
+        def _mock_update(experiment_id, current_generation, *args, **kwargs):
+            return next(update_results)
+
+        self.manager.persistence_service.update_experiment_progress.side_effect = (
+            _mock_update
+        )
+
+        def _run_evolution(config, bt_config, progress_callback=None):
+            for gen in range(6):
+                progress_callback(gen, 6, 0.5)
+            return {"best_strategy": None}
+
+        mock_ga_engine = MagicMock()
+        mock_ga_engine.run_evolution.side_effect = _run_evolution
+        mock_ga_engine.is_stop_requested.return_value = False
+        self.manager._register_active_engine("test_exp_001", mock_ga_engine)
+
+        self.manager.run_experiment("test_exp_001", ga_config, backtest_config)
+
+        # 連続失敗がしきい値に達しないため実験は失敗扱いにならない
+        self.manager.persistence_service.fail_experiment.assert_not_called()
+
     def test_stop_experiment(self):
         """実験停止のテスト"""
         mock_ga_engine = MagicMock()

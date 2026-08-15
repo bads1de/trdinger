@@ -334,6 +334,10 @@ class GeneticAlgorithmEngine:
         except Exception as e:
             logger.error(f"進化実行エラー: {e}")
             raise
+        finally:
+            # 実験ごとにユニークな creator クラスを名前空間から除去する
+            # （放置すると長寿命プロセスでクラスが蓄積するため）
+            self.deap_setup.cleanup()
 
     def _set_generator_context(self, backtest_config: dict[str, Any]) -> None:
         """ジェネレーターにコンテキストを設定します。

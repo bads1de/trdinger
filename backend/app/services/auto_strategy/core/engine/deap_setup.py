@@ -154,10 +154,30 @@ class DEAPSetup:
         """生成された個体クラスを取得
 
         DEAPのcreator.createによって生成された個体クラスを返します。
-        このクラスはStrategyGeneを継承し、fitness属性を持っています。
+        このクラスはStrategyGeneを継承しており、fitness属性を持っています。
 
         Returns:
             type: 生成されたIndividualクラス。StrategyGeneを継承し、
-                fitness属性（FitnessMulti型）を持つ。未生成の場合はNone。
+                fitness属性（FitnessMulti型）を持つ。未生成の場合はNone
         """
         return self.Individual
+
+    def cleanup(self) -> None:
+        """creator 名前空間に登録したクラスを破棄する。
+
+        creator はモジュールレベルのグローバルであり、実験ごとに作成した
+        UUID サフィックス付きクラス（FitnessMulti_xxxx / Individual_xxxx）を
+        放置すると長寿命プロセスでクラスオブジェクトが蓄積する。そのため
+        実行終了時に名前空間から除去する。生存する個体インスタンスは
+        クラスへの参照を保持するため、除去後も動作に影響しない。
+        """
+        for class_name in (self.fitness_class_name, self.individual_class_name):
+            if class_name is not None and hasattr(creator, class_name):
+                try:
+                    delattr(creator, class_name)
+                except Exception as e:
+                    logger.debug("creator クラスの除去に失敗しました: %s", e)
+        self.toolbox = None
+        self.Individual = None
+        self.fitness_class_name = None
+        self.individual_class_name = None

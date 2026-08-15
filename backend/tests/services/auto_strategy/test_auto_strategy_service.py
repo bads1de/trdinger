@@ -111,7 +111,7 @@ def test_start_strategy_generation_success(
 
     # 検証
     assert result_exp_id == experiment_id
-    mock_persistence_service.create_experiment.assert_called_once()
+    mock_persistence_service.create_experiment_within_limit.assert_called_once()
     mock_experiment_manager.initialize_ga_engine.assert_called_once()
     init_args = mock_experiment_manager.initialize_ga_engine.call_args.args
     assert init_args[1] == experiment_id
@@ -152,7 +152,7 @@ def test_start_strategy_generation_rejects_when_concurrent_limit_reached(
             background_tasks,
         )
 
-    mock_persistence_service.create_experiment.assert_not_called()
+    mock_persistence_service.create_experiment_within_limit.assert_not_called()
     mock_experiment_manager.initialize_ga_engine.assert_not_called()
     assert len(background_tasks.tasks) == 0
 
@@ -190,7 +190,7 @@ def test_start_strategy_generation_allows_under_limit(
     )
 
     assert result_exp_id == experiment_id
-    mock_persistence_service.create_experiment.assert_called_once()
+    mock_persistence_service.create_experiment_within_limit.assert_called_once()
 
 
 def test_start_strategy_generation_cleans_up_on_failure(

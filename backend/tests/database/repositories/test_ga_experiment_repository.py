@@ -97,6 +97,66 @@ class TestCreateExperiment:
         assert experiment.status == "pending"
 
 
+class TestCreateExperimentWithinLimit:
+    """create_experiment_within_limitメソッドのテスト"""
+
+    @staticmethod
+    def _set_running_count(repository: GAExperimentRepository, count: int) -> None:
+        """running状態の実験数をモックするヘルパー"""
+        mock_query = MagicMock()
+        mock_query.filter.return_value.with_for_update.return_value.all.return_value = [
+            (i,) for i in range(count)
+        ]
+        repository.db.query.return_value = mock_query
+
+    def test_create_experiment_within_limit_success(
+        self, repository: GAExperimentRepository
+    ) -> None:
+        """上限未満の場合は実験が作成される"""
+        repository.db.bind = None
+        self._set_running_count(repository, 1)
+        repository.db.add = MagicMock()
+        repository.db.commit = MagicMock()
+        repository.db.refresh = MagicMock(side_effect=lambda x: setattr(x, "id", 1))
+
+        experiment = repository.create_experiment_within_limit(
+            experiment_id="exp-uuid-001",
+            name="test_experiment",
+            config={},
+            total_generations=100,
+            max_running=2,
+        )
+
+        assert experiment is not None
+        assert experiment.experiment_id == "exp-uuid-001"
+        assert experiment.status == "running"
+        repository.db.add.assert_called_once()
+        repository.db.commit.assert_called_once()
+        repository.db.rollback.assert_not_called()
+
+    def test_create_experiment_within_limit_rejects_at_limit(
+        self, repository: GAExperimentRepository
+    ) -> None:
+        """上限に達している場合は作成せずロールバックする"""
+        repository.db.bind = None
+        self._set_running_count(repository, 2)
+        repository.db.add = MagicMock()
+        repository.db.commit = MagicMock()
+
+        experiment = repository.create_experiment_within_limit(
+            experiment_id="exp-uuid-002",
+            name="test_experiment",
+            config={},
+            total_generations=100,
+            max_running=2,
+        )
+
+        assert experiment is None
+        repository.db.rollback.assert_called_once()
+        repository.db.add.assert_not_called()
+        repository.db.commit.assert_not_called()
+
+
 class TestUpdateExperimentStatus:
     """update_experiment_statusメソッドのテスト"""
 

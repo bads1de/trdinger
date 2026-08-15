@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from app.cli.main import app
 from app.cli._services import SynchronousScheduler
+from app.cli.main import app
 
 runner = CliRunner()
 
@@ -161,7 +161,7 @@ class TestDataCommands:
             patch(
                 "app.cli.main.SynchronousBackgroundTasks",
                 return_value=MagicMock(),
-            ) as bg,
+            ),
         ):
             result = runner.invoke(
                 app,
@@ -205,9 +205,7 @@ class TestDataCommands:
             assert result.exit_code == 0
             orchestration.execute_bulk_incremental_update.assert_called_once()
 
-    def test_data_status_shows_count(
-        self, mock_data_services, mock_db, sync_runner
-    ):
+    def test_data_status_shows_count(self, mock_data_services, mock_db, sync_runner):
         """status は件数と範囲を表示する"""
         orchestration, _ = mock_data_services
         orchestration.get_collection_status = MagicMock(
@@ -256,9 +254,7 @@ class TestDataCommands:
             assert result.exit_code == 0
             assert "1080件" in result.output
 
-    def test_data_reset_all_with_yes(
-        self, mock_data_services, sync_runner
-    ):
+    def test_data_reset_all_with_yes(self, mock_data_services, sync_runner):
         """reset all --yes は確認なしで実行"""
         _, management = mock_data_services
         management.reset_all_data = MagicMock(
@@ -295,13 +291,9 @@ class TestDataCommands:
                 app, ["data", "reset", "all", "--symbol", "BTC/USDT:USDT", "--yes"]
             )
             assert result.exit_code == 0
-            management.reset_data_by_symbol.assert_called_once_with(
-                "BTC/USDT:USDT"
-            )
+            management.reset_data_by_symbol.assert_called_once_with("BTC/USDT:USDT")
 
-    def test_data_reset_invalid_target(
-        self, mock_data_services, sync_runner
-    ):
+    def test_data_reset_invalid_target(self, mock_data_services, sync_runner):
         """不正な対象は exit 2"""
         with patch(
             "app.cli.main.build_data_collection_services",

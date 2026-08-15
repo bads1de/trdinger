@@ -307,3 +307,38 @@ class TestDEAPSetup:
         """セットアップ前の個体クラス取得テスト"""
         individual_class = deap_setup.get_individual_class()
         assert individual_class is None
+
+    @patch(
+        "app.services.auto_strategy.core.engine.deap_setup.creator",
+        new_callable=MockCreator,
+    )
+    def test_cleanup_removes_creator_classes(
+        self, mock_creator, deap_setup, mock_config, mock_functions
+    ):
+        """cleanupがcreator名前空間のクラスを除去することを確認する"""
+        deap_setup.setup_deap(
+            mock_config,
+            mock_functions["create_individual"],
+            mock_functions["evaluate"],
+            mock_functions["crossover"],
+        )
+        fitness_name = deap_setup.fitness_class_name
+        individual_name = deap_setup.individual_class_name
+        assert hasattr(mock_creator, fitness_name)
+        assert hasattr(mock_creator, individual_name)
+
+        deap_setup.cleanup()
+
+        assert not hasattr(mock_creator, fitness_name)
+        assert not hasattr(mock_creator, individual_name)
+        assert deap_setup.toolbox is None
+        assert deap_setup.Individual is None
+        assert deap_setup.fitness_class_name is None
+        assert deap_setup.individual_class_name is None
+
+    def test_cleanup_before_setup_is_noop(self, deap_setup):
+        """セットアップ前のcleanupは例外を投げない"""
+        deap_setup.cleanup()
+
+        assert deap_setup.toolbox is None
+        assert deap_setup.Individual is None

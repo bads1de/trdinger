@@ -417,14 +417,21 @@ class IndividualEvaluator:
             gene = self._resolve_gene(individual)
 
             cache_key = self._build_cache_key(gene)
+            requested_fidelity = "coarse" if is_coarse_fidelity(config) else "full"
 
             with self._lock:
-                cached: tuple[float, ...] | None = (
+                cached_entry: tuple[tuple[float, ...], str] | None = (
                     None if force_refresh else self._result_cache.get(cache_key)
                 )
-                if cached is not None:
-                    self._last_evaluation_report = self._report_cache.get(cache_key)
-                    return cached
+                if cached_entry is not None:
+                    cached_fitness, cached_fidelity = cached_entry
+                    if self._is_usable_cached_fidelity(
+                        cached_fidelity, requested_fidelity
+                    ):
+                        self._last_evaluation_report = self._report_cache.get(cache_key)
+                        return cached_fitness
+                    # fidelity が一致しないキャッシュ（例: coarse 結果への
+                    # full 要求）は誤ヒットのため再評価する
 
             # バックテスト設定のベースを取得
             base_backtest_config: dict[str, Any] = (
@@ -444,9 +451,9 @@ class IndividualEvaluator:
             fitness = report.aggregated_fitness
             self._last_evaluation_report = report
 
-            # 結果をキャッシュ（ロック付き書き込み）
+            # 結果をキャッシュ（ロック付き書き込み、fidelity を併記）
             with self._lock:
-                self._result_cache[cache_key] = fitness
+                self._result_cache[cache_key] = (fitness, requested_fidelity)
                 self._report_cache[cache_key] = report
 
             return fitness
@@ -455,6 +462,18 @@ class IndividualEvaluator:
             logger.error(f"個体評価エラー: {e}")
             penalty = self._fitness_calculator.get_penalty_values(config)
             return penalty
+
+    @staticmethod
+    def _is_usable_cached_fidelity(cached: str, requested: str) -> bool:
+        """キャッシュされた fidelity で要求を満たせるか判定する。
+
+        coarse は期間・検証方式を縮退させた近似評価のため、coarse 結果を
+        full 要求へ流用できない。逆向き（full 結果を coarse 要求へ流用）は
+        評価精度が上回るため許容する。
+        """
+        if cached == requested:
+            return True
+        return cached == "full" and requested == "coarse"
 
     def evaluate_robustness_report(
         self, individual: Any, config: GAConfig

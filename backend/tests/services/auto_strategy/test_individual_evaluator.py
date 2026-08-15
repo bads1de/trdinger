@@ -187,6 +187,51 @@ class TestIndividualEvaluator:
             == "full"
         )
 
+    def test_evaluate_individual_does_not_serve_coarse_cache_for_full_request(self):
+        """coarse結果がfull要求へ誤ヒットしないことを確認する。"""
+        gene = self._create_mock_gene()
+        coarse_report = Mock()
+        coarse_report.aggregated_fitness = (0.1,)
+        coarse_report.metadata = {}
+        full_report = Mock()
+        full_report.aggregated_fitness = (0.9,)
+        full_report.metadata = {}
+
+        self.evaluator._evaluation_strategy.execute_ga_report = Mock(
+            side_effect=[coarse_report, full_report]
+        )
+
+        coarse_config = build_coarse_ga_config(GAConfig())
+        full_config = GAConfig()
+
+        coarse_result = self.evaluator.evaluate_individual(gene, coarse_config)
+        full_result = self.evaluator.evaluate_individual(gene, full_config)
+
+        assert coarse_result == (0.1,)
+        assert full_result == (0.9,)
+        assert self.evaluator._evaluation_strategy.execute_ga_report.call_count == 2
+
+    def test_evaluate_individual_allows_full_cache_for_coarse_request(self):
+        """full結果は精度が上回るためcoarse要求へ流用できる。"""
+        gene = self._create_mock_gene()
+        full_report = Mock()
+        full_report.aggregated_fitness = (0.9,)
+        full_report.metadata = {}
+
+        self.evaluator._evaluation_strategy.execute_ga_report = Mock(
+            return_value=full_report
+        )
+
+        coarse_config = build_coarse_ga_config(GAConfig())
+        full_config = GAConfig()
+
+        first = self.evaluator.evaluate_individual(gene, full_config)
+        second = self.evaluator.evaluate_individual(gene, coarse_config)
+
+        assert first == (0.9,)
+        assert second == (0.9,)
+        assert self.evaluator._evaluation_strategy.execute_ga_report.call_count == 1
+
     def test_prepare_backtest_config_for_evaluation_adds_warmup_window(self):
         gene = StrategyGene(
             indicators=[

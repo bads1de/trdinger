@@ -8,6 +8,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, cast
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database.models import GAExperiment
@@ -81,6 +82,81 @@ class GAExperimentRepository(BaseRepository):
             return experiment
 
         return _create_experiment()
+
+    def create_experiment_within_limit(
+        self,
+        *,
+        experiment_id: str | None,
+        name: str,
+        config: dict[str, Any],
+        total_generations: int,
+        max_running: int,
+        status: str = "running",
+    ) -> GAExperiment | None:
+        """
+        同時実行上限チェック付きで新しいGA実験を作成する（アトミック）
+
+        実行中実験数のカウントと INSERT を同一トランザクションで行うことで、
+        チェックと作成の間に別リクエストが割り込むレース条件
+        （check-then-act）を防ぎます。PostgreSQL ではトランザクション
+        スコープのアドバイザリロックでプロセス間も直列化します。
+
+        Args:
+            experiment_id: フロントエンド由来の実験UUID
+            name: 実験名
+            config: GA設定（JSON形式）
+            total_generations: 総世代数
+            max_running: 同時実行上限（running 状態の上限数）
+            status: 初期ステータス
+
+        Returns:
+            作成されたGA実験。同時実行上限に達している場合は None。
+        """
+        from app.utils.error_handler import safe_operation
+
+        @safe_operation(context="GA実験作成（同時実行上限付き）", is_api_call=False)
+        def _create_experiment_within_limit() -> GAExperiment | None:
+            # PostgreSQL の場合はアドバイザリロックでチェック〜INSERT を
+            # プロセス間でも直列化する（SQLite には存在しないためスキップ）
+            bind = self.db.bind
+            if bind is not None and bind.dialect.name == "postgresql":
+                self.db.execute(
+                    text(
+                        "SELECT pg_advisory_xact_lock("
+                        "hashtext('ga_experiment_create_within_limit'))"
+                    )
+                )
+
+            running_rows = (
+                self.db.query(GAExperiment.id)
+                .filter(GAExperiment.status == "running")
+                .with_for_update()
+                .all()
+            )
+            if len(running_rows) >= max_running:
+                self.db.rollback()
+                logger.info(
+                    f"同時実行上限（{max_running}件）に達したため実験作成を拒否: {name}"
+                )
+                return None
+
+            experiment = GAExperiment(
+                experiment_id=experiment_id,
+                name=name,
+                config=config,
+                status=status,
+                total_generations=total_generations,
+                current_generation=0,
+                progress=0.0,
+            )
+            self.db.add(experiment)
+            self.db.commit()
+            self.db.refresh(experiment)
+
+            logger.info(f"GA実験を作成しました: {experiment.id} ({name})")
+            return experiment
+
+        return _create_experiment_within_limit()
 
     def update_experiment_status(
         self,
@@ -322,14 +398,10 @@ class GAExperimentRepository(BaseRepository):
                 experiment.error_message = (
                     "サーバー再起動により実行コンテキストが失われたため停止しました"
                 )
-                experiment.completed_at = cast(
-                    datetime, datetime.now(timezone.utc)
-                )  # type: ignore
+                experiment.completed_at = cast(datetime, datetime.now(timezone.utc))  # type: ignore
             if stale:
                 self.db.commit()
-                logger.info(
-                    f"孤児実験を停止状態へ巻き戻しました: {len(stale)} 件"
-                )
+                logger.info(f"孤児実験を停止状態へ巻き戻しました: {len(stale)} 件")
             return len(stale)
 
         return _reconcile()

@@ -117,6 +117,55 @@ class ExperimentPersistenceService:
             )
             return experiment_id
 
+    def create_experiment_within_limit(
+        self,
+        experiment_id: str,
+        experiment_name: str,
+        ga_config: GAConfig,
+        backtest_config: dict[str, Any],
+        *,
+        max_running: int,
+    ) -> bool:
+        """
+        同時実行上限チェック付きで実験を作成（アトミック）
+
+        上限チェックと作成を単一トランザクションで行うことで、
+        並列リクエストによる上限突破を防ぎます。
+
+        Args:
+            experiment_id: 実験UUID
+            experiment_name: 実験名
+            ga_config: GA設定
+            backtest_config: バックテスト設定
+            max_running: 同時実行上限
+
+        Returns:
+            作成できた場合は True、上限に達している場合は False
+        """
+        with self.db_session_factory() as db:
+            ga_experiment_repo = GAExperimentRepository(db)
+            config_data = {
+                "ga_config": ga_config.to_dict(),
+                "backtest_config": backtest_config,
+                "experiment_id": experiment_id,
+            }
+            created = ga_experiment_repo.create_experiment_within_limit(
+                experiment_id=experiment_id,
+                name=experiment_name,
+                config=config_data,
+                total_generations=ga_config.generations,
+                max_running=max_running,
+            )
+
+        if created is None:
+            logger.info(
+                f"同時実行上限に達したため実験を作成しませんでした: {experiment_name}"
+            )
+            return False
+
+        logger.info(f"実験を作成しました: {experiment_name} (UUID: {experiment_id})")
+        return True
+
     def save_experiment_result(
         self,
         experiment_id: str,
@@ -168,7 +217,9 @@ class ExperimentPersistenceService:
 
         logger.info(f"実験結果保存完了: {experiment_id}")
 
-    def save_backtest_result(self, result_data: dict[str, Any]) -> dict[str, Any] | None:
+    def save_backtest_result(
+        self, result_data: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """詳細バックテスト結果をデータベースに保存
 
         Returns:
