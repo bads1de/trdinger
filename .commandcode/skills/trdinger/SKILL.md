@@ -1,13 +1,13 @@
 ---
 name: trdinger
-description: Trdinger オートストラテジーのターミナル操作。GA 実験の実行・一覧・詳細・停止・削除、生成済み戦略の閲覧を CLI で行う。ユーザーが「実験を回して」「戦略を生成して」「GA を実行して」「trdinger」等と頼んだ時に使う。
-argument-hint: "[exp|strategy] [subcommand] [options]"
+description: Trdinger オートストラテジーのターミナル操作。GA 実験の実行・一覧・詳細・停止・削除、生成済み戦略の閲覧、市場データ（OHLCV/FR/OI）の収集・確認・削除を CLI で行う。ユーザーが「実験を回して」「戦略を生成して」「GA を実行して」「データを取ってきて」「trdinger」等と頼んだ時に使う。
+argument-hint: "[exp|strategy|data] [subcommand] [options]"
 compatibility: backend/.venv の Python 環境（uv 管理）が必要
 ---
 
 # Trdinger CLI 操作
 
-GA 実験と生成済み戦略をターミナルから操作する。サーバー（uvicorn）は不要。
+GA 実験・生成済み戦略・市場データをターミナルから操作する。サーバー（uvicorn）は不要。
 
 ## 前提
 
@@ -65,6 +65,19 @@ uv run trdinger strategy list --min-fitness 50    # fitness閾値フィルター
 uv run trdinger strategy show auto_42             # 詳細（BT成績込み）
 ```
 
+### 市場データの管理
+
+```powershell
+uv run trdinger data overview                     # 全データ総件数
+uv run trdinger data fetch --timeframe 4h         # 履歴OHLCVを収集してDB保存
+uv run trdinger data fetch --force --timeframe 1h # 既存データを削除して再取得
+uv run trdinger data update                       # DB末尾から最新まで差分更新
+uv run trdinger data status --timeframe 4h        # 件数・データ範囲の確認
+uv run trdinger data reset ohlcv --yes            # OHLCV全削除（確認あり）
+```
+
+`data reset` は取り消せない。実行前に必ず `data overview` で現状を確認し、ユーザーが明示的に削除を望んだ場合のみ実行する。
+
 ## ユーザーの意図 → コマンドの翻訳例
 
 | 依頼 | 実行コマンド |
@@ -74,6 +87,9 @@ uv run trdinger strategy show auto_42             # 詳細（BT成績込み）
 | 「実験の進捗は？」 | `exp list` して running を確認 |
 | 「この実験消して」 | `exp delete <uuid> --yes`（ユーザーが明示的に削除を望んだ場合のみ） |
 | 「良い戦略ある？」 | `strategy list --min-fitness 50` → 上位を `strategy show` |
+| 「データを取ってきて」 | `data overview` → 不足があれば `data fetch --timeframe <tf>` |
+| 「データを最新にして」 | `data update` |
+| 「データどれくらいある？」 | `data overview` / `data status` |
 
 ## よくあるエラーと対処
 

@@ -18,11 +18,13 @@ import json
 import logging
 import sys
 import uuid
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 import typer
 
 from app.cli._services import (
+    SynchronousBackgroundTasks,
+    build_data_collection_services,
     build_services,
     build_task_scheduler,
 )
@@ -34,6 +36,7 @@ from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.services.experiment_application_service import (
     TaskScheduler,
 )
+from database.connection import SessionLocal
 
 logger = logging.getLogger("trdinger")
 
@@ -48,6 +51,9 @@ app.add_typer(exp_app, name="exp")
 
 strategy_app = typer.Typer(help="生成済み戦略の閲覧", no_args_is_help=True)
 app.add_typer(strategy_app, name="strategy")
+
+data_app = typer.Typer(help="市場データの収集・管理", no_args_is_help=True)
+app.add_typer(data_app, name="data")
 
 
 def _setup_logging(verbose: bool) -> None:
@@ -408,6 +414,233 @@ def strategy_show(
         _print_json(strategy)
     else:
         _print_ga_strategy(strategy)
+
+
+@data_app.command("fetch")
+def data_fetch(
+    symbol: Annotated[
+        str, typer.Option("--symbol", "-s", help="取引ペア")
+    ] = "BTC/USDT:USDT",
+    timeframe: Annotated[
+        str, typer.Option("--timeframe", "-t", help="時間足")
+    ] = "1h",
+    force_update: Annotated[
+        bool, typer.Option("--force", "-f", help="既存データを削除して再取得")
+    ] = False,
+    start_date: Annotated[
+        str | None, typer.Option("--start-date", help="収集開始日（YYYY-MM-DD）")
+    ] = None,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="結果をJSONで出力")
+    ] = False,
+) -> None:
+    """OHLCV履歴データを取引所から取得してDBに保存する（同期実行）。"""
+    orchestration, _ = build_data_collection_services()
+    background_tasks = SynchronousBackgroundTasks()
+
+    from fastapi import BackgroundTasks
+
+    with SessionLocal() as db:
+        try:
+            result = asyncio_run(
+                orchestration.start_historical_data_collection(
+                    symbol,
+                    timeframe,
+                    cast(BackgroundTasks, background_tasks),
+                    db,
+                    force_update,
+                    start_date,
+                )
+            )
+            asyncio_run(background_tasks.run_tasks())
+        except (ValueError, RuntimeError) as e:
+            typer.echo(f"収集失敗: {e}", err=True)
+            raise typer.Exit(code=1) from e
+
+    if json_output:
+        _print_json(result)
+    else:
+        status = result.get("status", "unknown")
+        typer.echo(f"[{status}] {result.get('message', '')}")
+
+
+@data_app.command("update")
+def data_update(
+    symbol: Annotated[
+        str, typer.Option("--symbol", "-s", help="取引ペア")
+    ] = "BTC/USDT:USDT",
+    json_output: Annotated[
+        bool, typer.Option("--json", help="結果をJSONで出力")
+    ] = False,
+) -> None:
+    """DB末尾から最新まで差分更新する（OHLCV・FR・OI一括）。"""
+    orchestration, _ = build_data_collection_services()
+
+    with SessionLocal() as db:
+        try:
+            result = asyncio_run(
+                orchestration.execute_bulk_incremental_update(symbol, db)
+            )
+        except (ValueError, RuntimeError) as e:
+            typer.echo(f"更新失敗: {e}", err=True)
+            raise typer.Exit(code=1) from e
+
+    if json_output:
+        _print_json(result)
+    else:
+        typer.echo(result.get("message", "更新完了"))
+
+
+@data_app.command("status")
+def data_status(
+    symbol: Annotated[
+        str, typer.Option("--symbol", "-s", help="取引ペア")
+    ] = "BTC/USDT:USDT",
+    timeframe: Annotated[
+        str, typer.Option("--timeframe", "-t", help="時間足")
+    ] = "1h",
+    json_output: Annotated[
+        bool, typer.Option("--json", help="結果をJSONで出力")
+    ] = False,
+) -> None:
+    """指定シンボル・時間足の収集状況（件数・範囲）を確認する。"""
+    orchestration, _ = build_data_collection_services()
+    background_tasks = SynchronousBackgroundTasks()
+
+    from fastapi import BackgroundTasks
+
+    with SessionLocal() as db:
+        try:
+            result = asyncio_run(
+                orchestration.get_collection_status(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    background_tasks=cast(BackgroundTasks, background_tasks),
+                    auto_fetch=False,
+                    db=db,
+                )
+            )
+        except (ValueError, RuntimeError) as e:
+            typer.echo(f"確認失敗: {e}", err=True)
+            raise typer.Exit(code=1) from e
+
+    if json_output:
+        _print_json(result)
+    else:
+        data = result.get("data", {}) if isinstance(result, dict) else {}
+        count = data.get("data_count", 0)
+        latest = data.get("latest_timestamp")
+        oldest = data.get("oldest_timestamp")
+        typer.echo(f"{symbol} {timeframe}: {count}件")
+        if oldest and latest:
+            typer.echo(f"  範囲: {oldest} 〜 {latest}")
+
+
+@data_app.command("overview")
+def data_overview(
+    json_output: Annotated[
+        bool, typer.Option("--json", help="結果をJSONで出力")
+    ] = False,
+) -> None:
+    """全データ種別（OHLCV・FR・OI）の総件数と範囲を確認する。"""
+    _, management = build_data_collection_services()
+
+    try:
+        result = asyncio_run(management.get_data_status())
+    except (ValueError, RuntimeError) as e:
+        typer.echo(f"確認失敗: {e}", err=True)
+        raise typer.Exit(code=1) from e
+
+    if json_output:
+        _print_json(result)
+    else:
+        data = result.get("data", {}) if isinstance(result, dict) else {}
+        counts = data.get("data_counts", {})
+        total = data.get("total_records", 0)
+        typer.echo(
+            f"OHLCV: {counts.get('ohlcv', 0)}件 / "
+            f"FR: {counts.get('funding_rates', 0)}件 / "
+            f"OI: {counts.get('open_interest', 0)}件（計{total}件）"
+        )
+
+
+@data_app.command("reset")
+def data_reset(
+    target: Annotated[
+        str,
+        typer.Argument(
+            help="リセット対象（all | ohlcv | funding-rates | open-interest）"
+        ),
+    ],
+    symbol: Annotated[
+        str | None, typer.Option("--symbol", "-s", help="シンボルを限定して削除")
+    ] = None,
+    yes: Annotated[
+        bool, typer.Option("--yes", "-y", help="確認プロンプトをスキップ")
+    ] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="結果をJSONで出力")
+    ] = False,
+) -> None:
+    """DBの市場データを削除する（デフォルトは確認あり）。"""
+    if not yes:
+        scope = symbol or target
+        answer = typer.confirm(
+            f"{scope} のデータを削除します。よろしいですか？"
+        )
+        if not answer:
+            typer.echo("キャンセルしました")
+            raise typer.Exit(code=0)
+
+    _, management = build_data_collection_services()
+
+    try:
+        if symbol is not None:
+            result = asyncio_run(management.reset_data_by_symbol(symbol))
+        elif target == "all":
+            result = asyncio_run(management.reset_all_data())
+        elif target == "ohlcv":
+            result = asyncio_run(management.reset_ohlcv_data())
+        elif target == "funding-rates":
+            result = asyncio_run(management.reset_funding_rate_data())
+        elif target == "open-interest":
+            result = asyncio_run(management.reset_open_interest_data())
+        else:
+            typer.echo(
+                "対象は all | ohlcv | funding-rates | open-interest のいずれかです",
+                err=True,
+            )
+            raise typer.Exit(code=2)
+    except typer.Exit:
+        raise
+    except (ValueError, RuntimeError) as e:
+        typer.echo(f"リセット失敗: {e}", err=True)
+        raise typer.Exit(code=1) from e
+
+    if json_output:
+        _print_json(result)
+    else:
+        data = result.get("data", {}) if isinstance(result, dict) else {}
+        typer.echo(
+            f"{result.get('message', '完了')} "
+            f"（削除: {data.get('total_deleted', data.get('deleted_count', '?'))}件）"
+        )
+
+
+def asyncio_run(coro: Any) -> Any:
+    """CLI から async サービスを同期実行する共通ヘルパー。
+
+    NOTE: データ収集サービス内部で生成される ccxt exchange は
+    close されないままプロセス終了を迎えるため、aiohttp の
+    ResourceWarning（Unclosed client session）が出る。
+    既知のサービス層リソース管理問題であり、CLI では抑制する。
+    """
+    import asyncio
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", ResourceWarning)
+        return asyncio.run(coro)
 
 
 if __name__ == "__main__":
