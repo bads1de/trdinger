@@ -1124,8 +1124,8 @@ class TestValidationConfig:
         assert vc.min_primary_fitness is None
         assert vc.min_trades is None
         assert vc.max_drawdown is None
-        assert vc.wfa_n_folds == 5
-        assert vc.wfa_train_ratio == 0.7
+        assert vc.wfa_n_folds == 3
+        assert vc.wfa_train_ratio == 0.5
         assert vc.wfa_anchored is False
         assert vc.validate_candidates is True
         assert vc.max_candidates == 5

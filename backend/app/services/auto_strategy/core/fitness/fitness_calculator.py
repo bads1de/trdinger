@@ -366,7 +366,14 @@ class FitnessCalculator:
     def meets_constraints(
         self, metrics: Mapping[str, float], config: "GAConfig"
     ) -> bool:
-        """評価で使う制約判定をまとめて返す。"""
+        """評価で使う制約判定をまとめて返す。
+
+        収益性制約（負リターン・最低シャープレシオ）は、キーに ``None`` を
+        指定すると無効化できる。WFA 検証ではフォールド合格を構造的制約
+        （取引数・ドローダウン）だけで判定し、収益性は集約フィットネスで
+        評価するため、検証用設定では ``min_total_return`` /
+        ``min_sharpe_ratio`` を None にする。
+        """
         try:
             constraints = getattr(config, "fitness_constraints", {}) or {}
 
@@ -385,13 +392,18 @@ class FitnessCalculator:
             ):
                 return False
 
-            total_return = metrics.get("total_return", 0.0)
-            if total_return < 0.0:
-                return False
+            min_total_return = constraints.get("min_total_return")
+            if min_total_return is not None:
+                total_return = metrics.get("total_return", 0.0)
+                if total_return < float(min_total_return):
+                    return False
 
-            sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
-            min_sharpe_ratio = float(constraints.get("min_sharpe_ratio", 0.0) or 0.0)
-            return not sharpe_ratio < min_sharpe_ratio
+            min_sharpe_ratio = constraints.get("min_sharpe_ratio")
+            if min_sharpe_ratio is not None:
+                sharpe_ratio = metrics.get("sharpe_ratio", 0.0)
+                if sharpe_ratio < float(min_sharpe_ratio):
+                    return False
+            return True
         except (KeyError, TypeError, ValueError):
             return False
 

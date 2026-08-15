@@ -217,8 +217,8 @@ class EvaluationConfig(NestedConfigMixin):
     oos_split_ratio: float = 0.25
     oos_fitness_weight: float = 0.5
     enable_walk_forward: bool = False
-    wfa_n_folds: int = 5
-    wfa_train_ratio: float = 0.7
+    wfa_n_folds: int = 3
+    wfa_train_ratio: float = 0.5
     wfa_anchored: bool = False
 
 
@@ -287,8 +287,13 @@ class ValidationConfig(NestedConfigMixin):
     max_drawdown: float | None = None
 
     # WFA 設定（検証用。評価設定を上書きする）
-    wfa_n_folds: int = 5
-    wfa_train_ratio: float = 0.7
+    # フォールド数と train 比率は、テスト窓が取引回数確保に十分な長さに
+    # なるよう調整済み。2024H1・4h足の場合、テスト窓は約30日
+    # （=(1 - 0.5) * 181日 / 3）となり、レンジ相場でも正リターン達成の
+    # 可能性が十分に評価できる。min_pass_rate=0.5 は 3 フォールド中 2 合格
+    # を要求する。
+    wfa_n_folds: int = 3
+    wfa_train_ratio: float = 0.5
     wfa_anchored: bool = False
 
     # 候補戦略も検証するか（False の場合は最良戦略のみ検証）

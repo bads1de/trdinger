@@ -90,8 +90,8 @@ class TestWalkForwardAnalysis:
         config = GAConfig()
 
         assert config.evaluation_config.enable_walk_forward is False
-        assert config.evaluation_config.wfa_n_folds == 5
-        assert config.evaluation_config.wfa_train_ratio == 0.7
+        assert config.evaluation_config.wfa_n_folds == 3
+        assert config.evaluation_config.wfa_train_ratio == 0.5
         assert config.evaluation_config.wfa_anchored is False
 
     def test_wfa_config_custom_values(self):

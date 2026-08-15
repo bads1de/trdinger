@@ -151,6 +151,7 @@ PENALTY_FITNESS_MAGNITUDE = 1e9
 DEFAULT_FITNESS_CONSTRAINTS = {
     "min_trades": 10,  # 最低保証回数（50→10に一時的に緩和）
     "max_drawdown_limit": 0.2,  # 20%以上のドローダウンでペナルティ（0.3→0.2に強化）
+    "min_total_return": 0.0,  # 負リターンの戦略は GA 評価で不合格
     "min_sharpe_ratio": 0.5,  # 最低シャープレシオ（1.0→0.5に変更）
 }
 

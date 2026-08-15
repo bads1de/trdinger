@@ -112,6 +112,49 @@ class BacktestDataProvider:
         expected_start, expected_end = expected_range
         return bool(worker_start <= expected_start <= expected_end <= worker_end)
 
+    def _find_encompassing_cached_data(
+        self, key: tuple[Any, ...]
+    ) -> pd.DataFrame | None:
+        """ローカルキャッシュから要求期間を内包するデータを探してスライスする。
+
+        WFA のフォールド評価はフォールドごとに異なる期間を要求するが、
+        事前に全期間データがキャッシュされていれば（GA ワーカー用 prefetch など）、
+        DB アクセスなしでスライスして返せる。キャッシュエントリ数は
+        高々 100 程度なので全走査でも十分軽い。
+        """
+        if len(key) < 4:
+            return None
+        expected_range = self._parse_key_date_range(key)
+        if expected_range is None:
+            return None
+        expected_start, expected_end = expected_range
+
+        try:
+            cache_items = list(self._data_cache.items())
+        except Exception:
+            return None
+
+        for cached_key, cached_data in cache_items:
+            if not isinstance(cached_data, pd.DataFrame) or cached_data.empty:
+                continue
+            if not self._is_compatible_worker_key(cached_key, key):
+                continue
+            try:
+                cached_index = pd.DatetimeIndex(cached_data.index)
+                if len(cached_index) == 0:
+                    continue
+                slice_start = align_timestamp_to_index(expected_start, cached_index)
+                slice_end = align_timestamp_to_index(expected_end, cached_index)
+                sliced = cached_data.loc[
+                    (cached_data.index >= slice_start)
+                    & (cached_data.index <= slice_end)
+                ]
+            except Exception:
+                continue
+            if not sliced.empty:
+                return sliced
+        return None
+
     def get_cached_backtest_data(
         self, backtest_config: dict[str, SerializableValue]
     ) -> pd.DataFrame | None:
@@ -138,6 +181,12 @@ class BacktestDataProvider:
         with self._lock:
             if key in self._data_cache:
                 return self._data_cache[key]
+
+            # 要求期間を内包するキャッシュ済みデータ（全期間 prefetch など）が
+            # あれば、DB アクセスせずにスライスして返す。
+            cached = self._find_encompassing_cached_data(key)
+            if cached is not None:
+                return cached
 
         # DB アクセスは BacktestService の共有セッションを使うため、
         # 並列スレッドから同時に実行すると SQLite の
@@ -193,6 +242,11 @@ class BacktestDataProvider:
         with self._lock:
             if key in self._data_cache:
                 return self._data_cache[key]
+
+            # 要求期間を内包するキャッシュ済みデータがあればスライスして返す
+            cached = self._find_encompassing_cached_data(key)
+            if cached is not None:
+                return cached
 
         try:
             with self._lock:

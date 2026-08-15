@@ -319,6 +319,18 @@ class StrategyValidationService:
                         f"{validation_config.min_primary_fitness} を満たしません"
                     )
 
+        # フォールド合格は構造的制約のみで判定するため、収益性はここで
+        # 集約フィットネスの符号でゲートする。最大化目的で負値は
+        # 「全期間を通して収益を上げられていない」ことを意味する。
+        if (
+            primary_fitness is not None
+            and not objective_registry.is_minimize_objective(
+                report.primary_objective or ""
+            )
+            and primary_fitness < 0.0
+        ):
+            reasons.append(f"集約フィットネス {primary_fitness:.4f} が負値です")
+
         trades_list = self._collect_scenario_metric(report, "total_trades")
         if validation_config.min_trades is not None:
             if len(trades_list) != scenario_count:
@@ -506,6 +518,13 @@ class StrategyValidationService:
         )
         scaled_min_trades = max(1, int(round(base_min_trades * fold_ratio)))
         validation_ga_config.fitness_constraints["min_trades"] = scaled_min_trades
+
+        # WFA のフォールド合格は構造的制約（取引数・ドローダウン）だけで判定する。
+        # 収益性制約（負リターン・最低シャープレシオ）をフォールドごとに適用すると、
+        # 短期間のテスト窓では相場環境の影響で正当な戦略まで弾かれる。
+        # 収益性は集約フィットネス（_judge の負値ゲート）で評価する。
+        validation_ga_config.fitness_constraints["min_total_return"] = None
+        validation_ga_config.fitness_constraints["min_sharpe_ratio"] = None
 
         return validation_ga_config
 
