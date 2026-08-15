@@ -155,6 +155,90 @@ class BacktestDataProvider:
                 return sliced
         return None
 
+    def _find_extendable_cached_data(
+        self, key: tuple[Any, ...]
+    ) -> tuple[pd.DataFrame, pd.Timestamp] | None:
+        """終端はカバーするが開始が不足するキャッシュデータを探す。
+
+        warmup シフトにより要求開始がキャッシュ開始より過去にずれた場合、
+        キャッシュデータの終端が要求終端をカバーしていれば、
+        不足分（要求開始〜キャッシュ開始）だけを DB から取得して
+        連結すればよい。キャッシュ側のスライスと不足開始点を返す。
+        """
+        if len(key) < 4:
+            return None
+        expected_range = self._parse_key_date_range(key)
+        if expected_range is None:
+            return None
+        expected_start, expected_end = expected_range
+
+        try:
+            cache_items = list(self._data_cache.items())
+        except Exception:
+            return None
+
+        best: tuple[pd.DataFrame, pd.Timestamp] | None = None
+        for cached_key, cached_data in cache_items:
+            if not isinstance(cached_data, pd.DataFrame) or cached_data.empty:
+                continue
+            if not isinstance(cached_key, tuple) or len(cached_key) != len(key):
+                continue
+            # シンボル・タイムフレーム等のプレフィックスが一致するものだけ対象。
+            # 内包は要求しない（warmup シフトで開始が不足するケースを扱うため）。
+            if cached_key[:-2] != key[:-2]:
+                continue
+            cached_range = self._parse_key_date_range(cached_key)
+            if cached_range is None:
+                continue
+            cached_start, cached_end = cached_range
+            if not (cached_end >= expected_end and cached_start > expected_start):
+                continue
+            try:
+                cached_index = pd.DatetimeIndex(cached_data.index)
+                if len(cached_index) == 0:
+                    continue
+                slice_end = align_timestamp_to_index(expected_end, cached_index)
+                tail = cached_data.loc[cached_data.index <= slice_end]
+                if tail.empty:
+                    continue
+                actual_start = pd.Timestamp(cached_data.index[0])
+            except Exception:
+                continue
+            # 最も開始が早い（＝不足が少ない）エントリを優先
+            if best is None or actual_start < best[1]:
+                best = (tail, actual_start)
+        return best
+
+    @staticmethod
+    def _ensure_utc(value: Any) -> pd.Timestamp:
+        """naive なら UTC を付与し、aware なら UTC へ変換する。"""
+        ts = pd.Timestamp(value)
+        if ts.tzinfo is None:
+            return cast(pd.Timestamp, ts.tz_localize("UTC"))
+        return cast(pd.Timestamp, ts.tz_convert("UTC"))
+
+    def _combine_with_gap(
+        self,
+        tail: pd.DataFrame,
+        missing: pd.DataFrame,
+        actual_start: pd.Timestamp,
+    ) -> pd.DataFrame:
+        """不足分（要求開始〜キャッシュ開始）を DB 取得結果で連結する。"""
+        if missing is None or getattr(missing, "empty", True):
+            return tail
+        if tail is None or getattr(tail, "empty", True):
+            return missing
+        try:
+            aligned_start = align_timestamp_to_index(actual_start, missing.index)
+        except Exception:
+            aligned_start = actual_start
+        gap_part = missing.loc[missing.index < aligned_start]
+        if gap_part.empty:
+            return tail
+        combined = pd.concat([gap_part, tail])
+        combined = combined[~combined.index.duplicated(keep="last")]
+        return combined.sort_index()
+
     def get_cached_backtest_data(
         self, backtest_config: dict[str, SerializableValue]
     ) -> pd.DataFrame | None:
@@ -182,11 +266,16 @@ class BacktestDataProvider:
             if key in self._data_cache:
                 return self._data_cache[key]
 
-            # 要求期間を内包するキャッシュ済みデータ（全期間 prefetch など）が
-            # あれば、DB アクセスせずにスライスして返す。
+            # 内包スライスを優先し、開始不足なら終端一致の拡張を試みる
             cached = self._find_encompassing_cached_data(key)
             if cached is not None:
                 return cached
+
+            extendable = self._find_extendable_cached_data(key)
+            if extendable is not None:
+                tail, actual_start = extendable
+            else:
+                tail, actual_start = None, None
 
         # DB アクセスは BacktestService の共有セッションを使うため、
         # 並列スレッドから同時に実行すると SQLite の
@@ -197,22 +286,24 @@ class BacktestDataProvider:
                 return self._data_cache[key]
 
             self.backtest_service.ensure_data_service_initialized()
-            start_dt = (
-                pd.to_datetime(cast(Any, start_date)).tz_localize("UTC")
-                if pd.to_datetime(cast(Any, start_date)).tzinfo is None
-                else pd.to_datetime(cast(Any, start_date))
-            )
-            end_dt = (
-                pd.to_datetime(cast(Any, end_date)).tz_localize("UTC")
-                if pd.to_datetime(cast(Any, end_date)).tzinfo is None
-                else pd.to_datetime(cast(Any, end_date))
-            )
-            data = self.backtest_service.data_service.get_data_for_backtest(
-                symbol=symbol,
-                timeframe=timeframe,
-                start_date=start_dt,
-                end_date=end_dt,
-            )
+            start_dt = self._ensure_utc(start_date)
+            end_dt = self._ensure_utc(end_date)
+            if tail is not None and actual_start is not None:
+                # 不足分（要求開始〜キャッシュ開始）だけを DB から取得して連結
+                missing = self.backtest_service.data_service.get_data_for_backtest(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    start_date=start_dt,
+                    end_date=actual_start,
+                )
+                data = self._combine_with_gap(tail, missing, actual_start)
+            else:
+                data = self.backtest_service.data_service.get_data_for_backtest(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    start_date=start_dt,
+                    end_date=end_dt,
+                )
             self._data_cache[key] = data
         logger.debug(f"バックテストデータをキャッシュしました: {key}")
         return data
@@ -248,17 +339,33 @@ class BacktestDataProvider:
             if cached is not None:
                 return cached
 
+            extendable = self._find_extendable_cached_data(key)
+            if extendable is not None:
+                tail, actual_start = extendable
+            else:
+                tail, actual_start = None, None
+
         try:
             with self._lock:
                 if key in self._data_cache:
                     return self._data_cache[key]
                 self.backtest_service.ensure_data_service_initialized()
-                data = self.backtest_service.data_service.get_data_for_backtest(
-                    symbol=symbol,
-                    timeframe="1m",
-                    start_date=pd.to_datetime(cast(Any, start_date)),
-                    end_date=pd.to_datetime(cast(Any, end_date)),
-                )
+                if tail is not None and actual_start is not None:
+                    # 不足分（要求開始〜キャッシュ開始）だけを DB から取得して連結
+                    missing = self.backtest_service.data_service.get_data_for_backtest(
+                        symbol=symbol,
+                        timeframe="1m",
+                        start_date=pd.to_datetime(cast(Any, start_date)),
+                        end_date=actual_start,
+                    )
+                    data = self._combine_with_gap(tail, missing, actual_start)
+                else:
+                    data = self.backtest_service.data_service.get_data_for_backtest(
+                        symbol=symbol,
+                        timeframe="1m",
+                        start_date=pd.to_datetime(cast(Any, start_date)),
+                        end_date=pd.to_datetime(cast(Any, end_date)),
+                    )
                 if not data.empty:
                     self._data_cache[key] = data
                     logger.debug(f"1分足データをキャッシュしました: {key}")

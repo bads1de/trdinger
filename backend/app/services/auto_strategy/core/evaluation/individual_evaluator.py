@@ -234,14 +234,15 @@ class IndividualEvaluator:
             return None
 
         backtest_config = self._fixed_backtest_config.copy()
+        prefetch_config = self._build_prefetch_backtest_config(backtest_config, config)
         shared_data: dict[str, Any] = {}
-        main_key, minute_key = self._build_backtest_cache_keys(backtest_config)
+        main_key, minute_key = self._build_backtest_cache_keys(prefetch_config)
 
-        main_data = self._get_cached_data(backtest_config)
+        main_data = self._get_cached_data(prefetch_config)
         if main_data is not None and not getattr(main_data, "empty", False):
             shared_data["main_data"] = {"key": main_key, "data": main_data}
 
-        minute_data = self._get_cached_minute_data(backtest_config)
+        minute_data = self._get_cached_minute_data(prefetch_config)
         if minute_data is not None:
             shared_data["minute_data"] = {
                 "key": minute_key,
@@ -249,6 +250,42 @@ class IndividualEvaluator:
             }
 
         return (backtest_config, config, shared_data)
+
+    def _build_prefetch_backtest_config(
+        self, backtest_config: dict[str, Any], config: GAConfig
+    ) -> dict[str, Any]:
+        """全個体の warmup シフトを内包するよう開始日を過去に広げる。
+
+        個体ごとの warmup バー数は遺伝子に依存するため、プリフェッチ開始日を
+        生成範囲の上限（lookback_period=200 + 余裕）分だけ過去にずらす。
+        これにより全個体・全フォールドの要求期間がキャッシュに内包され、
+        個体評価ごとの DB アクセスを排除できる。
+        """
+        prefetch_config = backtest_config.copy()
+        start_date = backtest_config.get("start_date")
+        timeframe = str(backtest_config.get("timeframe", ""))
+        if not start_date or not timeframe:
+            return prefetch_config
+
+        max_indicator_minutes = self._window_service.timeframe_to_minutes(timeframe)
+        if getattr(config, "enable_multi_timeframe", False):
+            available_timeframes = getattr(config, "available_timeframes", None)
+            if not available_timeframes:
+                from app.config.constants import SUPPORTED_TIMEFRAMES
+
+                available_timeframes = SUPPORTED_TIMEFRAMES
+            indicator_minutes = [
+                self._window_service.timeframe_to_minutes(tf)
+                for tf in available_timeframes
+            ]
+            if indicator_minutes:
+                max_indicator_minutes = max(indicator_minutes)
+
+        buffered_start = self._window_service.estimate_max_warmup_shift(
+            start_date, timeframe, max_indicator_minutes
+        )
+        prefetch_config["start_date"] = buffered_start
+        return prefetch_config
 
     @staticmethod
     def _build_backtest_cache_keys(

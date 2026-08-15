@@ -216,3 +216,85 @@ class TestBacktestDataProviderCache:
 
         pd.testing.assert_frame_equal(result, db_df)
         mock_service.data_service.get_data_for_backtest.assert_called_once()
+
+    def test_local_cache_extendable_start_gap_fetches_only_missing(self):
+        """終端はカバーし開始が不足する場合、不足分だけ DB から取得して連結する"""
+        mock_service = Mock()
+        mock_service.ensure_data_service_initialized = Mock()
+        mock_service.data_service = Mock()
+
+        full_df = pd.DataFrame(
+            {"close": [4, 5, 6, 7]},
+            index=pd.date_range("2024-01-04", periods=4, freq="D", tz="UTC"),
+        )
+        cache = {
+            ("BTC/USDT:USDT", "1h", "2024-01-04", "2024-01-07"): full_df,
+        }
+        provider = BacktestDataProvider(
+            backtest_service=mock_service,
+            data_cache=cache,
+            lock=threading.Lock(),
+        )
+
+        gap_df = pd.DataFrame(
+            {"close": [1, 2, 3]},
+            index=pd.date_range("2024-01-01", periods=3, freq="D", tz="UTC"),
+        )
+        mock_service.data_service.get_data_for_backtest.return_value = gap_df
+
+        config = {
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-07",
+        }
+
+        result = provider.get_cached_backtest_data(config)
+
+        assert result is not None
+        assert len(result) == 7
+        # 不足分のみを要求して取得していること
+        assert mock_service.data_service.get_data_for_backtest.call_count == 1
+        call_kwargs = mock_service.data_service.get_data_for_backtest.call_args.kwargs
+        assert str(call_kwargs["start_date"]).startswith("2024-01-01")
+        assert str(call_kwargs["end_date"]).startswith("2024-01-04")
+
+    def test_local_cache_extendable_minute_data_gap(self):
+        """1分足でも開始不足を不足分だけ DB 取得して連結する"""
+        mock_service = Mock()
+        mock_service.ensure_data_service_initialized = Mock()
+        mock_service.data_service = Mock()
+
+        full_df = pd.DataFrame(
+            {"close": [4, 5, 6, 7]},
+            index=pd.date_range("2024-01-04", periods=4, freq="D", tz="UTC"),
+        )
+        cache = {
+            ("minute", "BTC/USDT:USDT", "1m", "2024-01-04", "2024-01-07"): full_df,
+        }
+        provider = BacktestDataProvider(
+            backtest_service=mock_service,
+            data_cache=cache,
+            lock=threading.Lock(),
+        )
+
+        gap_df = pd.DataFrame(
+            {"close": [1, 2, 3]},
+            index=pd.date_range("2024-01-01", periods=3, freq="D", tz="UTC"),
+        )
+        mock_service.data_service.get_data_for_backtest.return_value = gap_df
+
+        config = {
+            "symbol": "BTC/USDT:USDT",
+            "timeframe": "1h",
+            "start_date": "2024-01-01",
+            "end_date": "2024-01-07",
+        }
+
+        result = provider.get_cached_minute_data(config)
+
+        assert result is not None
+        assert len(result) == 7
+        assert mock_service.data_service.get_data_for_backtest.call_count == 1
+        call_kwargs = mock_service.data_service.get_data_for_backtest.call_args.kwargs
+        assert str(call_kwargs["end_date"]).startswith("2024-01-04")

@@ -6,6 +6,7 @@ EvaluationWorker のユニットテスト
 
 from unittest.mock import MagicMock, patch
 
+import pandas as pd
 import pytest
 
 import app.services.auto_strategy.core.evaluation.evaluation_worker as ew_module
@@ -25,10 +26,10 @@ class TestInitializeWorkerProcess:
         "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
     )
     @patch(
-        "app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService"
+        "app.services.backtest.services.backtest_service.BacktestService"
     )
     @patch(
-        "app.services.auto_strategy.core.evaluation.evaluation_worker.IndividualEvaluator"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
     )
     def test_initialize_success(
         self,
@@ -57,10 +58,10 @@ class TestInitializeWorkerProcess:
         "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
     )
     @patch(
-        "app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService"
+        "app.services.backtest.services.backtest_service.BacktestService"
     )
     @patch(
-        "app.services.auto_strategy.core.evaluation.evaluation_worker.IndividualEvaluator"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
     )
     def test_initialize_with_shared_data(
         self,
@@ -87,10 +88,10 @@ class TestInitializeWorkerProcess:
         "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
     )
     @patch(
-        "app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService"
+        "app.services.backtest.services.backtest_service.BacktestService"
     )
     @patch(
-        "app.services.auto_strategy.core.evaluation.evaluation_worker.IndividualEvaluator"
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
     )
     def test_initialize_without_shared_data(
         self,
@@ -114,7 +115,51 @@ class TestInitializeWorkerProcess:
         mock_initialize_worker.assert_not_called()
 
     @patch(
-        "app.services.auto_strategy.core.evaluation.evaluation_worker.BacktestService"
+        "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
+    )
+    @patch(
+        "app.services.backtest.services.backtest_service.BacktestService"
+    )
+    @patch(
+        "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
+    )
+    def test_initialize_seeds_local_cache_from_shared_data(
+        self,
+        mock_evaluator_cls,
+        mock_backtest_service_cls,
+        mock_initialize_worker,
+    ):
+        """共有データの DataFrame ペイロードがローカルキャッシュへ投入されること"""
+        mock_backtest_service = MagicMock()
+        mock_backtest_service_cls.return_value = mock_backtest_service
+
+        mock_evaluator = MagicMock()
+        mock_evaluator._lock = MagicMock()
+        mock_evaluator._data_cache = {}
+        mock_evaluator_cls.return_value = mock_evaluator
+
+        backtest_config = {"symbol": "BTC/USDT:USDT"}
+        ga_config = MagicMock()
+        minute_df = pd.DataFrame({"close": [1, 2]})
+        shared_data = {
+            "minute_data": {
+                "key": ("minute", "BTC/USDT:USDT", "1m", "2024-01-01", "2024-06-30"),
+                "data": minute_df,
+            },
+        }
+
+        initialize_worker_process(backtest_config, ga_config, shared_data)
+
+        mock_initialize_worker.assert_called_once_with(shared_data)
+        assert (
+            mock_evaluator._data_cache[
+                ("minute", "BTC/USDT:USDT", "1m", "2024-01-01", "2024-06-30")
+            ]
+            is minute_df
+        )
+
+    @patch(
+        "app.services.backtest.services.backtest_service.BacktestService"
     )
     def test_initialize_error_propagates(self, mock_backtest_service_cls):
         """初期化エラーが伝播されること"""

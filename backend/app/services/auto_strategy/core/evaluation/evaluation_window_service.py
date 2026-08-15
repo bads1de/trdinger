@@ -140,6 +140,40 @@ class EvaluationWindowService:
         return timeframe_map.get(str(timeframe), 60)
 
     @staticmethod
+    def estimate_max_warmup_shift(
+        start_date: object,
+        timeframe: str,
+        max_indicator_minutes: int | None = None,
+    ) -> object:
+        """全個体に共通する最大 warmup シフト後の開始日時を返す。
+
+        個体ごとの warmup バー数は遺伝子に依存するが、GA の生成範囲から
+        上限が決まる（period / lookback_period = 200、var_lookback = 500）。
+        プリフェッチ開始日をこの上限分だけ過去にずらすことで、
+        全個体・全フォールドの要求期間が内包スライスにヒットし、
+        個体評価ごとの DB アクセスを排除できる。
+
+        Args:
+            start_date: 評価開始日時。
+            timeframe: ベースタイムフレーム（"4h" など）。
+            max_indicator_minutes: 指標タイムフレームの最大分（MTF 考慮済み）。
+                None の場合はベースタイムフレームを使用する（MTF 無効時の挙動）。
+        """
+        # estimate_required_warmup_bars の実体は lookback_period（上限 200）+ 1
+        # バー。MTF スケール（最大 1d/1h = 24 倍）を見込んで余裕を持たせる。
+        max_lookback_bars = 250
+        indicator_minutes = (
+            max_indicator_minutes
+            or EvaluationWindowService.timeframe_to_minutes(timeframe)
+        )
+        buffer_minutes = max_lookback_bars * max(
+            indicator_minutes, EvaluationWindowService.timeframe_to_minutes(timeframe)
+        )
+        start_timestamp = pd.Timestamp(start_date)
+        adjusted = start_timestamp - pd.to_timedelta(buffer_minutes, unit="m")
+        return EvaluationWindowService.format_datetime_like(start_date, adjusted)
+
+    @staticmethod
     def format_datetime_like(original_value: object, timestamp: pd.Timestamp) -> object:
         """元の入力型に合わせて Timestamp を整形する。"""
         if isinstance(original_value, pd.Timestamp):

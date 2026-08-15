@@ -41,6 +41,37 @@ class TestEvaluationWindowService:
         assert prepared["end_date"] == "2024-01-12 00:00:00"
         assert prepared["start_date"] == "2024-01-09 03:00:00"
 
+    def test_estimate_max_warmup_shift_uses_indicator_minutes(self):
+        """最大 warmup シフトが指標タイムフレーム（MTF 考慮）を反映する"""
+        start_date = "2024-01-01 00:00:00"
+
+        shifted = self.service.estimate_max_warmup_shift(
+            start_date, "4h", max_indicator_minutes=1440
+        )
+
+        expected = pd.Timestamp(start_date) - pd.to_timedelta(250 * 1440, unit="m")
+        assert pd.Timestamp(shifted) == expected
+
+    def test_estimate_max_warmup_shift_defaults_to_base_timeframe(self):
+        """max_indicator_minutes 未指定時はベースタイムフレームのバッファを使う"""
+        start_date = "2024-01-01 00:00:00"
+
+        shifted = self.service.estimate_max_warmup_shift(start_date, "4h")
+
+        expected = pd.Timestamp(start_date) - pd.to_timedelta(250 * 240, unit="m")
+        assert pd.Timestamp(shifted) == expected
+
+    def test_estimate_max_warmup_shift_respects_base_timeframe(self):
+        """指標タイムフレームよりベース足が長い場合はベース足分を確保する"""
+        start_date = "2024-01-01 00:00:00"
+
+        shifted = self.service.estimate_max_warmup_shift(
+            start_date, "4h", max_indicator_minutes=60
+        )
+
+        expected = pd.Timestamp(start_date) - pd.to_timedelta(250 * 240, unit="m")
+        assert pd.Timestamp(shifted) == expected
+
     def test_apply_evaluation_window_to_result_recomputes_trimmed_window(self):
         market_data = pd.DataFrame(
             {

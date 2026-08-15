@@ -5,6 +5,7 @@
 import logging
 import os
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
@@ -35,6 +36,28 @@ if DATABASE_URL.lower().startswith("sqlite"):
         connect_args={"check_same_thread": False},
         echo=False,
     )
+
+    # GA の並列ワーカー（ProcessPool）が同一 SQLite ファイルへ同時に
+    # 読み取りアクセスするため、WAL モードと busy_timeout を有効にして
+    # ロック競合による待ち時間を削減する。
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
+
+    # WAL モードは初回接続時に恒久設定される（-wal ファイルが作られる）。
+    # 初回のみ手動接続して確定させ、並列ワーカー起動時の競合を避ける。
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL"))
+    except Exception as exc:
+        logger.warning("SQLite WAL モードの初期化に失敗しました: %s", exc)
+
     logger.info("SQLiteデータベースを使用しています（NullPool設定）")
 else:
     # PostgreSQLなど本番環境用

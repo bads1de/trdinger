@@ -76,9 +76,16 @@ class ParallelEvaluator:
             worker_initargs: 初期化関数の引数
         """
         self.evaluate_func = evaluate_func
-        # CPUバウンド処理の最適値: 物理コア数 - 2, 最大8にキャップ
-        cpu_count = os.cpu_count() or 1
-        self.max_workers = max_workers or min(8, max(2, cpu_count - 2))
+        # CPUバウンド処理の最適値: 物理コア数 + 1、最大8にキャップ。
+        # 起動コスト（Windows spawn）は大きいが永続プールでは償却されるため、
+        # 評価スループット優先で物理コア+1（I/O 待ちの重なりを考慮）を使う。
+        try:
+            import psutil
+
+            physical_cores = psutil.cpu_count(logical=False) or 1
+        except ImportError:
+            physical_cores = os.cpu_count() or 1
+        self.max_workers = max_workers or min(8, max(2, physical_cores + 1))
         self.timeout_per_individual = timeout_per_individual
         self.use_process_pool = use_process_pool
         self.worker_initializer = worker_initializer
