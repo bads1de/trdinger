@@ -139,26 +139,31 @@ class BacktestDataProvider:
             if key in self._data_cache:
                 return self._data_cache[key]
 
-        self.backtest_service.ensure_data_service_initialized()
-        start_dt = (
-            pd.to_datetime(cast(Any, start_date)).tz_localize("UTC")
-            if pd.to_datetime(cast(Any, start_date)).tzinfo is None
-            else pd.to_datetime(cast(Any, start_date))
-        )
-        end_dt = (
-            pd.to_datetime(cast(Any, end_date)).tz_localize("UTC")
-            if pd.to_datetime(cast(Any, end_date)).tzinfo is None
-            else pd.to_datetime(cast(Any, end_date))
-        )
-        data = self.backtest_service.data_service.get_data_for_backtest(
-            symbol=symbol,
-            timeframe=timeframe,
-            start_date=start_dt,
-            end_date=end_dt,
-        )
+        # DB アクセスは BacktestService の共有セッションを使うため、
+        # 並列スレッドから同時に実行すると SQLite の
+        # "concurrent operations are not permitted" が発生する。
+        # キャッシュヒットしない場合のみロックを保持して直列化する。
         with self._lock:
             if key in self._data_cache:
                 return self._data_cache[key]
+
+            self.backtest_service.ensure_data_service_initialized()
+            start_dt = (
+                pd.to_datetime(cast(Any, start_date)).tz_localize("UTC")
+                if pd.to_datetime(cast(Any, start_date)).tzinfo is None
+                else pd.to_datetime(cast(Any, start_date))
+            )
+            end_dt = (
+                pd.to_datetime(cast(Any, end_date)).tz_localize("UTC")
+                if pd.to_datetime(cast(Any, end_date)).tzinfo is None
+                else pd.to_datetime(cast(Any, end_date))
+            )
+            data = self.backtest_service.data_service.get_data_for_backtest(
+                symbol=symbol,
+                timeframe=timeframe,
+                start_date=start_dt,
+                end_date=end_dt,
+            )
             self._data_cache[key] = data
         logger.debug(f"バックテストデータをキャッシュしました: {key}")
         return data
@@ -190,22 +195,22 @@ class BacktestDataProvider:
                 return self._data_cache[key]
 
         try:
-            self.backtest_service.ensure_data_service_initialized()
-            data = self.backtest_service.data_service.get_data_for_backtest(
-                symbol=symbol,
-                timeframe="1m",
-                start_date=pd.to_datetime(cast(Any, start_date)),
-                end_date=pd.to_datetime(cast(Any, end_date)),
-            )
-            if not data.empty:
-                with self._lock:
-                    if key in self._data_cache:
-                        return self._data_cache[key]
+            with self._lock:
+                if key in self._data_cache:
+                    return self._data_cache[key]
+                self.backtest_service.ensure_data_service_initialized()
+                data = self.backtest_service.data_service.get_data_for_backtest(
+                    symbol=symbol,
+                    timeframe="1m",
+                    start_date=pd.to_datetime(cast(Any, start_date)),
+                    end_date=pd.to_datetime(cast(Any, end_date)),
+                )
+                if not data.empty:
                     self._data_cache[key] = data
-                logger.debug(f"1分足データをキャッシュしました: {key}")
-                return data
-            logger.debug(f"1分足データが空です: {key}")
-            return None
+                    logger.debug(f"1分足データをキャッシュしました: {key}")
+                    return data
+                logger.debug(f"1分足データが空です: {key}")
+                return None
         except Exception as e:
             logger.warning(f"1分足データ取得エラー: {e}")
             return None

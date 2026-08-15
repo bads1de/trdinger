@@ -7,6 +7,7 @@
 
 import gc
 import logging
+import math
 import random
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Optional
@@ -271,6 +272,9 @@ class EvolutionRunner:
                         best_fitness = (
                             float(best_fitness) if best_fitness is not None else None
                         )
+                    # ±inf / NaN は DB 保存や API 応答で問題になるため None に落とす
+                    if best_fitness is not None and not math.isfinite(best_fitness):
+                        best_fitness = None
                     progress_callback(gen, config.generations, best_fitness)
             finally:
                 # ループ終了時に元のGC閾値を復元（エラー時も含む）
@@ -549,10 +553,13 @@ class EvolutionRunner:
                 except (TypeError, ValueError):
                     continue
 
-            if not values:
+            # ±inf（制約違反ペナルティ）の fitness は平均計算の対象外とする。
+            # そのまま np.mean に渡すと NaN / RuntimeWarning を引き起こす。
+            finite_values = [v for v in values if math.isfinite(v)]
+            if not finite_values:
                 continue
 
-            average_value = float(np.mean(values))
+            average_value = float(np.mean(finite_values))
             if objective_registry.is_dynamic_scalar_objective(objective):
                 scalars[objective] = min(
                     DYNAMIC_SCALAR_MAX,

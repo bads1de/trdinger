@@ -196,6 +196,42 @@ class TestGeneticOperators:
             < mutated_low.metadata["adaptive_mutation_rate"]
         )
 
+    def test_adaptive_mutate_with_inf_fitness_no_warning(
+        self, sample_strategy_gene, ga_config
+    ):
+        """±inf fitness（制約違反ペナルティ）でも警告を出さずに変異できる"""
+        import warnings
+
+        class MockIndividual:
+            def __init__(self, fitness_values):
+                self.fitness = Mock()
+                self.fitness.values = fitness_values
+
+        # 全個体が -inf / +inf fitness（ペナルティ）の population
+        all_inf_pop = [
+            MockIndividual((-float("inf"),)),
+            MockIndividual((float("inf"),)),
+        ]
+        mixed_pop = [
+            MockIndividual((0.8,)),
+            MockIndividual((-float("inf"),)),
+            MockIndividual((1.2,)),
+        ]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            mutated_all_inf = sample_strategy_gene.adaptive_mutate(
+                all_inf_pop, ga_config, base_mutation_rate=0.1
+            )
+            mutated_mixed = sample_strategy_gene.adaptive_mutate(
+                mixed_pop, ga_config, base_mutation_rate=0.1
+            )
+
+        assert isinstance(mutated_all_inf, StrategyGene)
+        assert isinstance(mutated_mixed, StrategyGene)
+        # 非有限値のみの場合はベースの変異率にフォールバック
+        assert mutated_all_inf.metadata["adaptive_mutation_rate"] == 0.1
+
     def test_uniform_crossover_diversity(self, ga_config):
         """ユニフォーム交叉の多様性テスト"""
         parent1 = StrategyGene(

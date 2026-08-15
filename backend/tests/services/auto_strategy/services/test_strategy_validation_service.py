@@ -657,6 +657,67 @@ class TestStrategyValidationService:
         assert validation["passed"] is False
         assert any("フォールバック" in reason for reason in validation["reasons"])
 
+    def test_penalized_scenarios_fail_closed(self, mock_evaluator):
+        """ペナルティフォールドが1件でもあれば不合格になる"""
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        report = _make_report(pass_rate=1.0, primary_fitness=0.8)
+        report.metadata["penalized_scenario_count"] = 1
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is False
+        assert any("フォールド" in reason for reason in validation["reasons"])
+
+    def test_no_penalized_scenarios_passes(self, mock_evaluator):
+        """ペナルティが無ければ判定は従来通り"""
+        config = GAConfig(
+            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        report = _make_report(pass_rate=1.0, primary_fitness=0.8)
+        report.metadata["penalized_scenario_count"] = 0
+
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                },
+                config,
+                {},
+            )
+
+        validation = filtered["validation_results"]["best"]
+        assert validation["passed"] is True
+
     def test_min_primary_fitness_minimize_direction(self, mock_evaluator):
         """最小化目的（max_drawdown）では min_primary_fitness は上限として判定される"""
         config = GAConfig(
@@ -1013,6 +1074,42 @@ class TestValidationGaConfigBuilding:
 
         assert validation_config.objectives == ["total_return"]
         assert validation_config.evaluation_config.wfa_n_folds == 5
+
+    def test_build_validation_ga_config_scales_min_trades_to_fold_length(
+        self, mock_evaluator
+    ):
+        """WFA検証用設定では min_trades がフォールド長に比例して緩和される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True, wfa_n_folds=5, wfa_train_ratio=0.7
+            ),
+            fitness_constraints={"min_trades": 50},
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        validation_config = service._build_validation_ga_config(config)
+
+        # fold_ratio = (1 - 0.7) / 5 = 0.06, 50 * 0.06 = 3
+        assert validation_config.fitness_constraints["min_trades"] == 3
+        # 元の設定は変更されない（deepcopy 済み）
+        assert config.fitness_constraints["min_trades"] == 50
+
+    def test_build_validation_ga_config_min_trades_floor_of_one(self, mock_evaluator):
+        """スケール後の min_trades は 1 未満にならない"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True, wfa_n_folds=5, wfa_train_ratio=0.7
+            ),
+            fitness_constraints={"min_trades": 10},
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        validation_config = service._build_validation_ga_config(config)
+
+        # fold_ratio = 0.06, 10 * 0.06 = 0.6 → floor で 1
+        assert validation_config.fitness_constraints["min_trades"] == 1
 
 
 class TestValidationConfig:

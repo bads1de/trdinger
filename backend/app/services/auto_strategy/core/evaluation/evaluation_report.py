@@ -12,9 +12,15 @@ from statistics import median
 from typing import Any
 
 from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
 
 _ROBUST_WORST_CASE_WEIGHT = 0.3
 _DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _is_penalty_value(value: float) -> bool:
+    """制約違反・評価エラーのペナルティ fitness 値かどうかを判定する。"""
+    return abs(value) >= PENALTY_FITNESS_MAGNITUDE
 
 
 def _safe_copy_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
@@ -75,7 +81,7 @@ class EvaluationReport:
         values = [
             float(scenario.fitness[0])
             for scenario in self.scenarios
-            if scenario.fitness
+            if scenario.fitness and not _is_penalty_value(float(scenario.fitness[0]))
         ]
         if not values:
             return None
@@ -150,6 +156,16 @@ class EvaluationReport:
                 metadata=_safe_copy_metadata(metadata),
             )
 
+        scenario_has_penalty = [
+            any(
+                _is_penalty_value(float(scenario.fitness[index]))
+                for index in range(min(len(scenario.fitness), len(objective_names)))
+            )
+            for scenario in scenario_list
+        ]
+        metadata = _safe_copy_metadata(metadata)
+        metadata.setdefault("penalized_scenario_count", sum(scenario_has_penalty))
+
         aggregated_fitness = []
         for index, objective in enumerate(objective_names):
             values = [
@@ -160,9 +176,20 @@ class EvaluationReport:
                 )
                 for scenario in scenario_list
             ]
+            # 制約違反・評価エラーのペナルティ値（±PENALTY_FITNESS_MAGNITUDE）は
+            # DEAP 内部の順位付けマーカーであり、実数値ではない。そのまま集約すると
+            # 中央値やワーストケースが 1 個のペナルティに引きずられ、
+            # 集約 fitness が無意味な巨大値になってしまうため、集約から除外する。
+            aggregate_values = [
+                value
+                for value, has_penalty in zip(
+                    values, scenario_has_penalty, strict=False
+                )
+                if not has_penalty
+            ]
             aggregated_fitness.append(
                 cls._aggregate_objective_values(
-                    values=values,
+                    values=aggregate_values,
                     objective=objective,
                     aggregate_method=aggregate_method,
                     weights=weights,
@@ -175,7 +202,7 @@ class EvaluationReport:
             aggregated_fitness=tuple(aggregated_fitness),
             scenarios=scenario_list,
             aggregate_method=aggregate_method,
-            metadata=_safe_copy_metadata(metadata),
+            metadata=metadata,
         )
         report.metadata.setdefault("pass_rate", report.pass_rate)
         report.metadata.setdefault("scenario_count", len(scenario_list))

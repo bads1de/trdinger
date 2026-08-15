@@ -17,6 +17,7 @@ import numpy as np
 from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.config.constants import (
     DEFAULT_FITNESS_WEIGHTS,
+    PENALTY_FITNESS_MAGNITUDE,
 )
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.types import SerializableValue
@@ -208,13 +209,20 @@ class FitnessCalculator:
 
         評価エラー時や制約違反時に使用する。目的関数の方向性に応じて
         適切なペナルティ値を設定する。
+
+        Note:
+            ±inf の代わりに有限の大きな値（``PENALTY_FITNESS_MAGNITUDE``）を
+            使う。実現可能な fitness の範囲を大きく外れた値のため、DEAP の
+            NSGA-II 選択では任意の有効個体に支配され ±inf と同等の順序関係を
+            維持する。さらに DB 保存や API の JSON 応答（allow_nan=False）で
+            エラーを起こさない。
         """
         penalty_values = []
         for obj in config.objectives:
             if objective_registry.is_minimize_objective(obj):
-                penalty_values.append(float("inf"))
+                penalty_values.append(PENALTY_FITNESS_MAGNITUDE)
             else:
-                penalty_values.append(-float("inf"))
+                penalty_values.append(-PENALTY_FITNESS_MAGNITUDE)
         return tuple(penalty_values)
 
     def extract_performance_metrics(

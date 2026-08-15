@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from app.services.auto_strategy.config import GAConfig
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
 from app.services.auto_strategy.config.ga_config import EvaluationConfig
 from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
@@ -356,7 +357,7 @@ class TestIndividualEvaluator:
         assert scenario.passed is False
         assert scenario.metadata["early_terminated"] is True
         assert scenario.metadata["termination_reason"] == "trade_pace"
-        assert scenario.fitness == (-float("inf"),)
+        assert scenario.fitness == (-PENALTY_FITNESS_MAGNITUDE,)
 
     def test_apply_evaluation_window_to_result_recomputes_trimmed_window(self):
         market_data = pd.DataFrame(
@@ -841,11 +842,9 @@ class TestIndividualEvaluator:
         )
 
         # 制約違反（min_trades=10 > total_trades=1）によりペナルティ値が返される
-        # 未知の目的はminimize方向とみなされ、ペナルティは +inf
-        import math
-
+        # 未知の目的はminimize方向とみなされ、ペナルティは有限の大きな値
         assert len(result) == 1
-        assert math.isinf(result[0]) and result[0] > 0
+        assert result[0] == PENALTY_FITNESS_MAGNITUDE
 
     def test_evaluate_individual_with_oos(self):
         """OOS検証ありの個体評価テスト"""

@@ -4,6 +4,37 @@ fitness 値の抽出を共通化するユーティリティ。
 
 from __future__ import annotations
 
+import math
+
+
+def sanitize_fitness_for_output(
+    value: object,
+    *,
+    default: float = 0.0,
+) -> float | tuple[float, ...] | None:
+    """結果出力・永続化用に fitness の非有限値（±inf / NaN）を安全化する。
+
+    制約違反・低取引回数の個体には fitness として ±inf（ペナルティ）が
+    設定されるが、これは DEAP 内部（選択・順位付け）のためのマーカーであり、
+    DB 保存や API の JSON 応答（Starlette は ``allow_nan=False`` で直列化）では
+    ``ValueError: Out of range float values are not JSON compliant`` を
+    引き起こす。出力境界で有限値（非有限は ``default``、全体が空は ``None``）
+    へ置換する。
+    """
+    if isinstance(value, (tuple, list)):
+        if not value:
+            return None
+        sanitized: list[float] = []
+        for item in value:
+            if isinstance(item, (int, float)) and math.isfinite(float(item)):
+                sanitized.append(float(item))
+            else:
+                sanitized.append(default)
+        return sanitized[0] if len(sanitized) == 1 else tuple(sanitized)
+    if isinstance(value, (int, float)) and math.isfinite(float(value)):
+        return float(value)
+    return None
+
 
 def normalize_fitness_values(
     values: object,

@@ -261,6 +261,15 @@ class StrategyValidationService:
         scenario_count = len(report.scenarios)
         metadata = report.metadata if isinstance(report.metadata, dict) else {}
 
+        # ペナルティ fitness（制約違反・評価エラー）を含むシナリオは
+        # 集約 fitness から除外されるため、そのまま合格させると
+        # 実質的にフォールドを無視した判定になる。fail-closed で不合格にする。
+        penalized_count = int(metadata.get("penalized_scenario_count", 0) or 0)
+        if penalized_count > 0:
+            reasons.append(
+                f"制約違反・評価エラーのフォールドが {penalized_count} 件あります"
+            )
+
         pass_rate = report.pass_rate
         if scenario_count == 0:
             reasons.append("検証シナリオがありません")
@@ -478,6 +487,25 @@ class StrategyValidationService:
         evaluation_config.early_termination_settings = EarlyTerminationSettings(
             enabled=False
         )
+
+        # フォールドのテスト窓は全体期間の (1 - train_ratio) / n_folds しかなく、
+        # フル期間向けの min_trades のままではほぼ確実に制約違反（ペナルティ）に
+        # なる。フォールド長に比例した取引回数を許容するよう制約をスケールする。
+        # スケール後の制約が 1 未満になる場合は最小の 1 に丸める。
+        from app.services.auto_strategy.config.constants import (
+            DEFAULT_FITNESS_CONSTRAINTS,
+        )
+
+        fold_ratio = (1.0 - validation_config.wfa_train_ratio) / max(
+            1, int(validation_config.wfa_n_folds)
+        )
+        base_min_trades = int(
+            validation_ga_config.fitness_constraints.get(
+                "min_trades", DEFAULT_FITNESS_CONSTRAINTS["min_trades"]
+            )
+        )
+        scaled_min_trades = max(1, int(round(base_min_trades * fold_ratio)))
+        validation_ga_config.fitness_constraints["min_trades"] = scaled_min_trades
 
         return validation_ga_config
 

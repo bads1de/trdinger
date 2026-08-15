@@ -15,6 +15,7 @@ import pandas as pd
 import pytest
 
 from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.core.evaluation.condition_evaluator import (
     ConditionEvaluator,
@@ -160,8 +161,8 @@ class TestFitnessCalculator:
         config = SimpleNamespace(objectives=["custom_loss", "total_return"])
 
         assert self.calculator.get_penalty_values(config) == (
-            float("inf"),
-            -float("inf"),
+            PENALTY_FITNESS_MAGNITUDE,
+            -PENALTY_FITNESS_MAGNITUDE,
         )
 
     def test_calculate_long_short_balance(self, mock_backtest_result):

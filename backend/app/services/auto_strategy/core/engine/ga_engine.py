@@ -31,6 +31,7 @@ from .deap_setup import DEAPSetup
 from .evolution_runner import EvolutionRunner, EvolutionStoppedError
 from .fitness_utils import (
     extract_result_fitness,
+    sanitize_fitness_for_output,
 )
 from .ga_utils import (
     create_deap_mutate_wrapper,
@@ -432,6 +433,23 @@ class GeneticAlgorithmEngine:
         )
         return previous
 
+    @staticmethod
+    def _safe_fitness_stat(
+        values: Any, reducer: Callable[[np.ndarray], float]
+    ) -> float:
+        """±inf（ペナルティ）を除いた集団 fitness の統計量を計算する。
+
+        制約違反・低取引回数などの個体は fitness に ±inf（ペナルティ）が
+        設定されるため、そのまま `np.mean` / `np.std` を計算すると
+        RuntimeWarning（invalid value encountered in subtract）を引き起こす。
+        非有限値はペナルティマーカーとして統計から除外する。
+        """
+        arr = np.asarray(values, dtype=float)
+        finite = arr[np.isfinite(arr)]
+        if finite.size == 0:
+            return float("nan")
+        return float(reducer(finite))
+
     def _create_statistics(self) -> Any:
         """
         統計情報収集オブジェクトを作成
@@ -443,10 +461,10 @@ class GeneticAlgorithmEngine:
             統計情報収集用オブジェクト
         """
         stats = tools.Statistics(lambda ind: ind.fitness.values)
-        stats.register("avg", np.mean)
-        stats.register("std", np.std)
-        stats.register("min", np.min)
-        stats.register("max", np.max)
+        stats.register("avg", lambda v: self._safe_fitness_stat(v, np.mean))
+        stats.register("std", lambda v: self._safe_fitness_stat(v, np.std))
+        stats.register("min", lambda v: self._safe_fitness_stat(v, np.min))
+        stats.register("max", lambda v: self._safe_fitness_stat(v, np.max))
         return stats
 
     def _create_parallel_evaluator(self, config: GAConfig) -> ParallelEvaluator | None:
@@ -626,7 +644,19 @@ class GeneticAlgorithmEngine:
 
         execution_time = time.time() - start_time
 
+        ranked_population = self.result_processor.sort_population(population)
+        persisted_population = ranked_population[:MAX_PERSISTED_POPULATION_SIZE]
+
         # 最終的な結果の構築
+        # fitness の ±inf / NaN（制約違反ペナルティ）は DEAP 内部専用の値であり、
+        # DB 保存や API の JSON 応答で ValueError を引き起こすため、
+        # 出力境界で安全な有限値（または None）へ置換する。
+        best_fitness_value = sanitize_fitness_for_output(best_fitness_value)
+        fitness_scores = [
+            sanitize_fitness_for_output(extract_primary_fitness(individual)) or 0.0
+            for individual in persisted_population
+        ]
+
         result = {
             "best_strategy": best_gene,
             "best_fitness": best_fitness_value,
@@ -638,17 +668,27 @@ class GeneticAlgorithmEngine:
             "best_evaluation_summary": best_evaluation_summary,
         }
 
-        ranked_population = self.result_processor.sort_population(population)
-        persisted_population = ranked_population[:MAX_PERSISTED_POPULATION_SIZE]
         result["all_strategies"] = persisted_population
-        result["fitness_scores"] = [
-            extract_primary_fitness(individual) for individual in persisted_population
-        ]
+        result["fitness_scores"] = fitness_scores
         result["evaluation_summaries"] = self._collect_population_evaluation_summaries(
             persisted_population,
             config,
         )
-        result["pareto_front"] = best_strategies or []
+        # パレート解の fitness も出力境界で安全化する（リスト形状は維持）
+        result["pareto_front"] = [
+            {
+                **solution,
+                "fitness_values": [
+                    (
+                        float(v)
+                        if isinstance(v, (int, float)) and np.isfinite(float(v))
+                        else 0.0
+                    )
+                    for v in solution.get("fitness_values", [])
+                ],
+            }
+            for solution in (best_strategies or [])
+        ]
         result["objectives"] = config.objectives
 
         return result

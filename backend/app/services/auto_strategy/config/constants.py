@@ -139,6 +139,14 @@ DEFAULT_FITNESS_WEIGHTS = {
     "trade_frequency_penalty": 0.05,
 }
 
+# === フィットネスペナルティの大きさ ===
+# 制約違反・評価エラー時のペナルティ fitness 値の絶対値。
+# ±inf の代わりに有限の大きな値を使うことで、実現可能な fitness（通常
+# ±100 未満）を大きく外れ、DEAP の NSGA-II 選択では任意の有効個体に
+# 支配される（±inf と同等の順序関係）。加えて DB 保存や API の JSON 応答
+# （allow_nan=False）でエラーを起こさない。
+PENALTY_FITNESS_MAGNITUDE = 1e9
+
 # === フィットネス制約設定 ===
 DEFAULT_FITNESS_CONSTRAINTS = {
     "min_trades": 10,  # 最低保証回数（50→10に一時的に緩和）

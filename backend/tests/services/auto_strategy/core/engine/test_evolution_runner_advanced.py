@@ -311,6 +311,44 @@ class TestEvolutionRunnerAdvanced:
         ] == pytest.approx(1.3)
         assert config.objective_dynamic_scalars.get("total_return", 1.0) == 1.0
 
+    def test_dynamic_objective_scalars_ignores_inf_fitness(
+        self, mock_toolbox, mock_stats
+    ):
+        """±inf fitness（ペナルティ）を含んでも警告を出さずに更新できる"""
+        import warnings
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=mock_stats,
+        )
+
+        def build_individual(values):
+            individual = MagicMock()
+            individual.fitness = MagicMock()
+            individual.fitness.valid = True
+            individual.fitness.values = values
+            return individual
+
+        population = [
+            build_individual((0.5, -float("inf"))),
+            build_individual((0.4, 0.1)),
+            build_individual((-float("inf"), 0.2)),
+        ]
+        config = SimpleNamespace(
+            dynamic_objective_reweighting=True,
+            objectives=["total_return", "max_drawdown"],
+            objective_dynamic_scalars={},
+        )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            runner._update_dynamic_objective_scalars(population, config)
+
+        # total_return の平均は [0.5, 0.4] から計算される（-inf は除外）
+        assert config.objective_dynamic_scalars.get("total_return", 1.0) == 1.0
+        # max_drawdown の平均は [-inf, 0.1, 0.2] のうち有限値 [0.1, 0.2] から計算
+        assert config.objective_dynamic_scalars["max_drawdown"] == pytest.approx(1.15)
+
     def test_two_stage_selection_promotes_report_robust_elite(
         self, mock_toolbox, mock_stats
     ):
