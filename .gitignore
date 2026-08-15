@@ -81,7 +81,9 @@ backend/results/
 .claude/
 
 # Command Code (local settings & personal taste learnings)
-.commandcode/
+.commandcode/*
+# ただしスキルはチーム共有のため追跡する
+!.commandcode/skills/
 
 # Note: .python-version and uv.lock are intentionally tracked for reproducibility
 
