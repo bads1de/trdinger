@@ -31,11 +31,29 @@ def _make_service() -> tuple[ExperimentPersistenceService, MagicMock]:
 
 
 def _make_strategy(id_: str = "s1") -> Mock:
-    """StrategyGene として振る舞う Mock"""
+    """StrategyGene として振る舞う Mock（構造シグネチャ計算可能な属性付き）"""
     s = Mock()
     s.id = id_
     s.fitness = SimpleNamespace(values=(1.0,), valid=True)
     s.__class__ = StrategyGene
+    # 重複排除（strategy_dedup）が反復・比較する構造属性を明示する。
+    # 指標タイプに id を使うことで個体ごとに一意の構造になる。
+    s.indicators = [SimpleNamespace(type=f"IND_{id_}", timeframe=None, parameters={})]
+    s.long_entry_conditions = []
+    s.short_entry_conditions = []
+    s.long_exit_conditions = []
+    s.short_exit_conditions = []
+    s.stateful_conditions = []
+    s.tool_genes = []
+    s.risk_management = {}
+    s.tpsl_gene = None
+    s.long_tpsl_gene = None
+    s.short_tpsl_gene = None
+    s.position_sizing_gene = None
+    s.entry_gene = None
+    s.long_entry_gene = None
+    s.short_entry_gene = None
+    s.exit_gene = None
     return s
 
 
@@ -363,6 +381,49 @@ class TestSaveOtherStrategies:
 
         saved_data = mock_repo.save_strategies_batch.call_args[0][0]
         assert saved_data[0]["fitness_score"] == 0.0
+
+    def test_structural_clones_are_deduplicated(self) -> None:
+        """同一構造のクローンは1件だけ保存され、最高スコアの個体が残る"""
+        service, _ = _make_service()
+        db = MagicMock()
+
+        def _clone_of(base_id: str, clone_id: str) -> Mock:
+            clone = _make_strategy(clone_id)
+            clone.indicators = [
+                SimpleNamespace(type=f"IND_{base_id}", timeframe=None, parameters={})
+            ]
+            return clone
+
+        best = _make_strategy("best")
+        other = _make_strategy("other")
+        clone_low = _clone_of("other", "clone_low")
+        clone_high = _clone_of("other", "clone_high")
+        clone_of_best = _clone_of("best", "clone_best")
+        result = {
+            "best_strategy": best,
+            "all_strategies": [best, other, clone_low, clone_high, clone_of_best],
+            "fitness_scores": [1.0, 0.6, 0.5, 0.8, 0.9],
+        }
+
+        with (
+            patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
+            ) as mock_repo_cls,
+            patch.object(
+                service.serializer,
+                "strategy_gene_to_dict",
+                return_value={"serialized": True},
+            ),
+        ):
+            mock_repo = mock_repo_cls.return_value
+            mock_repo.save_strategies_batch.return_value = 1
+
+            service._save_other_strategies(db, {"db_id": 1}, result, GAConfig())
+
+        saved_data = mock_repo.save_strategies_batch.call_args[0][0]
+        # other系列は最高スコアの clone_high のみ、best のクローンは除外
+        assert len(saved_data) == 1
+        assert saved_data[0]["fitness_score"] == 0.8
 
 
 class TestSaveParetoFront:

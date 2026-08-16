@@ -263,7 +263,17 @@ class TwoStageSelection:
         first_vector = next(iter(candidate_vectors.values()), None)
         if first_vector is None:
             return 0.0
-        return sharing_radius * float(np.sqrt(len(first_vector)))
+
+        # 正規化済みベクトルでは値が一定の次元（使用されない指標など）は
+        # すべて 0 になるため、レンジが 0 の次元を除外した実効次元数で
+        # しきい値を計算する（niche 計算と同じ口径）。
+        vectors_matrix = np.array(list(candidate_vectors.values()), dtype=float)
+        active_dim_count = int(
+            np.count_nonzero(vectors_matrix.max(axis=0) - vectors_matrix.min(axis=0))
+        )
+        if active_dim_count <= 0:
+            return 0.0
+        return sharing_radius * float(np.sqrt(active_dim_count))
 
     @staticmethod
     def _is_behaviorally_distinct(

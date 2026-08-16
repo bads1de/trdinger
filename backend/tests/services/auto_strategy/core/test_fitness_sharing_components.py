@@ -196,6 +196,37 @@ class TestFitnessSharingComponents:
         assert state_before[3] == state_after[3]
         assert state_before[4] == state_after[4]
 
+    def test_niche_threshold_ignores_dead_dimensions(self) -> None:
+        """値が一定の次元（未使用指標など）がしきい値を広げないこと"""
+        # 実効1次元: 正規化後の距離は 0.4 と 0.6
+        active_values = np.array([[0.0], [0.4], [1.0]])
+        dead_dimensions = np.zeros((3, 49))
+        vectors_with_dead_dims = np.hstack([active_values, dead_dimensions])
+
+        counts = compute_niche_counts_vectorized(
+            vectors_with_dead_dims,
+            sharing_radius=0.1,
+            sampling_threshold=1000,
+            sampling_ratio=0.3,
+        )
+
+        # 実効1次元なら半径は 0.1*sqrt(1)=0.1 → 距離0.4は隣人にならない
+        np.testing.assert_allclose(counts, [1.0, 1.0, 1.0])
+
+    def test_niche_threshold_finds_neighbors_in_active_dimensions(self) -> None:
+        """実効次元内の近接個体は隣人として数えられること"""
+        active_values = np.array([[0.0], [0.05], [1.0]])
+
+        counts = compute_niche_counts_vectorized(
+            active_values,
+            sharing_radius=0.1,
+            sampling_threshold=1000,
+            sampling_ratio=0.3,
+        )
+
+        # 正規化後の距離 0.005 < 0.1 → 先頭2個体は互いに隣人（自分含む）
+        np.testing.assert_allclose(counts, [2.0, 2.0, 1.0])
+
     def test_silhouette_based_sharing_returns_early_for_two_individuals(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -302,6 +333,82 @@ class TestFitnessSharingComponents:
         assert result == population
         assert captured["n_clusters"] == 2
 
+    def test_silhouette_adjustment_is_bounded_to_half_of_raw(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """シルエット倍率は生値の50%未満に下げないこと（順位情報の消滅防止）"""
+
+        class FakeKMeans:
+            def __init__(self, n_clusters: int, random_state: int, n_init: Any) -> None:
+                pass
+
+            def fit_predict(self, vectors: np.ndarray) -> np.ndarray:
+                return np.array([0, 0, 1])
+
+        monkeypatch.setattr(fitness_sharing_silhouette, "KMeans", FakeKMeans)
+        # normalized silhouette は [1.0, 0.5, 0.0] → 倍率 [0.5, 0.75, 1.0]
+        monkeypatch.setattr(
+            fitness_sharing_silhouette,
+            "silhouette_samples",
+            lambda vectors, labels: np.array([1.0, 0.0, -1.0]),
+        )
+
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+
+        class FitnessAwareStrategyGene(StrategyGene):
+            __slots__ = ("fitness",)
+
+        population = []
+        for i in range(3):
+            gene = FitnessAwareStrategyGene(
+                id=f"gene{i}",
+                indicators=[IndicatorGene(type="SMA", parameters={"period": 10 + i})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            )
+            gene.fitness = SimpleNamespace(values=(2.0,), valid=True)
+            population.append(gene)
+
+        result = sharing.silhouette_based_sharing(population)
+
+        adjusted = [gene.fitness.values[0] for gene in result]
+        np.testing.assert_allclose(adjusted, [1.0, 1.5, 2.0])
+
+    def test_apply_fitness_sharing_softens_niche_division(self) -> None:
+        """同一構造のクラスタは sqrt(ニッチ数) で除算されること"""
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+
+        class FitnessAwareStrategyGene(StrategyGene):
+            __slots__ = ("fitness",)
+
+        population = []
+        for i in range(4):
+            gene = FitnessAwareStrategyGene(
+                id=f"gene{i}",
+                indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            )
+            gene.fitness = SimpleNamespace(values=(1.0,), valid=True)
+            population.append(gene)
+
+        result = sharing.apply_fitness_sharing(population)
+
+        adjusted = [gene.fitness.values[0] for gene in result]
+        # ニッチ数4 → sqrt(4)=2 で割る。同一ベクトルのためシルエットは
+        # 全員同値になり、（クラスタ割り当てによらず）全員同じ倍率になる。
+        assert max(adjusted) / min(adjusted) < 1.001
+        # 古典的な共有（1/4=0.25）より緩く、無調整（1.0）より強い範囲に収まる
+        assert 0.25 < min(adjusted) < 1.0
+
     def test_apply_fitness_sharing_does_not_attach_feature_vector(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -352,3 +459,44 @@ class TestFitnessSharingComponents:
         assert len(result) == 2
         assert not hasattr(gene1, "_feature_vector")
         assert not hasattr(gene2, "_feature_vector")
+
+
+class TestTwoStageBehaviorThreshold:
+    """二段階選抜の behavior 距離しきい値のテスト"""
+
+    def test_threshold_uses_active_dimensions_only(self) -> None:
+        from app.services.auto_strategy.core.engine.two_stage_selection import (
+            TwoStageSelection,
+        )
+
+        selection = TwoStageSelection(
+            toolbox=None,
+            fitness_sharing=SimpleNamespace(sharing_radius=0.1),
+        )
+
+        # 実効1次元（残り9次元は全個体で0）
+        vectors = {
+            "a": np.zeros(10),
+            "b": np.array([0.4] + [0.0] * 9),
+            "c": np.array([1.0] + [0.0] * 9),
+        }
+
+        threshold = selection._get_behavior_distance_threshold(vectors)
+
+        # 死んだ次元を含めた sqrt(10) ではなく sqrt(1) ベース
+        assert threshold == pytest.approx(0.1)
+        assert threshold < 0.4  # a-b 間の距離より小さい（別ニッチと判定される）
+
+    def test_threshold_zero_when_all_dimensions_dead(self) -> None:
+        from app.services.auto_strategy.core.engine.two_stage_selection import (
+            TwoStageSelection,
+        )
+
+        selection = TwoStageSelection(
+            toolbox=None,
+            fitness_sharing=SimpleNamespace(sharing_radius=0.1),
+        )
+
+        vectors = {"a": np.zeros(5), "b": np.zeros(5)}
+
+        assert selection._get_behavior_distance_threshold(vectors) == 0.0

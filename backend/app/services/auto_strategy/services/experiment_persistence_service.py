@@ -29,6 +29,7 @@ from database.repositories.generated_strategy_repository import (
 )
 
 from ..config import GAConfig
+from ..utils.strategy_dedup import deduplicate_strategies
 
 logger = logging.getLogger(__name__)
 
@@ -309,30 +310,36 @@ class ExperimentPersistenceService:
         generated_strategy_repo = GeneratedStrategyRepository(db)
         evaluation_summaries = result.get("evaluation_summaries", {})
 
-        strategies_data = []
         fitness_scores = result.get("fitness_scores", [])
-        for i, strategy in enumerate(all_strategies[:100]):  # 上位100件に制限
-            if strategy.id != best_strategy.id:
-                # fitness_scoresの範囲内にあるかチェック
-                fitness_score = fitness_scores[i] if i < len(fitness_scores) else 0.0
-                strategy_key = self._get_strategy_result_key(strategy)
-                gene_data = self.serializer.strategy_gene_to_dict(strategy)
-                gene_data = attach_evaluation_summary(
-                    gene_data,
-                    evaluation_summaries.get(strategy_key),
+        # 最終集団には同一構造のクローンが残ることがあるため、構造シグネチャで
+        # 重複を排除する（最良戦略と同一構造の個体も保存対象から除外）。
+        deduplicated = deduplicate_strategies(
+            all_strategies,
+            fitness_scores,
+            exclude=[best_strategy],
+            max_count=100,
+        )
+
+        strategies_data = []
+        for strategy, fitness_score in deduplicated:
+            strategy_key = self._get_strategy_result_key(strategy)
+            gene_data = self.serializer.strategy_gene_to_dict(strategy)
+            gene_data = attach_evaluation_summary(
+                gene_data,
+                evaluation_summaries.get(strategy_key),
+            )
+            if validation_results:
+                gene_data = attach_validation_summary(
+                    gene_data, validation_results.get(strategy_key)
                 )
-                if validation_results:
-                    gene_data = attach_validation_summary(
-                        gene_data, validation_results.get(strategy_key)
-                    )
-                strategies_data.append(
-                    {
-                        "experiment_id": db_experiment_id,
-                        "gene_data": gene_data,
-                        "generation": ga_config.generations,
-                        "fitness_score": fitness_score,
-                    }
-                )
+            strategies_data.append(
+                {
+                    "experiment_id": db_experiment_id,
+                    "gene_data": gene_data,
+                    "generation": ga_config.generations,
+                    "fitness_score": fitness_score,
+                }
+            )
 
         if strategies_data:
             saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)

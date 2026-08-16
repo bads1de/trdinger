@@ -27,6 +27,7 @@ from ..evaluation.evaluation_fidelity import (
 )
 from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..fitness.fitness_sharing import FitnessSharing
+from ..fitness.fitness_validation import has_valid_fitness
 from .ga_utils import _invalidate_individual_cache, _set_fitness_values
 from .two_stage_selection import DEFAULT_MIN_PASS_RATE, TwoStageSelection
 
@@ -212,13 +213,6 @@ class EvolutionRunner:
             try:
                 logger.debug("世代 %s/%s を開始", gen + 1, config.generations)
 
-                # 適応度共有の適用（有効な場合、世代毎）
-                if (
-                    config.fitness_sharing.enable_fitness_sharing
-                    and self.fitness_sharing
-                ):
-                    population = self.fitness_sharing.apply_fitness_sharing(population)
-
                 # 選択（親個体の選択）
                 # cloneを使用することで、交叉・変異が元の個体に影響しないようにする
                 offspring = list(self.toolbox.map(self.toolbox.clone, population))
@@ -242,7 +236,7 @@ class EvolutionRunner:
                     candidate_population,
                     config,
                 )
-                population[:] = self._apply_two_stage_selection(
+                population[:] = self._apply_shared_selection(
                     candidate_population,
                     len(population),
                     config,
@@ -569,6 +563,45 @@ class EvolutionRunner:
                 scalars[objective] = DEFAULT_SCALAR_VALUE
 
         config.objective_dynamic_scalars = scalars
+
+    def _apply_shared_selection(
+        self,
+        candidate_population: list[Any],
+        population_size: int,
+        config: "GAConfig",
+    ) -> list[Any]:
+        """適応度共有を選択対象プール全体に適用して次世代を選ぶ。
+
+        共有は親集団だけ・子孫だけに適用すると、減衰した個体と生の適応度の
+        個体が同じ選択プールで競争してしまう。そこで選択直前にプール全体へ
+        対称的に適用し、選択完了後は適応度を元の値へ復元する。これにより
+        統計・Hall of Fame・次世代の共有計算が常に生の適応度を参照し、
+        生存個体の適応度が世代をまたいで複利減衰することもなくなる。
+        """
+        if not (config.fitness_sharing.enable_fitness_sharing and self.fitness_sharing):
+            return self._apply_two_stage_selection(
+                candidate_population,
+                population_size,
+                config,
+            )
+
+        original_values: dict[int, tuple[float, ...]] = {}
+        for individual in candidate_population:
+            if has_valid_fitness(individual):
+                original_values[id(individual)] = individual.fitness.values
+
+        self.fitness_sharing.apply_fitness_sharing(candidate_population)
+        try:
+            return self._apply_two_stage_selection(
+                candidate_population,
+                population_size,
+                config,
+            )
+        finally:
+            for individual in candidate_population:
+                values = original_values.get(id(individual))
+                if values is not None and has_valid_fitness(individual):
+                    individual.fitness.values = values
 
     def _apply_two_stage_selection(
         self,

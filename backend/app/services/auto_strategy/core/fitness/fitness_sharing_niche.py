@@ -30,8 +30,20 @@ def compute_niche_counts_vectorized(
     if n_individuals < 2:
         return np.ones(n_individuals)
 
+    # 使用されない指標などで常に値が一定の次元（死んだ次元）は距離に寄与しない。
+    # しきい値は実効次元数ベースで計算する（全体次元数を使うと半径が実態より
+    # 広がり、構成が少し違うだけの個体まで同じニッチに分類される）。
+    active_dim_count = int(
+        np.count_nonzero(vectors.max(axis=0) - vectors.min(axis=0) > 0)
+    )
     vectors_normalized = normalize_vectors(vectors)
-    distance_threshold = sharing_radius * np.sqrt(vectors_normalized.shape[1])
+    distance_threshold = sharing_radius * np.sqrt(max(active_dim_count, 1))
+    # 集団が1つの系族へ収束すると個体間距離が縮み、固定半径では系族を
+    # ニッチとして認識できなくなる。プール内距離の中央値に比例する下限を
+    # 併用し、密集した系族が常にまとめて罰則を受けるようにする。
+    distance_threshold = max(
+        distance_threshold, _median_pairwise_distance(vectors_normalized) * 0.5
+    )
 
     if n_individuals > sampling_threshold:
         return compute_niche_counts_sampling(
@@ -58,7 +70,7 @@ def find_neighbors_kdtree(
     radius: float,
 ) -> Sequence[Sequence[int]]:
     """
-    KD-Treeを使用して各点の近傍を探索する。
+    KD-Treeを使用して各点の近傍を探索（O(N log N)）
     """
     if len(vectors) < 1:
         return []
@@ -66,6 +78,18 @@ def find_neighbors_kdtree(
     tree = cKDTree(vectors)
     neighbors_list = tree.query_ball_point(vectors, r=radius)
     return cast(Sequence[Sequence[int]], neighbors_list)
+
+
+def _median_pairwise_distance(vectors: np.ndarray) -> float:
+    """正規化済みベクトル間のユークリッド距離の中央値を返す。"""
+    if len(vectors) < 2:
+        return 0.0
+    diffs = vectors[:, None, :] - vectors[None, :, :]
+    distances = np.linalg.norm(diffs, axis=-1)
+    upper = distances[np.triu_indices(len(vectors), k=1)]
+    if upper.size == 0:
+        return 0.0
+    return float(np.median(upper))
 
 
 def normalize_vectors(vectors: np.ndarray) -> np.ndarray:

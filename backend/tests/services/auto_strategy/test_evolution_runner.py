@@ -372,6 +372,98 @@ class TestEvolutionRunner:
             mock_fitness_sharing.apply_fitness_sharing.call_count == config.generations
         )
 
+    def test_fitness_sharing_applied_to_full_candidate_pool(
+        self, mock_toolbox, dummy_population, config
+    ):
+        """共有は親集団だけでなく選択プール全体（子孫+親）へ適用されること"""
+        config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
+        mock_fitness_sharing = Mock()
+        mock_fitness_sharing.apply_fitness_sharing.side_effect = lambda pop: pop
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox, stats=None, fitness_sharing=mock_fitness_sharing
+        )
+
+        with patch("random.random", return_value=0.9):  # No cx/mut
+            runner.run_evolution(dummy_population, config)
+
+        pool_sizes = [
+            len(call.args[0])
+            for call in mock_fitness_sharing.apply_fitness_sharing.call_args_list
+        ]
+        # 各世代で offspring(4) + population(4) = 8 が対象
+        assert pool_sizes == [2 * len(dummy_population)] * config.generations
+
+    def test_fitness_restored_after_shared_selection(
+        self, mock_toolbox, dummy_population, config
+    ):
+        """共有で減衰させた適応度は選択後に元の値へ復元されること"""
+        config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
+        mock_fitness_sharing = Mock()
+
+        def _halve_fitness(pop):
+            for ind in pop:
+                if ind.fitness.valid:
+                    ind.fitness.values = tuple(v * 0.5 for v in ind.fitness.values)
+            return pop
+
+        mock_fitness_sharing.apply_fitness_sharing.side_effect = _halve_fitness
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox, stats=None, fitness_sharing=mock_fitness_sharing
+        )
+        # 評価時に既存の適応度をそのまま返す（値の上書きを防ぐ）
+        mock_toolbox.evaluate = Mock(
+            side_effect=lambda ind: ind.fitness.values if ind.fitness.valid else (1.0,)
+        )
+        original_values = [ind.fitness.values for ind in dummy_population]
+
+        with patch("random.random", return_value=0.9):  # No cx/mut
+            final_population, _logbook = runner.run_evolution(dummy_population, config)
+
+        # 選択後（統計・HoFが参照するタイミング）は生の適応度に戻っている
+        assert len(final_population) == len(original_values)
+        for ind in final_population:
+            assert ind.fitness.values in original_values
+        # 共有が実際に呼ばれたことを確認（復元前のテストとして意味を持つ）
+        assert mock_fitness_sharing.apply_fitness_sharing.call_count == (
+            config.generations
+        )
+
+    def test_fitness_restored_when_selection_raises(
+        self, mock_toolbox, dummy_population, config
+    ):
+        """選択中に例外が起きても適応度が復元されること"""
+        config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
+        mock_fitness_sharing = Mock()
+
+        def _halve_fitness(pop):
+            for ind in pop:
+                if ind.fitness.valid:
+                    ind.fitness.values = tuple(v * 0.5 for v in ind.fitness.values)
+            return pop
+
+        mock_fitness_sharing.apply_fitness_sharing.side_effect = _halve_fitness
+        mock_toolbox.select = Mock(side_effect=RuntimeError("selection failed"))
+        # 評価時に既存の適応度をそのまま返す（値の上書きを防ぐ）
+        mock_toolbox.evaluate = Mock(
+            side_effect=lambda ind: ind.fitness.values if ind.fitness.valid else (1.0,)
+        )
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox, stats=None, fitness_sharing=mock_fitness_sharing
+        )
+        original_values = [ind.fitness.values for ind in dummy_population]
+
+        with (
+            patch("random.random", return_value=0.9),
+            pytest.raises(RuntimeError, match="selection failed"),
+        ):
+            runner.run_evolution(dummy_population, config)
+
+        for ind, original in zip(dummy_population, original_values, strict=True):
+            assert ind.fitness.values == original
+
     def test_initialization_wires_behavior_provider_for_fitness_sharing(
         self,
         mock_toolbox,

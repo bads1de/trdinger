@@ -40,20 +40,6 @@ _FrozenKey = tuple | bytes | SerializablePrimitive
 logger = logging.getLogger(__name__)
 
 
-def _safe_ratio(current: float, original: float) -> float:
-    if np.isinf(original) or np.isinf(current):
-        return 1.0
-    return float(
-        np.divide(current, original, out=np.zeros_like(current), where=original != 0)
-    )
-
-
-def _restore_value(original: float, ratio: float) -> float:
-    if np.isinf(original):
-        return original
-    return original * ratio
-
-
 class FitnessSharing:
     """
     フィットネス共有クラス
@@ -68,6 +54,9 @@ class FitnessSharing:
     DEFAULT_SHARING_RADIUS = 0.1
     DEFAULT_ALPHA = 1.0
     BEHAVIOR_SIGNATURE_PRECISION = 8
+    # ニッチ除算の緩和指数。1.0 は古典的な共有（ niche_count で割る）だが、
+    # 大きなニッチが一括して報酬を失い良好領域ごと消えるため sqrt で緩和する。
+    NICHE_PENALTY_EXPONENT = 0.5
 
     def __init__(
         self,
@@ -132,6 +121,11 @@ class FitnessSharing:
         個体群にフィットネス共有を適用（最適化版）
 
         ベクトル化とKD-Treeを使用してO(N²)からO(N log N)に計算量を削減。
+
+        Note:
+            適応度値はニッチカウントとシルエット係数で「一時的に」調整される。
+            選択以外の用途（統計・HoF・次世代の評価値）に影響させないため、
+            呼び出し側は選択完了後に必ず元の値へ復元すること。
         """
         try:
             if len(population) <= 1:
@@ -175,52 +169,33 @@ class FitnessSharing:
             for idx, valid_idx in enumerate(valid_indices):
                 niche_counts[valid_idx] = niche_counts_vectorized[idx]
 
-            original_fitness: dict[int, tuple[float, ...]] = {}
+            # 適応度はニッチカウントとシルエット係数で一時的に調整される。
+            # 呼び出し側（EvolutionRunner）は選択完了後に元の値へ復元するため、
+            # ここでは復元を行わない（世代をまたいだ減衰を防ぐ）。
+            # ニッチ除算は sqrt で緩和する（定数のdocstring参照）。
             for i, individual in enumerate(population):
                 if has_valid_fitness(individual):
-                    original_fitness[i] = individual.fitness.values
+                    softened_niche_count = float(
+                        np.power(max(niche_counts[i], 1.0), self.NICHE_PENALTY_EXPONENT)
+                    )
                     shared_fitness_values = tuple(
                         float(
                             np.divide(
                                 fitness_val,
-                                niche_counts[i],
+                                softened_niche_count,
                                 out=np.zeros_like(fitness_val),
-                                where=niche_counts[i] != 0,
+                                where=softened_niche_count != 0,
                             )
                         )
                         for fitness_val in individual.fitness.values
                     )
                     individual.fitness.values = shared_fitness_values
 
-            result = _silhouette_based_sharing(
+            return _silhouette_based_sharing(
                 population,
                 gene_serializer=self.gene_serializer,
                 vectorize_gene=resolve_vector,
             )
-
-            # niche-count調整を元に戻し、シルエット調整のみを残す
-            for i, individual in enumerate(population):
-                if i in original_fitness and hasattr(individual, "fitness"):
-                    silhouette_ratio = (
-                        tuple(
-                            _safe_ratio(s, o)
-                            for s, o in zip(
-                                individual.fitness.values,
-                                original_fitness[i],
-                                strict=False,
-                            )
-                        )
-                        if individual.fitness.valid
-                        else original_fitness[i]
-                    )
-                    individual.fitness.values = tuple(
-                        _restore_value(o, r)
-                        for o, r in zip(
-                            original_fitness[i], silhouette_ratio, strict=False
-                        )
-                    )
-
-            return result
 
         except Exception as e:
             logger.error(f"フィットネス共有適用エラー: {e}")

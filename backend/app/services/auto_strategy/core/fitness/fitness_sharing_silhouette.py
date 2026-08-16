@@ -23,7 +23,10 @@ MAX_CLUSTERS = 3
 RANDOM_STATE = 42
 SILHOUETTE_OFFSET = 1.0
 SILHOUETTE_DIVISOR = 2.0
-MIN_ADJUSTMENT_FACTOR = 0.1
+# 適応度調整倍率の下限。クラスタ中心の個体でも生値の 50% は保証する。
+# （下限が低いと大半の個体が下限に張り付いて順位情報が消え、
+# 選択が実質ランダム化して収束と適応度低下を招く）
+MIN_ADJUSTMENT_FACTOR = 0.5
 
 
 def _collect_gene_vectors(
@@ -95,8 +98,10 @@ def silhouette_based_sharing(
                 normalized_silhouette = (
                     silhouette_score + SILHOUETTE_OFFSET
                 ) / SILHOUETTE_DIVISOR
-                adjustment_factor = max(
-                    MIN_ADJUSTMENT_FACTOR, 1.0 - normalized_silhouette
+                # クラスタ中心（normalized=1）ほど小さい倍率。下限は 0.5。
+                span = 1.0 - MIN_ADJUSTMENT_FACTOR
+                adjustment_factor = MIN_ADJUSTMENT_FACTOR + span * (
+                    1.0 - normalized_silhouette
                 )
 
                 original_fitness_values = individual.fitness.values
