@@ -543,7 +543,10 @@ class ConditionEvaluator:
         try:
             return float(operand_str)
         except (ValueError, TypeError):
-            return 0.0
+            # 未知の識別子を 0 扱いにすると ``close > 未知列`` が常に真に
+            # なるため、NaN を返して比較を False に落とす
+            # （ベクトル化経路の None 扱いと同じセマンティクス）
+            return float("nan")
 
     def evaluate_stateful_condition(
         self,

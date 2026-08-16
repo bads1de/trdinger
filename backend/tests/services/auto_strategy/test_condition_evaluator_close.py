@@ -3,6 +3,7 @@
 condition_evaluatorのcloseオペランド取得機能をテスト
 """
 
+import math
 import os
 import sys
 
@@ -99,15 +100,20 @@ class TestConditionEvaluatorClose:
 
         assert result == 123.45
 
-    def test_unknown_operand_returns_zero(self):
-        """未知のオペランドは0を返すことをテスト"""
+    def test_unknown_operand_returns_nan(self):
+        """未知のオペランドはNaNを返すことをテスト
+
+        0を返すと ``close > 未知列`` が常に真になり、参照切れ条件を
+        持つ個体が毎バーエントリーのデジェネレート戦略として
+        生き残ってしまうため、NaN（比較は常に偽）を返す。
+        """
         mock_strategy = Mock()
         # Mock が属性アクセス時に Mock を返さないように spec を設定
         mock_strategy = Mock(spec=[])
 
         result = self.evaluator.get_condition_value("unknown_indicator", mock_strategy)
 
-        assert result == 0.0
+        assert math.isnan(result)
 
     def test_condition_evaluation_with_close_operand(self):
         """closeオペランドを使用した条件評価テスト"""

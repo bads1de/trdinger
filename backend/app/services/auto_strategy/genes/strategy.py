@@ -9,12 +9,14 @@ GA（遺伝的アルゴリズム）によって進化させる取引戦略の設
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, cast
 
 from app.types import SerializableValue
 
+from ..utils.indicator_references import build_indicator_reference_name
 from .conditions import Condition, ConditionGroup, StatefulCondition
 from .entry import EntryGene
 from .exit import ExitGene
@@ -27,6 +29,64 @@ if TYPE_CHECKING:
     from ..config.ga_config import GAConfig
 
 logger = logging.getLogger(__name__)
+
+_PRICE_OPERANDS = frozenset({"close", "open", "high", "low", "volume"})
+_OUTPUT_INDEX_SUFFIX = re.compile(r"_\d+$")
+
+
+def _operand_reference_name(operand: object) -> str | None:
+    """条件オペランドから参照名を抽出する（数値リテラルは None）。"""
+    if isinstance(operand, bool):
+        return None
+    if isinstance(operand, (int, float)):
+        return None
+    if isinstance(operand, str):
+        return operand
+    if isinstance(operand, dict):
+        name = operand.get("name") or operand.get("indicator")
+        return str(name) if name else None
+    return None
+
+
+def _is_resolvable_operand(operand_name: str, valid_names: set[str]) -> bool:
+    """オペランド名が解決可能か（価格列・自身の指標列・数値リテラル）。"""
+    try:
+        float(operand_name)
+        return True
+    except ValueError:
+        pass
+    if operand_name in _PRICE_OPERANDS or operand_name in valid_names:
+        return True
+    # 複数出力指標（MACD_xxxxxxxx_0 など）の出力インデックス接尾辞を外して再判定
+    base = _OUTPUT_INDEX_SUFFIX.sub("", operand_name)
+    return base != operand_name and base in valid_names
+
+
+def _filter_condition_item(
+    item: Condition | ConditionGroup, valid_names: set[str]
+) -> tuple[Condition | ConditionGroup | None, int]:
+    """単一条件または条件グループを参照整合性でフィルタする。
+
+    Returns:
+        (フィルタ後のアイテム。全滅した場合は None, 除去した条件・グループ数)
+    """
+    if isinstance(item, ConditionGroup):
+        kept: list[Condition | ConditionGroup] = []
+        dropped = 0
+        for sub in item.conditions:
+            filtered, sub_dropped = _filter_condition_item(sub, valid_names)
+            dropped += sub_dropped
+            if filtered is not None:
+                kept.append(filtered)
+        if not kept:
+            return None, dropped + 1
+        item.conditions = kept
+        return item, dropped
+    for operand in (item.left_operand, item.right_operand):
+        name = _operand_reference_name(operand)
+        if name is not None and not _is_resolvable_operand(name, valid_names):
+            return None, 1
+    return item, 0
 
 
 @dataclass(slots=True)
@@ -242,6 +302,62 @@ class StrategyGene:
 
         self.indicators = _ensure_min_non_price_indicators(self.indicators, config)
         return self
+
+    def valid_operand_names(self) -> set[str]:
+        """条件オペランドとして解決可能な自身の指標名の集合を返す。"""
+        names: set[str] = set()
+        for indicator in self.indicators:
+            names.add(indicator.type)
+            timeframe = getattr(indicator, "timeframe", None)
+            if timeframe:
+                names.add(f"{indicator.type}_{timeframe}")
+            names.add(build_indicator_reference_name(indicator))
+        return names
+
+    def repair_condition_references(self) -> int:
+        """
+        自身の指標リストに存在しない参照を含む条件を除去する。
+
+        交叉は指標と条件を別々の親から混ぜ、突然変異は指標を除去するため、
+        条件が存在しない指標列（dangling reference）を参照しうる。評価器は
+        未知の列を実質 0 扱いにするため、放置すると ``close > 未知列`` が
+        常に真となり、毎バーエントリーするだけの個体が選抜され続ける。
+        演算子適用直後に本メソッドを呼び、参照整合性を保証する。
+
+        Returns:
+            除去した条件・条件グループ・ステートフル条件の合計数。
+        """
+        valid_names = self.valid_operand_names()
+        removed = 0
+        for attr in (
+            "long_entry_conditions",
+            "short_entry_conditions",
+            "long_exit_conditions",
+            "short_exit_conditions",
+        ):
+            conditions = getattr(self, attr)
+            kept: list[Condition | ConditionGroup] = []
+            for item in conditions:
+                filtered, dropped = _filter_condition_item(item, valid_names)
+                removed += dropped
+                if filtered is not None:
+                    kept.append(filtered)
+            setattr(self, attr, kept)
+
+        kept_stateful: list[StatefulCondition] = []
+        for stateful in self.stateful_conditions:
+            trigger_ok, _ = _filter_condition_item(
+                stateful.trigger_condition, valid_names
+            )
+            follow_ok, _ = _filter_condition_item(
+                stateful.follow_condition, valid_names
+            )
+            if trigger_ok is not None and follow_ok is not None:
+                kept_stateful.append(stateful)
+            else:
+                removed += 1
+        self.stateful_conditions = kept_stateful
+        return removed
 
     def mutate(self, config: GAConfig, mutation_rate: float = 0.1) -> StrategyGene:
         """戦略遺伝子の突然変異を実行する。"""

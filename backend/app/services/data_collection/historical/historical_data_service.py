@@ -23,6 +23,9 @@ from ..bybit.market_data_service import BybitMarketDataService
 
 logger = logging.getLogger(__name__)
 
+# 差分OHLCV取得のページング上限（1000件/リクエスト × 500ページ = 50万本 ≈ 1m足約1年分）
+MAX_INCREMENTAL_FETCH_PAGES = 500
+
 
 class HistoricalDataService:
     """
@@ -270,20 +273,38 @@ class HistoricalDataService:
                         logger.info(f"初回データ収集: {symbol} {tf}")
 
                     # OHLCVデータを取得
-                    ohlcv_data = await self.market_service.fetch_ohlcv_data(
-                        symbol, tf, 1000, since=since_ms
-                    )
-
-                    if not ohlcv_data:
-                        logger.info(f"新しいデータはありません: {symbol} {tf}")
-                        ohlcv_result = 0
-                    else:
+                    # 1リクエストの上限は1000件のため、未取得分が残る場合は
+                    # ページングで最新まで取得する（1m足は1日1440件で、
+                    # 単発取得では遅延が解消されず尻切れデータになる）
+                    ohlcv_result = 0
+                    current_since = since_ms
+                    fetched_any = False
+                    for _ in range(MAX_INCREMENTAL_FETCH_PAGES):
+                        ohlcv_data = await self.market_service.fetch_ohlcv_data(
+                            symbol, tf, 1000, since=current_since
+                        )
+                        if not ohlcv_data:
+                            break
+                        fetched_any = True
                         # データベースに保存
-                        ohlcv_result = (
+                        ohlcv_result += (
                             await self.market_service._save_ohlcv_to_database(
                                 ohlcv_data, symbol, tf, ohlcv_repository
                             )
                         )
+                        if len(ohlcv_data) < 1000:
+                            break
+                        last_ts = max(int(bar[0]) for bar in ohlcv_data)
+                        next_since = last_ts + 1
+                        if next_since <= (current_since or 0):
+                            # タイムスタンプが進まない場合は無限ループ防止のため終了
+                            break
+                        current_since = next_since
+                        # APIレート制限を回避するため少し待機
+                        await asyncio.sleep(0.1)
+
+                    if not fetched_any:
+                        logger.info(f"新しいデータはありません: {symbol} {tf}")
 
                     ohlcv_results[tf] = {
                         "symbol": symbol,

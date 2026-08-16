@@ -95,7 +95,15 @@ def uniform_crossover(
     child1_params["metadata"] = c1_meta
     child2_params["metadata"] = c2_meta
 
-    return strategy_gene_class(**child1_params), strategy_gene_class(**child2_params)
+    child1 = strategy_gene_class(**child1_params)
+    child2 = strategy_gene_class(**child2_params)
+
+    # フィールド単位のスワップで条件と指標が別々の親に混ざるため、
+    # 参照切れの条件を除去して整合性を保つ
+    child1.repair_condition_references()
+    child2.repair_condition_references()
+
+    return child1, child2
 
 
 def single_point_crossover(
@@ -269,5 +277,10 @@ def single_point_crossover(
         tool_genes=c2_tool,
         metadata=c2_meta,
     )
+
+    # 指標は両親の混在、条件はどちらか一方の親から丸ごと渡るため、
+    # 参照切れの条件を除去して整合性を保つ
+    child1.repair_condition_references()
+    child2.repair_condition_references()
 
     return child1, child2

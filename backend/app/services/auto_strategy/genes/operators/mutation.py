@@ -321,6 +321,9 @@ def mutate_strategy_gene(
         # 非価格指標（OI/FR/LSR由来）の最低数を確保
         mutated.repair_non_price_indicators(config)
 
+        # 指標の削除・交換で条件参照が切れるため、整合性を修復する
+        mutated.repair_condition_references()
+
         return mutated
 
     except Exception as e:

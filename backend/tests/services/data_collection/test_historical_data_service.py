@@ -226,6 +226,92 @@ class TestCollectBulkIncrementalData:
                 assert "funding_rate" in result["data"]
                 assert result["data"]["funding_rate"]["saved_count"] == 5
 
+    async def test_collect_bulk_incremental_data_pages_through_large_gap(
+        self, service, mock_market_service, mock_repository
+    ):
+        """1000件超の差分がある場合にページングで全件取得することを確認"""
+        base_ts = 1_700_000_000_000
+        page1 = [
+            [base_ts + i * 60000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
+            for i in range(1000)
+        ]
+        page2 = [
+            [
+                base_ts + 59_940_001 + j * 60000,
+                29000.0,
+                29500.0,
+                28500.0,
+                29200.0,
+                100.5,
+            ]
+            for j in range(500)
+        ]
+        mock_market_service.fetch_ohlcv_data.side_effect = [page1, page2]
+        mock_repository.get_latest_timestamp.return_value = datetime(2023, 11, 14)
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            with patch("app.config.unified_config.unified_config") as mock_config:
+                mock_config.market.supported_timeframes = ["1h"]
+                result = await service.collect_bulk_incremental_data(
+                    symbol="BTC/USDT:USDT",
+                    timeframe="1h",
+                    ohlcv_repository=mock_repository,
+                )
+
+        # 2ページ取得し、2ページ目は1ページ目の最終タイムスタンプ+1から始まる
+        assert mock_market_service.fetch_ohlcv_data.call_count == 2
+        second_call = mock_market_service.fetch_ohlcv_data.call_args_list[1]
+        assert second_call.kwargs["since"] == base_ts + 59_940_001
+        # 保存はページごとに呼ばれ、件数は合算される
+        assert mock_market_service._save_ohlcv_to_database.call_count == 2
+        tf_result = result["data"]["ohlcv"]["timeframe_results"]["1h"]
+        assert tf_result["saved_count"] == 20
+
+    async def test_collect_bulk_incremental_data_stops_when_page_not_full(
+        self, service, mock_market_service, mock_repository
+    ):
+        """ページが1000件未満なら最新到達とみなし追加取得しないことを確認"""
+        short_page = [
+            [1_700_000_000_000 + i * 60000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
+            for i in range(300)
+        ]
+        mock_market_service.fetch_ohlcv_data.return_value = short_page
+        mock_repository.get_latest_timestamp.return_value = datetime(2023, 11, 14)
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            with patch("app.config.unified_config.unified_config") as mock_config:
+                mock_config.market.supported_timeframes = ["1h"]
+                await service.collect_bulk_incremental_data(
+                    symbol="BTC/USDT:USDT",
+                    timeframe="1h",
+                    ohlcv_repository=mock_repository,
+                )
+
+        assert mock_market_service.fetch_ohlcv_data.call_count == 1
+
+    async def test_collect_bulk_incremental_data_stops_on_stale_page(
+        self, service, mock_market_service, mock_repository
+    ):
+        """タイムスタンプが進まないページでは無限ループせず終了することを確認"""
+        stale_page = [
+            [1_700_000_000_000, 29000.0, 29500.0, 28500.0, 29200.0, 100.5]
+            for _ in range(1000)
+        ]
+        mock_market_service.fetch_ohlcv_data.return_value = stale_page
+        mock_repository.get_latest_timestamp.return_value = datetime(2023, 11, 14)
+
+        with patch("asyncio.sleep", new_callable=AsyncMock):
+            with patch("app.config.unified_config.unified_config") as mock_config:
+                mock_config.market.supported_timeframes = ["1h"]
+                await service.collect_bulk_incremental_data(
+                    symbol="BTC/USDT:USDT",
+                    timeframe="1h",
+                    ohlcv_repository=mock_repository,
+                )
+
+        # 2ページ目でタイムスタンプ不進行を検知して終了する
+        assert mock_market_service.fetch_ohlcv_data.call_count == 2
+
 
 @pytest.mark.asyncio
 class TestCollectHistoricalDataWithStartDate:
