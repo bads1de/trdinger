@@ -19,6 +19,7 @@ import numpy as np
 from deap import tools
 
 from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.config.ga_config import SurvivalSelectionConfig
 
 from ..evaluation.evaluation_fidelity import (
     build_coarse_ga_config,
@@ -29,6 +30,7 @@ from ..evaluation.parallel_evaluator import ParallelEvaluator
 from ..fitness.fitness_sharing import FitnessSharing
 from ..fitness.fitness_validation import has_valid_fitness
 from .ga_utils import _invalidate_individual_cache, _set_fitness_values
+from .restricted_tournament import restricted_tournament_replace
 from .two_stage_selection import DEFAULT_MIN_PASS_RATE, TwoStageSelection
 
 logger = logging.getLogger(__name__)
@@ -240,6 +242,8 @@ class EvolutionRunner:
                     candidate_population,
                     len(population),
                     config,
+                    offspring=offspring,
+                    parents=population,
                 )
 
                 if should_stop and should_stop():
@@ -569,8 +573,15 @@ class EvolutionRunner:
         candidate_population: list[Any],
         population_size: int,
         config: "GAConfig",
+        offspring: list[Any] | None = None,
+        parents: list[Any] | None = None,
     ) -> list[Any]:
-        """適応度共有を選択対象プール全体に適用して次世代を選ぶ。
+        """生存選択の前段（RTR）と適応度共有を経て次世代を選ぶ。
+
+        制限トーナメント置換 (RTR) が有効な場合、まず各子個体を構造的に
+        最も近い既存個体と局所競争させ、ニッチごとに絞った生存プールを
+        組む。これにより多数の類似した子が適応度差だけで多様な親を
+        一斉に置き換える経路を断つ。
 
         共有は親集団だけ・子孫だけに適用すると、減衰した個体と生の適応度の
         個体が同じ選択プールで競争してしまう。そこで選択直前にプール全体へ
@@ -578,6 +589,13 @@ class EvolutionRunner:
         統計・Hall of Fame・次世代の共有計算が常に生の適応度を参照し、
         生存個体の適応度が世代をまたいで複利減衰することもなくなる。
         """
+        candidate_population = self._apply_restricted_tournament(
+            candidate_population,
+            config,
+            offspring=offspring,
+            parents=parents,
+        )
+
         if not (config.fitness_sharing.enable_fitness_sharing and self.fitness_sharing):
             return self._apply_two_stage_selection(
                 candidate_population,
@@ -602,6 +620,48 @@ class EvolutionRunner:
                 values = original_values.get(id(individual))
                 if values is not None and has_valid_fitness(individual):
                     individual.fitness.values = values
+
+    def _apply_restricted_tournament(
+        self,
+        candidate_population: list[Any],
+        config: "GAConfig",
+        offspring: list[Any] | None,
+        parents: list[Any] | None,
+    ) -> list[Any]:
+        """制限トーナメント置換で候補プールを構造ニッチごとに絞る。
+
+        各子個体は生存プールからサンプリングした中で指標構成距離が最小の
+        個体と比較され、ニッチ代表を支配した場合のみ置換・追加される。
+        失敗した場合はそのままの候補プールで選択を続行する。
+        """
+        survival_config = getattr(config, "survival_selection_config", None)
+        if not isinstance(survival_config, SurvivalSelectionConfig):
+            return candidate_population
+        if not survival_config.enable_restricted_tournament:
+            return candidate_population
+        if not parents or not offspring:
+            return candidate_population
+
+        try:
+            survivors = restricted_tournament_replace(
+                parents,
+                offspring,
+                crowding_factor=survival_config.restricted_tournament_crowding_factor,
+            )
+        except Exception as exc:
+            logger.warning(
+                "制限トーナメント置換に失敗したため通常の候補プールで選択します: %s",
+                exc,
+            )
+            return candidate_population
+
+        logger.debug(
+            "RTR: parents=%d offspring=%d survivors=%d",
+            len(parents),
+            len(offspring),
+            len(survivors),
+        )
+        return survivors
 
     def _apply_two_stage_selection(
         self,

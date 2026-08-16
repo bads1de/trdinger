@@ -317,6 +317,18 @@ class FitnessSharingConfig(NestedConfigMixin):
     sampling_ratio: float = GA_DEFAULT_FITNESS_SHARING["sampling_ratio"]
 
 
+@dataclass
+class SurvivalSelectionConfig(NestedConfigMixin):
+    """生存選択の多様性維持設定。"""
+
+    # 制限トーナメント置換 (RTR) を次世代選択の前段で適用するか。
+    # 有効時、各子個体は指標構成距離で最も近い既存個体との局所競争を経て
+    # NSGA-II 選抜プールに入る（類似子がニッチ外の多様な親を置き換えられない）。
+    enable_restricted_tournament: bool = False
+    # 局所競争相手のサンプル数（crowding factor）
+    restricted_tournament_crowding_factor: int = 8
+
+
 def _get_default_values_from_fields(cls: type[Any]) -> dict[str, Any]:
     """dataclass フィールド定義からデフォルト値辞書を組み立てる。"""
     defaults: dict[str, Any] = {}
@@ -395,6 +407,11 @@ class GAConfig:
 
     # フィットネス共有設定
     fitness_sharing: FitnessSharingConfig = field(default_factory=FitnessSharingConfig)
+
+    # 生存選択の多様性維持設定
+    survival_selection_config: SurvivalSelectionConfig = field(
+        default_factory=SurvivalSelectionConfig
+    )
 
     # 目的関数設定
     objectives: list[str] = field(default_factory=lambda: DEFAULT_GA_OBJECTIVES.copy())
@@ -496,6 +513,8 @@ class GAConfig:
             value = MutationConfig.from_dict(value)
         if name == "fitness_sharing" and isinstance(value, dict):
             value = FitnessSharingConfig.from_dict(value)
+        if name == "survival_selection_config" and isinstance(value, dict):
+            value = SurvivalSelectionConfig.from_dict(value)
 
         object.__setattr__(self, name, value)
 
@@ -513,6 +532,14 @@ class GAConfig:
                 self,
                 "fitness_sharing",
                 FitnessSharingConfig.from_dict(fitness_sharing),
+            )
+
+        survival_selection: Any = self.survival_selection_config
+        if isinstance(survival_selection, dict):
+            object.__setattr__(
+                self,
+                "survival_selection_config",
+                SurvivalSelectionConfig.from_dict(survival_selection),
             )
 
         if isinstance(self.mutation_config, dict):
@@ -589,5 +616,6 @@ __all__ = [
     "IterativeImprovementConfig",
     "ValidationConfig",
     "FitnessSharingConfig",
+    "SurvivalSelectionConfig",
     "GAConfig",
 ]

@@ -25,6 +25,7 @@ from app.services.auto_strategy.config.ga_config import (  # noqa: E402
     EvaluationConfig,
     FitnessSharingConfig,
     GAConfig,
+    SurvivalSelectionConfig,
 )
 from app.services.auto_strategy.core import GeneticAlgorithmEngine  # noqa: E402
 from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402
@@ -122,12 +123,27 @@ def main() -> None:
         action="store_true",
         help="適応度共有を無効化して選抜のみの挙動を計測",
     )
+    parser.add_argument(
+        "--rtr",
+        action="store_true",
+        help="制限トーナメント置換 (RTR) を生存選択に適用",
+    )
+    parser.add_argument(
+        "--rtr-cf",
+        type=int,
+        default=8,
+        help="RTR の局所競争相手サンプル数 (crowding factor)",
+    )
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
 
     for rate in [float(r) for r in args.seed_rates.split(",")]:
         use_seeds = rate > 0.0
-        label = f"seed_rate={rate}" + (" [no-sharing]" if args.no_sharing else "")
+        label = f"seed_rate={rate}"
+        if args.no_sharing:
+            label += " [no-sharing]"
+        if args.rtr:
+            label += f" [rtr cf={args.rtr_cf}]"
         config = GAConfig(
             population_size=4 if args.smoke else args.population,
             generations=1 if args.smoke else args.generations,
@@ -146,6 +162,14 @@ def main() -> None:
                 FitnessSharingConfig(enable_fitness_sharing=False)
                 if args.no_sharing
                 else FitnessSharingConfig()
+            ),
+            survival_selection_config=(
+                SurvivalSelectionConfig(
+                    enable_restricted_tournament=True,
+                    restricted_tournament_crowding_factor=args.rtr_cf,
+                )
+                if args.rtr
+                else SurvivalSelectionConfig()
             ),
             evaluation_config=EvaluationConfig(enable_parallel=not args.smoke),
             fallback_start_date="2024-01-01",
@@ -258,7 +282,8 @@ def main() -> None:
                 collect_leaves(item, leaves)
                 has_price_vs_overlay = any(
                     is_price_operand(getattr(leaf, "left_operand", None))
-                    and getattr(leaf, "right_operand", None) in overlay_refs
+                    and _operand_reference_name(getattr(leaf, "right_operand", None))
+                    in overlay_refs
                     for leaf in leaves
                 )
                 has_threshold_leaf = any(
