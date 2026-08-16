@@ -288,9 +288,7 @@ class AutoStrategyService:
                     "success": False,
                     "message": "実験 application service が初期化されていません",
                 }
-            return self.experiment_application_service.delete_experiment(
-                experiment_id
-            )
+            return self.experiment_application_service.delete_experiment(experiment_id)
         except Exception as e:
             logger.error("エラー in 実験削除: %s", e)
             return {

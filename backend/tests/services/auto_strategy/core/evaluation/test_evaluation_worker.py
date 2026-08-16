@@ -25,9 +25,7 @@ class TestInitializeWorkerProcess:
     @patch(
         "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
     )
-    @patch(
-        "app.services.backtest.services.backtest_service.BacktestService"
-    )
+    @patch("app.services.backtest.services.backtest_service.BacktestService")
     @patch(
         "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
     )
@@ -57,9 +55,7 @@ class TestInitializeWorkerProcess:
     @patch(
         "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
     )
-    @patch(
-        "app.services.backtest.services.backtest_service.BacktestService"
-    )
+    @patch("app.services.backtest.services.backtest_service.BacktestService")
     @patch(
         "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
     )
@@ -87,9 +83,7 @@ class TestInitializeWorkerProcess:
     @patch(
         "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
     )
-    @patch(
-        "app.services.backtest.services.backtest_service.BacktestService"
-    )
+    @patch("app.services.backtest.services.backtest_service.BacktestService")
     @patch(
         "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
     )
@@ -117,9 +111,7 @@ class TestInitializeWorkerProcess:
     @patch(
         "app.services.auto_strategy.core.evaluation.parallel_evaluator.initialize_worker"
     )
-    @patch(
-        "app.services.backtest.services.backtest_service.BacktestService"
-    )
+    @patch("app.services.backtest.services.backtest_service.BacktestService")
     @patch(
         "app.services.auto_strategy.core.evaluation.individual_evaluator.IndividualEvaluator"
     )
@@ -158,9 +150,7 @@ class TestInitializeWorkerProcess:
             is minute_df
         )
 
-    @patch(
-        "app.services.backtest.services.backtest_service.BacktestService"
-    )
+    @patch("app.services.backtest.services.backtest_service.BacktestService")
     def test_initialize_error_propagates(self, mock_backtest_service_cls):
         """初期化エラーが伝播されること"""
         mock_backtest_service_cls.side_effect = RuntimeError("DB connection failed")

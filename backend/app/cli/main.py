@@ -78,9 +78,7 @@ def exp_run(
     name: Annotated[
         str, typer.Option("--name", "-n", help="実験名")
     ] = "CLI experiment",
-    population: Annotated[
-        int, typer.Option("--population", "-p", help="個体数")
-    ] = 20,
+    population: Annotated[int, typer.Option("--population", "-p", help="個体数")] = 20,
     generations: Annotated[
         int, typer.Option("--generations", "-g", help="世代数")
     ] = 10,
@@ -96,9 +94,7 @@ def exp_run(
     symbol: Annotated[
         str, typer.Option("--symbol", "-s", help="取引ペア")
     ] = "BTC/USDT:USDT",
-    timeframe: Annotated[
-        str, typer.Option("--timeframe", "-t", help="時間足")
-    ] = "4h",
+    timeframe: Annotated[str, typer.Option("--timeframe", "-t", help="時間足")] = "4h",
     start_date: Annotated[
         str, typer.Option("--start-date", help="バックテスト開始日")
     ] = "2024-01-01",
@@ -121,9 +117,7 @@ def exp_run(
         int | None,
         typer.Option("--min-trades", help="最小取引回数制約（0で無効化）"),
     ] = None,
-    smoke: Annotated[
-        bool, typer.Option("--smoke", help="高速スモークモード")
-    ] = False,
+    smoke: Annotated[bool, typer.Option("--smoke", help="高速スモークモード")] = False,
     mtf: Annotated[
         bool, typer.Option("--mtf", help="マルチタイムフレーム指標を有効化")
     ] = False,
@@ -152,9 +146,7 @@ def exp_run(
     max_conditions: Annotated[
         int, typer.Option("--max-conditions", help="エントリー条件の最大数")
     ] = 3,
-    verbose: Annotated[
-        bool, typer.Option("--verbose", "-v", help="詳細ログ")
-    ] = False,
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="詳細ログ")] = False,
     json_output: Annotated[
         bool, typer.Option("--json", help="結果をJSONで出力")
     ] = False,
@@ -232,9 +224,7 @@ def exp_run(
 
 @exp_app.command("list")
 def exp_list(
-    json_output: Annotated[
-        bool, typer.Option("--json", help="JSON形式で出力")
-    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="JSON形式で出力")] = False,
 ) -> None:
     """実験一覧を表示する。"""
     auto_strategy_service, _ = build_services()
@@ -257,9 +247,7 @@ def exp_list(
 @exp_app.command("show")
 def exp_show(
     experiment_id: Annotated[str, typer.Argument(help="実験ID (UUID)")],
-    json_output: Annotated[
-        bool, typer.Option("--json", help="JSON形式で出力")
-    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="JSON形式で出力")] = False,
 ) -> None:
     """実験の詳細を表示する。"""
     auto_strategy_service, _ = build_services()
@@ -292,18 +280,14 @@ def exp_stop(
     if result.get("success"):
         typer.echo(f"停止しました: {experiment_id}")
     else:
-        typer.echo(
-            f"停止失敗: {result.get('message', '不明なエラー')}", err=True
-        )
+        typer.echo(f"停止失敗: {result.get('message', '不明なエラー')}", err=True)
         raise typer.Exit(code=1)
 
 
 @exp_app.command("delete")
 def exp_delete(
     experiment_id: Annotated[str, typer.Argument(help="実験ID (UUID)")],
-    yes: Annotated[
-        bool, typer.Option("--yes", "-y", help="確認をスキップ")
-    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="確認をスキップ")] = False,
 ) -> None:
     """実験を削除する（戦略・BT結果もカスケード削除）。"""
     if not yes:
@@ -328,9 +312,7 @@ def strategy_list(
     min_fitness: Annotated[
         float | None, typer.Option("--min-fitness", help="最小フィットネス")
     ] = None,
-    json_output: Annotated[
-        bool, typer.Option("--json", help="JSON形式で出力")
-    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="JSON形式で出力")] = False,
 ) -> None:
     """生成済み戦略の一覧を表示する。"""
     from app.services.auto_strategy.services.generated_strategy_service import (
@@ -383,9 +365,7 @@ def _print_ga_strategy(strategy: dict[str, Any]) -> None:
 @strategy_app.command("show")
 def strategy_show(
     strategy_id: Annotated[str, typer.Argument(help="戦略ID (例: auto_42)")],
-    json_output: Annotated[
-        bool, typer.Option("--json", help="JSON形式で出力")
-    ] = False,
+    json_output: Annotated[bool, typer.Option("--json", help="JSON形式で出力")] = False,
 ) -> None:
     """戦略の詳細を表示する。"""
     from app.services.auto_strategy.services.generated_strategy_service import (
@@ -421,9 +401,7 @@ def data_fetch(
     symbol: Annotated[
         str, typer.Option("--symbol", "-s", help="取引ペア")
     ] = "BTC/USDT:USDT",
-    timeframe: Annotated[
-        str, typer.Option("--timeframe", "-t", help="時間足")
-    ] = "1h",
+    timeframe: Annotated[str, typer.Option("--timeframe", "-t", help="時間足")] = "1h",
     force_update: Annotated[
         bool, typer.Option("--force", "-f", help="既存データを削除して再取得")
     ] = False,
@@ -496,9 +474,7 @@ def data_status(
     symbol: Annotated[
         str, typer.Option("--symbol", "-s", help="取引ペア")
     ] = "BTC/USDT:USDT",
-    timeframe: Annotated[
-        str, typer.Option("--timeframe", "-t", help="時間足")
-    ] = "1h",
+    timeframe: Annotated[str, typer.Option("--timeframe", "-t", help="時間足")] = "1h",
     json_output: Annotated[
         bool, typer.Option("--json", help="結果をJSONで出力")
     ] = False,
@@ -585,9 +561,7 @@ def data_reset(
     """DBの市場データを削除する（デフォルトは確認あり）。"""
     if not yes:
         scope = symbol or target
-        answer = typer.confirm(
-            f"{scope} のデータを削除します。よろしいですか？"
-        )
+        answer = typer.confirm(f"{scope} のデータを削除します。よろしいですか？")
         if not answer:
             typer.echo("キャンセルしました")
             raise typer.Exit(code=0)

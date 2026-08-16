@@ -47,9 +47,7 @@ async def get_linear_symbols():
 async def collect_symbol_data(service, repository, symbol, period, start_date=None):
     """1つのシンボルのデータを収集"""
     try:
-        logger.info(
-            f"[{symbol}] 収集開始 (period: {period}, start_date: {start_date})"
-        )
+        logger.info(f"[{symbol}] 収集開始 (period: {period}, start_date: {start_date})")
 
         # 履歴データの収集（start_date を指定しないことで、可能な限り過去から取得）
         # ※ サービスの collect_historical_long_short_ratio_data は内部でページネーションを行う

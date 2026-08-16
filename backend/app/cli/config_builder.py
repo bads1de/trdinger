@@ -164,9 +164,7 @@ def build_ga_config_dict(
         )
 
         fitness_constraints = DEFAULT_FITNESS_CONSTRAINTS.copy()
-        fitness_constraints["min_trades"] = (
-            min_trades if min_trades is not None else 0
-        )
+        fitness_constraints["min_trades"] = min_trades if min_trades is not None else 0
 
     config_kwargs: dict[str, Any] = {
         "population_size": normalized["population"],
@@ -199,14 +197,10 @@ def build_ga_config_dict(
         config_kwargs["non_price_indicator_probability"] = non_price_probability
 
         if mtf:
-            timeframes = [
-                tf.strip() for tf in mtf_timeframes.split(",") if tf.strip()
-            ]
+            timeframes = [tf.strip() for tf in mtf_timeframes.split(",") if tf.strip()]
             from app.config.constants import SUPPORTED_TIMEFRAMES
 
-            invalid_tfs = [
-                tf for tf in timeframes if tf not in SUPPORTED_TIMEFRAMES
-            ]
+            invalid_tfs = [tf for tf in timeframes if tf not in SUPPORTED_TIMEFRAMES]
             if invalid_tfs:
                 raise ValueError(
                     "サポートされていないタイムフレーム: "

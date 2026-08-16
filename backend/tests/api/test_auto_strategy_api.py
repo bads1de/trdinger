@@ -558,9 +558,7 @@ class TestDeleteExperiment:
             "message": "実験を削除しました（戦略 3 件を含む）",
         }
 
-        response = test_client.delete(
-            "/api/auto-strategy/experiments/test-exp-001"
-        )
+        response = test_client.delete("/api/auto-strategy/experiments/test-exp-001")
 
         assert response.status_code == 200
         data = response.json()
@@ -578,9 +576,7 @@ class TestDeleteExperiment:
             "message": "実験が見つかりません: nonexistent",
         }
 
-        response = test_client.delete(
-            "/api/auto-strategy/experiments/nonexistent"
-        )
+        response = test_client.delete("/api/auto-strategy/experiments/nonexistent")
 
         assert response.status_code == 200
         data = response.json()

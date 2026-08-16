@@ -65,15 +65,11 @@ def build_data_collection_services() -> tuple[
     return DataCollectionOrchestrationService(), DataManagementOrchestrationService()
 
 
-def build_services() -> tuple[
-    AutoStrategyService, ExperimentApplicationService
-]:
+def build_services() -> tuple[AutoStrategyService, ExperimentApplicationService]:
     """サーバー非依存のサービス群を構築する。"""
     backtest_service = BacktestService()
     persistence_service = ExperimentPersistenceService(SessionLocal)
-    experiment_manager = ExperimentManager(
-        backtest_service, persistence_service
-    )
+    experiment_manager = ExperimentManager(backtest_service, persistence_service)
     application_service = ExperimentApplicationService(
         experiment_manager, persistence_service
     )
