@@ -42,20 +42,32 @@ class MTFStrategy:
     ) -> tuple[
         list[Condition | ConditionGroup],
         list[Condition | ConditionGroup],
-        list[Condition],
+        list[IndicatorGene],
     ]:
         """
         上位足のトレンドと下位足のトリガーを組み合わせたMTF条件を生成
 
-        上位足のトレンド方向に沿って、下位足のオシレーター等がシグナルを出している状態
-        （例: 4時間足SMAが上昇中 AND 1時間足RSIが売られすぎ）を構成します。
+        上位足のトレンド方向に沿って、下位足のオシレーター等がシグナルを
+        出している状態（例: 4時間足SMAが上昇中 AND 1時間足RSIが売られすぎ）を
+        構築します。
+
+        生成した条件が参照する上位足指標コピーは第三戻り値として返すため、
+        呼び出し側で遺伝子の指標リストへ追加する必要があります
+        （追加しないと条件が参照整合性検査で除去される）。
 
         Args:
-            indicators: 生成済みの指標遺伝子リスト
+            indicators (List[IndicatorGene]): 生成済みの指標遺伝子のリスト。
 
         Returns:
-            (ロング条件, ショート条件, 予備)のタプル
+            (ロング条件, ショート条件, 条件が参照する上位足指標コピー) のタプル。
         """
+        # MTF生成は明示的に有効化された場合のみ行う。評価側のウォームアップ
+        # 期間延長も同フラグ依存のため、フラグなしで上位足指標を作ると
+        # 計算結果が欠損する。
+        ga_config = getattr(self.gen, "ga_config_obj", None)
+        if not getattr(ga_config, "enable_multi_timeframe", False):
+            return [], [], []
+
         long_conds, short_conds = [], []
         current_tf = self.gen.context.get("timeframe", "1h") or "1h"
         higher_tf = self._determine_higher_tf(current_tf)
@@ -69,8 +81,12 @@ class MTFStrategy:
         if not trends:
             return [], [], []
 
-        # 上位足トレンド指標の作成
-        mtf_trends = self._create_mtf_indicators(trends, higher_tf)
+        # 上位足トレンド指標の作成（指標数上限と重複を考慮）
+        mtf_trends, new_copies = self._create_mtf_indicators(
+            indicators, trends, higher_tf
+        )
+        if not mtf_trends:
+            return [], [], []
         targets = triggers if triggers else trends
 
         # 組み合わせ生成: (上位足トレンド) AND (下位足トリガー)
@@ -117,7 +133,16 @@ class MTFStrategy:
                 else lst
             )
 
-        return _sample(long_conds), _sample(short_conds), []
+        sampled_longs = _sample(long_conds)
+        sampled_shorts = _sample(short_conds)
+
+        # サンプリング後の条件が実際に参照する新規コピーのみ返す
+        # （既存指標の再利用分は遺伝子に登録済みのため返さない）
+        used_names = self._collect_operand_names(sampled_longs + sampled_shorts)
+        used_copies = [
+            ind for ind in new_copies if self.gen._get_indicator_name(ind) in used_names
+        ]
+        return sampled_longs, sampled_shorts, used_copies
 
     def _determine_higher_tf(self, current_tf: str) -> str:
         """実行足に基づいて適切な上位足を決定"""
@@ -125,12 +150,71 @@ class MTFStrategy:
         return cast(str, random.choice(res) if isinstance(res, list) else res)
 
     def _create_mtf_indicators(
-        self, indicators: list[IndicatorGene], timeframe: str
-    ) -> list[IndicatorGene]:
-        """指標のディープコピーを作成し、timeframeを設定"""
-        res = []
-        for ind in indicators:
+        self,
+        indicators: list[IndicatorGene],
+        trend_indicators: list[IndicatorGene],
+        timeframe: str,
+    ) -> tuple[list[IndicatorGene], list[IndicatorGene]]:
+        """条件生成に使う上位足トレンド指標の集合を返す。
+
+        既に上位足の指標が遺伝子内に存在する場合はそれを再利用し、
+        無い分だけディープコピーを作る。コピーは (type, timeframe) の
+        重複を作らず、遺伝子の指標数上限（max_indicators）を超えない
+        範囲に収める。
+
+        Returns:
+            (条件生成に使う指標リスト, 新規作成したコピーのリスト) のタプル。
+            新規コピーのみ呼び出し側で遺伝子に登録する。
+        """
+        ga_config = getattr(self.gen, "ga_config_obj", None)
+        max_indicators = getattr(ga_config, "max_indicators", 10)
+        room = max(0, max_indicators - len(indicators))
+
+        existing_pairs = {
+            (ind.type, getattr(ind, "timeframe", None)) for ind in indicators
+        }
+        res: list[IndicatorGene] = []
+        new_copies: list[IndicatorGene] = []
+        res_types: set[str] = set()
+
+        # 1. 既存の上位足トレンド指標を再利用（枠は消費しない）
+        for ind in trend_indicators:
+            if getattr(ind, "timeframe", None) == timeframe and (
+                ind.type not in res_types
+            ):
+                res.append(ind)
+                res_types.add(ind.type)
+
+        # 2. 不足分はコピーを作成（枠の範囲内）
+        for ind in trend_indicators:
+            if len(new_copies) >= room:
+                break
+            if ind.type in res_types or (ind.type, timeframe) in existing_pairs:
+                continue
             new_ind = copy.deepcopy(ind)
             new_ind.timeframe = timeframe
             res.append(new_ind)
-        return res
+            new_copies.append(new_ind)
+            res_types.add(ind.type)
+        return res, new_copies
+
+    @staticmethod
+    def _collect_operand_names(conditions: list[Any]) -> set[str]:
+        """条件リスト内の全オペランド名（文字列のみ）を収集する。"""
+        names: set[str] = set()
+
+        def scan(item: Any) -> None:
+            if isinstance(item, ConditionGroup):
+                for sub in item.conditions:
+                    scan(sub)
+                return
+            for operand in (
+                getattr(item, "left_operand", None),
+                getattr(item, "right_operand", None),
+            ):
+                if isinstance(operand, str):
+                    names.add(operand)
+
+        for item in conditions:
+            scan(item)
+        return names

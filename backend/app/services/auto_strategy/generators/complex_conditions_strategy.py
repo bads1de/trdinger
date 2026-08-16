@@ -13,13 +13,9 @@ import logging
 import random
 from typing import TYPE_CHECKING
 
-from app.services.indicators.config import (
-    IndicatorScaleType,
-    indicator_registry,
-)
-
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
+from ..utils.scale_compat import default_threshold_for
 
 if TYPE_CHECKING:
     from .condition_generator import ConditionGenerator
@@ -29,14 +25,8 @@ logger = logging.getLogger(__name__)
 
 class ComplexConditionsStrategy:
     """
-    複数の指標組み合わせで意味のある条件を生成する戦略。
+    複数の指標を組み合わせて意味のある条件を生成する戦略。
     """
-
-    # 定数
-    OSCILLATOR_LONG_THRESHOLDS = [55, 60, 65]
-    OSCILLATOR_SHORT_THRESHOLDS = [45, 40, 35]
-    PM100_LONG_THRESHOLDS = [10, 25, 50]
-    PM100_SHORT_THRESHOLDS = [-10, -25, -50]
 
     def __init__(self, condition_generator: ConditionGenerator) -> None:
         self.gen = condition_generator
@@ -114,31 +104,20 @@ class ComplexConditionsStrategy:
         )
 
         # 順張り特化: Close > Trend AND Momentum > Bullish
-        cfg = indicator_registry.get_indicator_config(momentum.type)
-        scale_type = cfg.scale_type if cfg else None
-
-        th_long: int | float | str = 0
-        th_short: int | float | str = 0
-        if scale_type == IndicatorScaleType.OSCILLATOR_0_100:
-            th_long = random.choice(self.OSCILLATOR_LONG_THRESHOLDS)
-            th_short = random.choice(self.OSCILLATOR_SHORT_THRESHOLDS)
-        elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-            th_long = random.choice(self.PM100_LONG_THRESHOLDS)
-            th_short = random.choice(self.PM100_SHORT_THRESHOLDS)
-        elif scale_type in (
-            IndicatorScaleType.PRICE_RATIO,
-            IndicatorScaleType.PRICE_ABSOLUTE,
-        ):
-            # 価格スケールの場合は閾値ではなく、Close自体と比較させる
-            th_long = "close"
-            th_short = "close"
+        # 閾値はレジストリ定義（normal プロファイル）とスケール型から決定する。
+        # スケール型が PRICE_* でも close と同尺度でない指標（ATR 等の比率系、
+        # WHALE_DIVERGENCE 等の閾値付き比率系）を close と比較させると
+        # 恒真/恒偽になるため、default_threshold_for 側で判定する。
+        if self.gen._is_price_scale(momentum):
+            th_long: int | float | str = "close"
+            th_short: int | float | str = "close"
         else:
-            th_long = 0
-            th_short = 0
+            th_long = default_threshold_for(momentum.type, bullish=True)
+            th_short = default_threshold_for(momentum.type, bullish=False)
 
         # ロング: Close > Trend AND Momentum > High
         long_conds: list[Condition | ConditionGroup] = [
-            Condition(left_operand="Close", operator=">", right_operand=t_name),
+            Condition(left_operand="close", operator=">", right_operand=t_name),
         ]
         # Momentumの比較対象が "close" の場合は、Momentum > Close (または < Close) になる
         # もしMomentumがRSI(0-100)なら、RSI > 60 となる
@@ -155,7 +134,7 @@ class ComplexConditionsStrategy:
 
         # ショート: Close < Trend AND Momentum < Low
         short_conds: list[Condition | ConditionGroup] = [
-            Condition(left_operand="Close", operator="<", right_operand=t_name),
+            Condition(left_operand="close", operator="<", right_operand=t_name),
         ]
         short_conds.append(
             Condition(left_operand=m_name, operator=op_short, right_operand=th_short)
@@ -226,9 +205,9 @@ class ComplexConditionsStrategy:
         up_name, low_name = self.gen._get_band_names(target)
 
         longs.append(
-            Condition(left_operand="Close", operator=">", right_operand=up_name)
+            Condition(left_operand="close", operator=">", right_operand=up_name)
         )
         shorts.append(
-            Condition(left_operand="Close", operator="<", right_operand=low_name)
+            Condition(left_operand="close", operator="<", right_operand=low_name)
         )
         return longs, shorts

@@ -405,9 +405,13 @@ class RandomGeneGenerator:
         except Exception as e:
             logger.debug("指標キャッシュの設定に失敗しました: %s", e)
             pass
-        long_entry_conditions, short_entry_conditions, _ = (
+        long_entry_conditions, short_entry_conditions, extra_indicators = (
             self.smart_condition_generator.generate_balanced_conditions(indicators)
         )
+        # MTF条件が参照する上位足指標コピーを遺伝子の指標リストに登録する
+        # （登録しないと条件が参照整合性検査で除去される）
+        if extra_indicators:
+            indicators = indicators + extra_indicators
 
         # 条件の成立性を底上げ：OR 正規化と価格vsトレンド(or open)フォールバックをコアに委譲
         long_entry_conditions = self.smart_condition_generator.normalize_conditions(

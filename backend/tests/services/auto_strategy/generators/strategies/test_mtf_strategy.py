@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.services.auto_strategy.config.constants import IndicatorType
+from app.services.auto_strategy.config.ga_config import GAConfig
 from app.services.auto_strategy.generators.mtf_strategy import (
     MTFStrategy,
 )
@@ -16,6 +17,13 @@ class TestMTFStrategy:
         generator = MagicMock()
         # モックのコンテキスト設定
         generator.context = {"timeframe": "1h", "symbol": "BTC/USDT"}
+
+        # MTF有効化済みの実GAConfig（MagicMockのままでは数値比較に失敗する）
+        generator.ga_config_obj = GAConfig(
+            enable_multi_timeframe=True,
+            available_timeframes=["4h", "1d"],
+            max_indicators=10,
+        )
 
         # 指標タイプの分類モック
         def _classify(indicators):
@@ -90,25 +98,26 @@ class TestMTFStrategy:
         assert len(first_long.conditions) >= 2
 
     def test_assign_timeframes(self, strategy):
-        """指標へのタイムフレーム割り当てロジックをテスト"""
+        """トレンド指標へのタイムフレーム割り当てロジックをテスト"""
         indicators = [
             IndicatorGene(type="SMA", parameters={"period": 20}),
             IndicatorGene(type="RSI", parameters={"period": 14}),
         ]
 
-        # 上位足を4hに設定して割り当て実行
+        # 上位足を4hに設定して割り当て実行（トレンドプールはSMAのみ）
         higher_tf = "4h"
-        mtf_indicators = strategy._create_mtf_indicators(indicators, higher_tf)
+        usable, new_copies = strategy._create_mtf_indicators(
+            indicators, indicators[:1], higher_tf
+        )
 
         # 元のリストとは別のインスタンスになっているか
-        assert mtf_indicators is not indicators
+        assert usable is not indicators
 
-        # 全ての指標に上位足が設定されているか確認（ヘルパーメソッドは無差別に適用するため）
-        sma = next(i for i in mtf_indicators if i.type == "SMA")
+        # トレンド指標のコピーに上位足が設定されている
+        sma = next(i for i in new_copies if i.type == "SMA")
         assert sma.timeframe == higher_tf
-
-        rsi = next(i for i in mtf_indicators if i.type == "RSI")
-        assert rsi.timeframe == higher_tf
+        # モーメンタム指標はコピー対象外
+        assert all(i.type == "SMA" for i in new_copies)
 
     def test_assign_timeframes_preserves_indicator_id(self, strategy):
         """MTF複製時にIDへtimeframeを埋め込まないこと"""
@@ -116,6 +125,6 @@ class TestMTFStrategy:
             IndicatorGene(type="SMA", parameters={"period": 20}, id="smaid123456")
         ]
 
-        mtf_indicators = strategy._create_mtf_indicators(indicators, "4h")
+        _, new_copies = strategy._create_mtf_indicators(indicators, indicators, "4h")
 
-        assert mtf_indicators[0].id == "smaid123456"
+        assert new_copies[0].id == "smaid123456"

@@ -324,6 +324,9 @@ def mutate_strategy_gene(
         # 指標の削除・交換で条件参照が切れるため、整合性を修復する
         mutated.repair_condition_references()
 
+        # 旧シード由来の価格×非価格スケール比較（恒真/恒偽）を閾値比較へ書き直す
+        mutated.repair_condition_scales()
+
         return mutated
 
     except Exception as e:

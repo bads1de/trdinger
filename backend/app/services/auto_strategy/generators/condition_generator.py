@@ -13,6 +13,7 @@ from ..config.constants import (
 )
 from ..genes import Condition, ConditionGroup, IndicatorGene
 from ..utils.indicator_references import build_indicator_reference_name
+from ..utils.scale_compat import default_threshold_for, is_close_comparable_type
 from .complex_conditions_strategy import ComplexConditionsStrategy
 from .mtf_strategy import MTFStrategy
 
@@ -34,8 +35,6 @@ class ConditionGenerator:
     OR_GROUP_PROBABILITY = 0.3
     OSCILLATOR_HIGH_THRESHOLD = 70.0
     OSCILLATOR_LOW_THRESHOLD = 30.0
-    OSCILLATOR_MIDPOINT = 50.0
-    ZERO_THRESHOLD = 0.0
     EXIT_MOMENTUM_HIGH_THRESHOLD = 10.0
     EXIT_MOMENTUM_LOW_THRESHOLD = -10.0
 
@@ -149,23 +148,23 @@ class ConditionGenerator:
         self,
         indicators: list[IndicatorGene],
     ) -> IndicatorGene | None:
-        """フォールバックに使うトレンド系指標を選ぶ。"""
-        trend_pref = ("SMA", "EMA")
-        trend_categories = {"trend", "overlap", "custom"}
-        trend_pool: list[IndicatorGene] = []
-        for ind in indicators or []:
-            if not getattr(ind, "enabled", True):
-                continue
-            cfg = indicator_registry.get_indicator_config(ind.type)
-            if cfg and getattr(cfg, "category", None) in trend_categories:
-                trend_pool.append(ind)
+        """フォールバックに使うトレンド系指標を選ぶ。
 
-        pref = [ind for ind in trend_pool if ind.type in trend_pref]
+        close と直接比較できる指標に限定する。カテゴリベースの選出だと
+        FUNDING_RATE_LEVEL 等（値域が価格と桁違い）が候補に入り、
+        ``close > FUNDING_RATE_LEVEL`` の恒真条件が全戦略に注入される。
+        """
+        trend_pref = ("SMA", "EMA")
+        pool: list[IndicatorGene] = [
+            ind
+            for ind in indicators or []
+            if getattr(ind, "enabled", True) and self._is_price_scale(ind)
+        ]
+
+        pref = [ind for ind in pool if ind.type in trend_pref]
         if pref:
             return random.choice(pref)
-        if trend_pool:
-            return random.choice(trend_pool)
-        return None
+        return random.choice(pool) if pool else None
 
     @staticmethod
     def _resolve_fallback_operator(side: str, purpose: str) -> str:
@@ -203,7 +202,7 @@ class ConditionGenerator:
     ) -> tuple[
         list[Condition | ConditionGroup],
         list[Condition | ConditionGroup],
-        list[Condition],
+        list[IndicatorGene],
     ]:
         """
         与えられたテクニカル指標群から、統計的にバランスの取れたロング・ショート条件を「スマートに」生成します。
@@ -218,13 +217,14 @@ class ConditionGenerator:
             indicators (List[IndicatorGene]): 戦略の構成要素となる指標遺伝子のリスト。
 
         Returns:
-            Tuple[List, List, List]: (ロング条件リスト, ショート条件リスト, 共通/メタ条件リスト) のタプル。
+            (ロング条件リスト, ショート条件リスト, 条件が参照する追加指標（MTFコピー等）) のタプル。
         """
         if not indicators:
             return self.generate_fallback_conditions(indicators)
 
         # 統合された戦略パターン（Complex & MTF）
         longs, shorts = [], []
+        extra_indicators: list[IndicatorGene] = []
 
         # 1. 複雑な組み合わせ戦略
         try:
@@ -235,17 +235,24 @@ class ConditionGenerator:
         except Exception as e:
             logger.warning(f"ComplexStrategy生成失敗: {e}")
 
-        # 2. MTF戦略
+        # 2. MTF戦略（enable_multi_timeframe 有効時のみ）
         try:
             mtf_strategy = MTFStrategy(self)
-            mtf_longs, mtf_shorts, _ = mtf_strategy.generate_conditions(indicators)
+            mtf_longs, mtf_shorts, mtf_copies = mtf_strategy.generate_conditions(
+                indicators
+            )
             longs.extend(mtf_longs)
             shorts.extend(mtf_shorts)
+            extra_indicators.extend(mtf_copies)
         except Exception as e:
             logger.debug(f"MTFStrategy生成スキップ: {e}")
 
-        # 3. 制限とフォールバック
-        return self._finalize_conditions(longs, shorts, indicators, purpose="entry")
+        # 3. 制限とフォールバック（MTFコピーも指標プールに加える）
+        all_indicators = indicators + extra_indicators
+        finalized = self._finalize_conditions(
+            longs, shorts, all_indicators, purpose="entry"
+        )
+        return finalized[0], finalized[1], extra_indicators
 
     def _finalize_conditions(
         self,
@@ -535,29 +542,14 @@ class ConditionGenerator:
         )
 
     def _is_price_scale(self, indicator: IndicatorGene) -> bool:
-        """価格スケールの指標かどうか
+        """close と直接比較できる価格スケールの指標かどうか
 
-        close と直接比較できる指標（SMA/EMA/VWAP等）かを判定する。
-        閾値が定義された PRICE_RATIO 系（LONG_SHORT_RATIO_LEVEL 等）は
-        値域が価格と桁違いのため比較対象から除外する。
+        SMA/EMA/VWAP/SUPERTREND 等の価格オーバーレイに限定する。
+        スケール型だけでは FISHER・TSI 等（PRICE_ABSOLUTE だが値域が
+        価格と桁違い）を除外できないため、実態はホワイトリスト
+        （scale_compat.is_close_comparable_type）で判定する。
         """
-        cfg = indicator_registry.get_indicator_config(indicator.type)
-        if cfg:
-            if cfg.thresholds:
-                return False
-            return cfg.scale_type in (
-                IndicatorScaleType.PRICE_RATIO,
-                IndicatorScaleType.PRICE_ABSOLUTE,
-            )
-        return indicator.type in [
-            "SMA",
-            "EMA",
-            "WMA",
-            "HMA",
-            "KAMA",
-            "TRIMA",
-            "VWAP",
-        ]
+        return is_close_comparable_type(indicator.type)
 
     def _is_band_indicator(self, indicator: IndicatorGene) -> bool:
         """バンド系指標（Upper/Lowerを持つ）かどうか"""
@@ -625,33 +617,16 @@ class ConditionGenerator:
 
             if val is not None:
                 threshold = val
+            elif self._is_price_scale(indicator):
+                # close と同尺度で推移する指標は閾値ではなく close と比較する
+                threshold = "close"
             else:
-                # 設定から取得できない場合のスマートなデフォルト値
-                scale_type = config_obj.scale_type
-                if scale_type in (
-                    IndicatorScaleType.PRICE_RATIO,
-                    IndicatorScaleType.PRICE_ABSOLUTE,
-                ):
-                    # 価格スケールなら0ではなくCloseと比較
-                    threshold = "close"
-                elif scale_type == IndicatorScaleType.OSCILLATOR_0_100:
-                    # 0-100オシレーターなら50を基準
-                    threshold = self.OSCILLATOR_MIDPOINT
-                elif scale_type == IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100:
-                    # ±100なら0でOK
-                    threshold = self.ZERO_THRESHOLD
-                elif scale_type == IndicatorScaleType.MOMENTUM_ZERO_CENTERED:
-                    # 0中心なら0でOK
-                    threshold = self.ZERO_THRESHOLD
-                elif scale_type in (
-                    IndicatorScaleType.FUNDING_RATE,
-                    IndicatorScaleType.OPEN_INTEREST,
-                ):
-                    # OI/FR 派生はゼロ基準の閾値を使う
-                    threshold = self.ZERO_THRESHOLD
-                elif scale_type == IndicatorScaleType.VOLUME:
-                    # 出来高
-                    threshold = "SMA"
+                # それ以外はスケール既定の閾値（レジストリの normal
+                # プロファイルを優先）を使う。価格と桁違いの指標を
+                # close と比較させると恒真/恒偽になるため。
+                threshold = default_threshold_for(
+                    indicator.type, bullish=(side == "long")
+                )
 
         return [
             Condition(
@@ -687,41 +662,27 @@ class ConditionGenerator:
     def _get_indicator_type(self, indicator: IndicatorGene | str) -> IndicatorType:
         """
         指標のタイプを取得（統合版）
-        優先順位: indicator_registry
+
+        スケール定義ベースで分類する: close と同尺度のオーバーレイ
+        （SMA/EMA/VWAP等）は TREND、閾値比較するオシレーター・派生指標は
+        MOMENTUM。レジストリ未登録の指標は TREND 扱い（クロス等の
+        価格スケールガードが別途機能するため安全）。
+
+        注意: レジストリの category はカスタム指標で一律 "custom" に
+        なるため、従来のカテゴリ文字列一致では全指標が MOMENTUM に
+        分類され、TREND バケットが常に空だった。これによりトレンド
+        フォローパターンと MTF 戦略が実質無効化されていた。
         """
         raw_name = indicator.type if isinstance(indicator, IndicatorGene) else indicator
         # レジストリがエイリアス解決を自動で行う
         indicator_name = raw_name.upper()
 
-        # indicator_registryをチェック
         cfg = indicator_registry.get_indicator_config(indicator_name)
-
-        if cfg:
-            # 設定内のカテゴリー情報を使用
-            if getattr(cfg, "category", None):
-                cat = str(getattr(cfg, "category", "")).lower()
-
-                # 部分一致による推定
-                if any(
-                    k in cat
-                    for k in [
-                        "momentum",
-                        "oscillator",
-                        "technical",
-                        "custom",
-                        "cycle",
-                    ]
-                ):
-                    return IndicatorType.MOMENTUM
-                elif any(
-                    k in cat for k in ["trend", "overlap", "moving average", "candles"]
-                ):
-                    return IndicatorType.TREND
-                elif any(k in cat for k in ["volatility", "statistics"]):
-                    return IndicatorType.VOLATILITY
-
-        # デフォルト
-        return IndicatorType.TREND
+        if cfg is None:
+            return IndicatorType.TREND
+        if is_close_comparable_type(indicator_name):
+            return IndicatorType.TREND
+        return IndicatorType.MOMENTUM
 
     @safe_operation(context="動的指標分類", is_api_call=False)
     def _dynamic_classify(

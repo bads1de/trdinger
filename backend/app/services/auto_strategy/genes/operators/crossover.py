@@ -103,6 +103,10 @@ def uniform_crossover(
     child1.repair_condition_references()
     child2.repair_condition_references()
 
+    # 旧シード由来の価格×非価格スケール比較（恒真/恒偽）を閾値比較へ書き直す
+    child1.repair_condition_scales()
+    child2.repair_condition_scales()
+
     return child1, child2
 
 
@@ -282,5 +286,9 @@ def single_point_crossover(
     # 参照切れの条件を除去して整合性を保つ
     child1.repair_condition_references()
     child2.repair_condition_references()
+
+    # 旧シード由来の価格×非価格スケール比較（恒真/恒偽）を閾値比較へ書き直す
+    child1.repair_condition_scales()
+    child2.repair_condition_scales()
 
     return child1, child2

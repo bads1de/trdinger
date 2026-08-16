@@ -55,7 +55,8 @@ def _is_resolvable_operand(operand_name: str, valid_names: set[str]) -> bool:
         return True
     except ValueError:
         pass
-    if operand_name in _PRICE_OPERANDS or operand_name in valid_names:
+    # 生成器には "Close" の大小両方が存在したため価格列はケース不感応に判定する
+    if operand_name.lower() in _PRICE_OPERANDS or operand_name in valid_names:
         return True
     # 複数出力指標（MACD_xxxxxxxx_0 など）の出力インデックス接尾辞を外して再判定
     base = _OUTPUT_INDEX_SUFFIX.sub("", operand_name)
@@ -358,6 +359,84 @@ class StrategyGene:
                 removed += 1
         self.stateful_conditions = kept_stateful
         return removed
+
+    def repair_condition_scales(self) -> int:
+        """
+        価格オペランドと価格と同尺度でない指標の比較を閾値比較へ書き直す。
+
+        スケールガード導入前に保存されたシード遺伝子には
+        ``close > FUNDING_RATE_LEVEL`` のような直接比較（値域が価格と
+        桁違いのため恒真/恒偽になる）が残っており、交叉で新一代に持ち
+        込まれる。指標側のオペランドを左辺に残し、右辺をスケール既定の
+        閾値（レジストリ normal プロファイル優先）へ置き換える。
+
+        Returns:
+            書き直した条件の合計数。
+        """
+        from ..utils.scale_compat import (
+            default_threshold_for,
+            is_bullish_operator,
+            is_close_comparable_type,
+            is_price_operand,
+        )
+
+        name_to_gene: dict[str, IndicatorGene] = {}
+        for indicator in self.indicators:
+            name_to_gene.setdefault(indicator.type, indicator)
+            timeframe = getattr(indicator, "timeframe", None)
+            if timeframe:
+                name_to_gene.setdefault(f"{indicator.type}_{timeframe}", indicator)
+            name_to_gene[build_indicator_reference_name(indicator)] = indicator
+
+        def _match_gene(operand: object) -> IndicatorGene | None:
+            name = _operand_reference_name(operand)
+            if name is None:
+                return None
+            gene = name_to_gene.get(name)
+            if gene is None:
+                base = _OUTPUT_INDEX_SUFFIX.sub("", name)
+                gene = name_to_gene.get(base)
+            return gene
+
+        def _fix_leaf(condition: Condition) -> bool:
+            for price_attr, other_attr in (
+                ("left_operand", "right_operand"),
+                ("right_operand", "left_operand"),
+            ):
+                if not is_price_operand(getattr(condition, price_attr)):
+                    continue
+                other = getattr(condition, other_attr)
+                other_name = _operand_reference_name(other)
+                if other_name is None:
+                    continue
+                gene = _match_gene(other)
+                if gene is None or is_close_comparable_type(gene.type):
+                    continue
+                condition.left_operand = other_name
+                condition.right_operand = default_threshold_for(
+                    gene.type, bullish=is_bullish_operator(condition.operator)
+                )
+                return True
+            return False
+
+        def _fix_item(item: Condition | ConditionGroup) -> int:
+            if isinstance(item, ConditionGroup):
+                return sum(_fix_item(sub) for sub in item.conditions)
+            return 1 if _fix_leaf(item) else 0
+
+        repaired = 0
+        for attr in (
+            "long_entry_conditions",
+            "short_entry_conditions",
+            "long_exit_conditions",
+            "short_exit_conditions",
+        ):
+            repaired += sum(_fix_item(item) for item in getattr(self, attr))
+
+        for stateful in self.stateful_conditions:
+            repaired += _fix_item(stateful.trigger_condition)
+            repaired += _fix_item(stateful.follow_condition)
+        return repaired
 
     def mutate(self, config: GAConfig, mutation_rate: float = 0.1) -> StrategyGene:
         """戦略遺伝子の突然変異を実行する。"""
