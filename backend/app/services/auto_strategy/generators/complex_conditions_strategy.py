@@ -101,10 +101,13 @@ class ComplexConditionsStrategy:
             classified[IndicatorType.TREND],
             classified[IndicatorType.MOMENTUM],
         )
-        if not trends or not momentums:
+        # Close と直接比較できるのは価格スケールの指標のみ。
+        # 非価格指標（OI/FR/LSR由来等）と組ませると恒真/恒偽条件になる。
+        price_trends = [t for t in trends if self.gen._is_price_scale(t)]
+        if not price_trends or not momentums:
             return longs, shorts
 
-        trend, momentum = random.choice(trends), random.choice(momentums)
+        trend, momentum = random.choice(price_trends), random.choice(momentums)
         t_name, m_name = (
             self.gen._get_indicator_name(trend),
             self.gen._get_indicator_name(momentum),

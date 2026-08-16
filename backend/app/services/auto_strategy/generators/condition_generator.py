@@ -356,7 +356,9 @@ class ConditionGenerator:
         shorts: list[Condition | ConditionGroup] = []
 
         classified = self._dynamic_classify(indicators)
-        trend_candidates = classified[IndicatorType.TREND]
+        trend_candidates = [
+            i for i in classified[IndicatorType.TREND] if self._is_price_scale(i)
+        ]
         momentum_candidates = classified[IndicatorType.MOMENTUM]
 
         if trend_candidates:
@@ -533,10 +535,20 @@ class ConditionGenerator:
         )
 
     def _is_price_scale(self, indicator: IndicatorGene) -> bool:
-        """価格スケールの指標かどうか"""
+        """価格スケールの指標かどうか
+
+        close と直接比較できる指標（SMA/EMA/VWAP等）かを判定する。
+        閾値が定義された PRICE_RATIO 系（LONG_SHORT_RATIO_LEVEL 等）は
+        値域が価格と桁違いのため比較対象から除外する。
+        """
         cfg = indicator_registry.get_indicator_config(indicator.type)
         if cfg:
-            return cfg.scale_type == IndicatorScaleType.PRICE_RATIO
+            if cfg.thresholds:
+                return False
+            return cfg.scale_type in (
+                IndicatorScaleType.PRICE_RATIO,
+                IndicatorScaleType.PRICE_ABSOLUTE,
+            )
         return indicator.type in [
             "SMA",
             "EMA",

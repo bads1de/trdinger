@@ -48,6 +48,16 @@ CURATED_INDICATOR_CATALOG: tuple[str, ...] = (
     # Volatility / band
     "BBANDS",
     "ATR",
+    # Volume（出来高）
+    "VWAP",
+    "MFI",
+    "CMF",
+    "PVO",
+    "VFI",
+    # レンジ/ボラティリティ判定・統計
+    "SQUEEZE",
+    "RWI",
+    "ZSCORE",
     # OI / FR / LSR derived
     "CRYPTO_LEVERAGE_INDEX",
     "LIQUIDATION_CASCADE_SCORE",

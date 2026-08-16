@@ -5,16 +5,18 @@ BybitのUSDT無期限契約（Linear Perpetual）の全ペアを対象に、
 Long/Short Ratioの履歴データを取得・保存します。
 
 使用方法:
-    python backend/scripts/data_ingestion/collect_all_ls_ratio.py [period]
+    python backend/scripts/data_ingestion/collect_all_ls_ratio.py [period] [start_date]
 
     period: 収集する時間足 (default: 1h)
             対応値: 5min, 15min, 30min, 1h, 4h, 1d
+    start_date: 収集開始日 (default: なし = 2020-10-01から、YYYY-MM-DD)
 """
 
 import asyncio
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 
 # プロジェクトルートへのパスを追加してモジュールをインポート可能にする
 sys.path.append(
@@ -42,15 +44,20 @@ async def get_linear_symbols():
     return ["BTC/USDT:USDT"]
 
 
-async def collect_symbol_data(service, repository, symbol, period):
+async def collect_symbol_data(service, repository, symbol, period, start_date=None):
     """1つのシンボルのデータを収集"""
     try:
-        logger.info(f"[{symbol}] 収集開始 (period: {period})")
+        logger.info(
+            f"[{symbol}] 収集開始 (period: {period}, start_date: {start_date})"
+        )
 
-        # 履歴データの収集（start_dateを指定しないことで、可能な限り過去から取得）
+        # 履歴データの収集（start_date を指定しないことで、可能な限り過去から取得）
         # ※ サービスの collect_historical_long_short_ratio_data は内部でページネーションを行う
         saved_count = await service.collect_historical_long_short_ratio_data(
-            symbol=symbol, period=period, repository=repository
+            symbol=symbol,
+            period=period,
+            repository=repository,
+            start_date=start_date,
         )
 
         logger.info(f"[{symbol}] 収集完了: {saved_count}件 保存")
@@ -70,7 +77,21 @@ async def main():
         logger.error(f"無効な期間です: {period}. 指定可能: {allowed_periods}")
         return
 
-    logger.info(f"=== 全ペア Long/Short Ratio 収集開始 (Period: {period}) ===")
+    # 任意の第2引数: 収集開始日 (YYYY-MM-DD)
+    start_date = None
+    if len(sys.argv) > 2:
+        try:
+            start_date = datetime.strptime(sys.argv[2], "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+        except ValueError:
+            logger.error(f"無効な開始日です: {sys.argv[2]} (YYYY-MM-DD 形式)")
+            return
+
+    logger.info(
+        f"=== 全ペア Long/Short Ratio 収集開始 (Period: {period}, "
+        f"Start: {start_date or '2020-10-01'}) ==="
+    )
 
     # 1. シンボルリストの取得
     logger.info("市場データを取得中...")
@@ -95,7 +116,9 @@ async def main():
         for i, symbol in enumerate(symbols):
             logger.info(f"--- 処理中 ({i + 1}/{len(symbols)}): {symbol} ---")
 
-            count = await collect_symbol_data(service, repository, symbol, period)
+            count = await collect_symbol_data(
+                service, repository, symbol, period, start_date=start_date
+            )
             total_saved += count
 
             # レート制限への配慮（少し待機）

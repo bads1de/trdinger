@@ -73,3 +73,23 @@ class TestIndicatorUniverse:
         for _ in range(30):
             indicators = generate_random_indicators(config)
             assert any(indicator.type in non_price for indicator in indicators)
+
+
+class TestCuratedVolumeAndRegimeIndicators:
+    """curatedカタログへの出来高系・レンジ/統計系追加のテスト"""
+
+    def test_curated_universe_contains_volume_indicators(self):
+        indicators = set(get_indicator_universe_names(IndicatorUniverseMode.CURATED))
+
+        assert "VWAP" in indicators
+        assert "MFI" in indicators
+        assert "CMF" in indicators
+        assert "PVO" in indicators
+        assert "VFI" in indicators
+
+    def test_curated_universe_contains_regime_stat_indicators(self):
+        indicators = set(get_indicator_universe_names(IndicatorUniverseMode.CURATED))
+
+        assert "SQUEEZE" in indicators
+        assert "RWI" in indicators
+        assert "ZSCORE" in indicators

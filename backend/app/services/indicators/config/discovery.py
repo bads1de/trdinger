@@ -63,6 +63,9 @@ def _get_cache_version() -> str:
 
     # 独自インジケーター実装ファイルのハッシュをバージョンに含める
     for rel_path in (
+        # _SPECIAL_CONFIG_OVERRIDES 等の設定変更もキャッシュに反映させるため
+        # discovery 自身のハッシュも含める
+        "app/services/indicators/config/discovery.py",
         "app/services/indicators/technical_indicators/advanced_features.py",
         "app/services/indicators/technical_indicators/original/vortex_rsi.py",
         "app/services/indicators/technical_indicators/original/trend_trigger_factor.py",
@@ -125,7 +128,7 @@ def _load_cache() -> list[IndicatorConfig] | None:
                     config.indicator_name
                 ]
                 if "min_length_func" in overrides:
-                    config.min_length_func = overrides["min_length_func"]  # type: ignore[assignment]
+                    config.min_length_func = overrides["min_length_func"]
             # customカテゴリのインジケーターのadapter_functionを再構成
             if config.category == "custom" and config.adapter_function is None:
                 try:
@@ -318,7 +321,7 @@ class DynamicIndicatorDiscovery:
         "SMA": ["SIMPLE_MA"],
     }
 
-    _SPECIAL_CONFIG_OVERRIDES = {
+    _SPECIAL_CONFIG_OVERRIDES: dict[str, dict[str, Any]] = {
         "DEMARKER": {
             "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
             "use_default_thresholds": True,
@@ -330,6 +333,61 @@ class DynamicIndicatorDiscovery:
         "MMI": {
             "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
             "use_default_thresholds": True,
+        },
+        # --- スケール推定ヒューリスティックの誤分類修正（curated対象） ---
+        # 合成データでの推定だと値域が広がらず price_ratio/price_absolute に
+        # 落ち、`RSI > close` のような恒偽条件が生成されるため明示的に修正する
+        "RSI": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+            "thresholds": {
+                "aggressive": {"long_gt": 40, "short_lt": 60},
+                "normal": {"long_gt": 50, "short_lt": 50},
+                "conservative": {"long_gt": 60, "short_lt": 40},
+            },
+        },
+        "STOCH": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+            "thresholds": {
+                "aggressive": {"long_gt": 40, "short_lt": 60},
+                "normal": {"long_gt": 50, "short_lt": 50},
+                "conservative": {"long_gt": 60, "short_lt": 40},
+            },
+        },
+        "MFI": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+            "thresholds": {
+                "aggressive": {"long_gt": 40, "short_lt": 60},
+                "normal": {"long_gt": 50, "short_lt": 50},
+                "conservative": {"long_gt": 60, "short_lt": 40},
+            },
+        },
+        "CHOP": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+        },
+        # ADX は 0-100 のトレンド強度。25 がトレンド有無の古典的閾値
+        "ADX": {
+            "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
+            "thresholds": {
+                "aggressive": {"long_gt": 20, "short_lt": 20},
+                "normal": {"long_gt": 25, "short_lt": 25},
+                "conservative": {"long_gt": 30, "short_lt": 30},
+            },
+        },
+        "MACD": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        },
+        "TRIX": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        },
+        # --- 出来高系（curated 追加に伴うスケール定義） ---
+        "CMF": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        },
+        "PVO": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
+        },
+        "VFI": {
+            "scale_type": IndicatorScaleType.MOMENTUM_ZERO_CENTERED,
         },
         "TTF": {
             "scale_type": IndicatorScaleType.OSCILLATOR_PLUS_MINUS_100,
