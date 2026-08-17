@@ -31,7 +31,7 @@ export interface GAEvaluationConfig {
   early_termination_settings?: EarlyTerminationSettingsConfig;
   oos_split_ratio?: number;
   oos_fitness_weight?: number;
-  /** 評価モード: "single" | "oos" | "walk_forward" | "purged_kfold" | "auto"。未指定("auto")はフラグから自動判定 */
+  /** 評価モード: "single" | "walk_forward" | "auto"。未指定("auto")はフラグから自動判定 */
   evaluation_mode?: string;
   enable_walk_forward?: boolean;
   wfa_n_folds?: number;

@@ -1047,11 +1047,10 @@ class TestValidationGaConfigBuilding:
         validation_config = service._build_validation_ga_config(config)
 
         eval_cfg = validation_config.evaluation_config
-        # WFAが有効化され、OOS/PurgedKFold は無効化される
+        # WFAが有効化され、OOS 分割は無効化される
         assert eval_cfg.enable_walk_forward is True
         assert eval_cfg.wfa_n_folds == 3
         assert eval_cfg.oos_split_ratio == 0.0
-        assert validation_config.enable_purged_kfold is False
         # 最終品質ゲートは完全評価で行う（早期終了を無効化）
         assert eval_cfg.early_termination_settings.enabled is False
 
@@ -1075,10 +1074,12 @@ class TestValidationGaConfigBuilding:
         assert validation_config.objectives == ["total_return"]
         assert validation_config.evaluation_config.wfa_n_folds == 5
 
-    def test_build_validation_ga_config_scales_min_trades_to_fold_length(
-        self, mock_evaluator
-    ):
-        """WFA検証用設定では min_trades がフォールド長に比例して緩和される"""
+    def test_build_validation_ga_config_preserves_min_trades(self, mock_evaluator):
+        """WFA検証用設定では min_trades は事前スケールされず保持される。
+
+        フォールド長に応じたスケールは FitnessCalculator 側（window_days ベース）で
+        適用されるため、ここでの二重スケールは行わない。
+        """
         config = GAConfig(
             validation_config=ValidationConfig(
                 enabled=True, wfa_n_folds=5, wfa_train_ratio=0.7
@@ -1090,13 +1091,14 @@ class TestValidationGaConfigBuilding:
 
         validation_config = service._build_validation_ga_config(config)
 
-        # fold_ratio = (1 - 0.7) / 5 = 0.06, 50 * 0.06 = 3
-        assert validation_config.fitness_constraints["min_trades"] == 3
+        assert validation_config.fitness_constraints["min_trades"] == 50
         # 元の設定は変更されない（deepcopy 済み）
         assert config.fitness_constraints["min_trades"] == 50
 
-    def test_build_validation_ga_config_min_trades_floor_of_one(self, mock_evaluator):
-        """スケール後の min_trades は 1 未満にならない"""
+    def test_build_validation_ga_config_preserves_min_trades_when_small(
+        self, mock_evaluator
+    ):
+        """小さい min_trades も事前スケールで縮小されず保持される"""
         config = GAConfig(
             validation_config=ValidationConfig(
                 enabled=True, wfa_n_folds=5, wfa_train_ratio=0.7
@@ -1108,8 +1110,7 @@ class TestValidationGaConfigBuilding:
 
         validation_config = service._build_validation_ga_config(config)
 
-        # fold_ratio = 0.06, 10 * 0.06 = 0.6 → floor で 1
-        assert validation_config.fitness_constraints["min_trades"] == 1
+        assert validation_config.fitness_constraints["min_trades"] == 10
 
 
 class TestValidationConfig:

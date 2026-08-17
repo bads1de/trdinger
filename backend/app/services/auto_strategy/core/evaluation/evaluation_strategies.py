@@ -1,7 +1,7 @@
 """
 評価戦略モジュール
 
-OOS (Out-of-Sample) 検証、Walk-Forward 分析などの
+単一評価、Walk-Forward 分析などの
 評価戦略ルーティングを担当します。
 """
 
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # 評価モードの取りうる値（レポートの mode / 自動判定にも使用）
-EVALUATION_MODES = frozenset({"single", "oos", "walk_forward", "purged_kfold"})
+EVALUATION_MODES = frozenset({"single", "walk_forward"})
 # evaluation_mode 未指定（自動判定）を表す値
 AUTO_EVALUATION_MODE = "auto"
 
@@ -38,13 +38,13 @@ def resolve_evaluation_mode(config: GAConfig) -> str:
     """GAConfig から有効な評価モードを決定する。
 
     明示的な `evaluation_config.evaluation_mode` が設定されていればそれを優先し、
-    "auto"（未指定）の場合は従来どおりフラグ群から自動判定する（後方互換）。
+    "auto"（未指定）の場合は `enable_walk_forward` フラグから自動判定する。
 
     Args:
         config: GA設定。
 
     Returns:
-        str: "single" | "oos" | "walk_forward" | "purged_kfold" のいずれか。
+        str: "single" | "walk_forward" のいずれか。
     """
     evaluation_config = getattr(config, "evaluation_config", None)
 
@@ -56,15 +56,10 @@ def resolve_evaluation_mode(config: GAConfig) -> str:
             "未知の evaluation_mode=%r を無視し、フラグから自動判定します", explicit
         )
 
-    if getattr(config, "enable_purged_kfold", False):
-        return "purged_kfold"
     if evaluation_config is not None and bool(
         getattr(evaluation_config, "enable_walk_forward", False)
     ):
         return "walk_forward"
-    oos_ratio = float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0)
-    if oos_ratio > 0.0:
-        return "oos"
     return "single"
 
 
@@ -86,7 +81,7 @@ class EvaluationStrategy:
         self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
     ) -> EvaluationReport:
         """
-        GA設定で定義された評価戦略（PurgedKFold、WFA、OOS、単一評価等）を選択・実行し、
+        GA設定で定義された評価戦略（WFA、単一評価等）を選択・実行し、
         集約された評価レポートを生成します。
 
         このメソッドは、個体評価の「ルーティング」を担当します。
@@ -104,27 +99,10 @@ class EvaluationStrategy:
         """
         mode = resolve_evaluation_mode(config)
 
-        # PurgedKFold評価（過学習対策）
-        if mode == "purged_kfold":
-            return self._evaluate_with_purged_kfold_report(
-                gene, base_backtest_config, config
-            )
-
         # Walk-Forward 分析（最終検証・品質ゲート）
         if mode == "walk_forward":
             return self._evaluate_with_walk_forward_report(
                 gene, base_backtest_config, config
-            )
-
-        # OOS 検証（IS/OOS 分割の重み付き集約）
-        if mode == "oos":
-            evaluation_config = getattr(config, "evaluation_config", None)
-            oos_ratio = float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0)
-            oos_weight = float(
-                getattr(evaluation_config, "oos_fitness_weight", 0.5) or 0.5
-            )
-            return self._evaluate_with_oos_report(
-                gene, base_backtest_config, config, oos_ratio, oos_weight
             )
 
         # 単一評価（既定）
@@ -599,75 +577,6 @@ class EvaluationStrategy:
         }
         return is_config, oos_config, metadata
 
-    def _evaluate_with_oos_report(
-        self,
-        gene: Any,
-        base_backtest_config: dict[str, Any],
-        config: GAConfig,
-        oos_ratio: float,
-        oos_weight: float,
-    ) -> EvaluationReport:
-        """Out-of-Sample (OOS) 検証を含む評価を実行する。"""
-        try:
-            is_config, oos_config, split_metadata = self._build_oos_split_configs(
-                base_backtest_config,
-                oos_ratio,
-            )
-
-            with ThreadPoolExecutor(max_workers=2) as executor:
-                is_future = executor.submit(
-                    self._evaluate_scenario,
-                    gene,
-                    is_config,
-                    config,
-                    scenario_name="is",
-                    metadata={"segment": "is"},
-                )
-                oos_future = executor.submit(
-                    self._evaluate_scenario,
-                    gene,
-                    oos_config,
-                    config,
-                    scenario_name="oos",
-                    metadata={"segment": "oos"},
-                )
-
-                is_scenario = is_future.result()
-                oos_scenario = oos_future.result()
-
-            report = EvaluationReport.aggregate(
-                mode="oos",
-                objectives=self._get_objectives(config),
-                scenarios=[is_scenario, oos_scenario],
-                aggregate_method="weighted",
-                weights=[1.0 - oos_weight, oos_weight],
-                metadata={
-                    "evaluation_layer": "validation",
-                    "method": "oos",
-                    "oos_weight": oos_weight,
-                    **split_metadata,
-                },
-            )
-
-            logger.info(
-                "OOS評価完了（並列）: pass_rate=%s, Combined=%s",
-                round(report.pass_rate, 4),
-                report.aggregated_fitness,
-            )
-            return report
-
-        except Exception as e:
-            logger.error(f"OOS評価中エラー: {e}")
-            return self._evaluate_single_report(
-                gene,
-                base_backtest_config,
-                config,
-                metadata={
-                    "evaluation_fallback": True,
-                    "fallback_reason": f"OOS評価エラー: {e}",
-                },
-            )
-
     def _evaluate_with_walk_forward_report(
         self,
         gene: Any,
@@ -913,186 +822,5 @@ class EvaluationStrategy:
                 _DATETIME_FORMAT
             )
             fold_configs.append((fold_idx, test_config))
-
-        return fold_configs
-
-    def _evaluate_with_purged_kfold_report(
-        self,
-        gene: Any,
-        base_backtest_config: dict[str, Any],
-        config: GAConfig,
-    ) -> EvaluationReport:
-        """PurgedKFold評価（過学習対策）を並列実行する。"""
-        try:
-            n_splits = getattr(config, "purged_kfold_splits", 5)
-            embargo_pct = getattr(config, "purged_kfold_embargo", 0.01)
-
-            date_range = self._resolve_backtest_date_range(base_backtest_config)
-            if date_range is None:
-                logger.warning(
-                    "PurgedKFold: 期間が不明または無効なため通常評価にフォールバック"
-                )
-                return self._evaluate_single_report(
-                    gene,
-                    base_backtest_config,
-                    config,
-                    metadata={
-                        "evaluation_fallback": True,
-                        "fallback_reason": "PurgedKFoldのバックテスト期間が不正です",
-                        "expected_fold_count": int(n_splits),
-                        "completed_fold_count": 0,
-                        "evaluation_incomplete": True,
-                    },
-                )
-            start_date, end_date = date_range
-
-            fold_configs = self._precompute_purged_kfold_configs(
-                start_date,
-                end_date,
-                n_splits,
-                embargo_pct,
-                base_backtest_config,
-            )
-
-            if not fold_configs:
-                logger.warning(
-                    "PurgedKFold: 有効なフォールドがないため通常評価にフォールバック"
-                )
-                return self._evaluate_single_report(
-                    gene,
-                    base_backtest_config,
-                    config,
-                    metadata={
-                        "evaluation_fallback": True,
-                        "fallback_reason": "PurgedKFoldの有効なフォールドがありません",
-                        "expected_fold_count": int(n_splits),
-                        "completed_fold_count": 0,
-                        "evaluation_incomplete": True,
-                    },
-                )
-
-            scenario_reports = self._run_parallel_scenario_tasks(
-                [
-                    (
-                        fold_idx,
-                        lambda fold_idx=fold_idx, test_config=test_config: (
-                            self._evaluate_scenario(
-                                gene,
-                                test_config,
-                                config,
-                                scenario_name=f"fold_{fold_idx}",
-                                metadata={"fold_index": fold_idx},
-                            )
-                        ),
-                    )
-                    for fold_idx, test_config in fold_configs
-                ],
-                error_context="PurgedKFold Fold",
-            )
-
-            completed_fold_count = len(scenario_reports)
-            expected_fold_count = int(n_splits)
-            if not scenario_reports:
-                logger.warning(
-                    "PurgedKFold: 有効なフォールドがないため通常評価にフォールバック"
-                )
-                return self._evaluate_single_report(
-                    gene,
-                    base_backtest_config,
-                    config,
-                    metadata={
-                        "evaluation_fallback": True,
-                        "fallback_reason": "PurgedKFoldのフォールド評価がすべて失敗しました",
-                        "expected_fold_count": expected_fold_count,
-                        "completed_fold_count": 0,
-                        "failed_fold_count": self._last_scenario_task_failures,
-                        "evaluation_incomplete": True,
-                    },
-                )
-
-            scenario_reports.sort(
-                key=lambda scenario: int(scenario.metadata.get("fold_index", -1))
-            )
-            report = EvaluationReport.aggregate(
-                mode="purged_kfold",
-                objectives=self._get_objectives(config),
-                scenarios=scenario_reports,
-                aggregate_method="robust",
-                metadata={
-                    "fold_count": completed_fold_count,
-                    "expected_fold_count": expected_fold_count,
-                    "completed_fold_count": completed_fold_count,
-                    "failed_fold_count": self._last_scenario_task_failures,
-                    "evaluation_incomplete": completed_fold_count
-                    != expected_fold_count,
-                },
-            )
-
-            logger.info(
-                "PurgedKFold評価完了（並列）: %sフォールド, pass_rate=%s, 集約=%s",
-                len(scenario_reports),
-                round(report.pass_rate, 4),
-                tuple(round(v, 4) for v in report.aggregated_fitness),
-            )
-
-            return report
-
-        except Exception as e:
-            logger.error(f"PurgedKFold評価中エラー: {e}")
-            return self._evaluate_single_report(
-                gene,
-                base_backtest_config,
-                config,
-                metadata={
-                    "evaluation_fallback": True,
-                    "fallback_reason": f"PurgedKFold評価エラー: {e}",
-                    "evaluation_incomplete": True,
-                },
-            )
-
-    def _precompute_purged_kfold_configs(
-        self,
-        start_date: pd.Timestamp,
-        end_date: pd.Timestamp,
-        n_splits: int,
-        embargo_pct: float,
-        base_backtest_config: dict[str, Any],
-    ) -> list[tuple[int, dict[str, Any]]]:
-        """PurgedKFold 用のテスト設定を事前計算する。"""
-        fold_configs: list[tuple[int, dict[str, Any]]] = []
-        if n_splits <= 0:
-            return fold_configs
-
-        total_duration = end_date - start_date
-        if total_duration <= pd.Timedelta(0):
-            return fold_configs
-
-        embargo_pct = max(0.0, float(embargo_pct or 0.0))
-        embargo_duration = total_duration * embargo_pct
-        usable_duration = total_duration - embargo_duration * max(0, n_splits - 1)
-        if usable_duration <= pd.Timedelta(0):
-            return fold_configs
-
-        fold_duration = usable_duration / n_splits
-        current_start = start_date
-
-        for fold_idx in range(n_splits):
-            effective_test_start = current_start
-            if effective_test_start >= end_date:
-                break
-
-            if fold_idx == n_splits - 1:
-                effective_test_end = end_date
-            else:
-                effective_test_end = effective_test_start + fold_duration
-
-            if effective_test_end <= effective_test_start:
-                continue
-
-            test_config = base_backtest_config.copy()
-            test_config["start_date"] = effective_test_start.strftime(_DATETIME_FORMAT)
-            test_config["end_date"] = effective_test_end.strftime(_DATETIME_FORMAT)
-            fold_configs.append((fold_idx, test_config))
-            current_start = effective_test_end + embargo_duration
 
         return fold_configs

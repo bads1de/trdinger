@@ -572,11 +572,9 @@ class StrategyValidationService:
         evaluation_config.wfa_train_ratio = validation_config.wfa_train_ratio
         evaluation_config.wfa_anchored = validation_config.wfa_anchored
         # 最終品質ゲートは明示的に WFA モードへ固定する。
-        # これにより OOS / PurgedKFold との競合を設定面から排除できる。
         evaluation_config.evaluation_mode = "walk_forward"
-        # OOS / PurgedKFold が WFA と競合しないように無効化（後方互換のため明示）
+        # OOS 分割が WFA と競合しないように無効化（後方互換のため明示）
         evaluation_config.oos_split_ratio = 0.0
-        validation_ga_config.enable_purged_kfold = False
 
         # 検証は最終的な品質ゲートのため、完全評価で行う。
         # 早期終了（trade_pace など）が発動するとフォールドが -Infinity で

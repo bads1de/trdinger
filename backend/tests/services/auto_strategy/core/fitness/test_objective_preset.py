@@ -1,5 +1,3 @@
-import pytest
-
 from app.services.auto_strategy.config.ga_config import EvaluationConfig, GAConfig
 from app.services.auto_strategy.core.evaluation.evaluation_fidelity import (
     build_coarse_ga_config,

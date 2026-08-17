@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # 有効な評価モード（evaluation_config.evaluation_mode）。evaluation_strategies 側の
 # EVALUATION_MODES と整合させること。
-_EVALUATION_MODES = frozenset({"single", "oos", "walk_forward", "purged_kfold"})
+_EVALUATION_MODES = frozenset({"single", "walk_forward"})
 
 
 class ConfigValidator:

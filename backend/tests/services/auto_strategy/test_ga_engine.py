@@ -527,7 +527,6 @@ class TestGeneticAlgorithmEngine:
                 # multi_fidelity_oos_ratio が優先されることを確認する
                 multi_fidelity_oos_ratio=0.2,
             ),
-            enable_purged_kfold=True,
         )
         shared_data = {"main_data": pd.DataFrame({"close": [1, 2]})}
         captured_configs = []
@@ -550,6 +549,5 @@ class TestGeneticAlgorithmEngine:
         worker_config = captured_configs[0]
         assert worker_config is not config
         assert worker_config.evaluation_config.enable_walk_forward is False
-        assert worker_config.enable_purged_kfold is False
         assert worker_config.evaluation_config.oos_split_ratio == 0.2
         assert getattr(worker_config, "_evaluation_fidelity", "full") == "coarse"

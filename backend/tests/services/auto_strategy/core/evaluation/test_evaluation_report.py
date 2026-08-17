@@ -26,7 +26,7 @@ class TestEvaluationReport:
 
     def test_aggregate_robust_for_minimize_objective(self):
         report = EvaluationReport.aggregate(
-            mode="purged_kfold",
+            mode="walk_forward",
             objectives=["max_drawdown"],
             scenarios=[
                 ScenarioEvaluation(name="fold_1", fitness=(0.1,), passed=True),
@@ -47,7 +47,7 @@ class TestEvaluationReport:
         )
 
         report = EvaluationReport.aggregate(
-            mode="purged_kfold",
+            mode="walk_forward",
             objectives=["custom_loss"],
             scenarios=[
                 ScenarioEvaluation(name="fold_1", fitness=(0.1,), passed=True),
@@ -62,7 +62,7 @@ class TestEvaluationReport:
 
     def test_aggregate_weighted_uses_weights(self):
         report = EvaluationReport.aggregate(
-            mode="oos",
+            mode="walk_forward",
             objectives=["weighted_score"],
             scenarios=[
                 ScenarioEvaluation(name="is", fitness=(1.0,), passed=True),

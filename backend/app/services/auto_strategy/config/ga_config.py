@@ -223,9 +223,8 @@ class EvaluationConfig(NestedConfigMixin):
     # GA選抜用の WFA を IS 窓内で実行するフラグ (デフォルト無効)。
     # 有効時は execute_ga_report が IS 窓を fold 分割し robust 集約で選抜する。
     enable_walk_forward_for_ga: bool = False
-    # 明示的な評価モード（"single" | "oos" | "walk_forward" | "purged_kfold" | "auto"）。
-    # "auto"（既定）の場合は従来のフラグ群
-    # （enable_purged_kfold / enable_walk_forward / oos_split_ratio）から自動判定する（後方互換）。
+    # 明示的な評価モード（"single" | "walk_forward" | "auto"）。
+    # "auto"（既定）の場合は enable_walk_forward フラグから自動判定する（後方互換）。
     evaluation_mode: str = "auto"
 
 
@@ -457,11 +456,6 @@ class GAConfig:
     # フォールバック設定
     fallback_start_date: str = GA_FALLBACK_START_DATE
     fallback_end_date: str = GA_FALLBACK_END_DATE
-
-    # PurgedKFold設定（過学習対策）
-    enable_purged_kfold: bool = False  # PurgedKFoldを有効にするフラグ
-    purged_kfold_splits: int = 5  # 分割数
-    purged_kfold_embargo: float = 0.01  # エンバーゴ率
 
     # 遺伝子生成設定拡張
     indicator_universe_mode: str = "curated"

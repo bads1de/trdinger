@@ -52,7 +52,6 @@ def test_execute_robustness_report_adds_regime_windows():
     evaluator = _StubEvaluator()
     strategy = EvaluationStrategy(evaluator)
     config = SimpleNamespace(
-        enable_purged_kfold=False,
         evaluation_config=SimpleNamespace(
             enable_walk_forward=False,
             oos_split_ratio=0.0,

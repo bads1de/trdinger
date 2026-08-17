@@ -65,7 +65,7 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
 
     目的：
     - 進化の初期段階では個体の大まかな傾向を把握すれば十分であるため、
-      計算負荷の高い WFA（Walk-Forward Analysis）やパージング付き交差検証を無効化し、
+      計算負荷の高い WFA（Walk-Forward Analysis）を無効化し、
       全体の計算時間を大幅に短縮します。
 
     Args:
@@ -77,7 +77,6 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
     coarse = deepcopy(config)
     coarse.evaluation_config.enable_walk_forward = False
     coarse.evaluation_config.enable_walk_forward_for_ga = False
-    coarse.enable_purged_kfold = False
     # multi-fidelity 有効時は coarse 評価専用の OOS 比率（multi_fidelity_oos_ratio）を
     # 常に優先する。通常の oos_split_ratio がデフォルト有効（0.25）でも、
     # 粗評価の軽量・高速という意図を維持するため。

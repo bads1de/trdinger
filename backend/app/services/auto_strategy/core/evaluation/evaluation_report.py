@@ -1,7 +1,7 @@
 """
 評価レポートモデル
 
-単一評価・OOS・WFA・PurgedKFold の評価結果を統一的に表現する。
+単一評価・WFA・ロバストネス評価の結果を統一的に表現する。
 """
 
 from __future__ import annotations
@@ -129,7 +129,7 @@ class EvaluationReport:
         このメソッドは、単純な平均だけでなく、戦略の安定性や堅牢性を評価するための高度な集約をサポートします。
 
         Args:
-            mode (str): 評価モード（"oos", "wfa", "cv" 等）。
+            mode (str): 評価モード（"single", "walk_forward", "robustness" 等）。
             objectives (Sequence[str]): 目的関数の名前のリスト。
             scenarios (Iterable[ScenarioEvaluation]): 集約対象となる各シナリオの評価結果。
             aggregate_method (str): 集約手法。

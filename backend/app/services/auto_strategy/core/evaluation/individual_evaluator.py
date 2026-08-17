@@ -548,11 +548,6 @@ class IndividualEvaluator:
             "aggregate_method": str(
                 getattr(robustness_config, "aggregate_method", "robust")
             ),
-            "enable_purged_kfold": bool(getattr(config, "enable_purged_kfold", False)),
-            "purged_kfold_splits": int(getattr(config, "purged_kfold_splits", 0) or 0),
-            "purged_kfold_embargo": float(
-                getattr(config, "purged_kfold_embargo", 0.0) or 0.0
-            ),
             "enable_walk_forward": bool(
                 getattr(evaluation_config, "enable_walk_forward", False)
             ),

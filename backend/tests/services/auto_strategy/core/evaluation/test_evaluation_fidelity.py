@@ -21,14 +21,12 @@ def test_build_coarse_ga_config_disables_expensive_modes_and_uses_oos():
             # multi_fidelity_oos_ratio が優先されることを確認する
             multi_fidelity_oos_ratio=0.2,
         ),
-        enable_purged_kfold=True,
     )
 
     coarse = build_coarse_ga_config(config)
 
     assert coarse is not config
     assert coarse.evaluation_config.enable_walk_forward is False
-    assert coarse.enable_purged_kfold is False
     assert coarse.evaluation_config.oos_split_ratio == 0.2
     assert getattr(coarse, "_evaluation_fidelity", "full") == "coarse"
 
