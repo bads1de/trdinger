@@ -347,9 +347,9 @@ class SurvivalSelectionConfig(NestedConfigMixin):
     # 制限トーナメント置換 (RTR) を次世代選択の前段で適用するか。
     # 有効時、各子個体は指標構成距離で最も近い既存個体との局所競争を経て
     # NSGA-II 選抜プールに入る（類似子がニッチ外の多様な親を置き換えられない）。
-    enable_restricted_tournament: bool = False
+    enable_restricted_tournament: bool = True
     # 局所競争相手のサンプル数（crowding factor）
-    restricted_tournament_crowding_factor: int = 8
+    restricted_tournament_crowding_factor: int = 4
 
 
 def _get_default_values_from_fields(cls: type[Any]) -> dict[str, Any]:
@@ -393,9 +393,8 @@ class GAConfig:
     max_conditions: int = 3
 
     # 非価格指標（OI/FR/LSR由来）の最低数保証
-    # 0 の場合は強制しない（従来挙動）。1 以上にすると各戦略が
-    # 必ず指定数以上の非価格指標を含むよう生成・進化する。
-    min_non_price_indicators: int = 0
+    # 1 以上にすると各戦略が必ず指定数以上の非価格指標を含むよう生成・進化する。
+    min_non_price_indicators: int = 1
 
     # 非価格指標の選択確率（公平な自由探索用）
     # トレンド70%優先バイアスで非価格指標が埋もれるのを防ぐ。
@@ -475,7 +474,7 @@ class GAConfig:
     # シード戦略設定（ハイブリッド初期化）
     # 実戦的な戦略テンプレートを初期集団に注入し、探索効率を向上させる
     use_seed_strategies: bool = True  # シード戦略を使用するか
-    seed_injection_rate: float = 0.3  # 初期集団のうちシードで置き換える割合（0.0-1.0）
+    seed_injection_rate: float = 0.20  # 初期集団のうちシードで置き換える割合（0.0-1.0）
 
     # 二段階選抜設定
     # サブ設定: two_stage_selection_config

@@ -46,6 +46,7 @@ from app.services.auto_strategy.core.evaluation.individual_evaluator import (  #
 from app.services.auto_strategy.generators.random_gene_generator import (  # noqa: E402
     RandomGeneGenerator,
 )
+from app.services.auto_strategy.genes.genetic_utils import GeneticUtils  # noqa: E402
 from app.services.auto_strategy.genes.strategy import StrategyGene  # noqa: E402
 from app.services.auto_strategy.serializers.serialization import (
     GeneSerializer,  # noqa: E402
@@ -279,6 +280,24 @@ def parse_args() -> argparse.Namespace:
         default=3,
         help="エントリー条件の最大数 (デフォルト: 3)",
     )
+    parser.add_argument(
+        "--rtr",
+        action="store_true",
+        help="制限トーナメント置換（RTR）を有効化し、指標構成の多様性を維持",
+    )
+    parser.add_argument(
+        "--sharing-radius",
+        type=float,
+        default=None,
+        help="フィットネス共有の共有半径（デフォルト: 0.1）。大きくすると多様性をより強く促進",
+    )
+    parser.add_argument(
+        "--rtr-cf",
+        type=int,
+        default=None,
+        help="RTR の局所競争相手のサンプル数（crowding factor, デフォルト: 8）。"
+        "小さくすると競争が緩くなり多様性が広がりやすくなる",
+    )
 
     return parser.parse_args()
 
@@ -325,6 +344,9 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         min_non_price=getattr(args, "min_non_price", 0),
         non_price_probability=getattr(args, "non_price_probability", 0.3),
         max_conditions=getattr(args, "max_conditions", 3),
+        enable_rtr=getattr(args, "rtr", False),
+        rtr_crowding_factor=getattr(args, "rtr_cf", None),
+        sharing_radius=getattr(args, "sharing_radius", None),
     )
 
     return GAConfig.from_dict(config_dict)
@@ -545,6 +567,46 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
         # 実験マネージャーと同じ品質基準をCLI実行にも適用する。
         # 合格した戦略だけが詳細バックテスト・出力の対象となる。
         if ga_config.validation_config.enabled:
+            # 検証前に、検証対象となり得る戦略の gene をスナップショットする。
+            # 全戦略が不合格でも構成を後から分析できるようにするため。
+            snapshot_serializer = GeneSerializer()
+            strategy_snapshot: dict[str, dict[str, Any]] = {}
+            for candidate in result.get("all_strategies", []):
+                key = GeneticUtils.get_strategy_result_key(candidate)
+                if key in strategy_snapshot:
+                    continue
+                try:
+                    strategy_snapshot[key] = snapshot_serializer.strategy_gene_to_dict(
+                        candidate
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("gene スナップショット取得に失敗: %s", exc)
+            best_candidate = result.get("best_strategy")
+            if best_candidate is not None:
+                key = GeneticUtils.get_strategy_result_key(best_candidate)
+                if key not in strategy_snapshot:
+                    try:
+                        strategy_snapshot[key] = (
+                            snapshot_serializer.strategy_gene_to_dict(best_candidate)
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("gene スナップショット取得に失敗: %s", exc)
+            for solution in result.get("pareto_front", []):
+                strategy = (
+                    solution.get("strategy") if isinstance(solution, dict) else solution
+                )
+                if strategy is None:
+                    continue
+                key = GeneticUtils.get_strategy_result_key(strategy)
+                if key in strategy_snapshot:
+                    continue
+                try:
+                    strategy_snapshot[key] = snapshot_serializer.strategy_gene_to_dict(
+                        strategy
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("gene スナップショット取得に失敗: %s", exc)
+
             logger.info("自動検証パイプラインを開始します（WFA）")
             evaluator = getattr(ga_engine, "individual_evaluator", None)
             if evaluator is None:
@@ -555,6 +617,7 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
                 ga_config=ga_config,
                 backtest_config=backtest_config,
             )
+            result["strategy_snapshot"] = strategy_snapshot
             validation_results = result.get("validation_results", {})
             passed_count = sum(
                 1 for v in validation_results.values() if v.get("passed", False)
@@ -668,6 +731,8 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
             output["validation_report_summaries"] = result[
                 "validation_report_summaries"
             ]
+        if "strategy_snapshot" in result:
+            output["validated_strategies"] = result["strategy_snapshot"]
 
         # パレート最適解がある場合
         if "pareto_front" in result:

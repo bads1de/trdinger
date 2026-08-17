@@ -337,6 +337,7 @@ class EvaluationReport:
                         float(scenario.fitness[0]) if scenario.fitness else 0.0
                     ),
                     "metadata": scenario.metadata.copy(),
+                    "performance_metrics": dict(scenario.performance_metrics or {}),
                 }
                 for scenario in scenario_slice
             ],

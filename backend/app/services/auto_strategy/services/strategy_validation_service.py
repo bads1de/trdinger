@@ -96,19 +96,33 @@ class StrategyValidationService:
         best_strategy = result.get("best_strategy")
         best_key = self._get_strategy_key(best_strategy) if best_strategy else None
 
-        # 1. 検証対象の収集（最良戦略 + 上位候補 + パレートフロント）
+        # 1. 検証対象の収集（最良戦略 + 指標構成が多様な上位候補 + パレートフロント）
+        # fitness上位をそのまま取ると同一構成（例: MACD+BBANDS+ATR のみ）に偏るため、
+        # 指標構成シグネチャが重複しないよう選ぶ（多様性優先の検証）。
         candidates_to_validate: list[Any] = []
+        seen_keys: set[str] = set()
+        seen_signatures: set[Any] = set()
+
+        def _add_candidate(strategy: Any) -> None:
+            if strategy is None:
+                return
+            key = self._get_strategy_key(strategy)
+            if key in seen_keys:
+                return
+            seen_keys.add(key)
+            candidates_to_validate.append(strategy)
+
         if best_strategy is not None:
-            candidates_to_validate.append(best_strategy)
+            _add_candidate(best_strategy)
+            seen_signatures.add(self._indicator_composition_signature(best_strategy))
 
         if validation_config.validate_candidates:
-            for strategy in result.get("all_strategies", [])[
-                : validation_config.max_candidates
-            ]:
+            # 候補プール: フィットネス順の全戦略 + パレートフロント
+            pool: list[Any] = []
+            for strategy in result.get("all_strategies", []):
                 key = self._get_strategy_key(strategy)
                 if key != best_key:
-                    candidates_to_validate.append(strategy)
-            # パレートフロントの戦略も検証対象に含める
+                    pool.append(strategy)
             for solution in result.get("pareto_front", []):
                 strategy = (
                     solution.get("strategy")
@@ -116,9 +130,34 @@ class StrategyValidationService:
                     else solution
                 )
                 if strategy is not None:
+                    pool.append(strategy)
+
+            # 第1パス: 未見の指標構成を優先して選ぶ（多様性確保）
+            diverse: list[Any] = []
+            for strategy in pool:
+                key = self._get_strategy_key(strategy)
+                if key in seen_keys:
+                    continue
+                signature = self._indicator_composition_signature(strategy)
+                if signature in seen_signatures:
+                    continue
+                seen_signatures.add(signature)
+                diverse.append(strategy)
+                if len(diverse) >= validation_config.max_candidates:
+                    break
+
+            # 第2パス: 多様性で埋め切れない場合は fitness 上位から補充
+            if len(diverse) < validation_config.max_candidates:
+                for strategy in pool:
                     key = self._get_strategy_key(strategy)
-                    if key != best_key:
-                        candidates_to_validate.append(strategy)
+                    if key in seen_keys or strategy in diverse:
+                        continue
+                    diverse.append(strategy)
+                    if len(diverse) >= validation_config.max_candidates:
+                        break
+
+            for strategy in diverse:
+                _add_candidate(strategy)
 
         # 2. 各候補の WFA 検証
         for strategy in candidates_to_validate:
@@ -599,3 +638,17 @@ class StrategyValidationService:
     def _get_strategy_key(strategy: Any) -> str:
         """戦略を識別するキーを返す（永続化層と同じルール）。"""
         return GeneticUtils.get_strategy_result_key(strategy)
+
+    @staticmethod
+    def _indicator_composition_signature(strategy: Any) -> tuple[Any, ...]:
+        """指標構成（タイプの集合）から多様性判定用のシグネチャを構築する。
+
+        パラメータの違いは無視し、どの指標タイプを組み合わせているかのみで
+        判定する（例: MACD+BBANDS+ATR はパラメータが異なっても同一扱い）。
+        """
+        indicator_types: set[Any] = set()
+        for indicator in getattr(strategy, "indicators", None) or []:
+            if not getattr(indicator, "enabled", True):
+                continue
+            indicator_types.add(str(getattr(indicator, "type", "")))
+        return tuple(sorted(indicator_types))

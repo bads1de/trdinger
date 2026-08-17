@@ -87,6 +87,115 @@ def validation_config():
 class TestStrategyValidationService:
     """StrategyValidationService のテスト"""
 
+    def test_validation_candidates_are_diversity_selected(self, mock_evaluator):
+        """検証候補は指標構成が重複しないよう多様性優先で選ばれる"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.5,
+                max_candidates=4,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        def _mk(sid: str, types: list[str]):
+            strategy = MagicMock()
+            strategy.id = sid
+            strategy.indicators = [
+                MagicMock(type=t, enabled=True) for t in types
+            ]
+            return strategy
+
+        # best と同じ構成の候補が fitness 上位に3件並んでいる想定
+        best = _mk("best", ["MACD", "BBANDS", "ATR"])
+        same1 = _mk("same1", ["MACD", "BBANDS", "ATR"])
+        same2 = _mk("same2", ["MACD", "BBANDS", "ATR"])
+        same3 = _mk("same3", ["MACD", "BBANDS", "ATR"])
+        diverse1 = _mk("diverse1", ["ADX", "T3"])
+        diverse2 = _mk("diverse2", ["CHOP", "PVO"])
+
+        validated_ids: list[str] = []
+
+        def fake_execute_report(gene, base_config, ga_config):
+            validated_ids.append(gene.id)
+            return _make_report(pass_rate=1.0, primary_fitness=0.8)
+
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            side_effect=fake_execute_report,
+        ):
+            result = {
+                "best_strategy": best,
+                "best_fitness": 0.9,
+                "all_strategies": [same1, same2, same3, diverse1, diverse2],
+                "fitness_scores": [0.9, 0.89, 0.88, 0.8, 0.7],
+                "pareto_front": [],
+                "evaluation_summaries": {},
+            }
+            service.validate_and_filter_result(result, config, {})
+
+        # 第1パス: best + 異なる構成の候補が優先される
+        assert validated_ids[0] == "best"
+        assert validated_ids[1:3] == ["diverse1", "diverse2"]
+        # 同一構成の same 系は第2パス（補充）でのみ登場し、3件すべては検証されない
+        assert "same3" not in validated_ids
+        assert len(validated_ids) <= 4
+
+    def test_validation_candidates_fallback_to_fitness_order(self, mock_evaluator):
+        """多様な構成が足りない場合は fitness 上位から補充される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.5,
+                max_candidates=3,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        def _mk(sid: str, types: list[str]):
+            strategy = MagicMock()
+            strategy.id = sid
+            strategy.indicators = [
+                MagicMock(type=t, enabled=True) for t in types
+            ]
+            return strategy
+
+        best = _mk("best", ["MACD", "BBANDS", "ATR"])
+        same1 = _mk("same1", ["MACD", "BBANDS", "ATR"])
+        same2 = _mk("same2", ["MACD", "BBANDS", "ATR"])
+
+        validated_ids: list[str] = []
+
+        def fake_execute_report(gene, base_config, ga_config):
+            validated_ids.append(gene.id)
+            return _make_report(pass_rate=1.0, primary_fitness=0.8)
+
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            side_effect=fake_execute_report,
+        ):
+            result = {
+                "best_strategy": best,
+                "best_fitness": 0.9,
+                # 全候補が同一構成の場合
+                "all_strategies": [same1, same2],
+                "fitness_scores": [0.9, 0.8],
+                "pareto_front": [],
+                "evaluation_summaries": {},
+            }
+            service.validate_and_filter_result(result, config, {})
+
+        # 多様性で埋め切れない場合、fitness 上位から補充される
+        assert validated_ids[0] == "best"
+        assert "same1" in validated_ids
+        assert "same2" in validated_ids
+
     def test_validation_disabled_returns_result_unchanged(self, mock_evaluator):
         """検証が無効な場合は結果をそのまま返す"""
         config = GAConfig(validation_config=ValidationConfig(enabled=False))

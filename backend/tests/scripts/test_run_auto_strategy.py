@@ -47,7 +47,7 @@ class TestCreateGaConfig:
         assert config.mutation_rate == 0.2
         assert config.elite_size == 2
         assert config.evaluation_config.enable_parallel is True
-        assert config.seed_injection_rate == 0.3
+        assert config.seed_injection_rate == 0.20
 
     def test_custom_config(self):
         """カスタム設定でGAConfigを作成できる"""

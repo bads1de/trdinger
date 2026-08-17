@@ -265,9 +265,9 @@ class TestSurvivalSelectionConfigWiring:
 
     def test_default_is_disabled(self) -> None:
         config = GAConfig()
-        assert config.survival_selection_config.enable_restricted_tournament is False
+        assert config.survival_selection_config.enable_restricted_tournament is True
         assert (
-            config.survival_selection_config.restricted_tournament_crowding_factor == 8
+            config.survival_selection_config.restricted_tournament_crowding_factor == 4
         )
 
     def test_roundtrip_through_from_dict(self) -> None:

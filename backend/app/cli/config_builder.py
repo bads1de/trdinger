@@ -109,6 +109,9 @@ def build_ga_config_dict(
     min_non_price: int = 0,
     non_price_probability: float = 0.3,
     max_conditions: int = 3,
+    enable_rtr: bool = False,
+    rtr_crowding_factor: int | None = None,
+    sharing_radius: float | None = None,
 ) -> dict[str, Any]:
     """
     実行オプションから GA 設定辞書を構築する。
@@ -138,6 +141,9 @@ def build_ga_config_dict(
         min_non_price: 非価格指標の最低数
         non_price_probability: 非価格指標の選択確率
         max_conditions: エントリー条件の最大数
+        enable_rtr: RTR（制限トーナメント置換）を有効化
+        rtr_crowding_factor: RTR の局所競争相手のサンプル数（None はデフォルト 8）
+        sharing_radius: フィットネス共有の共有半径（None はデフォルト 0.1）
 
     Returns:
         GA 設定辞書
@@ -217,6 +223,18 @@ def build_ga_config_dict(
         config_kwargs["validation_config"] = {"enabled": False}
     if fitness_constraints is not None:
         config_kwargs["fitness_constraints"] = fitness_constraints
+
+    if enable_rtr:
+        survival_selection: dict[str, Any] = {
+            "enable_restricted_tournament": True
+        }
+        if rtr_crowding_factor is not None:
+            survival_selection["restricted_tournament_crowding_factor"] = (
+                rtr_crowding_factor
+            )
+        config_kwargs["survival_selection_config"] = survival_selection
+    if sharing_radius is not None:
+        config_kwargs["fitness_sharing"] = {"sharing_radius": sharing_radius}
 
     return config_kwargs
 
