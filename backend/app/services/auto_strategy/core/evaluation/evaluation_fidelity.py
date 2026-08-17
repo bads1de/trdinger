@@ -76,6 +76,7 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
     """
     coarse = deepcopy(config)
     coarse.evaluation_config.enable_walk_forward = False
+    coarse.evaluation_config.enable_walk_forward_for_ga = False
     coarse.enable_purged_kfold = False
     # multi-fidelity 有効時は coarse 評価専用の OOS 比率（multi_fidelity_oos_ratio）を
     # 常に優先する。通常の oos_split_ratio がデフォルト有効（0.25）でも、

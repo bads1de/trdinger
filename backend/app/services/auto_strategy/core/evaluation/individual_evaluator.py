@@ -676,7 +676,10 @@ class IndividualEvaluator:
                 )
 
             # 4. フィットネス計算（フィットネス計算機に委譲）
-            fitness = self._calculate_multi_objective_fitness(result, config)
+            window_days = self._resolve_evaluation_window_days(fidelity_backtest_config)
+            fitness = self._calculate_multi_objective_fitness(
+                result, config, window_days=window_days
+            )
             performance_metrics = self._extract_performance_metrics(result)
             scenario_metadata = _safe_copy_metadata(metadata)
             scenario_metadata.update(
@@ -690,10 +693,13 @@ class IndividualEvaluator:
                     prepared_backtest_config["_evaluation_start"]
                 )
 
+            passed = self._is_backtest_result_passing(
+                result, config, window_days=window_days
+            )
             return ScenarioEvaluation(
                 name=scenario_name,
                 fitness=tuple(float(value) for value in fitness),
-                passed=self._is_backtest_result_passing(result, config),
+                passed=passed,
                 metadata=scenario_metadata,
                 performance_metrics=performance_metrics,
             )
@@ -721,13 +727,37 @@ class IndividualEvaluator:
                 metadata=scenario_metadata,
             )
 
+    @staticmethod
+    def _resolve_evaluation_window_days(
+        backtest_config: dict[str, Any],
+    ) -> int | None:
+        try:
+            import pandas as pd
+
+            s = pd.Timestamp(backtest_config.get("start_date"))
+            e = pd.Timestamp(backtest_config.get("end_date"))
+            if pd.isna(s) or pd.isna(e) or e <= s:
+                return None
+            days = int((e - s).total_seconds() // 86400)
+            return days if days > 0 else None
+        except Exception:
+            return None
+
     def _is_backtest_result_passing(
-        self, backtest_result: dict[str, Any], config: GAConfig
+        self,
+        backtest_result: dict[str, Any],
+        config: GAConfig,
+        *,
+        window_days: int | None = None,
     ) -> bool:
         """バックテスト結果が基本制約を満たすか判定する。"""
         try:
             metrics = self._extract_performance_metrics(backtest_result)
-            return self._fitness_calculator.meets_constraints(metrics, config)
+            if window_days is None:
+                window_days = self._resolve_evaluation_window_days(backtest_result)
+            return self._fitness_calculator.meets_constraints(
+                metrics, config, window_days=window_days
+            )
         except Exception as e:
             logger.debug("制約チェックに失敗しました: %s", e)
             return False

@@ -85,6 +85,9 @@ backend/results/
 # ただしスキルはチーム共有のため追跡する
 !.commandcode/skills/
 
+# Verification harness outputs (ephemeral)
+backend/edge_oos_*.json
+
 # Note: .python-version and uv.lock are intentionally tracked for reproducibility
 
 

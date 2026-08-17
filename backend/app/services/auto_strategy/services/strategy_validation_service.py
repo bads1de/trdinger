@@ -82,7 +82,9 @@ class StrategyValidationService:
 
         logger.info("自動検証パイプラインを開始します（WFA）")
 
-        validation_ga_config = self._build_validation_ga_config(ga_config)
+        validation_ga_config = self._build_validation_ga_config(
+            ga_config, backtest_config
+        )
         validation_results: dict[str, dict[str, Any]] = {}
 
         best_strategy = result.get("best_strategy")
@@ -479,7 +481,9 @@ class StrategyValidationService:
 
         return filtered
 
-    def _build_validation_ga_config(self, ga_config: GAConfig) -> GAConfig:
+    def _build_validation_ga_config(
+        self, ga_config: GAConfig, backtest_config: dict[str, Any] | None = None
+    ) -> GAConfig:
         """WFA 検証用の GA 設定を構築する。"""
         validation_config = ga_config.validation_config
         validation_ga_config = copy.deepcopy(ga_config)
@@ -500,25 +504,9 @@ class StrategyValidationService:
             enabled=False
         )
 
-        # フォールドのテスト窓は全体期間の (1 - train_ratio) / n_folds しかなく、
-        # フル期間向けの min_trades のままではほぼ確実に制約違反（ペナルティ）に
-        # なる。フォールド長に比例した取引回数を許容するよう制約をスケールする。
-        # スケール後の制約が 1 未満になる場合は最小の 1 に丸める。
-        from app.services.auto_strategy.config.constants import (
-            DEFAULT_FITNESS_CONSTRAINTS,
-        )
-
-        fold_ratio = (1.0 - validation_config.wfa_train_ratio) / max(
-            1, int(validation_config.wfa_n_folds)
-        )
-        base_min_trades = int(
-            validation_ga_config.fitness_constraints.get(
-                "min_trades", DEFAULT_FITNESS_CONSTRAINTS["min_trades"]
-            )
-        )
-        scaled_min_trades = max(1, int(round(base_min_trades * fold_ratio)))
-        validation_ga_config.fitness_constraints["min_trades"] = scaled_min_trades
-
+        # フォールド個別の窓長スケーリングは IndividualEvaluator 側で自動適用される
+        # (fidelity_backtest_config の start/end から window_days を導出)。
+        # ここでは二重スケールを避けるため事前スケールは行わない。
         # WFA のフォールド合格は構造的制約（取引数・ドローダウン）だけで判定する。
         # 収益性制約（負リターン・最低シャープレシオ）をフォールドごとに適用すると、
         # 短期間のテスト窓では相場環境の影響で正当な戦略まで弾かれる。

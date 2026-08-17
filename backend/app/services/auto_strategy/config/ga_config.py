@@ -220,6 +220,9 @@ class EvaluationConfig(NestedConfigMixin):
     wfa_n_folds: int = 3
     wfa_train_ratio: float = 0.5
     wfa_anchored: bool = False
+    # GA選抜用の WFA を IS 窓内で実行するフラグ (デフォルト無効)。
+    # 有効時は execute_ga_report が IS 窓を fold 分割し robust 集約で選抜する。
+    enable_walk_forward_for_ga: bool = False
 
 
 @dataclass
@@ -421,6 +424,10 @@ class GAConfig:
     dynamic_objective_reweighting: bool = True
     objective_dynamic_scalars: dict[str, float] = field(default_factory=dict)
 
+    # 目的関数プリセット: エッジ検証や長期窓で識別力を保つための切替
+    # "weighted_score" (デフォルト) / "excess_return" (B&H超過を直接最適化)
+    objective_preset: str | None = None
+
     # 実行時設定
     random_state: int | None = None
 
@@ -584,6 +591,18 @@ class GAConfig:
                 "evaluation_plan",
                 EvaluationPlan.from_dict(self.evaluation_plan),
             )
+
+        preset = getattr(self, "objective_preset", None)
+        if isinstance(preset, str) and preset.strip():
+            normalized = preset.strip()
+            if normalized == "excess_return":
+                object.__setattr__(self, "objectives", ["excess_return"])
+                object.__setattr__(self, "objective_weights", [1.0])
+            elif normalized == "weighted_score":
+                object.__setattr__(self, "objectives", list(DEFAULT_GA_OBJECTIVES))
+                object.__setattr__(
+                    self, "objective_weights", list(DEFAULT_GA_OBJECTIVE_WEIGHTS)
+                )
 
     def to_dict(self) -> dict[str, Any]:
         """

@@ -22,6 +22,7 @@ from app.services.auto_strategy.config.constants import (
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.types import SerializableValue
 
+from .constraint_scaling import get_effective_fitness_constraints
 from .evaluation_metrics import (
     calculate_trade_frequency_penalty,
     calculate_ulcer_index,
@@ -364,7 +365,11 @@ class FitnessCalculator:
         return metrics
 
     def meets_constraints(
-        self, metrics: Mapping[str, float], config: "GAConfig"
+        self,
+        metrics: Mapping[str, float],
+        config: "GAConfig",
+        *,
+        window_days: int | None = None,
     ) -> bool:
         """評価で使う制約判定をまとめて返す。
 
@@ -373,9 +378,15 @@ class FitnessCalculator:
         （取引数・ドローダウン）だけで判定し、収益性は集約フィットネスで
         評価するため、検証用設定では ``min_total_return`` /
         ``min_sharpe_ratio`` を None にする。
+
+        window_days を渡すと ``max_drawdown_limit`` / ``min_trades`` を
+        窓長に応じてスケールした実効制約で判定する（制約の窓長スケーリング）。
         """
         try:
-            constraints = getattr(config, "fitness_constraints", {}) or {}
+            base_constraints = getattr(config, "fitness_constraints", {}) or {}
+            constraints = get_effective_fitness_constraints(
+                base_constraints, window_days
+            )
 
             total_trades = int(metrics.get("total_trades", 0))
             if total_trades <= 0:
@@ -406,6 +417,31 @@ class FitnessCalculator:
             return True
         except (KeyError, TypeError, ValueError):
             return False
+
+    def _resolve_window_days(
+        self,
+        backtest_result: dict[str, SerializableValue],
+        kwargs: dict[str, Any],
+    ) -> int | None:
+        window_days = kwargs.get("window_days")
+        if isinstance(window_days, (int, float)) and float(window_days) > 0:
+            return int(window_days)
+        window_days = kwargs.get("evaluation_window_days")
+        if isinstance(window_days, (int, float)) and float(window_days) > 0:
+            return int(window_days)
+        start = backtest_result.get("start_date")
+        end = backtest_result.get("end_date")
+        try:
+            import pandas as pd
+
+            s = pd.Timestamp(start)
+            e = pd.Timestamp(end)
+            if pd.isna(s) or pd.isna(e) or e <= s:
+                return None
+            days = int((e - s).total_seconds() // 86400)
+            return days if days > 0 else None
+        except Exception:
+            return None
 
     def calculate_fitness(
         self,
@@ -439,7 +475,8 @@ class FitnessCalculator:
                 # GAの探索では zero-trade はよくある境界条件なので、警告ではなく debug に落とす。
                 return config.zero_trades_penalty
 
-            if not self.meets_constraints(metrics, config):
+            window_days = self._resolve_window_days(backtest_result, kwargs)
+            if not self.meets_constraints(metrics, config, window_days=window_days):
                 return config.constraint_violation_penalty
 
             balance_score = self.calculate_long_short_balance(backtest_result)
@@ -656,7 +693,11 @@ class FitnessCalculator:
             metrics = self.extract_performance_metrics(backtest_result)
             total_trades = int(metrics["total_trades"])
 
-            min_trades_req = int(config.fitness_constraints.get("min_trades", 0))
+            window_days = self._resolve_window_days(backtest_result, kwargs)
+            effective_constraints = get_effective_fitness_constraints(
+                getattr(config, "fitness_constraints", {}) or {}, window_days
+            )
+            min_trades_req = int(effective_constraints.get("min_trades", 0) or 0)
             if total_trades < min_trades_req:
                 return self.get_penalty_values(config)
 

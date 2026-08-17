@@ -90,6 +90,21 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """GA の選択に使う IS 専用評価を実行する。"""
         evaluation_config = getattr(config, "evaluation_config", None)
+        if evaluation_config is not None and bool(
+            getattr(evaluation_config, "enable_walk_forward_for_ga", False)
+        ):
+            ga_backtest_config: dict[str, Any] = base_backtest_config
+            oos_ratio_ga = float(
+                getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0
+            )
+            if oos_ratio_ga > 0.0:
+                ga_backtest_config, _, _ = self._build_oos_split_configs(
+                    base_backtest_config, oos_ratio_ga
+                )
+            return self._evaluate_ga_with_walk_forward_report(
+                gene, ga_backtest_config, config
+            )
+
         oos_ratio = float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0)
         metadata = {
             "evaluation_layer": "is",
@@ -743,6 +758,55 @@ class EvaluationStrategy:
                     "evaluation_incomplete": True,
                 },
             )
+
+    def _evaluate_ga_with_walk_forward_report(
+        self,
+        gene: Any,
+        base_backtest_config: dict[str, Any],
+        config: GAConfig,
+    ) -> EvaluationReport:
+        """GA選抜用の IS 内 WFA 評価 (robust 集約で選択圧を汎化側へ寄せる)."""
+        evaluation_config = getattr(config, "evaluation_config", None)
+        if evaluation_config is not None and bool(
+            getattr(evaluation_config, "enable_multi_fidelity_evaluation", False)
+        ):
+            try:
+                from .evaluation_fidelity import is_coarse_fidelity
+
+                if is_coarse_fidelity(config):
+                    scenario = self._evaluate_scenario(
+                        gene,
+                        base_backtest_config,
+                        config,
+                        scenario_name="single",
+                        metadata={
+                            "evaluation_scope": "ga",
+                            "wfa_ga_coarse_fallback": True,
+                        },
+                    )
+                    return EvaluationReport.single(
+                        mode="in_sample",
+                        objectives=self._get_objectives(config),
+                        scenario=scenario,
+                        metadata={
+                            "evaluation_layer": "is",
+                            "method": "is",
+                            "evaluation_scope": "ga",
+                            "wfa_ga_coarse_fallback": True,
+                        },
+                    )
+            except Exception:
+                pass
+
+        report = self._evaluate_with_walk_forward_report(
+            gene, base_backtest_config, config
+        )
+        if report.metadata.get("evaluation_fallback"):
+            return report
+        report.metadata["evaluation_layer"] = "is"
+        report.metadata["evaluation_scope"] = "ga"
+        report.metadata["wfa_ga"] = True
+        return report
 
     def _precompute_fold_configs(
         self,
