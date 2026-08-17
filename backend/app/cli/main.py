@@ -58,11 +58,16 @@ app.add_typer(data_app, name="data")
 
 def _setup_logging(verbose: bool) -> None:
     level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
+    try:
+        from app.utils.logging import configure_logging
+
+        configure_logging(log_file="cli.log")
+    except Exception:  # インポート失敗時は従来どおりコンソールのみ
+        logging.basicConfig(
+            level=level,
+            format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+            handlers=[logging.StreamHandler(sys.stdout)],
+        )
 
 
 def _new_experiment_id() -> str:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 
 CONSTRAINT_SCALING_REFERENCE_DAYS = 180
-CONSTRAINT_SCALING_MAX_DRAWDOWN = 0.35
+CONSTRAINT_SCALING_MAX_DRAWDOWN = 0.40
 CONSTRAINT_SCALING_MIN_DAYS = 7
 
 
@@ -42,7 +42,10 @@ def effective_min_trades(
     ratio = effective_window / effective_ref
     if ratio >= 1.0:
         return base
-    return max(1, int(round(base * ratio)))
+    # 切り捨てで下限を 1 まで緩和する（1トレードでも失格にしない）。
+    # round を使うと短いフォールド（例: 30日）で 2 に丸め上がり、
+    # 無取引側への選抜圧を強めるため floor に変更。
+    return max(1, int(base * ratio))
 
 
 def get_effective_fitness_constraints(

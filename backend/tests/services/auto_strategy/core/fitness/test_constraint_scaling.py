@@ -20,9 +20,9 @@ def test_effective_max_drawdown_sqrt_scaling():
     assert effective_max_drawdown_limit(0.2, 360) == pytest.approx(
         0.2 * (360 / 180) ** 0.5
     )
-    # 720日 = 180日の4倍 → sqrt(4)=2倍だが cap 0.35 で止まる
-    assert effective_max_drawdown_limit(0.2, 720) == pytest.approx(0.35)
-    # capを上げれば 0.4 まで伸びる
+    # 720日 = 180日の4倍 → sqrt(4)=2倍だが cap 0.40 で止まる
+    assert effective_max_drawdown_limit(0.2, 720) == pytest.approx(0.40)
+    # capを上げれば 0.4 を超えて伸びる
     assert effective_max_drawdown_limit(0.2, 720, cap=0.5) == pytest.approx(0.4)
 
 
@@ -39,8 +39,8 @@ def test_effective_min_trades_no_scaling_for_long_window():
 def test_effective_min_trades_scaled_for_short_window():
     # 半分の窓 → 半分の取引数
     assert effective_min_trades(10, 90) == 5
-    # 30日フォールド: 10 * 30/180 ≒ 1.67 → 2
-    assert effective_min_trades(10, 30) == 2
+    # 30日フォールド: 10 * 30/180 ≒ 1.67 → 切り捨てで 1（1トレードでも失格にしない）
+    assert effective_min_trades(10, 30) == 1
     # 極短窓でも最低1
     assert effective_min_trades(10, 1) == 1
 
@@ -55,10 +55,10 @@ def test_get_effective_constraints_combined():
     # 元のdictは変更されない
     assert base["max_drawdown_limit"] == 0.2
 
-    # 30日fold: DD据え置き、min_trades縮小
+    # 30日fold: DD据え置き、min_trades縮小（切り捨てで1まで緩和）
     eff2 = get_effective_fitness_constraints(base, 30)
     assert eff2["max_drawdown_limit"] == pytest.approx(0.2)
-    assert eff2["min_trades"] == 2
+    assert eff2["min_trades"] == 1
 
 
 def test_meets_constraints_backward_compatible():
@@ -124,11 +124,11 @@ def test_meets_constraints_window_scaling_allows_long_window_drawdown():
         config,
         window_days=360,
     )
-    # 700日でもcap 0.35を超えるDD 36%は違反
+    # 700日でもcap 0.40を超えるDD 41%は違反
     assert not calc.meets_constraints(
         {
             "total_trades": 10,
-            "max_drawdown": 0.36,
+            "max_drawdown": 0.41,
             "total_return": 0.1,
             "sharpe_ratio": 1.0,
         },
@@ -153,7 +153,7 @@ def test_meets_constraints_window_scaling_short_window_trades():
         config,
         window_days=180,
     )
-    # 30日foldでは min_tradesが2に縮小されるため通過
+    # 30日foldでは min_tradesが1に縮小されるため通過
     assert calc.meets_constraints(
         {"total_trades": 5, "max_drawdown": 0.1},
         config,

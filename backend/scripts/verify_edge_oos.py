@@ -26,6 +26,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 from scipy import stats
 
 # tqdm のプログレスバーは1バーあたり数百回の書き込みが発生し、
@@ -110,10 +111,19 @@ def build_config(args: argparse.Namespace) -> GAConfig:
         kwargs["objectives"] = ["excess_return"]
         kwargs["objective_weights"] = [1.0]
         kwargs["objective_preset"] = "excess_return"
+    if getattr(args, "seed", None) is not None:
+        kwargs["random_state"] = int(args.seed)
     if getattr(args, "wfa_ga", False):
         # ValidationConfig の WFA 設定を流用 (ユーザ選択: ValidationConfig流用)
         kwargs["evaluation_config"] = EvaluationConfig(
             enable_parallel=not args.smoke, enable_walk_forward_for_ga=True
+        )
+    if getattr(args, "no_early_termination", False):
+        # WFA-GA のフォールド評価で早期終了 (DD/期待値/ペース打ち切り) を無効化する
+        kwargs["evaluation_config"] = EvaluationConfig(
+            enable_parallel=not args.smoke,
+            enable_walk_forward_for_ga=getattr(args, "wfa_ga", False),
+            early_termination_settings=EarlyTerminationSettings(enabled=False),
         )
     return GAConfig(**kwargs)
 
@@ -301,6 +311,17 @@ def main() -> None:
         action="store_true",
         help="IS窓内で WFA (fold=ValidationConfig) を使って選抜する (enable_walk_forward_for_ga)",
     )
+    parser.add_argument(
+        "--no-early-termination",
+        action="store_true",
+        help="GA進化のフォールド評価で早期終了 (DD/期待値/trade_pace打ち切り) を無効化する",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="GA進化とランダムヌルの乱数シード (None で非固定、指定で再現可能)",
+    )
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
 
@@ -378,6 +399,10 @@ def main() -> None:
     )
     oos_primary = [primary(f, penalty_values) for f in oos_fitness]
 
+    if args.seed is not None:
+        # 進化とランダムヌルで同じシード列にならないようオフセットを付ける
+        random.seed(args.seed + 1)
+        np.random.seed(args.seed + 1)
     generator = RandomGeneGenerator(config=config)
     random_genes = [generator.generate_random_gene() for _ in range(args.n_random)]
     rand_fitness = evaluate_genes(
@@ -399,6 +424,9 @@ def main() -> None:
 
     pop_returns = [metric_of(gene, "total_return") for gene in population]
     rand_returns = [metric_of(gene, "total_return") for gene in random_genes]
+    pop_trades = [metric_of(gene, "total_trades") for gene in population]
+    rand_trades = [metric_of(gene, "total_trades") for gene in random_genes]
+    pop_max_dd = [metric_of(gene, "max_drawdown") for gene in population]
     bh_return = buy_and_hold_return(args.oos_start, args.oos_end)
 
     # --- Phase 3: 集計 ---
@@ -498,6 +526,9 @@ def main() -> None:
             "pop_returns": pop_returns,
             "rand_primary": rand_primary,
             "rand_returns": rand_returns,
+            "pop_trades": pop_trades,
+            "rand_trades": rand_trades,
+            "pop_max_dd": pop_max_dd,
         },
     }
 

@@ -56,15 +56,10 @@ from app.services.auto_strategy.services.strategy_validation_service import (  #
 from app.services.backtest.services.backtest_service import (
     BacktestService,  # noqa: E402
 )
+from app.utils.logging import configure_logging  # noqa: E402
 
-# ロギング設定
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-    ],
-)
+# ロギング設定（コンソール + backend/logs/auto_strategy.log へのファイル出力）
+configure_logging(log_file="auto_strategy.log")
 logger = logging.getLogger(__name__)
 
 
