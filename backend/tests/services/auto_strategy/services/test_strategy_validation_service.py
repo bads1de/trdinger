@@ -1129,6 +1129,12 @@ class TestValidationConfig:
         assert vc.wfa_anchored is False
         assert vc.validate_candidates is True
         assert vc.max_candidates == 5
+        assert vc.enable_pbo_gate is True
+        assert vc.pbo_threshold == 0.5
+        assert vc.enable_dsr_gate is False
+        assert vc.min_dsr == 0.95
+        assert vc.dsr_effective_trials is None
+        assert vc.dsr_sigma_sharpe == 1.0
 
     def test_from_dict(self):
         """辞書からの復元テスト"""
@@ -1140,6 +1146,11 @@ class TestValidationConfig:
                 "max_drawdown": 0.1,
                 "wfa_n_folds": 4,
                 "validate_candidates": False,
+                "enable_pbo_gate": False,
+                "pbo_threshold": 0.3,
+                "enable_dsr_gate": True,
+                "min_dsr": 0.9,
+                "dsr_effective_trials": 100,
             }
         }
         config = GAConfig.from_dict(data)
@@ -1150,6 +1161,11 @@ class TestValidationConfig:
         assert vc.max_drawdown == 0.1
         assert vc.wfa_n_folds == 4
         assert vc.validate_candidates is False
+        assert vc.enable_pbo_gate is False
+        assert vc.pbo_threshold == 0.3
+        assert vc.enable_dsr_gate is True
+        assert vc.min_dsr == 0.9
+        assert vc.dsr_effective_trials == 100
 
     def test_to_dict_round_trip(self):
         """to_dict → from_dict のラウンドトリップテスト"""
@@ -1173,3 +1189,232 @@ class TestValidationConfig:
         from app.services.auto_strategy.config import ValidationConfig as V2
 
         assert V2 is ValidationConfig
+
+
+class TestOverfittingGates:
+    """PBO / DSR ゲートのテスト"""
+
+    def _run_validation(self, mock_evaluator, config, report, backtest_config=None):
+        service = StrategyValidationService(mock_evaluator)
+        best = MagicMock()
+        best.id = "best"
+        with patch.object(
+            service._evaluation_strategy, "execute_report", return_value=report
+        ):
+            filtered = service.validate_and_filter_result(
+                {
+                    "best_strategy": best,
+                    "best_fitness": 0.8,
+                    "all_strategies": [best],
+                    "fitness_scores": [0.8],
+                    "pareto_front": [],
+                    "evaluation_summaries": {},
+                },
+                config,
+                backtest_config or {},
+            )
+        return filtered["validation_results"]["best"]
+
+    def _make_report_with_metrics(
+        self,
+        returns: list[float] | None = None,
+        sharpes: list[float] | None = None,
+        pass_rate: float = 1.0,
+    ) -> EvaluationReport:
+        n_folds = len(returns or sharpes or [])
+        scenarios = []
+        for i in range(n_folds):
+            metrics: dict[str, float] = {}
+            if returns is not None:
+                metrics["total_return"] = returns[i]
+            if sharpes is not None:
+                metrics["sharpe_ratio"] = sharpes[i]
+            scenarios.append(
+                ScenarioEvaluation(
+                    name=f"fold_{i}",
+                    fitness=(0.5,),
+                    passed=True,
+                    performance_metrics=metrics,
+                )
+            )
+        return EvaluationReport(
+            mode="walk_forward",
+            objectives=("total_return",),
+            aggregated_fitness=(0.5,),
+            scenarios=scenarios,
+            aggregate_method="robust",
+        )
+
+    def test_pbo_gate_rejects_majority_losing_folds(self, mock_evaluator):
+        """過半数のフォールドが負けなら不合格"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                enable_pbo_gate=True,
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=[0.1, -0.2, -0.3])
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is False
+        assert validation["pbo"] == pytest.approx(2 / 3)
+        assert validation["n_losing_folds"] == 2
+        assert any("PBO超過" in reason for reason in validation["reasons"])
+
+    def test_pbo_gate_passes_when_minority_losing(self, mock_evaluator):
+        """少数派のフォールドだけが負けなら合格"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                enable_pbo_gate=True,
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=[0.1, 0.2, -0.3])
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
+        assert validation["pbo"] == pytest.approx(1 / 3)
+
+    def test_pbo_gate_skipped_when_metrics_missing(self, mock_evaluator):
+        """total_return が取得できない場合はスキップ（fail-open）"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                enable_pbo_gate=True,
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=None, sharpes=[1.0, 1.5])
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
+        assert validation["pbo"] is None
+
+    def test_pbo_gate_disabled_allows_all_losing(self, mock_evaluator):
+        """ゲート無効時は全フォールド負けでも構造基準のみで判定"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                enable_pbo_gate=False,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=[-0.1, -0.2, -0.3])
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
+        assert validation["pbo"] is None
+
+    def test_dsr_gate_rejects_weak_sharpe(self, mock_evaluator):
+        """多重検定補正後も有意でない場合は不合格"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                enable_dsr_gate=True,
+                min_dsr=0.95,
+                dsr_effective_trials=2,
+                wfa_n_folds=2,
+                wfa_train_ratio=0.3,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=[0.1, 0.1], sharpes=[0.5, 0.5])
+        backtest_config = {
+            "start_date": "2015-01-01",
+            "end_date": "2025-01-01",
+        }
+        validation = self._run_validation(
+            mock_evaluator, config, report, backtest_config
+        )
+
+        assert validation["passed"] is False
+        assert validation["dsr"] is not None
+        assert any("DSR" in reason for reason in validation["reasons"])
+
+    def test_dsr_gate_passes_strong_sharpe(self, mock_evaluator):
+        """十分な SR と長いトラックレコードなら合格"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                enable_dsr_gate=True,
+                min_dsr=0.95,
+                dsr_effective_trials=2,
+                wfa_n_folds=2,
+                wfa_train_ratio=0.3,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=[0.1, 0.1], sharpes=[2.0, 2.0])
+        backtest_config = {
+            "start_date": "2015-01-01",
+            "end_date": "2025-01-01",
+        }
+        validation = self._run_validation(
+            mock_evaluator, config, report, backtest_config
+        )
+
+        assert validation["passed"] is True
+        assert validation["dsr"] is not None
+        assert validation["dsr"] > 0.95
+
+    def test_dsr_gate_fails_closed_on_short_window(self, mock_evaluator):
+        """統計力を確保できない短い検証期間は不合格"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+                enable_dsr_gate=True,
+                min_dsr=0.95,
+                wfa_n_folds=3,
+                wfa_train_ratio=0.5,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(
+            returns=[0.1, 0.1, 0.1], sharpes=[3.0, 3.0, 3.0]
+        )
+        backtest_config = {
+            "start_date": "2024-01-01",
+            "end_date": "2024-07-01",
+        }
+        validation = self._run_validation(
+            mock_evaluator, config, report, backtest_config
+        )
+
+        assert validation["passed"] is False
+        assert validation["dsr"] is None
+        assert any("統計力" in reason for reason in validation["reasons"])
+
+    def test_dsr_gate_disabled_by_default(self, mock_evaluator):
+        """DSR ゲートはデフォルト無効（有効化しない限り従来判定）"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.0,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=[0.1], sharpes=[0.1])
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
+        assert validation["dsr"] is None

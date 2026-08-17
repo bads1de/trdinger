@@ -15,6 +15,10 @@ from .helpers import validate_robustness_regime_window
 
 logger = logging.getLogger(__name__)
 
+# 有効な評価モード（evaluation_config.evaluation_mode）。evaluation_strategies 側の
+# EVALUATION_MODES と整合させること。
+_EVALUATION_MODES = frozenset({"single", "oos", "walk_forward", "purged_kfold"})
+
 
 class ConfigValidator:
     """GA設定バリデーター
@@ -121,6 +125,7 @@ class ConfigValidator:
         errors.extend(ConfigValidator._validate_ga_evolution_settings(config))
         errors.extend(ConfigValidator._validate_ga_fitness_settings(config))
         errors.extend(ConfigValidator._validate_ga_parameter_settings(config))
+        errors.extend(ConfigValidator._validate_ga_evaluation_mode(config))
         errors.extend(ConfigValidator._validate_ga_multi_fidelity_settings(config))
         errors.extend(ConfigValidator._validate_ga_early_termination_settings(config))
         errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
@@ -350,6 +355,20 @@ class ConfigValidator:
             )
 
         return errors
+
+    @staticmethod
+    def _validate_ga_evaluation_mode(config: GAConfig) -> list[str]:
+        """evaluation_mode の検証。"""
+        evaluation_config = getattr(config, "evaluation_config", None)
+        if evaluation_config is None:
+            return []
+        mode = getattr(evaluation_config, "evaluation_mode", "auto")
+        # MagicMock 等の文字列以外は検証対象外（既存の Mock ベーステストへの影響を防ぐ）
+        if not isinstance(mode, str) or mode == "auto" or mode in _EVALUATION_MODES:
+            return []
+        return [
+            f"evaluation_mode は {sorted(_EVALUATION_MODES)} のいずれか（または auto）である必要があります: {mode}"
+        ]
 
     @staticmethod
     def _validate_ga_multi_fidelity_settings(config: GAConfig) -> list[str]:
@@ -759,6 +778,30 @@ class ConfigValidator:
         if not isinstance(max_candidates, (int, float)) or int(max_candidates) <= 0:
             errors.append(
                 "validation_config.max_candidates は正の整数である必要があります"
+            )
+
+        pbo_threshold: Any = validation_config.pbo_threshold
+        if (
+            not isinstance(pbo_threshold, (int, float))
+            or not 0.0 <= float(pbo_threshold) <= 1.0
+        ):
+            errors.append(
+                "validation_config.pbo_threshold は0.0-1.0の範囲である必要があります"
+            )
+
+        min_dsr: Any = validation_config.min_dsr
+        if not isinstance(min_dsr, (int, float)) or not 0.0 <= float(min_dsr) <= 1.0:
+            errors.append(
+                "validation_config.min_dsr は0.0-1.0の範囲である必要があります"
+            )
+
+        dsr_effective_trials: Any = validation_config.dsr_effective_trials
+        if dsr_effective_trials is not None and (
+            not isinstance(dsr_effective_trials, (int, float))
+            or int(dsr_effective_trials) <= 0
+        ):
+            errors.append(
+                "validation_config.dsr_effective_trials は正の整数である必要があります"
             )
 
         return errors

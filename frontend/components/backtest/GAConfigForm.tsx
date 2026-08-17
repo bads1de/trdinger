@@ -156,6 +156,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           },
           oos_split_ratio: initialEvaluationConfig.oos_split_ratio ?? 0.25,
           oos_fitness_weight: initialEvaluationConfig.oos_fitness_weight ?? 0.5,
+          evaluation_mode: initialEvaluationConfig.evaluation_mode ?? "auto",
           enable_walk_forward:
             initialEvaluationConfig.enable_walk_forward ?? false,
           wfa_n_folds: initialEvaluationConfig.wfa_n_folds ?? 5,
@@ -186,6 +187,16 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           validate_candidates:
             initialValidationConfig.validate_candidates ?? true,
           max_candidates: initialValidationConfig.max_candidates ?? 5,
+          enable_pbo_gate: initialValidationConfig.enable_pbo_gate ?? true,
+          pbo_threshold: initialValidationConfig.pbo_threshold ?? 0.5,
+          enable_dsr_gate: initialValidationConfig.enable_dsr_gate ?? false,
+          min_dsr: initialValidationConfig.min_dsr ?? 0.95,
+          dsr_effective_trials:
+            initialValidationConfig.dsr_effective_trials === undefined
+              ? null
+              : initialValidationConfig.dsr_effective_trials,
+          dsr_sigma_sharpe:
+            initialValidationConfig.dsr_sigma_sharpe ?? 1.0,
         },
 
         // 反復改善ループ設定
@@ -543,19 +554,29 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               🛡️ 過学習対策
             </h5>
 
-            {/* OOS設定 */}
-            <InputField
-              label="Out-of-Sample 分割比率"
-              type="number"
-              value={evaluationConfig.oos_split_ratio ?? 0.25}
-              onChange={(val) =>
-                handleEvaluationConfigChange({ oos_split_ratio: val })
-              }
-              min={0}
-              max={0.5}
-              step={0.05}
-              description="検証用データの割合 (0.0-0.5)"
-            />
+            {/* 評価モード（明示指定。auto はフラグから自動判定） */}
+            <div className="mt-3">
+              <label className="block text-xs text-indigo-200 mb-1">
+                評価モード (evaluation_mode)
+              </label>
+              <select
+                value={evaluationConfig.evaluation_mode ?? "auto"}
+                onChange={(e) =>
+                  handleEvaluationConfigChange({ evaluation_mode: e.target.value })
+                }
+                className="w-full rounded bg-indigo-950/50 border border-indigo-500/40 text-indigo-100 text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="auto">auto（自動判定）</option>
+                <option value="walk_forward">
+                  walk_forward（WFA / 推奨）
+                </option>
+                <option value="single">single（単一評価）</option>
+              </select>
+              <p className="text-[11px] text-indigo-300/70 mt-1">
+                実運用に最も近いのは WFA。最終検証（自動検証パイプライン）は
+                WFA に固定されます。
+              </p>
+            </div>
 
             {/* WFA設定 */}
             <div className="mt-3 space-y-2">
@@ -684,6 +705,93 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 step={0.01}
                 description="全フォールドの最大DD上限（空欄でチェックなし）"
               />
+              <div className="pt-1 border-t border-rose-500/30">
+                <label className="flex items-center space-x-2 pt-2">
+                  <input
+                    type="checkbox"
+                    checked={validationConfig.enable_pbo_gate ?? true}
+                    onChange={(e) =>
+                      handleValidationConfigChange({
+                        enable_pbo_gate: e.target.checked,
+                      })
+                    }
+                    className="rounded border-rose-500 text-rose-600 focus:ring-rose-500"
+                  />
+                  <span className="text-sm text-rose-200">
+                    PBO ゲート（負けフォールド比率）
+                  </span>
+                </label>
+                <p className="text-[11px] text-rose-300/70 mt-1 pl-6">
+                  過半数のフォールドで利益を出せていない戦略を過学習として弾きます。
+                </p>
+                {(validationConfig.enable_pbo_gate ?? true) && (
+                  <div className="pl-6 mt-2">
+                    <InputField
+                      label="PBO閾値 (pbo_threshold)"
+                      type="number"
+                      value={validationConfig.pbo_threshold ?? 0.5}
+                      onChange={(value) =>
+                        handleValidationConfigChange({
+                          pbo_threshold: value,
+                        })
+                      }
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      description="負けフォールド比率の上限（0.0-1.0）"
+                    />
+                  </div>
+                )}
+                <label className="flex items-center space-x-2 pt-3">
+                  <input
+                    type="checkbox"
+                    checked={validationConfig.enable_dsr_gate ?? false}
+                    onChange={(e) =>
+                      handleValidationConfigChange({
+                        enable_dsr_gate: e.target.checked,
+                      })
+                    }
+                    className="rounded border-rose-500 text-rose-600 focus:ring-rose-500"
+                  />
+                  <span className="text-sm text-rose-200">
+                    DSR ゲート（多重検定補正 / 厳格）
+                  </span>
+                </label>
+                <p className="text-[11px] text-rose-300/70 mt-1 pl-6">
+                  GA の探索試行数でシャープレシオを割り引いた有意性を判定。
+                  有効にすると合格水準が大きく上がります。
+                </p>
+                {validationConfig.enable_dsr_gate && (
+                  <div className="pl-6 mt-2 space-y-2">
+                    <InputField
+                      label="DSR下限 (min_dsr)"
+                      type="number"
+                      value={validationConfig.min_dsr ?? 0.95}
+                      onChange={(value) =>
+                        handleValidationConfigChange({ min_dsr: value })
+                      }
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      description="Deflated Sharpe Ratio の合格下限（0.0-1.0）"
+                    />
+                    <InputField
+                      label="有効試行数"
+                      type="number"
+                      value={validationConfig.dsr_effective_trials}
+                      onChange={(value) =>
+                        handleValidationConfigChange({
+                          dsr_effective_trials: value,
+                        })
+                      }
+                      allowEmptyNumber
+                      min={1}
+                      step={1}
+                      description="空欄なら個体数×世代数を自動計算"
+                    />
+                  </div>
+                )}
+              </div>
               <label className="flex items-center space-x-2 pt-1">
                 <input
                   type="checkbox"

@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import logging
 from collections.abc import Mapping
+from statistics import median
 from typing import Any
 
 from ..config import objective_registry
@@ -24,6 +25,11 @@ from ..core.evaluation.evaluation_report import EvaluationReport
 from ..core.evaluation.evaluation_strategies import EvaluationStrategy
 from ..core.evaluation.individual_evaluator import IndividualEvaluator
 from ..genes.genetic_utils import GeneticUtils
+from .overfitting_metrics import (
+    deflated_sharpe_ratio,
+    estimate_test_window_years,
+    probability_of_backtest_overfitting,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +171,12 @@ class StrategyValidationService:
                 backtest_config,
                 validation_ga_config,
             )
-            validation = self._judge(report, validation_config)
+            validation = self._judge(
+                report,
+                validation_config,
+                validation_ga_config,
+                backtest_config,
+            )
             if validation.get("passed") and robustness_config.enabled:
                 validation = self._apply_robustness_gate(
                     validation,
@@ -257,6 +268,8 @@ class StrategyValidationService:
         self,
         report: EvaluationReport,
         validation_config: ValidationConfig,
+        ga_config: GAConfig,
+        backtest_config: dict[str, Any],
     ) -> dict[str, Any]:
         """評価レポートを合格基準に照らして判定する。"""
         reasons: list[str] = []
@@ -363,6 +376,68 @@ class StrategyValidationService:
                         f"{validation_config.max_drawdown:.2%} 超過"
                     )
 
+        # PBO ゲート: 負けフォールド（total_return < 0）の比率が閾値を超えると不合格。
+        # WFA のフォールド合格は構造的制約のみで判定されるため、
+        # 「収益性の観点で過半数のフォールドが負け」の戦略をここで弾く。
+        pbo: float | None = None
+        n_losing_folds: int | None = None
+        if validation_config.enable_pbo_gate:
+            fold_returns = self._collect_scenario_metric(report, "total_return")
+            if scenario_count > 0 and len(fold_returns) == scenario_count:
+                pbo = probability_of_backtest_overfitting(fold_returns)
+                n_losing_folds = sum(1 for value in fold_returns if value < 0.0)
+                if pbo is not None and pbo > validation_config.pbo_threshold:
+                    reasons.append(
+                        f"PBO超過: 負けフォールド {n_losing_folds}/{scenario_count} "
+                        f"(PBO={pbo:.2f}) が閾値 "
+                        f"{validation_config.pbo_threshold:.2f} を超えています"
+                    )
+            else:
+                logger.debug(
+                    "PBOゲート: total_return が全シナリオで取得できないためスキップ"
+                )
+
+        # DSR ゲート: 多重検定補正後のシャープレシオ有意性（厳格な統計検定）。
+        dsr: float | None = None
+        if validation_config.enable_dsr_gate:
+            fold_sharpes = self._collect_scenario_metric(report, "sharpe_ratio")
+            if scenario_count > 0 and len(fold_sharpes) == scenario_count:
+                observed_sr = float(median(fold_sharpes))
+                n_years = estimate_test_window_years(
+                    str(backtest_config.get("start_date", "") or ""),
+                    str(backtest_config.get("end_date", "") or ""),
+                    int(validation_config.wfa_n_folds),
+                    float(validation_config.wfa_train_ratio),
+                )
+                effective_trials = validation_config.dsr_effective_trials
+                if effective_trials is None:
+                    effective_trials = max(
+                        1,
+                        int(ga_config.population_size)
+                        * max(1, int(ga_config.generations)),
+                    )
+                if n_years is None or n_years < 1.0:
+                    reasons.append(
+                        "DSRゲート: 検証期間が短すぎて統計力を確保できません"
+                    )
+                else:
+                    dsr = deflated_sharpe_ratio(
+                        observed_sharpe=observed_sr,
+                        n_observations=n_years,
+                        n_trials=int(effective_trials),
+                        sigma_sharpe=float(validation_config.dsr_sigma_sharpe or 1.0),
+                    )
+                    if dsr < validation_config.min_dsr:
+                        reasons.append(
+                            f"DSR {dsr:.3f} が閾値 "
+                            f"{validation_config.min_dsr} 未満"
+                            f"（SR={observed_sr:.2f}, 試行数={effective_trials}）"
+                        )
+            else:
+                logger.debug(
+                    "DSRゲート: sharpe_ratio が全シナリオで取得できないためスキップ"
+                )
+
         report_summary = None
         to_summary_dict = getattr(report, "to_summary_dict", None)
         if callable(to_summary_dict):
@@ -378,6 +453,9 @@ class StrategyValidationService:
             "scenario_count": scenario_count,
             "mode": report.mode,
             "reasons": reasons,
+            "pbo": pbo,
+            "n_losing_folds": n_losing_folds,
+            "dsr": dsr,
             "report_summary": report_summary,
         }
 
@@ -493,7 +571,10 @@ class StrategyValidationService:
         evaluation_config.wfa_n_folds = validation_config.wfa_n_folds
         evaluation_config.wfa_train_ratio = validation_config.wfa_train_ratio
         evaluation_config.wfa_anchored = validation_config.wfa_anchored
-        # OOS / PurgedKFold が WFA と競合しないように無効化
+        # 最終品質ゲートは明示的に WFA モードへ固定する。
+        # これにより OOS / PurgedKFold との競合を設定面から排除できる。
+        evaluation_config.evaluation_mode = "walk_forward"
+        # OOS / PurgedKFold が WFA と競合しないように無効化（後方互換のため明示）
         evaluation_config.oos_split_ratio = 0.0
         validation_ga_config.enable_purged_kfold = False
 

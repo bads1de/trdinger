@@ -297,8 +297,8 @@ describe("GAConfigForm", () => {
       />
     );
 
-    // 合格率下限を変更（InputFieldのinputは表示値で特定）
-    const minPassRateInput = screen.getByDisplayValue("0.5");
+    // 合格率下限を変更（InputFieldのinputはラベルから特定）
+    const minPassRateInput = getInputFieldByLabel("合格率下限 (min_pass_rate)");
     fireEvent.change(minPassRateInput, { target: { value: "0.8" } });
 
     // 候補検証をオフにする
@@ -331,6 +331,36 @@ describe("GAConfigForm", () => {
 
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
     expect(submittedConfig.ga_config.validation_config.min_trades).toBe(30);
+  });
+
+  test("PBO/DSR ゲート設定を変更して送信できること", () => {
+    renderWithTooltipProvider(
+      <GAConfigForm
+        onSubmit={mockOnSubmit}
+        onClose={mockOnClose}
+        initialConfig={initialConfig}
+      />
+    );
+
+    // PBO 閾値を変更
+    const pboThresholdInput = getInputFieldByLabel("PBO閾値 (pbo_threshold)");
+    fireEvent.change(pboThresholdInput, { target: { value: "0.4" } });
+
+    // DSR ゲートを有効化
+    const dsrCheckbox = screen.getByLabelText(/DSR ゲート/);
+    fireEvent.click(dsrCheckbox);
+    const dsrMinInput = getInputFieldByLabel("DSR下限 (min_dsr)");
+    fireEvent.change(dsrMinInput, { target: { value: "0.9" } });
+
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
+
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    const validationConfig = submittedConfig.ga_config.validation_config;
+    expect(validationConfig.enable_pbo_gate).toBe(true);
+    expect(validationConfig.pbo_threshold).toBe(0.4);
+    expect(validationConfig.enable_dsr_gate).toBe(true);
+    expect(validationConfig.min_dsr).toBe(0.9);
   });
 
   test("validation_configが初期設定で有効ならチェックされていること", () => {

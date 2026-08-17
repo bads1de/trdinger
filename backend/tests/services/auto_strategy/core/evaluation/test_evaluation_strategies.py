@@ -9,7 +9,65 @@ from app.services.auto_strategy.core.evaluation.evaluation_report import (
 )
 from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
     EvaluationStrategy,
+    resolve_evaluation_mode,
 )
+
+
+def _config(**eval_kwargs: object) -> SimpleNamespace:
+    """evaluation_config と enable_purged_kfold（GAConfig トップレベル）を持つテスト用設定を生成する。"""
+    purged = bool(eval_kwargs.pop("enable_purged_kfold", False))
+    defaults = {
+        "evaluation_mode": "auto",
+        "enable_walk_forward": False,
+        "oos_split_ratio": 0.0,
+    }
+    defaults.update(eval_kwargs)
+    return SimpleNamespace(
+        enable_purged_kfold=purged,
+        evaluation_config=SimpleNamespace(**defaults),
+    )
+
+
+class TestResolveEvaluationMode:
+    """evaluation_mode 解決ロジックのテスト。"""
+
+    def test_explicit_mode_wins_over_flags(self):
+        # 明示的に walk_forward を指定しても、enable_purged_kfold=True が競合しても WFA 優先
+        cfg = _config(
+            evaluation_mode="walk_forward",
+            enable_purged_kfold=True,
+            enable_walk_forward=False,
+            oos_split_ratio=0.25,
+        )
+        assert resolve_evaluation_mode(cfg) == "walk_forward"
+
+    def test_explicit_oos_mode(self):
+        cfg = _config(evaluation_mode="oos", oos_split_ratio=0.0)
+        assert resolve_evaluation_mode(cfg) == "oos"
+
+    def test_explicit_single_mode(self):
+        cfg = _config(evaluation_mode="single", oos_split_ratio=0.25)
+        assert resolve_evaluation_mode(cfg) == "single"
+
+    def test_auto_derives_purged_kfold_from_flag(self):
+        cfg = _config(enable_purged_kfold=True, oos_split_ratio=0.25)
+        assert resolve_evaluation_mode(cfg) == "purged_kfold"
+
+    def test_auto_derives_walk_forward_from_flag(self):
+        cfg = _config(enable_walk_forward=True, oos_split_ratio=0.25)
+        assert resolve_evaluation_mode(cfg) == "walk_forward"
+
+    def test_auto_derives_oos_from_ratio(self):
+        cfg = _config(oos_split_ratio=0.25)
+        assert resolve_evaluation_mode(cfg) == "oos"
+
+    def test_auto_derives_single_when_all_off(self):
+        cfg = _config()
+        assert resolve_evaluation_mode(cfg) == "single"
+
+    def test_unknown_explicit_mode_falls_back_to_flags(self):
+        cfg = _config(evaluation_mode="bogus", oos_split_ratio=0.3)
+        assert resolve_evaluation_mode(cfg) == "oos"
 
 
 class TestEvaluationStrategy:
@@ -26,6 +84,28 @@ class TestEvaluationStrategy:
             )
         )
         self.strategy = EvaluationStrategy(self.evaluator)
+
+    def test_execute_report_routes_on_explicit_mode(self):
+        # 明示モード（walk_forward）は enable_purged_kfold フラグより優先される
+        cfg = _config(
+            evaluation_mode="walk_forward",
+            enable_purged_kfold=True,
+        )
+        self.strategy._evaluate_with_walk_forward_report = Mock(
+            return_value=Mock(aggregated_fitness=(0.7,))
+        )
+        self.strategy._evaluate_with_purged_kfold_report = Mock()
+        report = self.strategy.execute_report(
+            object(),
+            {
+                "start_date": "2024-01-01 00:00:00",
+                "end_date": "2024-02-01 00:00:00",
+            },
+            cfg,
+        )
+        assert report.aggregated_fitness == (0.7,)
+        self.strategy._evaluate_with_walk_forward_report.assert_called_once()
+        self.strategy._evaluate_with_purged_kfold_report.assert_not_called()
 
     def test_execute_prefers_purged_kfold_when_enabled(self):
         config = SimpleNamespace(

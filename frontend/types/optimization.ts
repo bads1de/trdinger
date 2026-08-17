@@ -31,6 +31,8 @@ export interface GAEvaluationConfig {
   early_termination_settings?: EarlyTerminationSettingsConfig;
   oos_split_ratio?: number;
   oos_fitness_weight?: number;
+  /** 評価モード: "single" | "oos" | "walk_forward" | "purged_kfold" | "auto"。未指定("auto")はフラグから自動判定 */
+  evaluation_mode?: string;
   enable_walk_forward?: boolean;
   wfa_n_folds?: number;
   wfa_train_ratio?: number;
@@ -56,6 +58,18 @@ export interface GAValidationConfig {
   min_trades?: number | null;
   /** 全フォールドの最大ドローダウン上限（null の場合はチェックしない） */
   max_drawdown?: number | null;
+  /** PBO ゲートを有効化するか（負けフォールド比率の判定） */
+  enable_pbo_gate?: boolean;
+  /** 合格できる負けフォールドの最大比率（0.0-1.0） */
+  pbo_threshold?: number;
+  /** Deflated Sharpe Ratio ゲートを有効化するか（多重検定補正） */
+  enable_dsr_gate?: boolean;
+  /** DSR の合格下限（0.0-1.0） */
+  min_dsr?: number;
+  /** DSR の有効試行数（null の場合は population_size * generations） */
+  dsr_effective_trials?: number | null;
+  /** DSR の帰無分布シャープレシオ標準偏差 */
+  dsr_sigma_sharpe?: number;
   /** 検証用 WFA フォールド数 */
   wfa_n_folds?: number;
   /** 検証用 WFA トレーニング比率 */

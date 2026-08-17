@@ -223,6 +223,10 @@ class EvaluationConfig(NestedConfigMixin):
     # GA選抜用の WFA を IS 窓内で実行するフラグ (デフォルト無効)。
     # 有効時は execute_ga_report が IS 窓を fold 分割し robust 集約で選抜する。
     enable_walk_forward_for_ga: bool = False
+    # 明示的な評価モード（"single" | "oos" | "walk_forward" | "purged_kfold" | "auto"）。
+    # "auto"（既定）の場合は従来のフラグ群
+    # （enable_purged_kfold / enable_walk_forward / oos_split_ratio）から自動判定する（後方互換）。
+    evaluation_mode: str = "auto"
 
 
 @dataclass
@@ -288,6 +292,23 @@ class ValidationConfig(NestedConfigMixin):
     min_trades: int | None = None
     # 全フォールドの最大ドローダウン上限（0.0-1.0、None の場合はチェックしない）
     max_drawdown: float | None = None
+
+    # 過学習対策ゲート（PBO / DSR）
+    # PBO (Probability of Backtest Overfitting) 風ゲート:
+    # 総リターンが負のフォールドの比率が pbo_threshold を超える戦略は不合格。
+    # 例: 0.5 = 過半数のフォールドで利益を出せていない戦略は過学習として弾く。
+    enable_pbo_gate: bool = True
+    pbo_threshold: float = 0.5
+    # Deflated Sharpe Ratio ゲート（多重検定補正）。
+    # GA の探索試行数（population_size x generations）でシャープレシオを
+    # 割り引いた有意性が min_dsr 未満の戦略は不合格。
+    # 厳格な統計検定のためデフォルト無効（有効時は合格水準が大きく上がる）。
+    enable_dsr_gate: bool = False
+    min_dsr: float = 0.95
+    # DSR の有効試行数（None の場合は population_size * generations を自動計算）
+    dsr_effective_trials: int | None = None
+    # 帰無分布での年率シャープレシオの標準偏差（通常 1.0 を仮定）
+    dsr_sigma_sharpe: float = 1.0
 
     # WFA 設定（検証用。評価設定を上書きする）
     # フォールド数と train 比率は、テスト窓が取引回数確保に十分な長さに

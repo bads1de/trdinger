@@ -28,6 +28,45 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# 評価モードの取りうる値（レポートの mode / 自動判定にも使用）
+EVALUATION_MODES = frozenset({"single", "oos", "walk_forward", "purged_kfold"})
+# evaluation_mode 未指定（自動判定）を表す値
+AUTO_EVALUATION_MODE = "auto"
+
+
+def resolve_evaluation_mode(config: GAConfig) -> str:
+    """GAConfig から有効な評価モードを決定する。
+
+    明示的な `evaluation_config.evaluation_mode` が設定されていればそれを優先し、
+    "auto"（未指定）の場合は従来どおりフラグ群から自動判定する（後方互換）。
+
+    Args:
+        config: GA設定。
+
+    Returns:
+        str: "single" | "oos" | "walk_forward" | "purged_kfold" のいずれか。
+    """
+    evaluation_config = getattr(config, "evaluation_config", None)
+
+    explicit = getattr(evaluation_config, "evaluation_mode", AUTO_EVALUATION_MODE)
+    if explicit and explicit != AUTO_EVALUATION_MODE:
+        if explicit in EVALUATION_MODES:
+            return explicit
+        logger.warning(
+            "未知の evaluation_mode=%r を無視し、フラグから自動判定します", explicit
+        )
+
+    if getattr(config, "enable_purged_kfold", False):
+        return "purged_kfold"
+    if evaluation_config is not None and bool(
+        getattr(evaluation_config, "enable_walk_forward", False)
+    ):
+        return "walk_forward"
+    oos_ratio = float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0)
+    if oos_ratio > 0.0:
+        return "oos"
+    return "single"
+
 
 class EvaluationStrategy:
     """
@@ -47,10 +86,13 @@ class EvaluationStrategy:
         self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
     ) -> EvaluationReport:
         """
-        GA設定で定義された評価戦略（OOS、WFA、K-Fold、単一評価等）を選択・実行し、
+        GA設定で定義された評価戦略（PurgedKFold、WFA、OOS、単一評価等）を選択・実行し、
         集約された評価レポートを生成します。
 
         このメソッドは、個体評価の「ルーティング」を担当します。
+        モードは `evaluation_config.evaluation_mode` で明示的に指定され、
+        未指定 ("auto") の場合は従来のフラグ群から自動判定されます
+        （`resolve_evaluation_mode` を参照）。
 
         Args:
             gene (StrategyGene): 評価対象の戦略遺伝子。
@@ -60,30 +102,33 @@ class EvaluationStrategy:
         Returns:
             EvaluationReport: 実行された全シナリオの結果と、それらを集約した適応度を保持するオブジェクト。
         """
-        evaluation_config = getattr(config, "evaluation_config", None)
+        mode = resolve_evaluation_mode(config)
 
         # PurgedKFold評価（過学習対策）
-        if getattr(config, "enable_purged_kfold", False):
+        if mode == "purged_kfold":
             return self._evaluate_with_purged_kfold_report(
                 gene, base_backtest_config, config
             )
 
-        if evaluation_config is not None and getattr(
-            evaluation_config, "enable_walk_forward", False
-        ):
+        # Walk-Forward 分析（最終検証・品質ゲート）
+        if mode == "walk_forward":
             return self._evaluate_with_walk_forward_report(
                 gene, base_backtest_config, config
             )
 
-        oos_ratio = getattr(evaluation_config, "oos_split_ratio", 0.0)
-        oos_weight = getattr(evaluation_config, "oos_fitness_weight", 0.5)
-
-        if oos_ratio > 0.0:
+        # OOS 検証（IS/OOS 分割の重み付き集約）
+        if mode == "oos":
+            evaluation_config = getattr(config, "evaluation_config", None)
+            oos_ratio = float(getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0)
+            oos_weight = float(
+                getattr(evaluation_config, "oos_fitness_weight", 0.5) or 0.5
+            )
             return self._evaluate_with_oos_report(
                 gene, base_backtest_config, config, oos_ratio, oos_weight
             )
-        else:
-            return self._evaluate_single_report(gene, base_backtest_config, config)
+
+        # 単一評価（既定）
+        return self._evaluate_single_report(gene, base_backtest_config, config)
 
     def execute_ga_report(
         self, gene: Any, base_backtest_config: dict[str, Any], config: GAConfig
