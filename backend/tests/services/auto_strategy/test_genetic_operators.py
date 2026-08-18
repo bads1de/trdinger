@@ -401,6 +401,9 @@ class TestGeneticOperators:
     def test_mutate_indicators_smart_condition_injection(self, ga_config):
         """新しい指標が追加された際に、その指標を利用する条件が注入されることを確認"""
         from app.services.auto_strategy.genes.operators.mutation import mutate_indicators
+        from app.services.auto_strategy.utils.indicator_references import (
+            build_indicator_reference_name,
+        )
 
         gene = StrategyGene(
             indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
@@ -419,7 +422,9 @@ class TestGeneticOperators:
             if len(test_gene.indicators) > 1:
                 new_ind = test_gene.indicators[-1]
                 # 新しい指標が条件のどこかで参照されているか
-                valid_names = {new_ind.type, f"{new_ind.type}_{getattr(new_ind, 'timeframe', '')}"}
+                # 注入時は build_indicator_reference_name と同一の参照名が使われるため、
+                # 期待値も同じ関数で構築する（id/timeframe を含む場合を考慮）
+                valid_names = {build_indicator_reference_name(new_ind)}
                 for cond in test_gene.long_entry_conditions + test_gene.short_entry_conditions:
                     if isinstance(cond, Condition) and (
                         cond.left_operand in valid_names or cond.right_operand in valid_names

@@ -316,7 +316,8 @@ class ValidationConfig(NestedConfigMixin):
 
     # 合格判定基準
     # WFA のフォールド合格率（0.0-1.0）。この値以上の戦略のみ合格。
-    min_pass_rate: float = 0.5
+    # 0.33 は 3-fold で 1/3 合格でも通る緩和値（厳しすぎで全滅を防ぐ）。
+    min_pass_rate: float = 0.33
     # 集約プライマリフィットネスの下限（None の場合はチェックしない）
     min_primary_fitness: float | None = None
     # 全フォールドの最小取引回数（None の場合はチェックしない）

@@ -591,6 +591,11 @@ def mutate_strategy_gene(
         # 旧シード由来の価格×非価格スケール比較（恒真/恒偽）を閾値比較へ書き直す
         mutated.repair_condition_scales()
 
+        # 参照除去で空になったエントリー条件を修復（無効個体の無駄打ちを削減）
+        mutated.ensure_min_entry_conditions(
+            min_conditions=getattr(config, "min_conditions", 1) or 1
+        )
+
         return mutated
 
     except Exception as e:

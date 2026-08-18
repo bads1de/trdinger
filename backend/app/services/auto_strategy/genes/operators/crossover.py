@@ -131,6 +131,11 @@ def uniform_crossover(
     child1.repair_condition_scales()
     child2.repair_condition_scales()
 
+    # 空条件の修復
+    min_conds = getattr(config, "min_conditions", 1) or 1
+    child1.ensure_min_entry_conditions(min_conditions=min_conds)
+    child2.ensure_min_entry_conditions(min_conditions=min_conds)
+
     return child1, child2
 
 
@@ -316,5 +321,9 @@ def single_point_crossover(
     # 旧シード由来の価格×非価格スケール比較（恒真/恒偽）を閾値比較へ書き直す
     child1.repair_condition_scales()
     child2.repair_condition_scales()
+
+    min_conds = getattr(config, "min_conditions", 1) or 1
+    child1.ensure_min_entry_conditions(min_conditions=min_conds)
+    child2.ensure_min_entry_conditions(min_conditions=min_conds)
 
     return child1, child2

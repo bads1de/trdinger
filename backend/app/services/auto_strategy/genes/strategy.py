@@ -360,6 +360,48 @@ class StrategyGene:
         self.stateful_conditions = kept_stateful
         return removed
 
+    def ensure_min_entry_conditions(self, min_conditions: int = 1) -> int:
+        """
+        エントリー条件が空の場合に最低数を保証する。
+
+        repair_condition_references 後に呼ぶことで、参照切れ除去で 0 本に
+        なった個体の無効評価を防ぐ。
+        """
+        if min_conditions <= 0 or not self.indicators:
+            return 0
+        from ..utils.scale_compat import default_threshold_for, is_close_comparable_type
+
+        added = 0
+        for attr, side in (
+            ("long_entry_conditions", "long"),
+            ("short_entry_conditions", "short"),
+        ):
+            conditions = getattr(self, attr)
+            if len(conditions) >= min_conditions:
+                continue
+            enabled_inds = [ind for ind in self.indicators if ind.enabled] or self.indicators
+            if not enabled_inds:
+                continue
+            import random
+
+            while len(getattr(self, attr)) < min_conditions:
+                ind = random.choice(enabled_inds)
+                ref_name = build_indicator_reference_name(ind)
+                if is_close_comparable_type(ind.type):
+                    op = ">" if side == "long" else "<"
+                    cond = Condition(
+                        left_operand="close", operator=op, right_operand=ref_name
+                    )
+                else:
+                    thresh = default_threshold_for(ind.type, bullish=(side == "long"))
+                    op = "<" if side == "long" else ">"
+                    cond = Condition(
+                        left_operand=ref_name, operator=op, right_operand=thresh
+                    )
+                getattr(self, attr).append(cond)
+                added += 1
+        return added
+
     def repair_condition_scales(self) -> int:
         """
         価格オペランドと価格と同尺度でない指標の比較を閾値比較へ書き直す。
