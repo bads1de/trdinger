@@ -23,6 +23,25 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+WEEKEND_FILTER_NAME = "weekend_filter"
+
+
+def _ensure_weekend_filter(tool_genes: list[Any]) -> list[Any]:
+    """weekend_filter が常時ONで存在することを保証する。"""
+    from ..tool import ToolGene
+
+    existing = next(
+        (t for t in tool_genes if getattr(t, "tool_name", None) == WEEKEND_FILTER_NAME),
+        None,
+    )
+    if existing is not None:
+        existing.enabled = True
+    else:
+        tool_genes.append(
+            ToolGene(tool_name=WEEKEND_FILTER_NAME, enabled=True, params={})
+        )
+    return tool_genes
+
 
 def _crossover_optional(
     gene_class: type[Any],
@@ -94,6 +113,11 @@ def uniform_crossover(
     c1_meta, c2_meta = GeneticUtils.prepare_crossover_metadata(parent1, parent2)
     child1_params["metadata"] = c1_meta
     child2_params["metadata"] = c2_meta
+
+    # weekend_filter 常時ONを保証
+    for params in (child1_params, child2_params):
+        tgs: list[Any] = params.get("tool_genes") or []
+        params["tool_genes"] = _ensure_weekend_filter(list(tgs))
 
     child1 = strategy_gene_class(**child1_params)
     child2 = strategy_gene_class(**child2_params)
@@ -226,6 +250,8 @@ def single_point_crossover(
 
     c1_tool = RandomGeneGenerator.enforce_filter_limit(config, c1_tool)
     c2_tool = RandomGeneGenerator.enforce_filter_limit(config, c2_tool)
+    c1_tool = _ensure_weekend_filter(c1_tool)
+    c2_tool = _ensure_weekend_filter(c2_tool)
 
     if random.random() < 0.5:
         c1_long_exit_cond = GeneticUtils.copy_conditions(parent1.long_exit_conditions)

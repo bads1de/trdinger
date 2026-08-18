@@ -174,18 +174,30 @@ class RandomGeneGenerator:
             postprocess(gene)
         return gene
 
+    WEEKEND_FILTER_NAME = "weekend_filter"
+
     def _generate_tool_genes_template(self) -> list[ToolGene]:
         """
         ツール遺伝子テンプレートを生成する
 
         ツールレジストリから全ツールを取得し、ツール遺伝子テンプレートを生成します。
         各ツールの有効フラグは優先度に応じた確率で設定されます。
+        weekend_filter は経験則で有効なため常時ONとする。
 
         Returns:
             List[ToolGene]: ツール遺伝子テンプレートリスト
         """
         tool_genes: list[ToolGene] = []
         for tool in tool_registry.get_all():
+            if tool.name == self.WEEKEND_FILTER_NAME:
+                tool_genes.append(
+                    ToolGene(
+                        tool_name=tool.name,
+                        enabled=True,
+                        params=tool.get_default_params(),
+                    )
+                )
+                continue
             # 優先度に応じた確率を取得
             priority = tool.definition.priority
             probability = self.TOOL_ENABLE_PROBABILITIES.get(
@@ -198,7 +210,7 @@ class RandomGeneGenerator:
                     params=tool.get_default_params(),
                 )
             )
-        # フィルター数制限を強制
+        # フィルター数制限を強制（weekend_filterはコスト0のため保護される）
         return self.enforce_filter_limit(self.config, tool_genes)
 
     @staticmethod
@@ -225,6 +237,8 @@ class RandomGeneGenerator:
 
         # コストを計算
         def get_cost(tool_gene: ToolGene) -> int:
+            if tool_gene.tool_name == RandomGeneGenerator.WEEKEND_FILTER_NAME:
+                return -1
             tool = tool_registry.get(tool_gene.tool_name)
             if tool:
                 priority = tool.definition.priority
@@ -234,8 +248,19 @@ class RandomGeneGenerator:
         enabled_filters.sort(key=get_cost, reverse=True)
 
         # 制限を超える場合、コストの高いフィルターから無効化
+        # weekend_filter は常に保護する
         while len(enabled_filters) > max_filters:
             tool_to_disable = enabled_filters.pop(0)
+            if tool_to_disable.tool_name == RandomGeneGenerator.WEEKEND_FILTER_NAME:
+                enabled_filters.append(tool_to_disable)
+                enabled_filters.sort(key=get_cost, reverse=True)
+                # weekend_filter以外が残っていなければ打ち切る
+                if all(
+                    t.tool_name == RandomGeneGenerator.WEEKEND_FILTER_NAME
+                    for t in enabled_filters
+                ):
+                    break
+                continue
             tool_to_disable.enabled = False
             disabled_filters.append(tool_to_disable)
 

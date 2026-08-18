@@ -133,6 +133,9 @@ class StrategyValidationService:
                     pool.append(strategy)
 
             # 第1パス: 未見の指標構成を優先して選ぶ（多様性確保）
+            target_limit = max(
+                0, validation_config.max_candidates - len(candidates_to_validate)
+            )
             diverse: list[Any] = []
             for strategy in pool:
                 key = self._get_strategy_key(strategy)
@@ -143,17 +146,17 @@ class StrategyValidationService:
                     continue
                 seen_signatures.add(signature)
                 diverse.append(strategy)
-                if len(diverse) >= validation_config.max_candidates:
+                if len(diverse) >= target_limit:
                     break
 
             # 第2パス: 多様性で埋め切れない場合は fitness 上位から補充
-            if len(diverse) < validation_config.max_candidates:
+            if len(diverse) < target_limit:
                 for strategy in pool:
                     key = self._get_strategy_key(strategy)
                     if key in seen_keys or strategy in diverse:
                         continue
                     diverse.append(strategy)
-                    if len(diverse) >= validation_config.max_candidates:
+                    if len(diverse) >= target_limit:
                         break
 
             for strategy in diverse:

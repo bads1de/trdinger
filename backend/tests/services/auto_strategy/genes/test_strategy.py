@@ -117,14 +117,18 @@ class TestStrategyGene:
         mutated = sample_gene.adaptive_mutate(
             population, mock_config, base_mutation_rate=0.5
         )
-        assert mutated.metadata["adaptive_mutation_rate"] < 0.5
+        rate_high = mutated.metadata["adaptive_mutation_rate"]
+        assert isinstance(rate_high, (int, float))
+        assert rate_high < 0.5
 
         # 分散が小さい場合 -> 変異率上昇
         mock_config.mutation_config.adaptive_variance_threshold = 100.0
         mutated = sample_gene.adaptive_mutate(
             population, mock_config, base_mutation_rate=0.1
         )
-        assert mutated.metadata["adaptive_mutation_rate"] > 0.1
+        rate_low = mutated.metadata["adaptive_mutation_rate"]
+        assert isinstance(rate_low, (int, float))
+        assert rate_low > 0.1
 
     def test_validate(self, sample_gene):
         # 実際に GeneValidator を呼び出す

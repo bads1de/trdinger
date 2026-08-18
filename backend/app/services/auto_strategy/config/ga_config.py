@@ -194,6 +194,38 @@ class MutationConfig(NestedConfigMixin):
     adaptive_increase_multiplier: float = float(
         cast(float, GA_MUTATION_SETTINGS["adaptive_mutation_rate_increase_multiplier"])
     )
+    condition_threshold_mutation_probability: float = float(
+        cast(
+            float,
+            GA_MUTATION_SETTINGS.get("condition_threshold_mutation_probability", 0.3),
+        )
+    )
+    condition_operand_swap_probability: float = float(
+        cast(
+            float,
+            GA_MUTATION_SETTINGS.get("condition_operand_swap_probability", 0.2),
+        )
+    )
+    condition_add_delete_probability: float = float(
+        cast(
+            float,
+            GA_MUTATION_SETTINGS.get("condition_add_delete_probability", 0.15),
+        )
+    )
+    indicator_condition_injection_probability: float = float(
+        cast(
+            float,
+            GA_MUTATION_SETTINGS.get(
+                "indicator_condition_injection_probability", 0.4
+            ),
+        )
+    )
+    tool_gene_add_delete_probability: float = float(
+        cast(
+            float,
+            GA_MUTATION_SETTINGS.get("tool_gene_add_delete_probability", 0.2),
+        )
+    )
     valid_condition_operators: list[str] = field(
         default_factory=lambda: OPERATORS.copy()
     )

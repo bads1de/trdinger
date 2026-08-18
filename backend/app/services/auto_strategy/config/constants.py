@@ -220,6 +220,11 @@ GA_MUTATION_SETTINGS = {
     "adaptive_mutation_variance_threshold": 0.001,
     "adaptive_mutation_rate_decrease_multiplier": 0.8,
     "adaptive_mutation_rate_increase_multiplier": 1.2,
+    "condition_threshold_mutation_probability": 0.3,
+    "condition_operand_swap_probability": 0.2,
+    "condition_add_delete_probability": 0.15,
+    "indicator_condition_injection_probability": 0.4,
+    "tool_gene_add_delete_probability": 0.6,
 }
 
 # === GA TPSL関連定数 ===

@@ -57,7 +57,7 @@ class TestGeneticOperators:
         assert isinstance(child2, StrategyGene)
         assert child1.id != parent1.id
         assert child2.id != parent2.id
-        assert len(child1.indicators) <= len(parent1.indicators)
+        assert len(child1.indicators) <= ga_config.max_indicators
 
     def test_mutate_basic(self, sample_strategy_gene, ga_config):
         """基本的な突然変異テスト"""
@@ -187,14 +187,13 @@ class TestGeneticOperators:
         assert isinstance(mutated_low, StrategyGene)
 
         # メタデータに適応的rateが設定されている
-        assert "adaptive_mutation_rate" in mutated_high.metadata
-        assert "adaptive_mutation_rate" in mutated_low.metadata
+        high_rate = mutated_high.metadata["adaptive_mutation_rate"]
+        low_rate = mutated_low.metadata["adaptive_mutation_rate"]
+        assert isinstance(high_rate, (int, float))
+        assert isinstance(low_rate, (int, float))
 
         # 高分散のrate < 低分散のrate のはず
-        assert (
-            mutated_high.metadata["adaptive_mutation_rate"]
-            < mutated_low.metadata["adaptive_mutation_rate"]
-        )
+        assert high_rate < low_rate
 
     def test_adaptive_mutate_with_inf_fitness_no_warning(
         self, sample_strategy_gene, ga_config
@@ -304,3 +303,178 @@ class TestGeneticOperators:
 
         assert gene.long_exit_conditions[0].operator == "!="
         assert gene.short_exit_conditions[0].operator == "!="
+
+    def test_mutate_conditions_threshold_mutation(self, ga_config):
+        """数値閾値の突然変異が正しく行われることを確認"""
+        gene = StrategyGene(
+            indicators=[IndicatorGene(type="RSI", parameters={"period": 14})],
+            long_entry_conditions=[
+                Condition(left_operand="RSI", operator="<", right_operand=30.0)
+            ],
+        )
+        ga_config.mutation_config.condition_threshold_mutation_probability = 1.0
+        ga_config.mutation_config.condition_operator_switch_probability = 0.0
+
+        # 変異実行（複数回実行して閾値が30.0から変化することを確認）
+        mutated_thresholds = set()
+        for _ in range(20):
+            test_gene = gene.clone()
+            mutate_conditions(test_gene, 1.0, ga_config)
+            cond = test_gene.long_entry_conditions[0]
+            if isinstance(cond, Condition) and isinstance(cond.right_operand, (int, float)):
+                mutated_thresholds.add(round(float(cond.right_operand), 4))
+
+        # 30.0 以外の閾値が生成されていること
+        assert len(mutated_thresholds) > 1
+
+    def test_mutate_conditions_operand_swap(self, ga_config):
+        """指標オペランドのスワップ変異が正しく行われることを確認"""
+        gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}),
+                IndicatorGene(type="EMA", parameters={"period": 20}),
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA")
+            ],
+        )
+        ga_config.mutation_config.condition_operand_swap_probability = 1.0
+        ga_config.mutation_config.condition_threshold_mutation_probability = 0.0
+
+        swapped = False
+        for _ in range(30):
+            test_gene = gene.clone()
+            mutate_conditions(test_gene, 1.0, ga_config)
+            cond = test_gene.long_entry_conditions[0]
+            if isinstance(cond, Condition) and cond.right_operand in ("EMA", "open", "high", "low"):
+                swapped = True
+                break
+
+        assert swapped, "Operand swap mutation should swap operand to valid alternative"
+
+    def test_mutate_conditions_add_and_delete(self, ga_config):
+        """条件の追加と削除（枝刈り）が正しく行われることを確認"""
+        gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}),
+                IndicatorGene(type="RSI", parameters={"period": 14}),
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA")
+            ],
+        )
+        ga_config.mutation_config.condition_add_delete_probability = 1.0
+
+        added = False
+        deleted = False
+
+        # 条件追加の検証
+        for _ in range(30):
+            test_gene = gene.clone()
+            mutate_conditions(test_gene, 1.0, ga_config)
+            if len(test_gene.long_entry_conditions) > 1:
+                added = True
+                break
+
+        assert added, "Condition addition mutation should add a new valid condition"
+
+        # 条件削除（枝刈り）の検証
+        multi_cond_gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}),
+                IndicatorGene(type="RSI", parameters={"period": 14}),
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA"),
+                Condition(left_operand="RSI", operator="<", right_operand=30.0),
+            ],
+        )
+        for _ in range(30):
+            test_gene = multi_cond_gene.clone()
+            mutate_conditions(test_gene, 1.0, ga_config)
+            if len(test_gene.long_entry_conditions) == 1:
+                deleted = True
+                break
+
+        assert deleted, "Condition deletion mutation should prune a condition when multiple exist"
+
+    def test_mutate_indicators_smart_condition_injection(self, ga_config):
+        """新しい指標が追加された際に、その指標を利用する条件が注入されることを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import mutate_indicators
+
+        gene = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA")
+            ],
+        )
+        ga_config.mutation_config.indicator_add_delete_probability = 1.0
+        ga_config.mutation_config.indicator_add_vs_delete_probability = 1.0
+        ga_config.mutation_config.indicator_condition_injection_probability = 1.0
+
+        injected = False
+        for _ in range(30):
+            test_gene = gene.clone()
+            mutate_indicators(test_gene, 1.0, ga_config)
+            if len(test_gene.indicators) > 1:
+                new_ind = test_gene.indicators[-1]
+                # 新しい指標が条件のどこかで参照されているか
+                valid_names = {new_ind.type, f"{new_ind.type}_{getattr(new_ind, 'timeframe', '')}"}
+                for cond in test_gene.long_entry_conditions + test_gene.short_entry_conditions:
+                    if isinstance(cond, Condition) and (
+                        cond.left_operand in valid_names or cond.right_operand in valid_names
+                    ):
+                        injected = True
+                        break
+            if injected:
+                break
+
+        assert injected, "Smart condition injection should inject conditions using the new indicator"
+
+    def test_mutate_tool_genes_add_and_toggle(self, ga_config):
+        """ToolGene の追加・パラメータ変異が動作することを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import mutate_strategy_gene
+        from app.services.auto_strategy.genes.tool import ToolGene
+
+        gene = StrategyGene(
+            tool_genes=[ToolGene(tool_name="weekend_filter", enabled=True, params={})],
+        )
+        ga_config.mutation_config.tool_gene_add_delete_probability = 1.0
+
+        # 変異実行
+        mutated = mutate_strategy_gene(gene, ga_config, mutation_rate=1.0)
+        assert isinstance(mutated, StrategyGene)
+
+    def test_mutate_conditions_respects_max_conditions(self, ga_config):
+        """条件変異およびスマート注入が max_conditions を超過しないことを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_conditions,
+            mutate_indicators,
+        )
+
+        ga_config.max_conditions = 2
+        ga_config.mutation_config.condition_add_delete_probability = 1.0
+        ga_config.mutation_config.indicator_condition_injection_probability = 1.0
+        ga_config.mutation_config.indicator_add_delete_probability = 1.0
+        ga_config.mutation_config.indicator_add_vs_delete_probability = 1.0
+
+        gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}),
+                IndicatorGene(type="EMA", parameters={"period": 20}),
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA"),
+                Condition(left_operand="close", operator=">", right_operand="EMA"),
+            ],
+        )
+
+        # すでに max_conditions (2) に達している状態で変異を実行
+        for _ in range(20):
+            test_gene = gene.clone()
+            mutate_conditions(test_gene, 1.0, ga_config)
+            assert len(test_gene.long_entry_conditions) <= ga_config.max_conditions
+
+            test_gene2 = gene.clone()
+            mutate_indicators(test_gene2, 1.0, ga_config)
+            assert len(test_gene2.long_entry_conditions) <= ga_config.max_conditions

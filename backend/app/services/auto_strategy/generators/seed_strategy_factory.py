@@ -22,6 +22,7 @@ from ..config.constants import TPSLMethod
 from ..genes.conditions import Condition, ConditionGroup
 from ..genes.indicator import IndicatorGene
 from ..genes.strategy import StrategyGene
+from ..genes.tool import ToolGene
 from ..genes.tpsl import TPSLGene
 from ..utils.indicator_references import build_indicator_reference_name
 
@@ -131,6 +132,13 @@ class SeedStrategyFactory:
             "type": "indicator",
             "name": cls._indicator_ref_name(indicator, output_index),
         }
+
+    WEEKEND_FILTER_NAME = "weekend_filter"
+
+    @classmethod
+    def _weekend_tool_genes(cls) -> list[ToolGene]:
+        """週末フィルター常時ONのツール遺伝子を生成"""
+        return [ToolGene(tool_name=cls.WEEKEND_FILTER_NAME, enabled=True, params={})]
 
     @staticmethod
     def _seed_metadata(seed_name: str) -> dict[str, SerializableValue]:
@@ -263,6 +271,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
+            tool_genes=cls._weekend_tool_genes(),
             metadata=cls._seed_metadata("dmi_extreme_trend"),
         )
 
@@ -316,6 +325,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
+            tool_genes=cls._weekend_tool_genes(),
             metadata=cls._seed_metadata("rsi_momentum"),
         )
 
@@ -371,6 +381,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
+            tool_genes=cls._weekend_tool_genes(),
             metadata=cls._seed_metadata("bollinger_breakout"),
         )
 
@@ -461,6 +472,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
+            tool_genes=cls._weekend_tool_genes(),
             metadata=cls._seed_metadata("kama_adx_hybrid"),
         )
 
@@ -554,6 +566,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
+            tool_genes=cls._weekend_tool_genes(),
             metadata=cls._seed_metadata("wae"),
         )
 
@@ -637,6 +650,7 @@ class SeedStrategyFactory:
             long_entry_conditions=long_conditions,
             short_entry_conditions=short_conditions,
             tpsl_gene=tpsl_gene,
+            tool_genes=cls._weekend_tool_genes(),
             metadata=cls._seed_metadata("trendilo"),
         )
 
