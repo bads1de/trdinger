@@ -132,7 +132,7 @@ GA_DEFAULT_CONFIG = {
     "max_indicators": 10,
     "zero_trades_penalty": 0.1,
     "constraint_violation_penalty": 0.0,  # 0.0に戻して制約違反が原因か確認
-    "max_enabled_filters": 3,  # 最大有効フィルター数
+    "max_enabled_filters": 4,  # 最大有効フィルター数（ツール11個に拡張）
 }
 
 # === フィットネス重み設定 ===

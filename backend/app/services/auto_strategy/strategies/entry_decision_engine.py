@@ -340,6 +340,33 @@ class EntryDecisionEngine:
 
         try:
             current_timestamp = self.strategy.data.index[-1]
+            extra: dict[str, Any] = {}
+            try:
+                eq = float(getattr(self.strategy, "equity", None) or 0)
+                mx = float(getattr(self.strategy, "_max_equity_seen", eq) or eq)
+                extra["equity"] = eq
+                extra["max_equity"] = mx
+            except Exception:
+                pass
+            try:
+                extra["closed_trades"] = list(
+                    getattr(self.strategy, "closed_trades", []) or []
+                )
+            except Exception:
+                pass
+            try:
+                idx = int(len(self.strategy.data)) - 1
+                pre = getattr(self.strategy, "_precomputed_atr", None)
+                if pre is not None and 0 <= idx < len(pre):
+                    import numpy as np
+
+                    atr = pre[idx]
+                    price = float(self.strategy.data.Close[-1])
+                    if not np.isnan(atr) and price > 0:
+                        extra["atr"] = float(atr)
+                        extra["atr_pct"] = float(atr) / price
+            except Exception:
+                pass
             context = ToolContext(
                 timestamp=current_timestamp,
                 current_price=float(self.strategy.data.Close[-1]),
@@ -350,6 +377,7 @@ class EntryDecisionEngine:
                     if hasattr(self.strategy.data, "Volume")
                     else 0.0
                 ),
+                extra_data=extra,
             )
 
             for tool_gene in self.strategy.gene.tool_genes:

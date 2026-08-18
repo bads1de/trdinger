@@ -20,6 +20,13 @@ from .specific_day_filter import SpecificDayFilter, specific_day_filter
 from .us_lunch_filter import USLunchFilter, us_lunch_filter
 from .us_market_open_filter import USMarketOpenFilter, us_market_open_filter
 
+from .drawdown_guard_filter import DrawdownGuardFilter, drawdown_guard_filter
+from .losing_streak_filter import LosingStreakFilter, losing_streak_filter
+from .volatility_regime_filter import (
+    VolatilityRegimeFilter,
+    volatility_regime_filter,
+)
+
 # 利用可能なツールをインポート（自動登録される）
 from .weekend_filter import WeekendFilter, weekend_filter
 
@@ -49,4 +56,10 @@ __all__ = [
     "specific_day_filter",
     "BeginningOfMonthFilter",
     "beginning_of_month_filter",
+    "LosingStreakFilter",
+    "losing_streak_filter",
+    "DrawdownGuardFilter",
+    "drawdown_guard_filter",
+    "VolatilityRegimeFilter",
+    "volatility_regime_filter",
 ]
