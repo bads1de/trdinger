@@ -11,7 +11,10 @@ import pytest
 from app.services.backtest.conversion.backtest_result_converter import (
     BacktestResultConverter,
 )
-from app.services.backtest.execution.backtest_executor import BacktestExecutor
+from app.services.backtest.execution.backtest_executor import (
+    BacktestEarlyTerminationError,
+    BacktestExecutor,
+)
 from app.services.backtest.services.backtest_data_service import BacktestDataService
 from app.services.backtest.services.backtest_service import BacktestService
 
@@ -189,6 +192,28 @@ def test_run_backtest_execution_error(backtest_service, sample_config):
         # 実行とアサーション
         with pytest.raises(Exception, match="Execution failed"):
             backtest_service.run_backtest(sample_config)
+
+
+def test_run_backtest_early_termination_not_logged_as_error(
+    backtest_service, sample_config, caplog
+):
+    """早期終了は意図された制御フローであり、ERROR として記録せず伝播する"""
+    mock_orchestrator = MagicMock()
+    mock_orchestrator.run.side_effect = BacktestEarlyTerminationError("max_drawdown")
+    backtest_service._orchestrator = mock_orchestrator
+
+    with (
+        patch.object(backtest_service, "_ensure_orchestrator_initialized"),
+        patch.object(backtest_service, "ensure_data_service_initialized"),
+        caplog.at_level(
+            "ERROR", logger="app.services.backtest.services.backtest_service"
+        ),
+    ):
+        with pytest.raises(BacktestEarlyTerminationError):
+            backtest_service.run_backtest(sample_config)
+
+    # ERROR レベルでは「バックテスト実行エラー」が記録されていないこと
+    assert not any("バックテスト実行エラー" in r.message for r in caplog.records)
 
 
 def test_run_backtest_conversion_error(

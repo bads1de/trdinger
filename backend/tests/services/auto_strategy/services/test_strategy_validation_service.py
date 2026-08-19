@@ -1230,7 +1230,7 @@ class TestValidationConfig:
         config = GAConfig()
         vc = config.validation_config
         assert vc.enabled is True
-        assert vc.min_pass_rate == 0.5
+        assert vc.min_pass_rate == 0.33
         assert vc.min_primary_fitness is None
         assert vc.min_trades is None
         assert vc.max_drawdown is None

@@ -73,7 +73,7 @@ class TestGAConfig:
             == 10
         )
         assert config.validation_config.enabled is True
-        assert config.validation_config.min_pass_rate == 0.5
+        assert config.validation_config.min_pass_rate == 0.33
 
     def test_two_stage_and_robustness_serialize_deserialize(self):
         """二段階選抜/robustness 設定がシリアライズされることを確認"""

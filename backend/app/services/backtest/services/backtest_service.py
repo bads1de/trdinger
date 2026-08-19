@@ -19,7 +19,10 @@ from database.repositories.open_interest_repository import (
     OpenInterestRepository,
 )
 
-from ..execution.backtest_executor import BacktestExecutionError
+from ..execution.backtest_executor import (
+    BacktestEarlyTerminationError,
+    BacktestExecutionError,
+)
 from ..execution.backtest_orchestrator import BacktestOrchestrator
 from .backtest_data_service import BacktestDataService
 
@@ -95,6 +98,10 @@ class BacktestService:
 
             return self._orchestrator.run(config, preloaded_data)
 
+        except BacktestEarlyTerminationError as e:
+            # 早期終了は意図された制御フローでありエラーではない（DEBUG で記録のみ）
+            logger.debug("バックテストが早期終了しました: %s", e)
+            raise
         except Exception as e:
             logger.error(f"バックテスト実行エラー: {e}")
             raise

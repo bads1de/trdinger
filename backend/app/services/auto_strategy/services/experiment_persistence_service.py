@@ -453,6 +453,7 @@ class ExperimentPersistenceService:
             return [
                 {
                     "id": exp.id,
+                    "experiment_id": exp.experiment_id,
                     "experiment_name": exp.name,
                     "status": exp.status,
                     "progress": exp.progress,

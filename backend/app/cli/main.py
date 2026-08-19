@@ -243,8 +243,9 @@ def exp_list(
         typer.echo("実験はまだありません")
         return
     for exp in experiments:
+        exp_uuid = exp.get("experiment_id") or exp["id"]
         typer.echo(
-            f"[{exp['status']}] {exp['id']}  {exp['experiment_name']}  "
+            f"[{exp['status']}] {exp_uuid}  {exp['experiment_name']}  "
             f"fitness={exp.get('best_fitness')}  progress={exp.get('progress', 0):.0%}"
         )
 

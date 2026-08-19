@@ -74,6 +74,25 @@ def test_exp_list_empty(mock_services):
         assert "実験はまだありません" in result.output
 
 
+def test_exp_list_shows_experiment_uuid(mock_services):
+    """exp list は show/stop/delete で使える experiments の UUID を表示する"""
+    auto_service, _ = mock_services
+    auto_service.list_experiments.return_value = [
+        {
+            "id": 7,
+            "experiment_id": "7d58c5d8-29d4-4380-8a8e-7f5cfa4ae757",
+            "experiment_name": "watch",
+            "status": "completed",
+            "progress": 1.0,
+            "best_fitness": 0.5,
+        }
+    ]
+    with patch("app.cli.main.build_services", return_value=mock_services):
+        result = runner.invoke(app, ["exp", "list"])
+        assert result.exit_code == 0
+        assert "7d58c5d8-29d4-4380-8a8e-7f5cfa4ae757" in result.output
+
+
 def test_exp_show_not_found(mock_services):
     """存在しない実験は exit 1"""
     auto_service, _ = mock_services

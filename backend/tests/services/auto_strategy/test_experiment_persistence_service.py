@@ -63,6 +63,7 @@ class TestExperimentPersistenceService:
             mock_repo = mock_repo_cls.return_value
             mock_exp = Mock()
             mock_exp.id = 1
+            mock_exp.experiment_id = "uuid-001"
             mock_exp.name = "Exp 1"
             mock_exp.status = "completed"
             mock_exp.created_at = datetime(2024, 1, 1)
@@ -73,6 +74,7 @@ class TestExperimentPersistenceService:
 
             assert len(experiments) == 1
             assert experiments[0]["id"] == 1
+            assert experiments[0]["experiment_id"] == "uuid-001"
             assert experiments[0]["experiment_name"] == "Exp 1"
             assert experiments[0]["status"] == "completed"
             assert experiments[0]["created_at"] == "2024-01-01T00:00:00"

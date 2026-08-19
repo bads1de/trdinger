@@ -26,7 +26,11 @@ from ..factories.strategy_class_factory import (
     StrategyClassFactory,
 )
 from ..services.backtest_data_service import BacktestDataService
-from .backtest_executor import BacktestExecutionError, BacktestExecutor
+from .backtest_executor import (
+    BacktestEarlyTerminationError,
+    BacktestExecutionError,
+    BacktestExecutor,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -158,6 +162,11 @@ class BacktestOrchestrator:
 
             return result
 
+        except BacktestEarlyTerminationError as e:
+            # 早期終了（max_drawdown 超過・trade_pace 不足など）は意図された制御フロー。
+            # エラーではないため ERROR でなく DEBUG で記録し、上位へそのまま伝播させる。
+            logger.debug("バックテストが早期終了しました: %s", e)
+            raise
         except (
             BacktestRunConfigValidationError,
             StrategyClassCreationError,
