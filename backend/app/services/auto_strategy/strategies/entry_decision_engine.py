@@ -257,11 +257,14 @@ class EntryDecisionEngine:
                         # 1未満なら比率（証拠金比率）として返す
                         # 0.001 などの小さな値でも OK
                         return fraction
-                    else:
-                        # 1以上（100%以上の証拠金を使用）なら、整数ユニット数として返す
-                        # FractionalBacktest のフレーム単位へ変換する
-                        # （backtesting.py は 1.0 以上の float をユニット数として扱う）
-                        return float(math.floor(final_units)) / FRACTIONAL_UNIT
+                    # 1以上（100%以上の証拠金を使用）の要求は、証拠金比率の上限に
+                    # クランプする（証拠金超過による注文キャンセルを防ぐ）。
+                    # backtesting.py では 0 < size < 1 が証拠金比率、
+                    # size >= 1 がユニット数として扱われるため、size == 1.0 は
+                    # 1 ユニット（FRACTIONAL_UNIT 分）と解釈され比率として使えない。
+                    # 1.0 未満の最大比率で返すことで、ブローカーが約定時に
+                    # マージン内の枚数を計算する。
+                    return 0.9999
 
                 return 0.001
             return 0.01

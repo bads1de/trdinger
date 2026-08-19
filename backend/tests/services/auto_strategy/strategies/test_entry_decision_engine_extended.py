@@ -352,8 +352,8 @@ class TestCalculatePositionSize:
         engine = EntryDecisionEngine(strategy)
         assert engine.calculate_position_size() == 0.001
 
-    def test_returns_integer_units_when_fraction_over_one(self):
-        # size が大きく、fraction >= 1.0 になる場合
+    def test_clamps_to_max_margin_ratio_when_fraction_over_one(self):
+        # 残高超過（fraction >= 1.0）の要求は証拠金比率の上限にクランプされる
         gene = _make_position_sizing_gene(min_size=0.001, max_size=100.0)
         strategy = _make_strategy(position_sizing_gene=gene)
         # position_sizing_service が 50.0 を返す
@@ -364,10 +364,29 @@ class TestCalculatePositionSize:
         # fraction = 50 * 100 / 100000 = 0.05 (1 未満) → fraction を返す
         # 別の設定で fraction >= 1 にする
         strategy.equity = 1000.0
-        # fraction = 50 * 100 / 1000 = 5.0 (1 以上) → floor(50) = 50
-        # 返り値は FractionalBacktest のフレーム単位（実ユニット数 × 1/FRACTIONAL_UNIT）
+        # fraction = 50 * 100 / 1000 = 5.0 (1 以上) → 0.9999 にクランプ
+        # （旧実装は 50.0 / FRACTIONAL_UNIT を返し、ブローカーに黙って
+        #   キャンセルされることで fitness を歪めていた）
         engine = EntryDecisionEngine(strategy)
-        assert engine.calculate_position_size() == 50.0 / FRACTIONAL_UNIT
+        assert engine.calculate_position_size() == pytest.approx(0.9999)
+
+    def test_no_truncation_for_sub_unit_size_when_fraction_over_one(self):
+        # 回帰テスト: final_units < 1 かつ fraction >= 1.0 のケースで
+        # floor による切り捨てで size=0.0 になり注文がスキップされるバグ
+        gene = _make_position_sizing_gene(min_size=0.001, max_size=100.0)
+        strategy = _make_strategy(position_sizing_gene=gene)
+        # position_sizing_service が 0.05 (BTC) を返す
+        strategy.position_sizing_service.calculate_position_size_fast.return_value = (
+            0.05
+        )
+        # real_price=100.0, equity=5.0
+        # fraction = 0.05 * 100 / 5 = 1.0 (1 以上) → 証拠金比率の上限にクランプ
+        # 旧実装: floor(0.05)=0 → 0.0 (注文スキップ)
+        strategy.equity = 5.0
+        engine = EntryDecisionEngine(strategy)
+        size = engine.calculate_position_size()
+        assert size == pytest.approx(0.9999)
+        assert 0 < size < 1
 
     def test_handles_invalid_equity(self):
         gene = _make_position_sizing_gene()

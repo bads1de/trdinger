@@ -11,7 +11,6 @@ from app.services.auto_strategy.strategies.entry_decision_engine import (
     EntryDecisionEngine,
 )
 from app.services.auto_strategy.strategies.runtime_state import StrategyRuntimeState
-from app.services.backtest.shared import FRACTIONAL_UNIT
 
 
 class TestEntryDecisionEngine:
@@ -156,7 +155,7 @@ class TestEntryDecisionEngine:
         assert engine.calculate_position_size() == pytest.approx(0.0255)
         assert engine.calculate_position_size() == pytest.approx(0.0408)
 
-    def test_calculate_position_size_preserves_gene_sized_quantity(
+    def test_calculate_position_size_clamps_to_margin_ratio_when_over_equity(
         self, engine, strategy
     ):
         position_sizing_gene = PositionSizingGene(
@@ -177,10 +176,10 @@ class TestEntryDecisionEngine:
         strategy.data.Low = np.array([49500.0, 50500.0])
         strategy.data.__len__ = MagicMock(return_value=2)
 
-        # 実ユニット数 250 はフレーム単位（×1/FRACTIONAL_UNIT）へ変換されて返る
-        assert engine.calculate_position_size() == pytest.approx(
-            250.0 / FRACTIONAL_UNIT
-        )
+        # 250 BTC（= $12.5M）は残高 $100k の 125 倍で、マージン超過になるため
+        # 証拠金比率の上限（1.0 未満）にクランプされる
+        # （旧実装はフレーム単位へ変換して返し、ブローカーに黙ってキャンセルされていた）
+        assert engine.calculate_position_size() == pytest.approx(0.9999)
 
     def test_calculate_effective_tpsl_prices_uses_precomputed_atr(
         self, engine, strategy
