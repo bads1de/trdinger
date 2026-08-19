@@ -380,6 +380,16 @@ class EvolutionRunner:
 
         return population
 
+    def _build_default_fitness(self, config: Optional["GAConfig"]) -> tuple[float, ...]:
+        """GA設定の目的数に合わせたデフォルトフィットネスを返す。"""
+        n_objectives = 1
+        if config is not None:
+            try:
+                n_objectives = len(config.objectives) or 1
+            except Exception:
+                n_objectives = 1
+        return tuple(0.0 for _ in range(n_objectives))
+
     def _evaluate_invalid_individuals(
         self,
         invalid_ind: list[Any],
@@ -440,7 +450,12 @@ class EvolutionRunner:
             return []
 
         if self.parallel_evaluator:
-            return list(self.parallel_evaluator.evaluate_population(individuals))
+            default_fitness = self._build_default_fitness(config)
+            return list(
+                self.parallel_evaluator.evaluate_population(
+                    individuals, default_fitness=default_fitness
+                )
+            )
 
         if self.individual_evaluator is not None and config is not None:
             fitness_values = [

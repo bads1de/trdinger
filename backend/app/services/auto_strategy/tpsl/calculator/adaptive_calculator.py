@@ -103,8 +103,19 @@ class AdaptiveCalculator(BaseTPSLCalculator):
                 return "fixed_percentage"
 
             # ボラティリティが高い場合
+            # volatility_regime（文字列）を優先し、互換のため
+            # 文字列の volatility キーにも対応する。
+            # volatility が数値の場合は数値閾値で判定する。
+            volatility_regime = market_data.get("volatility_regime", "normal")
             volatility = market_data.get("volatility", "normal")
-            if volatility in ["high", "very_high"]:
+            if volatility_regime in ["high", "very_high"]:
+                return "volatility"
+            if isinstance(volatility, (int, float)) and not isinstance(
+                volatility, bool
+            ):
+                if volatility >= 0.03:
+                    return "volatility"
+            elif volatility in ["high", "very_high"]:
                 return "volatility"
 
             # トレンドが明確な場合

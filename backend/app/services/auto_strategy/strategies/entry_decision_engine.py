@@ -190,6 +190,8 @@ class EntryDecisionEngine:
 
                             if not np.isnan(atr) and current_price > 0:
                                 market_data["atr_pct"] = atr / current_price
+                                # 実価格換算値も提供（VOLATILITY_BASED 計算機が使用）
+                                market_data["atr"] = atr / FRACTIONAL_UNIT
 
                     if "atr_pct" not in market_data:
                         lookback = getattr(
@@ -214,6 +216,26 @@ class EntryDecisionEngine:
                             atr = np.mean(tr)
                             if current_price > 0:
                                 market_data["atr_pct"] = atr / current_price
+                                market_data["atr"] = atr / FRACTIONAL_UNIT
+
+                    # 直近リターン系列を提供（VOLATILITY_BASED の VaR/ES 制限用）
+                    data_length = int(len(self.strategy.data))
+                    var_lookback = getattr(
+                        self.strategy.gene.position_sizing_gene, "var_lookback", 100
+                    )
+                    if data_length > var_lookback + 1:
+                        import numpy as np
+
+                        closes = np.asarray(
+                            self.strategy.data.Close[-(var_lookback + 1) :],
+                            dtype=float,
+                        )
+                        if len(closes) > 1 and np.all(np.isfinite(closes)):
+                            with np.errstate(divide="ignore", invalid="ignore"):
+                                returns = closes[1:] / closes[:-1] - 1.0
+                            market_data["returns"] = returns[
+                                np.isfinite(returns)
+                            ].tolist()
                 except Exception as e:
                     logger.debug("ATR market data calculation error: %s", e)
 
@@ -318,6 +340,55 @@ class EntryDecisionEngine:
                         {"high": h, "low": low_val, "close": c}
                         for h, low_val, c in zip(highs, lows, closes, strict=False)
                     ]
+
+            # STATISTICAL / ADAPTIVE 計算機向けに、過去価格系列・
+            # ボラティリティ・トレンド情報を提供する。
+            # これらが無いと統計・適応的ロジックが常にデフォルト値を返し、
+            # 対応する遺伝子（lookback_period / confidence_threshold 等）が
+            # 探索空間から実質消滅するため。
+            if tpsl_method in (
+                TPSLMethod.ADAPTIVE,
+                TPSLMethod.STATISTICAL,
+            ):
+                lookback = max(
+                    int(getattr(active_tpsl_gene, "lookback_period", 100)), 50
+                )
+                data_length = int(len(self.strategy.data))
+                if data_length > lookback + 1:
+                    closes = self.strategy.data.Close[-(lookback + 1) :]
+                    market_data["historical_prices"] = [
+                        float(c) for c in closes if c is not None
+                    ]
+                    market_data["historical_data_available"] = True
+
+                atr_value = market_data.get("atr")
+                if atr_value is not None and current_price > 0:
+                    volatility_pct = float(atr_value) / current_price
+                    market_data["volatility"] = volatility_pct
+                    # ボラティリティレジーム（文字列）を判定
+                    # （ADAPTIVE 計算機の方式選択で使用）
+                    if volatility_pct >= 0.05:
+                        market_data["volatility_regime"] = "very_high"
+                    elif volatility_pct >= 0.03:
+                        market_data["volatility_regime"] = "high"
+                    elif volatility_pct <= 0.005:
+                        market_data["volatility_regime"] = "low"
+                    else:
+                        market_data["volatility_regime"] = "normal"
+
+                    # トレンドレジームを判定（直近価格変化率ベース）
+                    historical_prices = market_data.get("historical_prices", [])
+                    if len(historical_prices) >= 20:
+                        start = historical_prices[-20]
+                        end = historical_prices[-1]
+                        if start and start > 0:
+                            change = (end - start) / start
+                            if change >= 0.02:
+                                market_data["trend"] = "strong_up"
+                            elif change <= -0.02:
+                                market_data["trend"] = "strong_down"
+                            else:
+                                market_data["trend"] = "neutral"
 
         return cast(
             tuple[float | None, float | None],

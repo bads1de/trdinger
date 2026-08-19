@@ -25,6 +25,19 @@ _WORKER_EVALUATOR: Any | None = None
 _WORKER_CONFIG: Any | None = None
 
 
+def _default_fitness_for_config(config: Any) -> tuple[float, ...]:
+    """GA設定の目的数に合わせたデフォルトフィットネスを生成する。
+
+    マルチ目的構成（objectives が2個以上）でも長さ不一致で
+    クラッシュしないようにする。
+    """
+    try:
+        n_objectives = len(getattr(config, "objectives", [])) or 1
+    except Exception:
+        n_objectives = 1
+    return tuple(0.0 for _ in range(n_objectives))
+
+
 def initialize_worker_process(
     backtest_config: dict[str, Any],
     ga_config: Any,
@@ -97,7 +110,9 @@ def worker_evaluate_individual(individual: Any) -> ParallelEvaluationResult:
     """
     if _WORKER_EVALUATOR is None or _WORKER_CONFIG is None:
         logger.error("Worker evaluator or config not initialized!")
-        return ParallelEvaluationResult(fitness=(0.0,))
+        return ParallelEvaluationResult(
+            fitness=_default_fitness_for_config(_WORKER_CONFIG)
+        )
 
     try:
         fitness = _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)
@@ -117,4 +132,6 @@ def worker_evaluate_individual(individual: Any) -> ParallelEvaluationResult:
         )
     except Exception as e:
         logger.error(f"Evaluation error in worker: {e}")
-        return ParallelEvaluationResult(fitness=(0.0,))
+        return ParallelEvaluationResult(
+            fitness=_default_fitness_for_config(_WORKER_CONFIG)
+        )

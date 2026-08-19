@@ -26,25 +26,27 @@ uv run trdinger exp run --name <実験名> --population 20 --generations 10 `
 ```
 
 **注意（必須）**:
+
 - `population_size` は 8 以上を推奨（二段階選抜のデフォルト候補数 5 を下回ると検証エラー）
 - クイック確認なら `--no-validation --generations 1 --population 8` で高速化
 - 本番探索は `--generations 50 --population 100` 程度
 - 実行は同期（終わるまで待つ）。長い実験は CI/cron や別ターミナルで
 
 主要オプション:
-| オプション | デフォルト | 意味 |
-|---|---|---|
-| `--population` / `-p` | 20 | 個体数（8以上推奨） |
-| `--generations` / `-g` | 10 | 世代数 |
-| `--elite-size` / `-e` | 2 | エリート保存数（個体数未満） |
-| `--crossover-rate` | 0.8 | 交叉率 |
-| `--mutation-rate` | 0.2 | 突然変異率 |
-| `--symbol` / `-s` | BTC/USDT:USDT | 取引ペア |
-| `--timeframe` / `-t` | 4h | 時間足 |
-| `--start-date` | 2024-01-01 | BT開始日 |
-| `--end-date` | 2024-06-30 | BT終了日 |
-| `--no-validation` | false | WFA自動検証を無効化 |
-| `--json` | false | 結果をJSONで出力 |
+
+| オプション             | デフォルト    | 意味                         |
+| ---------------------- | ------------- | ---------------------------- |
+| `--population` / `-p`  | 20            | 個体数（8以上推奨）          |
+| `--generations` / `-g` | 10            | 世代数                       |
+| `--elite-size` / `-e`  | 2             | エリート保存数（個体数未満） |
+| `--crossover-rate`     | 0.8           | 交叉率                       |
+| `--mutation-rate`      | 0.2           | 突然変異率                   |
+| `--symbol` / `-s`      | BTC/USDT:USDT | 取引ペア                     |
+| `--timeframe` / `-t`   | 4h            | 時間足                       |
+| `--start-date`         | 2024-01-01    | BT開始日                     |
+| `--end-date`           | 2024-06-30    | BT終了日                     |
+| `--no-validation`      | false         | WFA自動検証を無効化          |
+| `--json`               | false         | 結果をJSONで出力             |
 
 ### 実験の管理
 
@@ -80,24 +82,24 @@ uv run trdinger data reset ohlcv --yes            # OHLCV全削除（確認あ�
 
 ## ユーザーの意図 → コマンドの翻訳例
 
-| 依頼 | 実行コマンド |
-|---|---|
-| 「実験を回して」 | `exp run --name <説明的な名前> --population 50 --generations 30` |
-| 「クイックに試したい」 | `exp run --no-validation --population 8 --generations 3` |
-| 「実験の進捗は？」 | `exp list` して running を確認 |
-| 「この実験消して」 | `exp delete <uuid> --yes`（ユーザーが明示的に削除を望んだ場合のみ） |
-| 「良い戦略ある？」 | `strategy list --min-fitness 50` → 上位を `strategy show` |
-| 「データを取ってきて」 | `data overview` → 不足があれば `data fetch --timeframe <tf>` |
-| 「データを最新にして」 | `data update` |
-| 「データどれくらいある？」 | `data overview` / `data status` |
+| 依頼                       | 実行コマンド                                                        |
+| -------------------------- | ------------------------------------------------------------------- |
+| 「実験を回して」           | `exp run --name <説明的な名前> --population 50 --generations 30`    |
+| 「クイックに試したい」     | `exp run --no-validation --population 8 --generations 3`            |
+| 「実験の進捗は？」         | `exp list` して running を確認                                      |
+| 「この実験消して」         | `exp delete <uuid> --yes`（ユーザーが明示的に削除を望んだ場合のみ） |
+| 「良い戦略ある？」         | `strategy list --min-fitness 50` → 上位を `strategy show`           |
+| 「データを取ってきて」     | `data overview` → 不足があれば `data fetch --timeframe <tf>`        |
+| 「データを最新にして」     | `data update`                                                       |
+| 「データどれくらいある？」 | `data overview` / `data status`                                     |
 
 ## よくあるエラーと対処
 
-| エラー | 対処 |
-|---|---|
-| `二段階選抜候補数は個体数以下` | `--population` を 8 以上に上げる |
-| `同時実行できるGA実験の上限` | 既に 2 実験が running。`exp stop` か完了を待つ |
-| `ModuleNotFoundError: database` | `uv sync --all-extras` で再インストール |
+| エラー                          | 対処                                           |
+| ------------------------------- | ---------------------------------------------- |
+| `二段階選抜候補数は個体数以下`  | `--population` を 8 以上に上げる               |
+| `同時実行できるGA実験の上限`    | 既に 2 実験が running。`exp stop` か完了を待つ |
+| `ModuleNotFoundError: database` | `uv sync --all-extras` で再インストール        |
 
 ## 詳細
 

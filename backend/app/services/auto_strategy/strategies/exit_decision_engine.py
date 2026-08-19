@@ -176,11 +176,11 @@ class ExitDecisionEngine:
             return False
 
         exit_pct = exit_gene.partial_exit_pct
+        # backtesting.py はユニット数の整数（size >= 1）または
+        # 証拠金比率（0 < size < 1）しか受け付けないため、整数化する。
+        # 0 に丸められる場合は 1 に強制せずスキップする
+        # （1 に強制すると小さいポジションで実質 100% 決済になるため）。
         exit_size = round(abs(position.size) * exit_pct)
-        # sizeが0の場合は1に設定して最低1単位は決済する
-        if exit_size == 0:
-            exit_size = 1
-
         if exit_size <= 0:
             return False
 

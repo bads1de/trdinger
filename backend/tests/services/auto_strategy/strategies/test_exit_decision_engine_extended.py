@@ -192,7 +192,8 @@ class TestExecuteExit:
         strategy.buy.assert_called_once_with(size=pytest.approx(0.5))
 
     def test_executes_partial_exit_when_enabled(self, engine, strategy):
-        # position size 0.5 * exit_pct 0.5 = 0.25, round(0.25)=0 -> 1 にクランプ
+        # position.size が大きい場合（例: 10 * exit_pct 0.5 = 5）は部分決済される
+        strategy.position.size = 10
         strategy._get_effective_exit_gene.return_value = _make_long_exit_gene(
             exit_type=ExitType.PARTIAL,
             partial_exit_enabled=True,
@@ -202,7 +203,23 @@ class TestExecuteExit:
         result = engine.execute_exit(1.0)
 
         assert result is True
-        strategy.sell.assert_called_once_with(size=1)
+        strategy.sell.assert_called_once_with(size=5)
+
+    def test_skips_partial_exit_when_size_rounds_to_zero(self, engine, strategy):
+        # position.size 0.5 * exit_pct 0.5 = 0.25, round(0.25)=0
+        # 従来は 1 に強制して実質 100% 決済していたが、1 ユニット未満は
+        # スキップするのが正しい挙動。
+        strategy.position.size = 0.5
+        strategy._get_effective_exit_gene.return_value = _make_long_exit_gene(
+            exit_type=ExitType.PARTIAL,
+            partial_exit_enabled=True,
+            partial_exit_pct=0.5,
+        )
+
+        result = engine.execute_exit(1.0)
+
+        assert result is False
+        strategy.sell.assert_not_called()
 
     def test_does_not_partial_exit_when_flag_disabled(self, engine, strategy):
         strategy._get_effective_exit_gene.return_value = _make_long_exit_gene(

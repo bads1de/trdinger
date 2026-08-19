@@ -48,7 +48,16 @@ class RiskRewardCalculator(BaseTPSLCalculator):
         """
         # 1. パラメータ取得
         if tpsl_gene:
-            sl_pct = tpsl_gene.base_stop_loss or tpsl_gene.stop_loss_pct or 0.03
+            # RISK_REWARD_RATIO 方式では base_stop_loss を優先する。
+            # base_stop_loss はデフォルト 0.03 で常に truthy なため、
+            # 従来の `or` チェーンでは stop_loss_pct が恒久的に無視されて
+            # いた（死に遺伝子）。None チェックに変更し、
+            # 明示的に 0.0 を設定した場合も有効値として扱う。
+            sl_pct = getattr(tpsl_gene, "base_stop_loss", None)
+            if sl_pct is None:
+                sl_pct = tpsl_gene.stop_loss_pct
+            if sl_pct is None:
+                sl_pct = 0.03
             rr_ratio = tpsl_gene.risk_reward_ratio or 2.0
         else:
             sl_pct = kwargs.get("stop_loss_pct", kwargs.get("base_stop_loss", 0.03))

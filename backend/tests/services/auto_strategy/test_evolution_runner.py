@@ -161,7 +161,7 @@ class TestEvolutionRunner:
 
         # Parallel evaluator should be called once with full population
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            dummy_population
+            dummy_population, default_fitness=(0.0,)
         )
 
         # Toolbox evaluate should NOT be called
@@ -254,7 +254,7 @@ class TestEvolutionRunner:
 
         mock_build_coarse_config.assert_not_called()
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            dummy_population
+            dummy_population, default_fitness=(0.0,)
         )
         for ind in dummy_population:
             assert ind.fitness.values == (2.0,)
@@ -309,7 +309,9 @@ class TestEvolutionRunner:
             runner._evaluate_invalid_individuals(invalid_ind, config)
 
         mock_build_coarse_config.assert_not_called()
-        mock_parallel_evaluator.evaluate_population.assert_called_once_with(invalid_ind)
+        mock_parallel_evaluator.evaluate_population.assert_called_once_with(
+            invalid_ind, default_fitness=(0.0,)
+        )
         for ind in invalid_ind:
             assert ind.fitness.values == (3.0,)
             assert getattr(ind, "_evaluation_fidelity", None) == "coarse"
