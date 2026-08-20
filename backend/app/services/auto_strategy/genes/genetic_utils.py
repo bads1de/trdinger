@@ -325,13 +325,15 @@ class GeneticUtils:
         mutation_rate: float = 0.1,
         numeric_fields: list[str] | None = None,
         enum_fields: list[str] | None = None,
+        choice_fields: list[str] | None = None,
         numeric_ranges: dict[str, tuple[float, float]] | None = None,
     ) -> Any:
         """
         汎用遺伝子の突然変異を実行
 
         数値フィールドに対してはガウス的な変動を与え、
-        Enumフィールドに対してはランダムな再選択を行います。
+        Enumフィールドに対してはランダムな再選択、
+        Choiceフィールドに対してはboolトグルを行います。
 
         Args:
             gene: 突然変異対象の遺伝子インスタンス
@@ -339,6 +341,7 @@ class GeneticUtils:
             mutation_rate: 各フィールドが変異する確率
             numeric_fields: 数値として変動させるフィールド名のリスト
             enum_fields: Enum値として再選択させるフィールド名のリスト
+            choice_fields: boolトグル対象フィールド名のリスト
             numeric_ranges: 数値フィールドの許容範囲 {"field_name": (min, max)}
 
         Returns:
@@ -348,11 +351,18 @@ class GeneticUtils:
             numeric_fields = []
         if enum_fields is None:
             enum_fields = []
+        if choice_fields is None:
+            choice_fields = []
         if numeric_ranges is None:
             numeric_ranges = {}
 
         # 遺伝子のコピーを作成
         mutated_params = GeneticUtils._extract_gene_params(gene)
+        for _k, _v in list(mutated_params.items()):
+            if isinstance(_v, dict):
+                mutated_params[_k] = _v.copy()
+            elif isinstance(_v, list):
+                mutated_params[_k] = list(_v)
 
         # 数値フィールドの突然変異
         for field in numeric_fields:
@@ -387,6 +397,13 @@ class GeneticUtils:
                     mutated_params[field] = random.choice(
                         list(cast(Any, enum_class).__members__.values())
                     )
+
+        # Choiceフィールドの突然変異（boolトグル）
+        for field in choice_fields:
+            if random.random() < mutation_rate and field in mutated_params:
+                current_value = mutated_params[field]
+                if isinstance(current_value, bool):
+                    mutated_params[field] = not current_value
 
         return gene_class(**mutated_params)
 

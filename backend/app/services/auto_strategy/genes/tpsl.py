@@ -118,6 +118,7 @@ class TPSLGene(BaseGene):
             mutation_rate=mutation_rate,
             numeric_fields=self.NUMERIC_FIELDS,
             enum_fields=self.ENUM_FIELDS,
+            choice_fields=self.CHOICE_FIELDS,
             numeric_ranges=self.NUMERIC_RANGES,
         )
 

@@ -116,23 +116,21 @@ class PositionSizingGene(BaseGene):
         """突然変異する。パラメータはGAが自動的に最適化する。"""
         from .genetic_utils import GeneticUtils
 
-        mutated_params = GeneticUtils.extract_gene_params(self)
-
-        for field_name in self.NUMERIC_FIELDS:
-            if random.random() >= mutation_rate or field_name not in mutated_params:
-                continue
-
-            current_value = mutated_params[field_name]
-            if not isinstance(current_value, (int, float)):
-                continue
-
-            new_value = current_value * random.uniform(0.8, 1.2)
-            if isinstance(current_value, int):
-                new_value = int(new_value)
-            mutated_params[field_name] = new_value
-
-        _ensure_position_size_bounds(mutated_params)
-        return PositionSizingGene(**cast(dict[str, Any], mutated_params))
+        mutated_gene = cast(
+            PositionSizingGene,
+            GeneticUtils.mutate_generic_gene(
+                gene=self,
+                gene_class=self.__class__,
+                mutation_rate=mutation_rate,
+                numeric_fields=self.NUMERIC_FIELDS,
+                enum_fields=self.ENUM_FIELDS,
+                choice_fields=self.CHOICE_FIELDS,
+                numeric_ranges=self.NUMERIC_RANGES,
+            ),
+        )
+        if mutated_gene.min_position_size > mutated_gene.max_position_size:
+            mutated_gene.max_position_size = mutated_gene.min_position_size
+        return mutated_gene
 
     def clone(self) -> PositionSizingGene:
         """軽量コピーを作成"""
