@@ -140,7 +140,7 @@ class TestPenaltyExclusionInAggregate:
         assert round(report.aggregated_fitness[0], 6) == 0.6
         assert report.metadata["penalized_scenario_count"] == 1
 
-    def test_all_penalty_scenarios_aggregate_to_zero(self):
+    def test_all_penalty_scenarios_aggregate_to_penalty(self):
         report = EvaluationReport.aggregate(
             mode="walk_forward",
             objectives=["weighted_score"],
@@ -151,8 +151,9 @@ class TestPenaltyExclusionInAggregate:
             aggregate_method="robust",
         )
 
-        # 全シナリオがペナルティの場合、集約対象が無く 0.0 になる
-        assert report.aggregated_fitness == (0.0,)
+        # 全シナリオがペナルティの場合、方向を考慮したペナルティ値になる
+        # （0.0 は最小化目的で最良スコアになるため使用しない）
+        assert report.aggregated_fitness == (-PENALTY_FITNESS_MAGNITUDE,)
         assert report.metadata["penalized_scenario_count"] == 2
 
     def test_penalty_excluded_from_worst_case(self):
@@ -168,8 +169,8 @@ class TestPenaltyExclusionInAggregate:
 
         assert report.primary_worst_case_fitness == 0.4
 
-    def test_single_mode_with_penalty_only_aggregates_to_zero(self):
-        """single モードで唯一のシナリオがペナルティの場合、集約は 0.0 になる"""
+    def test_single_mode_with_penalty_only_aggregates_to_penalty(self):
+        """single モードで唯一のシナリオがペナルティの場合、集約はペナルティ値になる"""
         report = EvaluationReport.aggregate(
             mode="single",
             objectives=["weighted_score"],
@@ -179,5 +180,5 @@ class TestPenaltyExclusionInAggregate:
             aggregate_method="single",
         )
 
-        assert report.aggregated_fitness == (0.0,)
+        assert report.aggregated_fitness == (-PENALTY_FITNESS_MAGNITUDE,)
         assert report.metadata["penalized_scenario_count"] == 1

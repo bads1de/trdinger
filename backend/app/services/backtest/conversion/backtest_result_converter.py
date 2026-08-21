@@ -88,6 +88,10 @@ class BacktestResultConverter:
                 "status": "completed",
                 "error_message": None,
                 "created_at": datetime.now(timezone.utc),
+                # performance_metrics の単位宣言。statistics_calculator は
+                # リターン系指標を常にパーセント(%)で出力するため、
+                # 消費側(fitness_calculator)での単位推測を排除する。
+                "performance_metrics_unit": "percent",
                 "performance_metrics": self._stats_calculator.calculate_statistics(
                     actual_stats
                 ),

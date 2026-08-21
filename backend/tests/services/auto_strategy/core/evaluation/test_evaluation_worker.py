@@ -10,6 +10,7 @@ import pandas as pd
 import pytest
 
 import app.services.auto_strategy.core.evaluation.evaluation_worker as ew_module
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
 from app.services.auto_strategy.core.evaluation.evaluation_worker import (
     initialize_worker_process,
     worker_evaluate_individual,
@@ -196,7 +197,7 @@ class TestWorkerEvaluateIndividual:
             ew_module._WORKER_CONFIG = None
 
     def test_evaluate_without_initialization(self):
-        """未初期化時にデフォルト値が返されること"""
+        """未初期化時に方向を考慮したペナルティ値が返されること"""
         ew_module._WORKER_EVALUATOR = None
         ew_module._WORKER_CONFIG = None
 
@@ -205,14 +206,14 @@ class TestWorkerEvaluateIndividual:
             result = worker_evaluate_individual(mock_individual)
 
             assert isinstance(result, ParallelEvaluationResult)
-            assert result.fitness == (0.0,)
+            assert result.fitness == (-PENALTY_FITNESS_MAGNITUDE,)
             assert result.behavior_summary is None
         finally:
             ew_module._WORKER_EVALUATOR = None
             ew_module._WORKER_CONFIG = None
 
     def test_evaluate_with_error(self):
-        """評価エラー時にデフォルト値が返されること"""
+        """評価エラー時に方向を考慮したペナルティ値が返されること"""
         mock_evaluator = MagicMock()
         mock_evaluator.evaluate.side_effect = ValueError("Evaluation failed")
         mock_config = MagicMock()
@@ -225,7 +226,7 @@ class TestWorkerEvaluateIndividual:
             result = worker_evaluate_individual(mock_individual)
 
             assert isinstance(result, ParallelEvaluationResult)
-            assert result.fitness == (0.0,)
+            assert result.fitness == (-PENALTY_FITNESS_MAGNITUDE,)
             assert result.behavior_summary is None
         finally:
             ew_module._WORKER_EVALUATOR = None

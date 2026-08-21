@@ -95,7 +95,10 @@ class IndicatorGene:
 
 
 @safe_operation(
-    default_return=IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True),
+    # 失敗のたびに新しいインスタンスを返す（単一インスタンスの共有を防ぐ）
+    default_return=lambda: IndicatorGene(
+        type="SMA", parameters={"period": 20}, enabled=True
+    ),
     context="指標遺伝子作成",
 )
 def create_random_indicator_gene(
@@ -132,7 +135,7 @@ def create_random_indicator_gene(
     return indicator_gene
 
 
-@safe_operation(default_return=[], context="ランダム指標リスト生成")
+@safe_operation(default_return=list, context="ランダム指標リスト生成")
 def generate_random_indicators(config: Any) -> list[IndicatorGene]:
     """
     設定に基づいてランダムな指標リストを生成

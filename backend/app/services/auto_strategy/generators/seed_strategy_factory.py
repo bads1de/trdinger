@@ -350,12 +350,13 @@ class SeedStrategyFactory:
         )
         indicators = [bbands_indicator]
 
+        # BBANDS の戻り列は [BBL, BBM, BBU, BBB, BBP]（0=下限バンド, 2=上限バンド）
         # Long: Close > BBU (Upper Band)
         long_conditions: list[Condition | ConditionGroup] = [
             Condition(
                 left_operand="close",
                 operator=">",
-                right_operand=cls._indicator_ref(bbands_indicator, 0),
+                right_operand=cls._indicator_ref(bbands_indicator, 2),
                 direction="long",
             )
         ]
@@ -365,7 +366,7 @@ class SeedStrategyFactory:
             Condition(
                 left_operand="close",
                 operator="<",
-                right_operand=cls._indicator_ref(bbands_indicator, 2),
+                right_operand=cls._indicator_ref(bbands_indicator, 0),
                 direction="short",
             )
         ]
@@ -512,6 +513,7 @@ class SeedStrategyFactory:
 
         # 簡易版WAE Long: MACD > Signal AND MACD > 0
         # (本来はBB Width > Dead Zone の条件も必要だが、条件式の制約上省略)
+        # MACD の戻り列は [MACD, MACDh, MACDs]（1=ヒストグラム, 2=シグナル）
         long_conditions: list[Condition | ConditionGroup] = [
             ConditionGroup(
                 operator="AND",
@@ -519,7 +521,7 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(macd_indicator, 0),
                         operator=">",
-                        right_operand=cls._indicator_ref(macd_indicator, 1),
+                        right_operand=cls._indicator_ref(macd_indicator, 2),
                         direction="long",
                     ),
                     Condition(
@@ -540,7 +542,7 @@ class SeedStrategyFactory:
                     Condition(
                         left_operand=cls._indicator_ref(macd_indicator, 0),
                         operator="<",
-                        right_operand=cls._indicator_ref(macd_indicator, 1),
+                        right_operand=cls._indicator_ref(macd_indicator, 2),
                         direction="short",
                     ),
                     Condition(

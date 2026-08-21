@@ -17,7 +17,6 @@ import numpy as np
 from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.config.constants import (
     DEFAULT_FITNESS_WEIGHTS,
-    PENALTY_FITNESS_MAGNITUDE,
 )
 from app.services.auto_strategy.config.ga_config import GAConfig
 from app.types import SerializableValue
@@ -208,8 +207,8 @@ class FitnessCalculator:
     def get_penalty_values(self, config: "GAConfig") -> tuple[float, ...]:
         """一貫したペナルティ値のタプルを返す。
 
-        評価エラー時や制約違反時に使用する。目的関数の方向性に応じて
-        適切なペナルティ値を設定する。
+        評価エラー時や制約違反時に使用する。実装は
+        ``objective_registry.build_penalty_values`` が唯一のソース。
 
         Note:
             ±inf の代わりに有限の大きな値（``PENALTY_FITNESS_MAGNITUDE``）を
@@ -218,13 +217,7 @@ class FitnessCalculator:
             維持する。さらに DB 保存や API の JSON 応答（allow_nan=False）で
             エラーを起こさない。
         """
-        penalty_values = []
-        for obj in config.objectives:
-            if objective_registry.is_minimize_objective(obj):
-                penalty_values.append(PENALTY_FITNESS_MAGNITUDE)
-            else:
-                penalty_values.append(-PENALTY_FITNESS_MAGNITUDE)
-        return tuple(penalty_values)
+        return objective_registry.build_penalty_values(config.objectives)
 
     def extract_performance_metrics(
         self, backtest_result: dict[str, SerializableValue]
@@ -236,7 +229,12 @@ class FitnessCalculator:
         (例: max_drawdown=-47.98, total_return=47.98, win_rate=55.0)
         で保持されており、0.0〜1.0 の割合に正規化して返す。
         (例: max_drawdown=0.4798, total_return=0.4798, win_rate=0.55)
-        なお、既に割合単位で渡された場合はそのまま通す。
+
+        単位判定は ``performance_metrics_unit`` による明示宣言を最優先する
+        （``"percent"`` なら無条件で 1/100 にする）。宣言がない場合のみ
+        旧来の ``> 1.0`` ヒューリスティックで推測する。ヒューリスティックは
+        1% 未満のパーセント値を割合単位と誤認するため、正規のバックテスト
+        結果（BacktestResultConverter 経由）は必ず宣言を伴う。
 
         Args:
             backtest_result: バックテスト結果
@@ -296,15 +294,26 @@ class FitnessCalculator:
 
         if max_drawdown < 0:
             max_drawdown = abs(max_drawdown)
-        if max_drawdown > 1.0:
-            max_drawdown = min(max_drawdown / 100.0, 1.0)
 
-        if abs(total_return) > 1.0:
+        unit_declared = backtest_result.get("performance_metrics_unit")
+        if unit_declared == "percent":
+            # 生成側がパーセント単位と宣言している場合は無条件で割合へ変換する。
+            # 「> 1.0 ならパーセント」という推測は 1% 未満の値を誤認するため。
+            max_drawdown = min(max_drawdown / 100.0, 1.0)
             total_return = total_return / 100.0
-        if win_rate > 1.0:
             win_rate = win_rate / 100.0
-        if abs(buy_hold_return) > 1.0:
             buy_hold_return = buy_hold_return / 100.0
+        else:
+            # 単位宣言がない場合の後方互換フォールバック（テスト等の直接構築 dict）
+            if max_drawdown > 1.0:
+                max_drawdown = min(max_drawdown / 100.0, 1.0)
+
+            if abs(total_return) > 1.0:
+                total_return = total_return / 100.0
+            if win_rate > 1.0:
+                win_rate = win_rate / 100.0
+            if abs(buy_hold_return) > 1.0:
+                buy_hold_return = buy_hold_return / 100.0
 
         # 買い持ちベンチマークを上回る超過リターン（割合単位）。
         # 負値（買い持ちに負けている）はペナルティとしてそのまま効かせる。

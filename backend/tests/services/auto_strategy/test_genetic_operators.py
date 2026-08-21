@@ -194,6 +194,22 @@ class TestGeneticOperators:
         assert gene.tpsl_gene.trailing_stop is True
         assert gene.tpsl_gene.trailing_take_profit is True
 
+    def test_risk_mode_switch_toggles_trailing_on_directional_tpsl(self, ga_config):
+        """方向別 TPSL のトレーリングストップ / TP もトグル変異の対象"""
+        gene = StrategyGene(
+            long_tpsl_gene=TPSLGene(trailing_stop=False, trailing_take_profit=False),
+            short_tpsl_gene=TPSLGene(trailing_stop=False, trailing_take_profit=False),
+        )
+        with patch("random.random", return_value=0.0), patch(
+            "random.choice", side_effect=lambda seq: seq[0]
+        ):
+            mutate_risk_management_modes(gene, 1.0, ga_config)
+
+        assert gene.long_tpsl_gene.trailing_stop is True
+        assert gene.long_tpsl_gene.trailing_take_profit is True
+        assert gene.short_tpsl_gene.trailing_stop is True
+        assert gene.short_tpsl_gene.trailing_take_profit is True
+
     def test_risk_mode_switch_changes_position_sizing_method(self, ga_config):
         """ポジションサイジング method スイッチ変異は必ず別方式になる"""
         gene = StrategyGene(

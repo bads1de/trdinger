@@ -67,7 +67,7 @@ class DataIntegrationService:
     @safe_operation(
         context="バックテスト用DataFrame作成",
         is_api_call=False,
-        default_return=pd.DataFrame(),
+        default_return=pd.DataFrame,
     )
     def create_backtest_dataframe(
         self,
@@ -201,7 +201,7 @@ class DataIntegrationService:
     @safe_operation(
         context="データクリーニングと最適化",
         is_api_call=False,
-        default_return=pd.DataFrame(),
+        default_return=pd.DataFrame,
     )
     def _clean_and_optimize_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -245,7 +245,7 @@ class DataIntegrationService:
         except Exception:
             raise
 
-    @safe_operation(context="データ概要取得", is_api_call=False, default_return={})
+    @safe_operation(context="データ概要取得", is_api_call=False, default_return=dict)
     def get_data_summary(self, df: pd.DataFrame) -> dict:
         """
         データの概要情報を取得

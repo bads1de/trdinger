@@ -381,7 +381,10 @@ class RandomGeneGenerator:
     @safe_operation(
         context="ランダム戦略遺伝子生成",
         is_api_call=False,
-        default_return=StrategyGene(
+        # 失敗のたびに新しいインスタンスを返す。
+        # デコレーション時の単一インスタンスを共有すると、
+        # 生成失敗が連続した際に初期集団全体が同一オブジェクトになる。
+        default_return=lambda: StrategyGene(
             indicators=[
                 IndicatorGene(type="SMA", parameters={"period": 20}, enabled=True)
             ],

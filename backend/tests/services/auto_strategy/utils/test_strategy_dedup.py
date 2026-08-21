@@ -124,6 +124,36 @@ class TestStrategyStructureSignature:
             gene_b
         )
 
+    def test_different_tpsl_produce_distinct_signatures(self):
+        """TP/SL違いの戦略が同一構造と誤判定されないこと（slots dataclass 対応）"""
+        from app.services.auto_strategy.genes import TPSLGene
+
+        gene_a = _make_gene()
+        gene_a.tpsl_gene = TPSLGene(take_profit_pct=0.01, stop_loss_pct=0.005)
+        gene_b = _make_gene()
+        gene_b.tpsl_gene = TPSLGene(take_profit_pct=0.10, stop_loss_pct=0.05)
+
+        assert strategy_structure_signature(gene_a) != strategy_structure_signature(
+            gene_b
+        )
+
+    def test_different_position_sizing_produce_distinct_signatures(self):
+        """ポジションサイジング違いの戦略が同一構造と誤判定されないこと"""
+        from app.services.auto_strategy.genes import PositionSizingGene
+
+        gene_a = _make_gene()
+        gene_a.position_sizing_gene = PositionSizingGene(
+            method="FIXED_QUANTITY", fixed_quantity=1000
+        )
+        gene_b = _make_gene()
+        gene_b.position_sizing_gene = PositionSizingGene(
+            method="FIXED_QUANTITY", fixed_quantity=2000
+        )
+
+        assert strategy_structure_signature(gene_a) != strategy_structure_signature(
+            gene_b
+        )
+
 
 class TestDeduplicateStrategies:
     def test_clones_are_collapsed_to_best_score(self):

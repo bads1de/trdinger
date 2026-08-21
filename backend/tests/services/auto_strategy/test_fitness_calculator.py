@@ -407,6 +407,56 @@ def test_extract_performance_metrics_normalizes_percentage_returns(
     assert metrics["max_drawdown"] == pytest.approx(0.4798, abs=1e-9)
 
 
+def test_extract_performance_metrics_percent_unit_declaration(fitness_calculator):
+    """単位宣言(percent)がある場合、1% 未満の値も正しく割合へ変換される。
+
+    ``> 1.0`` ヒューリスティックは 0.8% を割合 0.8 (=80%) と誤認するが、
+    ``performance_metrics_unit == "percent"`` があれば無条件で 1/100 する。
+    BacktestResultConverter は常にこの宣言を付与する。
+    """
+    backtest_result = {
+        "performance_metrics_unit": "percent",
+        "performance_metrics": {
+            "total_return": 0.9,  # 0.9%
+            "sharpe_ratio": 1.5,
+            "max_drawdown": -0.8,  # 0.8%
+            "win_rate": 48.0,
+            "buy_hold_return": 0.5,  # 0.5%
+            "total_trades": 50,
+        },
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(backtest_result)
+
+    assert metrics["total_return"] == pytest.approx(0.009, abs=1e-9)
+    assert metrics["max_drawdown"] == pytest.approx(0.008, abs=1e-9)
+    assert metrics["win_rate"] == pytest.approx(0.48, abs=1e-9)
+    assert metrics["buy_hold_return"] == pytest.approx(0.005, abs=1e-9)
+    # ベンチマーク既知なので超過リターンも割合単位で計算される
+    assert metrics["excess_return"] == pytest.approx(0.004, abs=1e-9)
+
+
+def test_extract_performance_metrics_fraction_passthrough_without_declaration(
+    fitness_calculator,
+):
+    """単位宣言がない場合は旧来の挙動（割合単位はそのまま通す）を維持する"""
+    backtest_result = {
+        "performance_metrics": {
+            "total_return": 0.15,
+            "sharpe_ratio": 1.2,
+            "max_drawdown": 0.08,
+            "win_rate": 0.55,
+            "total_trades": 10,
+        },
+    }
+
+    metrics = fitness_calculator.extract_performance_metrics(backtest_result)
+
+    assert metrics["total_return"] == pytest.approx(0.15, abs=1e-9)
+    assert metrics["max_drawdown"] == pytest.approx(0.08, abs=1e-9)
+    assert metrics["win_rate"] == pytest.approx(0.55, abs=1e-9)
+
+
 def test_meets_constraints_drawdown_percentage_over_limit(
     fitness_calculator, sample_backtest_result, sample_config
 ):

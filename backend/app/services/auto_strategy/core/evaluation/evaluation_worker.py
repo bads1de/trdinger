@@ -10,6 +10,9 @@ from typing import Any
 
 import pandas as pd
 
+from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
+
 # 遅延インポートで循環参照と起動コストを避ける。
 # GA ワーカープロセスは Windows の spawn で生成されるため、
 # モジュール import 時間がそのままワーカー起動時間になる。
@@ -26,16 +29,22 @@ _WORKER_CONFIG: Any | None = None
 
 
 def _default_fitness_for_config(config: Any) -> tuple[float, ...]:
-    """GA設定の目的数に合わせたデフォルトフィットネスを生成する。
+    """評価失敗時のデフォルトフィットネス（方向を考慮したペナルティ値）を生成する。
 
     マルチ目的構成（objectives が2個以上）でも長さ不一致で
-    クラッシュしないようにする。
+    クラッシュしないようにする。0.0 を返すと最小化目的で最良スコアに
+    なり失敗個体が選択を勝ち抜けるため、目的ごとに方向を考慮した
+    ペナルティ値（objective_registry.build_penalty_values 準拠）を返す。
     """
     try:
-        n_objectives = len(getattr(config, "objectives", [])) or 1
+        objectives = list(getattr(config, "objectives", None) or [])
     except Exception:
-        n_objectives = 1
-    return tuple(0.0 for _ in range(n_objectives))
+        objectives = []
+    if not objectives:
+        # 設定が壊れて目的が取得できない場合も、失敗個体が有利に
+        # 扱われないよう最大化方向のペナルティを返す。
+        return (-PENALTY_FITNESS_MAGNITUDE,)
+    return objective_registry.build_penalty_values(objectives)
 
 
 def initialize_worker_process(

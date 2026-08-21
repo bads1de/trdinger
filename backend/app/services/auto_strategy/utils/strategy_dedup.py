@@ -9,6 +9,7 @@ id・metadata を除いた構造シグネチャで同一個体をまとめ、
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Iterable, Sequence
 from typing import Any
 
@@ -50,9 +51,18 @@ def _mapping_signature(value: Any) -> tuple:
 
 
 def _object_fields_signature(obj: Any) -> tuple:
-    """dataclass 等のインスタンスフィールドを正規化する（__slots__ は想定しない）。"""
-    fields = getattr(obj, "__dict__", None) or {}
-    return tuple(sorted((str(k), str(v)) for k, v in fields.items()))
+    """dataclass 等のインスタンスフィールドを正規化する。
+
+    TPSLGene 等のサブ遺伝子は ``@dataclass(slots=True)`` で定義されており
+    ``__dict__`` を持たないため、dataclass は ``dataclasses.fields()``
+    でフィールドを列挙する（``__dict__`` だけ見ると全サブ遺伝子が空に
+    崩れ、TP/SL・サイジング違いの戦略が同一構造と誤判定される）。
+    """
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        values = {f.name: getattr(obj, f.name, None) for f in dataclasses.fields(obj)}
+    else:
+        values = dict(getattr(obj, "__dict__", None) or {})
+    return tuple(sorted((str(k), str(v)) for k, v in values.items()))
 
 
 def _optional_object_signature(obj: Any) -> tuple:

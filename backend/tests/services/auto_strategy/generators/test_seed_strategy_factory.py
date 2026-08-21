@@ -147,15 +147,17 @@ class TestBollingerBreakout:
         assert long_cond.left_operand == "close"
 
     def test_uses_registered_band_names(self):
-        """バンド参照が実行時の登録名を使うこと"""
+        """バンド参照が実行時の登録名を使うこと（Long=上限, Short=下限）"""
         strategy = SeedStrategyFactory.create_bollinger_breakout()
 
+        # BBANDS の戻り列は [BBL, BBM, BBU, ...] なので
+        # Long は 2=上限バンド、Short は 0=下限バンドを参照する
         assert strategy.long_entry_conditions[0].right_operand[
             "name"
-        ] == _multi_output_ref_name(strategy, "BBANDS", 0)
+        ] == _multi_output_ref_name(strategy, "BBANDS", 2)
         assert strategy.short_entry_conditions[0].right_operand[
             "name"
-        ] == _multi_output_ref_name(strategy, "BBANDS", 2)
+        ] == _multi_output_ref_name(strategy, "BBANDS", 0)
 
 
 class TestKAMAADXHybrid:
@@ -192,23 +194,25 @@ class TestWAE:
         assert "ATR" in indicator_types
 
     def test_uses_registered_macd_names(self):
-        """MACD条件が実行時の登録名を使うこと"""
+        """MACD条件が実行時の登録名を使うこと（シグナル比較は index 2）"""
         strategy = SeedStrategyFactory.create_wae()
         long_group = strategy.long_entry_conditions[0]
         short_group = strategy.short_entry_conditions[0]
 
+        # MACD の戻り列は [MACD, MACDh, MACDs] なので
+        # MACDライン(0) と シグナル(2) を比較する
         assert long_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
             strategy, "MACD", 0
         )
         assert long_group.conditions[0].right_operand["name"] == _multi_output_ref_name(
-            strategy, "MACD", 1
+            strategy, "MACD", 2
         )
         assert short_group.conditions[0].left_operand["name"] == _multi_output_ref_name(
             strategy, "MACD", 0
         )
         assert short_group.conditions[0].right_operand[
             "name"
-        ] == _multi_output_ref_name(strategy, "MACD", 1)
+        ] == _multi_output_ref_name(strategy, "MACD", 2)
 
 
 class TestTrendilo:

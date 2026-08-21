@@ -251,7 +251,8 @@ class GeneticUtils:
         """
         複数種類のフィールドを持つ汎用遺伝子の交叉を実行
 
-        数値フィールド（平均化）、Enumフィールド（ランダム選択）、
+        数値フィールド（子ごとに独立した係数の中間交叉）、
+        Enumフィールド（ランダム選択）、
         およびどちらか一方を継承するフィールドを処理し、2つの子個体を生成します。
 
         Args:
@@ -276,6 +277,14 @@ class GeneticUtils:
         parent1_dict = GeneticUtils._extract_gene_params(parent1_gene)
         parent2_dict = GeneticUtils._extract_gene_params(parent2_gene)
 
+        # 辞書/リストフィールドは子間で参照を共有しないよう防御コピーする
+        for gene_dict in (parent1_dict, parent2_dict):
+            for _k, _v in list(gene_dict.items()):
+                if isinstance(_v, dict):
+                    gene_dict[_k] = _v.copy()
+                elif isinstance(_v, list):
+                    gene_dict[_k] = list(_v)
+
         child1_params = {}
         child2_params = {}
 
@@ -294,12 +303,18 @@ class GeneticUtils:
                     [parent1_dict[field], parent2_dict[field]]
                 )
             elif field in numeric_fields:
-                # 数値フィールドは平均化
+                # 数値フィールドは子ごとに独立した係数で中間交叉
                 val1 = parent1_dict[field]
                 val2 = parent2_dict[field]
                 if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
-                    child1_params[field] = (val1 + val2) / 2
-                    child2_params[field] = (val1 + val2) / 2
+                    was_int = isinstance(val1, int) and isinstance(val2, int)
+                    blended1 = val1 + (val2 - val1) * random.random()
+                    blended2 = val1 + (val2 - val1) * random.random()
+                    if was_int:
+                        blended1 = int(round(blended1))
+                        blended2 = int(round(blended2))
+                    child1_params[field] = blended1
+                    child2_params[field] = blended2
                 else:
                     child1_params[field] = val1
                     child2_params[field] = val2

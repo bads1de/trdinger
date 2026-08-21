@@ -19,6 +19,7 @@ import numpy as np
 from deap import tools
 
 from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
 from app.services.auto_strategy.config.ga_config import SurvivalSelectionConfig
 
 from ..evaluation.evaluation_fidelity import (
@@ -381,14 +382,20 @@ class EvolutionRunner:
         return population
 
     def _build_default_fitness(self, config: Optional["GAConfig"]) -> tuple[float, ...]:
-        """GA設定の目的数に合わせたデフォルトフィットネスを返す。"""
-        n_objectives = 1
+        """評価失敗個体に与えるデフォルトフィットネス（方向を考慮したペナルティ値）。
+
+        0.0 を返すと最小化目的（max_drawdown 等）で最良スコアになり、
+        失敗個体が選択を勝ち抜けてしまうため、目的ごとのペナルティ値を返す。
+        """
+        objectives: list[str] = []
         if config is not None:
             try:
-                n_objectives = len(config.objectives) or 1
+                objectives = list(config.objectives or [])
             except Exception:
-                n_objectives = 1
-        return tuple(0.0 for _ in range(n_objectives))
+                objectives = []
+        if not objectives:
+            return (-PENALTY_FITNESS_MAGNITUDE,)
+        return objective_registry.build_penalty_values(objectives)
 
     def _evaluate_invalid_individuals(
         self,

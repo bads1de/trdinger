@@ -9,6 +9,7 @@ from unittest.mock import Mock, call, patch
 import numpy as np
 import pytest
 
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
 from app.services.auto_strategy.core.engine.evolution_runner import (
     EvolutionStoppedError,
 )
@@ -160,8 +161,9 @@ class TestEvolutionRunner:
         runner._evaluate_population(dummy_population)
 
         # Parallel evaluator should be called once with full population
+        # （config 未指定のため目的不明のフォールバック = 最大化ペナルティ）
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            dummy_population, default_fitness=(0.0,)
+            dummy_population, default_fitness=(-PENALTY_FITNESS_MAGNITUDE,)
         )
 
         # Toolbox evaluate should NOT be called
@@ -254,7 +256,7 @@ class TestEvolutionRunner:
 
         mock_build_coarse_config.assert_not_called()
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            dummy_population, default_fitness=(0.0,)
+            dummy_population, default_fitness=(-PENALTY_FITNESS_MAGNITUDE,)
         )
         for ind in dummy_population:
             assert ind.fitness.values == (2.0,)
@@ -310,7 +312,7 @@ class TestEvolutionRunner:
 
         mock_build_coarse_config.assert_not_called()
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            invalid_ind, default_fitness=(0.0,)
+            invalid_ind, default_fitness=(-PENALTY_FITNESS_MAGNITUDE,)
         )
         for ind in invalid_ind:
             assert ind.fitness.values == (3.0,)

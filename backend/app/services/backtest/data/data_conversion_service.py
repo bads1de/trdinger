@@ -45,7 +45,7 @@ class DataConversionService:
     @safe_operation(
         context="OHLCV DataFrame変換",
         is_api_call=False,
-        default_return=pd.DataFrame(),
+        default_return=pd.DataFrame,
     )
     def convert_ohlcv_to_dataframe(self, ohlcv_data: list[OHLCVData]) -> pd.DataFrame:
         """

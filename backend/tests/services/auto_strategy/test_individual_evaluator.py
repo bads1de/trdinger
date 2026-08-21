@@ -613,7 +613,8 @@ class TestIndividualEvaluator:
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
-        assert result == (0.0,)
+        # 失敗個体は方向を考慮したペナルティ値（0.0 は最小化目的で最良になる）
+        assert result == (-PENALTY_FITNESS_MAGNITUDE,)
 
     def test_evaluate_individual_multi_objective_exception(self):
         """多目的最適化例外のテスト"""
@@ -627,7 +628,8 @@ class TestIndividualEvaluator:
 
         result = self.evaluator.evaluate(mock_individual, ga_config)
 
-        assert result == (0.0, 0.0)  # 目的数に応じた0.0が返される
+        # 目的数に応じたペナルティ値が返される（いずれも最大化目的）
+        assert result == (-PENALTY_FITNESS_MAGNITUDE, -PENALTY_FITNESS_MAGNITUDE)
 
     def test_extract_performance_metrics(self):
         """パフォーメンスメトリクス抽出のテスト"""

@@ -23,7 +23,7 @@ class StrategyValidator:
     @safe_operation(
         context="戦略遺伝子バリデーション",
         is_api_call=False,
-        default_return=(False, ["バリデーションエラー"]),
+        default_return=lambda: (False, ["バリデーションエラー"]),
     )
     def validate_strategy_gene(
         self, strategy_gene: Any, config: Any | None = None

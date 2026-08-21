@@ -659,9 +659,11 @@ def mutate_risk_management_modes(
         if methods:
             tpsl_gene.method = random.choice(methods)
 
-    # トレーリングストップ / TP のトグル（共通TPSLのみ）
-    tpsl_gene = mutated.tpsl_gene
-    if tpsl_gene is not None:
+    # トレーリングストップ / TP のトグル（共通 + 方向別 TPSL）
+    for field_name in ("tpsl_gene", "long_tpsl_gene", "short_tpsl_gene"):
+        tpsl_gene = getattr(mutated, field_name)
+        if tpsl_gene is None:
+            continue
         if random.random() < mutation_rate * 0.2:
             tpsl_gene.trailing_stop = not tpsl_gene.trailing_stop
         if random.random() < mutation_rate * 0.2:

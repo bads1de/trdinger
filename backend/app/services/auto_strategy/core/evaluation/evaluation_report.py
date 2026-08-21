@@ -240,7 +240,10 @@ class EvaluationReport:
             float: 集約後の数値。
         """
         if not values:
-            return 0.0
+            # 全シナリオがペナルティ（評価失敗・制約違反）で集計対象がない場合。
+            # 0.0 を返すと最小化目的で最良スコアになるため、方向を考慮した
+            # ペナルティ値を返して失敗個体が選択で有利にならないようにする。
+            return objective_registry.build_penalty_values([objective])[0]
 
         if aggregate_method == "single":
             return float(values[0])

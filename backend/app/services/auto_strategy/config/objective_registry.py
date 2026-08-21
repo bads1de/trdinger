@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Final, Literal
+
+from app.services.auto_strategy.config.constants import PENALTY_FITNESS_MAGNITUDE
 
 logger = logging.getLogger(__name__)
 
@@ -143,3 +146,26 @@ def to_selection_space(value: float, objective: str) -> float:
     """
     numeric_value = float(value)
     return -numeric_value if is_minimize_objective(objective) else numeric_value
+
+
+def build_penalty_values(objectives: Sequence[str]) -> tuple[float, ...]:
+    """
+    Build direction-aware penalty fitness values for the given objectives.
+
+    評価エラー・タイムアウト・制約違反など「評価に失敗した個体」の
+    適応度は必ずこの値を使う唯一のソースとする。0.0 を返すと最小化目的
+    （max_drawdown 等）で最良スコアになり、失敗個体が選択を勝ち抜けて
+    しまうため、方向に応じた最悪値（±PENALTY_FITNESS_MAGNITUDE）を返す。
+
+    Args:
+        objectives: 目的関数名のシーケンス
+
+    Returns:
+        tuple[float, ...]: 目的ごとのペナルティ値
+    """
+    return tuple(
+        PENALTY_FITNESS_MAGNITUDE
+        if is_minimize_objective(obj)
+        else -PENALTY_FITNESS_MAGNITUDE
+        for obj in objectives
+    )

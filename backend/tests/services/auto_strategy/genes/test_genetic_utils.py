@@ -119,11 +119,12 @@ class TestGeneticUtils:
             choice_fields=["choice_val"],
         )
 
-        # 数値フィールド（平均化）
-        assert c1.numeric_val == 15.0
-        assert c2.numeric_val == 15.0
-        assert c1.int_val == 150
-        assert c2.int_val == 150
+        # 数値フィールド（親の範囲内で中間交叉、int型は維持）
+        for child in (c1, c2):
+            assert 10.0 <= child.numeric_val <= 20.0
+            assert isinstance(child.int_val, int)
+            assert 100 <= child.int_val <= 200
+        assert c1.numeric_val != c2.numeric_val or c1.int_val != c2.int_val
 
         # Choiceフィールド（どちらか）
         assert c1.choice_val in ["left", "right"]

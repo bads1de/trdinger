@@ -630,7 +630,7 @@ class IndividualEvaluator:
             if not run_config:
                 return ScenarioEvaluation(
                     name=scenario_name,
-                    fitness=tuple(0.0 for _ in config.objectives),
+                    fitness=self._fitness_calculator.get_penalty_values(config),
                     passed=False,
                     metadata=_safe_copy_metadata(metadata),
                 )
@@ -717,7 +717,7 @@ class IndividualEvaluator:
             scenario_metadata["error"] = str(e)
             return ScenarioEvaluation(
                 name=scenario_name,
-                fitness=tuple(0.0 for _ in config.objectives),
+                fitness=self._fitness_calculator.get_penalty_values(config),
                 passed=False,
                 metadata=scenario_metadata,
             )

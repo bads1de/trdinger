@@ -377,7 +377,7 @@ class ErrorHandler:
 
 
 def safe_operation(
-    default_return: object | str = "RAISE_EXCEPTION",
+    default_return: object | str | Callable[[], Any] = "RAISE_EXCEPTION",
     error_handler: Callable[[Exception, str], Any] | None = None,
     context: str = "統一操作",
     is_api_call: bool = False,
@@ -389,10 +389,16 @@ def safe_operation(
     1. `error_handler`（カスタム関数）が指定されている場合、それを呼び出して結果を返します。
     2. `is_api_call=True` の場合、FastAPI の標準化された `HTTPException` を送出します。
     3. `default_return` が "RAISE_EXCEPTION"（デフォルト）の場合、発生した例外をそのまま再送出します。
-    4. それ以外の場合、エラーをログに記録し、`default_return` に指定された値を返却して実行を継続させます。
+    4. `default_return` が引数を取らない callable の場合、呼び出して結果を返します。
+    5. それ以外の場合、エラーをログに記録し、`default_return` に指定された値を返却して実行を継続させます。
 
     Args:
         default_return (R | str): エラー発生時に返却するデフォルト値。
+            引数を取らない callable（lambda、クラス等）を渡すと、
+            エラーのたびに呼び出して新しいインスタンスを生成して返す。
+            可変オブジェクト（dataclass インスタンスやリスト等）を直接渡すと
+            デコレーション時に 1 回だけ生成された同一インスタンスが
+            全呼び出しで共有されるため、callable での指定を推奨する。
         error_handler (Callable[[Exception, str], T] | None): 独自のエラー処理ロジックを持つ関数 `(exception, context) -> T`。
         context (str): ログ出力やエラーメッセージに使用される操作の識別名（例: "DB保存"）。
         is_api_call (bool): APIエンドポイントとして動作させるか（エラー時にHTTP例外を投げるか）。
@@ -410,6 +416,8 @@ def safe_operation(
         logger.error(f"エラー in {context}: {e}")
         if isinstance(default_return, str) and default_return == "RAISE_EXCEPTION":
             raise e
+        if callable(default_return):
+            return default_return()
         return default_return
 
     def decorator(func: Callable[P, T]) -> Callable[P, T]:
