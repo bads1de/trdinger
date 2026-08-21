@@ -272,7 +272,7 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.3,
         help="非価格指標の選択確率（公平な自由探索用, 0.0-1.0, デフォルト: 0.3）。"
-        "トレンド70%優先バイアスで非価格指標が埋もれるのを防ぐ",
+        "トレンド70%%優先バイアスで非価格指標が埋もれるのを防ぐ",
     )
     parser.add_argument(
         "--max-conditions",
@@ -723,6 +723,10 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
 
         if saved_backtest_path:
             output["backtest_result_file"] = saved_backtest_path
+
+        # 世代ごとの進化統計（gen / avg / max 等）を出力に含める
+        if "logbook" in result and result["logbook"] is not None:
+            output["logbook"] = [dict(record) for record in result["logbook"]]
 
         # 自動検証結果を出力に含める（実行された場合）
         if "validation_results" in result:

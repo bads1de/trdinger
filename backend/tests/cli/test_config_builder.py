@@ -159,6 +159,60 @@ class TestBuildGaConfigDict:
         assert config["validation_config"]["enabled"] is False
         assert config["max_indicators"] == 3
 
+    def test_smoke_disables_early_termination(self):
+        """smoke モードでは早期終了が無効化される（全個体ペナルティ防止）"""
+        config = build_ga_config_dict(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            smoke=True,
+        )
+        early = config["evaluation_config"]["early_termination_settings"]
+        assert early["enabled"] is False
+
+    def test_non_smoke_keeps_early_termination_default(self):
+        """通常モードでは早期終了設定を上書きしない（GAConfig デフォルトに委ねる）"""
+        config = build_ga_config_dict(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+        )
+        assert "early_termination_settings" not in config["evaluation_config"]
+
+    def test_smoke_config_is_accepted_by_ga_config(self):
+        """smoke 構成が GAConfig.from_dict で受け入れられる"""
+        from app.services.auto_strategy.config.ga_config import (
+            EarlyTerminationSettings,
+            EvaluationConfig,
+            GAConfig,
+        )
+
+        config_dict = build_ga_config_dict(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            smoke=True,
+        )
+        ga_config = GAConfig.from_dict(config_dict)
+        assert isinstance(ga_config.evaluation_config, EvaluationConfig)
+        assert isinstance(
+            ga_config.evaluation_config.early_termination_settings,
+            EarlyTerminationSettings,
+        )
+        assert ga_config.evaluation_config.early_termination_settings.enabled is False
+
     def test_mtf_enabled(self):
         """MTF 有効化でタイムフレームが設定される"""
         config = build_ga_config_dict(

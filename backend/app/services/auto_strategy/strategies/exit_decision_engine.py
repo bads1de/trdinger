@@ -185,7 +185,9 @@ class ExitDecisionEngine:
             return False
 
         current_price = self.strategy.data.Close[-1]
-        logger.info(
+        # バックテストのホットパスでバーごとに呼ばれるため DEBUG で記録する
+        # （INFO のままだと GA 評価時にログが数百万行規模で流出する）
+        logger.debug(
             f"部分決済: direction={'LONG' if direction > 0 else 'SHORT'}, "
             f"size={exit_size:.4f}, price={current_price}, pct={exit_pct:.2%}"
         )
@@ -204,7 +206,7 @@ class ExitDecisionEngine:
             return False
 
         current_price = self.strategy.data.Close[-1]
-        logger.info(
+        logger.debug(
             f"全決済: direction={'LONG' if direction > 0 else 'SHORT'}, "
             f"size={abs(position.size):.4f}, price={current_price}"
         )
@@ -221,7 +223,7 @@ class ExitDecisionEngine:
         トレーリングSLを起動する。
         決済は実行せず、PositionManagerにトレーリング開始を通知。
         """
-        logger.info(
+        logger.debug(
             f"トレーリングSL起動: direction={'LONG' if direction > 0 else 'SHORT'}"
         )
         self.strategy.position_manager.activate_trailing_stop()

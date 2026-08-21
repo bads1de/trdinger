@@ -132,6 +132,32 @@ class TestRestrictedTournamentReplace:
         )
         assert survivors == self.parents
 
+    def test_clone_is_rejected_even_when_twin_is_not_sampled(self) -> None:
+        # 双子の親がサンプリングされない状況（crowding_factor=1）でも、
+        # プール全体の構造照合によりクローン子は常に棄却される
+        many_parents = [make_gene([(f"P{i}", "")], 1.0) for i in range(20)]
+        twin_parent = make_gene([("TWIN", "")], 1.0)
+        parents = many_parents + [twin_parent]
+        clone_child = make_gene([("TWIN", "")], 1.0)
+        survivors = restricted_tournament_replace(
+            parents, [clone_child], crowding_factor=1, rng=random.Random(123)
+        )
+        assert survivors == parents
+
+    def test_dominating_child_cannot_duplicate_existing_structure(self) -> None:
+        # 同一構造の子がニッチ代表を支配しても、構造一意性を優先して棄却する
+        # （決定論的評価では同一構造の fitness 差は発生しないため）
+        parent_ab = make_gene([("A", ""), ("B", "")], 1.0)
+        other_parent = make_gene([("Z", "")], 1.0)
+        stronger_same_structure = make_gene([("A", ""), ("B", "")], 5.0)
+        survivors = restricted_tournament_replace(
+            [parent_ab, other_parent],
+            [stronger_same_structure],
+            crowding_factor=10,
+            rng=self.rng,
+        )
+        assert survivors == [parent_ab, other_parent]
+
     def test_nondominated_structurally_distinct_child_is_appended(self) -> None:
         child = make_gene([("Q", ""), ("R", "")], 1.0)
         survivors = restricted_tournament_replace(
@@ -160,11 +186,11 @@ class TestRestrictedTournamentReplace:
         p1 = make_gene([("A", "")], 5.0)
         p2 = make_gene([("A", ""), ("B", "")], 1.0)
         p3 = make_gene([("Z", "")], 1.0)
-        child = make_gene([("A", ""), ("B", "")], 2.0)
+        # child は P2 に最も近い（距離 1/3）別構造とし、P2 のみを支配して置換する
+        child = make_gene([("A", ""), ("B", ""), ("C", "")], 2.0)
         survivors = restricted_tournament_replace(
             [p1, p2, p3], [child], crowding_factor=3, rng=self.rng
         )
-        # 最寄りは P2（距離 1/3）で、child は P2 を支配する → P2 のみ置換
         assert p1 in survivors and p3 in survivors
         assert p2 not in survivors and child in survivors
 

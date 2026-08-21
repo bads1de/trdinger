@@ -11,6 +11,7 @@ from collections.abc import Sequence
 from typing import Any, TypeGuard
 
 from app.services.auto_strategy.config import objective_registry
+from app.services.auto_strategy.utils.strategy_dedup import strategy_structure_signature
 
 from ..evaluation.evaluation_report import EvaluationReport
 from .fitness_utils import (
@@ -194,17 +195,21 @@ def extract_primary_fitness(individual: object) -> float:
 def get_individual_identity(individual: object) -> object:
     """個体比較用の安定キーを返す。
 
-    個体のid属性を優先して使用し、存在しない場合は
-    PythonのオブジェクトIDをフォールバックとして使用します。
+    id・metadata を除いた構造シグネチャを優先して使用し、遺伝子id（UUID）だけが
+    異なる構造クローンを同一視する。シグネチャの構築に失敗した場合は
+    id 属性（なければオブジェクトID）へフォールバックする。
 
     Args:
         individual: 比較対象の個体。
 
     Returns:
-        個体を一意に識別するキー（文字列のidまたはintのオブジェクトID）。
+        個体を一意に識別するキー（構造シグネチャタプル、文字列のidまたはintのオブジェクトID）。
     """
-    individual_id = getattr(individual, "id", None)
-    return individual_id if individual_id not in (None, "") else id(individual)
+    try:
+        return strategy_structure_signature(individual)
+    except Exception:
+        individual_id = getattr(individual, "id", None)
+        return individual_id if individual_id not in (None, "") else id(individual)
 
 
 def get_two_stage_rank(individual: object) -> int | None:

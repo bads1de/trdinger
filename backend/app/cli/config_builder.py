@@ -192,6 +192,12 @@ def build_ga_config_dict(
         config_kwargs["use_seed_strategies"] = False
         config_kwargs["seed_injection_rate"] = 0.0
         config_kwargs["two_stage_selection_config"] = {"enabled": False}
+        # smoke モードでは早期終了（trade_pace / max_drawdown 等）を無効化する。
+        # min_trades=30 等のデフォルト基準は小さい構成・短い期間ですぐ発動し、
+        # 全個体がペナルティ fitness になって動作確認にならないため。
+        config_kwargs["evaluation_config"]["early_termination_settings"] = {
+            "enabled": False
+        }
     else:
         config_kwargs["max_indicators"] = max_indicators
         config_kwargs["max_conditions"] = max_conditions
@@ -225,9 +231,7 @@ def build_ga_config_dict(
         config_kwargs["fitness_constraints"] = fitness_constraints
 
     if enable_rtr:
-        survival_selection: dict[str, Any] = {
-            "enable_restricted_tournament": True
-        }
+        survival_selection: dict[str, Any] = {"enable_restricted_tournament": True}
         if rtr_crowding_factor is not None:
             survival_selection["restricted_tournament_crowding_factor"] = (
                 rtr_crowding_factor

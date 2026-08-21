@@ -8,6 +8,7 @@
 """
 
 import random
+import zlib
 
 import pytest
 from deap import tools
@@ -42,8 +43,9 @@ def _synthetic_fitness(
         score += 0.1
     if gene.exit_gene is not None:
         score += 0.1
-    # 決定性ハッシュで個体ごとの微細な差を付ける（同一構造の個体が並ぶのを防ぐ）
-    seed = hash(str(sorted(str(i.type) for i in gene.indicators)))
+    # 決定的ハッシュで個体ごとの微細な差を付ける（同一構造の個体が並ぶのを防ぐ）。
+    # 組み込み hash() は PYTHONHASHSEED によりプロセス毎に変わるため zlib.crc32 を使う
+    seed = zlib.crc32(str(sorted(str(i.type) for i in gene.indicators)).encode("utf-8"))
     score += (seed % 100) / 1000.0
     return (score,)
 

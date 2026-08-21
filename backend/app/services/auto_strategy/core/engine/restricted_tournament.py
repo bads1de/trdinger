@@ -7,6 +7,10 @@
 ニッチの代表を支配した場合のみ置換を許すため、指標構成の多様性が選択圧から
 独立に守られる。
 
+加えて、生存プール全体の構造シグネチャを照合し、同一構造（クローン）の子は
+ニッチ代表がサンプリングされるかどうかに依存せず常に棄却する。これにより
+交叉・変異を免れた親の完全コピーがプールへ紛れ込む経路を断てる。
+
 GDE3 (Kukkonen & Lampinen 2005) の生存選択を (mu+lambda) バッチ選択へ適応させた
 もので、最終的な次世代の決定は既存の NSGA-II 二段階選抜に委ねる。
 """
@@ -14,6 +18,7 @@ GDE3 (Kukkonen & Lampinen 2005) の生存選択を (mu+lambda) バッチ選択�
 from __future__ import annotations
 
 import random
+from collections import Counter
 from typing import Any
 
 from app.services.auto_strategy.utils.strategy_dedup import strategy_structure_signature
@@ -71,11 +76,10 @@ def restricted_tournament_replace(
     各子個体は生存プールから ``crowding_factor`` 個をサンプリングし、指標構成
     距離が最小の個体（ニッチ代表）と比較する:
 
+    - 子の構造シグネチャがプールに既に存在（クローン）→ サンプリングに関係なく棄却
     - 子が代表を支配 → 代表のスロットを子が置き換える（ニッチ内改善）
     - 代表が子を支配 → 子は棄却
-    - 非支配のとき:
-      - 構造シグネチャが完全同一（クローン）→ 子は棄却
-      - 構造が異なる → 子を追加（多様性の純増）
+    - 非支配で構造が異なる → 子を追加（多様性の純増）
 
     Args:
         parents: 現世代の個体群（変更されない）。
@@ -92,6 +96,7 @@ def restricted_tournament_replace(
     survivors = list(parents)
     slot_elements = [indicator_set_elements(individual) for individual in survivors]
     slot_signatures = [strategy_structure_signature(ind) for ind in survivors]
+    signature_counts: Counter[tuple] = Counter(slot_signatures)
 
     for child in offspring:
         if not has_valid_fitness(child):
@@ -99,11 +104,20 @@ def restricted_tournament_replace(
 
         if not survivors:
             survivors.append(child)
-            slot_elements.append(indicator_set_elements(child))
-            slot_signatures.append(strategy_structure_signature(child))
+            child_elements = indicator_set_elements(child)
+            child_signature = strategy_structure_signature(child)
+            slot_elements.append(child_elements)
+            slot_signatures.append(child_signature)
+            signature_counts[child_signature] += 1
             continue
 
         child_elements = indicator_set_elements(child)
+        child_signature = strategy_structure_signature(child)
+        if signature_counts.get(child_signature, 0) > 0:
+            # 構造クローン: プールのどこかに同一構造が既に存在する場合は、
+            # ニッチ代表がサンプリングされるかどうかに依存せず常に棄却する
+            continue
+
         indices = sampler.sample(
             range(len(survivors)), min(sample_size, len(survivors))
         )
@@ -114,20 +128,22 @@ def restricted_tournament_replace(
         competitor = survivors[closest]
 
         if _dominates(child, competitor):
+            replaced_signature = slot_signatures[closest]
             survivors[closest] = child
             slot_elements[closest] = child_elements
-            slot_signatures[closest] = strategy_structure_signature(child)
+            slot_signatures[closest] = child_signature
+            signature_counts[replaced_signature] -= 1
+            if signature_counts[replaced_signature] <= 0:
+                del signature_counts[replaced_signature]
+            signature_counts[child_signature] += 1
             continue
 
         if _dominates(competitor, child):
             continue
 
-        child_signature = strategy_structure_signature(child)
-        if child_signature == slot_signatures[closest]:
-            # 構造クローン: 代表スロットが同じ情報を既に保持している
-            continue
         survivors.append(child)
         slot_elements.append(child_elements)
         slot_signatures.append(child_signature)
+        signature_counts[child_signature] += 1
 
     return survivors
