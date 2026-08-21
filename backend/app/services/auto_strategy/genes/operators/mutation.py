@@ -5,7 +5,6 @@ StrategyGene の突然変異（mutation）演算ロジック。
 突然変異処理を提供します。
 """
 
-import contextlib
 import inspect
 import logging
 import random
@@ -21,7 +20,7 @@ from ...utils.scale_compat import (
     default_threshold_for,
     is_close_comparable_type,
 )
-from ..conditions import Condition, ConditionGroup
+from ..conditions import Condition, ConditionGroup, StatefulCondition
 from ..entry import EntryGene, create_random_entry_gene
 from ..exit import ExitGene, create_random_exit_gene
 from ..position_sizing import (
@@ -188,16 +187,13 @@ def _mutate_condition_leaf(
 ) -> None:
     """単一条件の突然変異（演算子・閾値・オペランド）"""
     # 1. 演算子の変異
-    if (
-        random.random()
-        < config.mutation_config.condition_operator_switch_probability
-    ):
+    if random.random() < config.mutation_config.condition_operator_switch_probability:
         try:
             condition.operator = random.choice(
                 config.mutation_config.valid_condition_operators
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"演算子変異スキップ: {e}")
 
     # 2. 閾値（数値オペランド）の変異
     if (
@@ -210,10 +206,7 @@ def _mutate_condition_leaf(
                 setattr(condition, attr, _mutate_threshold(val))
 
     # 3. オペランドのスワップ変異
-    if (
-        random.random()
-        < config.mutation_config.condition_operand_swap_probability
-    ):
+    if random.random() < config.mutation_config.condition_operand_swap_probability:
         _mutate_operands(condition, strategy, valid_names)
 
 
@@ -233,6 +226,45 @@ def _mutate_condition_topology(
         conditions.pop(idx)
     # 追加: 有効な指標から条件を生成して追加（max_conditions 未満の場合のみ）
     elif len(conditions) < max_conds and strategy.indicators:
+        # 20% の確率で ConditionGroup（AND/OR + 2条件）を生成してネスト構造を導入
+        if (
+            random.random() < 0.2
+            and len(conditions) + 1 <= max_conds
+            and len(strategy.indicators) >= 1
+        ):
+            try:
+                conds: list[Condition | ConditionGroup] = []
+                for _ in range(2):
+                    ind = random.choice(strategy.indicators)
+                    ref_name = build_indicator_reference_name(ind)
+                    if is_close_comparable_type(ind.type):
+                        op = ">" if side == "long" else "<"
+                        conds.append(
+                            Condition(
+                                left_operand="close",
+                                operator=op,
+                                right_operand=ref_name,
+                            )
+                        )
+                    else:
+                        thresh = default_threshold_for(
+                            ind.type, bullish=(side == "long")
+                        )
+                        op = "<" if side == "long" else ">"
+                        conds.append(
+                            Condition(
+                                left_operand=ref_name,
+                                operator=op,
+                                right_operand=thresh,
+                            )
+                        )
+                group = ConditionGroup(
+                    operator=random.choice(["AND", "OR"]), conditions=conds
+                )
+                conditions.append(group)
+                return
+            except Exception as e:
+                logger.debug(f"ConditionGroup生成スキップ: {e}")
         ind = random.choice(strategy.indicators)
         ref_name = build_indicator_reference_name(ind)
         if is_close_comparable_type(ind.type):
@@ -281,39 +313,98 @@ def mutate_indicators(
     }
 
     for i, indicator in enumerate(mutated.indicators):
-        if random.random() < mutation_rate:
-            for param_name, param_value in indicator.parameters.items():
-                if (
-                    isinstance(param_value, (int, float))
-                    and random.random() < mutation_rate
-                ):
-                    was_integer = isinstance(param_value, int)
+        # パラメータ変異: 各パラメータを mutation_rate で変異（二重ゲートを解消）
+        for param_name, param_value in list(indicator.parameters.items()):
+            if (
+                isinstance(param_value, (int, float))
+                and random.random() < mutation_rate
+            ):
+                was_integer = isinstance(param_value, int)
 
-                    if (
-                        param_name == "period"
-                        and hasattr(config, "parameter_ranges")
-                        and "period" in config.parameter_ranges
-                    ):
-                        min_p, max_p = config.parameter_ranges["period"]
-                        mutated.indicators[i].parameters[param_name] = max(
-                            min_p,
-                            min(
-                                max_p,
-                                int(
-                                    param_value
-                                    * random.uniform(min_multiplier, max_multiplier)
-                                ),
+                if (
+                    param_name == "period"
+                    and hasattr(config, "parameter_ranges")
+                    and "period" in config.parameter_ranges
+                ):
+                    min_p, max_p = config.parameter_ranges["period"]
+                    mutated.indicators[i].parameters[param_name] = max(
+                        min_p,
+                        min(
+                            max_p,
+                            int(
+                                param_value
+                                * random.uniform(min_multiplier, max_multiplier)
                             ),
+                        ),
+                    )
+                elif was_integer or param_name in integer_param_names:
+                    new_value = int(
+                        param_value * random.uniform(min_multiplier, max_multiplier)
+                    )
+                    mutated.indicators[i].parameters[param_name] = max(1, new_value)
+                else:
+                    mutated.indicators[i].parameters[param_name] = (
+                        param_value * random.uniform(min_multiplier, max_multiplier)
+                    )
+
+        # 指標タイプの変異: 別タイプへスイッチ（パラメータは新タイプ用に再生成）
+        if random.random() < mutation_rate * 0.15:
+            try:
+                from ...config.indicator_universe import get_indicator_universe_names
+                from ..indicator import create_random_indicator_gene
+
+                available = list(get_indicator_universe_names(config))  # type: ignore[arg-type]
+                if available:
+                    new_type = random.choice(available)
+                    if new_type != indicator.type:
+                        new_gene = create_random_indicator_gene(
+                            new_type, config, timeframe=indicator.timeframe
                         )
-                    elif was_integer or param_name in integer_param_names:
-                        new_value = int(
-                            param_value * random.uniform(min_multiplier, max_multiplier)
-                        )
-                        mutated.indicators[i].parameters[param_name] = max(1, new_value)
+                        # id と enabled は旧指標を引き継ぐ
+                        new_gene.id = indicator.id
+                        new_gene.enabled = indicator.enabled
+                        mutated.indicators[i] = new_gene
+                        indicator = new_gene
+            except Exception as e:
+                logger.debug(f"指標タイプ変異スキップ: {e}")
+
+        # タイムフレーム変異（MTF有効時のみ）
+        if random.random() < mutation_rate * 0.15:
+            try:
+                if getattr(config, "enable_multi_timeframe", False):
+                    from app.config.constants import SUPPORTED_TIMEFRAMES
+
+                    available_tfs = (
+                        getattr(config, "available_timeframes", None)
+                        or SUPPORTED_TIMEFRAMES
+                    )
+                    # 30% で None（デフォルトTF）、それ以外でランダムTF
+                    if indicator.timeframe is None:
+                        if random.random() < 0.5:
+                            mutated.indicators[i].timeframe = random.choice(
+                                available_tfs
+                            )
                     else:
-                        mutated.indicators[i].parameters[param_name] = (
-                            param_value * random.uniform(min_multiplier, max_multiplier)
-                        )
+                        if random.random() < 0.3:
+                            mutated.indicators[i].timeframe = None
+                        else:
+                            mutated.indicators[i].timeframe = random.choice(
+                                available_tfs
+                            )
+                else:
+                    mutated.indicators[i].timeframe = None
+            except Exception as e:
+                logger.debug(f"タイムフレーム変異スキップ: {e}")
+
+        # 有効/無効フラグの変異
+        if random.random() < mutation_rate * 0.1:
+            mutated.indicators[i].enabled = not mutated.indicators[i].enabled
+
+        # json_config のリフレッシュ（パラメータ/type/timeframe 変異後）
+        try:
+            mutated.indicators[i].json_config = mutated.indicators[i].get_json_config()
+        except Exception as e:
+            logger.debug(f"json_config更新スキップ: {e}")
 
     if (
         random.random()
@@ -424,17 +515,13 @@ def mutate_conditions(
         conditions: list[Condition | ConditionGroup], side: str
     ) -> None:
         # 1. トポロジー変異（条件追加・枝刈り）
-        if (
-            random.random()
-            < config.mutation_config.condition_add_delete_probability
-        ):
+        if random.random() < config.mutation_config.condition_add_delete_probability:
             _mutate_condition_topology(conditions, mutated, config, side=side)
 
         # 2. 条件アイテムの変異
         if (
             conditions
-            and random.random()
-            < config.mutation_config.condition_selection_probability
+            and random.random() < config.mutation_config.condition_selection_probability
         ):
             idx = random.randint(0, len(conditions) - 1)
             mutate_item(conditions[idx])
@@ -449,6 +536,106 @@ def mutate_conditions(
             maybe_mutate_branch(conditions, side)
 
 
+def mutate_stateful_conditions(
+    mutated: StrategyGene, mutation_rate: float, config: GAConfig
+) -> None:
+    """ステートフル条件の突然変異処理。"""
+    valid_names = mutated.valid_operand_names()
+    max_stateful = 3  # 設定に上限がないため固定
+
+    # 既存の stateful 条件の変異
+    for sc in list(mutated.stateful_conditions):
+        if random.random() < mutation_rate:
+            # lookback_bars の摂動
+            if random.random() < 0.3:
+                sc.lookback_bars = max(
+                    1, min(20, int(sc.lookback_bars * random.uniform(0.8, 1.2)) or 1)
+                )
+            # cooldown_bars の摂動
+            if random.random() < 0.3:
+                sc.cooldown_bars = max(
+                    0, min(20, int(sc.cooldown_bars * random.uniform(0.8, 1.2)))
+                )
+            # direction の反転
+            if random.random() < 0.2:
+                sc.direction = "short" if sc.direction == "long" else "long"
+            # enabled トグル
+            if random.random() < 0.2:
+                sc.enabled = not sc.enabled
+            # trigger / follow 条件の変異
+            if random.random() < 0.5:
+                _mutate_condition_leaf(
+                    sc.trigger_condition, mutated, config, valid_names
+                )
+            if random.random() < 0.5:
+                _mutate_condition_leaf(
+                    sc.follow_condition, mutated, config, valid_names
+                )
+            # オペランドスワップは _mutate_condition_leaf 内で確率的に実行されるが、追加で単独スワップも
+            if (
+                random.random()
+                < config.mutation_config.condition_operand_swap_probability
+            ):
+                _mutate_operands(sc.trigger_condition, mutated, valid_names)
+            if (
+                random.random()
+                < config.mutation_config.condition_operand_swap_probability
+            ):
+                _mutate_operands(sc.follow_condition, mutated, valid_names)
+
+    # トポロジー変異: 追加・削除
+    if random.random() < mutation_rate * 0.2:
+        # 削除
+        if (
+            mutated.stateful_conditions
+            and len(mutated.stateful_conditions) > 0
+            and random.random() < 0.5
+        ):
+            # 1件以上あればランダムに削除（少なくとも1件は削除可能）
+            idx = random.randint(0, len(mutated.stateful_conditions) - 1)
+            mutated.stateful_conditions.pop(idx)
+        # 追加（指標がある場合のみ）
+        elif len(mutated.stateful_conditions) < max_stateful and mutated.indicators:
+            try:
+                ind_trigger = random.choice(mutated.indicators)
+                ind_follow = random.choice(mutated.indicators)
+                ref_trigger = build_indicator_reference_name(ind_trigger)
+                ref_follow = build_indicator_reference_name(ind_follow)
+
+                # トリガー条件の生成
+                if is_close_comparable_type(ind_trigger.type):
+                    trigger = Condition(
+                        left_operand="close", operator=">", right_operand=ref_trigger
+                    )
+                else:
+                    thresh = default_threshold_for(ind_trigger.type, bullish=True)
+                    trigger = Condition(
+                        left_operand=ref_trigger, operator="<", right_operand=thresh
+                    )
+                # フォロー条件の生成
+                if is_close_comparable_type(ind_follow.type):
+                    follow = Condition(
+                        left_operand="close", operator=">", right_operand=ref_follow
+                    )
+                else:
+                    thresh = default_threshold_for(ind_follow.type, bullish=False)
+                    follow = Condition(
+                        left_operand=ref_follow, operator=">", right_operand=thresh
+                    )
+
+                new_sc = StatefulCondition(
+                    trigger_condition=trigger,
+                    follow_condition=follow,
+                    lookback_bars=random.randint(3, 10),
+                    cooldown_bars=random.randint(0, 5),
+                    direction=random.choice(["long", "short"]),
+                    enabled=True,
+                )
+                mutated.stateful_conditions.append(new_sc)
+            except Exception as e:
+                logger.debug(f"ステートフル条件追加スキップ: {e}")
+
+
 def mutate_strategy_gene(
     gene: StrategyGene, config: GAConfig, mutation_rate: float = 0.1
 ) -> StrategyGene:
@@ -456,11 +643,20 @@ def mutate_strategy_gene(
     try:
         mutated = gene.clone()
 
-        with contextlib.suppress(Exception):
+        try:
             mutate_indicators(mutated, mutation_rate, config)
+        except Exception as e:
+            logger.warning(f"指標変異に失敗しました（スキップ）: {e}")
 
-        with contextlib.suppress(Exception):
+        try:
             mutate_conditions(mutated, mutation_rate, config)
+        except Exception as e:
+            logger.warning(f"条件変異に失敗しました（スキップ）: {e}")
+
+        try:
+            mutate_stateful_conditions(mutated, mutation_rate, config)
+        except Exception as e:
+            logger.warning(f"ステートフル条件変異に失敗しました（スキップ）: {e}")
 
         try:
             min_risk_multiplier, max_risk_multiplier = (
@@ -485,8 +681,8 @@ def mutate_strategy_gene(
                             min_risk_multiplier,
                             max_risk_multiplier,
                         )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"リスクパラメータ変異スキップ: {e}")
 
         try:
             for (
@@ -504,8 +700,8 @@ def mutate_strategy_gene(
                         field_name,
                         _create_sub_gene(creator_func, config),  # type: ignore[arg-type]
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"サブ遺伝子変異スキップ: {e}")
 
         try:
             from ...tools import tool_registry
@@ -541,10 +737,23 @@ def mutate_strategy_gene(
                         if tool:
                             tool_gene.params = tool.mutate_params(tool_gene.params)
 
+                # ツール削除（weekend_filter以外をランダムに除去）
+                if (
+                    len(mutated.tool_genes) > 1
+                    and random.random() < tool_add_prob * 0.5
+                ):
+                    removable = [
+                        t
+                        for t in mutated.tool_genes
+                        if t.tool_name != WEEKEND_FILTER_NAME
+                    ]
+                    if removable:
+                        to_remove = random.choice(removable)
+                        mutated.tool_genes.remove(to_remove)
+
                 # ツール新規追加
                 if (
-                    len(mutated.tool_genes)
-                    < getattr(config, "max_enabled_filters", 3)
+                    len(mutated.tool_genes) < getattr(config, "max_enabled_filters", 3)
                     and random.random()
                     < config.mutation_config.tool_gene_add_delete_probability
                     * mutation_rate

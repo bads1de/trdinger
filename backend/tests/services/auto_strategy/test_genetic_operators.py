@@ -3,6 +3,7 @@
 """
 
 import copy
+import random
 from unittest.mock import Mock, patch
 
 import pytest
@@ -321,7 +322,9 @@ class TestGeneticOperators:
             test_gene = gene.clone()
             mutate_conditions(test_gene, 1.0, ga_config)
             cond = test_gene.long_entry_conditions[0]
-            if isinstance(cond, Condition) and isinstance(cond.right_operand, (int, float)):
+            if isinstance(cond, Condition) and isinstance(
+                cond.right_operand, (int, float)
+            ):
                 mutated_thresholds.add(round(float(cond.right_operand), 4))
 
         # 30.0 以外の閾値が生成されていること
@@ -346,7 +349,12 @@ class TestGeneticOperators:
             test_gene = gene.clone()
             mutate_conditions(test_gene, 1.0, ga_config)
             cond = test_gene.long_entry_conditions[0]
-            if isinstance(cond, Condition) and cond.right_operand in ("EMA", "open", "high", "low"):
+            if isinstance(cond, Condition) and cond.right_operand in (
+                "EMA",
+                "open",
+                "high",
+                "low",
+            ):
                 swapped = True
                 break
 
@@ -396,11 +404,15 @@ class TestGeneticOperators:
                 deleted = True
                 break
 
-        assert deleted, "Condition deletion mutation should prune a condition when multiple exist"
+        assert deleted, (
+            "Condition deletion mutation should prune a condition when multiple exist"
+        )
 
     def test_mutate_indicators_smart_condition_injection(self, ga_config):
         """新しい指標が追加された際に、その指標を利用する条件が注入されることを確認"""
-        from app.services.auto_strategy.genes.operators.mutation import mutate_indicators
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_indicators,
+        )
         from app.services.auto_strategy.utils.indicator_references import (
             build_indicator_reference_name,
         )
@@ -425,20 +437,27 @@ class TestGeneticOperators:
                 # 注入時は build_indicator_reference_name と同一の参照名が使われるため、
                 # 期待値も同じ関数で構築する（id/timeframe を含む場合を考慮）
                 valid_names = {build_indicator_reference_name(new_ind)}
-                for cond in test_gene.long_entry_conditions + test_gene.short_entry_conditions:
+                for cond in (
+                    test_gene.long_entry_conditions + test_gene.short_entry_conditions
+                ):
                     if isinstance(cond, Condition) and (
-                        cond.left_operand in valid_names or cond.right_operand in valid_names
+                        cond.left_operand in valid_names
+                        or cond.right_operand in valid_names
                     ):
                         injected = True
                         break
             if injected:
                 break
 
-        assert injected, "Smart condition injection should inject conditions using the new indicator"
+        assert injected, (
+            "Smart condition injection should inject conditions using the new indicator"
+        )
 
     def test_mutate_tool_genes_add_and_toggle(self, ga_config):
         """ToolGene の追加・パラメータ変異が動作することを確認"""
-        from app.services.auto_strategy.genes.operators.mutation import mutate_strategy_gene
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_strategy_gene,
+        )
         from app.services.auto_strategy.genes.tool import ToolGene
 
         gene = StrategyGene(
@@ -483,3 +502,314 @@ class TestGeneticOperators:
             test_gene2 = gene.clone()
             mutate_indicators(test_gene2, 1.0, ga_config)
             assert len(test_gene2.long_entry_conditions) <= ga_config.max_conditions
+
+    def test_mutate_stateful_conditions_mutates_existing(self, ga_config):
+        """既存 stateful 条件の lookback/cooldown/direction/enabled が変異することを確認"""
+        from app.services.auto_strategy.genes.conditions import StatefulCondition
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_stateful_conditions,
+        )
+
+        gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}),
+                IndicatorGene(type="RSI", parameters={"period": 14}),
+            ],
+            stateful_conditions=[
+                StatefulCondition(
+                    trigger_condition=Condition(
+                        left_operand="close", operator=">", right_operand="SMA"
+                    ),
+                    follow_condition=Condition(
+                        left_operand="RSI", operator="<", right_operand=30.0
+                    ),
+                    lookback_bars=5,
+                    cooldown_bars=2,
+                    direction="long",
+                    enabled=True,
+                )
+            ],
+        )
+        ga_config.mutation_config.condition_operand_swap_probability = 0.0
+
+        changed = False
+        for seed in range(30):
+            random.seed(seed)
+            test_gene = gene.clone()
+            mutate_stateful_conditions(test_gene, 1.0, ga_config)
+            sc = test_gene.stateful_conditions[0]
+            if (
+                sc.lookback_bars != 5
+                or sc.cooldown_bars != 2
+                or sc.direction != "long"
+                or sc.enabled is not True
+                or sc.trigger_condition.operator != ">"
+            ):
+                changed = True
+                break
+
+        assert changed, "Stateful condition mutation should alter at least one field"
+
+    def test_mutate_stateful_conditions_topology_add_and_delete(self, ga_config):
+        """stateful 条件の追加・削除トポロジー変異が動作することを確認"""
+        from app.services.auto_strategy.genes.conditions import StatefulCondition
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_stateful_conditions,
+        )
+
+        gene = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+            stateful_conditions=[],
+        )
+
+        added = False
+        for seed in range(50):
+            random.seed(seed)
+            test_gene = gene.clone()
+            mutate_stateful_conditions(test_gene, 1.0, ga_config)
+            if len(test_gene.stateful_conditions) > 0:
+                added = True
+                break
+
+        assert added, "Stateful topology mutation should add a new condition"
+
+        multi_gene = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+            stateful_conditions=[
+                StatefulCondition(
+                    trigger_condition=Condition(
+                        left_operand="close", operator=">", right_operand="SMA"
+                    ),
+                    follow_condition=Condition(
+                        left_operand="close", operator="<", right_operand="SMA"
+                    ),
+                ),
+                StatefulCondition(
+                    trigger_condition=Condition(
+                        left_operand="close", operator="<", right_operand="SMA"
+                    ),
+                    follow_condition=Condition(
+                        left_operand="close", operator=">", right_operand="SMA"
+                    ),
+                ),
+            ],
+        )
+
+        deleted = False
+        for seed in range(100):
+            random.seed(1000 + seed)
+            test_gene = multi_gene.clone()
+            mutate_stateful_conditions(test_gene, 1.0, ga_config)
+            if len(test_gene.stateful_conditions) < 2:
+                deleted = True
+                break
+
+        assert deleted, "Stateful topology mutation should delete an existing condition"
+
+    def test_mutate_indicators_type_switch(self, ga_config):
+        """指標タイプのスイッチ変異が動作することを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_indicators,
+        )
+
+        gene = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+        )
+        # 追加/削除を無効化してタイプスイッチのみを観察
+        ga_config.mutation_config.indicator_add_delete_probability = 0.0
+
+        switched = False
+        for seed in range(100):
+            random.seed(seed)
+            test_gene = gene.clone()
+            mutate_indicators(test_gene, 1.0, ga_config)
+            if test_gene.indicators[0].type != "SMA":
+                switched = True
+                break
+
+        assert switched, "Indicator type mutation should switch to another type"
+
+    def test_mutate_indicators_timeframe_toggle(self, ga_config):
+        """タイムフレーム変異（MTF有効時）が動作することを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_indicators,
+        )
+
+        ga_config.enable_multi_timeframe = True
+        ga_config.mutation_config.indicator_add_delete_probability = 0.0
+
+        gene = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+        )
+
+        toggled = False
+        for seed in range(200):
+            random.seed(seed)
+            test_gene = gene.clone()
+            mutate_indicators(test_gene, 1.0, ga_config)
+            if test_gene.indicators[0].timeframe is not None:
+                toggled = True
+                break
+
+        assert toggled, "Timeframe mutation should assign a timeframe when MTF enabled"
+
+    def test_mutate_indicators_timeframe_none_when_mtf_disabled(self, ga_config):
+        """MTF無効時は timeframe が None に正規化されることを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_indicators,
+        )
+
+        ga_config.enable_multi_timeframe = False
+        ga_config.mutation_config.indicator_add_delete_probability = 0.0
+
+        gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}, timeframe="4h")
+            ],
+        )
+
+        normalized = False
+        for seed in range(200):
+            random.seed(seed)
+            test_gene = gene.clone()
+            mutate_indicators(test_gene, 1.0, ga_config)
+            if test_gene.indicators[0].timeframe is None:
+                normalized = True
+                break
+
+        assert normalized, (
+            "Timeframe mutation should normalize timeframe to None when MTF disabled"
+        )
+
+    def test_mutate_indicators_enabled_toggle(self, ga_config):
+        """指標 enabled フラグのトグル変異が動作することを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_indicators,
+        )
+
+        ga_config.mutation_config.indicator_add_delete_probability = 0.0
+
+        gene = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+        )
+
+        toggled = False
+        for seed in range(500):
+            random.seed(seed)
+            test_gene = gene.clone()
+            mutate_indicators(test_gene, 1.0, ga_config)
+            if test_gene.indicators[0].enabled is False:
+                toggled = True
+                break
+
+        assert toggled, "Enabled flag mutation should toggle the indicator off"
+
+    def test_mutate_tool_genes_deletion(self, ga_config):
+        """ToolGene の削除変異が動作し weekend_filter は保護されることを確認"""
+        from app.services.auto_strategy.genes.operators.mutation import (
+            mutate_strategy_gene,
+        )
+        from app.services.auto_strategy.genes.tool import ToolGene
+
+        ga_config.mutation_config.tool_gene_add_delete_probability = 1.0
+
+        gene = StrategyGene(
+            tool_genes=[
+                ToolGene(tool_name="weekend_filter", enabled=True, params={}),
+                ToolGene(tool_name="trend_filter", enabled=True, params={}),
+            ],
+        )
+
+        deleted = False
+        for seed in range(50):
+            random.seed(seed)
+            test_gene = gene.clone()
+            mutated = mutate_strategy_gene(test_gene, ga_config, mutation_rate=1.0)
+            names = [t.tool_name for t in mutated.tool_genes]
+            if "trend_filter" not in names:
+                deleted = True
+            # weekend_filter は常に存在する
+            assert "weekend_filter" in names
+
+        assert deleted, "Tool deletion mutation should remove a non-weekend tool"
+
+    def test_mutate_condition_topology_generates_group(self, ga_config):
+        """トポロジー変異で ConditionGroup が生成されることを確認"""
+        from app.services.auto_strategy.genes.conditions import ConditionGroup
+        from app.services.auto_strategy.genes.operators.mutation import (
+            _mutate_condition_topology,
+        )
+
+        ga_config.max_conditions = 5
+        ga_config.min_conditions = 1
+
+        gene = StrategyGene(
+            indicators=[
+                IndicatorGene(type="SMA", parameters={"period": 10}),
+                IndicatorGene(type="RSI", parameters={"period": 14}),
+            ],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="SMA")
+            ],
+        )
+
+        group_created = False
+        for seed in range(100):
+            random.seed(seed)
+            test_gene = gene.clone()
+            _mutate_condition_topology(
+                test_gene.long_entry_conditions, test_gene, ga_config, side="long"
+            )
+            if any(
+                isinstance(c, ConditionGroup) for c in test_gene.long_entry_conditions
+            ):
+                group_created = True
+                break
+
+        assert group_created, "Topology mutation should generate a ConditionGroup"
+
+    def test_mutate_entry_gene_toggles_enabled_and_priority(self):
+        """EntryGene の enabled/priority 変異が動作することを確認"""
+        import random as _random
+
+        from app.services.auto_strategy.genes.entry import EntryGene
+
+        gene = EntryGene(enabled=True, priority=1.0)
+
+        enabled_changed = False
+        priority_changed = False
+        for seed in range(300):
+            _random.seed(seed)
+            mutated = gene.mutate(mutation_rate=1.0)
+            if mutated.enabled is not True:
+                enabled_changed = True
+            if mutated.priority != 1.0:
+                priority_changed = True
+            if enabled_changed and priority_changed:
+                break
+
+        assert enabled_changed, "EntryGene mutation should toggle enabled"
+        assert priority_changed, "EntryGene mutation should perturb priority"
+
+    def test_mutate_exit_gene_toggles_enabled_and_priority(self):
+        """ExitGene の enabled/priority 変異が動作することを確認"""
+        import random as _random
+
+        from app.services.auto_strategy.genes.exit import ExitGene
+
+        gene = ExitGene(enabled=True, priority=1.0)
+
+        enabled_changed = False
+        priority_changed = False
+        for seed in range(300):
+            _random.seed(seed)
+            mutated = gene.mutate(mutation_rate=1.0)
+            if mutated.enabled is not True:
+                enabled_changed = True
+            if mutated.priority != 1.0:
+                priority_changed = True
+            if enabled_changed and priority_changed:
+                break
+
+        assert enabled_changed, "ExitGene mutation should toggle enabled"
+        assert priority_changed, "ExitGene mutation should perturb priority"

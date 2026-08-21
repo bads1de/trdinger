@@ -159,6 +159,17 @@ class ExitGene:
             if random.random() < 0.2:
                 gene.trailing_stop_activation = not gene.trailing_stop_activation
 
+            # 有効/無効フラグのトグル
+            if random.random() < 0.2:
+                gene.enabled = not gene.enabled
+
+            # 優先度の摂動
+            if random.random() < 0.3:
+                gene.priority = max(
+                    0.5,
+                    min(1.5, gene.priority * random.uniform(0.8, 1.2)),
+                )
+
         return gene
 
     @classmethod
