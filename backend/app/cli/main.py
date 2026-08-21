@@ -115,6 +115,13 @@ def exp_run(
     no_validation: Annotated[
         bool, typer.Option("--no-validation", help="WFA自動検証を無効化")
     ] = False,
+    validate_pareto_front: Annotated[
+        bool,
+        typer.Option(
+            "--validate-pareto-front",
+            help="パレートフロントの全メンバーをWFA検証し、合格した非劣解セット全体を残す",
+        ),
+    ] = False,
     no_seeds: Annotated[
         bool, typer.Option("--no-seeds", help="シード戦略注入を無効化")
     ] = False,
@@ -173,6 +180,7 @@ def exp_run(
             smoke=smoke,
             min_trades=min_trades,
             no_validation=no_validation,
+            validate_pareto_front=validate_pareto_front,
             no_seeds=no_seeds,
             mtf=mtf,
             mtf_timeframes=mtf_timeframes,
