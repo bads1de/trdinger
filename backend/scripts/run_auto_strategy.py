@@ -221,6 +221,12 @@ def parse_args() -> argparse.Namespace:
         help="GA後のWFA自動検証を無効化（高速実行用）",
     )
     parser.add_argument(
+        "--validate-pareto-front",
+        action="store_true",
+        help="パレートフロントの全メンバーをWFA検証し、合格した非劣解セット全体を残す"
+        "（デフォルトは上位候補のみ検証のため、枠外のパレート解は出力から欠落する）",
+    )
+    parser.add_argument(
         "--no-seeds",
         action="store_true",
         help="組み込みシード戦略の注入を無効化し、全個体をランダム生成で開始（多様性重視）",
@@ -335,6 +341,7 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         smoke=smoke_mode,
         min_trades=getattr(args, "min_trades", None),
         no_validation=getattr(args, "no_validation", False),
+        validate_pareto_front=getattr(args, "validate_pareto_front", False),
         no_seeds=getattr(args, "no_seeds", False),
         mtf=getattr(args, "mtf", False),
         mtf_timeframes=getattr(args, "mtf_timeframes", "1d"),

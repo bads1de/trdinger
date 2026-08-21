@@ -11,6 +11,8 @@ import pytest
 from app.services.auto_strategy.config import GAConfig
 from app.services.auto_strategy.config.constants import (
     EntryType,
+    PositionSizingMethod,
+    TPSLMethod,
 )
 from app.services.auto_strategy.genes import (
     Condition,
@@ -20,7 +22,10 @@ from app.services.auto_strategy.genes import (
     StrategyGene,
     TPSLGene,
 )
-from app.services.auto_strategy.genes.operators.mutation import mutate_conditions
+from app.services.auto_strategy.genes.operators.mutation import (
+    mutate_conditions,
+    mutate_risk_management_modes,
+)
 
 
 class TestGeneticOperators:
@@ -151,6 +156,102 @@ class TestGeneticOperators:
             mutated = gene.mutate(config, mutation_rate=1.0)
 
         assert mutated.tpsl_gene is not None
+
+    def test_risk_mode_switch_changes_tpsl_method(self, ga_config):
+        """TPSL method スイッチ変異は必ず別の方式へ切り替わる"""
+        gene = StrategyGene(
+            tpsl_gene=TPSLGene(method=TPSLMethod.FIXED_PERCENTAGE),
+            long_tpsl_gene=TPSLGene(method=TPSLMethod.STATISTICAL),
+            short_tpsl_gene=TPSLGene(method=TPSLMethod.ADAPTIVE),
+        )
+        original_methods = {
+            "tpsl": gene.tpsl_gene.method,
+            "long": gene.long_tpsl_gene.method,
+            "short": gene.short_tpsl_gene.method,
+        }
+
+        # random.random < 0.03 を保証し、choice は決定的にする
+        with patch("random.random", return_value=0.0), patch(
+            "random.choice",
+            side_effect=lambda seq: seq[0],
+        ):
+            mutate_risk_management_modes(gene, 0.1, ga_config)
+
+        assert gene.tpsl_gene.method != original_methods["tpsl"]
+        assert gene.long_tpsl_gene.method != original_methods["long"]
+        assert gene.short_tpsl_gene.method != original_methods["short"]
+
+    def test_risk_mode_switch_toggles_trailing(self, ga_config):
+        """トレーリングストップ / TP のトグル変異"""
+        gene = StrategyGene(
+            tpsl_gene=TPSLGene(trailing_stop=False, trailing_take_profit=False),
+        )
+        with patch("random.random", return_value=0.0), patch(
+            "random.choice", side_effect=lambda seq: seq[0]
+        ):
+            mutate_risk_management_modes(gene, 1.0, ga_config)
+
+        assert gene.tpsl_gene.trailing_stop is True
+        assert gene.tpsl_gene.trailing_take_profit is True
+
+    def test_risk_mode_switch_changes_position_sizing_method(self, ga_config):
+        """ポジションサイジング method スイッチ変異は必ず別方式になる"""
+        gene = StrategyGene(
+            position_sizing_gene=PositionSizingGene(
+                method=PositionSizingMethod.VOLATILITY_BASED
+            ),
+        )
+        with patch("random.random", return_value=0.0), patch(
+            "random.choice", side_effect=lambda seq: seq[0]
+        ):
+            mutate_risk_management_modes(gene, 0.1, ga_config)
+
+        assert (
+            gene.position_sizing_gene.method
+            != PositionSizingMethod.VOLATILITY_BASED
+        )
+
+    def test_risk_mode_switch_no_op_at_zero_rate(self, ga_config):
+        """mutation_rate=0 では何も変わらない"""
+        gene = StrategyGene(
+            tpsl_gene=TPSLGene(method=TPSLMethod.FIXED_PERCENTAGE),
+            position_sizing_gene=PositionSizingGene(),
+        )
+        before_tpsl = gene.tpsl_gene.method
+        before_sizing = gene.position_sizing_gene.method
+
+        mutate_risk_management_modes(gene, 0.0, ga_config)
+
+        assert gene.tpsl_gene.method == before_tpsl
+        assert gene.position_sizing_gene.method == before_sizing
+
+    def test_mutate_strategy_gene_applies_risk_mode_switch(self, ga_config):
+        """mutate_strategy_gene 全体フローで方式スイッチが機能する"""
+        methods_seen: set[TPSLMethod] = set()
+        gene = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+            long_entry_conditions=[
+                Condition(left_operand="close", operator=">", right_operand="open")
+            ],
+            tpsl_gene=TPSLGene(method=TPSLMethod.FIXED_PERCENTAGE),
+        )
+        for seed in range(50):
+            rng = random.Random(seed)
+            with patch("random.random", rng.random), patch(
+                "random.uniform", rng.uniform
+            ), patch(
+                "random.randint", lambda a, b, _r=rng: _r.randint(a, b)
+            ), patch(
+                "random.choice", lambda seq, _r=rng: _r.choice(list(seq))
+            ), patch(
+                "random.shuffle", lambda seq, _r=rng: _r.shuffle(list(seq))
+            ) as _shuffle_mock:
+                mutated = gene.mutate(ga_config, mutation_rate=0.5)
+            if mutated.tpsl_gene is not None:
+                methods_seen.add(mutated.tpsl_gene.method)
+
+        # 50回の変異で複数の方式が現れる（スイッチが実効的に働いている証拠）
+        assert len(methods_seen) >= 2
 
     def test_adaptive_mutate(self, sample_strategy_gene, ga_config):
         """適応的突然変異率調整のテスト"""

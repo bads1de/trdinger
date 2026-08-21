@@ -229,6 +229,37 @@ class TestBuildGaConfigDict:
         assert config["enable_multi_timeframe"] is True
         assert config["available_timeframes"] == ["1d"]
 
+    def test_validate_pareto_front_flag(self):
+        """--validate-pareto-front で validation_config にフラグが入る"""
+        config = build_ga_config_dict(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            validate_pareto_front=True,
+        )
+        assert config["validation_config"]["validate_pareto_front"] is True
+        assert "enabled" not in config["validation_config"]
+
+    def test_no_validation_overrides_validate_pareto_front(self):
+        """no_validation 指定時は validate_pareto_front より優先される"""
+        config = build_ga_config_dict(
+            population=20,
+            generations=10,
+            crossover_rate=0.8,
+            mutation_rate=0.2,
+            elite_size=2,
+            start_date="2024-01-01",
+            end_date="2024-06-30",
+            no_validation=True,
+            validate_pareto_front=True,
+        )
+        assert config["validation_config"]["enabled"] is False
+        assert "validate_pareto_front" not in config["validation_config"]
+
     def test_mtf_invalid_timeframe(self):
         """サポート外MTFタイムフレームは ValueError"""
         with pytest.raises(ValueError, match="タイムフレーム"):

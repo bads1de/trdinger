@@ -1054,6 +1054,103 @@ class TestStrategyValidationService:
         assert mock_execute.call_count == 2
         assert set(filtered["validation_results"].keys()) == {"best", "dup"}
 
+    def test_validate_pareto_front_validates_all_members(self, mock_evaluator):
+        """validate_pareto_front 有効時は枠外のパレート解も全員検証される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.6,
+                max_candidates=1,
+                validate_pareto_front=True,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        best = MagicMock()
+        best.id = "best"
+        pareto_a = MagicMock()
+        pareto_a.id = "pareto-a"
+        pareto_b = MagicMock()
+        pareto_b.id = "pareto-b"
+
+        def fake_execute_report(gene, base_config, ga_config):
+            if gene.id == "pareto-b":
+                return _make_report(pass_rate=0.1, primary_fitness=0.1)
+            return _make_report(pass_rate=0.8, primary_fitness=0.7)
+
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            side_effect=fake_execute_report,
+        ) as mock_execute:
+            result = {
+                "best_strategy": best,
+                "best_fitness": 0.7,
+                "all_strategies": [best],
+                "fitness_scores": [0.7],
+                "pareto_front": [
+                    {"strategy": pareto_a, "fitness_values": [0.7]},
+                    {"strategy": pareto_b, "fitness_values": [0.5]},
+                ],
+                "evaluation_summaries": {},
+            }
+            filtered = service.validate_and_filter_result(result, config, {})
+
+        # best + パレート2件がすべて検証される（max_candidates=1 でも）
+        assert mock_execute.call_count == 3
+        assert set(filtered["validation_results"].keys()) == {
+            "best",
+            "pareto-a",
+            "pareto-b",
+        }
+        # 合格したパレート解のみ面に残る
+        assert len(filtered["pareto_front"]) == 1
+        assert filtered["pareto_front"][0]["strategy"] is pareto_a
+
+    def test_validate_pareto_front_disabled_drops_unvalidated_members(
+        self, mock_evaluator
+    ):
+        """デフォルト（無効）では枠外のパレート解は無検証のまま破棄される"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                enabled=True,
+                min_pass_rate=0.6,
+                max_candidates=1,
+            ),
+            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            objectives=["total_return"],
+        )
+        service = StrategyValidationService(mock_evaluator)
+
+        best = MagicMock()
+        best.id = "best"
+        pareto_outside = MagicMock()
+        pareto_outside.id = "pareto-outside"
+
+        with patch.object(
+            service._evaluation_strategy,
+            "execute_report",
+            return_value=_make_report(pass_rate=0.8, primary_fitness=0.7),
+        ) as mock_execute:
+            result = {
+                "best_strategy": best,
+                "best_fitness": 0.7,
+                "all_strategies": [best],
+                "fitness_scores": [0.7],
+                "pareto_front": [
+                    {"strategy": pareto_outside, "fitness_values": [0.5]},
+                ],
+                "evaluation_summaries": {},
+            }
+            filtered = service.validate_and_filter_result(result, config, {})
+
+        # 枠 (max_candidates=1) は best で埋まるため pareto-outside は検証されない
+        assert mock_execute.call_count == 1
+        # 無検証のためフィルタで破棄され、パレート面が空になる
+        assert filtered["pareto_front"] == []
+
     def test_min_primary_fitness_maximize_direction(self, mock_evaluator):
         """最大化目的（total_return）では min_primary_fitness 未満は不合格になる"""
         config = GAConfig(

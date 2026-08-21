@@ -38,6 +38,8 @@ from .mutation import (
     adaptive_mutate_strategy_gene,
     mutate_conditions,
     mutate_indicators,
+    mutate_risk_management_modes,
+    mutate_stateful_conditions,
     mutate_strategy_gene,
 )
 
@@ -45,6 +47,8 @@ __all__ = [
     # mutation
     "mutate_indicators",
     "mutate_conditions",
+    "mutate_stateful_conditions",
+    "mutate_risk_management_modes",
     "mutate_strategy_gene",
     "adaptive_mutate_strategy_gene",
     # crossover

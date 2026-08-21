@@ -14,6 +14,7 @@ from typing import Any
 
 import numpy as np
 
+from ...config.constants import PositionSizingMethod, TPSLMethod
 from ...config.ga_config import GAConfig
 from ...utils.indicator_references import build_indicator_reference_name
 from ...utils.scale_compat import (
@@ -636,6 +637,44 @@ def mutate_stateful_conditions(
                 logger.debug(f"ステートフル条件追加スキップ: {e}")
 
 
+def mutate_risk_management_modes(
+    mutated: StrategyGene, mutation_rate: float, config: GAConfig
+) -> None:
+    """リスク管理の「方式」を切り替える突然変異。
+
+    TPSLGene / PositionSizingGene の汎用ENUM変異は二重ゲート
+    （サブ遺伝子呼び出しゲート × 内部再選択ゲート）で実効確率が低く、
+    さらに現在値と同じ方式の再選択（無効変異）が混ざるため、
+    方式自体の探索がほぼ機能しない。本関数は確率が当たれば
+    「必ず別方式へ」切り替える専用経路を提供する。
+    """
+    switch_probability = mutation_rate * 0.3
+
+    # TPSL 遺伝子（共通 + 方向別）の method 切替
+    for field_name in ("tpsl_gene", "long_tpsl_gene", "short_tpsl_gene"):
+        tpsl_gene = getattr(mutated, field_name)
+        if tpsl_gene is None or random.random() >= switch_probability:
+            continue
+        methods = [m for m in TPSLMethod if m != tpsl_gene.method]
+        if methods:
+            tpsl_gene.method = random.choice(methods)
+
+    # トレーリングストップ / TP のトグル（共通TPSLのみ）
+    tpsl_gene = mutated.tpsl_gene
+    if tpsl_gene is not None:
+        if random.random() < mutation_rate * 0.2:
+            tpsl_gene.trailing_stop = not tpsl_gene.trailing_stop
+        if random.random() < mutation_rate * 0.2:
+            tpsl_gene.trailing_take_profit = not tpsl_gene.trailing_take_profit
+
+    # ポジションサイジング遺伝子の method 切替
+    sizing_gene = mutated.position_sizing_gene
+    if sizing_gene is not None and random.random() < switch_probability:
+        sizing_methods = [m for m in PositionSizingMethod if m != sizing_gene.method]
+        if sizing_methods:
+            sizing_gene.method = random.choice(sizing_methods)
+
+
 def mutate_strategy_gene(
     gene: StrategyGene, config: GAConfig, mutation_rate: float = 0.1
 ) -> StrategyGene:
@@ -657,6 +696,11 @@ def mutate_strategy_gene(
             mutate_stateful_conditions(mutated, mutation_rate, config)
         except Exception as e:
             logger.warning(f"ステートフル条件変異に失敗しました（スキップ）: {e}")
+
+        try:
+            mutate_risk_management_modes(mutated, mutation_rate, config)
+        except Exception as e:
+            logger.warning(f"リスク管理方式変異に失敗しました（スキップ）: {e}")
 
         try:
             min_risk_multiplier, max_risk_multiplier = (

@@ -112,6 +112,7 @@ def build_ga_config_dict(
     enable_rtr: bool = False,
     rtr_crowding_factor: int | None = None,
     sharing_radius: float | None = None,
+    validate_pareto_front: bool = False,
 ) -> dict[str, Any]:
     """
     実行オプションから GA 設定辞書を構築する。
@@ -227,6 +228,8 @@ def build_ga_config_dict(
 
     if smoke or no_validation:
         config_kwargs["validation_config"] = {"enabled": False}
+    elif validate_pareto_front:
+        config_kwargs["validation_config"] = {"validate_pareto_front": True}
     if fitness_constraints is not None:
         config_kwargs["fitness_constraints"] = fitness_constraints
 

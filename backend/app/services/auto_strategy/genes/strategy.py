@@ -523,4 +523,8 @@ class StrategyGene:
         )
         child1.repair_non_price_indicators(config)
         child2.repair_non_price_indicators(config)
+        # repair_non_price_indicators は max_indicators 到達時に価格指標を
+        # 置換するため、交叉内で修復済みの条件参照が切れうる。最後に再修復する。
+        child1.repair_condition_references()
+        child2.repair_condition_references()
         return child1, child2

@@ -356,6 +356,11 @@ class ValidationConfig(NestedConfigMixin):
     validate_candidates: bool = True
     # 候補検証の対象数（上位 N 件）
     max_candidates: int = 5
+    # パレートフロントの全メンバーを検証するか。
+    # True の場合、max_candidates の枠外でもパレート解をすべて WFA 検証し、
+    # 合格した非劣解セット全体を結果に残す（枠外の無検証パレート解は
+    # フィルタで破棄されるため、False のままでは面が欠落する）
+    validate_pareto_front: bool = False
 
 
 @dataclass

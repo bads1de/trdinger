@@ -162,6 +162,22 @@ class StrategyValidationService:
             for strategy in diverse:
                 _add_candidate(strategy)
 
+        if validation_config.validate_pareto_front:
+            # パレートフロントの全メンバーを枠外で検証する。
+            # 枠外の無検証パレート解は _filter_result で破棄されるため、
+            # 検証しないまま出力すると非劣解セットが欠落する。
+            pareto_members: list[Any] = []
+            for solution in result.get("pareto_front", []):
+                strategy = (
+                    solution.get("strategy")
+                    if isinstance(solution, Mapping)
+                    else solution
+                )
+                if strategy is not None:
+                    pareto_members.append(strategy)
+            for strategy in pareto_members:
+                _add_candidate(strategy)
+
         # 2. 各候補の WFA 検証
         for strategy in candidates_to_validate:
             key = self._get_strategy_key(strategy)
