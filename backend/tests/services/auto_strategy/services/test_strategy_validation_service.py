@@ -103,9 +103,7 @@ class TestStrategyValidationService:
         def _mk(sid: str, types: list[str]):
             strategy = MagicMock()
             strategy.id = sid
-            strategy.indicators = [
-                MagicMock(type=t, enabled=True) for t in types
-            ]
+            strategy.indicators = [MagicMock(type=t, enabled=True) for t in types]
             return strategy
 
         # best と同じ構成の候補が fitness 上位に3件並んでいる想定
@@ -160,9 +158,7 @@ class TestStrategyValidationService:
         def _mk(sid: str, types: list[str]):
             strategy = MagicMock()
             strategy.id = sid
-            strategy.indicators = [
-                MagicMock(type=t, enabled=True) for t in types
-            ]
+            strategy.indicators = [MagicMock(type=t, enabled=True) for t in types]
             return strategy
 
         best = _mk("best", ["MACD", "BBANDS", "ATR"])

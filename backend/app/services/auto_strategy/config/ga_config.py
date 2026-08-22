@@ -215,9 +215,7 @@ class MutationConfig(NestedConfigMixin):
     indicator_condition_injection_probability: float = float(
         cast(
             float,
-            GA_MUTATION_SETTINGS.get(
-                "indicator_condition_injection_probability", 0.4
-            ),
+            GA_MUTATION_SETTINGS.get("indicator_condition_injection_probability", 0.4),
         )
     )
     tool_gene_add_delete_probability: float = float(

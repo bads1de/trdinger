@@ -171,9 +171,12 @@ class TestGeneticOperators:
         }
 
         # random.random < 0.03 を保証し、choice は決定的にする
-        with patch("random.random", return_value=0.0), patch(
-            "random.choice",
-            side_effect=lambda seq: seq[0],
+        with (
+            patch("random.random", return_value=0.0),
+            patch(
+                "random.choice",
+                side_effect=lambda seq: seq[0],
+            ),
         ):
             mutate_risk_management_modes(gene, 0.1, ga_config)
 
@@ -186,8 +189,9 @@ class TestGeneticOperators:
         gene = StrategyGene(
             tpsl_gene=TPSLGene(trailing_stop=False, trailing_take_profit=False),
         )
-        with patch("random.random", return_value=0.0), patch(
-            "random.choice", side_effect=lambda seq: seq[0]
+        with (
+            patch("random.random", return_value=0.0),
+            patch("random.choice", side_effect=lambda seq: seq[0]),
         ):
             mutate_risk_management_modes(gene, 1.0, ga_config)
 
@@ -200,8 +204,9 @@ class TestGeneticOperators:
             long_tpsl_gene=TPSLGene(trailing_stop=False, trailing_take_profit=False),
             short_tpsl_gene=TPSLGene(trailing_stop=False, trailing_take_profit=False),
         )
-        with patch("random.random", return_value=0.0), patch(
-            "random.choice", side_effect=lambda seq: seq[0]
+        with (
+            patch("random.random", return_value=0.0),
+            patch("random.choice", side_effect=lambda seq: seq[0]),
         ):
             mutate_risk_management_modes(gene, 1.0, ga_config)
 
@@ -217,15 +222,13 @@ class TestGeneticOperators:
                 method=PositionSizingMethod.VOLATILITY_BASED
             ),
         )
-        with patch("random.random", return_value=0.0), patch(
-            "random.choice", side_effect=lambda seq: seq[0]
+        with (
+            patch("random.random", return_value=0.0),
+            patch("random.choice", side_effect=lambda seq: seq[0]),
         ):
             mutate_risk_management_modes(gene, 0.1, ga_config)
 
-        assert (
-            gene.position_sizing_gene.method
-            != PositionSizingMethod.VOLATILITY_BASED
-        )
+        assert gene.position_sizing_gene.method != PositionSizingMethod.VOLATILITY_BASED
 
     def test_risk_mode_switch_no_op_at_zero_rate(self, ga_config):
         """mutation_rate=0 では何も変わらない"""
@@ -253,15 +256,15 @@ class TestGeneticOperators:
         )
         for seed in range(50):
             rng = random.Random(seed)
-            with patch("random.random", rng.random), patch(
-                "random.uniform", rng.uniform
-            ), patch(
-                "random.randint", lambda a, b, _r=rng: _r.randint(a, b)
-            ), patch(
-                "random.choice", lambda seq, _r=rng: _r.choice(list(seq))
-            ), patch(
-                "random.shuffle", lambda seq, _r=rng: _r.shuffle(list(seq))
-            ) as _shuffle_mock:
+            with (
+                patch("random.random", rng.random),
+                patch("random.uniform", rng.uniform),
+                patch("random.randint", lambda a, b, _r=rng: _r.randint(a, b)),
+                patch("random.choice", lambda seq, _r=rng: _r.choice(list(seq))),
+                patch(
+                    "random.shuffle", lambda seq, _r=rng: _r.shuffle(list(seq))
+                ) as _shuffle_mock,
+            ):
                 mutated = gene.mutate(ga_config, mutation_rate=0.5)
             if mutated.tpsl_gene is not None:
                 methods_seen.add(mutated.tpsl_gene.method)

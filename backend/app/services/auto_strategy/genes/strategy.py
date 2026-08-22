@@ -379,7 +379,9 @@ class StrategyGene:
             conditions = getattr(self, attr)
             if len(conditions) >= min_conditions:
                 continue
-            enabled_inds = [ind for ind in self.indicators if ind.enabled] or self.indicators
+            enabled_inds = [
+                ind for ind in self.indicators if ind.enabled
+            ] or self.indicators
             if not enabled_inds:
                 continue
             import random
