@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 # 定数
 FLOAT_TOLERANCE = 1e-8
 SHIFT_AMOUNT = 1
-PREVIOUS_VALUE_INDEX = 2
 PREVIOUS_VALUE_ILOC_INDEX = -2
 LAST_VALUE_INDEX = -1
 
@@ -383,7 +382,12 @@ class ConditionEvaluator:
         return False
 
     def _get_previous_value(self, operand: object, strategy_instance: Any) -> float:
-        """オペランドの1つ前の値を取得"""
+        """オペランドの1つ前のバーの値を取得
+
+        インジケーターはフル長 Series のまま登録されるため、現在バー位置の
+        1つ前（``bar_index - 1``）で読む。末尾から 2 番目を読む旧実装は
+        データセット末尾基準＝未来の値を読む先読みになっていた。
+        """
         if isinstance(operand, (int, float, np.number)):
             return float(operand)
 
@@ -408,27 +412,75 @@ class ConditionEvaluator:
                 val = getattr(strategy_instance, operand_str)
 
         if val is not None:
+            bar_index = self._get_current_bar_index(strategy_instance)
             try:
                 # pandas Series / DataFrame
                 if hasattr(val, "iloc"):
-                    if len(val) >= PREVIOUS_VALUE_INDEX:
+                    if bar_index is not None:
+                        prev_index = bar_index - 1
+                        if 0 <= prev_index < len(val):
+                            return float(cast(Any, val).iloc[prev_index])
+                        return float("nan")
+                    # data がない（バックテスト外）コンテキストは旧来の
+                    # 末尾基準（[-2]）を読む
+                    if len(val) >= 2:
                         return float(cast(Any, val).iloc[PREVIOUS_VALUE_ILOC_INDEX])
+                    return float("nan")
                 # numpy array / list
                 elif hasattr(val, "__getitem__"):
                     # 0次元配列（スカラー）の場合は len() がエラーになるためチェック
                     if hasattr(val, "ndim") and val.ndim == 0:
                         return float("nan")
-                    if len(val) >= PREVIOUS_VALUE_INDEX:
-                        return float(cast("float", val[-PREVIOUS_VALUE_INDEX]))
+                    if bar_index is not None:
+                        prev_index = bar_index - 1
+                        if 0 <= prev_index < len(val):
+                            return float(cast("float", val[prev_index]))
+                        return float("nan")
+                    if len(val) >= 2:
+                        return float(cast("float", val[-2]))
+                    return float("nan")
             except Exception as e:
                 logger.debug("前回の値の取得に失敗しました: %s", e)
                 pass
 
         return float("nan")
 
-    def _get_final_value(self, value: Any) -> float:
+    @staticmethod
+    def _get_current_bar_index(strategy_instance: Any) -> int | None:
+        """現在のバー位置を取得する。
+
+        backtesting.py は ``strategy.data`` を現在バーまでに切り詰めるため、
+        ``len(data) - 1`` が現在バーの位置になる。一方でインジケーターは
+        フル長の Series のまま戦略インスタンスに登録されるため、末尾
+        (``[-1]``) を読むとデータセット末尾＝未来の値を読む先読みになる。
+        スカラー評価では必ずこの位置で読む。
+
+        Returns:
+            現在バー位置。data が取得できない場合は None（旧来の末尾読み）。
         """
-        型に応じて末尾の有限値を取得（最適化版）
+        try:
+            data = getattr(strategy_instance, "data", None)
+            if data is None:
+                return None
+            length = len(data)
+            # 空データ（や Mock）は現在バーが存在しないため旧来の
+            # 末尾読みにフォールバックする
+            if length <= 0:
+                return None
+            return length - 1
+        except Exception:
+            return None
+
+    def _get_final_value(self, value: Any, bar_index: int | None = None) -> float:
+        """
+        型に応じて現在バーの値を取得（最適化版）
+
+        Args:
+            value: 読み取り対象の値（数値 / ndarray / Series / リスト等）。
+            bar_index: 現在バー位置。Series / ndarray 系はこの位置で読む。
+                None の場合は末尾を読む（旧来の挙動。backtesting.py 外の
+                ユニットテスト等、data がフル長のコンテキスト向け）。
+                範囲外の場合は NaN を返し比較を False に落とす。
         """
         # 1. 数値 (最速)
         if isinstance(value, (float, int, np.number)):
@@ -438,12 +490,20 @@ class ConditionEvaluator:
         if isinstance(value, np.ndarray):
             if value.ndim == 0:
                 return float(value)
+            if bar_index is not None:
+                if 0 <= bar_index < value.size:
+                    return float(value[bar_index])
+                return float("nan")
             if value.size > 0:
                 return float(value[-1])
             return 0.0
 
         # 3. Pandas Series
         if isinstance(value, pd.Series):
+            if bar_index is not None:
+                if 0 <= bar_index < len(value):
+                    return float(value.values[bar_index])
+                return float("nan")
             if not value.empty:
                 return float(
                     value.values[LAST_VALUE_INDEX]
@@ -452,6 +512,10 @@ class ConditionEvaluator:
 
         # 4. リスト等
         try:
+            if bar_index is not None:
+                if 0 <= bar_index < len(value):
+                    return float(value[bar_index])
+                return float("nan")
             return float(value[LAST_VALUE_INDEX])
         except (IndexError, TypeError, ValueError):
             return 0.0
@@ -470,6 +534,10 @@ class ConditionEvaluator:
 
         # 2. 識別子解決
         operand_str = self._extract_operand_str(operand)
+
+        # インジケーターはフル長 Series のまま登録されるため、現在バー位置を
+        # 求めてその位置で読む（末尾を読むと未来の値になる先読みになる）。
+        bar_index = self._get_current_bar_index(strategy_instance)
 
         # 3. OHLCVデータ
         # backtesting.pyの構造上、data.Close[-1] へのアクセスが最も頻出
@@ -519,14 +587,14 @@ class ConditionEvaluator:
         if hasattr(strategy_instance, "indicators"):
             indicators = strategy_instance.indicators
             if isinstance(indicators, dict) and operand_str in indicators:
-                return self._get_final_value(indicators[operand_str])
+                return self._get_final_value(indicators[operand_str], bar_index)
 
         # 5. Attributes (アクセサキャッシュ利用)
         try:
             # キャッシュされたアクセサを試す
             if operand_str in self._accessor_cache:
                 return self._get_final_value(
-                    self._accessor_cache[operand_str](strategy_instance)
+                    self._accessor_cache[operand_str](strategy_instance), bar_index
                 )
 
             # なければgetattrで取得し、キャッシュする
@@ -535,7 +603,7 @@ class ConditionEvaluator:
             import operator
 
             self._accessor_cache[operand_str] = operator.attrgetter(operand_str)
-            return self._get_final_value(val)
+            return self._get_final_value(val, bar_index)
         except AttributeError:
             pass
 

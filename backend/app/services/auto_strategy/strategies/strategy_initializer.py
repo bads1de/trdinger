@@ -136,6 +136,13 @@ class StrategyInitializer:
     ) -> None:
         """ベクトル化できたシグナルだけをキャッシュする。"""
         if signal is None:
+            # ベクトル化できない条件（未知の被演算子・スカラー比較・
+            # 未対応の CROSS 等）を含む場合はスカラー評価にフォールバックする。
+            # 頻度高く発生する場合は条件生成側の問題を示唆するため観測可能にする。
+            logger.debug(
+                "条件のベクトル化に失敗しスカラー評価へフォールバック: direction=%s",
+                direction,
+            )
             return
 
         if isinstance(signal, pd.Series):
