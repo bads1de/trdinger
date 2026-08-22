@@ -3,7 +3,7 @@
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
 import numpy as np
@@ -13,7 +13,12 @@ from sklearn.metrics import silhouette_samples
 from app.services.auto_strategy.genes import StrategyGene
 from app.services.auto_strategy.serializers.serialization import GeneSerializer
 
-from .fitness_validation import has_valid_fitness
+from .fitness_validation import (
+    compute_worst_selection_values,
+    has_valid_fitness,
+    resolve_minimize_flags,
+    shrink_advantage_toward_worst,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,9 +69,14 @@ def silhouette_based_sharing(
     population: list[Any],
     gene_serializer: GeneSerializer,
     vectorize_gene: Callable[[StrategyGene], np.ndarray],
+    objectives: Sequence[str] | None = None,
 ) -> list[Any]:
     """
     シルエットベースの共有を適用する。
+
+    クラスタ中心に近い個体（シルエット小）ほど「集団内最悪値からの
+    優位幅」を大きく縮小する。生値への乗算は最小化目的や負値では
+    改善に働くため使わない（``shrink_advantage_toward_worst`` 参照）。
     """
     try:
         if len(population) <= 1:
@@ -91,6 +101,15 @@ def silhouette_based_sharing(
 
         silhouette_vals = silhouette_samples(vectors_array, labels)
 
+        sample_values = next(
+            (ind.fitness.values for ind in population if has_valid_fitness(ind)),
+            (),
+        )
+        minimize_flags = resolve_minimize_flags(objectives, len(sample_values))
+        worst_selection_values = compute_worst_selection_values(
+            population, minimize_flags
+        )
+
         for j, idx in enumerate(valid_indices):
             individual = population[idx]
             if has_valid_fitness(individual):
@@ -104,10 +123,16 @@ def silhouette_based_sharing(
                     1.0 - normalized_silhouette
                 )
 
-                original_fitness_values = individual.fitness.values
                 adjusted_values = tuple(
-                    fitness_val * adjustment_factor
-                    for fitness_val in original_fitness_values
+                    shrink_advantage_toward_worst(
+                        fitness_val,
+                        worst_selection_values[k]
+                        if k < len(worst_selection_values)
+                        else None,
+                        minimize_flags[k] if k < len(minimize_flags) else False,
+                        adjustment_factor,
+                    )
+                    for k, fitness_val in enumerate(individual.fitness.values)
                 )
                 individual.fitness.values = adjusted_values
 

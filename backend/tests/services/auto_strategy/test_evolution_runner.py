@@ -360,7 +360,7 @@ class TestEvolutionRunner:
         """Test fitness sharing application during evolution."""
         config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
         mock_fitness_sharing = Mock()
-        mock_fitness_sharing.apply_fitness_sharing.side_effect = lambda pop: (
+        mock_fitness_sharing.apply_fitness_sharing.side_effect = lambda pop, **kw: (
             pop
         )  # Identity
 
@@ -382,7 +382,7 @@ class TestEvolutionRunner:
         """共有は親集団だけでなく選択プール全体（子孫+親）へ適用されること"""
         config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
         mock_fitness_sharing = Mock()
-        mock_fitness_sharing.apply_fitness_sharing.side_effect = lambda pop: pop
+        mock_fitness_sharing.apply_fitness_sharing.side_effect = lambda pop, **kw: pop
 
         runner = EvolutionRunner(
             toolbox=mock_toolbox, stats=None, fitness_sharing=mock_fitness_sharing
@@ -405,7 +405,7 @@ class TestEvolutionRunner:
         config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
         mock_fitness_sharing = Mock()
 
-        def _halve_fitness(pop):
+        def _halve_fitness(pop, **kwargs):
             for ind in pop:
                 if ind.fitness.valid:
                     ind.fitness.values = tuple(v * 0.5 for v in ind.fitness.values)
@@ -441,7 +441,7 @@ class TestEvolutionRunner:
         config.fitness_sharing = SimpleNamespace(enable_fitness_sharing=True)
         mock_fitness_sharing = Mock()
 
-        def _halve_fitness(pop):
+        def _halve_fitness(pop, **kwargs):
             for ind in pop:
                 if ind.fitness.valid:
                     ind.fitness.values = tuple(v * 0.5 for v in ind.fitness.values)

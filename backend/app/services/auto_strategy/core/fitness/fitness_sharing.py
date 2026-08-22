@@ -33,7 +33,12 @@ from .fitness_sharing_silhouette import (
 )
 from .fitness_sharing_vectorizer import build_behavior_profile
 from .fitness_sharing_vectorizer import vectorize_gene as _vectorize_gene
-from .fitness_validation import has_valid_fitness
+from .fitness_validation import (
+    compute_worst_selection_values,
+    has_valid_fitness,
+    resolve_minimize_flags,
+    shrink_advantage_toward_worst,
+)
 
 _FrozenKey = tuple | bytes | SerializablePrimitive
 
@@ -116,11 +121,22 @@ class FitnessSharing:
             self.operator_types = []
             self.operator_map = {}
 
-    def apply_fitness_sharing(self, population: list[Any]) -> list[Any]:
+    def apply_fitness_sharing(
+        self, population: list[Any], objectives: Sequence[str] | None = None
+    ) -> list[Any]:
         """
         個体群にフィットネス共有を適用（最適化版）
 
         ベクトル化とKD-Treeを使用してO(N²)からO(N log N)に計算量を削減。
+
+        混雑した個体の適応度は「集団内最悪値からの優位幅」をニッチカウントで
+        縮小する形で減衰させる（``shrink_advantage_toward_worst`` 参照）。
+        生値の除算は最小化目的や負値で「改善」に働くため使わない。
+
+        Args:
+            population: 対象個体群。
+            objectives: 目的関数名列。方向（最小化/最大化）の判定に使う。
+                None の場合はすべて最大化として扱う。
 
         Note:
             適応度値はニッチカウントとシルエット係数で「一時的に」調整される。
@@ -172,22 +188,32 @@ class FitnessSharing:
             # 適応度はニッチカウントとシルエット係数で一時的に調整される。
             # 呼び出し側（EvolutionRunner）は選択完了後に元の値へ復元するため、
             # ここでは復元を行わない（世代をまたいだ減衰を防ぐ）。
+            # 減衰は目的の方向と値の符号に依存しない「優位幅の縮小」で行い、
             # ニッチ除算は sqrt で緩和する（定数のdocstring参照）。
+            sample_values = next(
+                (ind.fitness.values for ind in population if has_valid_fitness(ind)),
+                (),
+            )
+            minimize_flags = resolve_minimize_flags(objectives, len(sample_values))
+            worst_selection_values = compute_worst_selection_values(
+                population, minimize_flags
+            )
+
             for i, individual in enumerate(population):
                 if has_valid_fitness(individual):
-                    softened_niche_count = float(
+                    soften_niche_count = float(
                         np.power(max(niche_counts[i], 1.0), self.NICHE_PENALTY_EXPONENT)
                     )
                     shared_fitness_values = tuple(
-                        float(
-                            np.divide(
-                                fitness_val,
-                                softened_niche_count,
-                                out=np.zeros_like(fitness_val),
-                                where=softened_niche_count != 0,
-                            )
+                        shrink_advantage_toward_worst(
+                            fitness_val,
+                            worst_selection_values[j]
+                            if j < len(worst_selection_values)
+                            else None,
+                            minimize_flags[j] if j < len(minimize_flags) else False,
+                            1.0 / soften_niche_count,
                         )
-                        for fitness_val in individual.fitness.values
+                        for j, fitness_val in enumerate(individual.fitness.values)
                     )
                     individual.fitness.values = shared_fitness_values
 
@@ -195,6 +221,7 @@ class FitnessSharing:
                 population,
                 gene_serializer=self.gene_serializer,
                 vectorize_gene=resolve_vector,
+                objectives=objectives,
             )
 
         except Exception as e:
@@ -380,7 +407,9 @@ class FitnessSharing:
             sampling_ratio=self.sampling_ratio,
         )
 
-    def silhouette_based_sharing(self, population: list[Any]) -> list[Any]:
+    def silhouette_based_sharing(
+        self, population: list[Any], objectives: Sequence[str] | None = None
+    ) -> list[Any]:
         """
         シルエットベースの共有
         """
@@ -394,6 +423,7 @@ class FitnessSharing:
             population,
             gene_serializer=self.gene_serializer,
             vectorize_gene=resolve_vector,
+            objectives=objectives,
         )
 
     def _vectorize_gene(

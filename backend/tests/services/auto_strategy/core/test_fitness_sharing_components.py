@@ -4,7 +4,10 @@ from typing import Any, cast
 import numpy as np
 import pytest
 
-from app.services.auto_strategy.core.fitness import fitness_sharing_silhouette
+from app.services.auto_strategy.core.fitness import (
+    fitness_sharing,
+    fitness_sharing_silhouette,
+)
 from app.services.auto_strategy.core.fitness.fitness_sharing import FitnessSharing
 from app.services.auto_strategy.core.fitness.fitness_sharing_niche import (
     compute_niche_counts_vectorized,
@@ -359,6 +362,7 @@ class TestFitnessSharingComponents:
             __slots__ = ("fitness",)
 
         population = []
+        # 最悪値 1.0 からの優位幅が [0.0, 0.5, 1.0] になるように設定
         for i in range(3):
             gene = FitnessAwareStrategyGene(
                 id=f"gene{i}",
@@ -370,22 +374,93 @@ class TestFitnessSharingComponents:
                 position_sizing_gene=None,
                 metadata={},
             )
-            gene.fitness = SimpleNamespace(values=(2.0,), valid=True)
+            gene.fitness = SimpleNamespace(values=(1.0 + 0.5 * i,), valid=True)
             population.append(gene)
 
         result = sharing.silhouette_based_sharing(population)
 
         adjusted = [gene.fitness.values[0] for gene in result]
-        np.testing.assert_allclose(adjusted, [1.0, 1.5, 2.0])
+        # 優位幅に倍率 [0.5, 0.75, 1.0] を掛ける:
+        # [1.0 + 0*0.5, 1.0 + 0.5*0.75, 1.0 + 1.0*1.0]
+        np.testing.assert_allclose(adjusted, [1.0, 1.375, 2.0])
 
-    def test_apply_fitness_sharing_softens_niche_division(self) -> None:
-        """同一構造のクラスタは sqrt(ニッチ数) で除算されること"""
+    def test_silhouette_sharing_never_improves_minimize_objective(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """最小化目的でシルエット調整が「改善」に働かないこと（方向バグ回帰）"""
+
+        class FakeKMeans:
+            def __init__(self, n_clusters: int, random_state: int, n_init: Any) -> None:
+                pass
+
+            def fit_predict(self, vectors: np.ndarray) -> np.ndarray:
+                return np.array([0, 0, 1])
+
+        monkeypatch.setattr(fitness_sharing_silhouette, "KMeans", FakeKMeans)
+        monkeypatch.setattr(
+            fitness_sharing_silhouette,
+            "silhouette_samples",
+            lambda vectors, labels: np.array([1.0, 1.0, 1.0]),
+        )
+
         sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
 
         class FitnessAwareStrategyGene(StrategyGene):
             __slots__ = ("fitness",)
 
         population = []
+        # ドローダウン（最小化）: 小さいほど良い。全員クラスタ中心扱い。
+        for i, drawdown in enumerate([0.30, 0.20, 0.10]):
+            gene = FitnessAwareStrategyGene(
+                id=f"gene{i}",
+                indicators=[IndicatorGene(type="SMA", parameters={"period": 10 + i})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            )
+            gene.fitness = SimpleNamespace(values=(drawdown,), valid=True)
+            population.append(gene)
+
+        result = sharing.silhouette_based_sharing(
+            population, objectives=["max_drawdown"]
+        )
+
+        adjusted = [gene.fitness.values[0] for gene in result]
+        # 最悪（0.30）以外は調整後に必ず悪化（値が増加）する。旧実装の
+        # 生値への乗算は最小化目的で値を 0 へ寄せて「改善」させていた。
+        assert adjusted[0] == 0.30
+        assert adjusted[1] > 0.20
+        assert adjusted[2] > 0.10
+
+    def test_apply_fitness_sharing_softens_niche_division(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """同一構造クラスタの優位幅は sqrt(ニッチ数) で縮小されること
+
+        behavior profile は適応度値を含むため、適応度が異なる個体は
+        自動的に別ニッチになる。ニッチ段のメカニクスを検証するため
+        profile を空にして構造ベクトルのみで比較する。
+        """
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+        monkeypatch.setattr(
+            sharing, "_build_behavior_profile_map", lambda population: {}
+        )
+        monkeypatch.setattr(
+            fitness_sharing,
+            "_silhouette_based_sharing",
+            lambda population, gene_serializer, vectorize_gene, objectives=None: (
+                population
+            ),
+        )
+
+        class FitnessAwareStrategyGene(StrategyGene):
+            __slots__ = ("fitness",)
+
+        population = []
+        # 同一構造（ニッチ数4）で適応度のみ異なる集団
         for i in range(4):
             gene = FitnessAwareStrategyGene(
                 id=f"gene{i}",
@@ -397,17 +472,61 @@ class TestFitnessSharingComponents:
                 position_sizing_gene=None,
                 metadata={},
             )
-            gene.fitness = SimpleNamespace(values=(1.0,), valid=True)
+            gene.fitness = SimpleNamespace(values=(1.0 + i,), valid=True)
             population.append(gene)
 
         result = sharing.apply_fitness_sharing(population)
 
         adjusted = [gene.fitness.values[0] for gene in result]
-        # ニッチ数4 → sqrt(4)=2 で割る。同一ベクトルのためシルエットは
-        # 全員同値になり、（クラスタ割り当てによらず）全員同じ倍率になる。
-        assert max(adjusted) / min(adjusted) < 1.001
-        # 古典的な共有（1/4=0.25）より緩く、無調整（1.0）より強い範囲に収まる
-        assert 0.25 < min(adjusted) < 1.0
+        # ニッチ数4 → sqrt(4)=2 で優位幅を割る。最悪値は 1.0:
+        # [1.0, 1.0+0.5, 1.0+1.0, 1.0+1.5]
+        np.testing.assert_allclose(adjusted, [1.0, 1.5, 2.0, 2.5])
+
+    def test_apply_fitness_sharing_never_improves_minimize_objective(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """最小化目的の混雑個体が共有調整で「改善」されないこと（方向バグ回帰）"""
+        sharing = FitnessSharing(sharing_radius=0.1, alpha=1.0)
+        monkeypatch.setattr(
+            sharing, "_build_behavior_profile_map", lambda population: {}
+        )
+        monkeypatch.setattr(
+            fitness_sharing,
+            "_silhouette_based_sharing",
+            lambda population, gene_serializer, vectorize_gene, objectives=None: (
+                population
+            ),
+        )
+
+        class FitnessAwareStrategyGene(StrategyGene):
+            __slots__ = ("fitness",)
+
+        population = []
+        # 同一構造（ニッチ数4）のドローダウン（最小化）集団
+        for i, drawdown in enumerate([0.40, 0.30, 0.20, 0.10]):
+            gene = FitnessAwareStrategyGene(
+                id=f"gene{i}",
+                indicators=[IndicatorGene(type="SMA", parameters={"period": 20})],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                metadata={},
+            )
+            gene.fitness = SimpleNamespace(values=(drawdown,), valid=True)
+            population.append(gene)
+
+        result = sharing.apply_fitness_sharing(population, objectives=["max_drawdown"])
+
+        adjusted = [gene.fitness.values[0] for gene in result]
+        # 旧実装はドローダウンを ニッチ数で割って改善させていた（0.1→0.05 等）。
+        # 新実装では最悪個体（0.40）以外は必ず悪化（増加）する:
+        # 最悪値 0.40 に向かって優位幅が 1/2 になる。
+        np.testing.assert_allclose(adjusted, [0.40, 0.35, 0.30, 0.25])
+        # 順序は維持される（最悪へ向かって縮むだけで逆転しない。
+        # 入力が降順のため維持されるのも降順）
+        assert adjusted == sorted(adjusted, key=lambda v: round(v, 9), reverse=True)
 
     def test_apply_fitness_sharing_does_not_attach_feature_vector(
         self, monkeypatch: pytest.MonkeyPatch

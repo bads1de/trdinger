@@ -630,7 +630,9 @@ class EvolutionRunner:
             if has_valid_fitness(individual):
                 original_values[id(individual)] = individual.fitness.values
 
-        self.fitness_sharing.apply_fitness_sharing(candidate_population)
+        self.fitness_sharing.apply_fitness_sharing(
+            candidate_population, objectives=getattr(config, "objectives", None)
+        )
         try:
             return self._apply_two_stage_selection(
                 candidate_population,
