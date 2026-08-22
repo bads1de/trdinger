@@ -933,3 +933,69 @@ class TestGeneticOperators:
 
         assert enabled_changed, "ExitGene mutation should toggle enabled"
         assert priority_changed, "ExitGene mutation should perturb priority"
+
+
+class TestCrossoverConstraintRepair:
+    """交叉後の整合性修復のテスト"""
+
+    def test_position_sizing_crossover_keeps_min_below_max(self):
+        """ブレンド交叉で min>max が生じても子は常に min<=max になること"""
+        parent1 = PositionSizingGene(min_position_size=0.01, max_position_size=0.02)
+        parent2 = PositionSizingGene(min_position_size=5.0, max_position_size=10.0)
+
+        repaired_seen = False
+        for _ in range(50):
+            child1, child2 = PositionSizingGene.crossover(parent1, parent2)
+            for child in (child1, child2):
+                assert isinstance(child, PositionSizingGene)
+                assert child.min_position_size <= child.max_position_size
+                if child.min_position_size == child.max_position_size:
+                    # ブレンドで min==max になる確率はほぼ0のため、
+                    # 等値は修復（max を min へ引き上げ）が発火した痕跡
+                    repaired_seen = True
+
+        assert repaired_seen, "50回のブレンドで一度も min>max 修復が走らなかった"
+
+    def test_position_sizing_crossover_blends_parent_values(self):
+        """修復がブレンド自体は妨げていないこと（子が両親の中間値を取る）"""
+        parent1 = PositionSizingGene(min_position_size=0.01, max_position_size=0.02)
+        parent2 = PositionSizingGene(min_position_size=5.0, max_position_size=10.0)
+
+        intermediate_seen = False
+        for _ in range(50):
+            child1, _ = PositionSizingGene.crossover(parent1, parent2)
+            if 0.01 < child1.min_position_size < 5.0:
+                intermediate_seen = True
+                break
+
+        assert intermediate_seen
+
+    def test_single_point_crossover_inherits_single_parent_risk_keys(self):
+        """片方の親しか持たないrisk_managementキーは0で捏造せず継承すること"""
+        from app.services.auto_strategy.genes.operators.crossover import (
+            crossover_strategy_genes,
+        )
+
+        parent1 = StrategyGene(
+            indicators=[IndicatorGene(type="SMA", parameters={"period": 10})],
+            risk_management={"position_size": 0.1, "max_leverage": 3},
+        )
+        parent2 = StrategyGene(
+            indicators=[IndicatorGene(type="EMA", parameters={"period": 20})],
+            risk_management={"position_size": 0.05, "mode": "aggressive"},
+        )
+
+        for _ in range(20):
+            child1, child2 = crossover_strategy_genes(
+                StrategyGene,
+                parent1,
+                parent2,
+                GAConfig(),
+                crossover_type="single_point",
+            )
+            for child in (child1, child2):
+                # 片方の親しか持たないキーは実親の値のまま（0捏造なし）
+                assert child.risk_management["max_leverage"] == 3
+                assert child.risk_management["mode"] == "aggressive"
+                # 両親が持つキーはどちらかの値
+                assert child.risk_management["position_size"] in (0.1, 0.05)

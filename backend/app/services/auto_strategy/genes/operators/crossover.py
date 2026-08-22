@@ -176,18 +176,35 @@ def single_point_crossover(
     c2_risk: dict[str, Any] = {}
     all_keys = set(parent1.risk_management.keys()) | set(parent2.risk_management.keys())
     for key in all_keys:
-        val1 = parent1.risk_management.get(key, 0)
-        val2 = parent2.risk_management.get(key, 0)
-        if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
-            if random.random() < 0.5:
-                c1_risk[key] = val1
-                c2_risk[key] = val2
+        in_parent1 = key in parent1.risk_management
+        in_parent2 = key in parent2.risk_management
+
+        if in_parent1 and in_parent2:
+            # 両親が持つキーは通常の交叉（数値は入れ替え、非数値はランダム選択）
+            val1 = parent1.risk_management[key]
+            val2 = parent2.risk_management[key]
+            if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
+                if random.random() < 0.5:
+                    c1_risk[key] = val1
+                    c2_risk[key] = val2
+                else:
+                    c1_risk[key] = val2
+                    c2_risk[key] = val1
             else:
-                c1_risk[key] = val2
-                c2_risk[key] = val1
+                c1_risk[key] = val1 if random.random() < 0.5 else val2
+                c2_risk[key] = val2 if random.random() < 0.5 else val1
         else:
-            c1_risk[key] = val1 if random.random() < 0.5 else val2
-            c2_risk[key] = val2 if random.random() < 0.5 else val1
+            # 片方の親しか持たないキーは、欠損側を 0 で捏造せず
+            # 保持している親の値をそのまま継承する（position_size=0 等が
+            # 生まれて評価が退化するのを防ぐ）
+            inherited = (
+                parent1.risk_management.get(key)
+                if in_parent1
+                else parent2.risk_management.get(key)
+            )
+            if inherited is not None:
+                c1_risk[key] = inherited
+                c2_risk[key] = inherited
 
     c1_tpsl, c2_tpsl = _crossover_optional(
         TPSLGene, parent1.tpsl_gene, parent2.tpsl_gene

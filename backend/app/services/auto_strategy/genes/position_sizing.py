@@ -132,6 +132,35 @@ class PositionSizingGene(BaseGene):
             mutated_gene.max_position_size = mutated_gene.min_position_size
         return mutated_gene
 
+    @classmethod
+    def crossover(
+        cls, parent1: BaseGene, parent2: BaseGene
+    ) -> tuple[BaseGene, BaseGene]:
+        """交叉（ブレンド後の min/max ポジションサイズ整合性を補正）。
+
+        crossover_generic_genes は min/max_position_size を独立した
+        係数でブレンドするため、子で min > max が生じ得る。validate に
+        引っかかる無効個体の量産を防ぐため、mutate と同じ規約
+        （max を min へ引き上げる）で補正する。
+        """
+        from .genetic_utils import GeneticUtils
+
+        child1, child2 = cast(
+            tuple[PositionSizingGene, PositionSizingGene],
+            GeneticUtils.crossover_generic_genes(
+                parent1_gene=parent1,
+                parent2_gene=parent2,
+                gene_class=cls,
+                numeric_fields=cls.NUMERIC_FIELDS,
+                enum_fields=cls.ENUM_FIELDS,
+                choice_fields=cls.CHOICE_FIELDS,
+            ),
+        )
+        for child in (child1, child2):
+            if child.min_position_size > child.max_position_size:
+                child.max_position_size = child.min_position_size
+        return child1, child2
+
     def clone(self) -> PositionSizingGene:
         """軽量コピーを作成"""
         return PositionSizingGene(
