@@ -288,6 +288,113 @@ class TestExperimentPersistenceService:
             save_kwargs = mock_strat_repo.save_strategy.call_args.kwargs
             assert save_kwargs["backtest_result_id"] is None
 
+    def test_save_experiment_result_commits_once_for_all_saves(self):
+        """最良・その他・パレート面が単一トランザクション（commit=1回）で保存されること"""
+        experiment_id = "exp_tx"
+        ga_config = GAConfig()
+        mock_strategy = Mock(spec=StrategyGene)
+        mock_strategy.id = "strat_tx"
+
+        result = {
+            "best_strategy": mock_strategy,
+            "best_fitness": 1.5,
+            "all_strategies": [mock_strategy],
+            "fitness_scores": [1.5],
+            "pareto_front": [
+                {"strategy": mock_strategy, "fitness_values": [1.5]},
+            ],
+        }
+        experiment_info = {
+            "db_id": 100,
+            "name": "AUTO_STRATEGY_GA_TEST",
+            "config": {"experiment_id": experiment_id},
+        }
+
+        with (
+            patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
+            ) as mock_strat_repo_cls,
+            patch.object(
+                self.persistence_service.serializer,
+                "strategy_gene_to_dict",
+                return_value={"serialized": True},
+            ),
+        ):
+            mock_strat_repo = mock_strat_repo_cls.return_value
+            mock_strat_repo.save_strategy.return_value = Mock(id=555)
+            mock_strat_repo.save_strategies_batch.return_value = [Mock(id=1)]
+
+            self.persistence_service.save_experiment_result(
+                experiment_id,
+                result,
+                ga_config,
+                {"symbol": "BTC/USDT:USDT"},
+                experiment_info=experiment_info,
+            )
+
+            # リポジトリはコミットせず（commit=False）、サービスが最後に一度だけコミット
+            assert mock_strat_repo.save_strategy.call_args.kwargs["commit"] is False
+            assert all(
+                call.kwargs.get("commit") is False
+                for call in mock_strat_repo.save_strategies_batch.call_args_list
+            )
+            self.mock_db_session.commit.assert_called_once()
+            self.mock_db_session.rollback.assert_not_called()
+
+    def test_save_experiment_result_rolls_back_on_failure(self):
+        """保存途中の失敗でロールバックされ、例外が呼び出し側へ伝播すること"""
+        import pytest
+
+        experiment_id = "exp_tx_fail"
+        ga_config = GAConfig()
+        mock_strategy = Mock(spec=StrategyGene)
+        mock_strategy.id = "strat_tx_fail"
+
+        result = {
+            "best_strategy": mock_strategy,
+            "best_fitness": 1.5,
+            "all_strategies": [mock_strategy],
+            "fitness_scores": [1.5],
+            "pareto_front": [
+                {"strategy": mock_strategy, "fitness_values": [1.5]},
+            ],
+        }
+        experiment_info = {
+            "db_id": 100,
+            "name": "AUTO_STRATEGY_GA_TEST",
+            "config": {"experiment_id": experiment_id},
+        }
+
+        with (
+            patch(
+                "app.services.auto_strategy.services.experiment_persistence_service.GeneratedStrategyRepository"
+            ) as mock_strat_repo_cls,
+            patch.object(
+                self.persistence_service.serializer,
+                "strategy_gene_to_dict",
+                return_value={"serialized": True},
+            ),
+        ):
+            mock_strat_repo = mock_strat_repo_cls.return_value
+            mock_strat_repo.save_strategy.return_value = Mock(id=555)
+            # パレート面の保存（最後のステップ）で失敗させる
+            mock_strat_repo.save_strategies_batch.side_effect = RuntimeError(
+                "DB write failed"
+            )
+
+            with pytest.raises(RuntimeError, match="DB write failed"):
+                self.persistence_service.save_experiment_result(
+                    experiment_id,
+                    result,
+                    ga_config,
+                    {"symbol": "BTC/USDT:USDT"},
+                    experiment_info=experiment_info,
+                )
+
+            # コミットされておらず、ロールバックされる＝部分保存が残らない
+            self.mock_db_session.commit.assert_not_called()
+            self.mock_db_session.rollback.assert_called_once()
+
     def test_save_backtest_result(self):
         """詳細バックテスト結果保存のテスト"""
         result_data = {

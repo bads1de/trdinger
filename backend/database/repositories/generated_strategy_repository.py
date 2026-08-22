@@ -56,6 +56,7 @@ class GeneratedStrategyRepository(BaseRepository):
         fitness_values: list[float] | None = None,
         parent_ids: list[int] | None = None,
         backtest_result_id: int | None = None,
+        commit: bool = True,
     ) -> GeneratedStrategy:
         """
         戦略を保存
@@ -68,6 +69,8 @@ class GeneratedStrategyRepository(BaseRepository):
             fitness_values: フィットネス値リスト（多目的最適化用）
             parent_ids: 親戦略のIDリスト
             backtest_result_id: バックテスト結果ID
+            commit: False の場合は flush のみでコミットしない
+                （複数保存を単一トランザクションにまとめる際に使用）
 
         Returns:
             保存された戦略
@@ -90,21 +93,27 @@ class GeneratedStrategyRepository(BaseRepository):
             )
 
             self.db.add(strategy)
-            self.db.commit()
-            self.db.refresh(strategy)
+            if commit:
+                self.db.commit()
+                self.db.refresh(strategy)
+            else:
+                # ID採番のみ行い、トランザクションは呼び出し側で確定する
+                self.db.flush()
 
             return strategy
 
         return _save_strategy()
 
     def save_strategies_batch(
-        self, strategies_data: list[dict[str, Any]]
+        self, strategies_data: list[dict[str, Any]], commit: bool = True
     ) -> list[GeneratedStrategy]:
         """
         戦略を一括保存
 
         Args:
             strategies_data: 戦略データのリスト
+            commit: False の場合は flush のみでコミットしない
+                （複数保存を単一トランザクションにまとめる際に使用）
 
         Returns:
             保存された戦略のリスト
@@ -130,9 +139,13 @@ class GeneratedStrategyRepository(BaseRepository):
                 strategies.append(strategy)
 
             self.db.add_all(strategies)
-            self.db.commit()
+            if commit:
+                self.db.commit()
+            else:
+                # ID採番のみ行い、トランザクションは呼び出し側で確定する
+                self.db.flush()
 
-            # 高速化のためrefreshはスキップ（IDはcommit時点で設定されている）
+            # 高速化のためrefreshはスキップ（IDはcommit/flush時点で設定されている）
             # for strategy in strategies:
             #     self.db.refresh(strategy)
 

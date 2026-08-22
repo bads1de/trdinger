@@ -190,31 +190,43 @@ class ExperimentPersistenceService:
         validation_results = result.get("validation_results", {})
 
         with self.db_session_factory() as db:
-            self._save_best_strategy(
-                db,
-                experiment_id,
-                experiment_info,
-                result,
-                ga_config,
-                validation_results=validation_results,
-                backtest_result_id=backtest_result_id,
-            )
-            self._save_other_strategies(
-                db,
-                experiment_info,
-                result,
-                ga_config,
-                validation_results=validation_results,
-            )
-
-            if "pareto_front" in result:
-                self._save_pareto_front(
+            try:
+                # 最良・その他・パレート面を単一トランザクションで保存する。
+                # 保存ごとにコミットすると途中失敗時に部分保存された実験結果が
+                # 残るため、まとめてフラッシュし最後に一度だけコミットする。
+                self._save_best_strategy(
+                    db,
+                    experiment_id,
+                    experiment_info,
+                    result,
+                    ga_config,
+                    validation_results=validation_results,
+                    backtest_result_id=backtest_result_id,
+                    commit=False,
+                )
+                self._save_other_strategies(
                     db,
                     experiment_info,
                     result,
                     ga_config,
                     validation_results=validation_results,
+                    commit=False,
                 )
+
+                if "pareto_front" in result:
+                    self._save_pareto_front(
+                        db,
+                        experiment_info,
+                        result,
+                        ga_config,
+                        validation_results=validation_results,
+                        commit=False,
+                    )
+
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
 
         logger.info(f"実験結果保存完了: {experiment_id}")
 
@@ -247,6 +259,7 @@ class ExperimentPersistenceService:
         *,
         validation_results: dict[str, Any] | None = None,
         backtest_result_id: int | None = None,
+        commit: bool = True,
     ) -> None:
         """最良戦略を保存する"""
         generated_strategy_repo = GeneratedStrategyRepository(db)
@@ -284,6 +297,7 @@ class ExperimentPersistenceService:
             fitness_score=fitness_score,
             fitness_values=fitness_values,
             backtest_result_id=backtest_result_id,
+            commit=commit,
         )
 
         logger.info(f"最良戦略を保存しました (ID: {best_strategy_record.id})")
@@ -296,6 +310,7 @@ class ExperimentPersistenceService:
         ga_config: GAConfig,
         *,
         validation_results: dict[str, Any] | None = None,
+        commit: bool = True,
     ) -> None:
         """最良戦略以外の戦略をバッチ保存する"""
         all_strategies = result.get("all_strategies", [])
@@ -342,8 +357,10 @@ class ExperimentPersistenceService:
             )
 
         if strategies_data:
-            saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
-            logger.info(f"追加戦略を一括保存しました: {saved_count} 件")
+            saved = generated_strategy_repo.save_strategies_batch(
+                strategies_data, commit=commit
+            )
+            logger.info(f"追加戦略を一括保存しました: {len(saved)} 件")
 
     def _save_pareto_front(
         self,
@@ -353,6 +370,7 @@ class ExperimentPersistenceService:
         ga_config: GAConfig,
         *,
         validation_results: dict[str, Any] | None = None,
+        commit: bool = True,
     ) -> None:
         """パレート最適解を保存する"""
         pareto_front = result.get("pareto_front", [])
@@ -390,8 +408,10 @@ class ExperimentPersistenceService:
                 )
 
         if strategies_data:
-            saved_count = generated_strategy_repo.save_strategies_batch(strategies_data)
-            logger.info(f"パレート最適解を一括保存しました: {saved_count} 件")
+            saved = generated_strategy_repo.save_strategies_batch(
+                strategies_data, commit=commit
+            )
+            logger.info(f"パレート最適解を一括保存しました: {len(saved)} 件")
 
     def complete_experiment(self, experiment_id: str) -> None:
         """実験を完了状態にする"""

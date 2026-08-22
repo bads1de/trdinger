@@ -174,6 +174,48 @@ class TestSaveStrategiesBatch:
         # refresh はスキップされる（最適化）
         assert cast(MagicMock, repository.db.refresh).call_count == 0
 
+    def test_save_strategy_without_commit_flushes_only(
+        self,
+        repository: GeneratedStrategyRepository,
+        sample_gene_data: dict[str, Any],
+    ) -> None:
+        """commit=False では flush のみでコミットしない（単一トランザクション用）"""
+        result = repository.save_strategy(
+            experiment_id=100,
+            gene_data=sample_gene_data,
+            generation=10,
+            fitness_score=0.85,
+            commit=False,
+        )
+
+        assert result is not None
+        cast(MagicMock, repository.db.add).assert_called_once()
+        cast(MagicMock, repository.db.flush).assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_not_called()
+        cast(MagicMock, repository.db.refresh).assert_not_called()
+
+    def test_save_strategies_batch_without_commit_flushes_only(
+        self,
+        repository: GeneratedStrategyRepository,
+        sample_gene_data: dict[str, Any],
+    ) -> None:
+        """commit=False では flush のみでコミットしない（単一トランザクション用）"""
+        strategies_data = [
+            {
+                "experiment_id": 100,
+                "gene_data": sample_gene_data,
+                "generation": 10,
+                "fitness_score": 0.85,
+            }
+        ]
+
+        result = repository.save_strategies_batch(strategies_data, commit=False)
+
+        assert result is not None
+        assert len(result) == 1
+        cast(MagicMock, repository.db.flush).assert_called_once()
+        cast(MagicMock, repository.db.commit).assert_not_called()
+
 
 class TestGetStrategiesByExperiment:
     """get_strategies_by_experimentメソッドのテスト"""

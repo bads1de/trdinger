@@ -338,7 +338,7 @@ class TestSaveOtherStrategies:
             ),
         ):
             mock_repo = mock_repo_cls.return_value
-            mock_repo.save_strategies_batch.return_value = 2
+            mock_repo.save_strategies_batch.return_value = [Mock(id=1), Mock(id=2)]
 
             service._save_other_strategies(
                 db, {"db_id": 10}, result, GAConfig(generations=20)
@@ -375,7 +375,7 @@ class TestSaveOtherStrategies:
             ),
         ):
             mock_repo = mock_repo_cls.return_value
-            mock_repo.save_strategies_batch.return_value = 1
+            mock_repo.save_strategies_batch.return_value = [Mock(id=1)]
 
             service._save_other_strategies(db, {"db_id": 1}, result, GAConfig())
 
@@ -416,7 +416,7 @@ class TestSaveOtherStrategies:
             ),
         ):
             mock_repo = mock_repo_cls.return_value
-            mock_repo.save_strategies_batch.return_value = 1
+            mock_repo.save_strategies_batch.return_value = [Mock(id=1)]
 
             service._save_other_strategies(db, {"db_id": 1}, result, GAConfig())
 
@@ -482,7 +482,7 @@ class TestSaveParetoFront:
             ),
         ):
             mock_repo = mock_repo_cls.return_value
-            mock_repo.save_strategies_batch.return_value = 2
+            mock_repo.save_strategies_batch.return_value = [Mock(id=1), Mock(id=2)]
 
             service._save_pareto_front(
                 db, {"db_id": 99}, result, GAConfig(generations=10)
@@ -540,7 +540,7 @@ class TestSaveParetoFront:
             ),
         ):
             mock_repo = mock_repo_cls.return_value
-            mock_repo.save_strategies_batch.return_value = 1
+            mock_repo.save_strategies_batch.return_value = [Mock(id=1)]
 
             service._save_pareto_front(db, {"db_id": 1}, result, GAConfig())
 
@@ -619,7 +619,7 @@ class TestSaveExperimentResultEdgeCases:
         ):
             mock_repo = mock_repo_cls.return_value
             mock_repo.save_strategy.return_value = Mock(id=1)
-            mock_repo.save_strategies_batch.return_value = 1
+            mock_repo.save_strategies_batch.return_value = [Mock(id=1)]
 
             service.save_experiment_result(
                 "exp_id", result, ga_config, {}, experiment_info=experiment_info
