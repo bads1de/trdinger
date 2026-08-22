@@ -57,7 +57,7 @@ class ParallelEvaluator:
 
     def __init__(
         self,
-        evaluate_func: Callable[[Any], tuple[float, ...]],
+        evaluate_func: Callable[..., Any],
         max_workers: int | None = None,
         timeout_per_individual: float = 300.0,
         use_process_pool: bool = True,
@@ -68,7 +68,9 @@ class ParallelEvaluator:
         初期化
 
         Args:
-            evaluate_func: 個体を評価する関数（toolbox.evaluate相当）
+            evaluate_func: 個体を評価する関数（toolbox.evaluate相当）。
+                ``dynamic_scalars`` を渡す場合のみ第2引数
+                ``dict[str, float] | None`` を受け取る必要がある。
             max_workers: 最大ワーカー数（Noneの場合はCPUコア数）
             timeout_per_individual: 個体あたりのタイムアウト秒数
             use_process_pool: ProcessPoolExecutorを使用するか
@@ -160,6 +162,7 @@ class ParallelEvaluator:
         self,
         population: list[Any],
         default_fitness: tuple[float, ...] | None = None,
+        dynamic_scalars: dict[str, float] | None = None,
     ) -> list[tuple[float, ...]]:
         """
         個体群を並列評価
@@ -167,6 +170,9 @@ class ParallelEvaluator:
         Args:
             population: 評価対象の個体リスト
             default_fitness: 評価失敗時のデフォルトフィットネス値
+            dynamic_scalars: メインプロセスで世代ごとに更新される
+                ``objective_dynamic_scalars``。評価関数が第2引数を
+                受け取る場合のみワーカーへ伝播される。
 
         Returns:
             各個体のフィットネス値のリスト（入力と同じ順序）
@@ -201,7 +207,11 @@ class ParallelEvaluator:
             try:
                 assert self._executor is not None
                 results = self._evaluate_on_executor(
-                    self._executor, population, results, default_fitness
+                    self._executor,
+                    population,
+                    results,
+                    default_fitness,
+                    dynamic_scalars,
                 )
             finally:
                 self.shutdown()
@@ -209,7 +219,7 @@ class ParallelEvaluator:
             # 永続的なExecutorを使用
             assert self._executor is not None
             results = self._evaluate_on_executor(
-                self._executor, population, results, default_fitness
+                self._executor, population, results, default_fitness, dynamic_scalars
             )
 
         # Noneが残っている場合はデフォルト値で埋める
@@ -228,6 +238,7 @@ class ParallelEvaluator:
         population: list[Any],
         results: list[tuple[float, ...] | None],
         default_fitness: tuple[float, ...],
+        dynamic_scalars: dict[str, float] | None = None,
     ) -> list[tuple[float, ...] | None]:
         """
         指定されたExecutor上で評価を実行します。
@@ -237,6 +248,8 @@ class ParallelEvaluator:
             population: 評価対象の個体リスト
             results: 結果格納用リスト
             default_fitness: デフォルト値
+            dynamic_scalars: 世代ごとに更新される動的スカラー。
+                指定時は評価関数へ第2引数として渡す。
 
         Returns:
             評価結果リスト
@@ -245,7 +258,10 @@ class ParallelEvaluator:
         future_started_at: dict[Any, float] = {}
 
         for i, ind in enumerate(population):
-            future = executor.submit(self.evaluate_func, ind)
+            if dynamic_scalars:
+                future = executor.submit(self.evaluate_func, ind, dynamic_scalars)
+            else:
+                future = executor.submit(self.evaluate_func, ind)
             future_to_index[future] = i
             future_started_at[future] = time.monotonic()
 

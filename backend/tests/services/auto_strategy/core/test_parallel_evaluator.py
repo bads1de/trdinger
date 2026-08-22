@@ -79,6 +79,50 @@ class TestParallelEvaluator:
         for i, fitness in enumerate(result):
             assert fitness == (float(i),)
 
+    def test_evaluate_population_propagates_dynamic_scalars(self):
+        """dynamic_scalars 指定時は評価関数へ第2引数として渡されること"""
+        received: list[dict | None] = []
+
+        def mock_evaluate(ind, dynamic_scalars=None):
+            received.append(dynamic_scalars)
+            return (1.0,)
+
+        individual = MagicMock()
+        individual.id = "ind_scalars"
+
+        evaluator = ParallelEvaluator(
+            evaluate_func=mock_evaluate,
+            max_workers=1,
+            use_process_pool=False,
+        )
+        scalars = {"max_drawdown": 0.15}
+        evaluator.evaluate_population(
+            [individual], default_fitness=(0.0,), dynamic_scalars=scalars
+        )
+
+        assert received == [scalars]
+
+    def test_evaluate_population_without_scalars_keeps_single_arg_call(self):
+        """dynamic_scalars 未指定時は従来どおり1引数で呼ばれること（後方互換）"""
+        received: list[tuple] = []
+
+        def mock_evaluate(*args):
+            received.append(args)
+            return (1.0,)
+
+        individual = MagicMock()
+        individual.id = "ind_no_scalars"
+
+        evaluator = ParallelEvaluator(
+            evaluate_func=mock_evaluate,
+            max_workers=1,
+            use_process_pool=False,
+        )
+        evaluator.evaluate_population([individual], default_fitness=(0.0,))
+
+        assert len(received) == 1
+        assert len(received[0]) == 1
+
     def test_evaluate_population_caches_behavior_summary_from_rich_result(self):
         """拡張返り値から behavior summary を回収できること"""
         individual = MagicMock()

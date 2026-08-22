@@ -89,6 +89,13 @@ class EvolutionRunner:
             toolbox=self.toolbox,
             fitness_sharing=self.fitness_sharing,
             individual_evaluator=self.individual_evaluator,
+            behavior_profile_provider=getattr(
+                self.parallel_evaluator,
+                "get_cached_behavior_profile",
+                None,
+            )
+            if self.parallel_evaluator is not None
+            else None,
         )
 
     def _wire_fitness_sharing_provider(self) -> None:
@@ -458,9 +465,18 @@ class EvolutionRunner:
 
         if self.parallel_evaluator:
             default_fitness = self._build_default_fitness(config)
+            # 世代ごとに更新される動的スカラーはワーカーの持つ設定が古いため、
+            # 評価要求ごとに最新値を伝播する（並列ワーカー伝播）
+            dynamic_scalars = None
+            if config is not None:
+                scalars = getattr(config, "objective_dynamic_scalars", None)
+                if scalars:
+                    dynamic_scalars = dict(scalars)
             return list(
                 self.parallel_evaluator.evaluate_population(
-                    individuals, default_fitness=default_fitness
+                    individuals,
+                    default_fitness=default_fitness,
+                    dynamic_scalars=dynamic_scalars,
                 )
             )
 

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import heapq
 import logging
+from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any, Optional, cast
 
 import numpy as np
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
     from ..evaluation.evaluation_report import EvaluationReport
 
 from .report_selection import (
+    build_behavior_rank_key,
     build_report_rank_key,
     extract_primary_fitness,
     get_individual_identity,
@@ -50,10 +52,15 @@ class TwoStageSelection:
         toolbox: Any,
         fitness_sharing: Any | None = None,
         individual_evaluator: Any | None = None,
-    ) -> None:
+        behavior_profile_provider: Callable[[Any], Mapping[str, float] | None]
+        | None = None,
+    ):
         self.toolbox = toolbox
         self.fitness_sharing = fitness_sharing
         self.individual_evaluator = individual_evaluator
+        # 並列評価時は report がメインプロセスに返らないため、
+        # behavior summary を report の代替ランクキーとして使う
+        self.behavior_profile_provider = behavior_profile_provider
 
     def apply_two_stage_selection(
         self,
@@ -174,11 +181,25 @@ class TwoStageSelection:
 
             report = self._resolve_evaluation_report(candidate, config)
             two_stage_config = getattr(config, "two_stage_selection_config", None)
-            rank_key = build_report_rank_key(
-                candidate,
-                cast(Optional["EvaluationReport"], report),
-                getattr(two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE),
+            min_pass_rate = getattr(
+                two_stage_config, "min_pass_rate", DEFAULT_MIN_PASS_RATE
             )
+            if report is not None:
+                rank_key = build_report_rank_key(
+                    candidate,
+                    cast(Optional["EvaluationReport"], report),
+                    min_pass_rate,
+                )
+            else:
+                # report が取得できない場合（並列評価のデフォルト動作）、
+                # behavior summary を report の代替として再ランクする。
+                # サマリーも無い場合のみ fitness 単独のフォールバックになる。
+                rank_key = build_behavior_rank_key(
+                    extract_primary_fitness(candidate),
+                    self._resolve_behavior_summary(candidate),
+                    min_pass_rate=min_pass_rate,
+                    primary_objective=self._primary_objective_name(config),
+                )
             ranked_candidates.append((rank_key, candidate))
 
         ranked_candidates.sort(key=lambda item: item[0], reverse=True)
@@ -190,6 +211,26 @@ class TwoStageSelection:
             (candidate, rank_key)
             for rank_key, candidate in ranked_candidates[:elite_count]
         ]
+
+    def _resolve_behavior_summary(self, candidate: Any) -> Mapping[str, float] | None:
+        """並列評価キャッシュから候補の behavior summary を取得する。"""
+        provider = self.behavior_profile_provider
+        if not callable(provider):
+            return None
+        try:
+            summary = provider(candidate)
+        except Exception as e:
+            logger.debug("behavior summary の取得に失敗しました: %s", e)
+            return None
+        return summary if isinstance(summary, Mapping) and summary else None
+
+    @staticmethod
+    def _primary_objective_name(config: GAConfig) -> str:
+        """主目的関数名を返す（多目的・未設定の場合は空文字）。"""
+        objectives = getattr(config, "objectives", None)
+        if isinstance(objectives, (list, tuple)) and objectives:
+            return str(objectives[0])
+        return ""
 
     def _diversify_reranked_elites(
         self,

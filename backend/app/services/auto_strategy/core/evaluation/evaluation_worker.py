@@ -107,12 +107,18 @@ def initialize_worker_process(
         raise
 
 
-def worker_evaluate_individual(individual: Any) -> ParallelEvaluationResult:
+def worker_evaluate_individual(
+    individual: Any,
+    dynamic_scalars: dict[str, float] | None = None,
+) -> ParallelEvaluationResult:
     """
     個体評価関数（ワーカープロセス内で実行）
 
     Args:
         individual: 評価対象の個体
+        dynamic_scalars: メインプロセスで世代ごとに更新される
+            ``objective_dynamic_scalars``。プール起動時に pickle された
+            設定は古いままなので、評価のたびに最新値を受け取って反映する。
 
     Returns:
         フィットネス値のタプル
@@ -122,6 +128,12 @@ def worker_evaluate_individual(individual: Any) -> ParallelEvaluationResult:
         return ParallelEvaluationResult(
             fitness=_default_fitness_for_config(_WORKER_CONFIG)
         )
+
+    if dynamic_scalars:
+        try:
+            _WORKER_CONFIG.objective_dynamic_scalars = dict(dynamic_scalars)
+        except Exception as e:
+            logger.debug("dynamic_scalars の反映に失敗しました: %s", e)
 
     try:
         fitness = _WORKER_EVALUATOR.evaluate(individual, _WORKER_CONFIG)

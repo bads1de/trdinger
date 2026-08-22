@@ -196,6 +196,47 @@ class TestWorkerEvaluateIndividual:
             ew_module._WORKER_EVALUATOR = None
             ew_module._WORKER_CONFIG = None
 
+    def test_dynamic_scalars_are_applied_to_worker_config(self):
+        """dynamic_scalars は評価前にワーカー設定へ反映されること"""
+        mock_evaluator = MagicMock()
+        mock_evaluator.evaluate.return_value = (0.5,)
+        mock_evaluator.get_last_evaluation_report.return_value = None
+        mock_config = MagicMock()
+        mock_config.objective_dynamic_scalars = {}
+
+        ew_module._WORKER_EVALUATOR = mock_evaluator
+        ew_module._WORKER_CONFIG = mock_config
+
+        try:
+            scalars = {"max_drawdown": 0.2, "ulcer_index": 0.1}
+            worker_evaluate_individual(MagicMock(), dynamic_scalars=scalars)
+
+            # プール起動時に pickle された設定は古いため、評価のたびに上書きされる
+            assert mock_config.objective_dynamic_scalars == scalars
+        finally:
+            ew_module._WORKER_EVALUATOR = None
+            ew_module._WORKER_CONFIG = None
+
+    def test_dynamic_scalars_none_keeps_existing_config(self):
+        """dynamic_scalars 未指定時は設定を書き換えないこと"""
+        mock_evaluator = MagicMock()
+        mock_evaluator.evaluate.return_value = (0.5,)
+        mock_evaluator.get_last_evaluation_report.return_value = None
+        mock_config = MagicMock()
+        existing = {"max_drawdown": 0.3}
+        mock_config.objective_dynamic_scalars = existing
+
+        ew_module._WORKER_EVALUATOR = mock_evaluator
+        ew_module._WORKER_CONFIG = mock_config
+
+        try:
+            worker_evaluate_individual(MagicMock())
+
+            assert mock_config.objective_dynamic_scalars is existing
+        finally:
+            ew_module._WORKER_EVALUATOR = None
+            ew_module._WORKER_CONFIG = None
+
     def test_evaluate_without_initialization(self):
         """未初期化時に方向を考慮したペナルティ値が返されること"""
         ew_module._WORKER_EVALUATOR = None

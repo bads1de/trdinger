@@ -516,7 +516,7 @@ class GeneticAlgorithmEngine:
             return None
 
         parallel_evaluator = ParallelEvaluator(
-            evaluate_func=worker_evaluate_individual,  # type: ignore[arg-type]  # トップレベル関数を指定
+            evaluate_func=worker_evaluate_individual,  # トップレベル関数を指定
             max_workers=getattr(evaluation_config, "max_workers", None),
             timeout_per_individual=getattr(
                 evaluation_config, "timeout", DEFAULT_TIMEOUT_PER_INDIVIDUAL

@@ -4,6 +4,7 @@ import pytest
 
 from app.services.auto_strategy.config import objective_registry
 from app.services.auto_strategy.core.engine.report_selection import (
+    build_behavior_rank_key,
     build_report_rank_key,
     build_report_rank_key_from_primary_fitness,
     get_individual_identity,
@@ -16,6 +17,53 @@ from app.services.auto_strategy.core.evaluation.evaluation_report import (
     EvaluationReport,
     ScenarioEvaluation,
 )
+
+
+def test_build_behavior_rank_key_uses_summary_values():
+    """behavior summary から pass_gate / pass_rate / worst / aggregated を作る"""
+    summary = {
+        "pass_rate": 1.0,
+        "worst_case_primary": 0.4,
+        "aggregated_primary": 0.6,
+    }
+
+    key = build_behavior_rank_key(1.5, summary, min_pass_rate=0.5)
+
+    assert key == (1.0, 1.0, 0.4, 0.6)
+
+
+def test_build_behavior_rank_key_applies_pass_gate():
+    """min_pass_rate 未満の個体は pass_gate=0 で不利になる"""
+    summary = {"pass_rate": 0.4, "worst_case_primary": 0.9, "aggregated_primary": 0.9}
+
+    key = build_behavior_rank_key(1.5, summary, min_pass_rate=0.5)
+
+    assert key[0] == 0.0
+    assert key[1] == 0.4
+
+
+def test_build_behavior_rank_key_converts_minimize_objective():
+    """最小化目的は選択空間へ変換して比較する"""
+    summary = {"pass_rate": 1.0, "worst_case_primary": 0.2, "aggregated_primary": 0.1}
+
+    key = build_behavior_rank_key(0.1, summary, primary_objective="max_drawdown")
+
+    assert key == (1.0, 1.0, -0.2, -0.1)
+
+
+def test_build_behavior_rank_key_falls_back_without_summary():
+    """サマリーが無い場合は fitness 単独のフォールバックキーになる"""
+    assert build_behavior_rank_key(1.5, None) == (0.0, 0.0, 1.5, 1.5)
+    assert build_behavior_rank_key(1.5, {}) == (0.0, 0.0, 1.5, 1.5)
+
+
+def test_build_behavior_rank_key_falls_back_on_missing_fields():
+    """必須フィールド欠損時は主fitnessで補完する"""
+    summary = {"pass_rate": 1.0}
+
+    key = build_behavior_rank_key(1.5, summary)
+
+    assert key == (1.0, 1.0, 1.5, 1.5)
 
 
 def test_build_report_rank_key_from_primary_fitness_uses_report_values():

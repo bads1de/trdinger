@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, TypeGuard
 
 from app.services.auto_strategy.config import objective_registry
@@ -185,6 +185,58 @@ def build_report_rank_key_from_primary_fitness(
         rank_components.extend((worst_case, aggregated))
 
     return tuple(rank_components)
+
+
+def build_behavior_rank_key(
+    primary_fitness: float,
+    behavior_summary: Mapping[str, float] | None,
+    min_pass_rate: float = 0.0,
+    primary_objective: str = "",
+) -> tuple[float, ...]:
+    """behavior summary を利用した再ランクキーを構築する。
+
+    並列評価では完全な EvaluationReport はワーカーから返されないため、
+    ``ParallelEvaluationResult.behavior_summary``（pass_rate・ワーストケース・
+    集約値の軽量サマリー）を report の代替として二段階選抜で使う。
+    キーの構造は ``build_report_rank_key_from_primary_fitness`` と同じ
+    (pass_gate, pass_rate, worst_case, aggregated)（降順ソートで上位）。
+
+    Args:
+        primary_fitness: 個体の主フィットネス値（サマリー欠落時のフォールバック）。
+        behavior_summary: behavior summary 辞書。None の場合はフォールバックキー。
+        min_pass_rate: 最低合格率。これ未満の個体はソートで不利になる。
+        primary_objective: 主目的関数名。最小化目的は選択空間へ変換する。
+
+    Returns:
+        Tuple[float, ...]: 再ランク用のソートキータプル。
+    """
+    base_fitness = float(primary_fitness)
+
+    if not behavior_summary:
+        return (0.0, 0.0, base_fitness, base_fitness)
+
+    pass_rate = float(behavior_summary.get("pass_rate", 0.0) or 0.0)
+    pass_gate = 1.0 if pass_rate >= float(min_pass_rate) else 0.0
+
+    worst_case_raw = behavior_summary.get("worst_case_primary")
+    aggregated_raw = behavior_summary.get("aggregated_primary")
+    # 主目的が最小化の場合は選択空間（大きいほど良い）へ変換して比較する
+    worst_case = _to_selection_space_or_raw(
+        worst_case_raw if worst_case_raw is not None else base_fitness,
+        primary_objective,
+    )
+    aggregated = _to_selection_space_or_raw(
+        aggregated_raw if aggregated_raw is not None else base_fitness,
+        primary_objective,
+    )
+    return (pass_gate, pass_rate, worst_case, aggregated)
+
+
+def _to_selection_space_or_raw(value: float, objective: str) -> float:
+    """主目的が最小化目的の場合のみ選択空間へ変換する。"""
+    if objective and objective_registry.is_minimize_objective(objective):
+        return objective_registry.to_selection_space(float(value), objective)
+    return float(value)
 
 
 def extract_primary_fitness(individual: object) -> float:

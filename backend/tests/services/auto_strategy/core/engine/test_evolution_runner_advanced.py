@@ -420,6 +420,80 @@ class TestEvolutionRunnerAdvanced:
         assert raw_leader not in selected[:1]
         mock_evaluator.evaluate_robustness_report.assert_not_called()
 
+    def test_two_stage_selection_uses_behavior_summary_when_report_missing(
+        self, mock_toolbox, mock_stats
+    ):
+        """並列評価時（reportなし）は behavior summary で再ランクすること
+
+        ワーカーから EvaluationReport は返らないため、report が取得できない
+        場合は behavior_summary（pass_rate・ワーストケース）を代替として使う。
+        旧実装は全員がフォールバックキーになり pass_rate ゲートが無効だった。
+        """
+        raw_leader = MagicMock()
+        raw_leader.id = "raw-leader"
+        raw_leader.fitness = MagicMock(valid=True, values=(0.95,))
+
+        robust_candidate = MagicMock()
+        robust_candidate.id = "robust-candidate"
+        robust_candidate.fitness = MagicMock(valid=True, values=(0.90,))
+
+        filler = MagicMock()
+        filler.id = "filler"
+        filler.fitness = MagicMock(valid=True, values=(0.50,))
+
+        mock_toolbox.select.return_value = [raw_leader, filler]
+        # 並列評価を想定し report は常に取得できない
+        mock_evaluator = MagicMock()
+        mock_evaluator.get_cached_evaluation_report.return_value = None
+
+        summaries = {
+            "raw-leader": {
+                "pass_rate": 0.5,
+                "worst_case_primary": 0.10,
+                "aggregated_primary": 0.95,
+            },
+            "robust-candidate": {
+                "pass_rate": 1.0,
+                "worst_case_primary": 0.82,
+                "aggregated_primary": 0.88,
+            },
+            "filler": {
+                "pass_rate": 0.5,
+                "worst_case_primary": 0.40,
+                "aggregated_primary": 0.50,
+            },
+        }
+        mock_parallel_evaluator = MagicMock()
+        mock_parallel_evaluator.get_cached_behavior_profile.side_effect = (
+            lambda individual: summaries.get(individual.id)
+        )
+
+        runner = EvolutionRunner(
+            toolbox=mock_toolbox,
+            stats=mock_stats,
+            individual_evaluator=mock_evaluator,
+            parallel_evaluator=mock_parallel_evaluator,
+        )
+        config = SimpleNamespace(
+            elite_size=1,
+            two_stage_selection_config=SimpleNamespace(
+                enabled=True,
+                elite_count=1,
+                candidate_pool_size=3,
+                min_pass_rate=0.75,
+            ),
+        )
+
+        selected = runner._apply_two_stage_selection(
+            [raw_leader, robust_candidate, filler],
+            population_size=2,
+            config=config,
+        )
+
+        # 主fitnessは劣るが pass_rate ゲートを満たす候補がエリートになる
+        assert selected[0] is robust_candidate
+        assert get_two_stage_rank(robust_candidate) == 0
+
     def test_two_stage_selection_keeps_population_size_with_duplicate_elite(
         self, mock_toolbox, mock_stats
     ):

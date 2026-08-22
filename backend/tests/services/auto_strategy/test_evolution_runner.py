@@ -163,7 +163,9 @@ class TestEvolutionRunner:
         # Parallel evaluator should be called once with full population
         # （config 未指定のため目的不明のフォールバック = 最大化ペナルティ）
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            dummy_population, default_fitness=(-PENALTY_FITNESS_MAGNITUDE,)
+            dummy_population,
+            default_fitness=(-PENALTY_FITNESS_MAGNITUDE,),
+            dynamic_scalars=None,
         )
 
         # Toolbox evaluate should NOT be called
@@ -256,7 +258,9 @@ class TestEvolutionRunner:
 
         mock_build_coarse_config.assert_not_called()
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            dummy_population, default_fitness=(-PENALTY_FITNESS_MAGNITUDE,)
+            dummy_population,
+            default_fitness=(-PENALTY_FITNESS_MAGNITUDE,),
+            dynamic_scalars=None,
         )
         for ind in dummy_population:
             assert ind.fitness.values == (2.0,)
@@ -312,7 +316,9 @@ class TestEvolutionRunner:
 
         mock_build_coarse_config.assert_not_called()
         mock_parallel_evaluator.evaluate_population.assert_called_once_with(
-            invalid_ind, default_fitness=(-PENALTY_FITNESS_MAGNITUDE,)
+            invalid_ind,
+            default_fitness=(-PENALTY_FITNESS_MAGNITUDE,),
+            dynamic_scalars=None,
         )
         for ind in invalid_ind:
             assert ind.fitness.values == (3.0,)
