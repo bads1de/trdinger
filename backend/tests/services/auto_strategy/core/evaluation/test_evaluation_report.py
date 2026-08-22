@@ -106,7 +106,8 @@ class TestEvaluationReport:
 class TestPenaltyExclusionInAggregate:
     """制約違反ペナルティ値を含む集約のテスト"""
 
-    def test_penalty_fitness_excluded_from_robust_aggregation(self):
+    def test_penalty_fitness_excluded_from_robust_median(self):
+        """robust の中央値は合格foldのみから計算し、ワーストにペナルティを反映"""
         report = EvaluationReport.aggregate(
             mode="walk_forward",
             objectives=["weighted_score"],
@@ -120,9 +121,10 @@ class TestPenaltyExclusionInAggregate:
             aggregate_method="robust",
         )
 
-        # ペナルティ値は集約から除外され、[0.6, 0.8] から計算される
-        # (median 0.7 * 0.7 + worst 0.6 * 0.3 = 0.67)
-        assert report.aggregated_fitness[0] == pytest.approx(0.67)
+        # 中央値は合格fold [0.6, 0.8] から 0.7。ワーストはペナルティを反映:
+        # 0.7 * 0.7 + (-1e9) * 0.3
+        expected = 0.7 * 0.7 + (-PENALTY_FITNESS_MAGNITUDE) * 0.3
+        assert report.aggregated_fitness[0] == pytest.approx(expected)
         assert report.metadata["penalized_scenario_count"] == 1
 
     def test_penalty_fitness_excluded_from_mean_aggregation(self):
@@ -168,6 +170,89 @@ class TestPenaltyExclusionInAggregate:
         )
 
         assert report.primary_worst_case_fitness == 0.4
+
+    def test_robust_worst_case_includes_penalty(self):
+        """robust 集約のワーストケースはペナルティfoldを反映すること
+
+        中央値は合格foldから計算するが、ワーストケースにペナルティ値
+        （方向考慮）を反映するため、1つでも失敗foldがあると集約fitnessは
+        大きく悪化する。
+        """
+        report = EvaluationReport.aggregate(
+            mode="walk_forward",
+            objectives=["weighted_score"],
+            scenarios=[
+                ScenarioEvaluation(name="fold_0", fitness=(0.4,), passed=True),
+                ScenarioEvaluation(name="fold_1", fitness=(-1e9,), passed=False),
+            ],
+            aggregate_method="robust",
+        )
+
+        # 中央値 0.4 × 0.7 + ワースト（ペナルティ）× 0.3
+        expected = 0.4 * 0.7 + (-PENALTY_FITNESS_MAGNITUDE) * 0.3
+        assert report.aggregated_fitness[0] == pytest.approx(expected)
+        # blend 後も有限値であり DB/JSON 保存可能な範囲に収まる
+        assert abs(report.aggregated_fitness[0]) < PENALTY_FITNESS_MAGNITUDE
+
+    def test_partial_failure_ranks_below_all_passing(self):
+        """一部fold失敗の個体が全合格の個体に支配されないこと（回帰）
+
+        旧実装はペナルティfoldを集計から完全除外するため、
+        「5 fold中2失敗だが残りが高調子」な個体が
+        「5 fold全部合格で低調」な個体に勝ってしまっていた。
+        """
+        partial_failure = EvaluationReport.aggregate(
+            mode="walk_forward",
+            objectives=["weighted_score"],
+            scenarios=[
+                ScenarioEvaluation(name="fold_0", fitness=(0.5,), passed=True),
+                ScenarioEvaluation(name="fold_1", fitness=(0.6,), passed=True),
+                ScenarioEvaluation(name="fold_2", fitness=(-1e9,), passed=False),
+                ScenarioEvaluation(name="fold_3", fitness=(-1e9,), passed=False),
+                ScenarioEvaluation(name="fold_4", fitness=(0.4,), passed=True),
+            ],
+            aggregate_method="robust",
+        )
+        all_passing = EvaluationReport.aggregate(
+            mode="walk_forward",
+            objectives=["weighted_score"],
+            scenarios=[
+                ScenarioEvaluation(name="fold_0", fitness=(0.3,), passed=True),
+                ScenarioEvaluation(name="fold_1", fitness=(0.3,), passed=True),
+                ScenarioEvaluation(name="fold_2", fitness=(0.3,), passed=True),
+                ScenarioEvaluation(name="fold_3", fitness=(0.3,), passed=True),
+                ScenarioEvaluation(name="fold_4", fitness=(0.3,), passed=True),
+            ],
+            aggregate_method="robust",
+        )
+
+        assert partial_failure.aggregated_fitness[0] < all_passing.aggregated_fitness[0]
+
+    def test_robust_penalty_worst_works_for_minimize_objective(self):
+        """最小化目的でも失敗foldがワーストケースに効くこと"""
+        report = EvaluationReport.aggregate(
+            mode="walk_forward",
+            objectives=["max_drawdown"],
+            scenarios=[
+                ScenarioEvaluation(name="fold_0", fitness=(0.2,), passed=True),
+                ScenarioEvaluation(
+                    name="fold_1", fitness=(1e9,), passed=False
+                ),  # 最小化のペナルティは +1e9
+            ],
+            aggregate_method="robust",
+        )
+        all_passing = EvaluationReport.aggregate(
+            mode="walk_forward",
+            objectives=["max_drawdown"],
+            scenarios=[
+                ScenarioEvaluation(name="fold_0", fitness=(0.2,), passed=True),
+                ScenarioEvaluation(name="fold_1", fitness=(0.25,), passed=True),
+            ],
+            aggregate_method="robust",
+        )
+
+        # 最小化は小さいほど良い: 失敗入りは大きく悪化する
+        assert report.aggregated_fitness[0] > all_passing.aggregated_fitness[0]
 
     def test_single_mode_with_penalty_only_aggregates_to_penalty(self):
         """single モードで唯一のシナリオがペナルティの場合、集約はペナルティ値になる"""

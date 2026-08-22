@@ -177,9 +177,10 @@ class EvaluationReport:
                 for scenario in scenario_list
             ]
             # 制約違反・評価エラーのペナルティ値（±PENALTY_FITNESS_MAGNITUDE）は
-            # DEAP 内部の順位付けマーカーであり、実数値ではない。そのまま集約すると
-            # 中央値やワーストケースが 1 個のペナルティに引きずられ、
-            # 集約 fitness が無意味な巨大値になってしまうため、集約から除外する。
+            # DEAP 内部の順位付けマーカーであり、実数値ではない。中央値系の
+            # 集計（median/mean/weighted）に混ざると1個のペナルティに引きずられて
+            # 無意味な巨大値になるため、中央値系の計算からは除外する。
+            # ただし robust のワーストケースには反映する（関数docstring参照）。
             aggregate_values = [
                 value
                 for value, has_penalty in zip(
@@ -190,6 +191,8 @@ class EvaluationReport:
             aggregated_fitness.append(
                 cls._aggregate_objective_values(
                     values=aggregate_values,
+                    # robust 集約のワーストケースはペナルティfoldを含む全値から取る
+                    all_values=values,
                     objective=objective,
                     aggregate_method=aggregate_method,
                     weights=weights,
@@ -218,23 +221,31 @@ class EvaluationReport:
         objective: str,
         aggregate_method: str,
         weights: Sequence[float] | None,
+        all_values: Sequence[float] | None = None,
     ) -> float:
         """
-        単一の目的関数（指標）に対して、複数のシナリオから得られた値を一つにまとめます。
+        単一の目的関数（指標）に対して、複数のシナリオから得た値を一つにまとめます。
 
         各集約手法のロジック：
         - **robust** (推奨): 安定性を評価するために、中央値とワーストケースを組み合わせます。
           $Aggregated = CentralValue \\cdot (1 - w) + WorstValue \\cdot w$
           ここで $w$ はワーストケースの重み（`_ROBUST_WORST_CASE_WEIGHT`）です。
+          中央値はペナルティを除いた合格シナリオから計算しますが、ワーストケースは
+          ``all_values``（ペナルティシナリオを含む全値）から取ります。ペナルティ値は
+          方向を考慮しているため、1つでも失敗シナリオがあれば必ずワーストになり、
+          「一部のfoldでmin_trades違反する個体が全合格の個体に勝つ」ことを
+          構造的に防ぎます（blend後の値は有限で DB/JSON にも安全）。
         - **weighted**: 各シナリオに対して `weights` で指定された重みを用いて加重平均を算出します。
-        - **mean**: 単純な算術平均を算出します。
+        - **mean**: 純粋な算術平均を算出します。
         - **single**: 最初のシナリオの値をそのまま使用します。
 
         Args:
-            values (Sequence[float]): 各シナリオでの評価値のリスト。
+            values (Sequence[float]): 集計対象の評価値（ペナルティシナリオを除外済み）。
             objective (str): 目的関数名（最小化すべき指標かどうかの判定に使用）。
             aggregate_method (str): 集約手法の識別子。
             weights (Optional[Sequence[float]]): 加重平均用のウェイト（合計が1になるよう内部で正規化されます）。
+            all_values (Optional[Sequence[float]]): ペナルティシナリオを含む全評価値。
+                robust のワーストケース計算のみで使用する。
 
         Returns:
             float: 集約後の数値。
@@ -262,10 +273,14 @@ class EvaluationReport:
 
         if aggregate_method == "robust":
             center_value = float(median(values))
+            # ワーストケースはペナルティシナリオを含む全値から取る。
+            # ペナルティ値は方向考慮（最小化なら +1e9、最大化なら -1e9）のため、
+            # 失敗シナリオが1つでもあれば自動的にワーストになる。
+            worst_candidates = all_values if all_values is not None else values
             worst_value = (
-                max(values)
+                max(worst_candidates)
                 if objective_registry.is_minimize_objective(objective)
-                else min(values)
+                else min(worst_candidates)
             )
             return float(
                 center_value * (1.0 - _ROBUST_WORST_CASE_WEIGHT)
