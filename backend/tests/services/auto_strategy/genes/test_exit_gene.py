@@ -92,8 +92,19 @@ class TestExitGene:
         gene = ExitGene.from_dict(data)
         assert gene.exit_type == ExitType.FULL
 
-        with pytest.raises(ValueError):
-            ExitGene.from_dict({"exit_type": "unknown"})
+        # 未知の文字列（旧バージョン・手編集JSON由来）→ クラッシュせず FULL へ
+        # フォールバック（DB保存済み戦略の復元が全体失敗するのを防ぐ）
+        gene = ExitGene.from_dict({"exit_type": "unknown"})
+        assert gene.exit_type == ExitType.FULL
+
+        # 文字列以外 → FULL
+        gene = ExitGene.from_dict({"exit_type": 123})
+        assert gene.exit_type == ExitType.FULL
+
+        # 未知の値でも他フィールドはそのまま復元される
+        gene = ExitGene.from_dict({"exit_type": "legacy_type", "partial_exit_pct": 0.7})
+        assert gene.exit_type == ExitType.FULL
+        assert gene.partial_exit_pct == 0.7
 
     def test_clone(self):
         gene = ExitGene(

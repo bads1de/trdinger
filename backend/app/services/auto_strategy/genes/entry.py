@@ -126,7 +126,12 @@ class EntryGene:
         """
         entry_type_value = data.get("entry_type", "market")
         if isinstance(entry_type_value, str):
-            entry_type = EntryType(entry_type_value)
+            try:
+                entry_type = EntryType(entry_type_value)
+            except ValueError:
+                # 旧バージョン・手編集JSON由来の未知の値はデフォルトへフォールバック
+                # （ValueError で戦略遺伝子全体の復元が失敗するのを防ぐ）
+                entry_type = EntryType.MARKET
         else:
             entry_type = EntryType.MARKET
 

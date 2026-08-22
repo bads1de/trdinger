@@ -109,7 +109,12 @@ class ExitGene:
         """
         exit_type_value = data.get("exit_type", "full")
         if isinstance(exit_type_value, str):
-            exit_type = ExitType(exit_type_value)
+            try:
+                exit_type = ExitType(exit_type_value)
+            except ValueError:
+                # 旧バージョン・手編集JSON由来の未知の値はデフォルトへフォールバック
+                # （ValueError で戦略遺伝子全体の復元が失敗するのを防ぐ）
+                exit_type = ExitType.FULL
         else:
             exit_type = ExitType.FULL
 

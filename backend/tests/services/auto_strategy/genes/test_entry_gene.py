@@ -1,7 +1,5 @@
 from unittest.mock import MagicMock
 
-import pytest
-
 from app.services.auto_strategy.config.constants import EntryType
 from app.services.auto_strategy.genes.entry import EntryGene, create_random_entry_gene
 
@@ -91,15 +89,21 @@ class TestEntryGene:
         gene = EntryGene.from_dict(data)
         assert gene.entry_type == EntryType.MARKET
 
-        # 不正な文字列の場合 -> MARKETにフォールバック
-        data = {"entry_type": "unknown"}
-        # EntryType("unknown") で ValueError になるはずだが、コードでは catch していないように見える？
-        # コードを確認すると:
-        # if isinstance(entry_type_value, str): entry_type = EntryType(entry_type_value)
-        # とあるので、不正な値だとここで ValueError になる。
-        # 呼び出し元が責任を持つ設計か、あるいはテストで確認する。
-        with pytest.raises(ValueError):
-            EntryGene.from_dict(data)
+        # 未知の文字列（旧バージョン・手編集JSON由来）→ クラッシュせず
+        # MARKET へフォールバック（DB保存済み戦略の復元が全体失敗するのを防ぐ）
+        gene = EntryGene.from_dict({"entry_type": "unknown"})
+        assert gene.entry_type == EntryType.MARKET
+
+        # 文字列以外 → MARKET
+        gene = EntryGene.from_dict({"entry_type": 123})
+        assert gene.entry_type == EntryType.MARKET
+
+        # 未知の値でも他フィールドはそのまま復元される
+        gene = EntryGene.from_dict(
+            {"entry_type": "legacy_type", "limit_offset_pct": 0.02}
+        )
+        assert gene.entry_type == EntryType.MARKET
+        assert gene.limit_offset_pct == 0.02
 
     def test_create_random_entry_gene_defaults(self):
         gene = create_random_entry_gene()
