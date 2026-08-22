@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 # タイムフレームを分単位に変換するマッピング
+# サポート対象の最大足は 1d（SUPPORTED_TIMEFRAMES 準拠）
 TIMEFRAME_TO_MINUTES = {
     "1m": 1,
     "5m": 5,
@@ -24,7 +25,6 @@ TIMEFRAME_TO_MINUTES = {
     "1h": 60,
     "4h": 240,
     "1d": 1440,
-    "1w": 10080,
 }
 
 
@@ -180,7 +180,6 @@ class MultiTimeframeDataProvider:
             "1h": "1h",
             "4h": "4h",
             "1d": "1D",
-            "1w": "1W",
         }
         rule = rule_map.get(target_timeframe, "1h")
 

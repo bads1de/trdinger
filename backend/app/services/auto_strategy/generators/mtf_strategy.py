@@ -8,7 +8,7 @@
 import copy
 import logging
 import random
-from typing import Any, cast
+from typing import Any
 
 from ..config.constants import IndicatorType
 from ..genes import Condition, ConditionGroup, IndicatorGene
@@ -23,6 +23,8 @@ class MTFStrategy:
 
     # 定数
     MAX_CONDITIONS_SAMPLE = 5
+    # サポート対象の最大足は 1d（SUPPORTED_TIMEFRAMES 準拠）のため、
+    # 1d をベース足とする実行には上位足が存在しない
     DEFAULT_HIGHER_TF = "1d"
     TIMEFRAME_MAPPING = {
         "1m": ["5m", "15m"],
@@ -30,8 +32,7 @@ class MTFStrategy:
         "15m": ["1h", "4h"],
         "30m": ["1h", "4h"],
         "1h": ["4h", "1d"],
-        "4h": "1d",
-        "1d": "1w",
+        "4h": ["1d"],
     }
 
     def __init__(self, condition_generator: Any) -> None:
@@ -71,6 +72,10 @@ class MTFStrategy:
         long_conds, short_conds = [], []
         current_tf = self.gen.context.get("timeframe", "1h") or "1h"
         higher_tf = self._determine_higher_tf(current_tf)
+        if higher_tf == current_tf:
+            # ベース足が最大足（1d）の場合は上位足が存在しないため
+            # MTF条件を生成しない（同足の重複指標は無意味）
+            return [], [], []
 
         # 指標を分類
         classified = self.gen._dynamic_classify(indicators)
@@ -146,8 +151,8 @@ class MTFStrategy:
 
     def _determine_higher_tf(self, current_tf: str) -> str:
         """実行足に基づいて適切な上位足を決定"""
-        res = self.TIMEFRAME_MAPPING.get(current_tf, self.DEFAULT_HIGHER_TF)
-        return cast(str, random.choice(res) if isinstance(res, list) else res)
+        candidates = self.TIMEFRAME_MAPPING.get(current_tf, [self.DEFAULT_HIGHER_TF])
+        return str(random.choice(candidates))
 
     def _create_mtf_indicators(
         self,

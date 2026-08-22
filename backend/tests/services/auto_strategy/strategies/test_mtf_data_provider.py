@@ -172,4 +172,5 @@ class TestTimeframeToMinutes:
         assert TIMEFRAME_TO_MINUTES["1h"] == 60
         assert TIMEFRAME_TO_MINUTES["4h"] == 240
         assert TIMEFRAME_TO_MINUTES["1d"] == 1440
-        assert TIMEFRAME_TO_MINUTES["1w"] == 10080
+        # 最大足は 1d（SUPPORTED_TIMEFRAMES 準拠）のため "1w" は存在しない
+        assert "1w" not in TIMEFRAME_TO_MINUTES

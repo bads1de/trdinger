@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -63,6 +64,22 @@ class TestMTFStrategy:
         assert strategy._determine_higher_tf("15m") in ["1h", "4h"]
         assert strategy._determine_higher_tf("1h") in ["4h", "1d"]
         assert strategy._determine_higher_tf("4h") == "1d"
+        # 最大足は 1d のため、1d ベースには上位足が存在しない
+        # （旧実装の "1w" は SUPPORTED_TIMEFRAMES 外でバリデータに弾かれた）
+        assert strategy._determine_higher_tf("1d") == "1d"
+
+    def test_generate_conditions_skips_for_daily_base(self, strategy):
+        """ベース足が 1d の場合は MTF 条件を生成しないこと"""
+        strategy.gen.context = {"timeframe": "1d"}
+        strategy.gen.ga_config_obj = SimpleNamespace(enable_multi_timeframe=True)
+
+        longs, shorts, copies = strategy.generate_conditions(
+            [IndicatorGene(type="SMA", parameters={"period": 20})]
+        )
+
+        assert longs == []
+        assert shorts == []
+        assert copies == []
 
     def test_generate_conditions_structure(self, strategy):
         """生成される条件の構造（AND結合）をテスト"""
