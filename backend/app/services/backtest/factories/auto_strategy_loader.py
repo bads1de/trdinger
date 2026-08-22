@@ -121,6 +121,14 @@ class AutoStrategyLoader:
         # 遺伝子をロードして検証（整合性チェックのため）
         gene = cast(_ValidatableGene, self.load_strategy_gene(strategy_config))
 
+        # 旧データや変異でTPSLが全無効になった遺伝子を自動修復（バリデーション前の救済）
+        try:
+            repair = getattr(gene, "ensure_valid_tpsl", None)
+            if callable(repair):
+                repair()
+        except Exception as e:
+            logger.debug(f"TPSL自動修復をスキップしました: {e}")
+
         # 遺伝子のバリデーション実行
         is_valid, errors = gene.validate()
         if not is_valid:

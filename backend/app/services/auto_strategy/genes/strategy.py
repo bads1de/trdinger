@@ -508,11 +508,76 @@ class StrategyGene:
             repaired += _fix_item(stateful.follow_condition)
         return repaired
 
+    def ensure_valid_tpsl(self) -> bool:
+        """
+        有効なTP/SL設定が存在することを保証する。
+
+        交叉・突然変異で全TPSLが無効（Noneまたはenabled=False）になった場合、
+        共通TPSLを有効化または生成して修復する。さらに、有効なTPSLが
+        バリデーションに失敗する（数値範囲外等）場合も再生成して
+        「有効なTP/SL設定がありません」およびTP/SLバリデーションエラーを防ぐ。
+
+        Returns:
+            修復が発生した場合 True
+        """
+        repaired = False
+
+        # 1. 有効なTPSLの数値バリデーションをチェックし、無効なものは再生成
+        for attr in ("tpsl_gene", "long_tpsl_gene", "short_tpsl_gene"):
+            gene = getattr(self, attr)
+            if gene is not None and getattr(gene, "enabled", False):
+                try:
+                    valid, _ = gene.validate()
+                    if not valid:
+                        from .tpsl import create_random_tpsl_gene
+
+                        setattr(self, attr, create_random_tpsl_gene())
+                        repaired = True
+                except Exception:
+                    from .tpsl import create_random_tpsl_gene
+
+                    setattr(self, attr, create_random_tpsl_gene())
+                    repaired = True
+
+        has_valid = any(
+            gene is not None and getattr(gene, "enabled", False)
+            for gene in (self.tpsl_gene, self.long_tpsl_gene, self.short_tpsl_gene)
+        )
+        if has_valid:
+            return repaired
+
+        # 2. 全無効の場合、共通TPSLを有効化または生成
+        if self.tpsl_gene is not None:
+            try:
+                self.tpsl_gene.enabled = True
+                # 有効化後に再検証し、失敗すれば再生成
+                try:
+                    valid, _ = self.tpsl_gene.validate()
+                    if not valid:
+                        from .tpsl import create_random_tpsl_gene
+
+                        self.tpsl_gene = create_random_tpsl_gene()
+                except Exception:
+                    from .tpsl import create_random_tpsl_gene
+
+                    self.tpsl_gene = create_random_tpsl_gene()
+            except Exception:
+                from .tpsl import create_random_tpsl_gene
+
+                self.tpsl_gene = create_random_tpsl_gene()
+        else:
+            from .tpsl import create_random_tpsl_gene
+
+            self.tpsl_gene = create_random_tpsl_gene()
+
+        return True
+
     def mutate(self, config: GAConfig, mutation_rate: float = 0.1) -> StrategyGene:
         """戦略遺伝子の突然変異を実行する。"""
         from .operators import mutate_strategy_gene
 
         mutated = mutate_strategy_gene(self, config, mutation_rate=mutation_rate)
+        mutated.ensure_valid_tpsl()
         return mutated.repair_non_price_indicators(config)
 
     def adaptive_mutate(
@@ -555,4 +620,6 @@ class StrategyGene:
         # 置換するため、交叉内で修復済みの条件参照が切れうる。最後に再修復する。
         child1.repair_condition_references()
         child2.repair_condition_references()
+        child1.ensure_valid_tpsl()
+        child2.ensure_valid_tpsl()
         return child1, child2

@@ -890,6 +890,12 @@ def mutate_strategy_gene(
             min_conditions=getattr(config, "min_conditions", 1) or 1
         )
 
+        # 全TPSLが無効化された場合の修復（バリデーションエラー「有効なTP/SL設定がありません」を防止）
+        try:
+            mutated.ensure_valid_tpsl()
+        except Exception as e:
+            logger.debug(f"TPSL修復スキップ: {e}")
+
         return mutated
 
     except Exception as e:

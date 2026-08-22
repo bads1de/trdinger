@@ -511,7 +511,7 @@ class DictConverter:
                 ToolGene.from_dict(tg) for tg in data.get("tool_genes", []) if tg
             ]
 
-            return strategy_gene_class(
+            gene = strategy_gene_class(
                 id=data.get("id", str(uuid.uuid4())),
                 indicators=indicators,
                 long_entry_conditions=long_entry_conditions,
@@ -524,6 +524,13 @@ class DictConverter:
                 metadata=data.get("metadata", {}),
                 **sub_genes,
             )
+            # 旧データや外部入力でTPSLが欠落（全無効）していた場合、自動修復する
+            try:
+                if hasattr(gene, "ensure_valid_tpsl"):
+                    gene.ensure_valid_tpsl()
+            except Exception as e:
+                logger.debug(f"TPSL自動修復スキップ: {e}")
+            return gene
 
         except Exception as e:
             logger.error(f"戦略遺伝子辞書復元エラー: {e}")

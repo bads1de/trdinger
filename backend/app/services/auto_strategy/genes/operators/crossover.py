@@ -140,6 +140,13 @@ def uniform_crossover(
     child1.ensure_min_entry_conditions(min_conditions=min_conds)
     child2.ensure_min_entry_conditions(min_conditions=min_conds)
 
+    # TPSL修復（全無効化時のバリデーションエラーを防止）
+    try:
+        child1.ensure_valid_tpsl()
+        child2.ensure_valid_tpsl()
+    except Exception as e:
+        logger.debug(f"TPSL修復スキップ: {e}")
+
     return child1, child2
 
 
@@ -350,5 +357,12 @@ def single_point_crossover(
     min_conds = getattr(config, "min_conditions", 1) or 1
     child1.ensure_min_entry_conditions(min_conditions=min_conds)
     child2.ensure_min_entry_conditions(min_conditions=min_conds)
+
+    # TPSL修復（全無効化時のバリデーションエラーを防止）
+    try:
+        child1.ensure_valid_tpsl()
+        child2.ensure_valid_tpsl()
+    except Exception as e:
+        logger.debug(f"TPSL修復スキップ: {e}")
 
     return child1, child2
