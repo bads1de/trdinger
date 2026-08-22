@@ -4,11 +4,6 @@ condition_evaluatorのcloseオペランド取得機能をテスト
 """
 
 import math
-import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from unittest.mock import Mock
 
 import pandas as pd

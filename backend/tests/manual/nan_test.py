@@ -3,14 +3,8 @@
 NaN値対応の手動テスト
 """
 
-import os
-import sys
-
 import numpy as np
 import pandas as pd
-
-# Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from app.utils.data_processing.preprocessing_pipeline import (
     CategoricalPipelineTransformer,
