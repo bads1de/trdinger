@@ -91,3 +91,6 @@ backend/edge_oos_*.json
 # Note: .python-version and uv.lock are intentionally tracked for reproducibility
 
 
+
+# Runtime logs (test/CLI runs write here)
+backend/logs/
