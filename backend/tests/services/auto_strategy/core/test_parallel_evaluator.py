@@ -193,6 +193,35 @@ class TestParallelEvaluator:
         assert result[0] == (-1.0,)
         assert result[1:] == [(1.0,), (2.0,), (3.0,), (4.0,)]
 
+    def test_timeout_excludes_queue_wait_behind_other_individuals(self):
+        """個体数がワーカー数を超えても、キュー待ち時間で誤タイムアウトしないこと
+
+        1ワーカー × 4個体（各0.2秒）× timeout 0.5秒。一括投入でsubmit時刻を
+        タイムアウト起点にすると、3個目以降はキュー待ち（0.4秒〜）だけで
+        起点から0.5秒を超え、実行前に打ち切られる。ローリング投入なら
+        起点は自分の実行開始時刻のため全個体が正常評価される。
+        """
+        individuals = [MagicMock() for _ in range(4)]
+        for i, ind in enumerate(individuals):
+            ind.id = f"ind_queue_{i}"
+
+        def slow_evaluate(_ind):
+            time.sleep(0.2)
+            return (1.0,)
+
+        evaluator = ParallelEvaluator(
+            evaluate_func=slow_evaluate,
+            max_workers=1,
+            timeout_per_individual=0.5,
+            use_process_pool=False,  # ThreadPoolを使用してピクル問題を回避
+        )
+
+        result = evaluator.evaluate_population(individuals, default_fitness=(-1.0,))
+
+        assert result == [(1.0,), (1.0,), (1.0,), (1.0,)]
+        assert evaluator._timeout_evaluations == 0
+        assert evaluator._successful_evaluations == 4
+
     def test_evaluate_parallel_faster_than_sequential(self):
         """並列評価がシーケンシャル評価より速いこと"""
         individuals = [MagicMock() for _ in range(4)]

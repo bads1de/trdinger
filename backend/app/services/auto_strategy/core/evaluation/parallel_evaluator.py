@@ -243,6 +243,13 @@ class ParallelEvaluator:
         """
         指定されたExecutor上で評価を実行します。
 
+        個体群をワーカー数を超えて一括投入すると、Executor のキューで
+        待機している時間も ``timeout_per_individual`` に算入され、
+        正常な個体が誤って打ち切られる。そのため投入（submit）は
+        同時実行数がワーカー数を超えないよう制限し、完了した枠から順に
+        補充するローリング投入を行う。これにより投入時刻≒実行開始時刻と
+        なり、タイムアウトは個体の実行時間のみを測定する。
+
         Args:
             executor: ProcessPoolExecutor または ThreadPoolExecutor
             population: 評価対象の個体リスト
@@ -254,18 +261,29 @@ class ParallelEvaluator:
         Returns:
             評価結果リスト
         """
-        future_to_index = {}
+        future_to_index: dict[Any, int] = {}
         future_started_at: dict[Any, float] = {}
 
-        for i, ind in enumerate(population):
-            if dynamic_scalars:
-                future = executor.submit(self.evaluate_func, ind, dynamic_scalars)
-            else:
-                future = executor.submit(self.evaluate_func, ind)
-            future_to_index[future] = i
-            future_started_at[future] = time.monotonic()
+        in_flight_limit = max(1, self.max_workers)
+        next_index = 0
 
-        pending = set(future_to_index)
+        def _submit_up_to_limit() -> None:
+            """空いている実行枠へ次の個体を投入する（投入時刻＝タイムアウト起点）。"""
+            nonlocal next_index
+            while next_index < len(population) and len(pending) < in_flight_limit:
+                ind = population[next_index]
+                if dynamic_scalars:
+                    future = executor.submit(self.evaluate_func, ind, dynamic_scalars)
+                else:
+                    future = executor.submit(self.evaluate_func, ind)
+                future_to_index[future] = next_index
+                future_started_at[future] = time.monotonic()
+                pending.add(future)
+                next_index += 1
+
+        pending: set[Any] = set()
+        _submit_up_to_limit()
+
         timed_out_futures = False
         poll_timeout = self._get_poll_timeout()
 
@@ -302,6 +320,9 @@ class ParallelEvaluator:
                     results[index] = default_fitness
                     self._clear_behavior_summary(population[index])
                     self._failed_evaluations += 1
+
+            # 完了した枠へ次の個体を投入する
+            _submit_up_to_limit()
 
             expired_futures = self._collect_expired_futures(
                 not_done,
