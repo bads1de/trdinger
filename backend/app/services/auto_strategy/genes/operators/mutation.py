@@ -282,20 +282,25 @@ def _mutate_condition_topology(
         conditions.append(new_cond)
 
 
-def mutate_indicators(
-    mutated: StrategyGene, mutation_rate: float, config: GAConfig
-) -> None:
-    """指標遺伝子の突然変異処理。"""
-    min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
-
-    integer_param_names = {
+# レジストリ照会失敗時のフォールバック用 整数パラメータ名（実パラメータ名を含む）
+_LEGACY_INTEGER_PARAM_NAMES = frozenset(
+    {
         "period",
         "signal_period",
         "lookback",
         "length",
         "fast_period",
         "slow_period",
+        "fast",
+        "slow",
+        "medium",
         "signal",
+        "cycle",
+        "d1",
+        "d2",
+        "drift",
+        "max_lookback",
+        "min_lookback",
         "roc_period",
         "atr_period",
         "std_dev_period",
@@ -312,6 +317,37 @@ def mutate_indicators(
         "aroon_period",
         "bop_period",
     }
+)
+
+
+def _is_integer_parameter(indicator_type: str, param_name: str) -> bool:
+    """
+    パラメータが整数かどうかをレジストリ定義から判定する。
+
+    従来の名称リスト（fast_period 等）と異なり、実際のパラメータ名
+    （MACD の fast/slow など）にも追従でき、実数化した期間の
+    小数変異を防げる。レジストリ照会に失敗した場合は名称リストへ
+    フォールバックする。
+    """
+    try:
+        from app.services.indicators.config import indicator_registry
+
+        config = indicator_registry.get_indicator_config(indicator_type)
+        if config and param_name in config.parameters:
+            default_value = config.parameters[param_name].default_value
+            return isinstance(default_value, int) and not isinstance(
+                default_value, bool
+            )
+    except Exception:
+        pass
+    return param_name in _LEGACY_INTEGER_PARAM_NAMES
+
+
+def mutate_indicators(
+    mutated: StrategyGene, mutation_rate: float, config: GAConfig
+) -> None:
+    """指標遺伝子の突然変異処理。"""
+    min_multiplier, max_multiplier = config.mutation_config.indicator_param_range
 
     for i, indicator in enumerate(mutated.indicators):
         # パラメータ変異: 各パラメータを mutation_rate で変異（二重ゲートを解消）
@@ -338,7 +374,7 @@ def mutate_indicators(
                             ),
                         ),
                     )
-                elif was_integer or param_name in integer_param_names:
+                elif was_integer or _is_integer_parameter(indicator.type, param_name):
                     new_value = int(
                         param_value * random.uniform(min_multiplier, max_multiplier)
                     )
@@ -839,6 +875,9 @@ def mutate_strategy_gene(
 
         # 非価格指標（OI/FR/LSR由来）の最低数を確保
         mutated.repair_non_price_indicators(config)
+
+        # 独立に変異されたパラメータの依存関係（fast<slow等）と整数性を修復する
+        mutated.repair_indicator_parameters()
 
         # 指標の削除・交換で条件参照が切れるため、整合性を修復する
         mutated.repair_condition_references()

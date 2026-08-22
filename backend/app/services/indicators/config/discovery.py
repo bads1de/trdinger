@@ -321,6 +321,34 @@ class DynamicIndicatorDiscovery:
         "SMA": ["SIMPLE_MA"],
     }
 
+    # パラメータ依存関係制約（fast < slow 等）
+    # GAのランダム生成・変異・交叉はパラメータを独立に操作するため、
+    # ここで宣言した制約を IndicatorConfig.repair_parameters で修復する。
+    # pandas-ta の慣例（fast=12, slow=26 等）に基づき短期側 < 長期側とする。
+    _PARAMETER_DEPENDENCY_CONSTRAINTS: dict[str, list[dict[str, Any]]] = {
+        "ADOSC": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "AMAT": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "AO": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "AOBV": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "APO": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "COPPOCK": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "KVO": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "MACD": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "MACDEXT": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "MASSI": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "PPO": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "PVO": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "SMI": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "STC": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "TSI": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "UO": [
+            {"type": "less_than", "param1": "fast", "param2": "medium"},
+            {"type": "less_than", "param1": "medium", "param2": "slow"},
+        ],
+        "VOSC": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+        "VWMACD": [{"type": "less_than", "param1": "fast", "param2": "slow"}],
+    }
+
     _SPECIAL_CONFIG_OVERRIDES: dict[str, dict[str, Any]] = {
         "DEMARKER": {
             "scale_type": IndicatorScaleType.OSCILLATOR_0_100,
@@ -1156,7 +1184,12 @@ class DynamicIndicatorDiscovery:
         if overrides.get("use_default_thresholds"):
             config.thresholds = config._get_default_thresholds()
 
-        # 3. 特殊なパラメータ制約の付与
+        # 3. パラメータ依存関係制約（fast < slow 等）の付与
+        dependency_constraints = cls._PARAMETER_DEPENDENCY_CONSTRAINTS.get(name_upper)
+        if dependency_constraints:
+            config.parameter_constraints = dependency_constraints
+
+        # 4. 特殊なパラメータ制約の付与
         if name_upper == "FRAMA":
             if "length" in config.parameters:
                 config.parameters["length"].even_only = True

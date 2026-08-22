@@ -10,7 +10,7 @@ import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, cast
+from typing import Any, TypeGuard, cast
 
 from app.types import SerializablePrimitive
 from app.utils.registry import Registry
@@ -89,6 +89,36 @@ class ParameterConfig:
             normalized = self.max_value
 
         return self._apply_even_constraint(normalized)
+
+
+def _is_numeric(value: Any) -> TypeGuard[int | float]:
+    """値が数値（bool を除く）かどうか。"""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _constraint_param_names(
+    constraint: dict[str, Any],
+) -> tuple[str, str] | None:
+    """制約の param1/param2 名を取得する（文字列でない場合は None）。"""
+    param1_name = constraint.get("param1")
+    param2_name = constraint.get("param2")
+    if isinstance(param1_name, str) and isinstance(param2_name, str):
+        return param1_name, param2_name
+    return None
+
+
+def _constraint_min_diff(constraint: dict[str, Any]) -> int | float:
+    """制約の min_diff を数値で取得する（未指定・不正値は 0）。"""
+    min_diff = constraint.get("min_diff", 0)
+    if isinstance(min_diff, (int, float)) and not isinstance(min_diff, bool):
+        return min_diff
+    return 0
+
+
+def _has_int_default(param_config: ParameterConfig) -> bool:
+    """パラメータのデフォルト値が整数型かどうか（GAの整数パラメータ判定）。"""
+    default_value = param_config.default_value
+    return isinstance(default_value, int) and not isinstance(default_value, bool)
 
 
 @dataclass
@@ -212,6 +242,168 @@ class IndicatorConfig:
                     )
 
         return len(errors) == 0, errors
+
+    def repair_parameters(
+        self, params: dict[str, Any], *, clamp_ranges: bool = False
+    ) -> int:
+        """
+        パラメータの整数性と依存関係制約を修復する（GA生成・変異・交叉後用）。
+
+        GAは各パラメータを独立に生成・変異するため、fast >= slow のような
+        依存関係違反や小数化した期間パラメータが生じ得る。本メソッドは
+
+        1. ParameterConfig.default_value が int のパラメータを整数へ丸める
+        2. 依存関係制約に違反する値ペアをスワップ（遺伝子材料を温存）し、
+           各パラメータの探索範囲へクランプ、それでも違反する場合は近傍値へ調整
+
+        を in-place で適用する。
+
+        Args:
+            params: 修復対象のパラメータ辞書（in-place で更新される）
+            clamp_ranges: True の場合、制約対象外のパラメータも探索範囲
+                （min/max）へクランプする。プリセット探索範囲は min/max と
+                一致しない場合があるため、デフォルトは False。
+
+        Returns:
+            値を変更したパラメータの数。
+        """
+        before = dict(params)
+
+        # 1) 整数パラメータの丸め込み（と clamp_ranges 時の範囲クランプ）
+        for name, param_config in self.parameters.items():
+            value = params.get(name)
+            if not _is_numeric(value):
+                continue
+            repaired_value = value
+            if _has_int_default(param_config):
+                repaired_value = int(repaired_value)
+            if clamp_ranges:
+                repaired_value = param_config._normalize_numeric_value(repaired_value)
+            params[name] = repaired_value
+
+        # 2) 依存関係制約の修復（連鎖制約は複数パスで収束させる）
+        if self.parameter_constraints:
+            constraints = [c for c in self.parameter_constraints if isinstance(c, dict)]
+            for _ in range(len(constraints) + 1):
+                self._repair_dependency_constraints_pass(params, constraints)
+                is_valid, _ = self.validate_constraints(params)
+                if is_valid:
+                    break
+
+        return sum(
+            1 for name, old_value in before.items() if old_value != params.get(name)
+        )
+
+    def _repair_dependency_constraints_pass(
+        self, params: dict[str, Any], constraints: list[dict[str, Any]]
+    ) -> None:
+        """依存関係制約を1パス分修復する。連鎖（fast<medium<slow等）は
+        個別修復が他制約を壊し得るため、呼び出し側で複数パス回す。"""
+        for constraint in constraints:
+            constraint_type = constraint.get("type")
+            names = _constraint_param_names(constraint)
+            if names is None:
+                continue
+            param1_name, param2_name = names
+
+            if param1_name not in params or param2_name not in params:
+                continue
+
+            value1 = params[param1_name]
+            value2 = params[param2_name]
+            if not _is_numeric(value1) or not _is_numeric(value2):
+                continue
+
+            if self._is_pair_satisfied(constraint, value1, value2):
+                continue
+
+            if constraint_type in ("less_than", "greater_than"):
+                # スワップで遺伝子材料を温存し、各探索範囲へクランプする
+                params[param1_name], params[param2_name] = value2, value1
+                for name in (param1_name, param2_name):
+                    param_config = self.parameters.get(name)
+                    if param_config is not None:
+                        params[name] = param_config._normalize_numeric_value(
+                            params[name]
+                        )
+                if self._is_pair_satisfied(
+                    constraint, params[param1_name], params[param2_name]
+                ):
+                    continue
+
+            # スワップで解消できない場合（同値等）は近傍値へ調整する
+            self._nudge_constraint_params(constraint, params)
+
+    @staticmethod
+    def _is_pair_satisfied(
+        constraint: dict[str, Any], value1: float, value2: float
+    ) -> bool:
+        """単一の依存関係制約を値ペアに対して評価する（未知の型は満た扱い）。"""
+        constraint_type = constraint.get("type")
+        if constraint_type == "less_than":
+            return value1 < value2
+        if constraint_type == "greater_than":
+            return value1 > value2
+        if constraint_type == "min_difference":
+            return (value1 - value2) >= _constraint_min_diff(constraint)
+        return True
+
+    def _nudge_constraint_params(
+        self, constraint: dict[str, Any], params: dict[str, Any]
+    ) -> None:
+        """スワップで解消できない違反を、範囲内の近傍値へ調整する。"""
+        constraint_type = constraint.get("type")
+        names = _constraint_param_names(constraint)
+        if names is None:
+            return
+        param1_name, param2_name = names
+
+        value1 = params.get(param1_name)
+        value2 = params.get(param2_name)
+        if not _is_numeric(value1) or not _is_numeric(value2):
+            return
+
+        if constraint_type == "less_than":
+            step = self._integer_step(param2_name)
+            raised = value1 + step
+            if self._is_within_range(param2_name, raised):
+                params[param2_name] = raised
+            elif self._is_within_range(param1_name, value2 - step):
+                params[param1_name] = value2 - step
+        elif constraint_type == "greater_than":
+            step = self._integer_step(param1_name)
+            lowered = value2 - step
+            if self._is_within_range(param1_name, lowered):
+                params[param1_name] = lowered
+            elif self._is_within_range(param2_name, value1 + step):
+                params[param2_name] = value1 + step
+        elif constraint_type == "min_difference":
+            needed = _constraint_min_diff(constraint) - (value1 - value2)
+            raised = value1 + needed
+            if self._is_within_range(param1_name, raised):
+                params[param1_name] = raised
+            elif self._is_within_range(param2_name, value2 - needed):
+                params[param2_name] = value2 - needed
+
+    def _integer_step(self, param_name: str) -> int | float:
+        """整数パラメータには 1、実数パラメータには 1.0 を調整幅とする。"""
+        param_config = self.parameters.get(param_name)
+        if param_config is not None and _has_int_default(param_config):
+            return 1
+        return 1.0
+
+    def _is_within_range(self, param_name: str, value: int | float) -> bool:
+        """値がパラメータの探索範囲内か（範囲未定義なら無制限とみなす）。"""
+        param_config = self.parameters.get(param_name)
+        if param_config is None:
+            return True
+        min_value = param_config.min_value
+        max_value = param_config.max_value
+        if min_value is not None and value < min_value:
+            return False
+        if max_value is not None and value > max_value:
+            return False
+        return True
 
     def _get_default_thresholds(self) -> dict[str, Any]:
         """スケールタイプに基づくデフォルトの閾値設定を生成"""
@@ -351,6 +543,9 @@ class IndicatorConfig:
                     params[param_name] = random.uniform(float(min_val), float(max_val))
             else:
                 params[param_name] = param_config.default_value  # type: ignore[assignment]
+
+        # 各パラメータが独立に抽選されるため、fast >= slow のような依存関係違反を修復する
+        self.repair_parameters(params)
 
         return params
 

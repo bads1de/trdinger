@@ -304,6 +304,32 @@ class StrategyGene:
         self.indicators = _ensure_min_non_price_indicators(self.indicators, config)
         return self
 
+    def repair_indicator_parameters(self) -> int:
+        """
+        指標パラメータの整数性と依存関係制約（fast < slow 等）を修復する。
+
+        変異は各パラメータを独立に乗算するため、MACD の fast >= slow の
+        ような無効な組合せや小数化した期間が生じ得る。このまま評価へ流すと
+        恒偽条件や意味の反転した指標として評価スロットを浪費するため、
+        演算子適用後にレジストリの制約定義へ基づいて修復する。
+
+        Returns:
+            パラメータが変更された指標の数。
+        """
+        from app.services.indicators.config import indicator_registry
+
+        repaired = 0
+        for indicator in self.indicators:
+            try:
+                config = indicator_registry.get_indicator_config(indicator.type)
+                if config is None:
+                    continue
+                if config.repair_parameters(indicator.parameters) > 0:
+                    repaired += 1
+            except Exception:
+                continue
+        return repaired
+
     def valid_operand_names(self) -> set[str]:
         """条件オペランドとして解決可能な自身の指標名の集合を返す。"""
         names: set[str] = set()
