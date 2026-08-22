@@ -175,6 +175,72 @@ class TestConfigValidator:
         assert is_valid is False
         assert any("エリート保存数は0以上、個体数未満" in e for e in errors)
 
+    def test_validate_ga_config_indicator_min_max_consistency(self, ga_config):
+        """min_indicators > max_indicators はサイレント失敗につながるため弾く"""
+        ga_config.min_indicators = 5
+        ga_config.max_indicators = 3
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("min_indicators は max_indicators 以下" in e for e in errors)
+
+    def test_validate_ga_config_conditions_min_max_consistency(self, ga_config):
+        ga_config.min_conditions = 4
+        ga_config.max_conditions = 2
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("min_conditions は max_conditions 以下" in e for e in errors)
+
+    def test_validate_ga_config_non_price_indicators_consistency(self, ga_config):
+        ga_config.min_non_price_indicators = 6
+        ga_config.max_indicators = 5
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any(
+            "min_non_price_indicators は max_indicators 以下" in e for e in errors
+        )
+
+    def test_validate_ga_config_min_max_consistency_passes_when_valid(self, ga_config):
+        ga_config.min_indicators = 2
+        ga_config.max_indicators = 5
+        ga_config.min_conditions = 1
+        ga_config.max_conditions = 3
+        ga_config.min_non_price_indicators = 1
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is True
+        assert errors == []
+
+    def test_validate_ga_config_evaluation_runtime_settings(self, ga_config):
+        """evaluation_config の WFA・実行時設定の範囲検証"""
+        # wfa_n_folds = 0 は WFA 実行時に破損するため実行前に弾く
+        ga_config.evaluation_config.wfa_n_folds = 0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("wfa_n_folds は正の整数" in e for e in errors)
+
+        ga_config.evaluation_config.wfa_n_folds = 5
+        ga_config.evaluation_config.wfa_train_ratio = 1.0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("wfa_train_ratio は0より大きく1.0未満" in e for e in errors)
+
+        ga_config.evaluation_config.wfa_train_ratio = 0.7
+        ga_config.evaluation_config.timeout = 0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("timeout は正の数" in e for e in errors)
+
+        ga_config.evaluation_config.timeout = 300.0
+        ga_config.evaluation_config.max_workers = 0
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("max_workers は正の整数" in e for e in errors)
+
+        ga_config.evaluation_config.max_workers = 4
+        ga_config.evaluation_config.oos_split_ratio = 1.5
+        is_valid, errors = ConfigValidator.validate(ga_config)
+        assert is_valid is False
+        assert any("oos_split_ratio は0以上1.0未満" in e for e in errors)
+
     def test_validate_ga_config_fitness_weights(self, ga_config):
         # 合計が1にならない
         ga_config.fitness_weights = {"total_return": 0.5}  # 他が足りない

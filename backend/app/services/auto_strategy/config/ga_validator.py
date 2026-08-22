@@ -125,7 +125,9 @@ class ConfigValidator:
         errors.extend(ConfigValidator._validate_ga_evolution_settings(config))
         errors.extend(ConfigValidator._validate_ga_fitness_settings(config))
         errors.extend(ConfigValidator._validate_ga_parameter_settings(config))
+        errors.extend(ConfigValidator._validate_ga_parameter_consistency(config))
         errors.extend(ConfigValidator._validate_ga_evaluation_mode(config))
+        errors.extend(ConfigValidator._validate_ga_evaluation_runtime_settings(config))
         errors.extend(ConfigValidator._validate_ga_multi_fidelity_settings(config))
         errors.extend(ConfigValidator._validate_ga_early_termination_settings(config))
         errors.extend(ConfigValidator._validate_ga_two_stage_settings(config))
@@ -352,6 +354,94 @@ class ConfigValidator:
                 f"無効なログレベル: {config.log_level}. "
                 "有効な値: {'DEBUG', 'INFO', 'WARNING', "
                 "'ERROR', 'CRITICAL'}"
+            )
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_parameter_consistency(config: GAConfig) -> list[str]:
+        """指標数・条件数などの設定間整合性（min <= max）を検証する。
+
+        min > max の設定はランダム生成の ``random.randint(min, max)`` で
+        ValueError を起こし、safe_operation のフォールバックが働いて
+        初期集団全体が同一個体になるサイレント失敗につながるため、
+        実行前にエラーとして弾く。
+        """
+        errors: list[str] = []
+
+        pairs: list[tuple[str, str]] = [
+            ("min_indicators", "max_indicators"),
+            ("min_conditions", "max_conditions"),
+        ]
+        for min_name, max_name in pairs:
+            min_v = getattr(config, min_name, None)
+            max_v = getattr(config, max_name, None)
+            if isinstance(min_v, (int, float)) and isinstance(max_v, (int, float)):
+                if float(min_v) > float(max_v):
+                    errors.append(
+                        f"{min_name} は {max_name} 以下である必要があります "
+                        f"({min_name}={min_v}, {max_name}={max_v})"
+                    )
+
+        min_non_price = getattr(config, "min_non_price_indicators", None)
+        max_indicators = getattr(config, "max_indicators", None)
+        if isinstance(min_non_price, (int, float)) and isinstance(
+            max_indicators, (int, float)
+        ):
+            if float(min_non_price) > float(max_indicators):
+                errors.append(
+                    "min_non_price_indicators は max_indicators 以下である必要があります "
+                    f"(min_non_price_indicators={min_non_price}, max_indicators={max_indicators})"
+                )
+
+        return errors
+
+    @staticmethod
+    def _validate_ga_evaluation_runtime_settings(config: GAConfig) -> list[str]:
+        """evaluation_config の WFA・実行時設定を検証する。
+
+        従来は validation_config（検証パイプライン用）の WFA 設定しか
+        検証しておらず、評価本体の evaluation_config 側は未検証だった。
+        """
+        errors: list[str] = []
+        evaluation_config = getattr(config, "evaluation_config", None)
+        if evaluation_config is None:
+            return errors
+
+        wfa_n_folds: Any = getattr(evaluation_config, "wfa_n_folds", None)
+        if not isinstance(wfa_n_folds, (int, float)) or int(wfa_n_folds) <= 0:
+            errors.append(
+                "evaluation_config.wfa_n_folds は正の整数である必要があります"
+            )
+
+        wfa_train_ratio: Any = getattr(evaluation_config, "wfa_train_ratio", None)
+        if (
+            not isinstance(wfa_train_ratio, (int, float))
+            or not 0.0 < float(wfa_train_ratio) < 1.0
+        ):
+            errors.append(
+                "evaluation_config.wfa_train_ratio は0より大きく1.0未満である必要があります"
+            )
+
+        oos_split_ratio: Any = getattr(evaluation_config, "oos_split_ratio", None)
+        if (
+            not isinstance(oos_split_ratio, (int, float))
+            or not 0.0 <= float(oos_split_ratio) < 1.0
+        ):
+            errors.append(
+                "evaluation_config.oos_split_ratio は0以上1.0未満である必要があります"
+            )
+
+        timeout: Any = getattr(evaluation_config, "timeout", None)
+        if not isinstance(timeout, (int, float)) or float(timeout) <= 0:
+            errors.append("evaluation_config.timeout は正の数である必要があります")
+
+        max_workers: Any = getattr(evaluation_config, "max_workers", None)
+        if max_workers is not None and (
+            not isinstance(max_workers, (int, float)) or int(max_workers) <= 0
+        ):
+            errors.append(
+                "evaluation_config.max_workers は正の整数である必要があります"
             )
 
         return errors
