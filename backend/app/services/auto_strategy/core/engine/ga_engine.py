@@ -128,21 +128,18 @@ class GeneticAlgorithmEngine:
         # 個体クラスを取得（個体生成時に使用）
         self.individual_class = self.deap_setup.get_individual_class()
 
-        # フィットネス共有の初期化
+        # フィットネス共有は常時ON（旧フラグは互換維持）
         fitness_sharing_config = config.fitness_sharing
-        if fitness_sharing_config.enable_fitness_sharing:
-            self.fitness_sharing = FitnessSharing(
-                sharing_radius=fitness_sharing_config.sharing_radius,
-                alpha=fitness_sharing_config.sharing_alpha,
-                sampling_threshold=fitness_sharing_config.sampling_threshold,
-                sampling_ratio=getattr(
-                    fitness_sharing_config,
-                    "sampling_ratio",
-                    FitnessSharing.SAMPLING_RATIO,
-                ),
-            )
-        else:
-            self.fitness_sharing = None
+        self.fitness_sharing = FitnessSharing(
+            sharing_radius=fitness_sharing_config.sharing_radius,
+            alpha=fitness_sharing_config.sharing_alpha,
+            sampling_threshold=fitness_sharing_config.sampling_threshold,
+            sampling_ratio=getattr(
+                fitness_sharing_config,
+                "sampling_ratio",
+                FitnessSharing.SAMPLING_RATIO,
+            ),
+        )
 
         logger.info("DEAP環境のセットアップ完了")
 
@@ -481,9 +478,10 @@ class GeneticAlgorithmEngine:
             ParallelEvaluator: 並列評価器インスタンス、またはNone。
         """
         evaluation_config = getattr(config, "evaluation_config", None)
-        if evaluation_config is None or not getattr(
-            evaluation_config, "enable_parallel", False
-        ):
+        if evaluation_config is None:
+            return None
+        # 並列は常時有効。逐次実行したい場合は max_workers=1 を指定。
+        if getattr(evaluation_config, "max_workers", None) == 1:
             return None
 
         from ..evaluation.evaluation_worker import (

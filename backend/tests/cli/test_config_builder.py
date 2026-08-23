@@ -129,7 +129,7 @@ class TestBuildGaConfigDict:
         assert config["validation_config"]["enabled"] is False
 
     def test_no_parallel_disables(self):
-        """--no-parallel で並列評価が無効化される"""
+        """--no-parallel は非推奨: 並列は常時ON（max_workers=1で逐次）"""
         config = build_ga_config_dict(
             population=20,
             generations=10,
@@ -140,7 +140,8 @@ class TestBuildGaConfigDict:
             end_date="2024-06-30",
             no_parallel=True,
         )
-        assert config["evaluation_config"]["enable_parallel"] is False
+        # 並列は常時ONのため、旧フラグは無視される
+        assert config["evaluation_config"]["enable_parallel"] is True
 
     def test_smoke_sets_minimal(self):
         """smoke モードで最小構成になる"""

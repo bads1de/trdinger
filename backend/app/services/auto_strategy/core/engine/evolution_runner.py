@@ -566,9 +566,7 @@ class EvolutionRunner:
             config: GA設定
         """
 
-        if not getattr(config, "dynamic_objective_reweighting", False):
-            config.objective_dynamic_scalars = {}
-            return
+        # 動的重み付けは常時ON
 
         if not population:
             config.objective_dynamic_scalars = {}
@@ -634,7 +632,8 @@ class EvolutionRunner:
             parents=parents,
         )
 
-        if not (config.fitness_sharing.enable_fitness_sharing and self.fitness_sharing):
+        # fitness共有は常時ON
+        if not self.fitness_sharing:
             return self._apply_two_stage_selection(
                 candidate_population,
                 population_size,
@@ -677,8 +676,7 @@ class EvolutionRunner:
         survival_config = getattr(config, "survival_selection_config", None)
         if not isinstance(survival_config, SurvivalSelectionConfig):
             return candidate_population
-        if not survival_config.enable_restricted_tournament:
-            return candidate_population
+        # RTRは常時ON
         if not parents or not offspring:
             return candidate_population
 

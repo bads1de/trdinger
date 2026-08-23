@@ -398,7 +398,8 @@ class TestGeneticAlgorithmEngine:
         mock_config = GAConfig()
         mock_config.population_size = 10
         mock_config.generations = 5
-        mock_config.evaluation_config.enable_parallel = False
+        # 並列は常時ON、逐次にしたい場合は max_workers=1
+        mock_config.evaluation_config.max_workers = 1
         mock_config.fitness_sharing.enable_fitness_sharing = False
         mock_config.mutation_rate = 0.1
         mock_config.use_seed_strategies = False

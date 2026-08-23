@@ -73,7 +73,8 @@ class TestCreateGaConfig:
         assert config.crossover_rate == 0.9
         assert config.mutation_rate == 0.1
         assert config.elite_size == 5
-        assert config.evaluation_config.enable_parallel is False
+        # 並列は常時ON（旧no_parallelフラグは非推奨で無視）
+        assert config.evaluation_config.enable_parallel is True
         assert config.log_level == "DEBUG"
 
     def test_smoke_config_disables_heavy_features(self, caplog):
@@ -102,7 +103,8 @@ class TestCreateGaConfig:
         assert config.elite_size == 1
         assert config.max_indicators == 3
         assert config.max_conditions == 2
-        assert config.evaluation_config.enable_parallel is False
+        # 並列は常時ON（smokeでも有効、max_workers=1で逐次にしたい場合のみ無効）
+        assert config.evaluation_config.enable_parallel is True
         assert config.use_seed_strategies is False
         assert config.seed_injection_rate == 0.0
         assert config.two_stage_selection_config.enabled is False

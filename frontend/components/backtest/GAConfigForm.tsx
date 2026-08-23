@@ -113,8 +113,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         },
         objectives: initialGAConfig.objectives ?? ["total_return"],
         objective_weights: initialGAConfig.objective_weights ?? [1.0],
-        dynamic_objective_reweighting:
-          initialGAConfig.dynamic_objective_reweighting ?? false,
+        dynamic_objective_reweighting: true,
         evaluation_config: {
           ...initialEvaluationConfig,
           enable_parallel: initialEvaluationConfig.enable_parallel ?? true,
@@ -362,7 +361,28 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     config.ga_config.iterative_improvement_config ?? {};
 
   const handleSubmit = () => {
-    onSubmit(config);
+    // Phase1: 常時ON項目は強制的にtrueで送信
+    const forcedConfig = {
+      ...config,
+      ga_config: {
+        ...config.ga_config,
+        dynamic_objective_reweighting: true,
+        fitness_sharing: {
+          ...(config.ga_config.fitness_sharing ?? {}),
+          enable_fitness_sharing: true,
+        },
+        evaluation_config: {
+          ...(config.ga_config.evaluation_config ?? {}),
+          enable_parallel: true,
+        },
+      },
+    };
+    // survival_selectionも常時ON
+    (forcedConfig.ga_config as any).survival_selection_config = {
+      ...((config.ga_config as any).survival_selection_config ?? {}),
+      enable_restricted_tournament: true,
+    };
+    onSubmit(forcedConfig as any);
   };
 
   return (
@@ -511,42 +531,11 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         <div className="p-3 bg-indigo-900/30 border border-indigo-500/30 rounded-md space-y-4">
           <h4 className="font-medium text-indigo-300">⚙️ 高度なGA設定</h4>
 
-          {/* 多様性維持・動的制御 */}
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={fitnessSharingConfig.enable_fitness_sharing ?? true}
-                onChange={(e) =>
-                  handleFitnessSharingChange({
-                    enable_fitness_sharing: e.target.checked,
-                  })
-                }
-                className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-              />
-              <span className="text-sm text-indigo-200">
-                フィットネス共有 (戦略の多様性向上)
-              </span>
-            </label>
-            <div>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={
-                    config.ga_config.dynamic_objective_reweighting ?? false
-                  }
-                  onChange={(e) =>
-                    handleGAConfigChange({
-                      dynamic_objective_reweighting: e.target.checked,
-                    })
-                  }
-                  className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-indigo-200">
-                  動的重み付け (レジーム適応)
-                </span>
-              </label>
-            </div>
+          {/* 多様性維持・動的制御（常時ON） */}
+          <div className="rounded bg-indigo-950/40 border border-indigo-500/20 px-3 py-2">
+            <p className="text-xs text-indigo-300">
+              多様性維持（Fitness共有 / RTR生存選択）と動的重み付けは常時ONです。
+            </p>
           </div>
 
           <div className="border-t border-indigo-500/30 pt-3">
@@ -903,56 +892,43 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           )}
         </div>
 
-        {/* 並列評価設定 */}
+        {/* 並列評価設定（常時ON: max_workers=1 で逐次） */}
         <div className="p-4 bg-cyan-900/30 border border-cyan-500/30 rounded-lg space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-cyan-200">
-              ⚡ 並列評価
+              ⚡ 並列評価（常時ON）
             </label>
-            <input
-              type="checkbox"
-              checked={evaluationConfig.enable_parallel ?? true}
-              onChange={(e) =>
-                handleEvaluationConfigChange({ enable_parallel: e.target.checked })
-              }
-              className="w-5 h-5 rounded border-cyan-500 text-cyan-600 focus:ring-cyan-500"
-              aria-label="並列評価を有効化"
-            />
+            <span className="text-xs text-cyan-300">max_workers=1で逐次</span>
           </div>
 
-          {evaluationConfig.enable_parallel && (
-            <>
-              <InputField
-                label="最大ワーカー数"
-                type="number"
-                value={evaluationConfig.max_workers ?? ""}
-                onChange={(value) =>
-                  handleEvaluationConfigChange({ max_workers: value || null })
-                }
-                min={1}
-                max={32}
-                step={1}
-                description={GA_INFO_MESSAGES.max_workers}
-                placeholder="自動（CPUコア数×2）"
-              />
-              <InputField
-                label="評価タイムアウト（秒）"
-                type="number"
-                value={evaluationConfig.timeout ?? 300}
-                onChange={(value) =>
-                  handleEvaluationConfigChange({ timeout: value })
-                }
-                min={30}
-                max={1800}
-                step={30}
-                description={GA_INFO_MESSAGES.evaluation_timeout}
-              />
-              <p className="text-xs text-cyan-300">
-                💡
-                並列評価は大規模な個体群（50以上）で効果的です。ワーカー数を増やすとメモリ使用量も増加します。
-              </p>
-            </>
-          )}
+          <InputField
+            label="最大ワーカー数"
+            type="number"
+            value={evaluationConfig.max_workers ?? ""}
+            onChange={(value) =>
+              handleEvaluationConfigChange({ max_workers: value || null })
+            }
+            min={1}
+            max={32}
+            step={1}
+            description={GA_INFO_MESSAGES.max_workers}
+            placeholder="自動（CPUコア数×2）"
+          />
+          <InputField
+            label="評価タイムアウト（秒）"
+            type="number"
+            value={evaluationConfig.timeout ?? 300}
+            onChange={(value) =>
+              handleEvaluationConfigChange({ timeout: value })
+            }
+            min={30}
+            max={1800}
+            step={30}
+            description={GA_INFO_MESSAGES.evaluation_timeout}
+          />
+          <p className="text-xs text-cyan-300">
+            💡 並列はデフォルト有効。大規模個体群（50以上）で効果的です。
+          </p>
         </div>
 
         <div className="p-4 bg-emerald-900/30 border border-emerald-500/30 rounded-lg space-y-3">

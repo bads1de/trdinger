@@ -152,7 +152,7 @@ describe("GAConfigForm", () => {
     expect(submittedConfig.ga_config.max_indicators).toBe(5);
   });
 
-  test("レジーム適応チェックボックスがデフォルトで未チェックであること", () => {
+  test("多様性維持と動的重み付けは常時ON表示されること", () => {
     renderWithTooltipProvider(
       <GAConfigForm
         onSubmit={mockOnSubmit}
@@ -161,14 +161,18 @@ describe("GAConfigForm", () => {
       />
     );
 
-    // レジーム適応チェックボックスを取得
-    const regimeCheckbox = screen.getByLabelText("動的重み付け (レジーム適応)");
-
-    // デフォルトで未チェックであることを確認
-    expect(regimeCheckbox).not.toBeChecked();
+    expect(
+      screen.getByText(/多様性維持.*常時ON/)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("動的重み付け (レジーム適応)")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText(/フィットネス共有/)
+    ).not.toBeInTheDocument();
   });
 
-  test("レジーム適応チェックボックスをチェックできること", () => {
+  test("送信時に動的重み付け・Fitness共有は常にtrueで送信されること", () => {
     renderWithTooltipProvider(
       <GAConfigForm
         onSubmit={mockOnSubmit}
@@ -177,30 +181,28 @@ describe("GAConfigForm", () => {
       />
     );
 
-    // レジーム適応チェックボックスを取得
-    const regimeCheckbox = screen.getByLabelText("動的重み付け (レジーム適応)");
-
-    // チェックボックスをクリック
-    fireEvent.click(regimeCheckbox);
-
-    // チェックされたことを確認
-    expect(regimeCheckbox).toBeChecked();
-
-    // フォームを送信
     const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
     fireEvent.click(submitButton);
 
-    // onSubmitが正しい値で呼び出されたことを確認
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
     expect(submittedConfig.ga_config.dynamic_objective_reweighting).toBe(true);
+    expect(
+      submittedConfig.ga_config.fitness_sharing.enable_fitness_sharing
+    ).toBe(true);
+    // 並列も常時ON
+    expect(submittedConfig.ga_config.evaluation_config.enable_parallel).toBe(
+      true
+    );
   });
 
-  test("レジーム適応チェックボックスがtrueで初期化されるとチェックされること", () => {
-    const configWithRegimeEnabled = {
+  test("初期値がfalseでも送信時は常時ONに正規化されること", () => {
+    const configWithRegimeDisabled = {
       ...initialConfig,
       ga_config: {
         ...initialConfig.ga_config,
-        dynamic_objective_reweighting: true,
+        dynamic_objective_reweighting: false,
+        fitness_sharing: { enable_fitness_sharing: false },
+        evaluation_config: { enable_parallel: false },
       },
     };
 
@@ -208,15 +210,21 @@ describe("GAConfigForm", () => {
       <GAConfigForm
         onSubmit={mockOnSubmit}
         onClose={mockOnClose}
-        initialConfig={configWithRegimeEnabled}
+        initialConfig={configWithRegimeDisabled}
       />
     );
 
-    // レジーム適応チェックボックスを取得
-    const regimeCheckbox = screen.getByLabelText("動的重み付け (レジーム適応)");
+    const submitButton = screen.getByRole("button", { name: /GA戦略を生成/i });
+    fireEvent.click(submitButton);
 
-    // チェックされていることを確認
-    expect(regimeCheckbox).toBeChecked();
+    const submittedConfig = mockOnSubmit.mock.calls[0][0];
+    expect(submittedConfig.ga_config.dynamic_objective_reweighting).toBe(true);
+    expect(
+      submittedConfig.ga_config.fitness_sharing.enable_fitness_sharing
+    ).toBe(true);
+    expect(submittedConfig.ga_config.evaluation_config.enable_parallel).toBe(
+      true
+    );
   });
 
   // ------------------------------------------------------------------

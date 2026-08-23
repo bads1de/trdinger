@@ -233,6 +233,8 @@ class MutationConfig(NestedConfigMixin):
 class EvaluationConfig(NestedConfigMixin):
     """評価・検証関連設定。"""
 
+    # 並列評価は常時有効（max_workers=1 で逐次にフォールバック）。
+    # 旧設定との互換のためフィールドは残すが、engine側で無視される。
     enable_parallel: bool = True
     max_workers: int | None = None  # Noneの場合は自動で物理コア-2, 最大8に制限
     timeout: float = 300.0

@@ -179,8 +179,9 @@ def build_ga_config_dict(
         "crossover_rate": crossover_rate,
         "mutation_rate": mutation_rate,
         "elite_size": normalized["elite_size"],
+        # 並列は常時有効（smokeでも有効だが、 smoke は population=2/gen=1 のため実質逐次と同等）
         "evaluation_config": {
-            "enable_parallel": not no_parallel and not smoke,
+            "enable_parallel": True,
         },
         "log_level": "DEBUG" if verbose else "INFO",
         "fallback_start_date": start_date,
