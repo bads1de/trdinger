@@ -77,17 +77,15 @@ def initialize_worker_process(
         # 3. 設定の適用
         evaluator.set_backtest_config(backtest_config)
 
-        # 4. 共有データの適用（DBアクセス削減のため）
+        # 4. 共有データの適用（後方互換）。
+        # 現行フローでは大量 DataFrame の pickle 配信を廃止したため
+        # shared_data は常に空だが、外部から明示的に渡された場合のみ
+        # ワーカーコンテキストとローカルキャッシュへ登録する。
         if shared_data:
-            # ワーカーコンテキストに共有データを登録
             from .parallel_evaluator import initialize_worker
 
             initialize_worker(shared_data)
 
-            # 親プロセスでプリフェッチ済みの全期間データをローカルキャッシュへ
-            # 直接投入する。個体ごとの warmup シフトにより要求キーがズレても、
-            # BacktestDataProvider の内包スライス/前方拡張がこのキャッシュを
-            # 再利用し、DB アクセスを不足分のみに抑えられる。
             for payload in shared_data.values():
                 if not isinstance(payload, dict):
                     continue

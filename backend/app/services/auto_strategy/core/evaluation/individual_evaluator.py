@@ -251,55 +251,6 @@ class IndividualEvaluator:
 
         return (self._fixed_backtest_config.copy(), config, {})
 
-    def _build_prefetch_backtest_config(
-        self, backtest_config: dict[str, Any], config: GAConfig
-    ) -> dict[str, Any]:
-        """全個体の warmup シフトを内包するよう開始日を過去に広げる。
-
-        個体ごとの warmup バー数は遺伝子に依存するため、プリフェッチ開始日を
-        生成範囲の上限（lookback_period=200 + 余裕）分だけ過去にずらす。
-        これにより全個体・全フォールドの要求期間がキャッシュに内包され、
-        個体評価ごとの DB アクセスを排除できる。
-        """
-        prefetch_config = backtest_config.copy()
-        start_date = backtest_config.get("start_date")
-        timeframe = str(backtest_config.get("timeframe", ""))
-        if not start_date or not timeframe:
-            return prefetch_config
-
-        max_indicator_minutes = self._window_service.timeframe_to_minutes(timeframe)
-        if getattr(config, "enable_multi_timeframe", False):
-            available_timeframes = getattr(config, "available_timeframes", None)
-            if not available_timeframes:
-                from app.config.constants import SUPPORTED_TIMEFRAMES
-
-                available_timeframes = SUPPORTED_TIMEFRAMES
-            indicator_minutes = [
-                self._window_service.timeframe_to_minutes(tf)
-                for tf in available_timeframes
-            ]
-            if indicator_minutes:
-                max_indicator_minutes = max(indicator_minutes)
-
-        buffered_start = self._window_service.estimate_max_warmup_shift(
-            start_date, timeframe, max_indicator_minutes
-        )
-        prefetch_config["start_date"] = buffered_start
-        return prefetch_config
-
-    @staticmethod
-    def _build_backtest_cache_keys(
-        backtest_config: dict[str, Any],
-    ) -> tuple[tuple[Any, ...], tuple[Any, ...]]:
-        """メイン足・1分足キャッシュキーを構築する。"""
-        symbol = backtest_config.get("symbol")
-        timeframe = backtest_config.get("timeframe")
-        start_date = backtest_config.get("start_date")
-        end_date = backtest_config.get("end_date")
-        main_key = (symbol, timeframe, str(start_date), str(end_date))
-        minute_key = ("minute", symbol, "1m", str(start_date), str(end_date))
-        return main_key, minute_key
-
     def __getstate__(self) -> dict[str, Any]:
         """Pickle化時の状態取得（ロック、キャッシュ、委譲先を除外）"""
         state = self.__dict__.copy()
