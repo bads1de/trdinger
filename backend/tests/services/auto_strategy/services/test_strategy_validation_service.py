@@ -1402,6 +1402,7 @@ class TestOverfittingGates:
         returns: list[float] | None = None,
         sharpes: list[float] | None = None,
         pass_rate: float = 1.0,
+        excess_returns: list[float] | None = None,
     ) -> EvaluationReport:
         n_folds = len(returns or sharpes or [])
         scenarios = []
@@ -1409,6 +1410,13 @@ class TestOverfittingGates:
             metrics: dict[str, float] = {}
             if returns is not None:
                 metrics["total_return"] = returns[i]
+                # 明示されない場合は市場比 = 絶対リターン（従来互換）
+                excess = (
+                    excess_returns[i] if excess_returns is not None else returns[i]
+                )
+                metrics["excess_return"] = excess
+                # Buy&Hold = 戦略リターン − 市場比
+                metrics["buy_hold_return"] = returns[i] - excess
             if sharpes is not None:
                 metrics["sharpe_ratio"] = sharpes[i]
             scenarios.append(
@@ -1457,11 +1465,164 @@ class TestOverfittingGates:
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
-        report = self._make_report_with_metrics(returns=[0.1, 0.2, -0.3])
+        # 絶対リターンは第3フォールドのみ負だが、通期では複利合算プラス。
+        # 市場比で負けたフォールドは 1/3（少数派）
+        report = self._make_report_with_metrics(returns=[0.1, 0.2, -0.12])
         validation = self._run_validation(mock_evaluator, config, report)
 
         assert validation["passed"] is True
         assert validation["pbo"] == pytest.approx(1 / 3)
+
+    def test_pbo_gate_counts_market_relative_losing_folds(self, mock_evaluator):
+        """PBOの負けフォールドは絶対収益ではなく市場比で判定される
+
+        絶対リターンが負でも Buy&Hold を上回っていれば「勝ち」と数える。
+        """
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=0.0,
+                validation_level="strict",
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        # 第1フォールドは絶対リターンが負でも、市場(-24%)を大きく
+        # 上回っているため「勝ち」と数える。通期は複利合算プラス。
+        report = self._make_report_with_metrics(
+            returns=[-0.01, 0.08],
+            excess_returns=[0.19, 0.15],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
+        assert validation["n_losing_folds"] == 0
+
+    def test_market_relative_gate_rejects_when_underperforming_buy_and_hold(
+        self, mock_evaluator
+    ):
+        """集約した市場比リターンが負なら不合格（絶対収益がプラスでも）"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=1.0,
+                validation_level="strict",
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        # 絶対リターンは全フォールド プラスだが、市場が +30% の強気相場で
+        # すべてに負けている → 市場比では負値
+        report = self._make_report_with_metrics(
+            returns=[0.05, 0.10],
+            excess_returns=[-0.25, -0.20],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is False
+        assert any("市場比リターン" in reason for reason in validation["reasons"])
+
+    def test_defensive_strategy_passes_despite_negative_absolute_returns(
+        self, mock_evaluator
+    ):
+        """熊相場で守りつつ通期ではプラスの戦略は合格する
+
+        下落フォールドで Buy&Hold(-17%) に対し -2% で守り、上昇フォールド
+        の利益で通期プラスになる戦略は、市場比ゲート・PBO ゲート・
+        絶対下限ゲートすべてに合格しなければならない。
+        """
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=1.0,
+                validation_level="strict",
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(
+            returns=[-0.02, 0.06],
+            excess_returns=[0.15, 0.12],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
+
+    def test_absolute_floor_rejects_net_losing_strategy(self, mock_evaluator):
+        """市場比で勝っていても通期合算が赤字なら不合格
+
+        全フォールドで Buy&Hold を上回る防御力があっても、通期で
+        複利合算するとマイナスになる戦略は単独運用に耐えない。
+        """
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=1.0,
+                validation_level="strict",
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        # 市場比は全フォールド プラス（中央値 > 0）だが、絶対リターンは
+        # すべてマイナスで通期赤字
+        report = self._make_report_with_metrics(
+            returns=[-0.007, -0.035, -0.013],
+            excess_returns=[0.13, 0.13, 0.10],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is False
+        assert any("全期間合算リターン" in reason for reason in validation["reasons"])
+
+    def test_full_period_excess_gate_rejects_net_underperformance(self, mock_evaluator):
+        """通期として Buy&Hold に負けていれば不合格
+
+        各フォールドの市場比は中央値でプラス（①合格）かつ通期黒字
+        （②合格）でも、爆騰フォールドでの出遅れが熊相場の守りを
+        上回り、通期では Buy&Hold に劣る場合は不合格になる。
+        """
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=1.0,
+                validation_level="strict",
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        # 戦略: 0.0% / +4.0% / +3.0%（通期 +7.1%）
+        # B&H: +60% / -17% / -11%（通期 +18.3%）→ 通期市場比 -11.2%
+        # フォールド別市場比は -0.60 / +0.21 / +0.14 で中央値はプラス
+        report = self._make_report_with_metrics(
+            returns=[0.00, 0.04, 0.03],
+            excess_returns=[-0.60, 0.21, 0.14],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is False
+        assert any("通期市場比リターン" in reason for reason in validation["reasons"])
+
+    def test_full_period_excess_gate_passes_when_beating_buy_and_hold(
+        self, mock_evaluator
+    ):
+        """通期で Buy&Hold を上回っていれば各フォールドの出遅れを許容"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=1.0,
+                validation_level="strict",
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        # 戦略: -2% / +6%（通期 +3.9%）
+        # B&H: -17% / -6%（通期 -21.98%）→ 通期市場比 +25.9%
+        report = self._make_report_with_metrics(
+            returns=[-0.02, 0.06],
+            excess_returns=[0.15, 0.12],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
 
     def test_pbo_gate_skipped_when_metrics_missing(self, mock_evaluator):
         """total_return が取得できない場合はスキップ（fail-open）"""
@@ -1481,7 +1642,13 @@ class TestOverfittingGates:
         assert validation["pbo"] is None
 
     def test_pbo_gate_disabled_allows_all_losing(self, mock_evaluator):
-        """ゲート無効時は全フォールド負けでも構造基準のみで判定"""
+        """PBOゲート無効時は市場比で勝っていればPBOでは判定されない
+
+        絶対リターンは一部フォールドで負だが、いずれも Buy&Hold を
+        上回る防御的な戦略。PBO ゲートが無効（basic）なら pbo は
+        計算されず、他ゲートも通過する。なお通期合算が赤字になる
+        ケースは絶対下限ゲートが別途不合格にする。
+        """
         config = GAConfig(
             validation_config=ValidationConfig(
                 min_pass_rate=0.0,
@@ -1490,7 +1657,10 @@ class TestOverfittingGates:
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
-        report = self._make_report_with_metrics(returns=[-0.1, -0.2, -0.3])
+        report = self._make_report_with_metrics(
+            returns=[-0.02, -0.01, 0.05],
+            excess_returns=[0.05, 0.04, 0.03],
+        )
         validation = self._run_validation(mock_evaluator, config, report)
 
         assert validation["passed"] is True

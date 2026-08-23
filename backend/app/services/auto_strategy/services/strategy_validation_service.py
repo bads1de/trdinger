@@ -33,6 +33,11 @@ from .overfitting_metrics import (
 
 logger = logging.getLogger(__name__)
 
+# 絶対下限ゲート: 全フォールド複利合算の通期リターンの最低水準。
+# 市場比でスキルがあっても、通期で赤字の戦略は単独運用に耐えないため
+# この水準を下回れば不合格とする。
+MIN_AGGREGATED_TOTAL_RETURN = 0.0
+
 
 class StrategyValidationService:
     """
@@ -393,16 +398,73 @@ class StrategyValidationService:
                     )
 
         # フォールド合格は構造的制約のみで判定するため、収益性はここで
-        # 集約フィットネスの符号でゲートする。最大化目的で負値は
-        # 「全期間を通して収益を上げられていない」ことを意味する。
+        # 3段階でゲートする。
+        #
+        # ① 市場比ゲート: excess_return（戦略 − Buy&Hold）の中央値が負なら
+        #    不合格。絶対収益ではなく市場比で判定することで、下落相場で
+        #    Buy&Hold を上回る防御的な戦略を誤って不合格にしない。
+        #    単一の爆騰フォールド（例: B&H +45%）による平均の歪みを避ける
+        #    ため median ベース（DSR ゲートと同じ）。
+        # ② 絶対下限ゲート: 全フォールドを複利合算した通期リターンが赤字
+        #    なら、市場比でスキルがあっても単独運用に耐えないため不合格。
+        # ③ 通期市場比ゲート: 複利合算した戦略リターンと Buy&Hold リターン
+        #    を比較し、通期として市場に勝っていなければ不合格。フォールド
+        #    単位の中央値判定（①）をすり抜けても、通期でアルファが実在
+        #    しない戦略（熊相場の守りだけでは爆騰期の出遅れを埋め合わせ
+        #    できない）を弾く。
+        #
+        # 各メトリクスが取得できないレポートの場合は、従来どおり集約
+        # フィットネスの符号へフォールバックする。
         if (
             primary_fitness is not None
             and not objective_registry.is_minimize_objective(
                 report.primary_objective or ""
             )
-            and primary_fitness < 0.0
         ):
-            reasons.append(f"集約フィットネス {primary_fitness:.4f} が負値です")
+            excess_returns = self._collect_scenario_metric(report, "excess_return")
+            if scenario_count > 0 and len(excess_returns) == scenario_count:
+                aggregate_excess = float(median(excess_returns))
+                if aggregate_excess < 0.0:
+                    reasons.append(
+                        "市場比リターン（excess_return 中央値 "
+                        f"{aggregate_excess:.4f}）が負値です"
+                    )
+            elif primary_fitness < 0.0:
+                reasons.append(f"集約フィットネス {primary_fitness:.4f} が負値です")
+
+            fold_total_returns = self._collect_scenario_metric(
+                report, "total_return"
+            )
+            has_total = scenario_count > 0 and len(fold_total_returns) == scenario_count
+            if has_total:
+                compounded = 1.0
+                for value in fold_total_returns:
+                    compounded *= 1.0 + float(value)
+                aggregated_return = compounded - 1.0
+                if aggregated_return < MIN_AGGREGATED_TOTAL_RETURN:
+                    reasons.append(
+                        f"全期間合算リターン {aggregated_return:.4f} が閾値 "
+                        f"{MIN_AGGREGATED_TOTAL_RETURN:.2f} 未満です"
+                    )
+
+            fold_bh_returns = self._collect_scenario_metric(
+                report, "buy_hold_return"
+            )
+            if (
+                has_total
+                and scenario_count > 0
+                and len(fold_bh_returns) == scenario_count
+            ):
+                bh_compound = 1.0
+                for value in fold_bh_returns:
+                    bh_compound *= 1.0 + float(value)
+                period_excess = compounded - bh_compound
+                if period_excess < 0.0:
+                    reasons.append(
+                        f"通期市場比リターン {period_excess:+.4f} が負値です"
+                        f"（戦略 {(compounded - 1.0):+.2%} vs "
+                        f"Buy&Hold {(bh_compound - 1.0):+.2%}）"
+                    )
 
         trades_list = self._collect_scenario_metric(report, "total_trades")
         if validation_config.min_trades is not None:
@@ -434,25 +496,26 @@ class StrategyValidationService:
                         f"{validation_config.max_drawdown:.2%} 超過"
                     )
 
-        # PBO ゲート: 負けフォールド（total_return < 0）の比率が閾値を超えると不合格。
-        # WFA のフォールド合格は構造的制約のみで判定されるため、
-        # 「収益性の観点で過半数のフォールドが負け」の戦略をここで弾く。
+        # PBO ゲート: 負けフォールド（市場比 excess_return < 0、すなわち
+        # Buy&Hold に劣ったフォールド）の比率が閾値を超えると不合格。
+        # 絶対収益ではなく市場比で判定するため、下落相場で Buy&Hold を
+        # 上回る防御的なフォールドを「負け」と誤判定しない。
         pbo: float | None = None
         n_losing_folds: int | None = None
         if validation_config.pbo_gate_active:
-            fold_returns = self._collect_scenario_metric(report, "total_return")
+            fold_returns = self._collect_scenario_metric(report, "excess_return")
             if scenario_count > 0 and len(fold_returns) == scenario_count:
                 pbo = probability_of_backtest_overfitting(fold_returns)
                 n_losing_folds = sum(1 for value in fold_returns if value < 0.0)
                 if pbo is not None and pbo > validation_config.pbo_threshold:
                     reasons.append(
-                        f"PBO超過: 負けフォールド {n_losing_folds}/{scenario_count} "
+                        f"PBO超過: 市場比で負けたフォールド {n_losing_folds}/{scenario_count} "
                         f"(PBO={pbo:.2f}) が閾値 "
                         f"{validation_config.pbo_threshold:.2f} を超えています"
                     )
             else:
                 logger.debug(
-                    "PBOゲート: total_return が全シナリオで取得できないためスキップ"
+                    "PBOゲート: excess_return が全シナリオで取得できないためスキップ"
                 )
 
         # DSR ゲート: 多重検定補正後のシャープレシオ有意性（厳格な統計検定）。
