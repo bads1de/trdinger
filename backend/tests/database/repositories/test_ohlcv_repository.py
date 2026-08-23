@@ -380,3 +380,105 @@ class TestErrorHandling:
             repository.clear_ohlcv_data_by_symbol_and_timeframe("BTC/USDT:USDT", "1h")
 
         repository.db.rollback.assert_called()
+
+
+class TestFetchOhlcvDataFrame:
+    """fetch_ohlcv_dataframe の等価性テスト（実in-memory SQLiteを使用）"""
+
+    BASE_TIME = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+    @pytest.fixture
+    def real_session(self) -> Any:
+        """実SQLite(in-memory)セッション"""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+
+        from database.connection import Base
+
+        engine = create_engine("sqlite://")
+        Base.metadata.create_all(engine)
+        session = sessionmaker(bind=engine)()
+        yield session
+        session.close()
+        engine.dispose()
+
+    def _seed_rows(
+        self,
+        session: Any,
+        count: int = 5,
+        symbol: str = "BTC/USDT:USDT",
+        timeframe: str = "1m",
+    ) -> None:
+        from datetime import timedelta
+
+        for i in range(count):
+            session.add(
+                OHLCVData(
+                    symbol=symbol,
+                    timeframe=timeframe,
+                    timestamp=self.BASE_TIME + timedelta(minutes=i),
+                    open=50000.0 + i,
+                    high=50100.0 + i,
+                    low=49900.0 + i,
+                    close=50050.0 + i,
+                    volume=10.0 * (i + 1),
+                )
+            )
+        session.commit()
+
+    def test_equivalent_to_legacy_orm_path(self, real_session: Any) -> None:
+        """軽量経路が ORM 経路（get_ohlcv_data + convert）と完全に等価であること"""
+        from app.services.backtest.data.data_conversion_service import (
+            DataConversionService,
+        )
+
+        self._seed_rows(real_session, count=5)
+        repo = OHLCVRepository(real_session)
+
+        # 従来経路: ORMエンティティ → 変換サービス
+        legacy_entities = repo.get_ohlcv_data(symbol="BTC/USDT:USDT", timeframe="1m")
+        legacy_df = DataConversionService().convert_ohlcv_to_dataframe(legacy_entities)
+
+        # 軽量経路: Core SELECT + read_sql
+        fast_df = repo.fetch_ohlcv_dataframe(symbol="BTC/USDT:USDT", timeframe="1m")
+
+        pd.testing.assert_frame_equal(fast_df, legacy_df)
+
+    def test_time_range_filter_inclusive(self, real_session: Any) -> None:
+        """start/end は従来経路と同じく両端を含む（>= / <=）"""
+        from datetime import timedelta
+
+        self._seed_rows(real_session, count=5)
+        repo = OHLCVRepository(real_session)
+
+        start = self.BASE_TIME + timedelta(minutes=1)
+        end = self.BASE_TIME + timedelta(minutes=3)
+
+        df = repo.fetch_ohlcv_dataframe(
+            symbol="BTC/USDT:USDT", timeframe="1m", start_time=start, end_time=end
+        )
+
+        assert len(df) == 3
+        # インデックスは従来経路と同じ naive UTC（tz情報は付かない）
+        assert df.index.min() == start.replace(tzinfo=None)
+        assert df.index.max() == end.replace(tzinfo=None)
+
+    def test_empty_result_returns_empty_frame(self, real_session: Any) -> None:
+        """該当データなしでは空のDataFrameを返す"""
+        repo = OHLCVRepository(real_session)
+
+        df = repo.fetch_ohlcv_dataframe(symbol="BTC/USDT:USDT", timeframe="1m")
+
+        assert isinstance(df, pd.DataFrame)
+        assert df.empty
+
+    def test_symbol_isolation(self, real_session: Any) -> None:
+        """他シンボル・他時間軸のデータは混入しない"""
+        self._seed_rows(real_session, count=3, symbol="ETH/USDT:USDT")
+        self._seed_rows(real_session, count=2, timeframe="5m")
+        self._seed_rows(real_session, count=2)
+        repo = OHLCVRepository(real_session)
+
+        df = repo.fetch_ohlcv_dataframe(symbol="BTC/USDT:USDT", timeframe="1m")
+
+        assert len(df) == 2

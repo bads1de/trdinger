@@ -134,6 +134,22 @@ class DataIntegrationService:
         end_date: datetime,
     ) -> pd.DataFrame:
         """ベースとなるOHLCVデータのDataFrameを取得"""
+        # 軽量経路: ORM ハイドレーションを介さず DataFrame を直接取得する。
+        # 1m 足のような大量行取得では ORM の行生成がボトルネックになるため、
+        # リポジトリが軽量メソッドを提供する場合はそちらを優先する。
+        repo = getattr(self.retrieval_service, "ohlcv_repo", None)
+        if repo is not None and hasattr(repo, "fetch_ohlcv_dataframe"):
+            df_fast = cast(Any, repo).fetch_ohlcv_dataframe(
+                symbol=symbol,
+                timeframe=timeframe,
+                start_time=start_date,
+                end_time=end_date,
+            )
+            if df_fast is not None and not df_fast.empty:
+                return df_fast
+            # 空の場合は従来経路にフォールバックし、
+            # 「データなし」時のエラー意味論を維持する
+
         ohlcv_data = self.retrieval_service.get_ohlcv_data(
             symbol, timeframe, start_date, end_date
         )

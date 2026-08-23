@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
+from sqlalchemy import asc, select
 from sqlalchemy.orm import Session
 
 from app.utils.data_processing.record_validator import (
@@ -103,6 +104,64 @@ class OHLCVRepository(BaseRepository):
             limit=limit,
         )
         return data
+
+    def fetch_ohlcv_dataframe(
+        self,
+        symbol: str,
+        timeframe: str,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> pd.DataFrame:
+        """
+        OHLCV データを ORM エンティティのハイドレーションなしで DataFrame として取得する
+
+        1m 足の長期間取得では ORM の行オブジェクト生成がボトルネックになるため、
+        必要カラムのみの Core SELECT を実行し、行タプルから直接 DataFrame を
+        構築する。列構成・dtype・インデックスは
+        ``get_ohlcv_data`` → ``DataConversionService.convert_ohlcv_to_dataframe``
+        の結果と等価になるように正規化する。
+
+        Args:
+            symbol (str): 取引ペア。
+            timeframe (str): 時間軸。
+            start_time (Optional[datetime]): 取得開始日時（含む）。
+            end_time (Optional[datetime]): 取得終了日時（含む）。
+
+        Returns:
+            pd.DataFrame: timestamp インデックス・float64 の OHLCV DataFrame。
+                該当データが無い場合は空の DataFrame。
+        """
+        stmt = (
+            select(
+                OHLCVData.timestamp,
+                OHLCVData.open,
+                OHLCVData.high,
+                OHLCVData.low,
+                OHLCVData.close,
+                OHLCVData.volume,
+            )
+            .where(OHLCVData.symbol == symbol, OHLCVData.timeframe == timeframe)
+            .order_by(asc(OHLCVData.timestamp))
+        )
+        if start_time is not None:
+            stmt = stmt.where(OHLCVData.timestamp >= start_time)
+        if end_time is not None:
+            stmt = stmt.where(OHLCVData.timestamp <= end_time)
+
+        columns = ["timestamp", "open", "high", "low", "close", "volume"]
+        result = self.db.execute(stmt)
+        df = pd.DataFrame(result.fetchall(), columns=columns)
+        if df.empty:
+            return df
+        # 従来の変換経路（convert_ohlcv_to_dataframe）と同じく
+        # pd.to_datetime の自然な解決に任せる。ストレージに offset が
+        # あれば tz-aware、無ければ naive になり、どちらの環境でも
+        # レガシー経路のインデックスと一致する。
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        df = df.set_index("timestamp")
+        for col in ("open", "high", "low", "close", "volume"):
+            df[col] = df[col].astype("float64")
+        return df
 
     def get_all_by_symbol(self, symbol: str, timeframe: str) -> list[OHLCVData]:
         """
