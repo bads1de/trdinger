@@ -4,6 +4,7 @@
 WFA検証 + 合格判定 + フィルタリングの各ロジックをテストします。
 """
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,6 +21,20 @@ from app.services.auto_strategy.core.evaluation.evaluation_report import (
 from app.services.auto_strategy.services.strategy_validation_service import (
     StrategyValidationService,
 )
+
+
+@pytest.fixture(autouse=True)
+def _stub_full_period_metrics(monkeypatch):
+    """既定ではフルピリオド連続評価を無効化する。
+
+    ゲート③はフォールド複利のフォールバック経路で動作し、連続評価を
+    検証するテストのみ個別に上書きする。
+    """
+    monkeypatch.setattr(
+        StrategyValidationService,
+        "_get_full_period_metrics",
+        lambda self, *args, **kwargs: None,
+    )
 
 
 def _make_report(
@@ -99,10 +114,30 @@ class TestStrategyValidationService:
         service = StrategyValidationService(mock_evaluator)
 
         def _mk(sid: str, types: list[str]):
-            strategy = MagicMock()
-            strategy.id = sid
-            strategy.indicators = [MagicMock(type=t, enabled=True) for t in types]
-            return strategy
+            # 行動シグネチャが実値を読めるよう実構造に近いオブジェクトを使う
+            return SimpleNamespace(
+                id=sid,
+                indicators=[
+                    SimpleNamespace(
+                        type=t,
+                        parameters={},
+                        enabled=True,
+                        timeframe=None,
+                        id=None,
+                    )
+                    for t in types
+                ],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                long_exit_conditions=[],
+                short_exit_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                entry_gene=None,
+                exit_gene=None,
+                tool_genes=[],
+            )
 
         # best と同じ構成の候補が fitness 上位に3件並んでいる想定
         best = _mk("best", ["MACD", "BBANDS", "ATR"])
@@ -153,10 +188,30 @@ class TestStrategyValidationService:
         service = StrategyValidationService(mock_evaluator)
 
         def _mk(sid: str, types: list[str]):
-            strategy = MagicMock()
-            strategy.id = sid
-            strategy.indicators = [MagicMock(type=t, enabled=True) for t in types]
-            return strategy
+            # 行動シグネチャが実値を読めるよう実構造に近いオブジェクトを使う
+            return SimpleNamespace(
+                id=sid,
+                indicators=[
+                    SimpleNamespace(
+                        type=t,
+                        parameters={},
+                        enabled=True,
+                        timeframe=None,
+                        id=None,
+                    )
+                    for t in types
+                ],
+                long_entry_conditions=[],
+                short_entry_conditions=[],
+                long_exit_conditions=[],
+                short_exit_conditions=[],
+                risk_management={},
+                tpsl_gene=None,
+                position_sizing_gene=None,
+                entry_gene=None,
+                exit_gene=None,
+                tool_genes=[],
+            )
 
         best = _mk("best", ["MACD", "BBANDS", "ATR"])
         same1 = _mk("same1", ["MACD", "BBANDS", "ATR"])
@@ -1308,7 +1363,7 @@ class TestValidationConfig:
         assert vc.dsr_gate_active is False
         assert vc.min_pass_rate == 0.33
         assert vc.min_primary_fitness is None
-        assert vc.min_trades is None
+        assert vc.min_trades == 10
         assert vc.max_drawdown is None
         assert vc.wfa_n_folds == 3
         assert vc.wfa_train_ratio == 0.5
@@ -1403,6 +1458,7 @@ class TestOverfittingGates:
         sharpes: list[float] | None = None,
         pass_rate: float = 1.0,
         excess_returns: list[float] | None = None,
+        trades: list[float] | None = None,
     ) -> EvaluationReport:
         n_folds = len(returns or sharpes or [])
         scenarios = []
@@ -1411,14 +1467,14 @@ class TestOverfittingGates:
             if returns is not None:
                 metrics["total_return"] = returns[i]
                 # 明示されない場合は市場比 = 絶対リターン（従来互換）
-                excess = (
-                    excess_returns[i] if excess_returns is not None else returns[i]
-                )
+                excess = excess_returns[i] if excess_returns is not None else returns[i]
                 metrics["excess_return"] = excess
                 # Buy&Hold = 戦略リターン − 市場比
                 metrics["buy_hold_return"] = returns[i] - excess
             if sharpes is not None:
                 metrics["sharpe_ratio"] = sharpes[i]
+            # 明示されない場合はゲートに影響しない十分な取引数
+            metrics["total_trades"] = float(trades[i]) if trades is not None else 40.0
             scenarios.append(
                 ScenarioEvaluation(
                     name=f"fold_{i}",
@@ -1624,6 +1680,92 @@ class TestOverfittingGates:
 
         assert validation["passed"] is True
 
+    def test_zero_trade_folds_rejected_by_default_min_trades(self, mock_evaluator):
+        """デフォルトの min_trades=10 により無取引フォールドは不合格
+
+        「何も取引しない」戦略は下落相場で Buy&Hold に勝ってしまい
+        市場比ゲートをすり抜けるため、取引数下限で防ぐ。
+        """
+        config = GAConfig(
+            validation_config=ValidationConfig(),  # デフォルト（min_trades=10）
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(
+            returns=[0.0, 0.1],
+            trades=[0, 25],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is False
+        assert any("最少取引数" in reason for reason in validation["reasons"])
+
+    def test_continuous_benchmark_rejects_fold_window_blindspot(
+        self, mock_evaluator, monkeypatch
+    ):
+        """連続B&Hに負ければフォールド複利で勝っていても不合格
+
+        WFA のテスト窓は期間を分割するためフォールド複利の B&H は
+        トレンド区間を取り逃して過小評価される。フルピリオドの連続
+        比較では弾かれるべきケース。
+        """
+        monkeypatch.setattr(
+            StrategyValidationService,
+            "_get_full_period_metrics",
+            lambda self, *args, **kwargs: {
+                "total_return": 0.05,
+                "buy_hold_return": 0.40,
+            },
+        )
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=1.0,
+                validation_level="strict",
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        # フォールド空間では全て合格する内容:
+        # 戦略 +10/8/9%、市場比 +15/12/14pp（中央値プラス・PBO 0/3）
+        report = self._make_report_with_metrics(
+            returns=[0.10, 0.08, 0.09],
+            excess_returns=[0.15, 0.12, 0.14],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is False
+        assert any("連続Buy&Hold" in reason for reason in validation["reasons"])
+
+    def test_continuous_benchmark_passes_when_outperforming(
+        self, mock_evaluator, monkeypatch
+    ):
+        """連続B&Hに勝っていればフォールド別の出遅れを許容する"""
+        monkeypatch.setattr(
+            StrategyValidationService,
+            "_get_full_period_metrics",
+            lambda self, *args, **kwargs: {
+                "total_return": 0.50,
+                "buy_hold_return": 0.40,
+            },
+        )
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=1.0,
+                validation_level="strict",
+                pbo_threshold=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(
+            returns=[0.10, 0.08, 0.09],
+            excess_returns=[0.15, 0.12, 0.14],
+        )
+        validation = self._run_validation(mock_evaluator, config, report)
+
+        assert validation["passed"] is True
+
     def test_pbo_gate_skipped_when_metrics_missing(self, mock_evaluator):
         """total_return が取得できない場合はスキップ（fail-open）"""
         config = GAConfig(
@@ -1762,3 +1904,111 @@ class TestOverfittingGates:
 
         assert validation["passed"] is True
         assert validation["dsr"] is None
+
+
+class TestBehavioralSignature:
+    """行動シグネチャ（クローン検出）のテスト"""
+
+    @staticmethod
+    def _indicator(ind_type, params, ind_id, enabled=True):
+        return SimpleNamespace(
+            type=ind_type,
+            parameters=params,
+            enabled=enabled,
+            timeframe=None,
+            id=ind_id,
+        )
+
+    @classmethod
+    def _strategy(
+        cls,
+        indicators,
+        long_cond_ref="BBANDS_aaaa1111_2",
+        short_cond_ref="BBANDS_aaaa1111_0",
+        risk_size=0.1,
+    ):
+        return SimpleNamespace(
+            indicators=indicators,
+            long_entry_conditions=[
+                {
+                    "direction": "long",
+                    "left_operand": "close",
+                    "operator": ">",
+                    "right_operand": {"type": "indicator", "name": long_cond_ref},
+                }
+            ],
+            short_entry_conditions=[
+                {
+                    "direction": "short",
+                    "left_operand": "close",
+                    "operator": "<",
+                    "right_operand": {"type": "indicator", "name": short_cond_ref},
+                }
+            ],
+            long_exit_conditions=[],
+            short_exit_conditions=[],
+            risk_management={"position_size": risk_size},
+            tpsl_gene=None,
+            position_sizing_gene=None,
+            entry_gene=None,
+            exit_gene=None,
+            tool_genes=[],
+        )
+
+    def test_clone_with_dead_indicator_and_different_id_is_same(self):
+        """死んだ指標＋ID差分のみのクローンは同一シグネチャ"""
+        base = self._indicator("BBANDS", {"length": 20, "std": 2.0}, "aaaa1111")
+        a = self._strategy([base])
+
+        clone_bbands = self._indicator("BBANDS", {"length": 20, "std": 2.0}, "bbbb2222")
+        dead_rsi = self._indicator("RSI", {"period": 14}, "cccc3333")
+        b = self._strategy(
+            [clone_bbands, dead_rsi],
+            long_cond_ref="BBANDS_bbbb2222_2",
+            short_cond_ref="BBANDS_bbbb2222_0",
+        )
+
+        assert StrategyValidationService._behavioral_signature(
+            a
+        ) == StrategyValidationService._behavioral_signature(b)
+
+    def test_disabled_indicators_are_ignored(self):
+        """無効化された指標はシグネチャに影響しない"""
+        base = self._indicator("BBANDS", {"length": 20, "std": 2.0}, "aaaa1111")
+        a = self._strategy([base])
+
+        with_disabled = self._indicator("MACD", {"fast": 12}, "dddd4444", enabled=False)
+        c = self._strategy([base, with_disabled])
+
+        assert StrategyValidationService._behavioral_signature(
+            a
+        ) == StrategyValidationService._behavioral_signature(c)
+
+    def test_parameter_difference_changes_signature(self):
+        """参照される指標のパラメータ差は別シグネチャ"""
+        a = self._strategy(
+            [self._indicator("BBANDS", {"length": 20, "std": 2.0}, "aaaa1111")]
+        )
+        d = self._strategy(
+            [self._indicator("BBANDS", {"length": 25, "std": 2.0}, "eeee5555")],
+            long_cond_ref="BBANDS_eeee5555_2",
+            short_cond_ref="BBANDS_eeee5555_0",
+        )
+
+        assert StrategyValidationService._behavioral_signature(
+            a
+        ) != StrategyValidationService._behavioral_signature(d)
+
+    def test_risk_management_difference_changes_signature(self):
+        """リスク管理設定の差は別シグネチャ"""
+        a = self._strategy(
+            [self._indicator("BBANDS", {"length": 20, "std": 2.0}, "aaaa1111")]
+        )
+        e = self._strategy(
+            [self._indicator("BBANDS", {"length": 20, "std": 2.0}, "aaaa1111")],
+            risk_size=0.2,
+        )
+
+        assert StrategyValidationService._behavioral_signature(
+            a
+        ) != StrategyValidationService._behavioral_signature(e)

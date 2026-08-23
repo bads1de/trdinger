@@ -295,6 +295,22 @@ class RobustnessConfig(NestedConfigMixin):
     stress_commission_multipliers: list[float] = field(default_factory=list)
     aggregate_method: str = "robust"
 
+    # --- パラメータ摂動頑健性ゲート ---
+    # 合格候補の指標パラメータを ±param_delta 揺らした変異体をフルピリオド
+    # 再評価し、成績が崩壊する場合（パラメータの針の山に過適合）は不合格。
+    # IS↔OOS 相関が負になる主要因への対抗策。
+    # 実行コスト: 変異体数 × フルピリオドバックテスト（合格候補のみに適用）。
+    param_perturbation_enabled: bool = True
+    # 摂動幅（各数値パラメータを ±この比率で揺らす）
+    param_delta: float = 0.10
+    # 生成する変異体の上限（一度に1パラメータずつ変更）
+    param_max_variants: int = 4
+    # 耐久変異体（後述の基準を満たす変異体）の最低割合
+    param_min_survival_rate: float = 0.5
+    # 変異体が「耐久」とみなされる基準:
+    #   絶対リターンが非負 かつ 市場比が元戦略の param_min_retention_ratio 倍以上
+    param_min_retention_ratio: float = 0.5
+
 
 @dataclass
 class IterativeImprovementConfig(NestedConfigMixin):
@@ -337,8 +353,10 @@ class ValidationConfig(NestedConfigMixin):
     min_pass_rate: float = 0.33
     # 集約プライマリフィットネスの下限（None の場合はチェックしない）
     min_primary_fitness: float | None = None
-    # 全フォールドの最小取引回数（None の場合はチェックしない）
-    min_trades: int | None = None
+    # 全フォールドの最小取引回数（None の場合はチェックしない）。
+    # デフォルト 10: 無取引・低活動戦略は「何もしないだけで下落相場に
+    # 勝つ」ため市場比ゲートをすり抜ける。これを防ぐ下限。
+    min_trades: int | None = 10
     # 全フォールドの最大ドローダウン上限（0.0-1.0、None の場合はチェックしない）
     max_drawdown: float | None = None
 

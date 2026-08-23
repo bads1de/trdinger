@@ -502,6 +502,24 @@ class EvaluationStrategy:
         self._last_scenario_task_failures = failed_count
         return scenario_reports
 
+    def execute_single_report(
+        self,
+        gene: Any,
+        backtest_config: dict[str, Any],
+        config: GAConfig,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> EvaluationReport:
+        """フルピリオドを分割なしで単一評価したレポートを返す。
+
+        検証ゲート（通期市場比の連続比較）から利用される専用経路。
+        GA 本体の ``execute_report`` とは別メソッドにすることで、
+        呼び出し側のモック/計測と干渉しない。
+        """
+        return self._evaluate_single_report(
+            gene, backtest_config, config, metadata=metadata
+        )
+
     def _evaluate_single_report(
         self,
         gene: Any,

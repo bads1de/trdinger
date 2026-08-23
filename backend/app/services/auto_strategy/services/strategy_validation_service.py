@@ -9,8 +9,11 @@ GA 実行後に Walk-Forward Analysis (WFA) で最終候補戦略を検証し、
 from __future__ import annotations
 
 import copy
+import json
 import logging
 from collections.abc import Mapping
+from dataclasses import fields as dataclass_fields
+from dataclasses import is_dataclass
 from statistics import median
 from typing import Any
 
@@ -25,11 +28,16 @@ from ..core.evaluation.evaluation_report import EvaluationReport
 from ..core.evaluation.evaluation_strategies import EvaluationStrategy
 from ..core.evaluation.individual_evaluator import IndividualEvaluator
 from ..genes.genetic_utils import GeneticUtils
+from ..utils.indicator_references import (
+    collect_indicator_references,
+    indicator_reference_names,
+)
 from .overfitting_metrics import (
     deflated_sharpe_ratio,
     estimate_test_window_years,
     probability_of_backtest_overfitting,
 )
+from .parameter_perturbation import build_perturbed_genes
 
 logger = logging.getLogger(__name__)
 
@@ -101,9 +109,9 @@ class StrategyValidationService:
         best_strategy = result.get("best_strategy")
         best_key = self._get_strategy_key(best_strategy) if best_strategy else None
 
-        # 1. 検証対象の収集（最良戦略 + 指標構成が多様な上位候補 + パレートフロント）
-        # fitness上位をそのまま取ると同一構成（例: MACD+BBANDS+ATR のみ）に偏るため、
-        # 指標構成シグネチャが重複しないよう選ぶ（多様性優先の検証）。
+        # 1. 検証対象の収集（最良戦略 + 行動シグネチャが多様な上位候補 + パレートフロント）
+        # fitness上位をそのまま取ると同一骨格のクローン個体に偏るため、
+        # 行動シグネチャ（死んだ遺伝子・ID差分を無視）が重複しないよう選ぶ。
         candidates_to_validate: list[Any] = []
         seen_keys: set[str] = set()
         seen_signatures: set[Any] = set()
@@ -119,7 +127,7 @@ class StrategyValidationService:
 
         if best_strategy is not None:
             _add_candidate(best_strategy)
-            seen_signatures.add(self._indicator_composition_signature(best_strategy))
+            seen_signatures.add(self._behavioral_signature(best_strategy))
 
         if validation_config.validate_candidates:
             # 候補プール: フィットネス順の全戦略 + パレートフロント
@@ -137,22 +145,23 @@ class StrategyValidationService:
                 if strategy is not None:
                     pool.append(strategy)
 
-            # 第1パス: 未見の指標構成を優先して選ぶ（多様性確保）
+            # 第1パス: 未見の行動シグネチャを優先して選ぶ（多様性確保）
             target_limit = max(
                 0, validation_config.max_candidates - len(candidates_to_validate)
             )
             diverse: list[Any] = []
-            for strategy in pool:
-                key = self._get_strategy_key(strategy)
-                if key in seen_keys:
-                    continue
-                signature = self._indicator_composition_signature(strategy)
-                if signature in seen_signatures:
-                    continue
-                seen_signatures.add(signature)
-                diverse.append(strategy)
-                if len(diverse) >= target_limit:
-                    break
+            if target_limit > 0:
+                for strategy in pool:
+                    key = self._get_strategy_key(strategy)
+                    if key in seen_keys:
+                        continue
+                    signature = self._behavioral_signature(strategy)
+                    if signature in seen_signatures:
+                        continue
+                    seen_signatures.add(signature)
+                    diverse.append(strategy)
+                    if len(diverse) >= target_limit:
+                        break
 
             # 第2パス: 多様性で埋め切れない場合は fitness 上位から補充
             if len(diverse) < target_limit:
@@ -239,9 +248,21 @@ class StrategyValidationService:
                 validation_config,
                 validation_ga_config,
                 backtest_config,
+                strategy=strategy,
             )
             if validation.get("passed") and robustness_config.enabled:
                 validation = self._apply_robustness_gate(
+                    validation,
+                    strategy,
+                    backtest_config,
+                    validation_ga_config,
+                    robustness_config,
+                )
+            if (
+                validation.get("passed")
+                and robustness_config.param_perturbation_enabled
+            ):
+                validation = self._apply_parameter_perturbation_gate(
                     validation,
                     strategy,
                     backtest_config,
@@ -260,6 +281,153 @@ class StrategyValidationService:
                 "mode": "error",
                 "reasons": [f"検証実行エラー: {e}"],
             }
+
+    def _apply_parameter_perturbation_gate(
+        self,
+        validation: dict[str, Any],
+        strategy: Any,
+        backtest_config: dict[str, Any],
+        validation_ga_config: GAConfig,
+        robustness_config: RobustnessConfig,
+    ) -> dict[str, Any]:
+        """パラメータ摂動頑健性ゲート（fail-closed）。
+
+        合格候補の指標パラメータを ±param_delta 揺らした変異体を
+        フルピリオド再評価し、以下を満たす変異体の割合が閾値未満なら
+        不合格にする:
+          - 絶対リターンが非負
+          - 市場比が元戦略の param_min_retention_ratio 倍以上
+
+        「±10% の変更で崩壊する戦略」＝パラメータの針の山に過適合した
+        戦略を排除し、OOS への生存率を構造的に引き上げる。
+        """
+        reasons = list(validation.get("reasons", []))
+        perturbation_result: dict[str, Any]
+
+        try:
+            original_metrics = self._get_full_period_metrics(
+                strategy, backtest_config, validation_ga_config
+            )
+            variants = build_perturbed_genes(
+                strategy,
+                float(robustness_config.param_delta),
+                int(robustness_config.param_max_variants),
+            )
+
+            if not variants:
+                # 数値パラメータが無い等のケースでは判定対象が無いまま通過
+                perturbation_result = {
+                    "passed": True,
+                    "variant_count": 0,
+                    "survived": 0,
+                    "survival_rate": None,
+                    "reasons": [],
+                    "labels": [],
+                }
+            elif original_metrics is None:
+                # 元戦略の連続指標が無い場合は判定不能 → 判定スキップ
+                logger.debug(
+                    "摂動ゲート: 元戦略のフルピリオド指標が取得できないためスキップ"
+                )
+                perturbation_result = {
+                    "passed": True,
+                    "variant_count": len(variants),
+                    "survived": None,
+                    "survival_rate": None,
+                    "reasons": [],
+                    "labels": [label for label, _ in variants],
+                }
+            else:
+                original_excess = float(original_metrics["total_return"]) - float(
+                    original_metrics["buy_hold_return"]
+                )
+                retention = float(robustness_config.param_min_retention_ratio)
+                survived = 0
+                variant_rows: list[dict[str, Any]] = []
+                gate_reasons: list[str] = []
+                for label, variant in variants:
+                    try:
+                        metrics = self._evaluate_variant_metrics(
+                            variant, backtest_config, validation_ga_config
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("変異体評価で例外: %s", exc)
+                        metrics = None
+                    if metrics is None:
+                        # 変異体の評価自体が失敗する場合、頑健でない証拠として
+                        # 不耐扱い（fail-closed）
+                        variant_rows.append({"label": label, "survived": False})
+                        gate_reasons.append(f"変異体の評価に失敗: {label}")
+                        continue
+                    total = float(metrics["total_return"])
+                    excess = total - float(metrics["buy_hold_return"])
+                    is_survivor = total >= 0.0 and excess >= retention * max(
+                        original_excess, 0.0
+                    )
+                    if is_survivor:
+                        survived += 1
+                    else:
+                        gate_reasons.append(
+                            f"{label}: リターン {total:+.2%} / "
+                            f"市場比 {excess:+.2%}（元 {original_excess:+.2%}）"
+                        )
+                    variant_rows.append({"label": label, "survived": is_survivor})
+
+                survival_rate = survived / len(variants) if variants else None
+                min_rate = float(robustness_config.param_min_survival_rate)
+                perturbation_reasons: list[str] = []
+                if survival_rate is not None and survival_rate < min_rate:
+                    perturbation_reasons.append(
+                        f"パラメータ摂動への耐性不足: 耐久変異体 "
+                        f"{survived}/{len(variants)}（ survival_rate="
+                        f"{survival_rate:.2f} < {min_rate:.2f}）"
+                    )
+                    perturbation_reasons.extend(gate_reasons)
+
+                perturbation_result = {
+                    "passed": not perturbation_reasons,
+                    "variant_count": len(variants),
+                    "survived": survived,
+                    "survival_rate": survival_rate,
+                    "reasons": perturbation_reasons,
+                    "labels": [row["label"] for row in variant_rows],
+                }
+
+            validation["param_perturbation"] = perturbation_result
+            if not perturbation_result.get("passed", True):
+                validation["passed"] = False
+                reasons.extend(perturbation_result.get("reasons", []))
+                validation["reasons"] = reasons
+            return validation
+
+        except Exception as e:  # noqa: BLE001
+            # fail-closed: 想定外エラー時は不合格として記録
+            logger.warning("パラメータ摂動ゲートでエラー: %s", e)
+            validation["param_perturbation"] = {
+                "passed": False,
+                "error": str(e),
+            }
+            validation["passed"] = False
+            validation["reasons"] = reasons + [f"パラメータ摂動ゲート実行エラー: {e}"]
+            return validation
+
+    def _evaluate_variant_metrics(
+        self,
+        variant_gene: Any,
+        backtest_config: dict[str, Any],
+        ga_config: GAConfig,
+    ) -> dict[str, float] | None:
+        """摂動変異体をフルピリオド評価した収益メトリクスを返す。"""
+        try:
+            single_config = copy.deepcopy(ga_config)
+            single_config.evaluation_config.evaluation_mode = "single"
+            report = self._evaluation_strategy.execute_single_report(
+                variant_gene, backtest_config, single_config
+            )
+            return self._extract_single_scenario_metrics(report)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("変異体評価に失敗: %s", exc)
+            return None
 
     def _apply_robustness_gate(
         self,
@@ -333,6 +501,7 @@ class StrategyValidationService:
         validation_config: ValidationConfig,
         ga_config: GAConfig,
         backtest_config: dict[str, Any],
+        strategy: Any = None,
     ) -> dict[str, Any]:
         """評価レポートを合格基準に照らして判定する。"""
         reasons: list[str] = []
@@ -407,19 +576,18 @@ class StrategyValidationService:
         #    ため median ベース（DSR ゲートと同じ）。
         # ② 絶対下限ゲート: 全フォールドを複利合算した通期リターンが赤字
         #    なら、市場比でスキルがあっても単独運用に耐えないため不合格。
-        # ③ 通期市場比ゲート: 複利合算した戦略リターンと Buy&Hold リターン
-        #    を比較し、通期として市場に勝っていなければ不合格。フォールド
-        #    単位の中央値判定（①）をすり抜けても、通期でアルファが実在
-        #    しない戦略（熊相場の守りだけでは爆騰期の出遅れを埋め合わせ
-        #    できない）を弾く。
+        # ③ 通期市場比ゲート: 学習期間全体を連続的に評価した戦略リターンと
+        #    Buy&Hold リターンを比較し、通期として市場に勝っていなければ
+        #    不合格。フォールド窓の複利比較は WFA のテスト窓が期間を分割
+        #    するため連続B&Hを過小評価し（トレンド期の急騰区間を取り逃す）、
+        #    「フォールドでは勝つが実質B&Hに大敗」の戦略を通してしまう。
+        #    フルピリオド指標が取得できない場合は、従来どおりフォールド
+        #    複利同士の比較へフォールバックする。
         #
         # 各メトリクスが取得できないレポートの場合は、従来どおり集約
         # フィットネスの符号へフォールバックする。
-        if (
-            primary_fitness is not None
-            and not objective_registry.is_minimize_objective(
-                report.primary_objective or ""
-            )
+        if primary_fitness is not None and not objective_registry.is_minimize_objective(
+            report.primary_objective or ""
         ):
             excess_returns = self._collect_scenario_metric(report, "excess_return")
             if scenario_count > 0 and len(excess_returns) == scenario_count:
@@ -432,9 +600,7 @@ class StrategyValidationService:
             elif primary_fitness < 0.0:
                 reasons.append(f"集約フィットネス {primary_fitness:.4f} が負値です")
 
-            fold_total_returns = self._collect_scenario_metric(
-                report, "total_return"
-            )
+            fold_total_returns = self._collect_scenario_metric(report, "total_return")
             has_total = scenario_count > 0 and len(fold_total_returns) == scenario_count
             if has_total:
                 compounded = 1.0
@@ -447,24 +613,41 @@ class StrategyValidationService:
                         f"{MIN_AGGREGATED_TOTAL_RETURN:.2f} 未満です"
                     )
 
-            fold_bh_returns = self._collect_scenario_metric(
-                report, "buy_hold_return"
-            )
-            if (
-                has_total
-                and scenario_count > 0
-                and len(fold_bh_returns) == scenario_count
-            ):
-                bh_compound = 1.0
-                for value in fold_bh_returns:
-                    bh_compound *= 1.0 + float(value)
-                period_excess = compounded - bh_compound
-                if period_excess < 0.0:
-                    reasons.append(
-                        f"通期市場比リターン {period_excess:+.4f} が負値です"
-                        f"（戦略 {(compounded - 1.0):+.2%} vs "
-                        f"Buy&Hold {(bh_compound - 1.0):+.2%}）"
+            # ③ は追加のフルピリオド評価を伴うため、先行ゲートで不合格が
+            # 確定している候補には実行しない（計算コスト節減）。
+            if not reasons and strategy is not None:
+                full_metrics = self._get_full_period_metrics(
+                    strategy, backtest_config, ga_config
+                )
+                if full_metrics is not None:
+                    continuous_total = float(full_metrics["total_return"])
+                    continuous_bh = float(full_metrics["buy_hold_return"])
+                    period_excess = continuous_total - continuous_bh
+                    if period_excess < 0.0:
+                        reasons.append(
+                            f"通期市場比リターン {period_excess:+.4f} が負値です"
+                            f"（戦略 {continuous_total:+.2%} vs 連続Buy&Hold "
+                            f"{continuous_bh:+.2%}）"
+                        )
+                elif (
+                    has_total
+                    and scenario_count > 0
+                    and len(self._collect_scenario_metric(report, "buy_hold_return"))
+                    == scenario_count
+                ):
+                    fold_bh_returns = self._collect_scenario_metric(
+                        report, "buy_hold_return"
                     )
+                    bh_compound = 1.0
+                    for value in fold_bh_returns:
+                        bh_compound *= 1.0 + float(value)
+                    period_excess = compounded - bh_compound
+                    if period_excess < 0.0:
+                        reasons.append(
+                            f"通期市場比リターン {period_excess:+.4f} が負値です"
+                            f"（戦略 {(compounded - 1.0):+.2%} vs "
+                            f"Buy&Hold {(bh_compound - 1.0):+.2%}）"
+                        )
 
         trades_list = self._collect_scenario_metric(report, "total_trades")
         if validation_config.min_trades is not None:
@@ -473,7 +656,7 @@ class StrategyValidationService:
                     f"total_trades メトリクスが全シナリオで取得できません"
                     f"（{len(trades_list)}/{scenario_count}）"
                 )
-            else:
+            elif trades_list:
                 min_trades = min(trades_list)
                 if min_trades < validation_config.min_trades:
                     reasons.append(
@@ -488,7 +671,7 @@ class StrategyValidationService:
                     f"max_drawdown メトリクスが全シナリオで取得できません"
                     f"（{len(dd_list)}/{scenario_count}）"
                 )
-            else:
+            elif dd_list:
                 max_dd = max(abs(v) for v in dd_list)
                 if max_dd > validation_config.max_drawdown:
                     reasons.append(
@@ -720,16 +903,209 @@ class StrategyValidationService:
         """戦略を識別するキーを返す（永続化層と同じルール）。"""
         return GeneticUtils.get_strategy_result_key(strategy)
 
-    @staticmethod
-    def _indicator_composition_signature(strategy: Any) -> tuple[Any, ...]:
-        """指標構成（タイプの集合）から多様性判定用のシグネチャを構築する。
+    # ------------------------------------------------------------------
+    # フルピリオド（連続）評価
+    # ------------------------------------------------------------------
 
-        パラメータの違いは無視し、どの指標タイプを組み合わせているかのみで
-        判定する（例: MACD+BBANDS+ATR はパラメータが異なっても同一扱い）。
+    def _get_full_period_metrics(
+        self,
+        strategy: Any,
+        backtest_config: dict[str, Any],
+        validation_ga_config: GAConfig,
+    ) -> dict[str, float] | None:
+        """学習期間全体を連続評価した戦略/B&Hリターンを取得する。
+
+        優先順位:
+        1. 評価器のキャッシュ済みフルピリオドレポート（逐次実行時に存在）
+        2. single モードでの再評価（WFA のようにテスト窓へ分割しない）
+
+        取得できない場合は None を返し、呼び出し側はフォールド複利比較へ
+        フォールバックする。失敗は想定内の経路として debug ログのみ。
         """
-        indicator_types: set[Any] = set()
-        for indicator in getattr(strategy, "indicators", None) or []:
+        try:
+            cached = self._evaluator.get_cached_evaluation_report(strategy)
+            metrics = self._extract_single_scenario_metrics(cached)
+            if metrics is not None:
+                return metrics
+
+            single_config = copy.deepcopy(validation_ga_config)
+            single_config.evaluation_config.evaluation_mode = "single"
+            report = self._evaluation_strategy.execute_single_report(
+                strategy, backtest_config, single_config
+            )
+            return self._extract_single_scenario_metrics(report)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("フルピリオド指標の取得に失敗: %s", exc)
+            return None
+
+    @staticmethod
+    def _extract_single_scenario_metrics(
+        report: Any,
+    ) -> dict[str, float] | None:
+        """単一シナリオ（フルピリオド）レポートから収益メトリクスを抽出する。"""
+        try:
+            if not isinstance(report, EvaluationReport):
+                return None
+            totals = StrategyValidationService._collect_scenario_metric(
+                report, "total_return"
+            )
+            bhs = StrategyValidationService._collect_scenario_metric(
+                report, "buy_hold_return"
+            )
+        except Exception:  # noqa: BLE001
+            return None
+        if len(totals) == 1 and len(bhs) == 1:
+            return {
+                "total_return": float(totals[0]),
+                "buy_hold_return": float(bhs[0]),
+            }
+        return None
+
+    # ------------------------------------------------------------------
+    # 行動シグネチャ（クローン検出）
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _behavioral_signature(strategy: Any) -> tuple[Any, ...]:
+        """取引ロジック本体から行動シグネチャを構築する。
+
+        - 条件式から参照されない「死んだ」指標遺伝子は無視する
+          （突然変異が条件に接続されない指標を乗せても同一扱い）
+        - 指標IDはランダム付与されるため正規化する
+          （同一構成・同一パラメータなら ID が違っても同一シグネチャ）
+
+        これにより、エリート複製＋デッド遺伝子乗せのクローン個体を
+        検証対象の重複として扱える。
+        """
+        indicators = getattr(strategy, "indicators", None) or []
+        condition_groups = (
+            getattr(strategy, "long_entry_conditions", None),
+            getattr(strategy, "short_entry_conditions", None),
+            getattr(strategy, "long_exit_conditions", None),
+            getattr(strategy, "short_exit_conditions", None),
+        )
+
+        referenced_names: set[str] = set()
+        for group in condition_groups:
+            StrategyValidationService._collect_indicator_references(
+                group, referenced_names
+            )
+
+        def _indicator_token(indicator: Any) -> str:
+            return "|".join(
+                (
+                    str(getattr(indicator, "type", "")),
+                    json.dumps(
+                        getattr(indicator, "parameters", {}) or {},
+                        sort_keys=True,
+                        default=str,
+                    ),
+                    str(indicator.timeframe or ""),
+                )
+            )
+
+        replacements: dict[str, str] = {}
+        indicator_tokens: list[str] = []
+        # 条件式が指標を一切参照しない場合（特殊な遺伝子・テストダブル）
+        # は参照フィルタを無効化し、全ての有効指標を対象にする
+        filter_by_reference = bool(referenced_names)
+        for indicator in indicators:
             if not getattr(indicator, "enabled", True):
                 continue
-            indicator_types.add(str(getattr(indicator, "type", "")))
-        return tuple(sorted(indicator_types))
+            names = indicator_reference_names(indicator)
+            # 参照されていない指標（死んだ遺伝子）はシグネチャから除外
+            if filter_by_reference and not (names & referenced_names):
+                continue
+            token = _indicator_token(indicator)
+            indicator_tokens.append(token)
+            for name in names:
+                replacements[name] = token
+
+        # 条件式内の参照名（ID込み）を正規化トークンへ置換して直列化
+        condition_text = json.dumps(
+            [StrategyValidationService._condition_to_json(g) for g in condition_groups],
+            sort_keys=True,
+            default=str,
+        )
+        for name in sorted(replacements, key=len, reverse=True):
+            condition_text = condition_text.replace(name, replacements[name])
+
+        tool_sig = tuple(
+            sorted(
+                (
+                    str(getattr(tool, "tool_name", "")),
+                    json.dumps(
+                        getattr(tool, "params", {}) or {},
+                        sort_keys=True,
+                        default=str,
+                    ),
+                )
+                for tool in getattr(strategy, "tool_genes", None) or []
+                if getattr(tool, "enabled", True)
+            )
+        )
+
+        return (
+            tuple(sorted(indicator_tokens)),
+            condition_text,
+            json.dumps(
+                getattr(strategy, "risk_management", None) or {},
+                sort_keys=True,
+                default=str,
+            ),
+            StrategyValidationService._gene_to_json(
+                getattr(strategy, "tpsl_gene", None)
+            ),
+            StrategyValidationService._gene_to_json(
+                getattr(strategy, "position_sizing_gene", None)
+            ),
+            StrategyValidationService._gene_to_json(
+                getattr(strategy, "entry_gene", None)
+            ),
+            StrategyValidationService._gene_to_json(
+                getattr(strategy, "exit_gene", None)
+            ),
+            tool_sig,
+        )
+
+    @staticmethod
+    def _collect_indicator_references(node: Any, out: set[str]) -> None:
+        """条件ツリーから指標参照を収集する（共通ユーティリティへ委譲）。"""
+        collect_indicator_references(node, out)
+
+    @staticmethod
+    def _condition_to_json(node: Any) -> Any:
+        """条件ツリーを JSON 直列化可能な形へ変換する（非dataclassはそのまま）。"""
+        if is_dataclass(node) and not isinstance(node, type):
+            return {
+                field_info.name: StrategyValidationService._condition_to_json(
+                    getattr(node, field_info.name, None)
+                )
+                for field_info in dataclass_fields(node)
+            }
+        if isinstance(node, dict):
+            return {
+                key: StrategyValidationService._condition_to_json(value)
+                for key, value in node.items()
+            }
+        if isinstance(node, (list, tuple)):
+            return [StrategyValidationService._condition_to_json(v) for v in node]
+        return node
+
+    @staticmethod
+    def _gene_to_json(gene: Any) -> str:
+        """補助遺伝子（TPSL/サイジング/注文方式）を正規化文字列化する。"""
+        if gene is None:
+            return ""
+        try:
+            if is_dataclass(gene) and not isinstance(gene, type):
+                payload = {
+                    field_info.name: getattr(gene, field_info.name, None)
+                    for field_info in dataclass_fields(gene)
+                }
+                return json.dumps(payload, sort_keys=True, default=str)
+            if hasattr(gene, "__dict__"):
+                return json.dumps(vars(gene), sort_keys=True, default=str)
+        except Exception:  # noqa: BLE001
+            return ""
+        return str(gene)
