@@ -129,23 +129,15 @@ describe("GAConfigForm", () => {
     );
   });
 
-  it("並列評価設定の切り替えが機能すること", () => {
+  it("並列評価は常時有効のためワーカー数のみ設定できること", () => {
     render(<GAConfigForm onSubmit={mockOnSubmit} onClose={mockOnClose} />);
 
-    const parallelCheckbox = screen.getByLabelText("並列評価を有効化");
-
-    // 初期状態はオン（デフォルト）
-    expect(parallelCheckbox).toBeChecked();
-
-    // オフにする
-    fireEvent.click(parallelCheckbox);
-    expect(parallelCheckbox).not.toBeChecked();
-
-    // 設定項目が消えることを確認 (max_workersの入力欄など)
-    // 存在しないことを確認するにはqueryByを使用
+    // enable_parallel のチェックボックスは廃止（常時ON）
     expect(
-      screen.queryByTestId("input-最大ワーカー数"),
+      screen.queryByLabelText("並列評価を有効化"),
     ).not.toBeInTheDocument();
+    // max_workers の入力欄は常に表示される
+    expect(screen.getByTestId("input-最大ワーカー数")).toBeInTheDocument();
   });
 
   it("キャンセルボタンがonCloseを呼ぶこと", () => {
@@ -198,8 +190,9 @@ describe("GAConfigForm", () => {
     expect(mockOnSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
         ga_config: expect.objectContaining({
+          // fitness_sharing は送信時に常時ONへ正規化され、nested の他の値は保持される
           fitness_sharing: expect.objectContaining({
-            enable_fitness_sharing: false,
+            enable_fitness_sharing: true,
             sharing_radius: 0.25,
             sharing_alpha: 1.3,
             sampling_threshold: 80,

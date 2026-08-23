@@ -234,8 +234,6 @@ class EvaluationConfig(NestedConfigMixin):
     """評価・検証関連設定。"""
 
     # 並列評価は常時有効（max_workers=1 で逐次にフォールバック）。
-    # 旧設定との互換のためフィールドは残すが、engine側で無視される。
-    enable_parallel: bool = True
     max_workers: int | None = None  # Noneの場合は自動で物理コア-2, 最大8に制限
     timeout: float = 300.0
     enable_multi_fidelity_evaluation: bool = False
@@ -248,16 +246,31 @@ class EvaluationConfig(NestedConfigMixin):
     )
     oos_split_ratio: float = 0.25
     oos_fitness_weight: float = 0.5
-    enable_walk_forward: bool = False
     wfa_n_folds: int = 3
     wfa_train_ratio: float = 0.5
     wfa_anchored: bool = False
-    # GA選抜用の WFA を IS 窓内で実行するフラグ (デフォルト無効)。
-    # 有効時は execute_ga_report が IS 窓を fold 分割し robust 集約で選抜する。
-    enable_walk_forward_for_ga: bool = False
     # 明示的な評価モード（"single" | "walk_forward" | "auto"）。
-    # "auto"（既定）の場合は enable_walk_forward フラグから自動判定する（後方互換）。
+    # "auto"（既定）は "single" 扱い。旧 enable_walk_forward フラグは
+    # from_dict で evaluation_mode へ変換される（後方互換）。
     evaluation_mode: str = "auto"
+    # GA 選抜（IS 評価）のモード（"fitness" | "walk_forward"）。
+    # "walk_forward" は旧 enable_walk_forward_for_ga フラグに相当し、
+    # IS 窓内で WFA fold 分割して robust 集約で選抜する。
+    ga_selection_mode: str = "fitness"
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Any:
+        """辞書から復元。旧ブールフラグを新モードフィールドへ変換する。"""
+        normalized = dict(data)
+        if "enable_walk_forward" in normalized:
+            legacy_enabled = bool(normalized.pop("enable_walk_forward"))
+            if "evaluation_mode" not in normalized and legacy_enabled:
+                normalized["evaluation_mode"] = "walk_forward"
+        if "enable_walk_forward_for_ga" in normalized:
+            legacy_ga_wfa = bool(normalized.pop("enable_walk_forward_for_ga"))
+            if "ga_selection_mode" not in normalized and legacy_ga_wfa:
+                normalized["ga_selection_mode"] = "walk_forward"
+        return super().from_dict(normalized)
 
 
 @dataclass
@@ -343,6 +356,8 @@ class ValidationConfig(NestedConfigMixin):
     dsr_sigma_sharpe: float = 1.0
 
     # WFA 設定（検証用。評価設定を上書きする）
+    # anchored の可否は evaluation_config.wfa_anchored を唯一の情報源とする
+    # （旧 validation_config.wfa_anchored は廃止）。
     # フォールド数と train 比率は、テスト窓が取引回数確保に十分な長さに
     # なるよう調整済み。2024H1・4h足の場合、テスト窓は約30日
     # （=(1 - 0.5) * 181日 / 3）となり、レンジ相場でも正リターン達成の
@@ -350,7 +365,6 @@ class ValidationConfig(NestedConfigMixin):
     # でも通る緩和値（厳しすぎで全滅を防ぐ）。
     wfa_n_folds: int = 3
     wfa_train_ratio: float = 0.5
-    wfa_anchored: bool = False
 
     # 候補戦略も検証するか（False の場合は最良戦略のみ検証）
     validate_candidates: bool = True

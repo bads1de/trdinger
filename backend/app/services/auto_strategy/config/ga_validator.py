@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 # 有効な評価モード（evaluation_config.evaluation_mode）。evaluation_strategies 側の
 # EVALUATION_MODES と整合させること。
 _EVALUATION_MODES = frozenset({"single", "walk_forward"})
+# 有効な GA 選抜（IS 評価）モード。evaluation_strategies 側の
+# GA_SELECTION_MODES と整合させること。
+_GA_SELECTION_MODES = frozenset({"fitness", "walk_forward"})
 
 
 class ConfigValidator:
@@ -448,17 +451,26 @@ class ConfigValidator:
 
     @staticmethod
     def _validate_ga_evaluation_mode(config: GAConfig) -> list[str]:
-        """evaluation_mode の検証。"""
+        """evaluation_mode / ga_selection_mode の検証。"""
         evaluation_config = getattr(config, "evaluation_config", None)
         if evaluation_config is None:
             return []
+        errors: list[str] = []
         mode = getattr(evaluation_config, "evaluation_mode", "auto")
         # MagicMock 等の文字列以外は検証対象外（既存の Mock ベーステストへの影響を防ぐ）
-        if not isinstance(mode, str) or mode == "auto" or mode in _EVALUATION_MODES:
-            return []
-        return [
-            f"evaluation_mode は {sorted(_EVALUATION_MODES)} のいずれか（または auto）である必要があります: {mode}"
-        ]
+        if isinstance(mode, str) and mode != "auto" and mode not in _EVALUATION_MODES:
+            errors.append(
+                f"evaluation_mode は {sorted(_EVALUATION_MODES)} のいずれか（または auto）である必要があります: {mode}"
+            )
+        ga_selection_mode = getattr(evaluation_config, "ga_selection_mode", "fitness")
+        if (
+            isinstance(ga_selection_mode, str)
+            and ga_selection_mode not in _GA_SELECTION_MODES
+        ):
+            errors.append(
+                f"ga_selection_mode は {sorted(_GA_SELECTION_MODES)} のいずれかである必要があります: {ga_selection_mode}"
+            )
+        return errors
 
     @staticmethod
     def _validate_ga_multi_fidelity_settings(config: GAConfig) -> list[str]:

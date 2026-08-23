@@ -13,7 +13,12 @@ from typing import Any, cast
 
 @dataclass
 class RobustnessPlan:
-    enabled: bool = False
+    """robustness gate 計画。
+
+    ``enabled`` スイッチは廃止し、シナリオの有無のみで gate の
+    有効/無効を判定する（運用設定 ``robustness_config.enabled`` へ反映）。
+    """
+
     scenarios: list[dict[str, Any]] = field(default_factory=list)
     policy: str = "gate_only"
     failure_policy: str = "fail_closed"
@@ -50,16 +55,17 @@ class EvaluationPlan:
 
         StrategyValidationService の robustness gate は
         ``config.robustness_config.enabled`` を参照するため、
-        計画の ``robustness.enabled`` とシナリオを運用設定へ同期します。
+        計画のシナリオ有無とシナリオ定義を運用設定へ同期します
+        （シナリオが1件以上あれば gate を有効化する）。
         """
         robustness_config = getattr(config, "robustness_config", None)
         if robustness_config is None:
             return
 
         plan_robustness = self.robustness
-        robustness_config.enabled = bool(plan_robustness.enabled)
 
         scenarios = plan_robustness.scenarios or []
+        robustness_config.enabled = bool(scenarios)
         if not scenarios:
             return
 

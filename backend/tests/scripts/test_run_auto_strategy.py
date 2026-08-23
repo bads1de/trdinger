@@ -32,7 +32,6 @@ class TestCreateGaConfig:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -46,7 +45,6 @@ class TestCreateGaConfig:
         assert config.crossover_rate == 0.8
         assert config.mutation_rate == 0.2
         assert config.elite_size == 2
-        assert config.evaluation_config.enable_parallel is True
         assert config.seed_injection_rate == 0.20
 
     def test_custom_config(self):
@@ -59,7 +57,6 @@ class TestCreateGaConfig:
             crossover_rate=0.9,
             mutation_rate=0.1,
             elite_size=5,
-            no_parallel=True,
             verbose=True,
             start_date="2023-01-01",
             end_date="2023-12-31",
@@ -73,8 +70,6 @@ class TestCreateGaConfig:
         assert config.crossover_rate == 0.9
         assert config.mutation_rate == 0.1
         assert config.elite_size == 5
-        # 並列は常時ON（旧no_parallelフラグは非推奨で無視）
-        assert config.evaluation_config.enable_parallel is True
         assert config.log_level == "DEBUG"
 
     def test_smoke_config_disables_heavy_features(self, caplog):
@@ -87,7 +82,6 @@ class TestCreateGaConfig:
             crossover_rate=0.9,
             mutation_rate=0.1,
             elite_size=5,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-01-31",
@@ -103,8 +97,6 @@ class TestCreateGaConfig:
         assert config.elite_size == 1
         assert config.max_indicators == 3
         assert config.max_conditions == 2
-        # 並列は常時ON（smokeでも有効、max_workers=1で逐次にしたい場合のみ無効）
-        assert config.evaluation_config.enable_parallel is True
         assert config.use_seed_strategies is False
         assert config.seed_injection_rate == 0.0
         assert config.two_stage_selection_config.enabled is False
@@ -121,7 +113,6 @@ class TestCreateGaConfig:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -140,7 +131,6 @@ class TestCreateGaConfig:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=15,  # 無効（population以上）
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -159,7 +149,6 @@ class TestCreateGaConfig:
             crossover_rate=1.5,  # 無効（1を超える）
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -221,7 +210,6 @@ class TestSmokeMode:
             population=20,
             generations=10,
             elite_size=2,
-            no_parallel=False,
             no_save=False,
             min_trades=None,
             smoke=True,
@@ -233,7 +221,6 @@ class TestSmokeMode:
         assert args.population == 2
         assert args.generations == 1
         assert args.elite_size == 1
-        assert args.no_parallel is True
         assert args.no_save is True
         assert args.min_trades == 0
 
@@ -423,15 +410,6 @@ class TestParseArgs:
 
         assert args.verbose is True
 
-    def test_no_parallel_flag(self):
-        """並列無効フラグが正しくパースされる"""
-        import scripts.run_auto_strategy as run_auto_strategy
-
-        with patch("sys.argv", ["run_auto_strategy.py", "--no-parallel"]):
-            args = run_auto_strategy.parse_args()
-
-        assert args.no_parallel is True
-
     def test_smoke_flag(self):
         """smokeフラグが正しくパースされる"""
         import scripts.run_auto_strategy as run_auto_strategy
@@ -532,7 +510,6 @@ class TestRunAutoStrategyExecution:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=1,
-            no_parallel=True,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-01-31",
@@ -627,7 +604,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=1,
-            no_parallel=True,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-01-31",
@@ -711,7 +687,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=1,
-            no_parallel=True,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-01-31",
@@ -763,7 +738,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -785,7 +759,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -817,7 +790,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -846,7 +818,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -874,7 +845,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",
@@ -901,7 +871,6 @@ class TestValidationIntegration:
             crossover_rate=0.8,
             mutation_rate=0.2,
             elite_size=2,
-            no_parallel=False,
             verbose=False,
             start_date="2024-01-01",
             end_date="2024-06-30",

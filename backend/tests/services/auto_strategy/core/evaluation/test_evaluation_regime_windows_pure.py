@@ -53,7 +53,7 @@ def test_execute_robustness_report_adds_regime_windows():
     strategy = EvaluationStrategy(evaluator)
     config = SimpleNamespace(
         evaluation_config=SimpleNamespace(
-            enable_walk_forward=False,
+            evaluation_mode="single",
             oos_split_ratio=0.0,
         ),
         objectives=["weighted_score"],

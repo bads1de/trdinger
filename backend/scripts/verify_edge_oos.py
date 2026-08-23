@@ -103,7 +103,7 @@ def build_config(args: argparse.Namespace) -> GAConfig:
             enable_restricted_tournament=True,
             restricted_tournament_crowding_factor=args.rtr_cf,
         ),
-        "evaluation_config": EvaluationConfig(enable_parallel=not args.smoke),
+        "evaluation_config": EvaluationConfig(),
         "fallback_start_date": args.is_start,
         "fallback_end_date": args.is_end,
     }
@@ -115,14 +115,13 @@ def build_config(args: argparse.Namespace) -> GAConfig:
         kwargs["random_state"] = int(args.seed)
     if getattr(args, "wfa_ga", False):
         # ValidationConfig の WFA 設定を流用 (ユーザ選択: ValidationConfig流用)
-        kwargs["evaluation_config"] = EvaluationConfig(
-            enable_parallel=not args.smoke, enable_walk_forward_for_ga=True
-        )
+        kwargs["evaluation_config"] = EvaluationConfig(ga_selection_mode="walk_forward")
     if getattr(args, "no_early_termination", False):
         # WFA-GA のフォールド評価で早期終了 (DD/期待値/ペース打ち切り) を無効化する
         kwargs["evaluation_config"] = EvaluationConfig(
-            enable_parallel=not args.smoke,
-            enable_walk_forward_for_ga=getattr(args, "wfa_ga", False),
+            ga_selection_mode=(
+                "walk_forward" if getattr(args, "wfa_ga", False) else "fitness"
+            ),
             early_termination_settings=EarlyTerminationSettings(enabled=False),
         )
     return GAConfig(**kwargs)
@@ -309,7 +308,7 @@ def main() -> None:
     parser.add_argument(
         "--wfa-ga",
         action="store_true",
-        help="IS窓内で WFA (fold=ValidationConfig) を使って選抜する (enable_walk_forward_for_ga)",
+        help="IS窓内で WFA (fold=ValidationConfig) を使って選抜する (ga_selection_mode=walk_forward)",
     )
     parser.add_argument(
         "--no-early-termination",
@@ -383,7 +382,6 @@ def main() -> None:
         oos_config.fitness_constraints = {}
 
     oos_config.evaluation_config = EvaluationConfig(
-        enable_parallel=False,
         # OOS 測定では窓を分割せず全期間を 1 シナリオで評価する
         oos_split_ratio=0.0,
         # 早期終了 (DD/期待値/ペース打ち切り) は進化の高速化機構であり

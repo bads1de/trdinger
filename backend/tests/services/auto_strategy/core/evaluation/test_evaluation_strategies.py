@@ -16,7 +16,7 @@ def _config(**eval_kwargs: object) -> SimpleNamespace:
     """evaluation_config を持つテスト用設定を生成する。"""
     defaults = {
         "evaluation_mode": "auto",
-        "enable_walk_forward": False,
+        "ga_selection_mode": "fitness",
     }
     defaults.update(eval_kwargs)
     return SimpleNamespace(evaluation_config=SimpleNamespace(**defaults))
@@ -25,28 +25,48 @@ def _config(**eval_kwargs: object) -> SimpleNamespace:
 class TestResolveEvaluationMode:
     """evaluation_mode 解決ロジックのテスト。"""
 
-    def test_explicit_mode_wins_over_flags(self):
-        cfg = _config(
-            evaluation_mode="walk_forward",
-            enable_walk_forward=False,
-        )
+    def test_explicit_walk_forward_mode(self):
+        cfg = _config(evaluation_mode="walk_forward")
         assert resolve_evaluation_mode(cfg) == "walk_forward"
 
     def test_explicit_single_mode(self):
         cfg = _config(evaluation_mode="single")
         assert resolve_evaluation_mode(cfg) == "single"
 
-    def test_auto_derives_walk_forward_from_flag(self):
-        cfg = _config(enable_walk_forward=True)
-        assert resolve_evaluation_mode(cfg) == "walk_forward"
-
-    def test_auto_derives_single_when_all_off(self):
+    def test_auto_resolves_to_single(self):
         cfg = _config()
         assert resolve_evaluation_mode(cfg) == "single"
 
-    def test_unknown_explicit_mode_falls_back_to_flags(self):
-        cfg = _config(evaluation_mode="bogus", enable_walk_forward=True)
-        assert resolve_evaluation_mode(cfg) == "walk_forward"
+    def test_unknown_explicit_mode_falls_back_to_single(self):
+        cfg = _config(evaluation_mode="bogus")
+        assert resolve_evaluation_mode(cfg) == "single"
+
+
+class TestResolveGaSelectionMode:
+    """ga_selection_mode 解決ロジックのテスト。"""
+
+    def test_explicit_walk_forward(self):
+        from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
+            resolve_ga_selection_mode,
+        )
+
+        cfg = _config(ga_selection_mode="walk_forward")
+        assert resolve_ga_selection_mode(cfg) == "walk_forward"
+
+    def test_default_is_fitness(self):
+        from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
+            resolve_ga_selection_mode,
+        )
+
+        assert resolve_ga_selection_mode(_config()) == "fitness"
+
+    def test_unknown_mode_falls_back_to_fitness(self):
+        from app.services.auto_strategy.core.evaluation.evaluation_strategies import (
+            resolve_ga_selection_mode,
+        )
+
+        cfg = _config(ga_selection_mode="bogus")
+        assert resolve_ga_selection_mode(cfg) == "fitness"
 
 
 class TestEvaluationStrategy:
@@ -85,7 +105,7 @@ class TestEvaluationStrategy:
         self.strategy._evaluate_single_report = Mock(return_value=single_report)
 
         cfg = _config(
-            enable_walk_forward=False,
+            evaluation_mode="single",
         )
 
         report = self.strategy.execute_report(
@@ -160,7 +180,7 @@ class TestEvaluationStrategy:
 
         config = SimpleNamespace(
             evaluation_config=SimpleNamespace(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=3,
                 wfa_train_ratio=0.8,
                 wfa_anchored=False,
@@ -187,7 +207,7 @@ class TestEvaluationStrategy:
 
         config = SimpleNamespace(
             evaluation_config=SimpleNamespace(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=3,
                 wfa_train_ratio=0.8,
                 wfa_anchored=True,
@@ -238,7 +258,7 @@ class TestEvaluationStrategy:
         self.evaluator._perform_single_evaluation_report.side_effect = side_effect
 
         config = SimpleNamespace(
-            evaluation_config=SimpleNamespace(enable_walk_forward=False),
+            evaluation_config=SimpleNamespace(ga_selection_mode="fitness"),
             objectives=["weighted_score"],
             fitness_constraints={},
             two_stage_selection_config=SimpleNamespace(min_pass_rate=1.0),
@@ -278,7 +298,7 @@ class TestEvaluationStrategy:
         )
 
         config = SimpleNamespace(
-            evaluation_config=SimpleNamespace(enable_walk_forward=False),
+            evaluation_config=SimpleNamespace(ga_selection_mode="fitness"),
             objectives=["weighted_score"],
             fitness_constraints={},
             two_stage_selection_config=SimpleNamespace(min_pass_rate=0.5),
@@ -327,7 +347,7 @@ class TestEvaluationStrategy:
 
         config = SimpleNamespace(
             evaluation_config=SimpleNamespace(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=3,
                 wfa_train_ratio=0.8,
                 wfa_anchored=False,

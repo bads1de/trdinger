@@ -55,11 +55,9 @@ class TestConfigValidator:
         config.evaluation_config.multi_fidelity_min_candidates = 3
         config.evaluation_config.oos_split_ratio = 0.3
         config.evaluation_config.oos_fitness_weight = 0.6
-        config.evaluation_config.enable_walk_forward = False
         config.evaluation_config.wfa_n_folds = 5
         config.evaluation_config.wfa_train_ratio = 0.7
         config.evaluation_config.wfa_anchored = True
-        config.evaluation_config.enable_parallel = True
         config.evaluation_config.max_workers = 4
         config.evaluation_config.timeout = 300.0
         config.evaluation_config.early_termination_settings = MagicMock()

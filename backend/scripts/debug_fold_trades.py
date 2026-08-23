@@ -41,10 +41,8 @@ def main() -> None:
     # 検証時と同じ WFA 設定に揃える
     vc = ga_config.validation_config
     ec = ga_config.evaluation_config
-    ec.enable_walk_forward = True
     ec.wfa_n_folds = vc.wfa_n_folds
     ec.wfa_train_ratio = vc.wfa_train_ratio
-    ec.wfa_anchored = vc.wfa_anchored
     ec.evaluation_mode = "walk_forward"
     ec.oos_split_ratio = 0.0
 

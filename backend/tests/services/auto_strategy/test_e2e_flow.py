@@ -105,7 +105,7 @@ class TestE2EFlow:
             max_indicators=2,
             elite_size=1,
             fitness_sharing={"enable_fitness_sharing": False},
-            evaluation_config=EvaluationConfig(enable_parallel=False),
+            evaluation_config=EvaluationConfig(),
             # このテストは基本フロー検証のため自動検証パイプラインを無効化
             validation_config=ValidationConfig(enabled=False),
         )

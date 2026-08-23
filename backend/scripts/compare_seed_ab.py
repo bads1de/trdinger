@@ -112,7 +112,7 @@ def run_once(
         non_price_indicator_probability=0.3,
         use_seed_strategies=use_seeds,
         seed_injection_rate=seed_rate if use_seeds else 0.0,
-        evaluation_config=EvaluationConfig(enable_parallel=not smoke),
+        evaluation_config=EvaluationConfig(),
         fallback_start_date="2022-01-01",
         fallback_end_date="2022-12-31",
     )

@@ -76,7 +76,6 @@ def apply_smoke_mode(args: argparse.Namespace) -> argparse.Namespace:
     args.population = 2
     args.generations = 1
     args.elite_size = 1
-    args.no_parallel = True
     args.no_save = True
     if getattr(args, "min_trades", None) is None:
         args.min_trades = 0
@@ -193,11 +192,6 @@ def parse_args() -> argparse.Namespace:
         "-v",
         action="store_true",
         help="詳細なログを出力",
-    )
-    parser.add_argument(
-        "--no-parallel",
-        action="store_true",
-        help="並列評価を無効化",
     )
     parser.add_argument(
         "--no-save",
@@ -336,7 +330,6 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         elite_size=getattr(args, "elite_size", 2),
         start_date=args.start_date,
         end_date=args.end_date,
-        no_parallel=getattr(args, "no_parallel", False),
         verbose=getattr(args, "verbose", False),
         smoke=smoke_mode,
         min_trades=getattr(args, "min_trades", None),

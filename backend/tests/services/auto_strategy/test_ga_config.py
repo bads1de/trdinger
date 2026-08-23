@@ -211,7 +211,6 @@ class TestGAConfig:
                     "valid_condition_operators": [">", "<", "CROSS_UP"],
                 },
                 "evaluation_config": {
-                    "enable_parallel": False,
                     "max_workers": 3,
                     "timeout": 120.0,
                     "enable_multi_fidelity_evaluation": True,
@@ -221,6 +220,7 @@ class TestGAConfig:
                     "multi_fidelity_min_candidates": 7,
                     "oos_split_ratio": 0.25,
                     "oos_fitness_weight": 0.6,
+                    # 旧フラグは from_dict で evaluation_mode へ変換される
                     "enable_walk_forward": True,
                     "wfa_n_folds": 4,
                     "wfa_train_ratio": 0.8,
@@ -247,7 +247,6 @@ class TestGAConfig:
             "CROSS_UP",
         ]
 
-        assert restored.evaluation_config.enable_parallel is False
         assert restored.evaluation_config.max_workers == 3
         assert restored.evaluation_config.timeout == 120.0
         assert restored.evaluation_config.enable_multi_fidelity_evaluation is True
@@ -257,7 +256,8 @@ class TestGAConfig:
         assert restored.evaluation_config.multi_fidelity_min_candidates == 7
         assert restored.evaluation_config.oos_split_ratio == 0.25
         assert restored.evaluation_config.oos_fitness_weight == 0.6
-        assert restored.evaluation_config.enable_walk_forward is True
+        # 旧 enable_walk_forward フラグは evaluation_mode へ変換される
+        assert restored.evaluation_config.evaluation_mode == "walk_forward"
         assert restored.evaluation_config.wfa_n_folds == 4
         assert restored.evaluation_config.wfa_train_ratio == 0.8
         assert restored.evaluation_config.wfa_anchored is True

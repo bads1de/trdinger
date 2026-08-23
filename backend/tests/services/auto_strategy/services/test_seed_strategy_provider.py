@@ -454,7 +454,6 @@ class TestEngineSeedInjection:
         config = GAConfig()
         config.population_size = 10
         config.generations = 5
-        config.evaluation_config.enable_parallel = False
         config.fitness_sharing.enable_fitness_sharing = False
         config.mutation_rate = 0.1
         config.use_seed_strategies = True

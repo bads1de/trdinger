@@ -171,7 +171,7 @@ def main() -> None:
                 if args.rtr
                 else SurvivalSelectionConfig()
             ),
-            evaluation_config=EvaluationConfig(enable_parallel=not args.smoke),
+            evaluation_config=EvaluationConfig(),
             fallback_start_date="2024-01-01",
             fallback_end_date="2024-06-30",
         )

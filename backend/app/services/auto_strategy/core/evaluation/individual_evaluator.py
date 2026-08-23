@@ -46,7 +46,11 @@ from .evaluation_report import (
     ScenarioEvaluation,
     _safe_copy_metadata,
 )
-from .evaluation_strategies import EvaluationStrategy
+from .evaluation_strategies import (
+    EvaluationStrategy,
+    resolve_evaluation_mode,
+    resolve_ga_selection_mode,
+)
 from .evaluation_window_service import EvaluationWindowService
 from .run_config_builder import RunConfigBuilder
 
@@ -548,9 +552,8 @@ class IndividualEvaluator:
             "aggregate_method": str(
                 getattr(robustness_config, "aggregate_method", "robust")
             ),
-            "enable_walk_forward": bool(
-                getattr(evaluation_config, "enable_walk_forward", False)
-            ),
+            "evaluation_mode": resolve_evaluation_mode(config),
+            "ga_selection_mode": resolve_ga_selection_mode(config),
             "wfa_n_folds": int(getattr(evaluation_config, "wfa_n_folds", 0) or 0),
             "wfa_train_ratio": float(
                 getattr(evaluation_config, "wfa_train_ratio", 0.0) or 0.0

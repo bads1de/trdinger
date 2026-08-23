@@ -77,7 +77,7 @@ def validation_config():
             max_drawdown=None,
         ),
         evaluation_config=EvaluationConfig(
-            enable_walk_forward=True,
+            evaluation_mode="walk_forward",
             wfa_n_folds=5,
         ),
         objectives=["total_return"],
@@ -95,7 +95,7 @@ class TestStrategyValidationService:
                 min_pass_rate=0.5,
                 max_candidates=4,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -150,7 +150,7 @@ class TestStrategyValidationService:
                 min_pass_rate=0.5,
                 max_candidates=3,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -238,7 +238,7 @@ class TestStrategyValidationService:
     def test_robustness_gate_keeps_wfa_passing_candidate(self, mock_evaluator):
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         config.robustness_config.enabled = True
@@ -281,7 +281,7 @@ class TestStrategyValidationService:
     def test_robustness_gate_rejects_partial_failure(self, mock_evaluator):
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         config.robustness_config.enabled = True
@@ -327,7 +327,7 @@ class TestStrategyValidationService:
     def test_robustness_gate_rejects_execution_error(self, mock_evaluator):
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         config.robustness_config.enabled = True
@@ -361,7 +361,7 @@ class TestStrategyValidationService:
         """評価計画のrobustness設定からゲートが有効化される"""
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
             evaluation_plan={
                 "robustness": {
@@ -420,7 +420,7 @@ class TestStrategyValidationService:
                 enabled=True,
                 min_pass_rate=0.6,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -471,7 +471,7 @@ class TestStrategyValidationService:
                 enabled=True,
                 min_pass_rate=0.9,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -508,7 +508,7 @@ class TestStrategyValidationService:
                 min_pass_rate=0.0,
                 min_trades=50,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -557,7 +557,7 @@ class TestStrategyValidationService:
                 min_pass_rate=0.0,
                 max_drawdown=0.05,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -606,7 +606,7 @@ class TestStrategyValidationService:
                 min_trades=1,
                 max_drawdown=0.5,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -657,7 +657,7 @@ class TestStrategyValidationService:
     ):
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -691,7 +691,7 @@ class TestStrategyValidationService:
     def test_incomplete_evaluation_fails_closed(self, mock_evaluator):
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -733,7 +733,7 @@ class TestStrategyValidationService:
     def test_evaluation_fallback_fails_closed(self, mock_evaluator):
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -766,7 +766,7 @@ class TestStrategyValidationService:
         """ペナルティフォールドが1件でもあれば不合格になる"""
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -797,7 +797,7 @@ class TestStrategyValidationService:
         """ペナルティが無ければ判定は従来通り"""
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -831,7 +831,7 @@ class TestStrategyValidationService:
                 min_pass_rate=0.0,
                 min_primary_fitness=0.1,  # 最大許容値（ドローダウン上限）
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["max_drawdown"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -897,7 +897,7 @@ class TestStrategyValidationService:
                 enabled=True,
                 min_pass_rate=0.6,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -938,7 +938,7 @@ class TestStrategyValidationService:
         """検証エラー時は不合格として扱われる"""
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -973,7 +973,7 @@ class TestStrategyValidationService:
                 enabled=True,
                 min_pass_rate=0.6,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -1018,7 +1018,7 @@ class TestStrategyValidationService:
                 enabled=True,
                 min_pass_rate=0.6,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -1059,7 +1059,7 @@ class TestStrategyValidationService:
                 max_candidates=1,
                 validate_pareto_front=True,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -1115,7 +1115,7 @@ class TestStrategyValidationService:
                 min_pass_rate=0.6,
                 max_candidates=1,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -1155,7 +1155,7 @@ class TestStrategyValidationService:
                 min_pass_rate=0.0,
                 min_primary_fitness=0.5,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         service = StrategyValidationService(mock_evaluator)
@@ -1239,7 +1239,7 @@ class TestValidationGaConfigBuilding:
                 wfa_train_ratio=0.7,
             ),
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=False,
+                evaluation_mode="single",
                 oos_split_ratio=0.25,
             ),
             objectives=["total_return"],
@@ -1250,7 +1250,7 @@ class TestValidationGaConfigBuilding:
 
         eval_cfg = validation_config.evaluation_config
         # WFAが有効化され、OOS 分割は無効化される
-        assert eval_cfg.enable_walk_forward is True
+        assert eval_cfg.evaluation_mode == "walk_forward"
         assert eval_cfg.wfa_n_folds == 3
         assert eval_cfg.oos_split_ratio == 0.0
         # 最終品質ゲートは完全評価で行う（早期終了を無効化）
@@ -1261,7 +1261,7 @@ class TestValidationGaConfigBuilding:
         config = GAConfig(
             validation_config=ValidationConfig(enabled=True, wfa_n_folds=5),
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=False,
+                evaluation_mode="single",
                 early_termination_settings={
                     "enabled": True,
                     "min_trades": 30,
@@ -1329,7 +1329,6 @@ class TestValidationConfig:
         assert vc.max_drawdown is None
         assert vc.wfa_n_folds == 3
         assert vc.wfa_train_ratio == 0.5
-        assert vc.wfa_anchored is False
         assert vc.validate_candidates is True
         assert vc.max_candidates == 5
         assert vc.enable_pbo_gate is True
@@ -1457,7 +1456,7 @@ class TestOverfittingGates:
                 enable_pbo_gate=True,
                 pbo_threshold=0.5,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(returns=[0.1, -0.2, -0.3])
@@ -1477,7 +1476,7 @@ class TestOverfittingGates:
                 enable_pbo_gate=True,
                 pbo_threshold=0.5,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(returns=[0.1, 0.2, -0.3])
@@ -1495,7 +1494,7 @@ class TestOverfittingGates:
                 enable_pbo_gate=True,
                 pbo_threshold=0.5,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(returns=None, sharpes=[1.0, 1.5])
@@ -1512,7 +1511,7 @@ class TestOverfittingGates:
                 min_pass_rate=0.0,
                 enable_pbo_gate=False,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(returns=[-0.1, -0.2, -0.3])
@@ -1533,7 +1532,7 @@ class TestOverfittingGates:
                 wfa_n_folds=2,
                 wfa_train_ratio=0.3,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(returns=[0.1, 0.1], sharpes=[0.5, 0.5])
@@ -1561,7 +1560,7 @@ class TestOverfittingGates:
                 wfa_n_folds=2,
                 wfa_train_ratio=0.3,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(returns=[0.1, 0.1], sharpes=[2.0, 2.0])
@@ -1588,7 +1587,7 @@ class TestOverfittingGates:
                 wfa_n_folds=3,
                 wfa_train_ratio=0.5,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(
@@ -1613,7 +1612,7 @@ class TestOverfittingGates:
                 enabled=True,
                 min_pass_rate=0.0,
             ),
-            evaluation_config=EvaluationConfig(enable_walk_forward=True),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
         report = self._make_report_with_metrics(returns=[0.1], sharpes=[0.1])

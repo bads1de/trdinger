@@ -189,10 +189,10 @@ describe("GAConfigForm", () => {
     expect(
       submittedConfig.ga_config.fitness_sharing.enable_fitness_sharing
     ).toBe(true);
-    // 並列も常時ON
-    expect(submittedConfig.ga_config.evaluation_config.enable_parallel).toBe(
-      true
-    );
+    // 並列評価は常時有効のため enable_parallel は送信されない
+    expect(
+      submittedConfig.ga_config.evaluation_config.enable_parallel
+    ).toBeUndefined();
   });
 
   test("初期値がfalseでも送信時は常時ONに正規化されること", () => {
@@ -202,7 +202,7 @@ describe("GAConfigForm", () => {
         ...initialConfig.ga_config,
         dynamic_objective_reweighting: false,
         fitness_sharing: { enable_fitness_sharing: false },
-        evaluation_config: { enable_parallel: false },
+        evaluation_config: { max_workers: 4 },
       },
     };
 
@@ -222,9 +222,9 @@ describe("GAConfigForm", () => {
     expect(
       submittedConfig.ga_config.fitness_sharing.enable_fitness_sharing
     ).toBe(true);
-    expect(submittedConfig.ga_config.evaluation_config.enable_parallel).toBe(
-      true
-    );
+    expect(
+      submittedConfig.ga_config.evaluation_config.enable_parallel
+    ).toBeUndefined();
   });
 
   // ------------------------------------------------------------------

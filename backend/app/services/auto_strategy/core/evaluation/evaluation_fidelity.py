@@ -75,8 +75,8 @@ def build_coarse_ga_config(config: GAConfig) -> GAConfig:
         GAConfig: 計算負荷を下げた縮退版の設定。`_evaluation_fidelity` 属性に "coarse" が設定されます。
     """
     coarse = deepcopy(config)
-    coarse.evaluation_config.enable_walk_forward = False
-    coarse.evaluation_config.enable_walk_forward_for_ga = False
+    coarse.evaluation_config.evaluation_mode = "single"
+    coarse.evaluation_config.ga_selection_mode = "fitness"
     # multi-fidelity 有効時は coarse 評価専用の OOS 比率（multi_fidelity_oos_ratio）を
     # 常に優先する。通常の oos_split_ratio がデフォルト有効（0.25）でも、
     # 粗評価の軽量・高速という意図を維持するため。

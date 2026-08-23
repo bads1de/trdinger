@@ -20,7 +20,6 @@ export interface EarlyTerminationSettingsConfig {
 }
 
 export interface GAEvaluationConfig {
-  enable_parallel?: boolean;
   max_workers?: number | null;
   timeout?: number;
   enable_multi_fidelity_evaluation?: boolean;
@@ -31,9 +30,10 @@ export interface GAEvaluationConfig {
   early_termination_settings?: EarlyTerminationSettingsConfig;
   oos_split_ratio?: number;
   oos_fitness_weight?: number;
-  /** 評価モード: "single" | "walk_forward" | "auto"。未指定("auto")はフラグから自動判定 */
+  /** 評価モード: "single" | "walk_forward" | "auto"。未指定("auto")は "single" 扱い */
   evaluation_mode?: string;
-  enable_walk_forward?: boolean;
+  /** GA選抜（IS評価）モード: "fitness" | "walk_forward"。旧 enable_walk_forward_for_ga 相当 */
+  ga_selection_mode?: string;
   wfa_n_folds?: number;
   wfa_train_ratio?: number;
   wfa_anchored?: boolean;
@@ -74,8 +74,6 @@ export interface GAValidationConfig {
   wfa_n_folds?: number;
   /** 検証用 WFA トレーニング比率 */
   wfa_train_ratio?: number;
-  /** 検証用 WFA anchored モード */
-  wfa_anchored?: boolean;
   /** 候補戦略も検証するか */
   validate_candidates?: boolean;
   /** 候補検証の対象数 */

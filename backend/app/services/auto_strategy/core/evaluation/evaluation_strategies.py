@@ -30,15 +30,18 @@ logger = logging.getLogger(__name__)
 
 # 評価モードの取りうる値（レポートの mode / 自動判定にも使用）
 EVALUATION_MODES = frozenset({"single", "walk_forward"})
-# evaluation_mode 未指定（自動判定）を表す値
+# GA 選抜（IS 評価）モードの取りうる値
+GA_SELECTION_MODES = frozenset({"fitness", "walk_forward"})
+# evaluation_mode / ga_selection_mode 未指定（自動判定）を表す値
 AUTO_EVALUATION_MODE = "auto"
+DEFAULT_GA_SELECTION_MODE = "fitness"
 
 
 def resolve_evaluation_mode(config: GAConfig) -> str:
     """GAConfig から有効な評価モードを決定する。
 
     明示的な `evaluation_config.evaluation_mode` が設定されていればそれを優先し、
-    "auto"（未指定）の場合は `enable_walk_forward` フラグから自動判定する。
+    "auto"（未指定）の場合は "single" を返す。
 
     Args:
         config: GA設定。
@@ -53,14 +56,32 @@ def resolve_evaluation_mode(config: GAConfig) -> str:
         if explicit in EVALUATION_MODES:
             return explicit
         logger.warning(
-            "未知の evaluation_mode=%r を無視し、フラグから自動判定します", explicit
+            "未知の evaluation_mode=%r を無視し、single を使用します", explicit
         )
-
-    if evaluation_config is not None and bool(
-        getattr(evaluation_config, "enable_walk_forward", False)
-    ):
-        return "walk_forward"
     return "single"
+
+
+def resolve_ga_selection_mode(config: GAConfig) -> str:
+    """GA 選抜（IS 評価）のモードを決定する。
+
+    Args:
+        config: GA設定。
+
+    Returns:
+        str: "fitness" | "walk_forward" のいずれか。
+    """
+    evaluation_config = getattr(config, "evaluation_config", None)
+
+    explicit = getattr(
+        evaluation_config, "ga_selection_mode", DEFAULT_GA_SELECTION_MODE
+    )
+    if explicit and explicit in GA_SELECTION_MODES:
+        return explicit
+    if explicit != DEFAULT_GA_SELECTION_MODE:
+        logger.warning(
+            "未知の ga_selection_mode=%r を無視し、fitness を使用します", explicit
+        )
+    return DEFAULT_GA_SELECTION_MODE
 
 
 class EvaluationStrategy:
@@ -86,7 +107,7 @@ class EvaluationStrategy:
 
         このメソッドは、個体評価の「ルーティング」を担当します。
         モードは `evaluation_config.evaluation_mode` で明示的に指定され、
-        未指定 ("auto") の場合は従来のフラグ群から自動判定されます
+        未指定 ("auto") は "single" 扱いです
         （`resolve_evaluation_mode` を参照）。
 
         Args:
@@ -113,9 +134,7 @@ class EvaluationStrategy:
     ) -> EvaluationReport:
         """GA の選択に使う IS 専用評価を実行する。"""
         evaluation_config = getattr(config, "evaluation_config", None)
-        if evaluation_config is not None and bool(
-            getattr(evaluation_config, "enable_walk_forward_for_ga", False)
-        ):
+        if resolve_ga_selection_mode(config) == "walk_forward":
             ga_backtest_config: dict[str, Any] = base_backtest_config
             oos_ratio_ga = float(
                 getattr(evaluation_config, "oos_split_ratio", 0.0) or 0.0

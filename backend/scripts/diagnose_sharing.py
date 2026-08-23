@@ -145,7 +145,7 @@ def main() -> None:
         non_price_indicator_probability=0.3,
         use_seed_strategies=False,
         seed_injection_rate=0.0,
-        evaluation_config=EvaluationConfig(enable_parallel=True),
+        evaluation_config=EvaluationConfig(),
         fallback_start_date="2024-01-01",
         fallback_end_date="2024-06-30",
     )

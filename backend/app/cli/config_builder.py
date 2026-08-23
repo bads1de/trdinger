@@ -95,7 +95,6 @@ def build_ga_config_dict(
     elite_size: int,
     start_date: str,
     end_date: str,
-    no_parallel: bool = False,
     verbose: bool = False,
     smoke: bool = False,
     min_trades: int | None = None,
@@ -128,7 +127,6 @@ def build_ga_config_dict(
         elite_size: エリート保存数
         start_date: バックテスト開始日
         end_date: バックテスト終了日
-        no_parallel: 並列評価を無効化
         verbose: 詳細ログ
         smoke: 高速スモークモード（最小構成へ縮小）
         min_trades: 最小取引回数制約（None はデフォルト、0 で無効）
@@ -179,10 +177,7 @@ def build_ga_config_dict(
         "crossover_rate": crossover_rate,
         "mutation_rate": mutation_rate,
         "elite_size": normalized["elite_size"],
-        # 並列は常時有効（smokeでも有効だが、 smoke は population=2/gen=1 のため実質逐次と同等）
-        "evaluation_config": {
-            "enable_parallel": True,
-        },
+        # 並列評価は常時有効（smokeでも有効だが、 smoke は population=2/gen=1 のため実質逐次と同等）
         "log_level": "DEBUG" if verbose else "INFO",
         "fallback_start_date": start_date,
         "fallback_end_date": end_date,
@@ -197,8 +192,8 @@ def build_ga_config_dict(
         # smoke モードでは早期終了（trade_pace / max_drawdown 等）を無効化する。
         # min_trades=30 等のデフォルト基準は小さい構成・短い期間ですぐ発動し、
         # 全個体がペナルティ fitness になって動作確認にならないため。
-        config_kwargs["evaluation_config"]["early_termination_settings"] = {
-            "enabled": False
+        config_kwargs["evaluation_config"] = {
+            "early_termination_settings": {"enabled": False}
         }
     else:
         config_kwargs["max_indicators"] = max_indicators

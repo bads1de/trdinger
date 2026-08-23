@@ -625,10 +625,9 @@ class StrategyValidationService:
         validation_ga_config = copy.deepcopy(ga_config)
 
         evaluation_config = validation_ga_config.evaluation_config
-        evaluation_config.enable_walk_forward = True
         evaluation_config.wfa_n_folds = validation_config.wfa_n_folds
         evaluation_config.wfa_train_ratio = validation_config.wfa_train_ratio
-        evaluation_config.wfa_anchored = validation_config.wfa_anchored
+        # anchored の可否は evaluation_config.wfa_anchored を唯一の情報源とする。
         # 最終品質ゲートは明示的に WFA モードへ固定する。
         evaluation_config.evaluation_mode = "walk_forward"
         # OOS 分割が WFA と競合しないように無効化（後方互換のため明示）

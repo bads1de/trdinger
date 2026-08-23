@@ -45,7 +45,7 @@ def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> dict[str, Any]:
         elite_size=2,
         max_indicators=3,
         min_indicators=1,
-        evaluation_config=EvaluationConfig(enable_parallel=False),
+        evaluation_config=EvaluationConfig(),
         use_seed_strategies=use_seeds,
         seed_injection_rate=seed_rate if use_seeds else 0.0,
         fitness_constraints={"min_trades": 1},

@@ -110,7 +110,8 @@ class TestBuildGaConfigDict:
         assert config["generations"] == 10
         assert config["crossover_rate"] == 0.8
         assert config["elite_size"] == 2
-        assert config["evaluation_config"]["enable_parallel"] is True
+        # 並列評価は常時有効のため evaluation_config の指定は不要
+        assert "evaluation_config" not in config
         # 検証は無効化フラグが無い限り GAConfig のデフォルトに委ねる（キー自体を入れない）
         assert "validation_config" not in config
 
@@ -127,21 +128,6 @@ class TestBuildGaConfigDict:
             no_validation=True,
         )
         assert config["validation_config"]["enabled"] is False
-
-    def test_no_parallel_disables(self):
-        """--no-parallel は非推奨: 並列は常時ON（max_workers=1で逐次）"""
-        config = build_ga_config_dict(
-            population=20,
-            generations=10,
-            crossover_rate=0.8,
-            mutation_rate=0.2,
-            elite_size=2,
-            start_date="2024-01-01",
-            end_date="2024-06-30",
-            no_parallel=True,
-        )
-        # 並列は常時ONのため、旧フラグは無視される
-        assert config["evaluation_config"]["enable_parallel"] is True
 
     def test_smoke_sets_minimal(self):
         """smoke モードで最小構成になる"""
@@ -186,7 +172,7 @@ class TestBuildGaConfigDict:
             start_date="2024-01-01",
             end_date="2024-06-30",
         )
-        assert "early_termination_settings" not in config["evaluation_config"]
+        assert "evaluation_config" not in config
 
     def test_smoke_config_is_accepted_by_ga_config(self):
         """smoke 構成が GAConfig.from_dict で受け入れられる"""

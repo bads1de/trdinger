@@ -69,7 +69,7 @@ class TestWalkForwardAnalysis:
         """WFA が有効な GAConfig"""
         return GAConfig(
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=5,
                 wfa_train_ratio=0.7,
                 wfa_anchored=False,
@@ -89,7 +89,7 @@ class TestWalkForwardAnalysis:
         """WFA 設定のデフォルト値テスト"""
         config = GAConfig()
 
-        assert config.evaluation_config.enable_walk_forward is False
+        assert config.evaluation_config.evaluation_mode == "auto"
         assert config.evaluation_config.wfa_n_folds == 3
         assert config.evaluation_config.wfa_train_ratio == 0.5
         assert config.evaluation_config.wfa_anchored is False
@@ -98,14 +98,14 @@ class TestWalkForwardAnalysis:
         """WFA 設定のカスタム値テスト"""
         config = GAConfig(
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=10,
                 wfa_train_ratio=0.8,
                 wfa_anchored=True,
             ),
         )
 
-        assert config.evaluation_config.enable_walk_forward is True
+        assert config.evaluation_config.evaluation_mode == "walk_forward"
         assert config.evaluation_config.wfa_n_folds == 10
         assert config.evaluation_config.wfa_train_ratio == 0.8
         assert config.evaluation_config.wfa_anchored is True
@@ -115,11 +115,11 @@ class TestWalkForwardAnalysis:
         config_dict = wfa_config.to_dict()
 
         assert "evaluation_config" in config_dict
-        assert config_dict["evaluation_config"]["enable_walk_forward"] is True
+        assert config_dict["evaluation_config"]["evaluation_mode"] == "walk_forward"
         assert config_dict["evaluation_config"]["wfa_n_folds"] == 5
 
     def test_wfa_config_from_dict(self):
-        """WFA 設定の辞書復元テスト"""
+        """WFA 設定の辞書復元テスト（旧フラグは evaluation_mode へ変換）"""
         data = {
             "evaluation_config": {
                 "enable_walk_forward": True,
@@ -130,7 +130,7 @@ class TestWalkForwardAnalysis:
         }
         config = GAConfig.from_dict(data)
 
-        assert config.evaluation_config.enable_walk_forward is True
+        assert config.evaluation_config.evaluation_mode == "walk_forward"
         assert config.evaluation_config.wfa_n_folds == 8
         assert config.evaluation_config.wfa_train_ratio == 0.75
         assert config.evaluation_config.wfa_anchored is True
@@ -198,7 +198,7 @@ class TestWalkForwardAnalysis:
         """Anchored WFA モードのテスト"""
         config = GAConfig(
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=3,
                 wfa_train_ratio=0.7,
                 wfa_anchored=True,  # Anchored モード
@@ -294,7 +294,7 @@ class TestWFAEdgeCases:
 
         wfa_config = GAConfig(
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=5,
             ),
             objectives=["weighted_score"],
@@ -326,7 +326,7 @@ class TestWFAEdgeCases:
 
         wfa_config = GAConfig(
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=1,  # 1フォールドのみ
             ),
             objectives=["weighted_score"],
@@ -385,7 +385,7 @@ class TestWFAMultiObjective:
 
         config = GAConfig(
             evaluation_config=EvaluationConfig(
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 wfa_n_folds=3,
             ),
             objectives=["sharpe_ratio", "total_return", "max_drawdown"],

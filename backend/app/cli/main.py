@@ -109,9 +109,6 @@ def exp_run(
     initial_capital: Annotated[
         float, typer.Option("--initial-capital", help="初期資本")
     ] = 100000.0,
-    no_parallel: Annotated[
-        bool, typer.Option("--no-parallel", help="並列評価を無効化")
-    ] = False,
     no_validation: Annotated[
         bool, typer.Option("--no-validation", help="WFA自動検証を無効化")
     ] = False,
@@ -175,7 +172,6 @@ def exp_run(
             elite_size=elite_size,
             start_date=start_date,
             end_date=end_date,
-            no_parallel=no_parallel,
             verbose=verbose,
             smoke=smoke,
             min_trades=min_trades,

@@ -116,7 +116,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         dynamic_objective_reweighting: true,
         evaluation_config: {
           ...initialEvaluationConfig,
-          enable_parallel: initialEvaluationConfig.enable_parallel ?? true,
           max_workers: initialEvaluationConfig.max_workers ?? 4,
           timeout: initialEvaluationConfig.timeout ?? 300,
           enable_multi_fidelity_evaluation:
@@ -156,8 +155,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           oos_split_ratio: initialEvaluationConfig.oos_split_ratio ?? 0.25,
           oos_fitness_weight: initialEvaluationConfig.oos_fitness_weight ?? 0.5,
           evaluation_mode: initialEvaluationConfig.evaluation_mode ?? "auto",
-          enable_walk_forward:
-            initialEvaluationConfig.enable_walk_forward ?? false,
+          ga_selection_mode: initialEvaluationConfig.ga_selection_mode ?? "fitness",
           wfa_n_folds: initialEvaluationConfig.wfa_n_folds ?? 5,
           wfa_train_ratio: initialEvaluationConfig.wfa_train_ratio ?? 0.7,
           wfa_anchored: initialEvaluationConfig.wfa_anchored ?? false,
@@ -182,7 +180,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               : initialValidationConfig.max_drawdown,
           wfa_n_folds: initialValidationConfig.wfa_n_folds ?? 5,
           wfa_train_ratio: initialValidationConfig.wfa_train_ratio ?? 0.7,
-          wfa_anchored: initialValidationConfig.wfa_anchored ?? false,
           validate_candidates:
             initialValidationConfig.validate_candidates ?? true,
           max_candidates: initialValidationConfig.max_candidates ?? 5,
@@ -361,7 +358,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
     config.ga_config.iterative_improvement_config ?? {};
 
   const handleSubmit = () => {
-    // Phase1: 常時ON項目は強制的にtrueで送信
+    // Phase1: 常時ON項目は強制的にtrueで送信（並列評価は常時有効のため送信不要）
     const forcedConfig = {
       ...config,
       ga_config: {
@@ -373,7 +370,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         },
         evaluation_config: {
           ...(config.ga_config.evaluation_config ?? {}),
-          enable_parallel: true,
         },
       },
     };
@@ -567,41 +563,23 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
               </p>
             </div>
 
-            {/* WFA設定 */}
-            <div className="mt-3 space-y-2">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={evaluationConfig.enable_walk_forward ?? false}
-                  onChange={(e) =>
-                    handleEvaluationConfigChange({
-                      enable_walk_forward: e.target.checked,
-                    })
+            {/* WFA設定（evaluation_mode = walk_forward 時に表示） */}
+            {(evaluationConfig.evaluation_mode ?? "auto") === "walk_forward" && (
+              <div className="mt-3">
+                <InputField
+                  label="WFAフォールド数"
+                  type="number"
+                  value={evaluationConfig.wfa_n_folds ?? 5}
+                  onChange={(val) =>
+                    handleEvaluationConfigChange({ wfa_n_folds: val })
                   }
-                  className="rounded border-indigo-500 text-indigo-600 focus:ring-indigo-500"
+                  min={2}
+                  max={10}
+                  step={1}
+                  description="期間分割数"
                 />
-                <span className="text-sm text-indigo-200">
-                  Walk-Forward Analysis (WFA)
-                </span>
-              </label>
-
-              {evaluationConfig.enable_walk_forward && (
-                <div className="pl-6">
-                  <InputField
-                    label="WFAフォールド数"
-                    type="number"
-                    value={evaluationConfig.wfa_n_folds ?? 5}
-                    onChange={(val) =>
-                      handleEvaluationConfigChange({ wfa_n_folds: val })
-                    }
-                    min={2}
-                    max={10}
-                    step={1}
-                    description="期間分割数"
-                  />
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* 多目的最適化設定 */}

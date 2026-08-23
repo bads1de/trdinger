@@ -25,11 +25,11 @@ def test_evaluation_plan_from_dict_ignores_unknown_keys():
         {
             "schema_version": "1",
             "validation": {"method": "oos"},
+            # 旧 enabled キーは無視され、シナリオ有無で gate の要否が決まる
             "robustness": {"enabled": True},
         }
     )
 
-    assert plan.robustness.enabled is True
     assert plan.robustness.scenarios == []
 
 
@@ -72,9 +72,9 @@ def test_apply_to_ga_config_syncs_enabled_and_scenarios():
 
 
 def test_apply_to_ga_config_disabled_keeps_legacy_fields():
-    """無効な計画ではレガシー設定を保持する"""
+    """シナリオ空の計画では gate を無効化し、レガシー設定を保持する"""
     config = GAConfig(robustness_config={"validation_symbols": ["ETH/USDT:USDT"]})
-    plan = EvaluationPlan()  # robustness.enabled はデフォルト False
+    plan = EvaluationPlan()  # シナリオ空 → gate 無効
 
     plan.apply_to_ga_config(config)
 

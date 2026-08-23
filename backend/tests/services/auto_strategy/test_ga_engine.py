@@ -460,7 +460,6 @@ class TestGeneticAlgorithmEngine:
         from app.services.auto_strategy.config.ga_config import GAConfig
 
         mock_config = GAConfig()
-        mock_config.evaluation_config.enable_parallel = True
         mock_config.evaluation_config.max_workers = 4
         mock_config.evaluation_config.timeout = 60.0
         mock_config.population_size = 10
@@ -521,9 +520,8 @@ class TestGeneticAlgorithmEngine:
         )
         config = GAConfig(
             evaluation_config=EvaluationConfig(
-                enable_parallel=True,
                 enable_multi_fidelity_evaluation=True,
-                enable_walk_forward=True,
+                evaluation_mode="walk_forward",
                 # 通常 OOS がデフォルト有効（0.25）でも coarse 評価では
                 # multi_fidelity_oos_ratio が優先されることを確認する
                 multi_fidelity_oos_ratio=0.2,
@@ -549,6 +547,6 @@ class TestGeneticAlgorithmEngine:
         assert len(captured_configs) == 1
         worker_config = captured_configs[0]
         assert worker_config is not config
-        assert worker_config.evaluation_config.enable_walk_forward is False
+        assert worker_config.evaluation_config.evaluation_mode == "single"
         assert worker_config.evaluation_config.oos_split_ratio == 0.2
         assert getattr(worker_config, "_evaluation_fidelity", "full") == "coarse"

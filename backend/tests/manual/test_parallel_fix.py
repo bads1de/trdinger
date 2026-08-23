@@ -47,7 +47,6 @@ def test_parallel_execution():
         population_size=4,
         generations=1,
         evaluation_config=EvaluationConfig(
-            enable_parallel=True,
             max_workers=2,
         ),
     )
