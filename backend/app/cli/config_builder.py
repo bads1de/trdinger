@@ -108,7 +108,6 @@ def build_ga_config_dict(
     min_non_price: int = 0,
     non_price_probability: float = 0.3,
     max_conditions: int = 3,
-    enable_rtr: bool = False,
     rtr_crowding_factor: int | None = None,
     sharing_radius: float | None = None,
     validate_pareto_front: bool = False,
@@ -140,7 +139,6 @@ def build_ga_config_dict(
         min_non_price: 非価格指標の最低数
         non_price_probability: 非価格指標の選択確率
         max_conditions: エントリー条件の最大数
-        enable_rtr: RTR（制限トーナメント置換）を有効化
         rtr_crowding_factor: RTR の局所競争相手のサンプル数（None はデフォルト 8）
         sharing_radius: フィットネス共有の共有半径（None はデフォルト 0.1）
 
@@ -223,19 +221,17 @@ def build_ga_config_dict(
             config_kwargs["indicator_universe_mode"] = indicator_universe
 
     if smoke or no_validation:
-        config_kwargs["validation_config"] = {"enabled": False}
+        config_kwargs["validation_config"] = {"validation_level": "off"}
     elif validate_pareto_front:
         config_kwargs["validation_config"] = {"validate_pareto_front": True}
     if fitness_constraints is not None:
         config_kwargs["fitness_constraints"] = fitness_constraints
 
-    if enable_rtr:
-        survival_selection: dict[str, Any] = {"enable_restricted_tournament": True}
-        if rtr_crowding_factor is not None:
-            survival_selection["restricted_tournament_crowding_factor"] = (
-                rtr_crowding_factor
-            )
-        config_kwargs["survival_selection_config"] = survival_selection
+    if rtr_crowding_factor is not None:
+        # enable_restricted_tournament はデフォルトONのため、crowding factor のみ上書きする
+        config_kwargs["survival_selection_config"] = {
+            "restricted_tournament_crowding_factor": rtr_crowding_factor
+        }
     if sharing_radius is not None:
         config_kwargs["fitness_sharing"] = {"sharing_radius": sharing_radius}
 

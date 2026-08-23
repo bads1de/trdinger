@@ -107,7 +107,7 @@ class TestE2EFlow:
             fitness_sharing={"enable_fitness_sharing": False},
             evaluation_config=EvaluationConfig(),
             # このテストは基本フロー検証のため自動検証パイプラインを無効化
-            validation_config=ValidationConfig(enabled=False),
+            validation_config=ValidationConfig(validation_level="off"),
         )
         backtest_config = {
             "symbol": "BTC/USDT:USDT",

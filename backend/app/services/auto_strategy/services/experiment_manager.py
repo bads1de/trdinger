@@ -131,7 +131,7 @@ class ExperimentManager:
 
                 # 自動検証パイプライン（WFA + 合格判定）
                 # 有効時は合格した戦略だけが保存対象となる
-                if ga_config.validation_config.enabled:
+                if ga_config.validation_config.is_enabled:
                     validation_service = self._get_validation_service(engine)
                     result = validation_service.validate_and_filter_result(
                         result=result,

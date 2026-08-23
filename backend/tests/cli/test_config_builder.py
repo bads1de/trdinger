@@ -127,7 +127,7 @@ class TestBuildGaConfigDict:
             end_date="2024-06-30",
             no_validation=True,
         )
-        assert config["validation_config"]["enabled"] is False
+        assert config["validation_config"]["validation_level"] == "off"
 
     def test_smoke_sets_minimal(self):
         """smoke モードで最小構成になる"""
@@ -143,7 +143,7 @@ class TestBuildGaConfigDict:
         )
         assert config["population_size"] == 2
         assert config["generations"] == 1
-        assert config["validation_config"]["enabled"] is False
+        assert config["validation_config"]["validation_level"] == "off"
         assert config["max_indicators"] == 3
 
     def test_smoke_disables_early_termination(self):
@@ -244,7 +244,7 @@ class TestBuildGaConfigDict:
             no_validation=True,
             validate_pareto_front=True,
         )
-        assert config["validation_config"]["enabled"] is False
+        assert config["validation_config"]["validation_level"] == "off"
         assert "validate_pareto_front" not in config["validation_config"]
 
     def test_mtf_invalid_timeframe(self):

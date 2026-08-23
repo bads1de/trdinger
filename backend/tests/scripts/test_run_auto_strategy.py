@@ -100,7 +100,7 @@ class TestCreateGaConfig:
         assert config.use_seed_strategies is False
         assert config.seed_injection_rate == 0.0
         assert config.two_stage_selection_config.enabled is False
-        assert config.validation_config.enabled is False
+        assert config.validation_config.validation_level == "off"
         assert config.fitness_constraints["min_trades"] == 0
 
     def test_invalid_population_raises_error(self):
@@ -747,7 +747,7 @@ class TestValidationIntegration:
 
         config = run_auto_strategy.create_ga_config(args)
 
-        assert config.validation_config.enabled is False
+        assert config.validation_config.validation_level == "off"
 
     def test_mtf_flags_enable_multi_timeframe(self):
         """--mtf フラグでMTF設定が有効化される"""

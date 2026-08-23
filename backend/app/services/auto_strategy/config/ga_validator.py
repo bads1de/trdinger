@@ -21,6 +21,8 @@ _EVALUATION_MODES = frozenset({"single", "walk_forward"})
 # 有効な GA 選抜（IS 評価）モード。evaluation_strategies 側の
 # GA_SELECTION_MODES と整合させること。
 _GA_SELECTION_MODES = frozenset({"fitness", "walk_forward"})
+# 有効な検証レベル（validation_config.validation_level）
+_VALIDATION_LEVELS = frozenset({"off", "basic", "strict", "full"})
 
 
 class ConfigValidator:
@@ -826,7 +828,16 @@ class ConfigValidator:
         validation_config = getattr(config, "validation_config", None)
         if validation_config is None:
             return errors
-        if not validation_config.enabled:
+        # validation_level を直接判定する（Mock 等の文字列以外は検証対象外）
+        level = getattr(validation_config, "validation_level", None)
+        if not isinstance(level, str):
+            return errors
+        if level not in _VALIDATION_LEVELS:
+            errors.append(
+                f"validation_config.validation_level は {sorted(_VALIDATION_LEVELS)} のいずれかである必要があります: {level}"
+            )
+            return errors
+        if level == "off":
             return errors
 
         min_pass_rate: Any = validation_config.min_pass_rate

@@ -70,7 +70,6 @@ def validation_config():
     """自動検証が有効な設定"""
     return GAConfig(
         validation_config=ValidationConfig(
-            enabled=True,
             min_pass_rate=0.6,
             min_primary_fitness=None,
             min_trades=None,
@@ -91,7 +90,6 @@ class TestStrategyValidationService:
         """検証候補は指標構成が重複しないよう多様性優先で選ばれる"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.5,
                 max_candidates=4,
             ),
@@ -146,7 +144,6 @@ class TestStrategyValidationService:
         """多様な構成が足りない場合は fitness 上位から補充される"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.5,
                 max_candidates=3,
             ),
@@ -194,7 +191,7 @@ class TestStrategyValidationService:
 
     def test_validation_disabled_returns_result_unchanged(self, mock_evaluator):
         """検証が無効な場合は結果をそのまま返す"""
-        config = GAConfig(validation_config=ValidationConfig(enabled=False))
+        config = GAConfig(validation_config=ValidationConfig(validation_level="off"))
         service = StrategyValidationService(mock_evaluator)
 
         result = {"best_strategy": "dummy", "all_strategies": []}
@@ -237,7 +234,7 @@ class TestStrategyValidationService:
 
     def test_robustness_gate_keeps_wfa_passing_candidate(self, mock_evaluator):
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            validation_config=ValidationConfig(min_pass_rate=0.6),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -280,7 +277,7 @@ class TestStrategyValidationService:
 
     def test_robustness_gate_rejects_partial_failure(self, mock_evaluator):
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            validation_config=ValidationConfig(min_pass_rate=0.6),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -326,7 +323,7 @@ class TestStrategyValidationService:
 
     def test_robustness_gate_rejects_execution_error(self, mock_evaluator):
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            validation_config=ValidationConfig(min_pass_rate=0.6),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -360,7 +357,7 @@ class TestStrategyValidationService:
     def test_robustness_gate_driven_by_evaluation_plan(self, mock_evaluator):
         """評価計画のrobustness設定からゲートが有効化される"""
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.6),
+            validation_config=ValidationConfig(min_pass_rate=0.6),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
             evaluation_plan={
@@ -417,7 +414,6 @@ class TestStrategyValidationService:
         """最良戦略が不合格でも合格した候補があれば昇格する"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.6,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -468,7 +464,6 @@ class TestStrategyValidationService:
         """全戦略が不合格なら best_strategy は None になる"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.9,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -504,7 +499,6 @@ class TestStrategyValidationService:
         """min_trades 未満の戦略は不合格になる"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
                 min_trades=50,
             ),
@@ -553,7 +547,6 @@ class TestStrategyValidationService:
         """max_drawdown を超える戦略は不合格になる"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
                 max_drawdown=0.05,
             ),
@@ -601,7 +594,6 @@ class TestStrategyValidationService:
     def test_missing_required_metrics_fail_closed(self, mock_evaluator):
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
                 min_trades=1,
                 max_drawdown=0.5,
@@ -656,7 +648,7 @@ class TestStrategyValidationService:
         self, mock_evaluator
     ):
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            validation_config=ValidationConfig(min_pass_rate=0.0),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -690,7 +682,7 @@ class TestStrategyValidationService:
 
     def test_incomplete_evaluation_fails_closed(self, mock_evaluator):
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            validation_config=ValidationConfig(min_pass_rate=0.0),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -732,7 +724,7 @@ class TestStrategyValidationService:
 
     def test_evaluation_fallback_fails_closed(self, mock_evaluator):
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            validation_config=ValidationConfig(min_pass_rate=0.0),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -765,7 +757,7 @@ class TestStrategyValidationService:
     def test_penalized_scenarios_fail_closed(self, mock_evaluator):
         """ペナルティフォールドが1件でもあれば不合格になる"""
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            validation_config=ValidationConfig(min_pass_rate=0.0),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -796,7 +788,7 @@ class TestStrategyValidationService:
     def test_no_penalized_scenarios_passes(self, mock_evaluator):
         """ペナルティが無ければ判定は従来通り"""
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, min_pass_rate=0.0),
+            validation_config=ValidationConfig(min_pass_rate=0.0),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -827,7 +819,6 @@ class TestStrategyValidationService:
         """最小化目的（max_drawdown）では min_primary_fitness は上限として判定される"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
                 min_primary_fitness=0.1,  # 最大許容値（ドローダウン上限）
             ),
@@ -894,7 +885,6 @@ class TestStrategyValidationService:
         """all_strategies が空でも合格したパレート戦略があれば昇格する"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.6,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -937,7 +927,7 @@ class TestStrategyValidationService:
     def test_validation_error_treated_as_fail(self, mock_evaluator):
         """検証エラー時は不合格として扱われる"""
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True),
+            validation_config=ValidationConfig(),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
         )
@@ -970,7 +960,6 @@ class TestStrategyValidationService:
         """パレートフロントも合格した戦略のみに絞られる"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.6,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -1015,7 +1004,6 @@ class TestStrategyValidationService:
         """同一キーの候補が重複しても検証は1回だけ実行される"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.6,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -1054,7 +1042,6 @@ class TestStrategyValidationService:
         """validate_pareto_front 有効時は枠外のパレート解も全員検証される"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.6,
                 max_candidates=1,
                 validate_pareto_front=True,
@@ -1111,7 +1098,6 @@ class TestStrategyValidationService:
         """デフォルト（無効）では枠外のパレート解は無検証のまま破棄される"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.6,
                 max_candidates=1,
             ),
@@ -1151,7 +1137,6 @@ class TestStrategyValidationService:
         """最大化目的（total_return）では min_primary_fitness 未満は不合格になる"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
                 min_primary_fitness=0.5,
             ),
@@ -1234,7 +1219,6 @@ class TestValidationGaConfigBuilding:
         """WFA検証用設定では早期終了が無効化される"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 wfa_n_folds=3,
                 wfa_train_ratio=0.7,
             ),
@@ -1259,7 +1243,7 @@ class TestValidationGaConfigBuilding:
     def test_build_validation_ga_config_preserves_other_settings(self, mock_evaluator):
         """検証用設定で他の評価設定は維持される"""
         config = GAConfig(
-            validation_config=ValidationConfig(enabled=True, wfa_n_folds=5),
+            validation_config=ValidationConfig(wfa_n_folds=5),
             evaluation_config=EvaluationConfig(
                 evaluation_mode="single",
                 early_termination_settings={
@@ -1283,9 +1267,7 @@ class TestValidationGaConfigBuilding:
         適用されるため、ここでの二重スケールは行わない。
         """
         config = GAConfig(
-            validation_config=ValidationConfig(
-                enabled=True, wfa_n_folds=5, wfa_train_ratio=0.7
-            ),
+            validation_config=ValidationConfig(wfa_n_folds=5, wfa_train_ratio=0.7),
             fitness_constraints={"min_trades": 50},
             objectives=["total_return"],
         )
@@ -1302,9 +1284,7 @@ class TestValidationGaConfigBuilding:
     ):
         """小さい min_trades も事前スケールで縮小されず保持される"""
         config = GAConfig(
-            validation_config=ValidationConfig(
-                enabled=True, wfa_n_folds=5, wfa_train_ratio=0.7
-            ),
+            validation_config=ValidationConfig(wfa_n_folds=5, wfa_train_ratio=0.7),
             fitness_constraints={"min_trades": 10},
             objectives=["total_return"],
         )
@@ -1322,7 +1302,10 @@ class TestValidationConfig:
         """デフォルト値のテスト"""
         config = GAConfig()
         vc = config.validation_config
-        assert vc.enabled is True
+        assert vc.validation_level == "strict"
+        assert vc.is_enabled is True
+        assert vc.pbo_gate_active is True
+        assert vc.dsr_gate_active is False
         assert vc.min_pass_rate == 0.33
         assert vc.min_primary_fitness is None
         assert vc.min_trades is None
@@ -1331,15 +1314,13 @@ class TestValidationConfig:
         assert vc.wfa_train_ratio == 0.5
         assert vc.validate_candidates is True
         assert vc.max_candidates == 5
-        assert vc.enable_pbo_gate is True
         assert vc.pbo_threshold == 0.5
-        assert vc.enable_dsr_gate is False
         assert vc.min_dsr == 0.95
         assert vc.dsr_effective_trials is None
         assert vc.dsr_sigma_sharpe == 1.0
 
     def test_from_dict(self):
-        """辞書からの復元テスト"""
+        """辞書からの復元テスト（旧ブールフラグは validation_level へ変換）"""
         data = {
             "validation_config": {
                 "enabled": True,
@@ -1357,15 +1338,15 @@ class TestValidationConfig:
         }
         config = GAConfig.from_dict(data)
         vc = config.validation_config
-        assert vc.enabled is True
+        # enabled=True + enable_pbo_gate=False + enable_dsr_gate=True → "full"
+        assert vc.validation_level == "full"
+        assert vc.is_enabled is True
         assert vc.min_pass_rate == 0.7
         assert vc.min_trades == 20
         assert vc.max_drawdown == 0.1
         assert vc.wfa_n_folds == 4
         assert vc.validate_candidates is False
-        assert vc.enable_pbo_gate is False
         assert vc.pbo_threshold == 0.3
-        assert vc.enable_dsr_gate is True
         assert vc.min_dsr == 0.9
         assert vc.dsr_effective_trials == 100
 
@@ -1373,7 +1354,6 @@ class TestValidationConfig:
         """to_dict → from_dict のラウンドトリップテスト"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.65,
                 min_primary_fitness=0.2,
                 max_drawdown=0.15,
@@ -1381,7 +1361,7 @@ class TestValidationConfig:
         )
         restored = GAConfig.from_dict(config.to_dict())
         vc = restored.validation_config
-        assert vc.enabled is True
+        assert vc.validation_level == "strict"
         assert vc.min_pass_rate == 0.65
         assert vc.min_primary_fitness == 0.2
         assert vc.max_drawdown == 0.15
@@ -1451,9 +1431,8 @@ class TestOverfittingGates:
         """過半数のフォールドが負けなら不合格"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
-                enable_pbo_gate=True,
+                validation_level="strict",
                 pbo_threshold=0.5,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -1471,9 +1450,8 @@ class TestOverfittingGates:
         """少数派のフォールドだけが負けなら合格"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
-                enable_pbo_gate=True,
+                validation_level="strict",
                 pbo_threshold=0.5,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -1489,9 +1467,8 @@ class TestOverfittingGates:
         """total_return が取得できない場合はスキップ（fail-open）"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
-                enable_pbo_gate=True,
+                validation_level="strict",
                 pbo_threshold=0.5,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
@@ -1507,9 +1484,8 @@ class TestOverfittingGates:
         """ゲート無効時は全フォールド負けでも構造基準のみで判定"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
-                enable_pbo_gate=False,
+                validation_level="basic",
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],
@@ -1524,9 +1500,8 @@ class TestOverfittingGates:
         """多重検定補正後も有意でない場合は不合格"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
-                enable_dsr_gate=True,
+                validation_level="full",
                 min_dsr=0.95,
                 dsr_effective_trials=2,
                 wfa_n_folds=2,
@@ -1552,9 +1527,8 @@ class TestOverfittingGates:
         """十分な SR と長いトラックレコードなら合格"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
-                enable_dsr_gate=True,
+                validation_level="full",
                 min_dsr=0.95,
                 dsr_effective_trials=2,
                 wfa_n_folds=2,
@@ -1580,9 +1554,8 @@ class TestOverfittingGates:
         """統計力を確保できない短い検証期間は不合格"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
-                enable_dsr_gate=True,
+                validation_level="full",
                 min_dsr=0.95,
                 wfa_n_folds=3,
                 wfa_train_ratio=0.5,
@@ -1609,7 +1582,6 @@ class TestOverfittingGates:
         """DSR ゲートはデフォルト無効（有効化しない限り従来判定）"""
         config = GAConfig(
             validation_config=ValidationConfig(
-                enabled=True,
                 min_pass_rate=0.0,
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),

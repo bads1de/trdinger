@@ -83,7 +83,7 @@ class StrategyValidationService:
             検証結果の詳細は result["validation_results"] に格納されます。
         """
         validation_config = ga_config.validation_config
-        if not validation_config.enabled:
+        if not validation_config.is_enabled:
             return result
 
         logger.info("自動検証パイプラインを開始します（WFA）")
@@ -439,7 +439,7 @@ class StrategyValidationService:
         # 「収益性の観点で過半数のフォールドが負け」の戦略をここで弾く。
         pbo: float | None = None
         n_losing_folds: int | None = None
-        if validation_config.enable_pbo_gate:
+        if validation_config.pbo_gate_active:
             fold_returns = self._collect_scenario_metric(report, "total_return")
             if scenario_count > 0 and len(fold_returns) == scenario_count:
                 pbo = probability_of_backtest_overfitting(fold_returns)
@@ -457,7 +457,7 @@ class StrategyValidationService:
 
         # DSR ゲート: 多重検定補正後のシャープレシオ有意性（厳格な統計検定）。
         dsr: float | None = None
-        if validation_config.enable_dsr_gate:
+        if validation_config.dsr_gate_active:
             fold_sharpes = self._collect_scenario_metric(report, "sharpe_ratio")
             if scenario_count > 0 and len(fold_sharpes) == scenario_count:
                 observed_sr = float(median(fold_sharpes))

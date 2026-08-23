@@ -231,7 +231,7 @@ describe("GAConfigForm", () => {
   // 自動検証パイプライン
   // ------------------------------------------------------------------
 
-  test("自動検証パイプラインがデフォルトで有効であること", () => {
+  test("自動検証パイプラインがデフォルトで厳格レベルであること", () => {
     renderWithTooltipProvider(
       <GAConfigForm
         onSubmit={mockOnSubmit}
@@ -240,8 +240,8 @@ describe("GAConfigForm", () => {
       />
     );
 
-    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
-    expect(validationToggle).toBeChecked();
+    const validationLevelSelect = screen.getByLabelText("検証レベル");
+    expect(validationLevelSelect).toHaveValue("strict");
     // 有効時は詳細設定が表示される
     expect(screen.getByText("合格率下限 (min_pass_rate)")).toBeInTheDocument();
   });
@@ -255,12 +255,11 @@ describe("GAConfigForm", () => {
       />
     );
 
-    // デフォルト有効 → 無効化
-    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
-    fireEvent.click(validationToggle);
+    // デフォルト有効 → 検証なしへ変更
+    const validationLevelSelect = screen.getByLabelText("検証レベル");
+    fireEvent.change(validationLevelSelect, { target: { value: "off" } });
 
     // 無効化すると詳細設定が非表示になる
-    expect(validationToggle).not.toBeChecked();
     expect(screen.queryByText("合格率下限 (min_pass_rate)")).not.toBeInTheDocument();
 
     // フォームを送信
@@ -268,7 +267,9 @@ describe("GAConfigForm", () => {
     fireEvent.click(submitButton);
 
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
-    expect(submittedConfig.ga_config.validation_config.enabled).toBe(false);
+    expect(submittedConfig.ga_config.validation_config.validation_level).toBe(
+      "off"
+    );
   });
 
   test("自動検証パイプラインが有効なら詳細設定が表示され設定が送信されること", () => {
@@ -289,7 +290,9 @@ describe("GAConfigForm", () => {
     fireEvent.click(submitButton);
 
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
-    expect(submittedConfig.ga_config.validation_config.enabled).toBe(true);
+    expect(submittedConfig.ga_config.validation_config.validation_level).toBe(
+      "strict"
+    );
     expect(submittedConfig.ga_config.validation_config.min_pass_rate).toBe(0.5);
     expect(submittedConfig.ga_config.validation_config.wfa_n_folds).toBe(5);
     expect(submittedConfig.ga_config.validation_config.validate_candidates).toBe(true);
@@ -350,13 +353,14 @@ describe("GAConfigForm", () => {
       />
     );
 
-    // PBO 閾値を変更
+    // PBO 閾値を変更（デフォルトの厳格レベルで PBO ゲートは有効）
     const pboThresholdInput = getInputFieldByLabel("PBO閾値 (pbo_threshold)");
     fireEvent.change(pboThresholdInput, { target: { value: "0.4" } });
 
-    // DSR ゲートを有効化
-    const dsrCheckbox = screen.getByLabelText(/DSR ゲート/);
-    fireEvent.click(dsrCheckbox);
+    // 検証レベルを最大にすると DSR ゲートが有効化される
+    fireEvent.change(screen.getByLabelText("検証レベル"), {
+      target: { value: "full" },
+    });
     const dsrMinInput = getInputFieldByLabel("DSR下限 (min_dsr)");
     fireEvent.change(dsrMinInput, { target: { value: "0.9" } });
 
@@ -365,9 +369,8 @@ describe("GAConfigForm", () => {
 
     const submittedConfig = mockOnSubmit.mock.calls[0][0];
     const validationConfig = submittedConfig.ga_config.validation_config;
-    expect(validationConfig.enable_pbo_gate).toBe(true);
+    expect(validationConfig.validation_level).toBe("full");
     expect(validationConfig.pbo_threshold).toBe(0.4);
-    expect(validationConfig.enable_dsr_gate).toBe(true);
     expect(validationConfig.min_dsr).toBe(0.9);
   });
 
@@ -377,7 +380,7 @@ describe("GAConfigForm", () => {
       ga_config: {
         ...initialConfig.ga_config,
         validation_config: {
-          enabled: true,
+          validation_level: "strict",
           min_pass_rate: 0.7,
           max_candidates: 3,
         },
@@ -392,8 +395,8 @@ describe("GAConfigForm", () => {
       />
     );
 
-    const validationToggle = screen.getByLabelText("自動検証パイプラインを有効化");
-    expect(validationToggle).toBeChecked();
+    const validationLevelSelect = screen.getByLabelText("検証レベル");
+    expect(validationLevelSelect).toHaveValue("strict");
     // InputFieldはlabelがinputと関連付かないためヘルパーで対象inputを特定して値を検証
     // number input の toHaveValue は数値比較が正しい
     expect(getInputFieldByLabel("合格率下限 (min_pass_rate)")).toHaveValue(0.7);

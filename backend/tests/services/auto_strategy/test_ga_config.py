@@ -72,7 +72,7 @@ class TestGAConfig:
             config.evaluation_config.early_termination_settings.expectancy_min_trades
             == 10
         )
-        assert config.validation_config.enabled is True
+        assert config.validation_config.is_enabled is True
         assert config.validation_config.min_pass_rate == 0.33
 
     def test_two_stage_and_robustness_serialize_deserialize(self):

@@ -48,8 +48,15 @@ export interface FitnessSharingConfig {
 }
 
 export interface GAValidationConfig {
-  /** 自動検証パイプラインを有効化するか */
-  enabled?: boolean;
+  /**
+   * 検証の厳格さレベル:
+   * - "off": 検証なし（全戦略保存）
+   * - "basic": WFA基本基準のみ
+   * - "strict": +PBOゲート（従来デフォルト相当）
+   * - "full": +DSRゲート
+   * 旧 enabled / enable_pbo_gate / enable_dsr_gate の統合先。
+   */
+  validation_level?: string;
   /** WFA のフォールド合格率の下限（0.0-1.0） */
   min_pass_rate?: number;
   /** 集約プライマリフィットネスの下限（null の場合はチェックしない） */
@@ -58,12 +65,8 @@ export interface GAValidationConfig {
   min_trades?: number | null;
   /** 全フォールドの最大ドローダウン上限（null の場合はチェックしない） */
   max_drawdown?: number | null;
-  /** PBO ゲートを有効化するか（負けフォールド比率の判定） */
-  enable_pbo_gate?: boolean;
   /** 合格できる負けフォールドの最大比率（0.0-1.0） */
   pbo_threshold?: number;
-  /** Deflated Sharpe Ratio ゲートを有効化するか（多重検定補正） */
-  enable_dsr_gate?: boolean;
   /** DSR の合格下限（0.0-1.0） */
   min_dsr?: number;
   /** DSR の有効試行数（null の場合は population_size * generations） */

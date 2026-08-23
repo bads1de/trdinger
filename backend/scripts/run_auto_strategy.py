@@ -281,11 +281,6 @@ def parse_args() -> argparse.Namespace:
         help="エントリー条件の最大数 (デフォルト: 3)",
     )
     parser.add_argument(
-        "--rtr",
-        action="store_true",
-        help="制限トーナメント置換（RTR）を有効化し、指標構成の多様性を維持",
-    )
-    parser.add_argument(
         "--sharing-radius",
         type=float,
         default=None,
@@ -296,7 +291,8 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=None,
         help="RTR の局所競争相手のサンプル数（crowding factor, デフォルト: 8）。"
-        "小さくすると競争が緩くなり多様性が広がりやすくなる",
+        "小さくすると競争が緩くなり多様性が広がりやすくなる。"
+        "RTR 自体はデフォルトで有効",
     )
 
     return parser.parse_args()
@@ -344,7 +340,6 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         min_non_price=getattr(args, "min_non_price", 0),
         non_price_probability=getattr(args, "non_price_probability", 0.3),
         max_conditions=getattr(args, "max_conditions", 3),
-        enable_rtr=getattr(args, "rtr", False),
         rtr_crowding_factor=getattr(args, "rtr_cf", None),
         sharing_radius=getattr(args, "sharing_radius", None),
     )
@@ -566,7 +561,7 @@ def run_auto_strategy(args: argparse.Namespace) -> dict[str, Any]:
         # 自動検証パイプライン（WFA + 合格判定）
         # 実験マネージャーと同じ品質基準をCLI実行にも適用する。
         # 合格した戦略だけが詳細バックテスト・出力の対象となる。
-        if ga_config.validation_config.enabled:
+        if ga_config.validation_config.is_enabled:
             # 検証前に、検証対象となり得る戦略の gene をスナップショットする。
             # 全戦略が不合格でも構成を後から分析できるようにするため。
             snapshot_serializer = GeneSerializer()

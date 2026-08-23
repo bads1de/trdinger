@@ -72,7 +72,7 @@ class TestExperimentManager:
         ga_config.population_size = 10
         ga_config.generations = 5
         # このテストは検証パイプライン無しの基本フローを検証するため明示的に無効化
-        ga_config.validation_config = ValidationConfig(enabled=False)
+        ga_config.validation_config = ValidationConfig(validation_level="off")
 
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
@@ -178,7 +178,7 @@ class TestExperimentManager:
     def test_run_experiment_fails_after_consecutive_progress_failures(self):
         """進捗更新が連続失敗した場合は実験を失敗扱いにする"""
         ga_config = GAConfig()
-        ga_config.validation_config = ValidationConfig(enabled=False)
+        ga_config.validation_config = ValidationConfig(validation_level="off")
         backtest_config = {}
 
         def _run_evolution(config, bt_config, progress_callback=None):
@@ -208,7 +208,7 @@ class TestExperimentManager:
     def test_progress_callback_resets_failure_count_on_success(self):
         """進捗更新の失敗は成功時にリセットされる"""
         ga_config = GAConfig()
-        ga_config.validation_config = ValidationConfig(enabled=False)
+        ga_config.validation_config = ValidationConfig(validation_level="off")
         backtest_config = {}
 
         update_results = iter([False, False, True, False, False, True])
@@ -290,7 +290,7 @@ class TestExperimentManager:
         ga_config = GAConfig()
         ga_config.population_size = 10
         ga_config.generations = 5
-        ga_config.validation_config = ValidationConfig(enabled=True)
+        ga_config.validation_config = ValidationConfig(validation_level="strict")
 
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
@@ -370,7 +370,7 @@ class TestExperimentManager:
         ga_config = GAConfig()
         ga_config.population_size = 10
         ga_config.generations = 5
-        ga_config.validation_config = ValidationConfig(enabled=True)
+        ga_config.validation_config = ValidationConfig(validation_level="strict")
 
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
@@ -451,7 +451,7 @@ class TestExperimentManager:
         ga_config.population_size = 10
         ga_config.generations = 5
         # このテストは検証パイプライン無しの基本フローを検証するため明示的に無効化
-        ga_config.validation_config = ValidationConfig(enabled=False)
+        ga_config.validation_config = ValidationConfig(validation_level="off")
         backtest_config = {
             "symbol": "BTC/USDT:USDT",
             "timeframe": "1h",

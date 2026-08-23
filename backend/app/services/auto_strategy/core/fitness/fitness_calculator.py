@@ -505,7 +505,8 @@ class FitnessCalculator:
             )
 
             # ulcer_indexとtrade_frequency_penaltyを常に考慮
-            # 動的スケーリングは常時ON（旧フラグは互換のため残置）
+            # 動的スカラーは dynamic_objective_reweighting 無効時は空になり
+            # 既定値 1.0（スケーリングなし）へフォールバックする
             ulcer_scale = 1.0
             trade_scale = 1.0
             dynamic_scalars = getattr(config, "objective_dynamic_scalars", {})

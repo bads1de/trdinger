@@ -164,7 +164,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
         // 自動検証パイプライン設定
         validation_config: {
           ...initialValidationConfig,
-          enabled: initialValidationConfig.enabled ?? true,
+          validation_level: initialValidationConfig.validation_level ?? "strict",
           min_pass_rate: initialValidationConfig.min_pass_rate ?? 0.5,
           min_primary_fitness:
             initialValidationConfig.min_primary_fitness === undefined
@@ -183,9 +183,7 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           validate_candidates:
             initialValidationConfig.validate_candidates ?? true,
           max_candidates: initialValidationConfig.max_candidates ?? 5,
-          enable_pbo_gate: initialValidationConfig.enable_pbo_gate ?? true,
           pbo_threshold: initialValidationConfig.pbo_threshold ?? 0.5,
-          enable_dsr_gate: initialValidationConfig.enable_dsr_gate ?? false,
           min_dsr: initialValidationConfig.min_dsr ?? 0.95,
           dsr_effective_trials:
             initialValidationConfig.dsr_effective_trials === undefined
@@ -357,8 +355,14 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
   const iterativeImprovementConfig: GAIterativeImprovementConfig =
     config.ga_config.iterative_improvement_config ?? {};
 
+  const validationLevel = validationConfig.validation_level ?? "strict";
+  const validationEnabled = validationLevel !== "off";
+  const pboGateActive = validationLevel === "strict" || validationLevel === "full";
+  const dsrGateActive = validationLevel === "full";
+
   const handleSubmit = () => {
-    // Phase1: 常時ON項目は強制的にtrueで送信（並列評価は常時有効のため送信不要）
+    // Phase1: 常時ON項目は強制的にtrueで送信
+    // （並列評価・RTR はバックエンド デフォルトが常時有効のため送信不要）
     const forcedConfig = {
       ...config,
       ga_config: {
@@ -372,11 +376,6 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
           ...(config.ga_config.evaluation_config ?? {}),
         },
       },
-    };
-    // survival_selectionも常時ON
-    (forcedConfig.ga_config as any).survival_selection_config = {
-      ...((config.ga_config as any).survival_selection_config ?? {}),
-      enable_restricted_tournament: true,
     };
     onSubmit(forcedConfig as any);
   };
@@ -595,18 +594,22 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
             <label className="text-sm font-medium text-rose-200">
               🛂 自動検証パイプライン
             </label>
-            <input
-              type="checkbox"
-              checked={validationConfig.enabled ?? true}
+            <select
+              value={validationLevel}
               onChange={(e) =>
-                handleValidationConfigChange({ enabled: e.target.checked })
+                handleValidationConfigChange({ validation_level: e.target.value })
               }
-              className="w-5 h-5 rounded border-rose-500 text-rose-600 focus:ring-rose-500"
-              aria-label="自動検証パイプラインを有効化"
-            />
+              className="rounded bg-rose-950/50 border border-rose-500/40 text-rose-100 text-sm px-2 py-1 focus:outline-none focus:ring-2 focus:ring-rose-500"
+              aria-label="検証レベル"
+            >
+              <option value="off">検証なし</option>
+              <option value="basic">基本（WFAのみ）</option>
+              <option value="strict">厳格（+PBOゲート）</option>
+              <option value="full">最大（+DSRゲート）</option>
+            </select>
           </div>
 
-          {validationConfig.enabled && (
+          {validationEnabled && (
             <>
               <p className="text-xs text-rose-300">
                 💡
@@ -673,25 +676,19 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                 description="全フォールドの最大DD上限（空欄でチェックなし）"
               />
               <div className="pt-1 border-t border-rose-500/30">
-                <label className="flex items-center space-x-2 pt-2">
-                  <input
-                    type="checkbox"
-                    checked={validationConfig.enable_pbo_gate ?? true}
-                    onChange={(e) =>
-                      handleValidationConfigChange({
-                        enable_pbo_gate: e.target.checked,
-                      })
-                    }
-                    className="rounded border-rose-500 text-rose-600 focus:ring-rose-500"
-                  />
+                <div className="flex items-center space-x-2 pt-2">
                   <span className="text-sm text-rose-200">
                     PBO ゲート（負けフォールド比率）
                   </span>
-                </label>
+                  <span className="text-[11px] text-rose-400/80">
+                    {pboGateActive ? "有効" : "無効（基本レベル）"}
+                  </span>
+                </div>
                 <p className="text-[11px] text-rose-300/70 mt-1 pl-6">
                   過半数のフォールドで利益を出せていない戦略を過学習として弾きます。
+                  レベル「厳格」以上で有効になります。
                 </p>
-                {(validationConfig.enable_pbo_gate ?? true) && (
+                {pboGateActive && (
                   <div className="pl-6 mt-2">
                     <InputField
                       label="PBO閾値 (pbo_threshold)"
@@ -709,26 +706,19 @@ const GAConfigForm: React.FC<GAConfigFormProps> = ({
                     />
                   </div>
                 )}
-                <label className="flex items-center space-x-2 pt-3">
-                  <input
-                    type="checkbox"
-                    checked={validationConfig.enable_dsr_gate ?? false}
-                    onChange={(e) =>
-                      handleValidationConfigChange({
-                        enable_dsr_gate: e.target.checked,
-                      })
-                    }
-                    className="rounded border-rose-500 text-rose-600 focus:ring-rose-500"
-                  />
+                <div className="flex items-center space-x-2 pt-3">
                   <span className="text-sm text-rose-200">
                     DSR ゲート（多重検定補正 / 厳格）
                   </span>
-                </label>
+                  <span className="text-[11px] text-rose-400/80">
+                    {dsrGateActive ? "有効" : "無効（最大レベルで有効）"}
+                  </span>
+                </div>
                 <p className="text-[11px] text-rose-300/70 mt-1 pl-6">
                   GA の探索試行数でシャープレシオを割り引いた有意性を判定。
-                  有効にすると合格水準が大きく上がります。
+                  レベル「最大」で有効になり、合格水準が大きく上がります。
                 </p>
-                {validationConfig.enable_dsr_gate && (
+                {dsrGateActive && (
                   <div className="pl-6 mt-2 space-y-2">
                     <InputField
                       label="DSR下限 (min_dsr)"

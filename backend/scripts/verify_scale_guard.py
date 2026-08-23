@@ -124,15 +124,10 @@ def main() -> None:
         help="適応度共有を無効化して選抜のみの挙動を計測",
     )
     parser.add_argument(
-        "--rtr",
-        action="store_true",
-        help="制限トーナメント置換 (RTR) を生存選択に適用",
-    )
-    parser.add_argument(
         "--rtr-cf",
         type=int,
         default=8,
-        help="RTR の局所競争相手サンプル数 (crowding factor)",
+        help="RTR の局所競争相手サンプル数 (crowding factor)。RTR 自体はデフォルトで有効",
     )
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
@@ -142,8 +137,7 @@ def main() -> None:
         label = f"seed_rate={rate}"
         if args.no_sharing:
             label += " [no-sharing]"
-        if args.rtr:
-            label += f" [rtr cf={args.rtr_cf}]"
+        label += f" [rtr cf={args.rtr_cf}]"
         config = GAConfig(
             population_size=4 if args.smoke else args.population,
             generations=1 if args.smoke else args.generations,
@@ -163,13 +157,8 @@ def main() -> None:
                 if args.no_sharing
                 else FitnessSharingConfig()
             ),
-            survival_selection_config=(
-                SurvivalSelectionConfig(
-                    enable_restricted_tournament=True,
-                    restricted_tournament_crowding_factor=args.rtr_cf,
-                )
-                if args.rtr
-                else SurvivalSelectionConfig()
+            survival_selection_config=SurvivalSelectionConfig(
+                restricted_tournament_crowding_factor=args.rtr_cf
             ),
             evaluation_config=EvaluationConfig(),
             fallback_start_date="2024-01-01",

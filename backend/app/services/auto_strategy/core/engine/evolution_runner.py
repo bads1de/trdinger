@@ -566,7 +566,11 @@ class EvolutionRunner:
             config: GA設定
         """
 
-        # 動的重み付けは常時ON
+        # 動的重み付けが無効な場合はスカラーをクリアし、
+        # FitnessCalculator 側の既定スケーリングへフォールバックさせる。
+        if not getattr(config, "dynamic_objective_reweighting", True):
+            config.objective_dynamic_scalars = {}
+            return
 
         if not population:
             config.objective_dynamic_scalars = {}

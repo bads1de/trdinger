@@ -320,12 +320,16 @@ class ValidationConfig(NestedConfigMixin):
 
     GA実行後に Walk-Forward Analysis で最終候補戦略を検証し、
     合格（Pass）/不合格（Fail）を判定するための設定。
+    厳格さは ``validation_level`` の一段階で制御する。
     合格した戦略だけが DB へ保存される。
     """
 
-    # 自動検証パイプラインを有効化するか
-    # 過学習対策のためデフォルト有効（合格戦略のみDB保存）
-    enabled: bool = True
+    # 検証の厳格さレベル。
+    # - "off":    検証パイプライン無効（合格判定せず全戦略を保存）
+    # - "basic":  WFA フォールド合格率などの基本基準のみ
+    # - "strict": basic + PBO ゲート（負けフォールド比率判定。従来のデフォルト相当）
+    # - "full":   strict + DSR ゲート（Deflated Sharpe Ratio・多重検定補正）
+    validation_level: str = "strict"
 
     # 合格判定基準
     # WFA のフォールド合格率（0.0-1.0）。この値以上の戦略のみ合格。
@@ -338,17 +342,15 @@ class ValidationConfig(NestedConfigMixin):
     # 全フォールドの最大ドローダウン上限（0.0-1.0、None の場合はチェックしない）
     max_drawdown: float | None = None
 
-    # 過学習対策ゲート（PBO / DSR）
+    # 過学習対策ゲート（PBO / DSR）— validation_level で制御される
     # PBO (Probability of Backtest Overfitting) 風ゲート:
     # 総リターンが負のフォールドの比率が pbo_threshold を超える戦略は不合格。
     # 例: 0.5 = 過半数のフォールドで利益を出せていない戦略は過学習として弾く。
-    enable_pbo_gate: bool = True
     pbo_threshold: float = 0.5
     # Deflated Sharpe Ratio ゲート（多重検定補正）。
     # GA の探索試行数（population_size x generations）でシャープレシオを
     # 割り引いた有意性が min_dsr 未満の戦略は不合格。
-    # 厳格な統計検定のためデフォルト無効（有効時は合格水準が大きく上がる）。
-    enable_dsr_gate: bool = False
+    # 厳格な統計検定のため "full" レベルでのみ有効。
     min_dsr: float = 0.95
     # DSR の有効試行数（None の場合は population_size * generations を自動計算）
     dsr_effective_trials: int | None = None
@@ -375,6 +377,37 @@ class ValidationConfig(NestedConfigMixin):
     # 合格した非劣解セット全体を結果に残す（枠外の無検証パレート解は
     # フィルタで破棄されるため、False のままでは面が欠落する）
     validate_pareto_front: bool = False
+
+    @property
+    def is_enabled(self) -> bool:
+        """検証パイプラインが有効か（"off" 以外）。"""
+        return self.validation_level != "off"
+
+    @property
+    def pbo_gate_active(self) -> bool:
+        """PBO ゲートが有効か（"strict" / "full"）。"""
+        return self.validation_level in ("strict", "full")
+
+    @property
+    def dsr_gate_active(self) -> bool:
+        """DSR ゲートが有効か（"full" のみ）。"""
+        return self.validation_level == "full"
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Any:
+        """辞書から復元。旧ブールフラグ3種を validation_level へ変換する。"""
+        normalized = dict(data)
+        if "validation_level" not in normalized:
+            # 旧フラグの組み合わせから厳格さレベルを復元する
+            if normalized.get("enabled") is False:
+                normalized["validation_level"] = "off"
+            elif normalized.get("enable_dsr_gate") is True:
+                normalized["validation_level"] = "full"
+            elif normalized.get("enable_pbo_gate") is False:
+                normalized["validation_level"] = "basic"
+        for legacy_key in ("enabled", "enable_pbo_gate", "enable_dsr_gate"):
+            normalized.pop(legacy_key, None)
+        return super().from_dict(normalized)
 
 
 @dataclass
