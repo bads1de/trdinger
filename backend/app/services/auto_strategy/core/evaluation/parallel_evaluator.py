@@ -44,6 +44,11 @@ def _combined_initializer(
         init_func(*init_args)
 
 
+def _noop_warmup_task() -> None:
+    """ワーカープリウォーム用のダミータスク。"""
+    return
+
+
 class ParallelEvaluator:
     """
     並列評価クラス
@@ -63,6 +68,7 @@ class ParallelEvaluator:
         use_process_pool: bool = True,
         worker_initializer: Callable | None = None,
         worker_initargs: tuple = (),
+        prewarm_workers: bool = True,
     ):
         """
         初期化
@@ -76,6 +82,10 @@ class ParallelEvaluator:
             use_process_pool: ProcessPoolExecutorを使用するか
             worker_initializer: ワーカープロセス初期化関数（ProcessPool用）
             worker_initargs: 初期化関数の引数
+            prewarm_workers: 起動直後に全ワーカーを並列プリウォームするか。
+                Windows(spawn) ではワーカーの重い初期化（モジュール import・
+                DB 接続・インジケーター登録など）が初タスク到着時に逐次走るため、
+                起動時にまとめて完了させて世代評価を即座に開始できるようにする。
         """
         self.evaluate_func = evaluate_func
         # CPUバウンド処理の最適値: 物理コア数 + 1、最大8にキャップ。
@@ -92,6 +102,7 @@ class ParallelEvaluator:
         self.use_process_pool = use_process_pool
         self.worker_initializer = worker_initializer
         self.worker_initargs = worker_initargs
+        self.prewarm_workers = prewarm_workers
 
         # 永続的なExecutor
         self._executor: ProcessPoolExecutor | ThreadPoolExecutor | None = None
@@ -134,8 +145,36 @@ class ParallelEvaluator:
                 initializer=_combined_initializer,
                 initargs=(self.worker_initializer, self.worker_initargs),
             )
+            if self.prewarm_workers:
+                self._prewarm_workers()
         else:
             self._executor = ThreadPoolExecutor(max_workers=self.max_workers)
+
+    def _prewarm_workers(self) -> None:
+        """全ワーカーの初期化を起動直後に並列実行させる。
+
+        ダミータスクをワーカー数ぶん投入すると、ProcessPoolExecutor が
+        全プロセスを即時スポーンし、initializer（モジュール import や
+        データ読み込みなど）が各ワーカーで同時に走る。これを怠ると
+        初期化は初タスクの割当順に逐次発生し、特に Windows(spawn) 環境で
+        進化開始直後の世代に大きな遅延として乗る。
+        """
+        executor = self._executor
+        if executor is None or self.max_workers <= 0:
+            return
+
+        logger.info(f"ワーカーをプリウォーム中 ({self.max_workers}ワーカー並列初期化)")
+        started_at = time.monotonic()
+        try:
+            futures = [
+                executor.submit(_noop_warmup_task) for _ in range(self.max_workers)
+            ]
+            wait(futures)
+        except Exception as e:
+            logger.warning(f"ワーカーのプリウォームに失敗しました: {e}")
+            return
+        elapsed = time.monotonic() - started_at
+        logger.info(f"ワーカーのプリウォーム完了 ({elapsed:.1f}秒)")
 
     def shutdown(self) -> None:
         """

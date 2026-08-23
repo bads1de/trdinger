@@ -324,11 +324,52 @@ class TestParallelEvaluator:
                 # ユーザー指定のinitializerが呼ばれたか
                 initializer_mock.assert_called_once_with("arg1", 123)
 
+    def test_prewarm_submits_dummy_tasks_on_start(self):
+        """start時に全ワーカーへダミータスクを投入してプリウォームすること"""
+        mock_executor_instance = MagicMock()
+        mock_future = MagicMock()
+        mock_executor_instance.submit.return_value = mock_future
+
+        with patch(
+            "app.services.auto_strategy.core.evaluation.parallel_evaluator.ProcessPoolExecutor",
+            return_value=mock_executor_instance,
+        ):
+            with patch(
+                "app.services.auto_strategy.core.evaluation.parallel_evaluator.wait",
+                return_value=({mock_future}, set()),
+            ):
+                evaluator = ParallelEvaluator(
+                    evaluate_func=lambda x: (1.0,),
+                    max_workers=3,
+                    use_process_pool=True,
+                )
+                evaluator.start()
+
+        assert mock_executor_instance.submit.call_count == 3
+
+    def test_prewarm_disabled_skips_dummy_tasks(self):
+        """prewarm_workers=Falseの場合はダミータスクを投入しないこと"""
+        mock_executor_instance = MagicMock()
+
+        with patch(
+            "app.services.auto_strategy.core.evaluation.parallel_evaluator.ProcessPoolExecutor",
+            return_value=mock_executor_instance,
+        ):
+            evaluator = ParallelEvaluator(
+                evaluate_func=lambda x: (1.0,),
+                max_workers=3,
+                use_process_pool=True,
+                prewarm_workers=False,
+            )
+            evaluator.start()
+
+        assert mock_executor_instance.submit.call_count == 0
+
     def test_persistent_executor_lifecycle(self):
-        """永続的なExecutorのライフサイクル管理ができること"""
         evaluator = ParallelEvaluator(
             evaluate_func=lambda x: (1.0,),
             max_workers=2,
+            prewarm_workers=False,
         )
         assert evaluator._executor is None
 
@@ -348,6 +389,7 @@ class TestParallelEvaluator:
         evaluator = ParallelEvaluator(
             evaluate_func=lambda x: (1.0,),
             max_workers=2,
+            prewarm_workers=False,
         )
         assert evaluator._executor is None
 
