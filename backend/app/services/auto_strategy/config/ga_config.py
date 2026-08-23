@@ -368,12 +368,25 @@ class ValidationConfig(NestedConfigMixin):
     # Deflated Sharpe Ratio ゲート（多重検定補正）。
     # GA の探索試行数（population_size x generations）でシャープレシオを
     # 割り引いた有意性が min_dsr 未満の戦略は不合格。
-    # 厳格な統計検定のため "full" レベルでのみ有効。
+    # strict / full で有効。合算テスト期間が dsr_min_tested_years 未満の
+    # 場合は統計力不足として判定をスキップする（fail-closed ではない）。
+    # 注意: DSR の式は観測期間（年）が 2年以上でないと有意計算が成立
+    # しないため、デフォルト閾値は 2.0年。短期間の保護は摂動・レジーム
+    # ゲートが担う。
     min_dsr: float = 0.95
     # DSR の有効試行数（None の場合は population_size * generations を自動計算）
     dsr_effective_trials: int | None = None
     # 帰無分布での年率シャープレシオの標準偏差（通常 1.0 を仮定）
     dsr_sigma_sharpe: float = 1.0
+    # DSR 判定に必要な最小の合算テスト期間（年）。これ未満ならスキップ
+    dsr_min_tested_years: float = 2.0
+
+    # --- レジーム一貫性ゲート ---
+    # 学習期間を regime_splits 個の等間隔スライスに分割し、全スライスで
+    # 「市場比 ≥ 0 かつ 取引あり」を要求する。片レジーム依存の戦略
+    # （例: 強気期だけ爆騰に乗る／ベア期だけ守る）を排除する。
+    regime_consistency_enabled: bool = True
+    regime_splits: int = 2
 
     # WFA 設定（検証用。評価設定を上書きする）
     # anchored の可否は evaluation_config.wfa_anchored を唯一の情報源とする
@@ -408,8 +421,12 @@ class ValidationConfig(NestedConfigMixin):
 
     @property
     def dsr_gate_active(self) -> bool:
-        """DSR ゲートが有効か（"full" のみ）。"""
-        return self.validation_level == "full"
+        """DSR ゲートが有効か（"strict" / "full"）。
+
+        GA による大量探索のメタ過適合対策はデフォルトで働かせるべきため、
+        basic（入門レベル）以外で有効。テスト期間が短い場合は判定を
+        スキップする（fail-closed ではない）。"""
+        return self.validation_level in ("strict", "full")
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> Any:

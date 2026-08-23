@@ -147,3 +147,36 @@ def estimate_test_window_years(
     test_ratio = 1.0 - float(train_ratio)
     fold_years = total_days * test_ratio / int(n_folds) / DAYS_PER_YEAR
     return max(fold_years, 0.0)
+
+
+def estimate_aggregate_tested_years(
+    start_date: str,
+    end_date: str,
+    train_ratio: float,
+) -> float | None:
+    """WFA 全フォールドのテスト窓を合算した期間（年）を推定する。
+
+    DSR の統計力は個々のフォールド窓ではなく、OOS 証拠の総量で決まる。
+    6ヶ月学習・train_ratio=0.5・3分割なら ≈0.25年 となる。
+
+    Args:
+        start_date: バックテスト開始日
+        end_date: バックテスト終了日
+        train_ratio: WFA トレーニング比率
+
+    Returns:
+        合算テスト期間（年）。算出できない場合は None。
+    """
+    try:
+        start = pd.Timestamp(start_date)
+        end = pd.Timestamp(end_date)
+    except Exception:
+        return None
+    if pd.isna(start) or pd.isna(end) or end <= start:
+        return None
+    if not 0.0 < float(train_ratio) < 1.0:
+        return None
+
+    total_days = float((end - start).total_seconds() / 86400.0)
+    tested_years = total_days * (1.0 - float(train_ratio)) / DAYS_PER_YEAR
+    return max(tested_years, 0.0)

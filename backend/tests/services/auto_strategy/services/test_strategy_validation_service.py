@@ -25,15 +25,20 @@ from app.services.auto_strategy.services.strategy_validation_service import (
 
 @pytest.fixture(autouse=True)
 def _stub_full_period_metrics(monkeypatch):
-    """既定ではフルピリオド連続評価を無効化する。
+    """既定ではフルピリオド連続評価とレジーム一貫性ゲートを無効化する。
 
-    ゲート③はフォールド複利のフォールバック経路で動作し、連続評価を
-    検証するテストのみ個別に上書きする。
+    ゲート③はフォールド複利のフォールバック経路で動作し、連続評価や
+    レジーム分割を検証するテストのみ個別に上書きする。
     """
     monkeypatch.setattr(
         StrategyValidationService,
         "_get_full_period_metrics",
         lambda self, *args, **kwargs: None,
+    )
+    monkeypatch.setattr(
+        StrategyValidationService,
+        "_apply_regime_consistency_gate",
+        lambda self, validation, *args, **kwargs: validation,
     )
 
 
@@ -1360,7 +1365,8 @@ class TestValidationConfig:
         assert vc.validation_level == "strict"
         assert vc.is_enabled is True
         assert vc.pbo_gate_active is True
-        assert vc.dsr_gate_active is False
+        # strict でも DSR は有効（メタ過適合対策のデフォルト化）
+        assert vc.dsr_gate_active is True
         assert vc.min_pass_rate == 0.33
         assert vc.min_primary_fitness is None
         assert vc.min_trades == 10
@@ -1862,13 +1868,14 @@ class TestOverfittingGates:
         assert validation["dsr"] is not None
         assert validation["dsr"] > 0.95
 
-    def test_dsr_gate_fails_closed_on_short_window(self, mock_evaluator):
-        """統計力を確保できない短い検証期間は不合格"""
+    def test_dsr_gate_skips_when_insufficient_window(self, mock_evaluator):
+        """合算テスト期間が閾値未満なら DSR 判定をスキップ（fail-closed廃止）"""
         config = GAConfig(
             validation_config=ValidationConfig(
                 min_pass_rate=0.0,
                 validation_level="full",
                 min_dsr=0.95,
+                dsr_min_tested_years=1.0,
                 wfa_n_folds=3,
                 wfa_train_ratio=0.5,
             ),
@@ -1886,15 +1893,41 @@ class TestOverfittingGates:
             mock_evaluator, config, report, backtest_config
         )
 
-        assert validation["passed"] is False
+        # 半年×train_ratio0.5 = 0.25年 < 閾値1.0年 → スキップで不合格にしない
+        assert validation["passed"] is True
         assert validation["dsr"] is None
-        assert any("統計力" in reason for reason in validation["reasons"])
 
-    def test_dsr_gate_disabled_by_default(self, mock_evaluator):
-        """DSR ゲートはデフォルト無効（有効化しない限り従来判定）"""
+    def test_dsr_gate_active_at_strict_level(self, mock_evaluator):
+        """DSR ゲートは strict レベルでも有効（メタ過適合対策のデフォルト化）"""
         config = GAConfig(
             validation_config=ValidationConfig(
                 min_pass_rate=0.0,
+                validation_level="strict",
+                min_dsr=0.95,
+                dsr_min_tested_years=0.25,
+                wfa_train_ratio=0.5,
+            ),
+            evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
+            objectives=["total_return"],
+        )
+        report = self._make_report_with_metrics(returns=[0.1], sharpes=[0.1])
+        # 10年学習 → 合算テスト 3.5年 ≥ デフォルト閾値2年 → 判定実行
+        backtest_config = {
+            "start_date": "2024-01-01",
+            "end_date": "2024-12-31",
+        }
+        validation = self._run_validation(
+            mock_evaluator, config, report, backtest_config
+        )
+
+        assert validation["dsr"] is not None
+
+    def test_dsr_gate_disabled_at_basic_level(self, mock_evaluator):
+        """basic レベルでは DSR ゲートは無効（従来互換）"""
+        config = GAConfig(
+            validation_config=ValidationConfig(
+                min_pass_rate=0.0,
+                validation_level="basic",
             ),
             evaluation_config=EvaluationConfig(evaluation_mode="walk_forward"),
             objectives=["total_return"],

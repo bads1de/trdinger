@@ -11,11 +11,14 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import math
 from collections.abc import Mapping
 from dataclasses import fields as dataclass_fields
 from dataclasses import is_dataclass
 from statistics import median
 from typing import Any
+
+import pandas as pd
 
 from ..config import objective_registry
 from ..config.ga_config import (
@@ -34,7 +37,7 @@ from ..utils.indicator_references import (
 )
 from .overfitting_metrics import (
     deflated_sharpe_ratio,
-    estimate_test_window_years,
+    estimate_aggregate_tested_years,
     probability_of_backtest_overfitting,
 )
 from .parameter_perturbation import build_perturbed_genes
@@ -250,6 +253,17 @@ class StrategyValidationService:
                 backtest_config,
                 strategy=strategy,
             )
+            if (
+                validation.get("passed")
+                and validation_config.regime_consistency_enabled
+            ):
+                validation = self._apply_regime_consistency_gate(
+                    validation,
+                    strategy,
+                    backtest_config,
+                    validation_ga_config,
+                    validation_config,
+                )
             if validation.get("passed") and robustness_config.enabled:
                 validation = self._apply_robustness_gate(
                     validation,
@@ -281,6 +295,103 @@ class StrategyValidationService:
                 "mode": "error",
                 "reasons": [f"検証実行エラー: {e}"],
             }
+
+    def _apply_regime_consistency_gate(
+        self,
+        validation: dict[str, Any],
+        strategy: Any,
+        backtest_config: dict[str, Any],
+        validation_ga_config: GAConfig,
+        validation_config: ValidationConfig,
+    ) -> dict[str, Any]:
+        """レジーム一貫性ゲート（fail-closed）。
+
+        学習期間を regime_splits 個の等間隔スライスに分割し、全スライスで:
+          - 市場比 ≥ 0（その区間の Buy&Hold に勝つ）
+          - 取引数 ≥ ceil(min_trades / splits)
+        を要求する。片レジーム依存の戦略（強気にだけ乗る／ベアにだけ
+        沿う）を出力から排除し、レジーム適応範囲を学習期間内で検証する。
+        """
+        reasons = list(validation.get("reasons", []))
+        try:
+            if not getattr(validation_config, "regime_consistency_enabled", True):
+                return validation
+            try:
+                start = pd.Timestamp(str(backtest_config.get("start_date", "") or ""))
+                end = pd.Timestamp(str(backtest_config.get("end_date", "") or ""))
+            except Exception:  # noqa: BLE001
+                return validation
+            splits = int(validation_config.regime_splits)
+            if splits < 2 or pd.isna(start) or pd.isna(end) or end <= start:
+                return validation
+
+            span = end - start
+            min_trades_total = int(validation_config.min_trades or 0)
+            min_trades_per_slice = math.ceil(min_trades_total / splits)
+
+            slice_rows: list[dict[str, Any]] = []
+            gate_reasons: list[str] = []
+            for index in range(splits):
+                slice_start = start + span * index / splits
+                slice_end = start + span * (index + 1) / splits
+                slice_cfg = dict(backtest_config)
+                slice_cfg["start_date"] = slice_start.strftime("%Y-%m-%d")
+                slice_cfg["end_date"] = slice_end.strftime("%Y-%m-%d")
+
+                metrics = self._evaluate_variant_metrics(
+                    strategy, slice_cfg, validation_ga_config
+                )
+                label = f"slice{index + 1}({slice_cfg['start_date']}~{slice_cfg['end_date']})"
+                if metrics is None:
+                    slice_rows.append({"label": label, "passed": False, "error": True})
+                    gate_reasons.append(f"{label}: 評価に失敗")
+                    continue
+                total = float(metrics["total_return"])
+                bh = float(metrics["buy_hold_return"])
+                excess = total - bh
+                trades = float(metrics.get("total_trades") or 0.0)
+                passed_slice = excess >= 0.0 and trades >= min_trades_per_slice
+                if not passed_slice:
+                    detail = []
+                    if excess < 0.0:
+                        detail.append(f"市場比 {excess:+.2%}")
+                    if trades < min_trades_per_slice:
+                        detail.append(f"取引数 {trades:.0f} < {min_trades_per_slice}")
+                    gate_reasons.append(f"{label}: {'、'.join(detail)}")
+                slice_rows.append(
+                    {
+                        "label": label,
+                        "passed": passed_slice,
+                        "total_return": total,
+                        "buy_hold_return": bh,
+                        "excess": excess,
+                        "trades": trades,
+                    }
+                )
+
+            regime_passed = not gate_reasons
+            validation["regime_consistency"] = {
+                "passed": regime_passed,
+                "splits": splits,
+                "slices": slice_rows,
+                "reasons": gate_reasons,
+            }
+            if not regime_passed:
+                validation["passed"] = False
+                reasons.append("レジーム一貫性なし: " + " / ".join(gate_reasons))
+                validation["reasons"] = reasons
+            return validation
+
+        except Exception as exc:  # noqa: BLE001
+            # fail-closed: 想定外エラー時は不合格として記録
+            logger.warning("レジーム一貫性ゲートでエラー: %s", exc)
+            validation["regime_consistency"] = {
+                "passed": False,
+                "error": str(exc),
+            }
+            validation["passed"] = False
+            validation["reasons"] = reasons + [f"レジーム一貫性ゲート実行エラー: {exc}"]
+            return validation
 
     def _apply_parameter_perturbation_gate(
         self,
@@ -701,16 +812,19 @@ class StrategyValidationService:
                     "PBOゲート: excess_return が全シナリオで取得できないためスキップ"
                 )
 
-        # DSR ゲート: 多重検定補正後のシャープレシオ有意性（厳格な統計検定）。
+        # DSR ゲート: 多重検定補正後のシャープレシオ有意性。
+        # GA の大量探索によるメタ過適合対策として strict / full で有効。
+        # 統計力の基準は個々のフォールド窓ではなく全フォールドの合算
+        # テスト期間（OOS 証拠の総量）。閾値未満の場合は判定をスキップ
+        # する（fail-closed ではない）。
         dsr: float | None = None
         if validation_config.dsr_gate_active:
             fold_sharpes = self._collect_scenario_metric(report, "sharpe_ratio")
             if scenario_count > 0 and len(fold_sharpes) == scenario_count:
                 observed_sr = float(median(fold_sharpes))
-                n_years = estimate_test_window_years(
+                tested_years = estimate_aggregate_tested_years(
                     str(backtest_config.get("start_date", "") or ""),
                     str(backtest_config.get("end_date", "") or ""),
-                    int(validation_config.wfa_n_folds),
                     float(validation_config.wfa_train_ratio),
                 )
                 effective_trials = validation_config.dsr_effective_trials
@@ -720,14 +834,18 @@ class StrategyValidationService:
                         int(ga_config.population_size)
                         * max(1, int(ga_config.generations)),
                     )
-                if n_years is None or n_years < 1.0:
-                    reasons.append(
-                        "DSRゲート: 検証期間が短すぎて統計力を確保できません"
+                if tested_years is None or (
+                    tested_years < float(validation_config.dsr_min_tested_years)
+                ):
+                    logger.debug(
+                        "DSRゲート: 合算テスト期間 %.2f年 が閾値 %.2f年 未満のためスキップ",
+                        tested_years if tested_years is not None else -1.0,
+                        float(validation_config.dsr_min_tested_years),
                     )
                 else:
                     dsr = deflated_sharpe_ratio(
                         observed_sharpe=observed_sr,
-                        n_observations=n_years,
+                        n_observations=tested_years,
                         n_trials=int(effective_trials),
                         sigma_sharpe=float(validation_config.dsr_sigma_sharpe or 1.0),
                     )
@@ -735,7 +853,8 @@ class StrategyValidationService:
                         reasons.append(
                             f"DSR {dsr:.3f} が閾値 "
                             f"{validation_config.min_dsr} 未満"
-                            f"（SR={observed_sr:.2f}, 試行数={effective_trials}）"
+                            f"（SR={observed_sr:.2f}, 試行数={effective_trials}, "
+                            f"合算テスト={tested_years:.2f}年）"
                         )
             else:
                 logger.debug(
@@ -955,10 +1074,16 @@ class StrategyValidationService:
         except Exception:  # noqa: BLE001
             return None
         if len(totals) == 1 and len(bhs) == 1:
-            return {
+            trades = StrategyValidationService._collect_scenario_metric(
+                report, "total_trades"
+            )
+            metrics: dict[str, float] = {
                 "total_return": float(totals[0]),
                 "buy_hold_return": float(bhs[0]),
             }
+            if len(trades) == 1:
+                metrics["total_trades"] = float(trades[0])
+            return metrics
         return None
 
     # ------------------------------------------------------------------
