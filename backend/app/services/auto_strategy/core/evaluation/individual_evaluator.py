@@ -233,27 +233,23 @@ class IndividualEvaluator:
     def build_parallel_worker_initargs(
         self, config: GAConfig
     ) -> tuple[dict[str, Any], GAConfig, dict[str, Any]] | None:
-        """並列ワーカー初期化に必要な引数を構築する。"""
+        """並列ワーカー初期化に必要な引数を構築する。
+
+        大量行の DataFrame（特に 1m 足）を initargs 経由で全ワーカーへ
+        pickle 配信すると、メインプロセスの直列化コストと各ワーカーの
+        復元コストが支配的になる。OHLCV 取得の軽量経路整備後は、
+        ワーカー側で必要になった初回評価時に個別ロードさせる方が
+        合計コストが小さく、かつ逐次モードと同じデータ取得経路になる。
+        そのため共有データは渡さず空辞書を返す。
+
+        Returns:
+            (バックテスト設定のコピー, GA設定, 空の共有データ辞書)。
+            ``_fixed_backtest_config`` が未設定の場合は None。
+        """
         if not self._fixed_backtest_config:
             return None
 
-        backtest_config = self._fixed_backtest_config.copy()
-        prefetch_config = self._build_prefetch_backtest_config(backtest_config, config)
-        shared_data: dict[str, Any] = {}
-        main_key, minute_key = self._build_backtest_cache_keys(prefetch_config)
-
-        main_data = self._get_cached_data(prefetch_config)
-        if main_data is not None and not getattr(main_data, "empty", False):
-            shared_data["main_data"] = {"key": main_key, "data": main_data}
-
-        minute_data = self._get_cached_minute_data(prefetch_config)
-        if minute_data is not None:
-            shared_data["minute_data"] = {
-                "key": minute_key,
-                "data": minute_data,
-            }
-
-        return (backtest_config, config, shared_data)
+        return (self._fixed_backtest_config.copy(), config, {})
 
     def _build_prefetch_backtest_config(
         self, backtest_config: dict[str, Any], config: GAConfig

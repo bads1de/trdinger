@@ -512,15 +512,18 @@ class TestIndividualEvaluator:
         assert trimmed.index.equals(target_index)
 
     def test_build_parallel_worker_initargs(self):
-        """並列ワーカー初期化引数の構築テスト"""
+        """並列ワーカー初期化引数の構築テスト
+
+        大量 DataFrame の pickle 配信を廃止したため、共有データは空で
+        返る。ワーカーは初回評価時に BacktestDataProvider のフォールバック
+        経路（逐次モードと同一）で個別ロードする。
+        """
         backtest_config = {"symbol": "BTC/USDT:USDT", "timeframe": "1h"}
         ga_config = GAConfig()
-        main_data = pd.DataFrame({"close": [1, 2]})
-        minute_data = pd.DataFrame({"close": [1, 2]})
 
         self.evaluator.set_backtest_config(backtest_config)
-        self.evaluator._get_cached_data = Mock(return_value=main_data)
-        self.evaluator._get_cached_minute_data = Mock(return_value=minute_data)
+        self.evaluator._get_cached_data = Mock()
+        self.evaluator._get_cached_minute_data = Mock()
 
         result = self.evaluator.build_parallel_worker_initargs(ga_config)
 
@@ -529,21 +532,10 @@ class TestIndividualEvaluator:
         assert run_backtest_config == backtest_config
         assert run_backtest_config is not backtest_config
         assert run_ga_config is ga_config
-        assert shared_data["main_data"]["key"] == (
-            "BTC/USDT:USDT",
-            "1h",
-            "None",
-            "None",
-        )
-        assert shared_data["main_data"]["data"] is main_data
-        assert shared_data["minute_data"]["key"] == (
-            "minute",
-            "BTC/USDT:USDT",
-            "1m",
-            "None",
-            "None",
-        )
-        assert shared_data["minute_data"]["data"] is minute_data
+        assert shared_data == {}
+        # データの事前ロードは行わない
+        self.evaluator._get_cached_data.assert_not_called()
+        self.evaluator._get_cached_minute_data.assert_not_called()
 
     def test_evaluate_individual_success(self):
         """個体評価成功のテスト"""
