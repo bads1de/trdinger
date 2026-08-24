@@ -57,6 +57,46 @@ from .run_config_builder import RunConfigBuilder
 
 logger = logging.getLogger(__name__)
 
+# 行動フィンガープリントの対象とする取引記録キー。
+# 欠損キーは定数扱いで直列化するため、入力が同じなら常に同一ハッシュになる。
+_TRADE_FINGERPRINT_KEYS = (
+    "entry_time",
+    "exit_time",
+    "entry_price",
+    "exit_price",
+    "size",
+    "pnl",
+    "return_pct",
+    "duration",
+)
+
+
+def compute_trade_fingerprint(trades: Any) -> str | None:
+    """取引履歴から行動フィンガープリント（SHA256先頭16桁）を計算する。
+
+    構造（遺伝子）は違っても実行時の取引列が完全に一致する個体、
+    すなわち「条件式内で参照はされるが挙動に影響しない遺伝子」を
+    持つクローン個体を検出するためのもの。取引が空・不正な場合は
+    None を返し（fail-open）、呼び出し側は重複判定を行わない。
+    """
+    if not isinstance(trades, list) or not trades:
+        return None
+    parts: list[str] = []
+    for trade in trades:
+        if not isinstance(trade, dict):
+            return None
+        values: list[str] = []
+        for key in _TRADE_FINGERPRINT_KEYS:
+            value = trade.get(key)
+            if isinstance(value, float):
+                value = round(value, 10)
+            elif isinstance(value, (int,)) and not isinstance(value, bool):
+                value = float(value)
+            values.append(str(value))
+        parts.append("|".join(values))
+    payload = "\n".join(parts).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()[:16]
+
 
 class IndividualEvaluator:
     """
@@ -653,6 +693,11 @@ class IndividualEvaluator:
                 scenario_metadata["evaluation_start"] = str(
                     prepared_backtest_config["_evaluation_start"]
                 )
+            fingerprint = compute_trade_fingerprint(
+                result.get("trade_history") if isinstance(result, dict) else None
+            )
+            if fingerprint:
+                scenario_metadata["behavior_fingerprint"] = fingerprint
 
             passed = self._is_backtest_result_passing(
                 result, config, window_days=window_days

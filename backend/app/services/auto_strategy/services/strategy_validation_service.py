@@ -29,7 +29,9 @@ from ..config.ga_config import (
 )
 from ..core.evaluation.evaluation_report import EvaluationReport
 from ..core.evaluation.evaluation_strategies import EvaluationStrategy
-from ..core.evaluation.individual_evaluator import IndividualEvaluator
+from ..core.evaluation.individual_evaluator import (
+    IndividualEvaluator,
+)
 from ..genes.genetic_utils import GeneticUtils
 from ..utils.indicator_references import (
     collect_indicator_references,
@@ -74,6 +76,9 @@ class StrategyValidationService:
         self._evaluation_strategy = EvaluationStrategy(
             evaluator, max_workers=max_workers
         )
+        # フルピリオド評価時に得た行動フィンガープリント（keyごと）。
+        # validate_and_filter_result の冒頭で毎回クリアされる。
+        self._behavior_fingerprints: dict[str, str] = {}
 
     # ------------------------------------------------------------------
     # 公開 API
@@ -108,6 +113,7 @@ class StrategyValidationService:
             ga_config, backtest_config
         )
         validation_results: dict[str, dict[str, Any]] = {}
+        self._behavior_fingerprints.clear()
 
         best_strategy = result.get("best_strategy")
         best_key = self._get_strategy_key(best_strategy) if best_strategy else None
@@ -196,10 +202,12 @@ class StrategyValidationService:
                 _add_candidate(strategy)
 
         # 2. 各候補の WFA 検証
+        key_to_strategy: dict[str, Any] = {}
         for strategy in candidates_to_validate:
             key = self._get_strategy_key(strategy)
             if key in validation_results:
                 continue
+            key_to_strategy[key] = strategy
             validation_results[key] = self._validate_strategy(
                 strategy,
                 backtest_config,
@@ -207,6 +215,10 @@ class StrategyValidationService:
                 validation_config,
                 ga_config.robustness_config,
             )
+
+        # 2.5 行動重複の排除（取引列フィンガープリント一致クローンの統合）
+        self._attach_behavior_fingerprints(validation_results, key_to_strategy)
+        validation_results = self._collapse_behavioral_duplicates(validation_results)
 
         # 3. 頑健性ベースの並び替え
         # メタ分析（n=16, Spearman +0.62 / fitness は -0.04）に基づき、
@@ -271,6 +283,94 @@ class StrategyValidationService:
             return (passed, has_margin, min_margin, fit_value)
 
         return dict(sorted(validation_results.items(), key=sort_key, reverse=True))
+
+    # ------------------------------------------------------------------
+    # 行動重複排除（バックテスト出力ベース）
+    # ------------------------------------------------------------------
+
+    def _behavior_fingerprint_from_cache(self, strategy: Any) -> str | None:
+        """評価器キャッシュのフルピリオドレポートから行動フィンガープリントを取得する。
+
+        キャッシュが無い（並列ワーカーで評価された等）場合は None を返し、
+        呼び出し側はその個体を重複判定の対象外とする（fail-open）。
+        """
+        if strategy is None:
+            return None
+        try:
+            report = self._evaluator.get_cached_evaluation_report(strategy)
+        except Exception:  # noqa: BLE001
+            return None
+        scenarios = getattr(report, "scenarios", None)
+        if not isinstance(scenarios, list) or not scenarios:
+            return None
+        metadata = getattr(scenarios[0], "metadata", None)
+        if not isinstance(metadata, dict):
+            return None
+        fingerprint = metadata.get("behavior_fingerprint")
+        if isinstance(fingerprint, str) and fingerprint:
+            return fingerprint
+        return None
+
+    def _attach_behavior_fingerprints(
+        self,
+        validation_results: dict[str, dict[str, Any]],
+        key_to_strategy: dict[str, Any],
+    ) -> None:
+        """検証結果に取引列フィンガープリントを添付する（取得できた場合のみ）。
+
+        第1経路: _get_full_period_metrics 実行時に記録した値。
+        第2経路: 評価器キャッシュのレポート（GA評価が同一プロセスだった場合）。
+        """
+        for key, result in validation_results.items():
+            fingerprint = self._behavior_fingerprints.get(key) or (
+                self._behavior_fingerprint_from_cache(key_to_strategy.get(key))
+            )
+            if fingerprint:
+                result["behavior_fingerprint"] = fingerprint
+
+    @staticmethod
+    def _collapse_behavioral_duplicates(
+        validation_results: dict[str, dict[str, Any]],
+    ) -> dict[str, dict[str, Any]]:
+        """取引フィンガープリントが一致する候補を1体に統合する。
+
+        同一グループ内では (passed, primary_fitness) が最も良い個体を残し、
+        残りは不合格へ変更して duplicate_of / reasons を記録する。
+        フィンガープリント未取得の個体は対象外（fail-open）。
+        """
+        groups: dict[str, list[str]] = {}
+        for key, result in validation_results.items():
+            fingerprint = result.get("behavior_fingerprint")
+            if fingerprint:
+                groups.setdefault(str(fingerprint), []).append(key)
+
+        def merit(key: str) -> tuple[bool, float]:
+            result = validation_results[key]
+            fit = result.get("primary_fitness")
+            fit_value = (
+                float(fit)
+                if isinstance(fit, (int, float)) and math.isfinite(float(fit))
+                else float("-inf")
+            )
+            return (bool(result.get("passed", False)), fit_value)
+
+        for _fingerprint, keys in groups.items():
+            if len(keys) < 2:
+                continue
+            ordered = sorted(keys, key=merit, reverse=True)
+            kept = ordered[0]
+            for duplicate in ordered[1:]:
+                dup_result = validation_results[duplicate]
+                dup_result["passed"] = False
+                dup_result["duplicate_of"] = kept
+                reason = (
+                    f"行動的に同一なクローン個体（取引fingerprint一致）: {kept} を優先"
+                )
+                reasons = dup_result.setdefault("reasons", [])
+                if reason not in reasons:
+                    reasons.append(reason)
+
+        return validation_results
 
     # ------------------------------------------------------------------
     # 内部処理
@@ -1088,19 +1188,38 @@ class StrategyValidationService:
         """
         try:
             cached = self._evaluator.get_cached_evaluation_report(strategy)
-            metrics = self._extract_single_scenario_metrics(cached)
-            if metrics is not None:
-                return metrics
+            if cached is not None:
+                self._remember_behavior_fingerprint(strategy, cached)
+                metrics = self._extract_single_scenario_metrics(cached)
+                if metrics is not None:
+                    return metrics
 
             single_config = copy.deepcopy(validation_ga_config)
             single_config.evaluation_config.evaluation_mode = "single"
             report = self._evaluation_strategy.execute_single_report(
                 strategy, backtest_config, single_config
             )
+            self._remember_behavior_fingerprint(strategy, report)
             return self._extract_single_scenario_metrics(report)
         except Exception as exc:  # noqa: BLE001
             logger.debug("フルピリオド指標の取得に失敗: %s", exc)
             return None
+
+    def _remember_behavior_fingerprint(self, strategy: Any, report: Any) -> None:
+        """フルピリオドレポートから行動フィンガープリントを記録する（取得できれば）。"""
+        scenarios = getattr(report, "scenarios", None)
+        if not isinstance(scenarios, list) or not scenarios:
+            return
+        metadata = getattr(scenarios[0], "metadata", None)
+        if not isinstance(metadata, dict):
+            return
+        fingerprint = metadata.get("behavior_fingerprint")
+        if isinstance(fingerprint, str) and fingerprint:
+            try:
+                key = self._get_strategy_key(strategy)
+            except Exception:  # noqa: BLE001
+                return
+            self._behavior_fingerprints[key] = fingerprint
 
     @staticmethod
     def _extract_single_scenario_metrics(

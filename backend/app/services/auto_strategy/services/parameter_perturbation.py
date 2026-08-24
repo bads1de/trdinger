@@ -1,19 +1,24 @@
 """パラメータ摂動変異体の生成
 
-合格候補の指標パラメータを微小に揺らした変異遺伝子を作る。
+合格候補の数値パラメータを微小に揺らした変異遺伝子を作る。
 「パラメータの針の山」に過適合した戦略（±10% の変更で成績が崩壊する
 戦略）を検出するための感度分析用。
 
 設計:
 - 数値パラメータ（int/float、bool除く）のみ対象
+- 対象コンポーネント:
+    * 条件式から参照される有効な指標遺伝子の parameters
+    * TPSL 遺伝子（base / long / short、enabled のみ）
+    * ポジションサイジング遺伝子（enabled のみ）
 - 一度に1パラメータだけ変更する One-At-a-Time 方式（影響の切り分けが可能）
 - 条件式から参照されない「死んだ」指標は揺らしても挙動が変わらないため除外
-- 生成数は max_variants で打ち止め（均等に間引いて決定論的に選ぶ）
+- 生成数は max_variants で打ち止め（全候補から均等に間引いて決定論的に選ぶ）
 """
 
 from __future__ import annotations
 
 import copy
+import dataclasses
 import logging
 from typing import Any
 
@@ -68,6 +73,88 @@ def _evenly_spread_indices(total: int, limit: int) -> list[int]:
     return sorted({min(total - 1, int(i * step)) for i in range(limit)})
 
 
+def _numeric_dataclass_fields(obj: Any) -> list[str]:
+    """オブジェクトの数値フィールド名（bool/dict等は除外）をソート済みで返す。
+
+    dataclass 以外（SimpleNamespace 等のテストダブル）は __dict__ に
+    フォールバックする。
+    """
+    if obj is None:
+        return []
+    try:
+        fields = dataclasses.fields(obj)
+        names = [f.name for f in fields]
+    except TypeError:
+        names = list(getattr(obj, "__dict__", {}).keys())
+    result: list[str] = []
+    for name in sorted(names):
+        value = getattr(obj, name, None)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        result.append(name)
+    return result
+
+
+# (source_kind, locator, key, original_value, direction)
+Candidate = tuple[str, Any, str, Any, int]
+
+
+def _collect_candidates(gene: Any) -> tuple[list[Any], list[Candidate]]:
+    """摂動候補（指標＋TPSL＋サイジング）と指標リストを返す。"""
+    alive = collect_alive_indicator_genes(gene)
+    candidates: list[Candidate] = []
+
+    for ind_index, indicator in enumerate(alive):
+        parameters = getattr(indicator, "parameters", None)
+        if not isinstance(parameters, dict):
+            continue
+        for key in sorted(parameters):
+            for direction in (+1, -1):
+                candidates.append(
+                    ("indicator", ind_index, key, parameters[key], direction)
+                )
+
+    sub_gene_specs = (
+        ("tpsl_gene", "TPSL"),
+        ("long_tpsl_gene", "TPSL_LONG"),
+        ("short_tpsl_gene", "TPSL_SHORT"),
+        ("position_sizing_gene", "SIZING"),
+    )
+    for attr_name, prefix in sub_gene_specs:
+        sub = getattr(gene, attr_name, None)
+        if sub is None or not getattr(sub, "enabled", True):
+            continue
+        for field_name in _numeric_dataclass_fields(sub):
+            value = getattr(sub, field_name)
+            for direction in (+1, -1):
+                candidates.append((attr_name, prefix, field_name, value, direction))
+
+    return alive, candidates
+
+
+def _apply_perturbation(
+    variant: Any,
+    kind: str,
+    locator: Any,
+    key: str,
+    new_value: Any,
+) -> str | None:
+    """変異遺伝子へ摂動を適用し、ラベルを返す（失敗時 None）。"""
+    if kind == "indicator":
+        target = collect_alive_indicator_genes(variant)[locator]
+        original = target.parameters[key]
+        target.parameters[key] = new_value
+        label_prefix = str(getattr(target, "type", "?"))
+    else:
+        target = getattr(variant, kind, None)
+        if target is None:
+            return None
+        original = getattr(target, key)
+        setattr(target, key, new_value)
+        label_prefix = str(locator)
+    return f"{label_prefix}.{key}: {original} -> {new_value}"
+
+
 def build_perturbed_genes(
     gene: Any,
     delta: float,
@@ -77,23 +164,12 @@ def build_perturbed_genes(
 
     Returns:
         list[(label, variant_gene)]: label は人間可読な差分説明
-            （例: "BBANDS.length: 20 -> 22"）。
+            （例: "BBANDS.length: 20 -> 22" / "TPSL.stop_loss_pct: 0.03 -> 0.027"）。
     """
     if max_variants <= 0 or delta <= 0.0:
         return []
 
-    alive = collect_alive_indicator_genes(gene)
-
-    # (alive内の指標インデックス, パラメータキー, 現在値, 方向) の候補を収集
-    candidates: list[tuple[int, str, Any, int]] = []
-    for ind_index, indicator in enumerate(alive):
-        parameters = getattr(indicator, "parameters", None)
-        if not isinstance(parameters, dict):
-            continue
-        for key in sorted(parameters):
-            for direction in (+1, -1):
-                candidates.append((ind_index, key, parameters[key], direction))
-
+    alive, candidates = _collect_candidates(gene)
     if not candidates:
         return []
 
@@ -103,15 +179,13 @@ def build_perturbed_genes(
 
     variants: list[tuple[str, Any]] = []
     seen_labels: set[str] = set()
-    for ind_index, key, original, direction in chosen:
+    for kind, locator, key, original, direction in chosen:
         new_value = _perturb_value(original, direction, delta)
         if new_value is None:
             continue
         variant = copy.deepcopy(gene)
-        target = collect_alive_indicator_genes(variant)[ind_index]
-        target.parameters[key] = new_value
-        label = f"{getattr(target, 'type', '?')}.{key}: {original} -> {new_value}"
-        if label in seen_labels:
+        label = _apply_perturbation(variant, kind, locator, key, new_value)
+        if label is None or label in seen_labels:
             continue
         seen_labels.add(label)
         variants.append((label, variant))

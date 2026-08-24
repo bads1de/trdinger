@@ -40,6 +40,12 @@ def _stub_full_period_metrics(monkeypatch):
         "_apply_regime_consistency_gate",
         lambda self, validation, *args, **kwargs: validation,
     )
+    # 摂動ゲートは専用テストモジュールで検証するため既定では無効化
+    monkeypatch.setattr(
+        StrategyValidationService,
+        "_apply_parameter_perturbation_gate",
+        lambda self, validation, *args, **kwargs: validation,
+    )
 
 
 def _make_report(
@@ -2097,3 +2103,76 @@ class TestBehavioralSignature:
         assert StrategyValidationService._behavioral_signature(
             a
         ) != StrategyValidationService._behavioral_signature(e)
+
+
+class TestCollapseBehavioralDuplicates:
+    """取引フィンガープリントによるクローン統合のテスト."""
+
+    @staticmethod
+    def _entry(passed: bool = True, fitness: float = 1.0, fp: str | None = None):
+        entry: dict = {"passed": passed, "primary_fitness": fitness}
+        if fp:
+            entry["behavior_fingerprint"] = fp
+        return entry
+
+    def test_identical_fingerprints_collapse_to_best(self):
+        results = {
+            "a": self._entry(True, 0.5, "FP1"),
+            "b": self._entry(True, 0.9, "FP1"),
+            "c": self._entry(False, 2.0, "FP1"),
+        }
+        out = StrategyValidationService._collapse_behavioral_duplicates(results)
+        assert out["b"]["passed"] is True
+        # 不合格でもfitnessが高い方を残すわけではなく、passed優先→b
+        assert out["c"]["duplicate_of"] == "b"
+        assert out["a"]["passed"] is False
+        assert out["a"]["duplicate_of"] == "b"
+        assert any("クローン" in r for r in out["a"]["reasons"])
+
+    def test_distinct_and_missing_fingerprints_untouched(self):
+        results = {
+            "a": self._entry(True, 0.5, "FP1"),
+            "b": self._entry(True, 0.9, "FP2"),
+            "c": self._entry(True, 0.7),
+            "d": self._entry(False, 0.1),
+        }
+        out = StrategyValidationService._collapse_behavioral_duplicates(results)
+        assert all(r["passed"] for r in (out["a"], out["b"], out["c"]))
+        assert all("duplicate_of" not in out[k] for k in out)
+
+    def test_reason_not_duplicated_on_double_run(self):
+        results = {
+            "a": self._entry(True, 0.1, "F"),
+            "b": self._entry(True, 0.2, "F"),
+        }
+        StrategyValidationService._collapse_behavioral_duplicates(results)
+        StrategyValidationService._collapse_behavioral_duplicates(results)
+        assert len(results["a"]["reasons"]) == 1
+
+
+class TestAttachBehaviorFingerprints:
+    """評価器キャッシュからのフィンガープリント取得のテスト."""
+
+    def test_attach_from_cached_report(self):
+        service = StrategyValidationService(MagicMock())
+        scenario = SimpleNamespace(metadata={"behavior_fingerprint": "abc123"})
+        service._evaluator.get_cached_evaluation_report.return_value = SimpleNamespace(
+            scenarios=[scenario]
+        )
+        results = {"k1": {"passed": True}}
+        service._attach_behavior_fingerprints(results, {"k1": object()})
+        assert results["k1"]["behavior_fingerprint"] == "abc123"
+
+    def test_missing_cache_stays_absent(self):
+        service = StrategyValidationService(MagicMock())
+        service._evaluator.get_cached_evaluation_report.return_value = None
+        results = {"k1": {"passed": True}}
+        service._attach_behavior_fingerprints(results, {"k1": object()})
+        assert "behavior_fingerprint" not in results["k1"]
+
+    def test_cache_error_is_fail_open(self):
+        service = StrategyValidationService(MagicMock())
+        service._evaluator.get_cached_evaluation_report.side_effect = RuntimeError("x")
+        results = {"k1": {"passed": True}}
+        service._attach_behavior_fingerprints(results, {"k1": object()})
+        assert "behavior_fingerprint" not in results["k1"]

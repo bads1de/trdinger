@@ -156,6 +156,67 @@ def _passed_validation():
     return {"passed": True, "reasons": []}
 
 
+class TestSubGenePerturbation:
+    """TPSL / ポジションサイジング遺伝子の摂動テスト"""
+
+    def _make_gene_with_subgenes(self):
+        gene = _make_gene()
+        gene.tpsl_gene = SimpleNamespace(
+            enabled=True,
+            stop_loss_pct=0.03,
+            take_profit_pct=0.06,
+            trailing_stop=False,  # bool は対象外
+        )
+        gene.position_sizing_gene = SimpleNamespace(
+            enabled=True,
+            risk_per_trade=0.02,
+            fixed_quantity=1.0,
+        )
+        return gene
+
+    def test_tpsl_numeric_field_is_perturbed(self):
+        gene = self._make_gene_with_subgenes()
+        variants = build_perturbed_genes(gene, delta=0.10, max_variants=64)
+        labels = [label for label, _ in variants]
+        assert any(label.startswith("TPSL.stop_loss_pct") for label in labels)
+        # bool フィールドは対象外
+        assert not any("trailing_stop" in label for label in labels)
+
+    def test_sizing_field_is_perturbed_with_prefix(self):
+        gene = self._make_gene_with_subgenes()
+        variants = build_perturbed_genes(gene, delta=0.10, max_variants=64)
+        labels = [label for label, _ in variants]
+        assert any(label.startswith("SIZING.risk_per_trade") for label in labels)
+
+    def test_disabled_subgene_is_excluded(self):
+        gene = self._make_gene_with_subgenes()
+        gene.tpsl_gene.enabled = False
+        variants = build_perturbed_genes(gene, delta=0.10, max_variants=64)
+        assert not any(label.startswith("TPSL.") for label, _ in variants)
+
+    def test_cap_applies_across_combined_pool(self):
+        gene = self._make_gene_with_subgenes()
+        variants = build_perturbed_genes(gene, delta=0.10, max_variants=3)
+        assert len(variants) <= 3
+
+    def test_variant_actually_differs_in_subgene(self):
+        import math
+
+        gene = self._make_gene_with_subgenes()
+        variants = build_perturbed_genes(gene, delta=0.10, max_variants=64)
+        hit = [
+            (label, v)
+            for label, v in variants
+            if label.startswith("TPSL.take_profit_pct")
+        ]
+        assert hit, "TPSL.take_profit_pct の変異体が生成されるべき"
+        _, variant = hit[0]
+        original_tp = gene.tpsl_gene.take_profit_pct
+        perturbed_tp = variant.tpsl_gene.take_profit_pct
+        expected = {original_tp * 1.10, original_tp * 0.90}
+        assert any(math.isclose(perturbed_tp, e, rel_tol=1e-9) for e in expected)
+
+
 class TestParameterPerturbationGate:
     """摂動ゲート判定のテスト"""
 
