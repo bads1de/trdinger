@@ -208,7 +208,14 @@ class StrategyValidationService:
                 ga_config.robustness_config,
             )
 
-        # 3. フィルタリング
+        # 3. 頑健性ベースの並び替え
+        # メタ分析（n=16, Spearman +0.62 / fitness は -0.04）に基づき、
+        # レジーム一貫性の最小スライスマージンを第一キー、fitness を第二キー
+        # （未記録・フォールバック）として出力順序を決める。
+        # 合格者は常に不合格者より上位に置く。
+        validation_results = self._rank_validation_results(validation_results)
+
+        # 4. フィルタリング
         filtered = self._filter_result(result, validation_results, validation_config)
         filtered["validation_results"] = validation_results
         filtered["validation_report_summaries"] = {
@@ -226,6 +233,44 @@ class StrategyValidationService:
             passed_count,
         )
         return filtered
+
+    def _rank_validation_results(
+        self, validation_results: dict[str, dict[str, Any]]
+    ) -> dict[str, dict[str, Any]]:
+        """検証結果を頑健性ベースの順序に並び替える。
+
+        ソートキー（降順）:
+          1. passed（合格者を常に不合格者より上位へ）
+          2. レジーム一貫性の最小スライスマージン（未記録は最下位扱い）
+          3. primary_fitness（同点・未記録時のフォールバック）
+
+        根拠: OOS予測力メタ分析において fitness は同期間内で予測力ゼロ
+        （Spearman -0.04）だった一方、レジーム最小マージンは正の予測力
+        （n=16, Spearman +0.62）を示した。サンプル蓄積後の再検証を前提と
+        した仮説ベースの改善である。
+        """
+
+        def sort_key(item: tuple[str, dict[str, Any]]) -> tuple:
+            result = item[1]
+            passed = bool(result.get("passed", False))
+            rc = result.get("regime_consistency") or {}
+            slices = rc.get("slices") or []
+            margins = [
+                float(s["excess"])
+                for s in slices
+                if isinstance(s, dict) and isinstance(s.get("excess"), (int, float))
+            ]
+            has_margin = bool(margins)
+            min_margin = min(margins) if margins else 0.0
+            fit = result.get("primary_fitness")
+            fit_value = (
+                float(fit)
+                if isinstance(fit, (int, float)) and math.isfinite(float(fit))
+                else float("-inf")
+            )
+            return (passed, has_margin, min_margin, fit_value)
+
+        return dict(sorted(validation_results.items(), key=sort_key, reverse=True))
 
     # ------------------------------------------------------------------
     # 内部処理

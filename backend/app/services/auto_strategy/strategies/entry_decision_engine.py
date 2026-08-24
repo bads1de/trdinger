@@ -10,6 +10,8 @@ import logging
 import math
 from typing import Any, cast
 
+import pandas as pd
+
 from app.services.backtest.shared import FRACTIONAL_UNIT
 
 from ..config.constants import EntryType
@@ -439,6 +441,45 @@ class EntryDecisionEngine:
                     if not np.isnan(atr) and price > 0:
                         extra["atr"] = float(atr)
                         extra["atr_pct"] = float(atr) / price
+            except Exception:
+                pass
+            try:
+                # ツール（funding_rate_filter 等）向けに現在バーの非価格データを供給
+                raw_df = getattr(self.strategy.data, "df", None)
+                idx = int(len(self.strategy.data)) - 1
+                if raw_df is not None and 0 <= idx < len(raw_df):
+                    for _col in ("funding_rate", "long_short_ratio"):
+                        if _col in getattr(raw_df, "columns", ()):
+                            _val = raw_df[_col].iloc[idx]
+                            if _val is not None and not pd.isna(_val):
+                                extra[_col] = float(_val)
+            except Exception:
+                pass
+            try:
+                # trend_filter 用 ADX / volume_filter 用平均出来高（事前計算済み）
+                idx = int(len(self.strategy.data)) - 1
+                pre_adx = getattr(self.strategy, "_precomputed_adx", None)
+                if pre_adx is not None and 0 <= idx < len(pre_adx):
+                    _v = pre_adx[idx]
+                    if (
+                        _v is not None
+                        and isinstance(_v, (int, float))
+                        and math.isfinite(float(_v))
+                    ):
+                        extra["adx"] = float(_v)
+            except Exception:
+                pass
+            try:
+                idx = int(len(self.strategy.data)) - 1
+                pre_avg_vol = getattr(self.strategy, "_precomputed_avg_volume", None)
+                if pre_avg_vol is not None and 0 <= idx < len(pre_avg_vol):
+                    _v = pre_avg_vol[idx]
+                    if (
+                        _v is not None
+                        and isinstance(_v, (int, float))
+                        and math.isfinite(float(_v))
+                    ):
+                        extra["avg_volume"] = float(_v)
             except Exception:
                 pass
             context = ToolContext(

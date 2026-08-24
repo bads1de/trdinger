@@ -32,6 +32,7 @@ class StrategyInitializer:
             self._initialize_indicators()
             self._precompute_condition_signals()
             self._precompute_position_sizing_atr()
+            self._precompute_tool_context_data()
             self._precompute_tpsl_atr()
         except Exception as e:
             logger.error("戦略初期化エラー: %s", e, exc_info=True)
@@ -233,3 +234,44 @@ class StrategyInitializer:
                                 )
                 except Exception as e:
                     logger.debug("TP/SL ATR事前計算失敗: %s", e)
+
+    def _precompute_tool_context_data(self) -> None:
+        """ツールフィルター用の追加指標（ADX・平均出来高）を事前計算する。
+
+        entry_decision_engine が ToolContext.extra_data 経由でツールへ
+        渡すデータの供給源。対応する tool_gene が存在する場合のみ計算する。
+        """
+        self.strategy._precomputed_adx = None
+        self.strategy._precomputed_avg_volume = None
+        try:
+            raw_df = getattr(self.strategy.data, "df", None)
+            if raw_df is None or not hasattr(raw_df, "columns"):
+                return
+            cols = set(map(str, getattr(raw_df, "columns", ())))
+            tool_genes = list(getattr(self.strategy.gene, "tool_genes", []) or [])
+            tool_names = {
+                str(getattr(g, "tool_name", "")) for g in tool_genes if g is not None
+            }
+
+            if "trend_filter" in tool_names and {"high", "low", "close"} <= cols:
+                periods = [
+                    int((getattr(g, "params", {}) or {}).get("adx_period", 14))
+                    for g in tool_genes
+                    if str(getattr(g, "tool_name", "")) == "trend_filter"
+                ]
+                period = periods[0] if periods else 14
+                adx_result = self.strategy.indicator_calculator.calculate_indicator(
+                    self.strategy.data,
+                    "ADX",
+                    {"length": max(2, period)},
+                )
+                adx_values = self._extract_atr_values(adx_result)
+                if adx_values is not None:
+                    self.strategy._precomputed_adx = adx_values
+
+            if "volume_filter" in tool_names and "volume" in cols:
+                volume = pd.to_numeric(raw_df["volume"], errors="coerce")
+                avg_volume = volume.rolling(window=20, min_periods=1).mean()
+                self.strategy._precomputed_avg_volume = avg_volume.to_numpy(dtype=float)
+        except Exception as e:
+            logger.debug("ツール用指標事前計算失敗: %s", e)

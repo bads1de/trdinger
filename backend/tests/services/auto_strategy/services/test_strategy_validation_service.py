@@ -1939,6 +1939,58 @@ class TestOverfittingGates:
         assert validation["dsr"] is None
 
 
+class TestRankValidationResults:
+    """頑健性ベース出力順序のテスト"""
+
+    def setup_method(self) -> None:
+        self.service = StrategyValidationService(MagicMock())
+
+    @staticmethod
+    def _entry(
+        passed: bool = True,
+        margin: float | None = None,
+        fitness: float | None = 1.0,
+    ) -> dict:
+        entry: dict = {"passed": passed, "primary_fitness": fitness}
+        if margin is not None:
+            entry["regime_consistency"] = {
+                "slices": [{"excess": margin}, {"excess": margin / 2}]
+            }
+        return entry
+
+    def test_orders_by_min_regime_margin(self) -> None:
+        results = {
+            "low": self._entry(margin=0.05, fitness=99.0),
+            "high": self._entry(margin=0.20, fitness=0.5),
+        }
+        ranked = self.service._rank_validation_results(results)
+        assert list(ranked.keys()) == ["high", "low"]
+
+    def test_fitness_tiebreak_when_no_margin(self) -> None:
+        results = {
+            "weak": self._entry(margin=None, fitness=1.0),
+            "strong": self._entry(margin=None, fitness=5.0),
+        }
+        ranked = self.service._rank_validation_results(results)
+        assert list(ranked.keys()) == ["strong", "weak"]
+
+    def test_failed_never_outranks_passed(self) -> None:
+        results = {
+            "failed_high_margin": self._entry(passed=False, margin=0.9, fitness=100.0),
+            "passed_low_margin": self._entry(passed=True, margin=0.01),
+        }
+        ranked = self.service._rank_validation_results(results)
+        assert list(ranked.keys()) == ["passed_low_margin", "failed_high_margin"]
+
+    def test_missing_margin_falls_below_holders(self) -> None:
+        results = {
+            "no_margin": self._entry(margin=None, fitness=50.0),
+            "with_margin": self._entry(margin=-0.10, fitness=0.1),
+        }
+        ranked = self.service._rank_validation_results(results)
+        assert list(ranked.keys()) == ["with_margin", "no_margin"]
+
+
 class TestBehavioralSignature:
     """行動シグネチャ（クローン検出）のテスト"""
 
