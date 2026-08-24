@@ -27,7 +27,11 @@ logger.setLevel(logging.INFO)
 warnings.filterwarnings("ignore")
 
 
-def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> dict[str, Any]:
+def run_single_ga(
+    use_seeds: bool,
+    seed_rate: float = 0.2,
+    symbol: str = "BTC/USDT:USDT",
+) -> dict[str, Any]:
     """単一のGA実行"""
     from app.services.auto_strategy.config.ga_config import EvaluationConfig, GAConfig
     from app.services.auto_strategy.core.engine.ga_engine import GeneticAlgorithmEngine
@@ -52,7 +56,7 @@ def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> dict[str, Any]:
     )
 
     backtest_config = {
-        "symbol": "BTC/USDT:USDT",
+        "symbol": symbol,
         "timeframe": "1h",
         "start_date": "2024-01-01",
         "end_date": "2024-06-01",
@@ -74,8 +78,20 @@ def run_single_ga(use_seeds: bool, seed_rate: float = 0.2) -> dict[str, Any]:
 
 
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="シード戦略効果検証スクリプト")
+    parser.add_argument(
+        "--symbol",
+        type=str,
+        default="BTC/USDT:USDT",
+        help="対象シンボル（例: ETH/USDT:USDT）",
+    )
+    args = parser.parse_args()
+    symbol = args.symbol
+
     print("\n" + "=" * 60)
-    print("     シード戦略効果検証スクリプト")
+    print(f"     シード戦略効果検証スクリプト (symbol={symbol})")
     print("=" * 60)
 
     results = {}
@@ -83,7 +99,7 @@ def main():
     # 1. シードなし
     print("\n【実験1】シードなしでGA実行...")
     try:
-        results["no_seed"] = run_single_ga(use_seeds=False)
+        results["no_seed"] = run_single_ga(use_seeds=False, symbol=symbol)
         print(
             f"  完了: {results['no_seed']['elapsed_time']:.1f}秒, "
             f"フィットネス: {results['no_seed']['best_fitness']:.4f}"
@@ -98,7 +114,9 @@ def main():
     # 2. シードあり
     print("\n【実験2】シードありでGA実行 (注入率: 30%)...")
     try:
-        results["with_seed"] = run_single_ga(use_seeds=True, seed_rate=0.3)
+        results["with_seed"] = run_single_ga(
+            use_seeds=True, seed_rate=0.3, symbol=symbol
+        )
         print(
             f"  完了: {results['with_seed']['elapsed_time']:.1f}秒, "
             f"フィットネス: {results['with_seed']['best_fitness']:.4f}"

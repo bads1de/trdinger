@@ -12,6 +12,7 @@ Long/Short Ratioの履歴データを取得・保存します。
     start_date: 収集開始日 (default: なし = 2020-10-01から、YYYY-MM-DD)
 """
 
+import argparse
 import asyncio
 import logging
 import os
@@ -47,12 +48,24 @@ logger = logging.getLogger(__name__)
 
 
 async def get_linear_symbols(symbol_filter: str | None = None):
-    """Bybitから有効なUSDT無期限契約のシンボルリストを取得（既定: BTC/USDT:USDT）"""
+    """収集対象シンボルのリストを返す（既定: BTC/USDT:USDT）。
+
+    symbol_filter はカンマ区切りで複数指定可能（例: "BTC/USDT:USDT,ETH/USDT:USDT"）。
+    指定シンボルが設定の supported_symbols ホワイトリストに含まれるか検証する。
+    """
+    from app.config.unified_config import unified_config
+
     if symbol_filter:
-        logger.info(f"対象シンボルをフィルタリング中 ({symbol_filter})...")
-        return [symbol_filter]
-    logger.info("対象シンボルをフィルタリング中 (BTC/USDT:USDTのみ)...")
-    return ["BTC/USDT:USDT"]
+        requested = [s.strip() for s in symbol_filter.split(",") if s.strip()]
+    else:
+        requested = ["BTC/USDT:USDT"]
+
+    supported = unified_config.market.supported_symbols
+    unknown = [s for s in requested if s not in supported]
+    if unknown:
+        raise ValueError(f"未対応のシンボル: {unknown} (対応: {', '.join(supported)})")
+    logger.info(f"対象シンボル: {requested}")
+    return requested
 
 
 async def collect_symbol_data(service, repository, symbol, period, start_date=None):
@@ -78,36 +91,61 @@ async def collect_symbol_data(service, repository, symbol, period, start_date=No
 
 
 async def main():
-    # 引数から期間を取得 (デフォルト: 1h)
-    period = sys.argv[1] if len(sys.argv) > 1 else "1h"
-    allowed_periods = ["5min", "15min", "30min", "1h", "4h", "1d"]
+    parser = argparse.ArgumentParser(
+        description="Long/Short Ratio 履歴データ収集スクリプト",
+        epilog=(
+            "使用例: python collect_all_ls_ratio.py --period 4h "
+            "--start-date 2020-10-01 --symbols BTC/USDT:USDT,ETH/USDT:USDT"
+        ),
+    )
+    parser.add_argument(
+        "-p",
+        "--period",
+        default="1h",
+        help="収集する時間足 (5min, 15min, 30min, 1h, 4h, 1d)",
+    )
+    parser.add_argument(
+        "-s",
+        "--start-date",
+        default=None,
+        help="収集開始日 YYYY-MM-DD（未指定時は 2020-10-01）",
+    )
+    parser.add_argument(
+        "--symbols",
+        default=None,
+        help="対象シンボル（カンマ区切り・未指定時は BTC/USDT:USDT）",
+    )
+    args = parser.parse_args()
 
+    period = args.period
+    allowed_periods = ["5min", "15min", "30min", "1h", "4h", "1d"]
     if period not in allowed_periods:
         logger.error(f"無効な期間です: {period}. 指定可能: {allowed_periods}")
         return
 
-    # 任意の第2引数: 収集開始日 (YYYY-MM-DD)
     start_date = None
-    if len(sys.argv) > 2:
+    if args.start_date:
         try:
-            start_date = datetime.strptime(sys.argv[2], "%Y-%m-%d").replace(
+            start_date = datetime.strptime(args.start_date, "%Y-%m-%d").replace(
                 tzinfo=timezone.utc
             )
         except ValueError:
-            logger.error(f"無効な開始日です: {sys.argv[2]} (YYYY-MM-DD 形式)")
+            logger.error(f"無効な開始日です: {args.start_date} (YYYY-MM-DD 形式)")
             return
 
-    # 任意の第3引数: 対象シンボル (既定: BTC/USDT:USDT)
-    symbol_filter = sys.argv[3] if len(sys.argv) > 3 else None
+    symbol_filter = args.symbols
 
     logger.info(
-        f"=== 全ペア Long/Short Ratio 収集開始 (Period: {period}, "
+        f"=== Long/Short Ratio 収集開始 (Period: {period}, "
         f"Start: {start_date or '2020-10-01'}, Symbol: {symbol_filter or 'BTC'}) ==="
     )
 
     # 1. シンボルリストの取得
-    logger.info("市場データを取得中...")
-    symbols = await get_linear_symbols(symbol_filter)
+    try:
+        symbols = await get_linear_symbols(symbol_filter)
+    except ValueError as e:
+        logger.error(str(e))
+        return
     logger.info(f"対象通貨ペア数: {len(symbols)}")
 
     # 2. サービスとリポジトリの初期化

@@ -34,6 +34,20 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # OHLCV データ収集
 # =============================================================================
+def resolve_timeframes(raw: list[str] | None, supported: list[str]) -> list[str]:
+    """時間足指定を検証・解決する（Noneなら全時間足）。
+
+    Raises:
+        ValueError: 未対応の時間足が含まれる場合
+    """
+    if not raw:
+        return list(supported)
+    unknown = [tf for tf in raw if tf not in supported]
+    if unknown:
+        raise ValueError(f"未対応の時間足: {unknown} (対応: {supported})")
+    return list(raw)
+
+
 async def collect_ohlcv_data(
     symbol: str = "BTC/USDT:USDT",
     timeframes: list[str] | None = None,
@@ -66,14 +80,9 @@ async def collect_ohlcv_data(
         market_service = BybitMarketDataService()
 
         # サポートされている全ての時間足を取得
-        if timeframes:
-            all_tfs = list(unified_config.market.supported_timeframes)
-            unknown = [tf for tf in timeframes if tf not in all_tfs]
-            if unknown:
-                raise ValueError(f"未対応の時間足: {unknown} (対応: {all_tfs})")
-            timeframes = list(timeframes)
-        else:
-            timeframes = list(unified_config.market.supported_timeframes)
+        timeframes = resolve_timeframes(
+            timeframes, list(unified_config.market.supported_timeframes)
+        )
         logger.info(f"対象時間足: {timeframes}")
 
         for tf in timeframes:

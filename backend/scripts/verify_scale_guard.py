@@ -130,6 +130,12 @@ def main() -> None:
         help="RTR の局所競争相手サンプル数 (crowding factor)。RTR 自体はデフォルトで有効",
     )
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument(
+        "--symbol",
+        type=str,
+        default="BTC/USDT:USDT",
+        help="対象シンボル（例: ETH/USDT:USDT）",
+    )
     args = parser.parse_args()
 
     for rate in [float(r) for r in args.seed_rates.split(",")]:
@@ -165,7 +171,7 @@ def main() -> None:
             fallback_end_date="2024-06-30",
         )
         backtest_config = {
-            "symbol": "BTC/USDT:USDT",
+            "symbol": args.symbol,
             "timeframe": "4h",
             "start_date": "2024-01-01",
             "end_date": "2024-06-30",

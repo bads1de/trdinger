@@ -199,23 +199,27 @@ class DataCollectionOrchestrationService:
         )
 
     async def start_bitcoin_full_data_collection(
-        self, background_tasks: BackgroundTasks, db: Session
+        self,
+        background_tasks: BackgroundTasks,
+        db: Session,
+        symbol: str | None = None,
     ) -> dict[str, Any]:
         """
-        ビットコイン（BTC/USDT）の全時間軸、全期間データの収集を予約
+        指定シンボルの全時間軸・全期間データの収集を予約
 
-        システムがサポートする全時間足（1m から 1d まで）に対して
-        非同期の収集タスクを発行します。
+        symbol 未指定時はデフォルトシンボル（BTC/USDT:USDT）。
+        ETH/USDT:USDT 等の設定済みシンボルも指定可能。
 
         Args:
             background_tasks: FastAPI のバックグラウンドタスク管理
             db: データベースセッション
+            symbol: 収集対象シンボル（例: ETH/USDT:USDT）
 
         Returns:
             予約された全タスクの情報を保持するレスポンス
         """
         return await self.bulk_data_orchestrator.start_bitcoin_full_data_collection(
-            background_tasks, db, self.historical_orchestrator
+            background_tasks, db, self.historical_orchestrator, symbol=symbol
         )
 
     async def start_bulk_historical_data_collection(

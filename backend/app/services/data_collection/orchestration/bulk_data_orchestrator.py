@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config.constants import DEFAULT_MARKET_SYMBOL
 from app.config.unified_config import unified_config
+from app.utils.data_conversion import normalize_market_symbol
 from app.utils.response import api_response
 from database.repositories.funding_rate_repository import FundingRateRepository
 from database.repositories.ohlcv_repository import OHLCVRepository
@@ -81,43 +82,57 @@ class BulkDataOrchestrator:
         background_tasks: BackgroundTasks,
         db: Session,
         historical_orchestrator: Any = None,
+        symbol: str | None = None,
     ) -> dict[str, Any]:
         """
-        ビットコイン（BTC/USDT）の全時間軸、全期間データの収集を予約
+        指定シンボルの全時間軸・全期間データの収集を予約
 
         システムがサポートする全時間足（1m から 1d まで）に対して
-        非同期の収集タスクを発行します。
+        非同期の収集タスクを発行します。symbol 未指定時は
+        デフォルトシンボル（BTC/USDT:USDT）を対象とします。
 
         Args:
             background_tasks: FastAPI のバックグラウンドタスク管理
             db: データベースセッション
             historical_orchestrator: 履歴データオーケストレーター
+            symbol: 収集対象シンボル（例: ETH/USDT:USDT）
 
         Returns:
             予約された全タスクの情報を保持するレスポンス
         """
         try:
-            # 全時間軸でビットコインデータを収集
+            target_symbol = self._resolve_collect_symbol(symbol)
+            # 全時間軸で対象シンボルのデータを収集
             timeframes = unified_config.market.supported_timeframes
 
             for timeframe in timeframes:
                 background_tasks.add_task(
                     historical_orchestrator._collect_historical_background,
-                    DEFAULT_MARKET_SYMBOL,
+                    target_symbol,
                     timeframe,
                     db,
                 )
 
             return api_response(
                 success=True,
-                message="ビットコインの全時間軸データ収集を開始しました",
-                data={"timeframes": timeframes},
+                message=f"{target_symbol} の全時間軸データ収集を開始しました",
+                data={"symbol": target_symbol, "timeframes": timeframes},
                 status="started",
             )
 
         except Exception as e:
-            logger.exception("ビットコイン全データ収集開始エラー: %s", e)
+            logger.exception("全データ収集開始エラー: %s", e)
             raise
+
+    @staticmethod
+    def _resolve_collect_symbol(symbol: str | None) -> str:
+        """収集対象シンボルを解決し、ホワイトリスト検証を行う。"""
+        candidate = (symbol or DEFAULT_MARKET_SYMBOL).strip()
+        normalized = normalize_market_symbol(candidate)
+        if normalized not in unified_config.market.supported_symbols:
+            supported = ", ".join(unified_config.market.supported_symbols)
+            raise ValueError(f"未対応のシンボルです: {candidate} (対応: {supported})")
+        return normalized
 
     async def start_bulk_historical_data_collection(
         self,
@@ -144,10 +159,8 @@ class BulkDataOrchestrator:
             発行された全タスク数と、対象シンボル・時間軸のリスト
         """
         try:
-            # 取引ペアと時間軸の定義
-            symbols = [
-                DEFAULT_MARKET_SYMBOL,
-            ]
+            # 設定で許可された全シンボル × 全時間軸を対象とする
+            symbols = list(unified_config.market.supported_symbols)
             timeframes = unified_config.market.supported_timeframes
 
             # データ存在チェックと収集タスクの追加
@@ -219,10 +232,8 @@ class BulkDataOrchestrator:
             収集開始レスポンス
         """
         try:
-            # 取引ペアと時間軸の定義
-            symbols = [
-                DEFAULT_MARKET_SYMBOL,
-            ]
+            # 設定で許可された全シンボル × 全時間軸を対象とする
+            symbols = list(unified_config.market.supported_symbols)
             timeframes = unified_config.market.supported_timeframes
 
             # データ存在チェックと収集タスクの追加

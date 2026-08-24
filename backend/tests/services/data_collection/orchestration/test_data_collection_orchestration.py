@@ -412,11 +412,34 @@ class TestStartBitcoinFullDataCollection:
 
         assert result["success"] is True
         assert result["status"] == "started"
-        assert "ビットコインの全時間軸データ収集を開始" in result["message"]
+        # 既定シンボル（BTC）でのメッセージ
+        assert "BTC/USDT:USDT の全時間軸データ収集を開始" in result["message"]
+        assert result["data"]["symbol"] == "BTC/USDT:USDT"
         # タイムフレームはunified_configから取得
         expected_timeframes = unified_config.market.supported_timeframes
         assert result["data"]["timeframes"] == expected_timeframes
         assert mock_background_tasks.add_task.call_count == len(expected_timeframes)
+
+    @pytest.mark.asyncio
+    async def test_start_full_data_collection_with_eth_symbol(
+        self,
+        orchestration_service: DataCollectionOrchestrationService,
+        mock_db_session: MagicMock,
+        mock_background_tasks: MagicMock,
+    ):
+        """ETH/USDT:USDT を指定して収集を開始できる"""
+        result = await orchestration_service.start_bitcoin_full_data_collection(
+            background_tasks=mock_background_tasks,
+            db=mock_db_session,
+            symbol="ETH/USDT:USDT",
+        )
+
+        assert result["success"] is True
+        assert result["data"]["symbol"] == "ETH/USDT:USDT"
+        assert "ETH/USDT:USDT の全時間軸データ収集を開始" in result["message"]
+        # 各時間足のタスクがETHシンボルで発行される
+        first_call = mock_background_tasks.add_task.call_args_list[0]
+        assert first_call.args[1] == "ETH/USDT:USDT"
 
 
 class TestGetCollectionStatus:
@@ -663,8 +686,10 @@ class TestStartAllDataBulkCollection:
             assert result["success"] is True
             assert result["status"] == "started"
             assert "全データ一括収集を開始" in result["message"]
-            # タイムフレーム数はunified_configから取得
-            expected_count = len(unified_config.market.supported_timeframes)
+            # シンボル×時間足の組み合わせ分タスクが発行される
+            expected_count = len(unified_config.market.supported_symbols) * len(
+                unified_config.market.supported_timeframes
+            )
             assert result["data"]["collection_tasks"] == expected_count
 
 

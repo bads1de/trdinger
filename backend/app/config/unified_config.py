@@ -18,6 +18,7 @@ from .constants import (
     DEFAULT_MARKET_TIMEFRAME,
     MAX_DATA_LIMIT,
     MIN_DATA_LIMIT,
+    SUPPORTED_MARKET_SYMBOLS,
     SUPPORTED_TIMEFRAMES,
 )
 
@@ -89,9 +90,9 @@ class MarketConfig(BaseSettings):
         default_factory=lambda: [DEFAULT_MARKET_EXCHANGE]
     )
 
-    # サポートされているシンボル（Bybit形式）
+    # サポートされているシンボル（Bybit形式・無期限契約）
     supported_symbols: list[str] = Field(
-        default_factory=lambda: [DEFAULT_MARKET_SYMBOL]
+        default_factory=lambda: list(SUPPORTED_MARKET_SYMBOLS)
     )
 
     # サポートされている時間軸
@@ -124,6 +125,9 @@ class MarketConfig(BaseSettings):
             "BTCUSDT": "BTC/USDT:USDT",
             "BTC-USDT": "BTC/USDT:USDT",
             "BTCUSDT_PERP": "BTC/USDT:USDT",
+            "ETHUSDT": "ETH/USDT:USDT",
+            "ETH-USDT": "ETH/USDT:USDT",
+            "ETHUSDT_PERP": "ETH/USDT:USDT",
         }
     )
 

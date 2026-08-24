@@ -593,3 +593,57 @@ class TestEdgeCases:
             )
 
             assert result == expected_data
+
+
+@pytest.mark.asyncio
+class TestFetchOpenInterestHistoryWithUntil:
+    """until（endTime）パラメータによる過去方向ページングのテスト"""
+
+    @patch(
+        "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
+        1000,
+    )
+    async def test_until_is_passed_to_ccxt_params(self, service, mock_exchange):
+        """until を指定すると params に含まれて CCXT へ渡ること"""
+        expected_data = [{"timestamp": 1609459200000, "openInterest": 100000.0}]
+        mock_exchange.fetch_open_interest_history.return_value = expected_data
+
+        with patch("asyncio.get_event_loop") as mock_loop:
+            mock_loop.return_value.run_in_executor = AsyncMock(
+                return_value=expected_data
+            )
+            result = await service.fetch_open_interest_history(
+                "BTC/USDT:USDT",
+                limit=200,
+                interval="1h",
+                until=1609459200000,
+            )
+
+        assert result == expected_data
+        # ccxt 呼び出しの第6引数（params）に until が入ること
+        call_args = mock_exchange.fetch_open_interest_history.call_args
+        params_passed = call_args.args[4]
+        assert params_passed == {"intervalTime": "1h", "until": 1609459200000}
+
+    @patch(
+        "app.services.data_collection.bybit.bybit_service.unified_config.data_collection.max_limit",
+        1000,
+    )
+    async def test_without_until_params_keep_interval_only(
+        self, service, mock_exchange
+    ):
+        """until 未指定時は intervalTime のみが params に含まれること"""
+        expected_data: list[dict] = []
+        mock_exchange.fetch_open_interest_history.return_value = expected_data
+
+        with patch("asyncio.get_event_loop") as mock_loop:
+            mock_loop.return_value.run_in_executor = AsyncMock(
+                return_value=expected_data
+            )
+            await service.fetch_open_interest_history(
+                "ETH/USDT:USDT", limit=100, interval="4h"
+            )
+
+        call_args = mock_exchange.fetch_open_interest_history.call_args
+        params_passed = call_args.args[4]
+        assert params_passed == {"intervalTime": "4h"}

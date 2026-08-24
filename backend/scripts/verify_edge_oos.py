@@ -80,7 +80,6 @@ for _noisy in (
 ):
     logging.getLogger(_noisy).setLevel(logging.WARNING)
 
-SYMBOL = "BTC/USDT:USDT"
 TIMEFRAME = "4h"
 
 
@@ -127,9 +126,13 @@ def build_config(args: argparse.Namespace) -> GAConfig:
     return GAConfig(**kwargs)
 
 
-def build_backtest_config(start: str, end: str) -> dict[str, Any]:
+def build_backtest_config(
+    start: str,
+    end: str,
+    symbol: str = "BTC/USDT:USDT",
+) -> dict[str, Any]:
     return {
-        "symbol": SYMBOL,
+        "symbol": symbol,
         "timeframe": TIMEFRAME,
         "start_date": start,
         "end_date": end,
@@ -192,7 +195,11 @@ def primary(
     return valid_score(value, penalty_values)
 
 
-def buy_and_hold_return(start: str, end: str) -> float | None:
+def buy_and_hold_return(
+    start: str,
+    end: str,
+    symbol: str = "BTC/USDT:USDT",
+) -> float | None:
     """評価窓のバイトアンドホールド価格リターンをDBから計算する。"""
     start_dt = datetime.fromisoformat(f"{start}T00:00:00+00:00")
     end_dt = datetime.fromisoformat(f"{end}T00:00:00+00:00")
@@ -200,7 +207,7 @@ def buy_and_hold_return(start: str, end: str) -> float | None:
         base = (
             db.query(OHLCVData)
             .filter(
-                OHLCVData.symbol == SYMBOL,
+                OHLCVData.symbol == symbol,
                 OHLCVData.timeframe == TIMEFRAME,
                 OHLCVData.timestamp >= start_dt,
                 OHLCVData.timestamp <= end_dt,
@@ -211,7 +218,7 @@ def buy_and_hold_return(start: str, end: str) -> float | None:
         last = (
             db.query(OHLCVData)
             .filter(
-                OHLCVData.symbol == SYMBOL,
+                OHLCVData.symbol == symbol,
                 OHLCVData.timeframe == TIMEFRAME,
                 OHLCVData.timestamp >= start_dt,
                 OHLCVData.timestamp <= end_dt,
@@ -321,6 +328,12 @@ def main() -> None:
         default=None,
         help="GA進化とランダムヌルの乱数シード (None で非固定、指定で再現可能)",
     )
+    parser.add_argument(
+        "--symbol",
+        type=str,
+        default="BTC/USDT:USDT",
+        help="対象シンボル（例: ETH/USDT:USDT）",
+    )
     parser.add_argument("--smoke", action="store_true")
     args = parser.parse_args()
 
@@ -332,8 +345,8 @@ def main() -> None:
         args.out = "edge_oos_smoke.json"
 
     config = build_config(args)
-    is_bt = build_backtest_config(args.is_start, args.is_end)
-    oos_bt = build_backtest_config(args.oos_start, args.oos_end)
+    is_bt = build_backtest_config(args.is_start, args.is_end, symbol=args.symbol)
+    oos_bt = build_backtest_config(args.oos_start, args.oos_end, symbol=args.symbol)
 
     # --- Phase 1: 学習窓で GA 進化 (IS fitness は進化中の値をそのまま使う) ---
     logger.info(
@@ -425,7 +438,7 @@ def main() -> None:
     pop_trades = [metric_of(gene, "total_trades") for gene in population]
     rand_trades = [metric_of(gene, "total_trades") for gene in random_genes]
     pop_max_dd = [metric_of(gene, "max_drawdown") for gene in population]
-    bh_return = buy_and_hold_return(args.oos_start, args.oos_end)
+    bh_return = buy_and_hold_return(args.oos_start, args.oos_end, symbol=args.symbol)
 
     # --- Phase 3: 集計 ---
     pairs = [

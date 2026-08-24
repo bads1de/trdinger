@@ -29,11 +29,15 @@ class TestNormalizeMarketSymbol:
         assert normalize_market_symbol("BTC/USD") == "BTC/USD:USD"
         assert normalize_market_symbol("ETH/USD") == "ETH/USD:USD"
 
-    def test_unknown_format_defaults_to_colon_usdt(self):
-        """認識できない形式はデフォルトで :USDT を付加する"""
-        # BybitService._normalize_symbol_for_ccxt / _normalize_derivative_symbol
-        # の既存の挙動に合わせる
-        assert normalize_market_symbol("BTCUSDT") == "BTCUSDT:USDT"
+    def test_compact_symbols_resolved_via_mapping(self):
+        """スラッシュなし表記は symbol_mapping 経由で正規形へ解決する"""
+        assert normalize_market_symbol("BTCUSDT") == "BTC/USDT:USDT"
+        assert normalize_market_symbol("BTCUSDT_PERP") == "BTC/USDT:USDT"
+        assert normalize_market_symbol("ETHUSDT") == "ETH/USDT:USDT"
+
+    def test_truly_unknown_format_defaults_to_colon_usdt(self):
+        """マッピングに無い形式はデフォルトで :USDT を付加する"""
+        assert normalize_market_symbol("SOLUSDT") == "SOLUSDT:USDT"
 
     def test_non_string_input_is_converted_to_string_first(self):
         """非文字列入力は str() 変換してから正規化する（既存の BybitService の挙動）"""

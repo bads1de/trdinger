@@ -77,10 +77,17 @@ class TestStartBitcoinFullDataCollection:
         background_tasks = BackgroundTasks()
         historical_orchestrator = MagicMock()
 
-        with patch.object(
-            orch_module.unified_config.market,
-            "supported_timeframes",
-            new=["1h", "1d"],
+        with (
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_timeframes",
+                new=["1h", "1d"],
+            ),
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_symbols",
+                new=["BTC/USDT:USDT"],
+            ),
         ):
             response = await orch.start_bitcoin_full_data_collection(
                 background_tasks=background_tasks,
@@ -131,10 +138,17 @@ class TestStartBulkHistoricalDataCollection:
         background_tasks = BackgroundTasks()
         historical_orchestrator = MagicMock()
 
-        with patch.object(
-            orch_module.unified_config.market,
-            "supported_timeframes",
-            new=["1h", "1d"],
+        with (
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_timeframes",
+                new=["1h", "1d"],
+            ),
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_symbols",
+                new=["BTC/USDT:USDT"],
+            ),
         ):
             with patch(
                 "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
@@ -165,10 +179,17 @@ class TestStartBulkHistoricalDataCollection:
         background_tasks = BackgroundTasks()
         historical_orchestrator = MagicMock()
 
-        with patch.object(
-            orch_module.unified_config.market,
-            "supported_timeframes",
-            new=["1h"],
+        with (
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_timeframes",
+                new=["1h"],
+            ),
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_symbols",
+                new=["BTC/USDT:USDT"],
+            ),
         ):
             with patch(
                 "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
@@ -198,10 +219,17 @@ class TestStartBulkHistoricalDataCollection:
         background_tasks = BackgroundTasks()
         historical_orchestrator = MagicMock()
 
-        with patch.object(
-            orch_module.unified_config.market,
-            "supported_timeframes",
-            new=["1h"],
+        with (
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_timeframes",
+                new=["1h"],
+            ),
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_symbols",
+                new=["BTC/USDT:USDT"],
+            ),
         ):
             with patch(
                 "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
@@ -249,10 +277,17 @@ class TestStartAllDataBulkCollection:
         db = MagicMock()
         background_tasks = BackgroundTasks()
 
-        with patch.object(
-            orch_module.unified_config.market,
-            "supported_timeframes",
-            new=["1h", "1d"],
+        with (
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_timeframes",
+                new=["1h", "1d"],
+            ),
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_symbols",
+                new=["BTC/USDT:USDT"],
+            ),
         ):
             with patch(
                 "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
@@ -275,10 +310,17 @@ class TestStartAllDataBulkCollection:
         db = MagicMock()
         background_tasks = BackgroundTasks()
 
-        with patch.object(
-            orch_module.unified_config.market,
-            "supported_timeframes",
-            new=["1h"],
+        with (
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_timeframes",
+                new=["1h"],
+            ),
+            patch.object(
+                orch_module.unified_config.market,
+                "supported_symbols",
+                new=["BTC/USDT:USDT"],
+            ),
         ):
             with patch(
                 "app.services.data_collection.orchestration.bulk_data_orchestrator.OHLCVRepository"
@@ -499,3 +541,32 @@ class TestCollectAllDataBackground:
             await orch._collect_all_data_background("BTC/USDT:USDT", "1h", db)
 
         db.close.assert_called_once()
+
+
+class TestResolveCollectSymbol:
+    """収集シンボル解決（ホワイトリスト検証）のテスト"""
+
+    def test_none_defaults_to_btc(self):
+        from app.config.unified_config import unified_config
+
+        assert BulkDataOrchestrator._resolve_collect_symbol(None) == (
+            unified_config.market.default_symbol
+        )
+
+    def test_eth_is_accepted(self):
+        assert (
+            BulkDataOrchestrator._resolve_collect_symbol("ETH/USDT:USDT")
+            == "ETH/USDT:USDT"
+        )
+
+    def test_whitespace_and_case_are_normalized(self):
+        assert (
+            BulkDataOrchestrator._resolve_collect_symbol("  eth/usdt:usdt ")
+            == "ETH/USDT:USDT"
+        )
+
+    def test_unknown_symbol_raises_value_error(self):
+        import pytest as _pytest
+
+        with _pytest.raises(ValueError, match="未対応のシンボル"):
+            BulkDataOrchestrator._resolve_collect_symbol("SOL/USDT:USDT")

@@ -228,7 +228,7 @@ def build_oos_config(
     """IS期間と同長の直後窓を持つ OOS 設定を返す。
 
     symbol を指定すると別シンボル上での OOS 評価（クロスシンボル検証）
-    設定を構築する。
+    設定を構築する。未指定時は元設定のシンボル（無ければ BTC）を使う。
     """
     s, e = backtest_config.get("start_date"), backtest_config.get("end_date")
     if not s or not e:
@@ -242,7 +242,7 @@ def build_oos_config(
         return None
     return {
         **BASE_CONFIG,
-        "symbol": symbol or SYMBOL,
+        "symbol": symbol or str(backtest_config.get("symbol") or SYMBOL),
         "start_date": (ed + timedelta(days=1)).strftime("%Y-%m-%d"),
         "end_date": (ed + dur + timedelta(days=1)).strftime("%Y-%m-%d"),
     }
@@ -251,13 +251,20 @@ def build_oos_config(
 # ---------------------------------------------------------------------------
 # 実行系
 # ---------------------------------------------------------------------------
-def run_ga_for_period(start: str, end: str, log_path: Path | None) -> Path | None:
+def run_ga_for_period(
+    start: str,
+    end: str,
+    log_path: Path | None,
+    symbol: str = SYMBOL,
+) -> Path | None:
     """scripts.run_auto_strategy をサブプロセス実行し結果JSONパスを返す。"""
     before = set((PROJECT_ROOT / "results/auto_strategy").glob("strategy_*.json"))
     cmd = [
         sys.executable,
         "-m",
         "scripts.run_auto_strategy",
+        "--symbol",
+        symbol,
         "--start-date",
         start,
         "--end-date",
@@ -284,8 +291,12 @@ def run_ga_for_period(start: str, end: str, log_path: Path | None) -> Path | Non
     return new_files[-1] if new_files else None
 
 
-def find_latest_result_for_period(start: str, end: str) -> Path | None:
-    """既存ファイルから該当期間の最新結果を探す（--skip-ga 用）。"""
+def find_latest_result_for_period(
+    start: str,
+    end: str,
+    symbol: str = SYMBOL,
+) -> Path | None:
+    """既存ファイルから該当期間・シンボルの最新結果を探す（--skip-ga 用）。"""
     best: tuple[float, Path] | None = None
     for f in (PROJECT_ROOT / "results/auto_strategy").glob("strategy_*.json"):
         try:
@@ -293,7 +304,11 @@ def find_latest_result_for_period(start: str, end: str) -> Path | None:
         except Exception:
             continue
         bc = d.get("backtest_config") or {}
-        if bc.get("start_date") == start and bc.get("end_date") == end:
+        if (
+            bc.get("start_date") == start
+            and bc.get("end_date") == end
+            and str(bc.get("symbol")) == symbol
+        ):
             mtime = f.stat().st_mtime
             if best is None or mtime > best[0]:
                 best = (mtime, f)
@@ -445,20 +460,24 @@ def process_period(
     history_records: list[dict[str, Any]],
     skip_ga: bool,
     eval_symbol: str | None = None,
+    ga_symbol: str = SYMBOL,
 ) -> bool:
     start, end = PERIOD_REGISTRY[label]
     if skip_ga:
-        result_path = find_latest_result_for_period(start, end)
+        result_path = find_latest_result_for_period(start, end, symbol=ga_symbol)
         if result_path is None:
-            print(f"\n[{label}] 既存結果なし（--skip-ga解除で実行）")
+            print(
+                f"\n[{label}] 既存結果なし（symbol={ga_symbol} / --skip-ga解除で実行）"
+            )
             return False
     else:
-        print(f"\n[{label}] GA実行中 ({start} ~ {end}) ...")
+        print(f"\n[{label}] GA実行中 ({start} ~ {end}, symbol={ga_symbol}) ...")
         t0 = time.time()
         result_path = run_ga_for_period(
             start,
             end,
             PROJECT_ROOT / "logs" / f"validate_pipeline_{label}.log",
+            symbol=ga_symbol,
         )
         if result_path is None:
             print(f"[{label}] 結果JSONが生成されず")
@@ -506,7 +525,7 @@ def process_period(
         outcome = evaluator.evaluate(raw, oos_cfg)
         if outcome is None:
             continue
-        row = {"period": label, **r, **outcome}
+        row = {"period": label, "ga_symbol": ga_symbol, **r, **outcome}
         if eval_symbol:
             row["eval_symbol"] = eval_symbol
             row["cross_symbol"] = eval_symbol != SYMBOL
@@ -558,6 +577,11 @@ def main() -> None:
             "例: ETH/USDT:USDT。履歴には cross_symbol フラグが付く"
         ),
     )
+    parser.add_argument(
+        "--symbol",
+        default=SYMBOL,
+        help=f"GA実行・結果検索の対象シンボル（既定: {SYMBOL}）",
+    )
     args = parser.parse_args()
 
     labels = [p.strip() for p in args.periods.split(",") if p.strip()]
@@ -578,6 +602,7 @@ def main() -> None:
                 new_records,
                 args.skip_ga,
                 eval_symbol=args.eval_symbol,
+                ga_symbol=args.symbol,
             ):
                 ok_count += 1
         except Exception as exc:  # noqa: BLE001

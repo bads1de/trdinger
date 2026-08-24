@@ -4,6 +4,7 @@ import React from "react";
 import { InputField } from "@/components/common/InputField";
 import { SelectField } from "@/components/common/SelectField";
 import { BacktestConfig } from "@/types/backtest";
+import { SUPPORTED_TRADING_PAIRS } from "@/constants";
 import { TIME_FRAME_OPTIONS } from "@/constants/backtest";
 
 interface BaseBacktestConfigFormProps {
@@ -16,7 +17,10 @@ export const BaseBacktestConfigForm: React.FC<BaseBacktestConfigFormProps> = ({
   config,
   onConfigChange,
 }) => {
-  const symbolOptions = [{ value: "BTC/USDT:USDT", label: "BTC/USDT:USDT" }];
+  const symbolOptions = SUPPORTED_TRADING_PAIRS.map((pair) => ({
+    value: pair.symbol,
+    label: pair.symbol,
+  }));
 
   return (
     <div className="space-y-4">

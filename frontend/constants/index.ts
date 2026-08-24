@@ -12,16 +12,22 @@ export const BACKEND_API_URL =
   process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000";
 
 /**
- * サポートされている取引ペア（BTC/USDT:USDT無期限先物のみ）
+ * サポートされている取引ペア（Bybit USDT無期限先物）
  *
- * 要件に従い、BTC/USDT:USDTの無期限先物のみをサポートします。
+ * バックエンドの SUPPORTED_MARKET_SYMBOLS（app/config/constants.py）と
+ * 内容を一致させて運用する。
  */
 export const SUPPORTED_TRADING_PAIRS: TradingPair[] = [
-  // Bitcoin USDT無期限先物のみ
   {
     symbol: "BTC/USDT:USDT",
     name: "Bitcoin / USDT Perpetual",
     base: "BTC",
+    quote: "USDT",
+  },
+  {
+    symbol: "ETH/USDT:USDT",
+    name: "Ethereum / USDT Perpetual",
+    base: "ETH",
     quote: "USDT",
   },
 ];

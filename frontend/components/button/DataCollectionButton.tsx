@@ -87,10 +87,10 @@ export const openInterestCollectionConfig: DataCollectionConfig = {
   variant: "warning",
   endpoint: "/api/open-interest/bulk-collect",
   confirmMessage:
-    "BTCの全期間OIデータを取得します。\n\n" +
-    "この処理には数分かかる場合があります。続行しますか？",
+    "全シンボルのOI履歴データを取得します（バックグラウンド実行）。\n\n" +
+    "この処理には時間がかかる場合があります。実行しますか？",
   successMessage: "Open Interestデータの収集を開始しました",
-  loadingText: "収集中...",
+  loadingText: "収集...",
 };
 
 /**

@@ -34,6 +34,11 @@ DEFAULT_MARKET_EXCHANGE = "bybit"
 # デフォルトの取引ペアシンボル
 # Bybit形式のシンボル表記（BTC/USDTの無期限契約）
 DEFAULT_MARKET_SYMBOL = "BTC/USDT:USDT"
+# データ収集・検証対象のシンボルホワイトリスト（Bybit USDT無期限契約）
+SUPPORTED_MARKET_SYMBOLS = [
+    DEFAULT_MARKET_SYMBOL,
+    "ETH/USDT:USDT",
+]
 # デフォルトの時間軸
 # データ取得・バックテストで使用するデフォルトの時間間隔
 DEFAULT_MARKET_TIMEFRAME = "1h"

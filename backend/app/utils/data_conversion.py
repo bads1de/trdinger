@@ -295,9 +295,19 @@ def normalize_market_symbol(symbol: Any) -> str:
     # 大文字に変換
     normalized = symbol_str.upper().strip()
 
-    # すでにコロン付きの場合はそのまま返す（例: "BTC/USDT:USDT"）
+    # 既にコロン付きの場合はそのまま返す（例: "BTC/USDT:USDT"）
     if ":" in normalized:
         return normalized
+
+    # 既知の別表記マッピングにあれば正規形へ変換（例: "ETHUSDT" -> "ETH/USDT:USDT"）
+    try:
+        from app.config.unified_config import unified_config
+
+        mapping = unified_config.market.symbol_mapping
+        if normalized in mapping:
+            return str(mapping[normalized])
+    except Exception:  # noqa: BLE001 - 設定読み込み失敗時は後続ルールで処理
+        pass
 
     # ハイフンをスラッシュに変換
     normalized = normalized.replace("-", "/")

@@ -1,5 +1,6 @@
 """validate_pipeline ヘルパーのテスト."""
 
+import json
 import math
 
 from scripts.validate_pipeline import (
@@ -231,3 +232,60 @@ class TestCrossSymbol:
             {"gene_hash": "AAA", "eval_symbol": "ETH/USDT:USDT"},  # 完全重複
         ]
         assert len(select_unique_rows(rows)) == 2
+
+
+class TestGASymbolSupport:
+    """GAフェーズのシンボル対応テスト."""
+
+    def test_build_oos_config_defaults_to_result_symbol(self):
+        from scripts.validate_pipeline import build_oos_config
+
+        cfg = build_oos_config(
+            {
+                "symbol": "ETH/USDT:USDT",
+                "start_date": "2025-01-01",
+                "end_date": "2025-06-30",
+            }
+        )
+        # 結果ファイルのシンボルを継承する（BTC定数に落ちない）
+        assert cfg is not None
+        assert cfg["symbol"] == "ETH/USDT:USDT"
+
+    def test_find_latest_result_filters_by_symbol(self, tmp_path, monkeypatch):
+        import scripts.validate_pipeline as vp
+
+        results_dir = tmp_path / "results" / "auto_strategy"
+        results_dir.mkdir(parents=True)
+
+        payload_btc = {
+            "backtest_config": {
+                "symbol": "BTC/USDT:USDT",
+                "start_date": "2025-01-01",
+                "end_date": "2025-06-30",
+            }
+        }
+        payload_eth = {
+            "backtest_config": {
+                "symbol": "ETH/USDT:USDT",
+                "start_date": "2025-01-01",
+                "end_date": "2025-06-30",
+            }
+        }
+        (results_dir / "strategy_a.json").write_text(
+            json.dumps(payload_btc), encoding="utf-8"
+        )
+        (results_dir / "strategy_b.json").write_text(
+            json.dumps(payload_eth), encoding="utf-8"
+        )
+
+        monkeypatch.setattr(vp, "PROJECT_ROOT", tmp_path)
+
+        hit = vp.find_latest_result_for_period(
+            "2025-01-01", "2025-06-30", symbol="ETH/USDT:USDT"
+        )
+        assert hit is not None and hit.name == "strategy_b.json"
+
+        miss = vp.find_latest_result_for_period(
+            "2025-01-01", "2025-06-30", symbol="SOL/USDT:USDT"
+        )
+        assert miss is None

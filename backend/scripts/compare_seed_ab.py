@@ -92,6 +92,7 @@ def run_once(
     seed_rate: float,
     *,
     smoke: bool = False,
+    symbol: str = "BTC/USDT:USDT",
 ) -> dict[str, Any]:
     """単一の GA 実行 + WFA 検証を行い、比較指標をまとめる。"""
     label = "with_seed" if use_seeds else "no_seed"
@@ -118,7 +119,7 @@ def run_once(
     )
 
     backtest_config = {
-        "symbol": "BTC/USDT:USDT",
+        "symbol": symbol,
         "timeframe": "4h",
         "start_date": "2022-01-01",
         "end_date": "2022-12-31",
@@ -267,6 +268,12 @@ def main() -> None:
         action="store_true",
         help="小規模構成（個体4・世代1・並列なし）でパイプライン動作を確認する",
     )
+    parser.add_argument(
+        "--symbol",
+        type=str,
+        default="BTC/USDT:USDT",
+        help="対象シンボル（例: ETH/USDT:USDT）",
+    )
     args = parser.parse_args()
 
     try:
@@ -284,7 +291,7 @@ def main() -> None:
         "config": {
             "population_size": 4 if args.smoke else 50,
             "generations": 1 if args.smoke else 20,
-            "symbol": "BTC/USDT:USDT",
+            "symbol": args.symbol,
             "timeframe": "4h",
             "period": "2022-01-01 ~ 2022-12-31",
             "validation": "WFA 5fold min_pass_rate=0.5",
@@ -297,7 +304,10 @@ def main() -> None:
         use_seeds = rate > 0.0
         try:
             results[key] = run_once(
-                use_seeds=use_seeds, seed_rate=rate, smoke=args.smoke
+                use_seeds=use_seeds,
+                seed_rate=rate,
+                smoke=args.smoke,
+                symbol=args.symbol,
             )
         except Exception as exc:  # noqa: BLE001
             logger.exception("%s 実行に失敗: %s", key, exc)

@@ -75,6 +75,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="fitness sharing 診断")
     parser.add_argument("--population", type=int, default=30)
     parser.add_argument("--generations", type=int, default=15)
+    parser.add_argument(
+        "--symbol",
+        type=str,
+        default="BTC/USDT:USDT",
+        help="対象シンボル（例: ETH/USDT:USDT）",
+    )
     args = parser.parse_args()
 
     generation_log: list[dict] = []
@@ -150,7 +156,7 @@ def main() -> None:
         fallback_end_date="2024-06-30",
     )
     backtest_config = {
-        "symbol": "BTC/USDT:USDT",
+        "symbol": args.symbol,
         "timeframe": "4h",
         "start_date": "2024-01-01",
         "end_date": "2024-06-30",
