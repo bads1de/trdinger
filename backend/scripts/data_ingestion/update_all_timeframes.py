@@ -34,12 +34,16 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 # OHLCV データ収集
 # =============================================================================
-async def collect_ohlcv_data(symbol: str = "BTC/USDT:USDT") -> dict:
+async def collect_ohlcv_data(
+    symbol: str = "BTC/USDT:USDT",
+    timeframes: list[str] | None = None,
+) -> dict:
     """
     全時間足のOHLCVデータを全期間収集
 
     Args:
         symbol: 取引ペアシンボル
+        timeframes: 収集対象の時間足リスト（Noneなら設定の全時間足）
 
     Returns:
         収集結果の辞書
@@ -62,7 +66,14 @@ async def collect_ohlcv_data(symbol: str = "BTC/USDT:USDT") -> dict:
         market_service = BybitMarketDataService()
 
         # サポートされている全ての時間足を取得
-        timeframes = unified_config.market.supported_timeframes
+        if timeframes:
+            all_tfs = list(unified_config.market.supported_timeframes)
+            unknown = [tf for tf in timeframes if tf not in all_tfs]
+            if unknown:
+                raise ValueError(f"未対応の時間足: {unknown} (対応: {all_tfs})")
+            timeframes = list(timeframes)
+        else:
+            timeframes = list(unified_config.market.supported_timeframes)
         logger.info(f"対象時間足: {timeframes}")
 
         for tf in timeframes:
@@ -325,18 +336,17 @@ async def collect_open_interest_data(
 
         for i in range(max_pages):
             try:
-                # OIデータの取得
-                if end_ms is None:
-                    oi_data = await oi_service.fetch_open_interest_history(
-                        symbol, limit=limit, since=None, interval=interval
-                    )
-                else:
-                    # 推定される過去のタイムスタンプ
-                    interval_ms = _interval_to_ms(interval)
-                    estimated_since = end_ms - (limit * interval_ms)
-                    oi_data = await oi_service.fetch_open_interest_history(
-                        symbol, limit=limit, since=estimated_since, interval=interval
-                    )
+                # OIデータの取得（until ベースで過去方向へページング）。
+                # Bybit は since(startTime) を与えるとその時刻以降を返すため、
+                # 過去へ遡るには endTime(until) を使い「指定時刻以前」を取得する。
+                until_ms = int(end_ms) if end_ms is not None else None
+                oi_data = await oi_service.fetch_open_interest_history(
+                    symbol,
+                    limit=limit,
+                    since=None,
+                    interval=interval,
+                    until=until_ms,
+                )
 
                 if not oi_data:
                     logger.info(
@@ -398,19 +408,6 @@ async def collect_open_interest_data(
     return {"type": "OpenInterest", "interval": interval, "total_saved": total_saved}
 
 
-def _interval_to_ms(interval: str) -> int:
-    """インターバル文字列をミリ秒に変換"""
-    multipliers = {
-        "5m": 5 * 60 * 1000,
-        "15m": 15 * 60 * 1000,
-        "30m": 30 * 60 * 1000,
-        "1h": 60 * 60 * 1000,
-        "4h": 4 * 60 * 60 * 1000,
-        "1d": 24 * 60 * 60 * 1000,
-    }
-    return multipliers.get(interval, 60 * 60 * 1000)  # デフォルト: 1h
-
-
 # =============================================================================
 # メイン収集関数
 # =============================================================================
@@ -420,6 +417,7 @@ async def collect_all_historical_data(
     collect_fr: bool = True,
     collect_oi: bool = True,
     oi_interval: str = "1h",
+    timeframes: list[str] | None = None,
 ) -> bool:
     """
     全種類のデータを全期間収集
@@ -444,7 +442,7 @@ async def collect_all_historical_data(
     try:
         # OHLCV データ収集
         if collect_ohlcv:
-            ohlcv_result = await collect_ohlcv_data(symbol)
+            ohlcv_result = await collect_ohlcv_data(symbol, timeframes=timeframes)
             results.append(ohlcv_result)
 
         # Funding Rate データ収集
@@ -496,8 +494,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--only-oi", action="store_true", help="Open Interestデータのみ収集"
     )
+    parser.add_argument(
+        "--timeframes",
+        default=None,
+        help="収集対象の時間足をカンマ区切りで指定（例: 4h,1h。未指定なら全時間足）",
+    )
 
     args = parser.parse_args()
+
+    timeframes: list[str] | None = None
+    if args.timeframes:
+        timeframes = [tf.strip() for tf in args.timeframes.split(",") if tf.strip()]
 
     # --only-* オプションの処理
     if args.only_ohlcv:
@@ -525,6 +532,7 @@ if __name__ == "__main__":
                 collect_fr=collect_fr,
                 collect_oi=collect_oi,
                 oi_interval=args.oi_interval,
+                timeframes=timeframes,
             )
         )
         sys.exit(0 if success else 1)

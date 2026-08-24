@@ -123,10 +123,14 @@ def gene_hash(raw_gene: Any) -> str:
 
 
 def record_key(row: dict[str, Any]) -> tuple:
-    """履歴重複判定キー。gene_hash優先、旧レコードは指標タプルで代替する。"""
+    """履歴重複判定キー。gene_hash優先、旧レコードは指標タプルで代替する。
+
+    評価シンボルもキーに含む（同一遺伝子でもBTC-OOSとETH-OOSは別観測）。
+    """
     gh = row.get("gene_hash")
+    sym = str(row.get("eval_symbol") or SYMBOL)
     if gh:
-        return ("h", str(gh))
+        return ("h", str(gh), sym)
     return (
         "m",
         row.get("period"),
@@ -134,6 +138,7 @@ def record_key(row: dict[str, Any]) -> tuple:
         row.get("regime_min_margin_pp"),
         row.get("pert_survival"),
         row.get("is_excess_pp"),
+        sym,
     )
 
 
@@ -216,8 +221,15 @@ def extract_candidate_records(result: dict[str, Any]) -> list[dict[str, Any]]:
     return records
 
 
-def build_oos_config(backtest_config: dict[str, Any]) -> dict[str, Any] | None:
-    """IS期間と同長の直後窓を持つ OOS 設定を返す。"""
+def build_oos_config(
+    backtest_config: dict[str, Any],
+    symbol: str | None = None,
+) -> dict[str, Any] | None:
+    """IS期間と同長の直後窓を持つ OOS 設定を返す。
+
+    symbol を指定すると別シンボル上での OOS 評価（クロスシンボル検証）
+    設定を構築する。
+    """
     s, e = backtest_config.get("start_date"), backtest_config.get("end_date")
     if not s or not e:
         return None
@@ -230,6 +242,7 @@ def build_oos_config(backtest_config: dict[str, Any]) -> dict[str, Any] | None:
         return None
     return {
         **BASE_CONFIG,
+        "symbol": symbol or SYMBOL,
         "start_date": (ed + timedelta(days=1)).strftime("%Y-%m-%d"),
         "end_date": (ed + dur + timedelta(days=1)).strftime("%Y-%m-%d"),
     }
@@ -377,12 +390,20 @@ def load_history(path: Path) -> list[dict[str, Any]]:
 
 
 def meta_report(rows: list[dict[str, Any]]) -> None:
-    """履歴全体での「選抜キー候補 ↔ OOS」予測力トラッキング（重複除去済み）。"""
+    """履歴全体での「選抜キー候補 ↔ OOS」予測力トラッキング（重複除去済み）。
+
+    同シンボルOOSのみで相関判定し、クロスシンボル行は別サマリに出力する。
+    """
     rows = select_unique_rows(rows)
-    usable = [r for r in rows if isinstance(r.get("oos_excess_pp"), (int, float))]
+    cross_rows = [r for r in rows if r.get("cross_symbol")]
+    same_symbol = [r for r in rows if not r.get("cross_symbol")]
+    usable = [
+        r for r in same_symbol if isinstance(r.get("oos_excess_pp"), (int, float))
+    ]
     print("\n===== メタ分析トラッカー =====")
     if len(usable) < 10:
         print(f"ユニークn={len(usable)} / 最低10件で判定開始")
+        _cross_summary(cross_rows)
         return
     metrics = ("fitness", "regime_min_margin_pp", "is_excess_pp")
     print(f"{'指標':22s} {'n':>4s} {'Pearson':>8s} {'Spearman':>8s}")
@@ -401,6 +422,21 @@ def meta_report(rows: list[dict[str, Any]]) -> None:
             )
         else:
             print(f"{m:22s} {len(pairs):>4d}       ---        ---")
+    _cross_summary(cross_rows)
+
+
+def _cross_summary(cross_rows: list[dict[str, Any]]) -> None:
+    """クロスシンボルOOS行のサマリを出力する（存在時のみ）。"""
+    usable = [r for r in cross_rows if isinstance(r.get("oos_excess_pp"), (int, float))]
+    if not usable:
+        return
+    exs = [float(r["oos_excess_pp"]) for r in usable]
+    beats = sum(1 for v in exs if v > 0)
+    symbols = sorted({str(r.get("eval_symbol")) for r in usable})
+    print(
+        f"クロスシンボルOOS n={len(usable)} ({','.join(symbols)}): "
+        f"中央値 {st.median(exs):+.2f}pp / 市場比勝ち {beats}/{len(usable)}"
+    )
 
 
 def process_period(
@@ -408,6 +444,7 @@ def process_period(
     evaluator: OOSEvaluator,
     history_records: list[dict[str, Any]],
     skip_ga: bool,
+    eval_symbol: str | None = None,
 ) -> bool:
     start, end = PERIOD_REGISTRY[label]
     if skip_ga:
@@ -444,12 +481,13 @@ def process_period(
     for reason, count in sorted(reason_hist.items(), key=lambda kv: -kv[1])[:3]:
         print(f"    不合格理由TOP: {reason}... x{count}")
 
-    oos_cfg = build_oos_config(result.get("backtest_config") or {})
+    oos_cfg = build_oos_config(result.get("backtest_config") or {}, symbol=eval_symbol)
     if oos_cfg is None:
         print("  OOS設定を構築できず（スキップ）")
         return False
+    symbol_note = f" on {eval_symbol}" if eval_symbol else ""
     print(
-        f"  OOS: {oos_cfg['start_date']} ~ {oos_cfg['end_date']} "
+        f"  OOS{symbol_note}: {oos_cfg['start_date']} ~ {oos_cfg['end_date']} "
         f"で合格 {len(passed)} 体を評価"
     )
 
@@ -469,6 +507,9 @@ def process_period(
         if outcome is None:
             continue
         row = {"period": label, **r, **outcome}
+        if eval_symbol:
+            row["eval_symbol"] = eval_symbol
+            row["cross_symbol"] = eval_symbol != SYMBOL
         oos_rows.append(row)
         history_records.append(row)
 
@@ -509,6 +550,14 @@ def main() -> None:
         default="results/validation_history.jsonl",
         help="候補記録の蓄積先(JSONL)",
     )
+    parser.add_argument(
+        "--eval-symbol",
+        default=None,
+        help=(
+            "OOS評価を別シンボル上で実行（クロスシンボル検証）。"
+            "例: ETH/USDT:USDT。履歴には cross_symbol フラグが付く"
+        ),
+    )
     args = parser.parse_args()
 
     labels = [p.strip() for p in args.periods.split(",") if p.strip()]
@@ -523,7 +572,13 @@ def main() -> None:
     started = time.time()
     for label in labels:
         try:
-            if process_period(label, evaluator, new_records, args.skip_ga):
+            if process_period(
+                label,
+                evaluator,
+                new_records,
+                args.skip_ga,
+                eval_symbol=args.eval_symbol,
+            ):
                 ok_count += 1
         except Exception as exc:  # noqa: BLE001
             print(f"[{label}] 処理エラー: {exc}")

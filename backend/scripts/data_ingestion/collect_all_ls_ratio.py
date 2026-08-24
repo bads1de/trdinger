@@ -29,17 +29,28 @@ from app.services.data_collection.bybit.long_short_ratio_service import (
 from database.connection import get_db
 from database.repositories.long_short_ratio_repository import LongShortRatioRepository
 
-# ロガー設定
+# ロガー設定（プロジェクトルートの logs/ 配下へ出力）
+_log_dir = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "logs",
+)
+os.makedirs(_log_dir, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(), logging.FileHandler("collect_ls_ratio.log")],
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(os.path.join(_log_dir, "collect_ls_ratio.log")),
+    ],
 )
 logger = logging.getLogger(__name__)
 
 
-async def get_linear_symbols():
-    """Bybitから有効なUSDT無期限契約のシンボルリストを取得（BTC/USDT:USDTのみ）"""
+async def get_linear_symbols(symbol_filter: str | None = None):
+    """Bybitから有効なUSDT無期限契約のシンボルリストを取得（既定: BTC/USDT:USDT）"""
+    if symbol_filter:
+        logger.info(f"対象シンボルをフィルタリング中 ({symbol_filter})...")
+        return [symbol_filter]
     logger.info("対象シンボルをフィルタリング中 (BTC/USDT:USDTのみ)...")
     return ["BTC/USDT:USDT"]
 
@@ -86,14 +97,17 @@ async def main():
             logger.error(f"無効な開始日です: {sys.argv[2]} (YYYY-MM-DD 形式)")
             return
 
+    # 任意の第3引数: 対象シンボル (既定: BTC/USDT:USDT)
+    symbol_filter = sys.argv[3] if len(sys.argv) > 3 else None
+
     logger.info(
         f"=== 全ペア Long/Short Ratio 収集開始 (Period: {period}, "
-        f"Start: {start_date or '2020-10-01'}) ==="
+        f"Start: {start_date or '2020-10-01'}, Symbol: {symbol_filter or 'BTC'}) ==="
     )
 
     # 1. シンボルリストの取得
     logger.info("市場データを取得中...")
-    symbols = await get_linear_symbols()
+    symbols = await get_linear_symbols(symbol_filter)
     logger.info(f"対象通貨ペア数: {len(symbols)}")
 
     # 2. サービスとリポジトリの初期化

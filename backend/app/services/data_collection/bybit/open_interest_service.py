@@ -43,6 +43,7 @@ class BybitOpenInterestService(BybitService):
         limit: int = 100,
         since: int | None = None,
         interval: str = "1h",
+        until: int | None = None,
     ) -> list[dict[str, Any]]:
         """
         オープンインタレスト履歴を取得
@@ -54,6 +55,8 @@ class BybitOpenInterestService(BybitService):
             limit: 取得するデータ数（デフォルト: 100）
             since: 開始タイムスタンプ（ミリ秒、オプション）
             interval: データ間隔（デフォルト: '1h'）
+            until: 終了タイムスタンプ（ミリ秒、オプション）。
+                指定するとその時刻以前のデータを返す（過去方向ページング用）
 
         Returns:
             List[Dict[str, Any]]: オープンインタレスト履歴データのリスト
@@ -63,6 +66,10 @@ class BybitOpenInterestService(BybitService):
         """
         self._validate_parameters(symbol, limit)
         normalized_symbol = normalize_market_symbol(symbol)
+        extra_params: dict[str, Any] = {"intervalTime": interval}
+        if until is not None:
+            # ccxt が until を Bybit の endTime へマッピングする
+            extra_params["until"] = int(until)
         return cast(
             list[dict[str, Any]],
             await self._handle_ccxt_errors(
@@ -72,7 +79,7 @@ class BybitOpenInterestService(BybitService):
                 interval,  # timeframeパラメータを追加
                 since,
                 limit,
-                {"intervalTime": interval},
+                extra_params,
             ),
         )
 

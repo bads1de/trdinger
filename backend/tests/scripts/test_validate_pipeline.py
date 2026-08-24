@@ -194,3 +194,40 @@ class TestGeneHashAndHistoryDedup:
         assert append_history(target, second) == 1
         lines = target.read_text(encoding="utf-8").splitlines()
         assert len(lines) == 2
+
+
+class TestCrossSymbol:
+    """クロスシンボルOOS評価サポートのテスト."""
+
+    def test_build_oos_config_symbol_override(self):
+        cfg = build_oos_config(
+            {
+                "start_date": "2022-01-01",
+                "end_date": "2022-06-30",
+                **{
+                    "symbol": "BTC/USDT:USDT",
+                    "timeframe": "4h",
+                },
+            },
+            symbol="ETH/USDT:USDT",
+        )
+        assert cfg is not None
+        assert cfg["symbol"] == "ETH/USDT:USDT"
+
+    def test_record_key_distinguishes_eval_symbol(self):
+        from scripts.validate_pipeline import record_key
+
+        base = {"gene_hash": "AAA"}
+        btc = record_key(base)
+        eth = record_key({**base, "eval_symbol": "ETH/USDT:USDT"})
+        assert btc != eth
+
+    def test_select_unique_keeps_same_gene_across_symbols(self):
+        from scripts.validate_pipeline import select_unique_rows
+
+        rows = [
+            {"gene_hash": "AAA"},
+            {"gene_hash": "AAA", "eval_symbol": "ETH/USDT:USDT"},
+            {"gene_hash": "AAA", "eval_symbol": "ETH/USDT:USDT"},  # 完全重複
+        ]
+        assert len(select_unique_rows(rows)) == 2
