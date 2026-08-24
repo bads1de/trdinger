@@ -4,11 +4,16 @@ import json
 import math
 
 from scripts.validate_pipeline import (
+    append_history,
     build_oos_config,
+    build_oos_row,
     extract_candidate_records,
+    load_history,
     norm_gene,
+    normalize_legacy_row,
     pearson,
     rank,
+    record_key,
     regime_min_margin_pp,
     spearman,
 )
@@ -289,3 +294,210 @@ class TestGASymbolSupport:
             "2025-01-01", "2025-06-30", symbol="SOL/USDT:USDT"
         )
         assert miss is None
+
+
+class TestBuildOosRowSymbolSemantics:
+    """build_oos_row / normalize_legacy_row のシンボル意味論テスト。
+
+    回帰: native実行(ETH)行がモジュール定数BTCへフォールバックし、
+    クロス行(eval=BTC)と誤重複していた問題。
+    """
+
+    CANDIDATE = {"gid": "abc", "gene_hash": "h1", "passed": True}
+    OUTCOME = {"oos_excess_pp": 1.5}
+
+    def test_native_row_eval_symbol_equals_ga_symbol(self):
+        row = build_oos_row(
+            "2022H1", "ETH/USDT:USDT", dict(self.CANDIDATE), dict(self.OUTCOME), None
+        )
+        assert row["eval_symbol"] == "ETH/USDT:USDT"
+        assert row["cross_symbol"] is False
+
+    def test_cross_row_flags_when_eval_differs_from_ga(self):
+        row = build_oos_row(
+            "2022H1",
+            "ETH/USDT:USDT",
+            dict(self.CANDIDATE),
+            dict(self.OUTCOME),
+            "BTC/USDT:USDT",
+        )
+        assert row["eval_symbol"] == "BTC/USDT:USDT"
+        assert row["cross_symbol"] is True
+
+    def test_cross_row_false_when_eval_equals_ga_explicitly(self):
+        row = build_oos_row(
+            "2022H1",
+            "BTC/USDT:USDT",
+            dict(self.CANDIDATE),
+            dict(self.OUTCOME),
+            "BTC/USDT:USDT",
+        )
+        assert row["cross_symbol"] is False
+
+    def test_normalize_legacy_row_prefers_ga_symbol_over_constant(self):
+        legacy = {"ga_symbol": "ETH/USDT:USDT", "oos_excess_pp": -14.0}
+        fixed = normalize_legacy_row(legacy)
+        assert fixed["eval_symbol"] == "ETH/USDT:USDT"
+        assert fixed["cross_symbol"] is False
+
+    def test_normalize_legacy_row_oldest_defaults_to_btc_constant(self):
+        fixed = normalize_legacy_row({"oos_excess_pp": 20.0})
+        assert fixed["eval_symbol"] == "BTC/USDT:USDT"
+        assert fixed["cross_symbol"] is False
+
+    def test_normalize_is_idempotent_and_preserves_existing_flags(self):
+        row = {
+            "ga_symbol": "ETH/USDT:USDT",
+            "eval_symbol": "BTC/USDT:USDT",
+            "cross_symbol": True,
+        }
+        once = normalize_legacy_row(dict(row))
+        assert normalize_legacy_row(dict(once)) == once
+
+    def test_append_history_distinguishes_same_gene_across_eval_symbols(self, tmp_path):
+
+        hist = tmp_path / "history.jsonl"
+        native = build_oos_row(
+            "2022H1", "ETH/USDT:USDT", dict(self.CANDIDATE), dict(self.OUTCOME), None
+        )
+        cross = build_oos_row(
+            "2022H1",
+            "ETH/USDT:USDT",
+            dict(self.CANDIDATE),
+            dict(self.OUTCOME),
+            "BTC/USDT:USDT",
+        )
+        # 遺伝子同一でも評価シンボルが違えば別観測として両方記録される
+        assert append_history(hist, [native]) == 1
+        assert append_history(hist, [cross]) == 1
+        assert len(list(hist.read_text(encoding="utf-8").splitlines())) == 2
+        # 同一キーの再追加はスキップ
+        assert append_history(hist, [dict(cross)]) == 0
+        keys = {record_key(r) for r in load_history(hist)}
+        assert len(keys) == 2
+
+
+class TestRegimeTagging:
+    """classify_regime / レジーム列付与 / シード統合のテスト"""
+
+    def test_classify_regime_boundaries(self):
+        from scripts.validate_pipeline import classify_regime
+
+        assert classify_regime(20.1) == "bull"
+        assert classify_regime(-20.1) == "bear"
+        assert classify_regime(20.0) == "sideways"
+        assert classify_regime(-20.0) == "sideways"
+        assert classify_regime(0.0) == "sideways"
+
+    def test_build_oos_row_adds_regime_columns(self):
+        cand = {"gid": "g1", "gene_hash": "h", "passed": True, "is_bh_pp": -56.0}
+        outcome = {"oos_excess_pp": 5.0, "oos_return_pp": 2.0, "oos_bh_pp": -64.0}
+        row = build_oos_row("2022H1", "BTC/USDT:USDT", cand, outcome, None)
+        assert row["is_regime"] == "bear"
+        assert row["oos_regime"] == "bear"
+        assert row["regime_match"] is True
+
+    def test_build_oos_row_regime_mismatch(self):
+        cand = {"gid": "g1", "gene_hash": "h", "is_bh_pp": 70.0}
+        outcome = {"oos_excess_pp": -3.0, "oos_bh_pp": -10.0}
+        row = build_oos_row("2023H1", "BTC/USDT:USDT", cand, outcome, None)
+        assert row["is_regime"] == "bull"
+        assert row["oos_regime"] == "sideways"
+        assert row["regime_match"] is False
+
+    def test_build_oos_row_records_seed_values(self):
+        row = build_oos_row(
+            "2022H1",
+            "BTC/USDT:USDT",
+            {"gid": "x", "gene_hash": "h"},
+            {"oos_excess_pp": 1.0},
+            None,
+            seed_values=[42, 43],
+        )
+        assert row["seed_values"] == [42, 43]
+
+    def test_extract_candidate_records_includes_is_bh(self, tmp_path):
+
+        bh = 0.1234
+        result = {
+            "validated_strategies": {"a1": {"entry_rules": [], "exit_rules": []}},
+            "validation_results": {
+                "a1": {
+                    "passed": True,
+                    "primary_fitness": 0.5,
+                    "report_summary": {
+                        "scenarios": [
+                            {
+                                "performance_metrics": {
+                                    "total_return": 0.2,
+                                    "buy_hold_return": bh,
+                                }
+                            }
+                        ]
+                    },
+                }
+            },
+        }
+        recs = extract_candidate_records(result)
+        assert len(recs) == 1
+        assert math.isclose(recs[0]["is_bh_pp"], bh * 100.0)
+
+    def test_merge_result_files_dedupes_and_namespaces_gids(self, tmp_path):
+        import json as _json
+
+        from scripts.validate_pipeline import merge_result_files
+
+        gene_a = {"entry_rules": [{"type": "sma_crossover"}], "exit_rules": []}
+        gene_b = {"entry_rules": [{"type": "rsi_extremes"}], "exit_rules": []}
+        f1 = tmp_path / "r1.json"
+        f2 = tmp_path / "r2.json"
+        f1.write_text(
+            _json.dumps(
+                {
+                    "backtest_config": {"symbol": "X"},
+                    "validated_strategies": {"aaa": gene_a},
+                    "validation_results": {"aaa": {"passed": True}},
+                }
+            ),
+            encoding="utf-8",
+        )
+        # f2: 同じ遺伝子(gene_a)と別遺伝子(gene_b)を含む
+        f2.write_text(
+            _json.dumps(
+                {
+                    "backtest_config": {"symbol": "X"},
+                    "validated_strategies": {"bbb": gene_a, "ccc": gene_b},
+                    "validation_results": {
+                        "bbb": {"passed": True},
+                        "ccc": {"passed": True},
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        merged = merge_result_files([f1, f2])
+        assert merged is not None
+        # 重複遺伝子は排除され、ユニーク2件のみ
+        assert len(merged["validation_results"]) == 2
+        gids = set(merged["validation_results"].keys())
+        # gidは接頭辞付きで一意化され、生遺伝子との対応が保たれる
+        for gid in gids:
+            assert gid in merged["validated_strategies"]
+
+    def test_find_all_results_for_period_returns_all_seeds(self, tmp_path, monkeypatch):
+        import scripts.validate_pipeline as vp
+
+        base = tmp_path / "results" / "auto_strategy"
+        base.mkdir(parents=True)
+        cfg = {"start_date": "2022-01-01", "end_date": "2022-06-30", "symbol": "ETH"}
+        for name in ("strategy_a.json", "strategy_b.json"):
+            (base / name).write_text(
+                json.dumps({"backtest_config": dict(cfg)}), encoding="utf-8"
+            )
+        (base / "other.json").write_text(
+            json.dumps({"backtest_config": {**cfg, "symbol": "BTC"}}),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(vp, "PROJECT_ROOT", tmp_path)
+        paths = vp.find_all_results_for_period("2022-01-01", "2022-06-30", "ETH")
+        assert len(paths) == 2

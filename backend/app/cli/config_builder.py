@@ -18,6 +18,9 @@ from typing import Any
 
 from app.services.auto_strategy.config.ga_config import GAConfig
 
+# 「上書きしない」ことを表すセンチネル（None は非決定論的実行の明示指定に使う）
+_UNSET: object = object()
+
 DEFAULT_SYMBOL = "BTC/USDT:USDT"
 DEFAULT_TIMEFRAME = "4h"
 DEFAULT_START_DATE = "2024-01-01"
@@ -111,6 +114,7 @@ def build_ga_config_dict(
     rtr_crowding_factor: int | None = None,
     sharing_radius: float | None = None,
     validate_pareto_front: bool = False,
+    random_state: int | None | object = _UNSET,
 ) -> dict[str, Any]:
     """
     実行オプションから GA 設定辞書を構築する。
@@ -180,6 +184,8 @@ def build_ga_config_dict(
         "fallback_start_date": start_date,
         "fallback_end_date": end_date,
     }
+    if random_state is not _UNSET:
+        config_kwargs["random_state"] = random_state
 
     if smoke:
         config_kwargs["max_indicators"] = 3

@@ -225,6 +225,13 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="組み込みシード戦略の注入を無効化し、全個体をランダム生成で開始（多様性重視）",
     )
+    parser.add_argument(
+        "--random-state",
+        type=str,
+        default=None,
+        help="RNGシード（再現性制御）。整数で固定、'none' で非決定論的実行。"
+        "未指定時はGAConfig既定値（42=決定論的）を使用",
+    )
 
     # 探索空間の拡張設定
     parser.add_argument(
@@ -314,9 +321,24 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
     Raises:
         ValueError: 引数が不正な場合
     """
-    from app.cli.config_builder import build_ga_config_dict
+    from app.cli.config_builder import _UNSET, build_ga_config_dict
 
     smoke_mode = getattr(args, "smoke", False)
+
+    # --random-state: 整数=固定シード / 'none'=非決定論 / 未指定=GAConfig既定（42）
+    raw_rs = getattr(args, "random_state", None)
+    random_state: int | None | object = _UNSET
+    if raw_rs is not None:
+        text = str(raw_rs).strip().lower()
+        if text in {"none", "null"}:
+            random_state = None
+        else:
+            try:
+                random_state = int(text)
+            except ValueError as exc:
+                raise ValueError(
+                    f"--random-state には整数または 'none' を指定してください: {raw_rs}"
+                ) from exc
 
     config_dict = build_ga_config_dict(
         population=getattr(args, "population", 20),
@@ -342,6 +364,7 @@ def create_ga_config(args: argparse.Namespace) -> GAConfig:
         max_conditions=getattr(args, "max_conditions", 3),
         rtr_crowding_factor=getattr(args, "rtr_cf", None),
         sharing_radius=getattr(args, "sharing_radius", None),
+        random_state=random_state,
     )
 
     return GAConfig.from_dict(config_dict)

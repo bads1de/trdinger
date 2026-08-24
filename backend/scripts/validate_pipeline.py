@@ -52,6 +52,7 @@ PERIOD_REGISTRY: dict[str, tuple[str, str]] = {
     "2026H1": ("2026-01-01", "2026-06-30"),
 }
 SYMBOL = "BTC/USDT:USDT"
+SEED_BASE = 42  # GAConfig 既定と同じ起点。--seeds N で 42,43,... を使用する
 TIMEFRAME = "4h"
 BASE_CONFIG = {
     "symbol": SYMBOL,
@@ -155,6 +156,66 @@ def select_unique_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return unique
 
 
+def normalize_legacy_row(row: dict[str, Any]) -> dict[str, Any]:
+    """旧形式行（eval_symbol / cross_symbol 欠落）を実行シンボルで補完する。
+
+    モジュール定数へのフォールバックは「GA対象が不明な最古参のBTC行」のみ許容し、
+    ga_symbol が記録済みの行はそれを優先する（非BTC native行の誤キー防止）。
+    """
+    if not row.get("eval_symbol"):
+        row["eval_symbol"] = row.get("ga_symbol") or SYMBOL
+    if "cross_symbol" not in row:
+        ga = row.get("ga_symbol")
+        row["cross_symbol"] = bool(ga) and str(row["eval_symbol"]) != str(ga)
+    return row
+
+
+def classify_regime(bh_pp: float) -> str:
+    """6ヶ月窓のB&Hリターン(pp)からレジームを分類する。
+
+    ±20pp を外れた側を bull / bear、内側を sideways とする。
+    """
+    if bh_pp > 20.0:
+        return "bull"
+    if bh_pp < -20.0:
+        return "bear"
+    return "sideways"
+
+
+def build_oos_row(
+    label: str,
+    ga_symbol: str,
+    candidate: dict[str, Any],
+    outcome: dict[str, Any],
+    eval_symbol: str | None,
+    seed_values: list[int] | None = None,
+) -> dict[str, Any]:
+    """OOS観測行を構築する。評価シンボルは常に明示し定数フォールバックを禁止する。
+
+    レジーム列（is_regime / oos_regime / regime_match）はB&H基準で自動付与する。
+    """
+    eff_eval = eval_symbol or ga_symbol
+    is_bh = candidate.get("is_bh_pp")
+    oos_bh = outcome.get("oos_bh_pp")
+    row: dict[str, Any] = {
+        "period": label,
+        "ga_symbol": ga_symbol,
+        "eval_symbol": eff_eval,
+        "cross_symbol": bool(eval_symbol and eval_symbol != ga_symbol),
+        **candidate,
+        **outcome,
+    }
+    if seed_values:
+        row["seed_values"] = list(seed_values)
+    if isinstance(is_bh, (int, float)):
+        row["is_regime"] = classify_regime(float(is_bh))
+    if isinstance(oos_bh, (int, float)):
+        row["oos_regime"] = classify_regime(float(oos_bh))
+    if "is_regime" in row and "oos_regime" in row:
+        row["regime_match"] = row["is_regime"] == row["oos_regime"]
+    return row
+
+
 def regime_min_margin_pp(validation: dict[str, Any]) -> float | None:
     """レジーム一貫性スライスの最小マージン（pp）。未記録は None。"""
     rc = validation.get("regime_consistency") or {}
@@ -215,6 +276,7 @@ def extract_candidate_records(result: dict[str, Any]) -> list[dict[str, Any]]:
                     else None
                 ),
                 "is_excess_pp": is_ex,
+                "is_bh_pp": float(bh) * 100.0 if isinstance(bh, (int, float)) else None,
                 "reasons": list(validation.get("reasons") or [])[:3],
             }
         )
@@ -256,8 +318,13 @@ def run_ga_for_period(
     end: str,
     log_path: Path | None,
     symbol: str = SYMBOL,
+    random_state: int | None = None,
 ) -> Path | None:
-    """scripts.run_auto_strategy をサブプロセス実行し結果JSONパスを返す。"""
+    """scripts.run_auto_strategy をサブプロセス実行し結果JSONパスを返す。
+
+    random_state を指定すると --random-state 経由でRNGシードを固定する
+    （シード倍増によるサンプル増強用。None は非決定論的実行）。
+    """
     before = set((PROJECT_ROOT / "results/auto_strategy").glob("strategy_*.json"))
     cmd = [
         sys.executable,
@@ -269,6 +336,8 @@ def run_ga_for_period(
         start,
         "--end-date",
         end,
+        "--random-state",
+        "none" if random_state is None else str(random_state),
     ]
     proc = subprocess.run(  # noqa: S603
         cmd,
@@ -297,7 +366,17 @@ def find_latest_result_for_period(
     symbol: str = SYMBOL,
 ) -> Path | None:
     """既存ファイルから該当期間・シンボルの最新結果を探す（--skip-ga 用）。"""
-    best: tuple[float, Path] | None = None
+    paths = find_all_results_for_period(start, end, symbol)
+    return paths[-1] if paths else None
+
+
+def find_all_results_for_period(
+    start: str,
+    end: str,
+    symbol: str = SYMBOL,
+) -> list[Path]:
+    """該当期間・シンボルの結果ファイルを全て返す（古い順）。シード倍増分を含む。"""
+    found: list[tuple[float, Path]] = []
     for f in (PROJECT_ROOT / "results/auto_strategy").glob("strategy_*.json"):
         try:
             d = json.loads(f.read_text(encoding="utf-8"))
@@ -309,10 +388,43 @@ def find_latest_result_for_period(
             and bc.get("end_date") == end
             and str(bc.get("symbol")) == symbol
         ):
-            mtime = f.stat().st_mtime
-            if best is None or mtime > best[0]:
-                best = (mtime, f)
-    return best[1] if best else None
+            found.append((f.stat().st_mtime, f))
+    return [p for _, p in sorted(found)]
+
+
+def merge_result_files(paths: list[Path]) -> dict[str, Any] | None:
+    """複数シードの結果ファイルを遺伝子重複排除しつつ1つに統合する。
+
+    gid はファイル間で衝突し得るため接頭辞で一意化する（OOS評価の
+    生遺伝子引き当てもこの gid で行うため、対応関係を保つ）。
+    """
+    merged: dict[str, Any] | None = None
+    seen_genes: set[str] = set()
+    for idx, path in enumerate(paths):
+        try:
+            result = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if merged is None:
+            merged = {
+                "backtest_config": result.get("backtest_config") or {},
+                "validated_strategies": {},
+                "validation_results": {},
+            }
+        strategies = result.get("validated_strategies") or {}
+        validations = result.get("validation_results") or {}
+        for gid, validation in validations.items():
+            raw = strategies.get(gid)
+            if raw is None:
+                continue
+            key = norm_gene(raw)
+            if key in seen_genes:
+                continue
+            seen_genes.add(key)
+            new_gid = f"s{idx}_{gid}"
+            merged["validated_strategies"][new_gid] = raw
+            merged["validation_results"][new_gid] = validation
+    return merged
 
 
 class OOSEvaluator:
@@ -398,7 +510,7 @@ def load_history(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         try:
-            rows.append(json.loads(line))
+            rows.append(normalize_legacy_row(json.loads(line)))
         except Exception:
             continue
     return rows
@@ -437,7 +549,43 @@ def meta_report(rows: list[dict[str, Any]]) -> None:
             )
         else:
             print(f"{m:22s} {len(pairs):>4d}       ---        ---")
+    _regime_summary(usable)
     _cross_summary(cross_rows)
+
+
+def _regime_summary(usable: list[dict[str, Any]]) -> None:
+    """OOSレジーム別・レジーム一致条件付きのサマリを出力する。"""
+    tagged = [r for r in usable if isinstance(r.get("oos_regime"), str)]
+    if not tagged:
+        return
+    print("\n--- レジーム別（同シンボルOOS） ---")
+    for reg in ("bull", "sideways", "bear"):
+        subset = [r for r in tagged if r["oos_regime"] == reg]
+        if not subset:
+            continue
+        exs = [float(r["oos_excess_pp"]) for r in subset if "oos_excess_pp" in r]
+        if not exs:
+            continue
+        beats = sum(1 for v in exs if v > 0)
+        print(
+            f"  OOS={reg:8s} n={len(subset):>3d} "
+            f"中央値 {st.median(exs):+7.2f}pp / 勝ち {beats}/{len(subset)}"
+        )
+    matched = [r for r in usable if r.get("regime_match") is True]
+    mismatched = [r for r in usable if r.get("regime_match") is False]
+    for name, subset in (("一致", matched), ("不一致", mismatched)):
+        exs = [
+            float(r["oos_excess_pp"])
+            for r in subset
+            if isinstance(r.get("oos_excess_pp"), (int, float))
+        ]
+        if not exs:
+            continue
+        beats = sum(1 for v in exs if v > 0)
+        print(
+            f"  IS/OOSレジーム{name} n={len(subset):>3d} "
+            f"中央値 {st.median(exs):+7.2f}pp / 勝ち {beats}/{len(subset)}"
+        )
 
 
 def _cross_summary(cross_rows: list[dict[str, Any]]) -> None:
@@ -461,30 +609,55 @@ def process_period(
     skip_ga: bool,
     eval_symbol: str | None = None,
     ga_symbol: str = SYMBOL,
+    seeds: int = 1,
 ) -> bool:
     start, end = PERIOD_REGISTRY[label]
+    seed_values: list[int] | None = None
+    paths: list[Path]
     if skip_ga:
-        result_path = find_latest_result_for_period(start, end, symbol=ga_symbol)
-        if result_path is None:
+        paths = find_all_results_for_period(start, end, symbol=ga_symbol)
+        if not paths:
             print(
                 f"\n[{label}] 既存結果なし（symbol={ga_symbol} / --skip-ga解除で実行）"
             )
             return False
+        result_path = paths[-1]
+        if len(paths) > 1:
+            print(f"\n[{label}] 既存結果 {len(paths)} ファイルを統合利用")
     else:
-        print(f"\n[{label}] GA実行中 ({start} ~ {end}, symbol={ga_symbol}) ...")
-        t0 = time.time()
-        result_path = run_ga_for_period(
-            start,
-            end,
-            PROJECT_ROOT / "logs" / f"validate_pipeline_{label}.log",
-            symbol=ga_symbol,
+        print(
+            f"\n[{label}] GA実行中 ({start} ~ {end}, symbol={ga_symbol}, "
+            f"seeds={seeds}) ..."
         )
-        if result_path is None:
+        t0 = time.time()
+        seed_values = [SEED_BASE + i for i in range(max(1, seeds))]
+        paths = []
+        for rs in seed_values:
+            p = run_ga_for_period(
+                start,
+                end,
+                PROJECT_ROOT / "logs" / f"validate_pipeline_{label}_rs{rs}.log",
+                symbol=ga_symbol,
+                random_state=rs,
+            )
+            if p is not None:
+                paths.append(p)
+        if not paths:
             print(f"[{label}] 結果JSONが生成されず")
             return False
-        print(f"  実行時間 {time.time() - t0:.0f}s -> {result_path.name}")
-
-    result = json.loads(result_path.read_text(encoding="utf-8"))
+        result_path = paths[-1]
+        print(
+            f"  実行時間 {time.time() - t0:.0f}s / 成功 {len(paths)}/{len(seed_values)}"
+            f" シード -> {[p.name for p in paths]}"
+        )
+    if len(paths) > 1:
+        merged = merge_result_files(paths)
+        if merged is not None:
+            result = merged
+        else:
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+    else:
+        result = json.loads(result_path.read_text(encoding="utf-8"))
     records = extract_candidate_records(result)
     passed = [r for r in records if r["passed"]]
     print(
@@ -525,10 +698,9 @@ def process_period(
         outcome = evaluator.evaluate(raw, oos_cfg)
         if outcome is None:
             continue
-        row = {"period": label, "ga_symbol": ga_symbol, **r, **outcome}
-        if eval_symbol:
-            row["eval_symbol"] = eval_symbol
-            row["cross_symbol"] = eval_symbol != SYMBOL
+        row = build_oos_row(
+            label, ga_symbol, r, outcome, eval_symbol, seed_values=seed_values
+        )
         oos_rows.append(row)
         history_records.append(row)
 
@@ -582,6 +754,12 @@ def main() -> None:
         default=SYMBOL,
         help=f"GA実行・結果検索の対象シンボル（既定: {SYMBOL}）",
     )
+    parser.add_argument(
+        "--seeds",
+        type=int,
+        default=1,
+        help="GA実行のシード数（42から連番で複数回実行しサンプルを増やす）",
+    )
     args = parser.parse_args()
 
     labels = [p.strip() for p in args.periods.split(",") if p.strip()]
@@ -603,6 +781,7 @@ def main() -> None:
                 args.skip_ga,
                 eval_symbol=args.eval_symbol,
                 ga_symbol=args.symbol,
+                seeds=max(1, int(args.seeds)),
             ):
                 ok_count += 1
         except Exception as exc:  # noqa: BLE001
