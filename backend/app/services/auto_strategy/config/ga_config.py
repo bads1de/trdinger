@@ -246,6 +246,11 @@ class EvaluationConfig(NestedConfigMixin):
     )
     oos_split_ratio: float = 0.25
     oos_fitness_weight: float = 0.5
+    # 資金費率の PnL 反映（決済後補正）。True の場合、バックテスト実行後に
+    # トレード保有期間と Buy&Hold の資金費コストを total_return /
+    # buy_hold_return から差し引く（funding_adjustment.apply_funding_adjustment）。
+    # 無効化すると従来どおり資金費を無視した評価になる（A/B 検証用）。
+    apply_funding_adjustment: bool = True
     wfa_n_folds: int = 3
     wfa_train_ratio: float = 0.5
     wfa_anchored: bool = False
@@ -568,7 +573,10 @@ class GAConfig:
     objective_preset: str | None = None
 
     # 実行時設定
-    random_state: int | None = None
+    # GA の乱数シード。run_evolution 開始時に random / numpy.random へ適用され、
+    # 同一設定・同一データでの再実行を再現可能にする（デフォルト 42）。
+    # None を指定した場合は OS エントロピーを使用する（従来動作・非再現）。
+    random_state: int | None = 42
 
     log_level: str = "ERROR"
 

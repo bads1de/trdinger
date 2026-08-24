@@ -52,6 +52,7 @@ from .evaluation_strategies import (
     resolve_ga_selection_mode,
 )
 from .evaluation_window_service import EvaluationWindowService
+from .funding_adjustment import apply_funding_adjustment
 from .run_config_builder import RunConfigBuilder
 
 logger = logging.getLogger(__name__)
@@ -620,6 +621,19 @@ class IndividualEvaluator:
                     backtest_config.get("end_date"),
                 )
 
+            # 資金費率の PnL 反映（決済後補正・無効化可能）
+            if getattr(
+                config.evaluation_config, "apply_funding_adjustment", True
+            ) and isinstance(result, dict):
+                raw_capital = result.get(
+                    "initial_capital"
+                ) or fidelity_backtest_config.get("initial_capital")
+                result = apply_funding_adjustment(
+                    result,
+                    data,
+                    float(raw_capital or 0.0),
+                )
+
             # 4. フィットネス計算（フィットネス計算機に委譲）
             window_days = self._resolve_evaluation_window_days(fidelity_backtest_config)
             fitness = self._calculate_multi_objective_fitness(
@@ -633,6 +647,8 @@ class IndividualEvaluator:
                     "end_date": str(fidelity_backtest_config.get("end_date")),
                 }
             )
+            if isinstance(result, dict) and result.get("_funding_adjustment"):
+                scenario_metadata["funding_adjustment"] = result["_funding_adjustment"]
             if prepared_backtest_config.get("_evaluation_start") is not None:
                 scenario_metadata["evaluation_start"] = str(
                     prepared_backtest_config["_evaluation_start"]
