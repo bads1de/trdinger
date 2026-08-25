@@ -26,11 +26,11 @@ class TestGetLinearSymbols:
 
     def test_unknown_symbol_raises_value_error(self):
         with pytest.raises(ValueError, match="未対応のシンボル"):
-            _run(get_linear_symbols("SOL/USDT:USDT"))
+            _run(get_linear_symbols("PEPE/USDT:USDT"))
 
     def test_mixed_known_and_unknown_raises(self):
         with pytest.raises(ValueError, match="未対応のシンボル"):
-            _run(get_linear_symbols("BTC/USDT:USDT,SOL/USDT:USDT"))
+            _run(get_linear_symbols("BTC/USDT:USDT,PEPE/USDT:USDT"))
 
 
 class TestResolveTimeframes:

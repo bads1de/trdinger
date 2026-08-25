@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timedelta
+from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
@@ -54,7 +54,9 @@ def load_open_interest(symbol: str) -> pd.Series:
     db = SessionLocal()
     try:
         rows = (
-            db.query(OpenInterestData.data_timestamp, OpenInterestData.open_interest_value)
+            db.query(
+                OpenInterestData.data_timestamp, OpenInterestData.open_interest_value
+            )
             .filter(OpenInterestData.symbol == symbol)
             .order_by(OpenInterestData.data_timestamp)
             .all()
@@ -135,7 +137,10 @@ def check_open_interest(oi: pd.Series) -> dict[str, Any]:
     cascades: dict[str, Any] = {}
     for day in KNOWN_CASCADE_DAYS:
         d0 = pd.Timestamp(day)
-        win = hourly[(hourly.index >= d0 - timedelta(days=2)) & (hourly.index < d0 + timedelta(days=2))]
+        win = hourly[
+            (hourly.index >= d0 - timedelta(days=2))
+            & (hourly.index < d0 + timedelta(days=2))
+        ]
         if win.empty:
             cascades[day] = "no data"
             continue
@@ -144,7 +149,9 @@ def check_open_interest(oi: pd.Series) -> dict[str, Any]:
         cascades[day] = {
             "pre_48h_peak": round(pre_peak, 2),
             "window_trough": round(trough, 2),
-            "drawdown_pct": round((trough / pre_peak - 1) * 100, 2) if pre_peak else None,
+            "drawdown_pct": round((trough / pre_peak - 1) * 100, 2)
+            if pre_peak
+            else None,
         }
     out["known_cascades"] = cascades
 
@@ -153,7 +160,8 @@ def check_open_interest(oi: pd.Series) -> dict[str, Any]:
     dd = (daily_min / daily_max_prev - 1) * 100
     worst = dd.nsmallest(5).dropna()
     out["top5_daily_drawdowns"] = [
-        {"date": str(k.date()), "drawdown_pct": round(float(v), 2)} for k, v in worst.items()
+        {"date": str(k.date()), "drawdown_pct": round(float(v), 2)}
+        for k, v in worst.items()
     ]
     gaps_hours = hourly.index.to_series().diff().dt.total_seconds().div(3600)
     out["hourly_gap_max_h"] = float(gaps_hours.max()) if len(gaps_hours) else None
@@ -176,7 +184,10 @@ def check_lsr(periods: dict[str, pd.DataFrame]) -> dict[str, Any]:
             "range": [str(df.index[0]), str(df.index[-1])],
             "sum_violations": bad_sum,
             "missing_estimate": missing,
-            "buy_ratio_range": [float(df["buy_ratio"].min()), float(df["buy_ratio"].max())],
+            "buy_ratio_range": [
+                float(df["buy_ratio"].min()),
+                float(df["buy_ratio"].max()),
+            ],
         }
     return out
 
@@ -217,7 +228,9 @@ def main() -> None:
             )
 
     out_path = PROJECT_ROOT / "results" / "derivative_data_quality.json"
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     print(f"\n保存: {out_path}")
 
 

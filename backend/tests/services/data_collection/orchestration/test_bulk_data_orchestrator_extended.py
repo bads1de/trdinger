@@ -569,4 +569,4 @@ class TestResolveCollectSymbol:
         import pytest as _pytest
 
         with _pytest.raises(ValueError, match="未対応のシンボル"):
-            BulkDataOrchestrator._resolve_collect_symbol("SOL/USDT:USDT")
+            BulkDataOrchestrator._resolve_collect_symbol("PEPE/USDT:USDT")

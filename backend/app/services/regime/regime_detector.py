@@ -72,7 +72,7 @@ class RegimeDetector:
         return labels
 
     def label_at(self, daily_closes: pd.Series, asof: pd.Timestamp) -> str | None:
-        """asof 时点（その日を含む）でのレジームラベルを返す。判定不能なら None。"""
+        """asof 時点（その日を含む）でのレジームラベルを返す。判定不能なら None。"""
         labels = self.detect_series(daily_closes[daily_closes.index <= asof])
         if labels.empty:
             return None

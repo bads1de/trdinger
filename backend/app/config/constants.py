@@ -38,6 +38,10 @@ DEFAULT_MARKET_SYMBOL = "BTC/USDT:USDT"
 SUPPORTED_MARKET_SYMBOLS = [
     DEFAULT_MARKET_SYMBOL,
     "ETH/USDT:USDT",
+    "SOL/USDT:USDT",
+    "XRP/USDT:USDT",
+    "BNB/USDT:USDT",
+    "DOGE/USDT:USDT",
 ]
 # デフォルトの時間軸
 # データ取得・バックテストで使用するデフォルトの時間間隔
